@@ -29,6 +29,10 @@ Use WebVTT sidecar files as HLS subtitles.
 
 Generate playlists based on template.
 
+### **[Scheduler](/docs/scheduler.md)**
+
+Breaks, clips and lives at a set time over the running programme.
+
 ### **[XMLTV / EPG](/docs/xmltv.md)**
 
 Program guide built from the playlists and the `.nfo` files in each program folder, with artwork.

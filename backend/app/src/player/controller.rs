@@ -25,7 +25,7 @@ use crate::{
     ARGS,
     db::{handles, models::Channel},
     file::{init_storage, local::LocalStorage},
-    player::{output::player, utils::Media},
+    player::{output::player, schedule::ScheduleState, utils::Media},
     utils::{
         config::PlayoutConfig, errors::ServiceError, logging::Target, system::SystemStat,
         text::text_config,
@@ -120,6 +120,7 @@ pub struct ChannelManager {
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
     pub text_overlay: TextOverlayState,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
+    pub schedule: Arc<ScheduleState>,
     pub shutdown: CancellationToken,
     pub system: SystemStat,
 }
@@ -207,6 +208,7 @@ impl ChannelManager {
             audio_level: Arc::new(StdMutex::new(None)),
             text_overlay,
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
+            schedule: Arc::new(ScheduleState::default()),
             shutdown,
             system,
         })
@@ -775,7 +777,7 @@ async fn run_channel(manager: ChannelManager) -> Result<(), ServiceError> {
     let filler_list = manager.filler_list.clone();
     let channel_id = config.general.channel_id;
 
-    debug!(target: Target::All.as_str(), channel = channel_id; "Start ffplayout v{VERSION}, channel: <span class=\"log-number\">{channel_id}</span>");
+    debug!(target: Target::All.as_str(), channel = channel_id; "Start NoAr v{VERSION}, channel: <span class=\"log-number\">{channel_id}</span>");
 
     let need_fill = {
         let list = filler_list.lock().await;

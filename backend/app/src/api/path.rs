@@ -66,6 +66,23 @@ pub fn routes() -> Router<AppState> {
                 )
                 .route("/presets/{id}", post(add_preset))
                 .route("/program/{id}", get(get_program))
+                .route(
+                    "/schedule/{id}",
+                    get(get_schedule_day).post(add_schedule_event),
+                )
+                .route("/schedule/{id}/events", get(get_schedule_events))
+                .route("/schedule/{id}/status", get(get_schedule_status))
+                .route("/schedule/{id}/stop", post(stop_schedule_event))
+                .route("/schedule/{id}/lives", get(get_lives).post(add_live))
+                .route("/schedule/{id}/lives/test", post(test_live_signal))
+                .route(
+                    "/schedule/{id}/{event_id}",
+                    put(update_schedule_event).delete(delete_schedule_event),
+                )
+                .route(
+                    "/schedule/{id}/{event_id}/trigger",
+                    post(trigger_schedule_event),
+                )
                 .route("/setup", get(get_setup_status).post(complete_setup))
                 .route("/system/{id}", get(get_system_stat))
                 .route("/user", get(get_user))

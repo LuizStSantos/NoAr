@@ -253,6 +253,11 @@ http://127.0.0.1:8787/public/1/live/master.m3u8
 Use nginx or another web server for production HLS delivery. The built-in route
 is appropriate for previewing and simple deployments.
 
+## Scheduler
+
+Scheduled events and lives: see [Scheduler](/docs/scheduler.md#api) for the
+routes under `/api/schedule/{id}` and the event format.
+
 ## Public XMLTV guide
 
 The program guide and its artwork are public, so IPTV players can load them

@@ -4,6 +4,7 @@ use chrono_tz::Tz;
 use quick_xml::{Reader, events::Event};
 
 use super::*;
+use crate::utils::schedule::parse_date;
 
 struct TempDir(PathBuf);
 
@@ -138,7 +139,7 @@ async fn guide_merges_program_parts_absorbs_ads_and_uses_nfo_metadata() {
         image_base_url: "http://tv.local/xmltv/1/images".to_string(),
     };
 
-    let xml = build_xmltv(&config, &channel, &options).await.unwrap();
+    let xml = build_xmltv(&config, &channel, &[], &options).await.unwrap();
     let day = today.format("%Y%m%d").to_string();
 
     assert_eq!(texts_of(&xml, "display-name"), ["Canal & Cia"]);
@@ -189,7 +190,7 @@ async fn guide_requires_an_initialized_playlist_start() {
     };
 
     assert!(matches!(
-        build_xmltv(&config, &channel, &options).await,
+        build_xmltv(&config, &channel, &[], &options).await,
         Err(ServiceError::Conflict(_))
     ));
 }
@@ -197,11 +198,7 @@ async fn guide_requires_an_initialized_playlist_start() {
 #[test]
 fn next_playlist_cuts_the_previous_one() {
     let at = |time: &str| NaiveDateTime::parse_from_str(time, "%F %T").unwrap();
-    let slot = |start: &str, stop: &str| Slot {
-        start: at(start),
-        stop: at(stop),
-        media: serde_json::from_value(clip(std::path::Path::new("/m/a.mp4"), 1.0)).unwrap(),
-    };
+    let slot = |start: &str, stop: &str| playlist_slot(at(start), at(stop), "/m/a.mp4");
     let mut slots = vec![
         slot("2026-10-14 05:00:00", "2026-10-14 05:50:00"),
         slot("2026-10-14 05:50:00", "2026-10-14 06:20:00"),
@@ -271,4 +268,146 @@ fn builds_safe_image_urls_and_text() {
     );
     assert_eq!(xml_safe("a\u{0B}b\tc"), "ab\tc");
     assert_eq!(title_from_file_name("/m/meu_clipe.mp4"), "meu clipe");
+}
+
+fn playlist_slot(start: NaiveDateTime, stop: NaiveDateTime, source: &str) -> Slot {
+    Slot {
+        start,
+        stop,
+        day_end: NaiveDateTime::parse_from_str("2026-10-15 06:00:00", "%F %T").unwrap(),
+        source: source.to_string(),
+        title: None,
+        ad: false,
+        scheduled: false,
+    }
+}
+
+fn scheduled(kind: ScheduleKind, entry: EntryMode, after: AfterMode) -> Occurrence {
+    let event = ScheduleEvent {
+        id: 1,
+        kind,
+        title: "Event".to_string(),
+        sources: vec!["Breaks/a.mp4".to_string()],
+        duration: 210.0,
+        start_date: "2026-10-14".to_string(),
+        start_time: "12:10:00".to_string(),
+        end_time: Some("12:20:00".to_string()),
+        entry_mode: entry,
+        after_mode: after,
+        show_in_guide: kind == ScheduleKind::Live,
+        enabled: true,
+        ..ScheduleEvent::default()
+    };
+
+    event
+        .occurrence_on(parse_date("2026-10-14").unwrap())
+        .unwrap()
+}
+
+fn timeline(slots: &[Slot]) -> Vec<(String, String, String)> {
+    slots
+        .iter()
+        .map(|slot| {
+            (
+                slot.start.format("%H:%M:%S").to_string(),
+                slot.stop.format("%H:%M:%S").to_string(),
+                slot.source.clone(),
+            )
+        })
+        .collect()
+}
+
+fn three_clips() -> Vec<Slot> {
+    let at =
+        |time: &str| NaiveDateTime::parse_from_str(&format!("2026-10-14 {time}"), "%F %T").unwrap();
+
+    vec![
+        playlist_slot(at("12:00:00"), at("12:30:00"), "a"),
+        playlist_slot(at("12:30:00"), at("13:00:00"), "b"),
+        playlist_slot(at("13:00:00"), at("13:30:00"), "c"),
+    ]
+}
+
+fn row(start: &str, stop: &str, source: &str) -> (String, String, String) {
+    (start.to_string(), stop.to_string(), source.to_string())
+}
+
+#[test]
+fn waiting_events_start_after_the_clip_and_delay_the_rest() {
+    let occurrence = scheduled(
+        ScheduleKind::Media,
+        EntryMode::AfterClip,
+        AfterMode::Continue,
+    );
+
+    let slots = apply_schedule(three_clips(), &[occurrence]);
+
+    assert_eq!(
+        timeline(&slots),
+        [
+            row("12:00:00", "12:30:00", "a"),
+            row("12:30:00", "12:33:30", "Breaks/a.mp4"),
+            row("12:33:30", "13:03:30", "b"),
+            row("13:03:30", "13:33:30", "c"),
+        ]
+    );
+    assert!(slots[1].ad, "a hidden event is absorbed like an ad");
+}
+
+#[test]
+fn interrupting_events_split_the_clip_and_resume_it() {
+    let occurrence = scheduled(
+        ScheduleKind::Media,
+        EntryMode::Interrupt,
+        AfterMode::Continue,
+    );
+
+    let slots = apply_schedule(three_clips(), &[occurrence]);
+
+    assert_eq!(
+        timeline(&slots),
+        [
+            row("12:00:00", "12:10:00", "a"),
+            row("12:10:00", "12:13:30", "Breaks/a.mp4"),
+            row("12:13:30", "12:33:30", "a"),
+            row("12:33:30", "13:03:30", "b"),
+            row("13:03:30", "13:33:30", "c"),
+        ]
+    );
+}
+
+#[test]
+fn lives_on_the_clock_cover_the_programme() {
+    let occurrence = scheduled(ScheduleKind::Live, EntryMode::Interrupt, AfterMode::Clock);
+
+    let slots = apply_schedule(three_clips(), &[occurrence]);
+
+    assert_eq!(
+        timeline(&slots),
+        [
+            row("12:00:00", "12:10:00", "a"),
+            row("12:10:00", "12:20:00", "Breaks/a.mp4"),
+            row("12:20:00", "12:30:00", "a"),
+            row("12:30:00", "13:00:00", "b"),
+            row("13:00:00", "13:30:00", "c"),
+        ]
+    );
+    assert!(!slots[1].ad, "a live shown in the guide is its own entry");
+}
+
+#[test]
+fn delays_stop_at_the_end_of_the_playlist_day() {
+    let at = |time: &str| NaiveDateTime::parse_from_str(time, "%F %T").unwrap();
+    let mut last = playlist_slot(at("2026-10-15 05:50:00"), at("2026-10-15 06:00:00"), "late");
+    last.day_end = at("2026-10-15 06:00:00");
+
+    let slots = delay(
+        vec![last],
+        at("2026-10-15 05:00:00"),
+        TimeDelta::try_minutes(5).unwrap(),
+        at("2026-10-15 06:00:00"),
+    );
+
+    assert_eq!(slots[0].start, at("2026-10-15 05:55:00"));
+    assert_eq!(slots[0].stop, at("2026-10-15 06:00:00"));
 }

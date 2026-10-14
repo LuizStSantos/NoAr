@@ -23,6 +23,7 @@ pub mod notification;
 pub mod paths;
 pub mod playlist;
 pub mod program;
+pub mod schedule;
 pub mod setup;
 pub mod system;
 pub mod task_runner;

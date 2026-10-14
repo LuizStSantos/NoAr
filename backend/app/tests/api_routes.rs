@@ -20,6 +20,8 @@ mod auth;
 mod configuration;
 #[path = "api/files.rs"]
 mod files;
+#[path = "api/schedule.rs"]
+mod schedule;
 #[path = "api/users.rs"]
 mod users;
 #[path = "api/xmltv.rs"]

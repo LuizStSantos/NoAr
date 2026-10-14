@@ -662,3 +662,137 @@ pub(crate) struct SetupRollback {
     pub active_outputs: Vec<i32>,
     pub user_id: i32,
 }
+
+/// What a scheduled event plays.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScheduleKind {
+    /// One or more clips from the storage.
+    #[default]
+    Media,
+    /// A live source read from a `.live` file in the storage.
+    Live,
+}
+
+/// How a scheduled event takes over the running programme.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EntryMode {
+    /// Wait until the clip on air ends.
+    #[default]
+    AfterClip,
+    /// Cut the clip on air at the exact time.
+    Interrupt,
+}
+
+/// Where the programme continues after a scheduled event.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AfterMode {
+    /// Continue where it stopped; the rest of the day runs later.
+    #[default]
+    Continue,
+    /// Jump to what the playlist has at the current time.
+    Clock,
+}
+
+macro_rules! text_enum {
+    ($name:ident { $($variant:ident => $text:literal),+ $(,)? }) => {
+        impl $name {
+            pub fn as_str(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $text),+
+                }
+            }
+        }
+
+        impl FromStr for $name {
+            type Err = String;
+
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                match value {
+                    $($text => Ok(Self::$variant),)+
+                    other => Err(format!("unknown {} '{other}'", stringify!($name))),
+                }
+            }
+        }
+    };
+}
+
+text_enum!(ScheduleKind { Media => "media", Live => "live" });
+text_enum!(EntryMode { AfterClip => "after_clip", Interrupt => "interrupt" });
+text_enum!(AfterMode { Continue => "continue", Clock => "clock" });
+
+/// A row of `schedule_events`. Times are in the channel time zone.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct ScheduleEvent {
+    pub id: i32,
+    pub channel_id: i32,
+    pub kind: ScheduleKind,
+    pub title: String,
+    /// Storage paths: the clips to play, or the one `.live` file.
+    pub sources: Vec<String>,
+    /// Total clip length in seconds; zero for live events.
+    pub duration: f64,
+    /// `YYYY-MM-DD`
+    pub start_date: String,
+    /// `HH:MM:SS`
+    pub start_time: String,
+    /// `HH:MM:SS`, live events only.
+    pub end_time: Option<String>,
+    /// Weekday bits, Sunday = 1 ... Saturday = 64; zero plays once.
+    pub repeat_days: u8,
+    pub entry_mode: EntryMode,
+    pub after_mode: AfterMode,
+    pub show_in_guide: bool,
+    pub retry_seconds: u32,
+    pub enabled: bool,
+}
+
+impl FromRow<'_, SqliteRow> for ScheduleEvent {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let text_enum = |column: &str| -> sqlx::Result<String> { row.try_get(column) };
+        let decode_error = |column: &str, error: String| sqlx::Error::ColumnDecode {
+            index: column.to_string(),
+            source: error.into(),
+        };
+        let sources: String = row.try_get("sources")?;
+
+        Ok(Self {
+            id: row.try_get("id")?,
+            channel_id: row.try_get("channel_id")?,
+            kind: text_enum("kind")?
+                .parse()
+                .map_err(|e| decode_error("kind", e))?,
+            title: row.try_get("title")?,
+            sources: serde_json::from_str(&sources)
+                .map_err(|e| decode_error("sources", e.to_string()))?,
+            duration: row.try_get("duration")?,
+            start_date: row.try_get("start_date")?,
+            start_time: row.try_get("start_time")?,
+            end_time: row.try_get("end_time")?,
+            repeat_days: row.try_get::<i64, _>("repeat_days")?.clamp(0, 127) as u8,
+            entry_mode: text_enum("entry_mode")?
+                .parse()
+                .map_err(|e| decode_error("entry_mode", e))?,
+            after_mode: text_enum("after_mode")?
+                .parse()
+                .map_err(|e| decode_error("after_mode", e))?,
+            show_in_guide: row.try_get("show_in_guide")?,
+            retry_seconds: row.try_get::<i64, _>("retry_seconds")?.max(0) as u32,
+            enabled: row.try_get("enabled")?,
+        })
+    }
+}
+
+/// Outcome of one occurrence of a scheduled event, from `schedule_runs`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]
+pub struct ScheduleRun {
+    pub event_id: i32,
+    /// `YYYY-MM-DD` of the occurrence.
+    pub occurrence: String,
+    /// `running`, `done`, `skipped` or `failed`.
+    pub status: String,
+    pub started_at: Option<String>,
+    pub finished_at: Option<String>,
+}

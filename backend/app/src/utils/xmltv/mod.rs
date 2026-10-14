@@ -18,12 +18,13 @@ pub mod library;
 pub mod nfo;
 
 use crate::{
-    player::utils::Media,
+    db::models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind},
     utils::{
         config::PlayoutConfig,
         errors::ServiceError,
         playlist::read_playlist,
         program::{channel_datetime, playlist_day_start},
+        schedule::{Occurrence, occurrences_between, seconds},
         time_machine::time_now,
     },
 };
@@ -52,10 +53,18 @@ pub struct XmltvOptions {
 }
 
 /// One playlist entry placed on the channel's local timeline.
+#[derive(Debug, Clone, PartialEq)]
 struct Slot {
     start: NaiveDateTime,
     stop: NaiveDateTime,
-    media: Media,
+    /// End of the playlist day the slot belongs to.
+    day_end: NaiveDateTime,
+    source: String,
+    title: Option<String>,
+    /// Ads, and scheduled events kept out of the guide.
+    ad: bool,
+    /// Placed by a scheduled event rather than the playlist.
+    scheduled: bool,
 }
 
 /// One entry of the guide; may cover several consecutive slots.
@@ -80,6 +89,7 @@ impl Programme {
 pub async fn build_xmltv(
     config: &PlayoutConfig,
     channel: &XmltvChannel,
+    events: &[ScheduleEvent],
     options: &XmltvOptions,
 ) -> Result<String, ServiceError> {
     let now = time_now(&config.channel.timezone);
@@ -89,6 +99,7 @@ pub async fn build_xmltv(
     let to = from + TimeDelta::try_days(days).unwrap_or_default();
 
     let slots = collect_slots(config, from, to).await?;
+    let slots = apply_schedule(slots, &occurrences_between(events, from, to));
     let programmes = group_programmes(config, slots).await;
     let images = ImageUrls {
         base: &options.image_base_url,
@@ -103,7 +114,7 @@ pub async fn build_xmltv(
         "tv",
         &[
             ("generator-info-name", "NoAr"),
-            ("generator-info-url", "https://github.com/LuizStSantos/noar"),
+            ("generator-info-url", "https://github.com/LuizStSantos/NoAr"),
         ],
     );
 
@@ -192,7 +203,11 @@ async fn collect_slots(
                 slots.push(Slot {
                     start: begin,
                     stop,
-                    media,
+                    day_end,
+                    source: media.source,
+                    title: media.title,
+                    ad: media.ad,
+                    scheduled: false,
                 });
             }
 
@@ -221,7 +236,7 @@ async fn group_programmes(config: &PlayoutConfig, slots: Vec<Slot>) -> Vec<Progr
     let mut programmes: Vec<Programme> = vec![];
 
     for slot in slots {
-        if is_break(&slot.media, filler.as_deref()) {
+        if is_break(&slot, filler.as_deref()) {
             if let Some(previous) = programmes.last_mut()
                 && is_contiguous(previous.stop, slot.start)
             {
@@ -231,10 +246,12 @@ async fn group_programmes(config: &PlayoutConfig, slots: Vec<Slot>) -> Vec<Progr
             continue;
         }
 
-        let clip = library.lookup(&slot.media.source).await;
+        let clip = library.lookup(&slot.source).await;
+        // A scheduled event's own title only stands in when no `.nfo`
+        // describes what it plays.
         let playlist_title = slot
-            .media
             .title
+            .filter(|_| !(slot.scheduled && clip.program.is_some()))
             .map(|title| title.trim().to_string())
             .filter(|title| !title.is_empty());
 
@@ -249,7 +266,7 @@ async fn group_programmes(config: &PlayoutConfig, slots: Vec<Slot>) -> Vec<Progr
         programmes.push(Programme {
             start: slot.start,
             stop: slot.stop,
-            source: slot.media.source,
+            source: slot.source,
             playlist_title,
             clip,
         });
@@ -271,8 +288,122 @@ fn filler_path(config: &PlayoutConfig) -> Option<PathBuf> {
         .then_some(filler)
 }
 
-fn is_break(media: &Media, filler: Option<&Path>) -> bool {
-    media.ad || filler.is_some_and(|filler| Path::new(&media.source).clean().starts_with(filler))
+fn is_break(slot: &Slot, filler: Option<&Path>) -> bool {
+    slot.ad
+        || (!slot.scheduled
+            && filler.is_some_and(|filler| Path::new(&slot.source).clean().starts_with(filler)))
+}
+
+/// Place scheduled events on the timeline the way the player airs them: at
+/// their time, or after the clip on air for events that wait. Afterwards the
+/// playlist either runs later (continue) or the event covers it (clock).
+fn apply_schedule(mut slots: Vec<Slot>, occurrences: &[Occurrence]) -> Vec<Slot> {
+    for occurrence in occurrences {
+        let event = &occurrence.event;
+        let start = match event.entry_mode {
+            EntryMode::Interrupt => occurrence.start,
+            EntryMode::AfterClip => slots
+                .iter()
+                .find(|slot| {
+                    !slot.scheduled && slot.start < occurrence.start && occurrence.start < slot.stop
+                })
+                .map_or(occurrence.start, |slot| slot.stop),
+        };
+        let end = match event.kind {
+            ScheduleKind::Media => start + seconds(event.duration),
+            ScheduleKind::Live => occurrence.end,
+        };
+
+        if end <= start {
+            continue;
+        }
+
+        let day_end = slots
+            .iter()
+            .find(|slot| slot.start <= start && start < slot.stop)
+            .map_or(end, |slot| slot.day_end);
+
+        slots = match event.after_mode {
+            AfterMode::Clock => cover(slots, start, end),
+            AfterMode::Continue => delay(slots, start, end - start, day_end),
+        };
+
+        slots.push(Slot {
+            start,
+            stop: end,
+            day_end,
+            source: event.sources.first().cloned().unwrap_or_default(),
+            title: Some(event.title.clone()),
+            ad: !event.show_in_guide,
+            scheduled: true,
+        });
+        slots.sort_by_key(|slot| slot.start);
+    }
+
+    slots
+}
+
+/// Remove `[start, end)` from the playlist slots; a slot that spans it keeps
+/// its parts before and after.
+fn cover(slots: Vec<Slot>, start: NaiveDateTime, end: NaiveDateTime) -> Vec<Slot> {
+    let mut covered = Vec::with_capacity(slots.len() + 1);
+
+    for slot in slots {
+        if slot.stop <= start || slot.start >= end {
+            covered.push(slot);
+            continue;
+        }
+
+        if slot.start < start {
+            covered.push(Slot {
+                stop: start,
+                ..slot.clone()
+            });
+        }
+
+        if slot.stop > end {
+            covered.push(Slot { start: end, ..slot });
+        }
+    }
+
+    covered
+}
+
+/// Push the playlist slots from `start` on by `length`, up to the end of
+/// their playlist day; the next day's playlist starts on time.
+fn delay(
+    slots: Vec<Slot>,
+    start: NaiveDateTime,
+    length: TimeDelta,
+    day_end: NaiveDateTime,
+) -> Vec<Slot> {
+    let mut delayed = Vec::with_capacity(slots.len() + 1);
+
+    for slot in slots {
+        if slot.stop <= start || slot.day_end != day_end {
+            delayed.push(slot);
+            continue;
+        }
+
+        let mut later = slot.clone();
+
+        if slot.start < start {
+            delayed.push(Slot {
+                stop: start,
+                ..slot
+            });
+            later.start = start;
+        }
+
+        later.start += length;
+        later.stop = (later.stop + length).min(day_end);
+
+        if later.start < later.stop {
+            delayed.push(later);
+        }
+    }
+
+    delayed
 }
 
 /// The channel logo, when it is an image inside the storage.

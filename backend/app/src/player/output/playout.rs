@@ -19,6 +19,7 @@ use crate::{
     player::{
         controller::{ChannelManager, loudness_config},
         input::source_generator,
+        schedule::{self, InterruptedClip},
         utils::{Media, get_delta, sec_to_time},
     },
     utils::{
@@ -100,10 +101,18 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         info!(channel = config.general.channel_id; "Started {count} live listener(s)");
     }
 
+    // Scheduled events: the ticker queues them, the play loop airs them.
+    manager.schedule.reset();
+    let ticker_cancel = CancellationToken::new();
+    let ticker = tokio::spawn(schedule::run_ticker(manager.clone(), ticker_cancel.clone()));
+
     let result = match config.output.mode {
         OutputMode::HLS => play_hls(manager.clone(), &config, &playout).await,
         _ => play_loop(manager.clone(), &config, &playout, None).await,
     };
+
+    ticker_cancel.cancel();
+    let _ = ticker.await;
 
     let finish_result = playout.finish().await.map_err(engine_error);
     result?;
@@ -192,8 +201,28 @@ async fn play_loop(
 ) -> Result<(), ServiceError> {
     let id = config.general.channel_id;
     let mut node_sources = source_generator(manager.clone()).await;
+    let mut interrupted: Option<InterruptedClip> = None;
 
-    while let Some(node) = node_sources.next().await {
+    loop {
+        // A due scheduled event airs between clips; afterwards the playlist
+        // restarts from the time shift the event left behind.
+        match schedule::play_queued_event(&manager, config, playout, interrupted.take()).await? {
+            Some(true) => {
+                manager.channel.lock().await.active = false;
+                request_shutdown(&manager.shutdown);
+                return Ok(());
+            }
+            Some(false) => {
+                node_sources = source_generator(manager.clone()).await;
+                continue;
+            }
+            None => {}
+        }
+
+        let Some(node) = node_sources.next().await else {
+            break;
+        };
+
         *manager.current_media.lock().await = Some(node.clone());
 
         if cancel_token
@@ -251,6 +280,7 @@ async fn play_loop(
             1.0
         };
         let is_ad = node.ad;
+        let clip_started = std::time::Instant::now();
         match playout
             .play_with_timing_logo_fade_rate_and_audio(
                 node.source.clone(),
@@ -277,6 +307,14 @@ async fn play_loop(
             }
             ClipResult::Played => {}
             ClipResult::Skipped => {
+                if manager.schedule.has_queued() {
+                    interrupted = Some(InterruptedClip {
+                        source: node.source.clone(),
+                        title: node.title.clone(),
+                        position: node.seek + clip_started.elapsed().as_secs_f64(),
+                    });
+                }
+
                 // Global shutdown also uses `skip_current` to interrupt the
                 // decoder. That expected cleanup must not look like a manual
                 // skip in the log.
@@ -695,6 +733,28 @@ fn hls_playlist_path(config: &PlayoutConfig) -> Result<PathBuf, ServiceError> {
     }
 
     Ok(path)
+}
+
+/// Play one source in real time without external audio or logo fades, as
+/// scheduled events do. An empty source plays black and silence.
+pub(crate) async fn play_plain(
+    playout: &AsyncPlayout,
+    config: &PlayoutConfig,
+    source: &str,
+    duration: f64,
+) -> Result<ClipResult, ServiceError> {
+    playout
+        .play_with_timing_logo_fade_rate_and_audio(
+            source.to_string(),
+            None,
+            Some(duration),
+            None,
+            subtitle_media_path(config, source),
+            LogoFade::default(),
+            1.0,
+        )
+        .await
+        .map_err(engine_error)
 }
 
 fn playout_duration(node: &Media) -> Option<f64> {

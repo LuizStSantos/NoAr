@@ -11,6 +11,7 @@ use tokio::fs;
 
 use crate::{
     api::{routes::stream_file, state::AppState},
+    db::handles,
     file::norm_abs_path,
     utils::{
         errors::ServiceError,
@@ -77,7 +78,8 @@ pub async fn get_xmltv(
         image_base_url: format!("{base_url}/xmltv/{id}/images"),
     };
 
-    let xml = build_xmltv(&config, &channel, &options).await?;
+    let events = handles::select_schedule_events(&state.pool, id).await?;
+    let xml = build_xmltv(&config, &channel, &events, &options).await?;
 
     Ok((
         [

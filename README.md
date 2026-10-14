@@ -12,10 +12,10 @@ Baecker and keeps its engine, web interface and API, adding:
 
 - **XMLTV guide** built from the playlists and a Kodi-style `.nfo` file in each
   program folder, with posters and episode images ([docs](docs/xmltv.md)).
-- **Scheduler** (in progress): place a break, a clip or a live show (SRT, RTMP,
-  HLS) at a time over whatever is on air, either waiting for the current clip
-  to end or interrupting it and resuming at the exact point, without dropping
-  the output.
+- **Scheduler**: place a break, a clip or a live show (SRT, RTMP, HLS) at a
+  time over whatever is on air, either waiting for the current clip to end or
+  interrupting it and resuming at the exact point, without dropping the
+  output ([docs](docs/scheduler.md)).
 - **Docker-first install**: one command, then a setup page in the browser.
 
 ## Install with Docker
@@ -23,8 +23,8 @@ Baecker and keeps its engine, web interface and API, adding:
 Requirements: Docker with the Compose plugin.
 
 ```sh
-git clone https://github.com/LuizStSantos/noar.git
-cd noar
+git clone https://github.com/LuizStSantos/NoAr.git
+cd NoAr
 docker compose up -d
 ```
 
