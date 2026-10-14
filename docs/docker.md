@@ -51,20 +51,27 @@ published port.
 
 ## Time zone
 
-Set `TZ` in `docker-compose.yml`. Playlists, schedules and the guide follow the
-channel time zone, which defaults to this one.
+Set `TZ` in `docker-compose.yml` before the first start. Playlists, schedules
+and the guide follow the channel time zone, and new channels take it from
+`TZ`. Channels that already exist keep theirs; change it in the channel
+settings.
 
 ## Environment
 
-The image sets these variables; change them only together with the volumes:
+The image sets these variables:
 
-| Variable | Default |
-| --- | --- |
-| `DB` | `/data/db/noar.db` |
-| `STORAGE` | `/data/media` |
-| `PLAYLISTS` | `/data/playlists` |
-| `PUBLIC` | `/data/public` |
-| `LOGS` | `/data/logs` |
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DB` | `/data/db/noar.db` | Database file |
+| `NOAR_SETUP_STORAGE` | `/data/media` | Storage path suggested on the setup page |
+| `NOAR_SETUP_PLAYLISTS` | `/data/playlists` | Playlist path suggested on the setup page |
+| `NOAR_SETUP_PUBLIC` | `/data/public` | HLS path suggested on the setup page |
+| `NOAR_SETUP_LOGS` | `/data/logs` | Log path suggested on the setup page |
+| `TZ` | `UTC` (`America/Sao_Paulo` in the compose file) | Time zone |
+
+After the setup, each channel uses the paths saved for it; change them in
+the channel settings. Do not set `STORAGE`, `PLAYLISTS`, `PUBLIC` or `LOGS`:
+they override the paths of every channel.
 
 ## Prebuilt image
 

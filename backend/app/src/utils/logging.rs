@@ -573,7 +573,12 @@ pub fn log_file_path() -> PathBuf {
     }
 
     if !log_path.is_dir() {
-        log_path = env::current_dir().unwrap();
+        // Before the setup the stored path usually does not exist yet. The
+        // Docker image names its log folder, so the first run logs there too.
+        log_path = env::var_os("NOAR_SETUP_LOGS")
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute() && path.is_dir())
+            .unwrap_or_else(|| env::current_dir().unwrap());
     }
 
     log_path

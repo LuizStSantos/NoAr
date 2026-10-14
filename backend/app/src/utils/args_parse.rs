@@ -88,7 +88,7 @@ pub struct Args {
     #[clap(long, env, help_heading = Some("Initial Setup / General"), help = "Path to public files, also HLS playlists")]
     pub public: Option<String>,
 
-    #[clap(long, env, help_heading = Some("Initial Setup / Playlist"), help = "Path to playlist, or playlist root folder")]
+    #[clap(long, help_heading = Some("Initial Setup / Playlist"), help = "Path to playlist, or playlist root folder")]
     pub playlists: Option<String>,
 
     #[clap(long, help_heading = Some("General"), help = "Add or update a global admin user")]

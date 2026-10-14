@@ -76,15 +76,33 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/runtime-packages.txt
 
 COPY --from=backend /usr/local/bin/noar /usr/local/bin/noar
+
+# NoAr reads the system time zone from /etc/localtime, not from TZ: point it
+# at TZ on every start, so the TZ of the compose file sets the time zone.
+COPY <<'SCRIPT' /usr/local/bin/noar-entrypoint
+#!/bin/sh
+set -e
+
+if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
+    ln -sf "/usr/share/zoneinfo/$TZ" /etc/localtime
+    echo "$TZ" > /etc/timezone
+fi
+
+exec noar "$@"
+SCRIPT
+RUN chmod 755 /usr/local/bin/noar-entrypoint
+
 # Default overlay logo and WebVTT placeholder copied into new storages.
 COPY assets/dummy.vtt assets/logo.png /usr/share/ffplayout/
 
-# Everything NoAr keeps lives under /data: mount it as a volume.
+# Everything NoAr keeps lives under /data: mount it as a volume. The
+# NOAR_SETUP_* paths only fill the setup page; each channel keeps the paths
+# saved for it.
 ENV DB=/data/db/noar.db \
-    STORAGE=/data/media \
-    PLAYLISTS=/data/playlists \
-    PUBLIC=/data/public \
-    LOGS=/data/logs \
+    NOAR_SETUP_STORAGE=/data/media \
+    NOAR_SETUP_PLAYLISTS=/data/playlists \
+    NOAR_SETUP_PUBLIC=/data/public \
+    NOAR_SETUP_LOGS=/data/logs \
     TZ=UTC
 
 RUN mkdir -p /data/db /data/media /data/playlists /data/public /data/logs
@@ -93,5 +111,5 @@ WORKDIR /data
 
 EXPOSE 8787
 
-ENTRYPOINT ["tini", "--", "noar"]
+ENTRYPOINT ["tini", "--", "noar-entrypoint"]
 CMD ["--listen", "0.0.0.0:8787"]

@@ -25,7 +25,8 @@ pub async fn get_setup_status(
 
     Ok(Json(SetupStatus {
         required,
-        settings: required.then(|| setup::setup_defaults(settings, &ARGS)),
+        settings: required
+            .then(|| setup::setup_defaults(settings, &setup::SetupPaths::from_env(&ARGS))),
     }))
 }
 

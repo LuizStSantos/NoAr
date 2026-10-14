@@ -38,16 +38,44 @@ pub struct SetupRequest {
     pub two_factor: bool,
 }
 
-/// Values the setup form starts with: the stored settings, with the paths
-/// given as arguments or environment variables taking precedence. The Docker
-/// image sets them, so its setup page already points at the data volume.
-pub fn setup_defaults(settings: GlobalSettings, args: &Args) -> SetupSettings {
+/// Paths the setup form suggests instead of the stored defaults.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct SetupPaths {
+    pub logs: Option<String>,
+    pub playlists: Option<String>,
+    pub public: Option<String>,
+    pub storage: Option<String>,
+}
+
+impl SetupPaths {
+    /// From `NOAR_SETUP_LOGS`, `NOAR_SETUP_PLAYLISTS`, `NOAR_SETUP_PUBLIC` and
+    /// `NOAR_SETUP_STORAGE`, which the Docker image sets to its data volume,
+    /// falling back to the path arguments.
+    ///
+    /// These only fill the setup form: the `--storage` style arguments (and
+    /// their environment variables) override every channel's paths at run
+    /// time, so the image must not use them.
+    pub fn from_env(args: &Args) -> Self {
+        let env = |name: &str| std::env::var(name).ok();
+
+        Self {
+            logs: env("NOAR_SETUP_LOGS").or_else(|| args.logs.clone()),
+            playlists: env("NOAR_SETUP_PLAYLISTS").or_else(|| args.playlists.clone()),
+            public: env("NOAR_SETUP_PUBLIC").or_else(|| args.public.clone()),
+            storage: env("NOAR_SETUP_STORAGE").or_else(|| args.storage.clone()),
+        }
+    }
+}
+
+/// Values the setup form starts with: the stored settings, with the
+/// suggested paths taking precedence.
+pub fn setup_defaults(settings: GlobalSettings, paths: &SetupPaths) -> SetupSettings {
     let mut defaults = SetupSettings::from(settings);
     let overrides = [
-        (&mut defaults.logs, &args.logs),
-        (&mut defaults.playlists, &args.playlists),
-        (&mut defaults.public, &args.public),
-        (&mut defaults.storage, &args.storage),
+        (&mut defaults.logs, &paths.logs),
+        (&mut defaults.playlists, &paths.playlists),
+        (&mut defaults.public, &paths.public),
+        (&mut defaults.storage, &paths.storage),
     ];
 
     for (field, value) in overrides {
@@ -393,14 +421,14 @@ mod tests {
             smtp_password: "secret".to_string(),
             ..GlobalSettings::default()
         };
-        let args = Args {
+        let paths = SetupPaths {
             storage: Some("/data/media".to_string()),
             playlists: Some(" /data/playlists ".to_string()),
             logs: Some(String::new()),
-            ..Args::default()
+            public: None,
         };
 
-        let defaults = setup_defaults(stored, &args);
+        let defaults = setup_defaults(stored, &paths);
 
         assert_eq!(defaults.storage, "/data/media");
         assert_eq!(defaults.playlists, "/data/playlists");
