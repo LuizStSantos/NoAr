@@ -41,7 +41,9 @@ pub async fn select_user(pool: &SqlitePool, id: i32) -> Result<User, ProcessErro
 }
 
 pub async fn select_users(pool: &SqlitePool) -> Result<Vec<User>, ProcessError> {
-    const QUERY: &str = "SELECT id, username FROM auth_user";
+    const QUERY: &str = "SELECT u.id, u.mail, u.username, u.role_id, u.two_factor, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
+        left join auth_user_channels uc on uc.user_id = u.id
+    GROUP BY u.id ORDER BY u.id";
 
     let result = sqlx::query_as(QUERY).fetch_all(pool).await?;
 
@@ -181,6 +183,21 @@ pub async fn update_user_with_channels(
     Ok(())
 }
 
+/// Change what a user may do: 1 global admin, 2 channel admin, 3 operator.
+pub async fn update_user_role(
+    pool: &SqlitePool,
+    id: i32,
+    role_id: i32,
+) -> Result<(), ProcessError> {
+    sqlx::query("UPDATE auth_user SET role_id = $2 WHERE id = $1")
+        .bind(id)
+        .bind(role_id)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
 pub async fn delete_user(pool: &SqlitePool, id: i32) -> Result<SqliteQueryResult, ProcessError> {
     const QUERY: &str = "DELETE FROM auth_user WHERE id = $1;";
 
@@ -282,6 +299,33 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(two_factor, 0);
+    }
+
+    #[tokio::test]
+    async fn lists_users_with_role_and_channels() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        crate::db::handles::db_migrate(&pool).await.unwrap();
+        sqlx::query("INSERT INTO auth_user (id, mail, username, password, role_id, two_factor) VALUES (7, 'op@example.org', 'operator', 'hash', 3, 0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        insert_user_channel(&mut pool.acquire().await.unwrap(), 7, vec![1])
+            .await
+            .unwrap();
+        update_user_role(&pool, 7, 2).await.unwrap();
+
+        let users = select_users(&pool).await.unwrap();
+        let operator = users.iter().find(|user| user.id == 7).unwrap();
+
+        assert_eq!(operator.username, "operator");
+        assert_eq!(operator.mail.as_deref(), Some("op@example.org"));
+        assert_eq!(operator.role_id, Some(2));
+        assert_eq!(operator.channel_ids, Some(vec![1]));
+        assert!(!operator.two_factor);
     }
 
     #[tokio::test]

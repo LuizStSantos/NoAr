@@ -490,7 +490,7 @@ watch(zoom, scrollToFocus)
 </script>
 
 <template>
-    <div class="min-h-[calc(100vh-52px)] flex flex-col">
+    <div class="min-h-[calc(100vh-56px)] flex flex-col">
         <div class="flex flex-wrap items-center gap-2.5 px-4 py-3 border-b border-base-300">
             <div class="join border border-base-content/30 rounded-md">
                 <button

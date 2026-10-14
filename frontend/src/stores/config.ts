@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useRouter } from 'vue-router'
 
 import { authFetch } from '@/composables/authFetch'
+import { countChanges } from '@/composables/diff'
 import { useAuth } from './auth'
 import { useIndex } from './index'
 import { i18n } from '../i18n'
@@ -33,6 +34,8 @@ export const useConfig = defineStore('config', {
         onetimeInfo: true,
         showPlayer: true,
         showRestartModal: false,
+        /** Channel whose playout configuration is in `playout`. */
+        loadedChannel: 0,
     }),
 
     getters: {},
@@ -41,12 +44,26 @@ export const useConfig = defineStore('config', {
             const authStore = useAuth()
 
             if (authStore.isLogin) {
+                const previous = this.channels[this.i]?.id
+
                 await authStore.obtainUuid()
                 await this.getChannelConfig().then(async () => {
-                    this.selectChannel(channelId)
-                    await this.getPlayoutConfig()
-                    await this.getPlayoutOutputs()
-                    await this.getPlayoutCodecs()
+                    this.selectChannel(channelId ?? previous)
+
+                    const id = this.channels[this.i]?.id
+                    const switched = id !== this.loadedChannel || !this.playout?.output
+
+                    // Keep unsaved settings while moving between pages of the same channel.
+                    if (switched || countChanges(this.playout, this.playoutSaved) === 0) {
+                        await this.getPlayoutConfig()
+                        await this.getPlayoutOutputs()
+                    }
+
+                    if (switched) {
+                        await this.getPlayoutCodecs()
+                        this.loadedChannel = id ?? 0
+                    }
+
                     await this.getUserConfig()
                 })
             }

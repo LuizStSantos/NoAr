@@ -1,5 +1,10 @@
 import './assets/css/main.css'
 
+// Date names for every interface language.
+import 'dayjs/locale/de'
+import 'dayjs/locale/pt-br'
+import 'dayjs/locale/ru'
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createHead } from '@unhead/vue/client'

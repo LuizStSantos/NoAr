@@ -11,11 +11,13 @@ use crate::{
         handles,
         models::{GlobalSettings, Role},
     },
-    utils::errors::ServiceError,
+    utils::{config::Mail, errors::ServiceError, mail::send_mail},
 };
 
 #[derive(Debug, Serialize)]
 pub struct GlobalSettingsResponse {
+    /// Folder of the log files, set at installation.
+    logs: String,
     smtp_server: String,
     smtp_user: String,
     smtp_password_set: bool,
@@ -28,6 +30,7 @@ pub struct GlobalSettingsResponse {
 impl From<GlobalSettings> for GlobalSettingsResponse {
     fn from(settings: GlobalSettings) -> Self {
         Self {
+            logs: settings.logs,
             smtp_server: settings.smtp_server,
             smtp_user: settings.smtp_user,
             smtp_password_set: !settings.smtp_password.is_empty(),
@@ -52,6 +55,51 @@ pub struct UpdateGlobalSettings {
     notification_server: String,
     #[serde(default)]
     notification_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TestMail {
+    recipient: String,
+}
+
+/// **Send a test e-mail with the saved SMTP settings**
+pub async fn send_global_test_mail(
+    State(state): State<AppState>,
+    _user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(data): Json<TestMail>,
+) -> Result<&'static str, ServiceError> {
+    ensure_any_authority(&details, &[&Role::GlobalAdmin])?;
+
+    let settings = handles::select_global(&state.pool).await?;
+
+    if settings.smtp_server.is_empty() || settings.smtp_password.is_empty() {
+        return Err(ServiceError::Conflict(
+            "The SMTP server is not configured".to_string(),
+        ));
+    }
+
+    let mail = Mail {
+        show: true,
+        subject: "NoAr test e-mail".to_string(),
+        smtp_server: settings.smtp_server,
+        smtp_starttls: settings.smtp_starttls,
+        smtp_user: settings.smtp_user,
+        smtp_password: settings.smtp_password,
+        smtp_port: settings.smtp_port,
+        recipient: data.recipient,
+        ..Mail::default()
+    };
+
+    send_mail(
+        &mail,
+        "NoAr test e-mail: the server can send mail.".to_string(),
+        false,
+    )
+    .await
+    .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
+
+    Ok("Test sent")
 }
 
 pub async fn get_global(

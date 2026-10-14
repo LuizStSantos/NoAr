@@ -114,3 +114,61 @@ async fn xmltv_guide_and_images_are_public_and_confined_to_image_files_in_storag
         );
     }
 }
+
+#[tokio::test]
+#[serial]
+async fn playlist_programs_name_clips_like_the_guide() {
+    let fixture = security_fixture().await;
+    let storage = fixture.root.join("storage");
+    let token = access_token(&fixture.state, 1).await;
+
+    write(
+        storage.join("Novela/tvshow.nfo"),
+        b"<tvshow><title>Novela</title></tvshow>",
+    )
+    .await;
+    write(storage.join("Novela/cap1.mp4"), b"").await;
+    write(storage.join("ads/spot.mp4"), b"").await;
+
+    let source = |path: &str| storage.join(path).to_string_lossy().to_string();
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            "/api/playlist/1/programs",
+            Some(&token),
+            json!([
+                {"source": source("Novela/cap1.mp4")},
+                {"source": source("ads/spot.mp4"), "ad": true},
+                {"source": source("Novela/cap1.mp4"), "title": "Especial"},
+            ]),
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let programmes: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(programmes[0]["title"], "Novela");
+    assert_eq!(programmes[1]["is_break"], true);
+    assert_eq!(programmes[2]["title"], "Novela");
+    assert_eq!(programmes[2]["sub_title"], "Especial");
+    assert_ne!(programmes[0]["key"], programmes[2]["key"]);
+
+    // Channel 2 is not one of this user's channels.
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            "/api/playlist/2/programs",
+            Some(&token),
+            json!([]),
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}

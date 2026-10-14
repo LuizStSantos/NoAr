@@ -323,3 +323,57 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
         .unwrap();
     assert_eq!(forbidden_response.status(), StatusCode::FORBIDDEN);
 }
+
+#[tokio::test]
+#[serial]
+async fn test_alerts_need_a_server_and_an_admin() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let operator = access_token(&fixture.state, 1).await;
+
+    for body in [
+        json!({"kind": "mail", "recipient": "ops@example.org", "subject": "NoAr"}),
+        json!({"kind": "push", "topic": "noar", "tags": ""}),
+    ] {
+        let response = fixture
+            .app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/playout/config/1/test-alert",
+                Some(&admin),
+                body.clone(),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+        let response = fixture
+            .app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/playout/config/1/test-alert",
+                Some(&operator),
+                body,
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            "/api/global/test-mail",
+            Some(&admin),
+            json!({"recipient": "ops@example.org"}),
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+}

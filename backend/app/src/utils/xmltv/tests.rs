@@ -177,6 +177,53 @@ async fn guide_merges_program_parts_absorbs_ads_and_uses_nfo_metadata() {
 }
 
 #[tokio::test]
+async fn clip_programmes_group_like_the_guide() {
+    let storage = TempDir::new();
+
+    storage.file(
+        "Jornal/tvshow.nfo",
+        "<tvshow><title>Jornal</title></tvshow>",
+    );
+    let block_1 = storage.file("Jornal/bloco1.mp4", "");
+    let block_2 = storage.file("Jornal/bloco2.mp4", "");
+    let ad = storage.file("intervalo/comercial.mp4", "");
+    let filler = storage.file("filler/vinheta.mp4", "");
+    let loose = storage.file("avulso.mp4", "");
+
+    let mut config = PlayoutConfig::default();
+    config.channel.storage = storage.0.clone();
+    config.storage.filler = "filler".to_string();
+    config.storage.filler_path = storage.0.join("filler");
+
+    let query = |path: &std::path::Path, title: Option<&str>, ad: bool| ClipQuery {
+        source: path.to_string_lossy().to_string(),
+        title: title.map(str::to_string),
+        ad,
+    };
+    let programmes = clip_programmes(
+        &config,
+        vec![
+            query(&block_1, None, false),
+            query(&ad, None, true),
+            query(&block_2, None, false),
+            query(&filler, None, false),
+            query(&loose, Some(" Especial "), false),
+        ],
+    )
+    .await;
+
+    let titles: Vec<&str> = programmes.iter().map(|p| p.title.as_str()).collect();
+    let breaks: Vec<bool> = programmes.iter().map(|p| p.is_break).collect();
+
+    assert_eq!(titles[0], "Jornal");
+    assert_eq!(titles[2], "Jornal");
+    assert_eq!(titles[4], "Especial");
+    assert_eq!(breaks, [false, true, false, true, false]);
+    assert_eq!(programmes[0].key, programmes[2].key);
+    assert_ne!(programmes[0].key, programmes[4].key);
+}
+
+#[tokio::test]
 async fn guide_requires_an_initialized_playlist_start() {
     let config = PlayoutConfig::default();
     let channel = XmltvChannel {

@@ -5,7 +5,7 @@ use axum::{
     extract::{Path as AxumPath, State},
 };
 use protect_axum::authorities::AuthDetails;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{
@@ -20,6 +20,8 @@ use crate::{
     utils::{
         config::{OutputMode, PlayoutConfig, get_config},
         errors::ServiceError,
+        mail::send_mail,
+        notification::send_test_notification,
     },
 };
 
@@ -600,6 +602,80 @@ fn validate_loudness(processing: &crate::utils::config::Audio) -> Result<(), Ser
 /// ```
 ///
 /// Response is a JSON object
+/// A test alert with the values of the alerts page, saved or not.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TestAlert {
+    Mail { recipient: String, subject: String },
+    Push { topic: String, tags: String },
+}
+
+/// **Send a test alert**
+///
+/// Sends one e-mail or push notification with the given recipient or topic,
+/// so the alerts page can check them before saving.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/playout/config/1/test-alert -H "Content-Type: application/json" \
+/// -d '{"kind": "push", "topic": "noar-tv", "tags": ""}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn send_test_alert(
+    State(state): State<AppState>,
+    AxumPath(id): AxumPath<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(alert): Json<TestAlert>,
+) -> Result<&'static str, ServiceError> {
+    ensure_any_authority(&details, &[&Role::GlobalAdmin, &Role::ChannelAdmin])?;
+    user.ensure_channel_or_admin(id)?;
+
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
+    let config = manager.config.read().await.clone();
+
+    match alert {
+        TestAlert::Mail { recipient, subject } => {
+            if !config.mail.show {
+                return Err(ServiceError::Conflict(
+                    "No mail server is configured".to_string(),
+                ));
+            }
+
+            let mut mail = config.mail;
+            mail.recipient = recipient;
+            mail.subject = subject;
+
+            send_mail(
+                &mail,
+                "NoAr test e-mail: the alerts of this channel reach you.".to_string(),
+                false,
+            )
+            .await
+            .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
+        }
+        TestAlert::Push { topic, tags } => {
+            if !config.notification.show {
+                return Err(ServiceError::Conflict(
+                    "No notification server is configured".to_string(),
+                ));
+            }
+
+            let mut notification = config.notification;
+            notification.topic = topic;
+            notification.tags = tags;
+
+            send_test_notification(notification, id)
+                .await
+                .map_err(ServiceError::BadRequest)?;
+        }
+    }
+
+    Ok("Test sent")
+}
+
 pub async fn get_playout_outputs(
     State(state): State<AppState>,
     AxumPath(id): AxumPath<i32>,

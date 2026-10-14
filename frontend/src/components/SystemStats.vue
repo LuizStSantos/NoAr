@@ -75,96 +75,72 @@ watch([data], () => {
 })
 </script>
 <template>
-    <div
-        class="grid grid-cols-1 xs:grid-cols-2 border-4 rounded-md border-primary text-left shadow-sm min-w-[320px] md:min-w-182 max-w-240"
-    >
-        <div class="p-4 bg-base-100">
-            <span class="text-3xl">{{ sysStat.system.name }} {{ sysStat.system.version }}</span>
-            <span v-if="sysStat.system.kernel">
-                <br />
-                {{ sysStat.system.kernel }}
-            </span>
-        </div>
-        <div class="p-4 bg-base-100 flex items-center">
-            <span v-if="sysStat.system.ffp_version">
-                <strong>NoAr:</strong>
-                v{{ sysStat.system.ffp_version }}
-            </span>
-        </div>
-        <div class="p-4 border border-primary">
-            <div class="text-xl">{{ t('system.cpu') }}</div>
+    <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+        <section class="card-box p-5 flex flex-col gap-1 sm:col-span-2 xl:col-span-3">
+            <div class="text-lg font-semibold">{{ sysStat.system.name }} {{ sysStat.system.version }}</div>
+            <div class="text-muted text-sm">
+                <span v-if="sysStat.system.kernel">{{ sysStat.system.kernel }}</span>
+                <span v-if="sysStat.system.ffp_version"> · NoAr v{{ sysStat.system.ffp_version }}</span>
+            </div>
+        </section>
+        <section class="card-box p-5 flex flex-col gap-3">
+            <h2 class="m-0 text-base font-semibold">{{ t('system.cpu') }}</h2>
+            <div class="font-mono text-[28px] tabular">{{ sysStat.cpu.usage.toFixed(1) }}%</div>
+            <div class="h-2 rounded bg-base-300 overflow-hidden">
+                <div class="h-full bg-accent" :style="{ width: `${Math.min(100, sysStat.cpu.usage)}%` }" />
+            </div>
+            <div class="text-sm text-muted">
+                {{ t('system.cores') }}: {{ sysStat.cpu.cores }} · {{ t('system.load') }}:
+                <span class="font-mono">{{ sysStat.load.one }} {{ sysStat.load.five }} {{ sysStat.load.fifteen }}</span>
+            </div>
+        </section>
+        <section class="card-box p-5 flex flex-col gap-3">
+            <h2 class="m-0 text-base font-semibold">{{ t('system.memory') }}</h2>
+            <div class="font-mono text-[28px] tabular">{{ fileSize(sysStat.memory.used) }}</div>
+            <div class="h-2 rounded bg-base-300 overflow-hidden">
+                <div
+                    class="h-full bg-accent"
+                    :style="{
+                        width: `${sysStat.memory.total ? (sysStat.memory.used / sysStat.memory.total) * 100 : 0}%`,
+                    }"
+                />
+            </div>
+            <div class="text-sm text-muted">
+                {{ t('system.total') }}: {{ fileSize(sysStat.memory.total) }} · {{ t('system.process') }}:
+                {{ fileSize(sysStat.memory.process) }} · {{ t('system.swap') }}: {{ fileSize(sysStat.swap.used) }}
+            </div>
+        </section>
+        <section class="card-box p-5 flex flex-col gap-3">
+            <h2 class="m-0 text-base font-semibold">
+                {{ t('system.network') }} <span class="text-muted font-normal">{{ sysStat.network?.name }}</span>
+            </h2>
             <div class="grid grid-cols-2 gap-2">
                 <div>
-                    <strong>{{ t('system.cores') }}:</strong> {{ sysStat.cpu.cores }}
+                    <div class="text-xs text-muted">{{ t('system.in') }}</div>
+                    <div class="font-mono text-lg">{{ fileSize(sysStat.network?.current_in) }}/s</div>
+                    <div class="text-xs text-subtle">{{ fileSize(sysStat.network?.total_in) }}</div>
                 </div>
                 <div>
-                    <strong>{{ t('system.usage') }}:</strong> {{ sysStat.cpu.usage.toFixed(2) }}%
+                    <div class="text-xs text-muted">{{ t('system.out') }}</div>
+                    <div class="font-mono text-lg">{{ fileSize(sysStat.network?.current_out) }}/s</div>
+                    <div class="text-xs text-subtle">{{ fileSize(sysStat.network?.total_out) }}</div>
                 </div>
             </div>
-        </div>
-        <div class="p-4 border border-primary">
-            <div class="text-xl">{{ t('system.load') }}</div>
-            <div class="grid grid-cols-3 gap-2">
-                <div>{{ sysStat.load.one }}</div>
-                <div>{{ sysStat.load.five }}</div>
-                <div>{{ sysStat.load.fifteen }}</div>
+        </section>
+        <section v-if="sysStat.storage?.path" class="card-box p-5 flex flex-col gap-3 sm:col-span-2 xl:col-span-3">
+            <h2 class="m-0 text-base font-semibold">{{ t('system.storage') }}</h2>
+            <div class="h-2 rounded bg-base-300 overflow-hidden">
+                <div
+                    class="h-full bg-accent"
+                    :style="{
+                        width: `${sysStat.storage.total ? ((sysStat.storage.total - sysStat.storage.free) / sysStat.storage.total) * 100 : 0}%`,
+                    }"
+                />
             </div>
-        </div>
-        <div class="p-4 border border-primary">
-            <div class="text-xl">{{ t('system.memory') }}</div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <strong>{{ t('system.total') }}:</strong> {{ fileSize(sysStat.memory.total) }}
-                </div>
-                <div>
-                    <strong>{{ t('system.usage') }}:</strong> {{ fileSize(sysStat.memory.used) }}
-                </div>
-                <div>
-                    <strong>{{ t('system.process') }}:</strong> {{ fileSize(sysStat.memory.process) }}
-                </div>
+            <div class="text-sm text-muted">
+                <span class="font-mono">{{ sysStat.storage.path }}</span> · {{ t('system.size') }}:
+                {{ fileSize(sysStat.storage.total) }} · {{ t('system.free') }}: {{ fileSize(sysStat.storage.free) }}
             </div>
-        </div>
-        <div class="p-4 border border-primary">
-            <div class="text-xl">{{ t('system.swap') }}</div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <strong>{{ t('system.total') }}:</strong> {{ fileSize(sysStat.swap.total) }}
-                </div>
-                <div>
-                    <strong>{{ t('system.usage') }}:</strong> {{ fileSize(sysStat.swap.used) }}
-                </div>
-            </div>
-        </div>
-        <div class="p-4 border border-primary">
-            <div class="text-xl">
-                {{ t('system.network') }} <span v-if="sysStat.network" class="fs-6">{{ sysStat.network?.name }}</span>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <strong>{{ t('system.in') }}:</strong> {{ fileSize(sysStat.network?.current_in) }}
-                </div>
-                <div>
-                    <strong>{{ t('system.out') }}:</strong> {{ fileSize(sysStat.network?.current_out) }}
-                </div>
-                <div>{{ fileSize(sysStat.network?.total_in) }}</div>
-                <div>{{ fileSize(sysStat.network?.total_out) }}</div>
-            </div>
-        </div>
-        <div v-if="sysStat.storage?.path" class="p-4 border border-primary">
-            <div class="text-xl">{{ t('system.storage') }}</div>
-
-            <div v-if="sysStat.storage" class="grid grid-cols-2 gap-2">
-                <div v-if="sysStat.storage" class="col-span-2">
-                    <strong>{{ t('system.device') }}:</strong> {{ sysStat.storage?.path }}
-                </div>
-                <div>
-                    <strong>{{ t('system.size') }}:</strong> {{ fileSize(sysStat.storage?.total) }}
-                </div>
-                <div>
-                    <strong>{{ t('system.free') }}:</strong> {{ fileSize(sysStat.storage?.free) }}
-                </div>
-            </div>
-        </div>
-        <div v-else class="p-4 border border-primary" />
+        </section>
     </div>
 </template>

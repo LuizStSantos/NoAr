@@ -1,14 +1,10 @@
 import dayjs from 'dayjs'
-import { isEqual } from 'es-toolkit/predicate'
-import { differenceWith } from 'es-toolkit/array'
-import { omit } from 'es-toolkit/object'
 import utc from 'dayjs/plugin/utc.js'
 import timezone from 'dayjs/plugin/timezone.js'
 
 import { defineStore } from 'pinia'
 
 import { authFetch } from '@/composables/authFetch'
-import { i18n } from '@/i18n'
 import { playlistOperations } from '@/composables/helper'
 import { useAuth } from '@/stores/auth'
 import { useIndex } from '@/stores/index'
@@ -19,11 +15,34 @@ dayjs.extend(timezone)
 
 const { processPlaylist } = playlistOperations()
 
+/** What is saved of a playlist entry, to tell edited lists from saved ones. */
+function snapshot(list: PlaylistItem[]): string {
+    return JSON.stringify(
+        list.map((item) => [
+            item.source,
+            item.in,
+            item.out,
+            item.duration,
+            item.title || '',
+            Boolean(item.ad),
+            item.audio || '',
+            item.custom_filter || '',
+        ]),
+    )
+}
+
 export const usePlaylist = defineStore('playlist', {
     state: () => ({
         playlist: [] as PlaylistItem[],
         isLoading: true,
         listDate: dayjs().format('YYYY-MM-DD'),
+        /** `channel:date` of the list in `playlist`. */
+        loadedKey: '',
+        savedSnapshot: '[]',
+        /** Edits since the list was loaded or saved. */
+        editCount: 0,
+        /** Entries added since the list was loaded or saved. */
+        addedUids: [] as string[],
         progressValue: 0,
         current: {} as PlaylistItem,
         currentIndex: 0,
@@ -32,15 +51,18 @@ export const usePlaylist = defineStore('playlist', {
         ingestListenerName: null as string | null,
         ingestListenerBackend: null as string | null,
         audioLevel: null as AudioLevel | null,
+        loudness: null as LiveLoudnessMetrics | null,
+        uptime: null as number | null,
         elapsedSec: 0,
         shift: 0,
         playoutIsRunning: false,
-        last_channel: 0,
         firstLoad: true,
         scrollToItem: false,
     }),
 
-    getters: {},
+    getters: {
+        dirty: (state) => snapshot(state.playlist) !== state.savedSnapshot,
+    },
     actions: {
         async getPlaylist(date: string) {
             const authStore = useAuth()
@@ -48,44 +70,38 @@ export const usePlaylist = defineStore('playlist', {
             const indexStore = useIndex()
             const channel = configStore.channels[configStore.i]?.id
 
+            this.isLoading = true
+
             await authFetch<Playlist>(`/api/playlist/${channel}?date=${date}`, {
                 method: 'GET',
                 headers: authStore.authHeader,
             })
                 .then((data: Playlist) => {
-                    if (data.program) {
-                        const programData = processPlaylist(date, data.program, false)
-
-                        if (
-                            channel === this.last_channel &&
-                            this.playlist.length > 0 &&
-                            programData.length > 0 &&
-                            (this.playlist[0]?.date === date || configStore.playout.playlist.infinit) &&
-                            differenceWith(this.playlist, programData, (a, b) => {
-                                return isEqual(omit(a, ['uid']), omit(b, ['uid']))
-                            }).length > 0
-                        ) {
-                            indexStore.msgAlert('warning', i18n.t('player.unsavedProgram'), 3)
-                        } else {
-                            this.playlist = programData ?? []
-                        }
-                    }
+                    this.playlist = data.program ? processPlaylist(date, data.program, false) : []
                 })
                 .catch((e) => {
                     if (e.status >= 400) {
                         indexStore.msgAlert('error', e.data, 5)
-                    } else if (
-                        channel === this.last_channel &&
-                        this.playlist.length > 0 &&
-                        this.playlist[0]?.date === date
-                    ) {
-                        indexStore.msgAlert('warning', i18n.t('player.unsavedProgram'), 3)
-                    } else {
-                        this.playlist = []
                     }
+
+                    this.playlist = []
                 })
 
-            this.last_channel = channel ?? 0
+            this.loadedKey = `${channel}:${date}`
+            this.markSaved()
+            this.isLoading = false
+        },
+
+        /** Recalculate start times after the list changed. */
+        touch() {
+            this.editCount += 1
+            this.playlist = processPlaylist(this.listDate, this.playlist, false)
+        },
+
+        markSaved() {
+            this.savedSnapshot = snapshot(this.playlist)
+            this.editCount = 0
+            this.addedUids = []
         },
 
         setStatus(item: PlayoutStatus) {
@@ -98,9 +114,25 @@ export const usePlaylist = defineStore('playlist', {
             this.ingestListenerName = item.ingest ? (item.ingest_listener_name ?? null) : null
             this.ingestListenerBackend = item.ingest ? (item.ingest_listener_backend ?? null) : null
             this.audioLevel = item.audio ?? null
+            this.loudness = item.loudness ?? null
+            this.uptime = item.uptime ?? null
             this.shift = item.shift
 
             this.progressValue = (this.elapsedSec * 100) / this.current.out
+        },
+
+        resetStatus() {
+            this.ingestRuns = false
+            this.ingestListenerId = null
+            this.ingestListenerName = null
+            this.ingestListenerBackend = null
+            this.elapsedSec = 0
+            this.shift = 0
+            this.audioLevel = null
+            this.loudness = null
+            this.uptime = null
+            this.current = {} as PlaylistItem
+            this.currentIndex = 0
         },
     },
 })

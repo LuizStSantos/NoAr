@@ -105,16 +105,37 @@ async fn send_notification(
     fatal: bool,
     message: String,
 ) {
-    let mut url = match reqwest::Url::parse(&config.server) {
-        Ok(url) => url,
-        Err(error) => {
-            error!(target: "notification", "Invalid notification server for channel {channel}: {error}");
-            return;
-        }
-    };
+    if let Err(error) = post_notification(config, channel, level, fatal, message).await {
+        error!(target: "notification", "{error}");
+    }
+}
+
+/// Send one message to a test topic and report what went wrong, so the
+/// settings page can tell the user right away.
+pub async fn send_test_notification(config: Notification, channel: i32) -> Result<(), String> {
+    post_notification(
+        config,
+        channel,
+        Level::Info,
+        false,
+        "NoAr test notification: the alerts of this channel reach you.".to_string(),
+    )
+    .await
+}
+
+async fn post_notification(
+    config: Notification,
+    channel: i32,
+    level: Level,
+    fatal: bool,
+    message: String,
+) -> Result<(), String> {
+    let mut url = reqwest::Url::parse(&config.server)
+        .map_err(|error| format!("Invalid notification server for channel {channel}: {error}"))?;
     let Ok(mut segments) = url.path_segments_mut() else {
-        error!(target: "notification", "Notification server cannot be used as a base URL for channel {channel}");
-        return;
+        return Err(format!(
+            "Notification server cannot be used as a base URL for channel {channel}"
+        ));
     };
     segments.pop_if_empty().push(&config.topic);
     drop(segments);
@@ -129,7 +150,7 @@ async fn send_notification(
         "2"
     };
     let title = format!(
-        "ffplayout channel {channel} {}",
+        "NoAr channel {channel} {}",
         if fatal { "FATAL" } else { level.as_str() }
     );
 
@@ -145,13 +166,12 @@ async fn send_notification(
         request = request.bearer_auth(config.token);
     }
 
-    if let Err(error) = request
+    request
         .send()
         .await
         .and_then(reqwest::Response::error_for_status)
-    {
-        error!(target: "notification", "Failed to send HTTP notification for channel {channel}: {error}");
-    }
+        .map(|_| ())
+        .map_err(|error| format!("Failed to send HTTP notification for channel {channel}: {error}"))
 }
 
 pub struct LogNotifier {
@@ -338,7 +358,7 @@ mod tests {
         let request = receiver.await.unwrap().to_ascii_lowercase();
         assert!(request.starts_with("post /base/alerts http/1.1\r\n"));
         assert!(request.contains("authorization: bearer secret\r\n"));
-        assert!(request.contains("title: ffplayout channel 7 error\r\n"));
+        assert!(request.contains("title: NoAr channel 7 error\r\n"));
         assert!(request.contains("priority: 4\r\n"));
         assert!(request.contains("tags: warning,broadcast\r\n"));
         assert!(request.ends_with("test message"));

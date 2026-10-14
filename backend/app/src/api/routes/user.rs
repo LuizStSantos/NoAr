@@ -115,6 +115,15 @@ pub async fn update_user(
     // their own account must not be able to grant themselves access to other
     // channels. Only a global admin may change `channel_ids`.
     let update_channels = user.is_global_admin();
+    // A global admin can change the role of other users, never their own.
+    let role_id = data
+        .role_id
+        .filter(|_| user.is_global_admin() && user.id != id);
+
+    if role_id.is_some_and(|role| !(1..=3).contains(&role)) {
+        return Err(ServiceError::BadRequest("Unknown role".to_string()));
+    }
+
     let channel_ids = data.channel_ids.clone().unwrap_or_default();
     let two_factor = user.is_global_admin().then_some(data.two_factor);
     let mail = data.mail.clone();
@@ -142,6 +151,10 @@ pub async fn update_user(
         update_channels.then_some(channel_ids),
     )
     .await?;
+
+    if let Some(role_id) = role_id {
+        handles::update_user_role(&state.pool, id, role_id).await?;
+    }
 
     Ok("Update Success")
 }

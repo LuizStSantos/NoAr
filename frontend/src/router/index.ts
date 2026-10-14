@@ -6,6 +6,9 @@ import LoginView from '@/views/LoginView.vue'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 
+const ALL = ['global_admin', 'channel_admin', 'user']
+const ADMINS = ['global_admin', 'channel_admin']
+
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
@@ -19,7 +22,7 @@ const router = createRouter({
             path: '/',
             name: 'home',
             component: HomeView,
-            meta: { showHeader: false },
+            meta: { showHeader: true },
         },
         {
             path: '/verification',
@@ -62,42 +65,72 @@ const router = createRouter({
             name: 'configure',
             component: () => import('@/views/ConfigureView.vue'),
             meta: { showHeader: true },
-            redirect: { name: 'configure-channel' },
+            redirect: (to) => ({ path: '/configure/general', query: to.query }),
             children: [
                 {
-                    path: 'channel',
-                    name: 'configure-channel',
-                    component: () => import('@/components/config/ConfigChannel.vue'),
-                    meta: { showHeader: true, roles: ['global_admin', 'channel_admin', 'user'] },
+                    path: 'general',
+                    name: 'settings-general',
+                    component: () => import('@/components/settings/SettingsGeneral.vue'),
+                    meta: { showHeader: true, roles: ALL },
                 },
                 {
-                    path: 'playout',
-                    name: 'configure-playout',
-                    component: () => import('@/components/config/ConfigPlayout.vue'),
-                    meta: { showHeader: true, roles: ['global_admin', 'channel_admin'] },
+                    path: 'output',
+                    name: 'settings-output',
+                    component: () => import('@/components/settings/SettingsOutput.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'ingest',
+                    name: 'settings-ingest',
+                    component: () => import('@/components/settings/SettingsIngest.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'playlist',
+                    name: 'settings-playlist',
+                    component: () => import('@/components/settings/SettingsPlaylist.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'logo',
+                    name: 'settings-logo',
+                    component: () => import('@/components/settings/SettingsLogo.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
                 },
                 {
                     path: 'audio',
-                    name: 'configure-audio',
-                    component: () => import('@/components/config/ConfigAudio.vue'),
-                    meta: { showHeader: true, roles: ['global_admin', 'channel_admin'] },
+                    name: 'settings-audio',
+                    component: () => import('@/components/settings/SettingsAudio.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
                 },
                 {
                     path: 'recording',
-                    name: 'configure-recording',
-                    component: () => import('@/components/config/ConfigRecording.vue'),
-                    meta: { showHeader: true, roles: ['global_admin', 'channel_admin'] },
+                    name: 'settings-recording',
+                    component: () => import('@/components/settings/SettingsRecording.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
                 },
                 {
-                    path: 'user',
-                    name: 'configure-user',
-                    component: () => import('@/components/config/ConfigUser.vue'),
-                    meta: { showHeader: true, roles: ['global_admin', 'channel_admin', 'user'] },
+                    path: 'alerts',
+                    name: 'settings-alerts',
+                    component: () => import('@/components/settings/SettingsAlerts.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
                 },
                 {
-                    path: 'global',
-                    name: 'configure-global',
-                    component: () => import('@/components/config/ConfigGlobal.vue'),
+                    path: 'advanced',
+                    name: 'settings-advanced',
+                    component: () => import('@/components/settings/SettingsAdvanced.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'users',
+                    name: 'settings-users',
+                    component: () => import('@/components/settings/SettingsUsers.vue'),
+                    meta: { showHeader: true, roles: ALL },
+                },
+                {
+                    path: 'server',
+                    name: 'settings-server',
+                    component: () => import('@/components/settings/SettingsServer.vue'),
                     meta: { showHeader: true, roles: ['global_admin'] },
                 },
             ],
@@ -149,7 +182,7 @@ router.beforeEach(async (to) => {
     const allowedRoles = to.meta.roles as string[] | undefined
 
     if (allowedRoles && !allowedRoles.includes(auth.role)) {
-        return { name: 'configure-channel' }
+        return { name: 'settings-general', query: to.query }
     }
 
     return

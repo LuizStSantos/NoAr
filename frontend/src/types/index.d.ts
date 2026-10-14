@@ -107,9 +107,14 @@ declare global {
         playlists: string
         storage: string
         timezone?: string
+        active?: boolean
+        last_date?: string | null
+        time_shift?: number
     }
 
     interface GlobalSettings {
+        /** Folder of the log files, set at installation. */
+        logs?: string
         smtp_server: string
         smtp_user: string
         smtp_password_set: boolean
@@ -159,6 +164,7 @@ declare global {
         in: number
         out: number
         ad?: boolean
+        custom_filter?: string
         overtime?: boolean
     }
 
@@ -230,7 +236,17 @@ declare global {
         mode: string
         elapsed: number
         shift: number
+        /** Seconds since the playout was started. */
+        uptime?: number | null
         title?: string
+    }
+
+    /** The guide programme a playlist clip belongs to. */
+    interface ClipProgramme {
+        key: string
+        title: string
+        sub_title: string | null
+        is_break: boolean
     }
 
     interface AudioLevel {

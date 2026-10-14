@@ -3,7 +3,7 @@ use std::{
     path::Path,
     sync::{
         Arc, Mutex as StdMutex, PoisonError,
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering},
     },
 };
 
@@ -90,6 +90,8 @@ pub struct ChannelManager {
     pub ingest: Arc<Mutex<Option<Child>>>,
     pub ingest_reader: Arc<Mutex<Option<ChildStdout>>>,
     pub is_alive: Arc<AtomicBool>,
+    /// Unix time the playout was started; 0 while it is stopped.
+    pub running_since: Arc<AtomicI64>,
     pub is_processing: Arc<AtomicBool>,
     pub filter_chain: Option<Arc<Mutex<Vec<String>>>>,
     pub current_date: Arc<Mutex<String>>,
@@ -165,6 +167,7 @@ impl ChannelManager {
             id: channel.id,
             db_pool,
             is_alive: Arc::new(AtomicBool::new(false)),
+            running_since: Arc::new(AtomicI64::new(0)),
             config: Arc::new(RwLock::new(config)),
             running_config: Arc::new(StdMutex::new(None)),
             channel: Arc::new(Mutex::new(channel)),
@@ -276,6 +279,8 @@ impl ChannelManager {
             return Err(error.into());
         }
 
+        self.mark_started();
+
         self.abort_supervisor().await;
         self.spawn_dev_metrics_snapshot().await;
 
@@ -303,6 +308,8 @@ impl ChannelManager {
             self.is_alive.store(false, Ordering::SeqCst);
             return Err(error.into());
         }
+
+        self.mark_started();
 
         self.list_init.store(true, Ordering::SeqCst);
 
@@ -336,6 +343,19 @@ impl ChannelManager {
         }
 
         Ok(())
+    }
+
+    fn mark_started(&self) {
+        self.running_since
+            .store(chrono::Utc::now().timestamp(), Ordering::SeqCst);
+    }
+
+    /// Seconds since the playout was started, while it runs.
+    pub fn uptime(&self) -> Option<i64> {
+        let since = self.running_since.load(Ordering::SeqCst);
+
+        (since > 0 && self.is_alive.load(Ordering::SeqCst))
+            .then(|| (chrono::Utc::now().timestamp() - since).max(0))
     }
 
     fn next_task_generation(&self) -> usize {
@@ -585,6 +605,7 @@ impl ChannelManager {
         }
 
         self.is_alive.store(false, Ordering::SeqCst);
+        self.running_since.store(0, Ordering::SeqCst);
         self.playback_control.lock().await.skip_current();
         self.stop_task(
             "task_runner",

@@ -12,7 +12,7 @@ use chrono_tz::Tz;
 use log::*;
 use path_clean::PathClean;
 use quick_xml::escape::escape;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::fs;
 
 pub mod library;
@@ -226,6 +226,74 @@ pub async fn guide_blocks(
             }
         })
         .collect())
+}
+
+/// A playlist clip the player wants to place in the guide.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ClipQuery {
+    pub source: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub ad: bool,
+}
+
+/// The guide programme a playlist clip belongs to.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ClipProgramme {
+    /// Consecutive clips with the same key form one guide entry.
+    pub key: String,
+    pub title: String,
+    pub sub_title: Option<String>,
+    /// Ads and filler, which extend the programme they interrupt.
+    pub is_break: bool,
+}
+
+/// Program names of playlist clips, as the guide will show them. The player
+/// uses this to group a playlist, including changes that are not saved yet.
+pub async fn clip_programmes(config: &PlayoutConfig, clips: Vec<ClipQuery>) -> Vec<ClipProgramme> {
+    let mut library = NfoLibrary::new(&config.channel.storage);
+    let filler = filler_path(config);
+    let mut programmes = Vec::with_capacity(clips.len());
+
+    for query in clips {
+        let is_break = query.ad
+            || filler
+                .as_deref()
+                .is_some_and(|filler| Path::new(&query.source).clean().starts_with(filler));
+        let clip = library.lookup(&query.source).await;
+        let playlist_title = query
+            .title
+            .map(|title| title.trim().to_string())
+            .filter(|title| !title.is_empty());
+        let key = format!(
+            "{}|{}|{}",
+            clip.program_key.display(),
+            clip.episode_key
+                .as_ref()
+                .map(|key| key.display().to_string())
+                .unwrap_or_default(),
+            playlist_title.as_deref().unwrap_or_default()
+        );
+        let programme = Programme {
+            start: NaiveDateTime::default(),
+            stop: NaiveDateTime::default(),
+            source: query.source,
+            playlist_title,
+            clip,
+            scheduled: false,
+        };
+        let (title, sub_title) = programme.titles();
+
+        programmes.push(ClipProgramme {
+            key,
+            title,
+            sub_title,
+            is_break,
+        });
+    }
+
+    programmes
 }
 
 /// Place every playlist entry between `from` and `to` on the timeline.

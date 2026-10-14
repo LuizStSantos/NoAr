@@ -42,7 +42,8 @@ export async function authFetch<T = unknown>(
     const type = responseType ?? defaultResponseType(response)
 
     if (!response.ok) {
-        throw new AuthFetchError(response, await readResponse(response, type))
+        // Error bodies follow their own content type, whatever the caller expects on success.
+        throw new AuthFetchError(response, await readResponse(response, defaultResponseType(response)))
     }
     if (response.status === 204) {
         return undefined as T

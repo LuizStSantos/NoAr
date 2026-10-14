@@ -15,6 +15,7 @@ use crate::{
     utils::{
         errors::ServiceError,
         playlist::{delete_playlist, generate_playlist, read_playlist, write_playlist},
+        xmltv::{ClipProgramme, ClipQuery, clip_programmes},
     },
 };
 
@@ -51,6 +52,39 @@ pub async fn get_playlist(
         Ok(playlist) => Ok(Json(playlist)),
         Err(e) => Err(e),
     }
+}
+
+/// **Program names of playlist clips**
+///
+/// Tells which guide programme each clip belongs to, so the player can group
+/// a playlist the way the XMLTV guide shows it, unsaved changes included.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/playlist/1/programs -H 'Content-Type: application/json'
+/// -d '[{"source": "/data/media/1/Show/ep1.mp4", "ad": false}]' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn playlist_programs(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(clips): Json<Vec<ClipQuery>>,
+) -> Result<Json<Vec<ClipProgramme>>, ServiceError> {
+    ensure_any_authority(
+        &details,
+        &[&Role::GlobalAdmin, &Role::ChannelAdmin, &Role::User],
+    )?;
+    user.ensure_channel_or_admin(id)?;
+
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
+
+    let config = manager.config.read().await.clone();
+
+    Ok(Json(clip_programmes(&config, clips).await))
 }
 
 /// **Save playlist**

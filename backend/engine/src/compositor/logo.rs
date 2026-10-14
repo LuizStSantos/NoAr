@@ -225,6 +225,19 @@ fn eval_position_expr(expr: &str, main: u32, overlay: u32) -> Result<i64> {
         let (sign, part) = part
             .strip_prefix('-')
             .map_or((1_i64, part), |part| (-1_i64, part));
+        // A term may be divided by a whole number, so `M/2-O/2` centers the logo.
+        let (part, divisor) = match part.split_once('/') {
+            Some((part, divisor)) => (
+                part.trim(),
+                divisor
+                    .trim()
+                    .parse::<i64>()
+                    .ok()
+                    .filter(|divisor| *divisor > 0)
+                    .ok_or_else(|| anyhow!("unsupported logo position expression {expr:?}"))?,
+            ),
+            None => (part, 1),
+        };
         let value = match part {
             "M" => i64::from(main),
             "O" => i64::from(overlay),
@@ -232,7 +245,7 @@ fn eval_position_expr(expr: &str, main: u32, overlay: u32) -> Result<i64> {
                 .parse::<i64>()
                 .map_err(|_| anyhow!("unsupported logo position expression {expr:?}"))?,
         };
-        total += sign * value;
+        total += sign * value / divisor;
     }
 
     Ok(total)
@@ -244,7 +257,20 @@ pub fn blend_logo(target: &mut frame::Video, logo: &LogoOverlay, opacity_factor:
 
 #[cfg(test)]
 mod tests {
-    use super::logo_dimensions;
+    use super::{logo_dimensions, logo_position};
+
+    #[test]
+    fn logo_position_accepts_corners_and_centers() {
+        assert_eq!(
+            logo_position("W-w-12:12", 1920, 1080, 200, 100).unwrap(),
+            (1708, 12)
+        );
+        assert_eq!(
+            logo_position("W/2-w/2:H-h-24", 1920, 1080, 200, 100).unwrap(),
+            (860, 956)
+        );
+        assert!(logo_position("W/0:12", 1920, 1080, 200, 100).is_err());
+    }
 
     #[test]
     fn logo_scale_accepts_output_percentages() {

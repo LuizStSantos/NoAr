@@ -317,8 +317,7 @@ export default {
         publicPath: 'Public (HLS) Path',
         playlistPath: 'Playlist Path',
         storagePath: 'Storage Path',
-        sharedStorage:
-            'NoAr работает внутри контейнера, используйте один и тот же корень хранилища для всех каналов!',
+        sharedStorage: 'NoAr работает внутри контейнера, используйте один и тот же корень хранилища для всех каналов!',
         timezone: 'Timezone',
     },
     setup: {

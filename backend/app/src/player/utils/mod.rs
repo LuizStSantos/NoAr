@@ -187,6 +187,7 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
         json!((played_time * 1000.0).round() / 1000.0),
     );
     data_map.insert("media".to_string(), get_media_map(media));
+    data_map.insert("uptime".to_string(), json!(manager.uptime()));
     if let Ok(audio_level) = manager.audio_level.lock()
         && let Some(audio_level) = *audio_level
     {

@@ -4,6 +4,7 @@ import { RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
 
+import { usePlayoutStatusStream } from '@/composables/playoutStatus'
 import { useIndex } from '@/stores/index'
 
 import AlertMsg from '@/components/utils/AlertMsg.vue'
@@ -12,6 +13,8 @@ import HeaderMenu from '@/components/HeaderMenu.vue'
 const { locale } = useI18n()
 const indexStore = useIndex()
 const route = useRoute()
+
+usePlayoutStatusStream()
 
 const language = localStorage.getItem('language')
 
@@ -47,15 +50,14 @@ useHead({
 })
 
 const showHeader = computed(() => route.meta.showHeader === true)
-const mainClass = computed(() => (showHeader.value ? 'h-[calc(100%-52px)]' : 'h-full'))
 </script>
 <template>
     <div class="min-h-screen bg-base-200">
-        <div v-if="showHeader" class="sticky top-0 z-10">
+        <div v-if="showHeader" class="sticky top-0 z-30">
             <HeaderMenu />
         </div>
 
-        <main :class="mainClass">
+        <main>
             <RouterView />
         </main>
 
