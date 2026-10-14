@@ -8,16 +8,10 @@ use std::{
 #[cfg(not(debug_assertions))]
 use build_print::info;
 
-#[cfg(all(not(debug_assertions), windows))]
-const NPM_COMMAND: &str = "npm.cmd";
-
-#[cfg(all(not(debug_assertions), not(windows)))]
+#[cfg(not(debug_assertions))]
 const NPM_COMMAND: &str = "npm";
 
-#[cfg(all(not(debug_assertions), windows))]
-const RUN_P_BIN: &str = "../../node_modules/.bin/run-p.cmd";
-
-#[cfg(all(not(debug_assertions), not(windows)))]
+#[cfg(not(debug_assertions))]
 const RUN_P_BIN: &str = "../../node_modules/.bin/run-p";
 
 #[cfg(not(debug_assertions))]
@@ -44,23 +38,7 @@ fn run_npm(args: &[&str]) {
     }
 }
 
-#[cfg(windows)]
-fn embed_windows_resources() {
-    const ICON_PATH: &str = "../../frontend/public/favicon.ico";
-
-    println!("cargo:rerun-if-changed={ICON_PATH}");
-    winresource::WindowsResource::new()
-        .set_icon(ICON_PATH)
-        .compile()
-        .expect("failed to embed Windows executable resources");
-}
-
-#[cfg(not(windows))]
-fn embed_windows_resources() {}
-
 fn main() {
-    embed_windows_resources();
-
     #[cfg(not(debug_assertions))]
     {
         // These files live outside the Cargo package. Watch the frontend inputs

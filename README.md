@@ -16,7 +16,15 @@ Baecker and keeps its engine, web interface and API, adding:
   time over whatever is on air, either waiting for the current clip to end or
   interrupting it and resuming at the exact point, without dropping the
   output ([docs](docs/scheduler.md)).
-- **Docker-first install**: one command, then a setup page in the browser.
+- **New Player**: live preview, a clock with what is on air and what comes
+  next, transport controls, and the day's playlist grouped by program the way
+  the guide names it, with drag and drop from the library and clip editing in
+  place.
+- **New settings**: eleven pages in a side menu, with search, unsaved-change
+  markers and one save bar.
+- **Docker-only install**: one command, then a setup page in the browser.
+
+![Player](docs/images/player.png)
 
 ## Install with Docker
 
@@ -59,16 +67,17 @@ Inherited from ffplayout:
 
 - dynamic daily playlists with a custom day start, editable while playing
 - folder mode, fillers for missing clips, playlist generator with templates
-- outputs: stream (RTMP, SRT, UDP), HLS and desktop
+- outputs: stream (RTMP, SRT, UDP) and HLS with adaptive renditions
 - RTMP and SRT live ingest that takes over without dropping the output
-- logo and live text overlay, loudness control
+- logo overlay, WebVTT subtitles, loudness normalization, recording
 - import playlists from text or m3u files
 - web interface and REST API, multiple channels
 - mail and HTTP push notifications for log alerts
 
-The documentation in [docs](docs/README.md) still describes native installs
-with the original ffplayout paths; with Docker you only need this README and
-[docs/docker.md](docs/docker.md).
+![Settings](docs/images/settings.png)
+
+Each feature has a page in [docs](docs/README.md); for the install you only
+need this README and [docs/docker.md](docs/docker.md).
 
 ## Development
 

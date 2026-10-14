@@ -2,15 +2,11 @@
 .github
 .vscode
 .vite
-.dev
 target
 node_modules
 frontend/dist
 data
 docs
-debian
-docker
-scripts
 tests_assets
 *.db
 *.db-*

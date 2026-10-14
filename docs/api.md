@@ -84,6 +84,7 @@ listed authenticated endpoints also enforce the channel assignment where an
 | `GET` | `/api/channels` | `GA, CA, U` | List channels available to the current user. |
 | `GET` | `/api/global` | `GA` | Read editable global SMTP and HTTP push settings. Secrets are represented only by `smtp_password_set` and `notification_token_set`. |
 | `PUT` | `/api/global` | `GA` | Update SMTP and HTTP push settings. Omit a secret or send an empty value to retain its current value. |
+| `POST` | `/api/global/test-mail` | `GA` | `{ "recipient": "..." }`. Sends a test e-mail with the saved SMTP settings. |
 
 ## Playout configuration and capabilities
 
@@ -93,10 +94,10 @@ listed authenticated endpoints also enforce the channel assignment where an
 | `PUT` | `/api/playout/config/{id}` | `GA, CA` | Replace the complete `PlayoutConfig`. Use the response from `GET` as the request shape. The response contains `requires_restart`; mail, notification, and volume changes are runtime-safe and return `false`. |
 | `GET` | `/api/playout/outputs/{id}` | `GA, CA, U` | List configured outputs for the channel. |
 | `GET` | `/api/playout/codecs/{id}` | `GA, CA, U` | List supported codecs for HLS, RTMP, SRT, UDP, and custom outputs, including compatible hardware encoders and their curated encoder-setting schema. |
-| `GET` | `/api/text/fonts` | `GA, CA, U` | List available font families. |
+| `POST` | `/api/playout/config/{id}/test-alert` | `GA, CA` | `{ "kind": "mail", "recipient": "...", "subject": "..." }` or `{ "kind": "push", "topic": "...", "tags": "..." }`. Sends one test alert with these values, saved or not. `409` when no mail or push server is configured. |
 
 `PUT /api/playout/config/{id}` validates output mode, codecs, HLS subtitle
-settings, text preset references, and volume before persisting the change.
+settings, and volume before persisting the change.
 Video settings are submitted as `output.video_options`: a string map whose
 allowed keys, values, numeric bounds, defaults, and visibility conditions are
 provided with the selected video codec by `GET /api/playout/codecs/{id}`.
@@ -135,7 +136,6 @@ Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
-| `POST` | `/api/control/{id}/text` | `GA, CA, U` | A `TextPreset` object. Send an empty `text` with `use_filename: false` to clear the overlay. |
 | `POST` | `/api/control/{id}/playout` | `GA, CA, U` | `{ "control": "back" \| "next" \| "reset" }` |
 | `PUT` | `/api/control/{id}/audio` | `GA, CA` | `{ "volume": 0.0 }`, from `0.0` through `1.5`. |
 | `GET` | `/api/control/{id}/media/current` | `GA, CA, U` | Read the current media and playout state. |
@@ -162,6 +162,7 @@ curl -X POST http://127.0.0.1:8787/api/control/1/process \
 | `GET` | `/api/playlist/{id}?date=YYYY-MM-DD` | `GA, CA, U` | Read a playlist. |
 | `POST` | `/api/playlist/{id}` | `GA, CA, U` | Save a complete playlist JSON document. |
 | `POST` | `/api/playlist/{id}/generate/{date}` | `GA, CA, U` | Generate and save a playlist. Body is optional: `{ "paths": ["..."], "shuffle": true, "template": { ... } }`. |
+| `POST` | `/api/playlist/{id}/programs` | `GA, CA, U` | Body: `[{ "source": "...", "title": null, "ad": false }]`. Returns, per clip, the guide programme it belongs to: `{ "key", "title", "sub_title", "is_break" }`. Consecutive clips with the same `key` form one guide entry; breaks extend the entry before them. |
 | `DELETE` | `/api/playlist/{id}/{date}` | `GA, CA, U` | Delete a playlist. |
 | `GET` | `/api/program/{id}` | `GA, CA, U` | Read programme items. Optional `start_after` and `start_before` query parameters accept local ISO date-times. |
 | `GET` | `/api/log/{id}` | `GA, CA, U` | Read a log. Optional query parameters: `date`, `timezone`, `download`. |
@@ -208,20 +209,16 @@ curl 'http://127.0.0.1:8787/file/1/folder/file.mp4?access=<ACCESS_TOKEN>'
 `GET /file/{id}/{filename}` also accepts a normal bearer token and supports a
 single HTTP `Range` request for seeking.
 
-## Text presets and users
+## Users
 
 | Method | Endpoint | Access | Description |
 | --- | --- | --- | --- |
-| `GET` | `/api/presets/{id}` | `GA, CA, U` | List presets for a channel. |
-| `POST` | `/api/presets/{id}` | `GA, CA, U` | Create a `TextPreset`. The channel is taken from the path. |
-| `PUT` | `/api/presets/{channel}/{preset}` | `GA, CA, U` | Update a `TextPreset`. |
-| `DELETE` | `/api/presets/{channel}/{preset}` | `GA, CA, U` | Delete a preset. |
 | `GET` | `/api/user` | `GA, CA, U` | Read the current user. |
-| `PUT` | `/api/user/{id}` | Self or `GA` | Update a user. Only a global admin can change channel assignments or two-factor settings. |
+| `PUT` | `/api/user/{id}` | Self or `GA` | Update a user. Only a global admin can change channel assignments, two-factor settings or the `role_id` (1 global admin, 2 channel admin, 3 operator) of another user. |
 | `GET` | `/api/user/{id}` | `GA` | Read a user by ID. |
 | `DELETE` | `/api/user/{id}` | `GA` | Delete a user. |
 | `POST` | `/api/user` | `GA` | Create a user. |
-| `GET` | `/api/users` | `GA` | List users. |
+| `GET` | `/api/users` | `GA` | List users with mail, role, channels and two-factor setting. |
 
 ## Server-sent events
 

@@ -11,7 +11,8 @@ edition.workspace = true
 workspace = true
 
 [features]
-default = ["desktop"]
+# The server needs no window or local audio; NoAr builds without them.
+default = []
 desktop-base = ["dep:cpal", "dep:winit"]
 desktop-gpu = ["desktop-base", "dep:bytemuck", "dep:pollster", "dep:wgpu"]
 desktop = ["desktop-gpu"]

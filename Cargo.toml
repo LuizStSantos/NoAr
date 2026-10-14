@@ -7,7 +7,7 @@ description = "24/7 playout based on rust and ffmpeg"
 readme = "README.md"
 version = "2.6.1-rc.1"
 license = "GPL-3.0"
-repository = "https://github.com/ffplayout/ffplayout"
+repository = "https://github.com/LuizStSantos/NoAr"
 authors = ["Jonathan Baecker <jonbae77@gmail.com>"]
 edition = "2024"
 

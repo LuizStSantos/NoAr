@@ -1,33 +1,9 @@
-**ffplayout Documentation**
+**NoAr Documentation**
 ================
 
-### **[For Developer](/docs/developer.md)**
+### **[Docker](/docs/docker.md)**
 
-Learn how to set up a developer environment and build native packages.
-
-### **[Install](/docs/install.md)**
-
-How to install ffplayout with API and frontend.
-
-### **[Folder Mode](/docs/folder_mode.md)**
-
-Learn more about playing the content of a folder.
-
-### **[Live Ingest](/docs/live_ingest.md)**
-
-Using live ingest to inject a live stream.
-
-### **[Output Modes](/docs/output.md)**
-
-The different output modes.
-
-### **[Closed Captions](/docs/closed_captions.md)**
-
-Use WebVTT sidecar files as HLS subtitles.
-
-### **[Playlist Generation](/docs/playlist_gen.md)**
-
-Generate playlists based on template.
+Install, data folders, ports and updates. Docker is the only supported install.
 
 ### **[Scheduler](/docs/scheduler.md)**
 
@@ -36,6 +12,26 @@ Breaks, clips and lives at a set time over the running programme.
 ### **[XMLTV / EPG](/docs/xmltv.md)**
 
 Program guide built from the playlists and the `.nfo` files in each program folder, with artwork.
+
+### **[Folder Mode](/docs/folder_mode.md)**
+
+Play the content of a folder instead of daily playlists.
+
+### **[Live Ingest](/docs/live_ingest.md)**
+
+Receivers that put a live stream on air without dropping the output.
+
+### **[Output Modes](/docs/output.md)**
+
+Stream and HLS outputs.
+
+### **[Closed Captions](/docs/closed_captions.md)**
+
+Use WebVTT sidecar files as HLS subtitles.
+
+### **[Playlist Generation](/docs/playlist_gen.md)**
+
+Generate playlists based on a template.
 
 ### **[Remote Sources](/docs/remote_source.md)**
 
@@ -49,6 +45,10 @@ Run a script or binary when a clip starts.
 
 Configure rate-limited log alerts for topic-based HTTP push services.
 
-### **[ffplayout API](/docs/api.md)**
+### **[API](/docs/api.md)**
 
 Control the engine, playlist and config with the API.
+
+### **[Development](/docs/developer.md)**
+
+Build and run NoAr from source while working on it.

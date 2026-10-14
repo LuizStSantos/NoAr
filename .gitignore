@@ -33,6 +33,7 @@ template.json
 
 # frontend stuff
 node_modules
+.vite
 .nuxt
 .nitro
 .cache

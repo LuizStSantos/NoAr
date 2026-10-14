@@ -1,40 +1,24 @@
-## Build ffplayout
+## Build NoAr
 
-For compiling, use the latest stable Rust version from [rustup](https://rustup.rs/).
+NoAr ships as a Docker image (see [docker.md](docker.md)); build from source
+only to work on it. Use the latest stable Rust version from
+[rustup](https://rustup.rs/) on Linux.
 
 ### FFmpeg libraries
 
-ffplayout links against FFmpeg through `ffmpeg-next`, so local builds need the FFmpeg runtime tools and development libraries. FFmpeg 7.0+ is required.
+NoAr links against FFmpeg through `ffmpeg-next`, so local builds need the FFmpeg runtime tools and development libraries. FFmpeg 7.0+ is required.
 
 On Debian/Ubuntu based systems install:
 
 ```bash
 sudo apt install \
     ffmpeg \
-    libasound2-dev \
     libavcodec-dev \
     libavformat-dev \
     libavutil-dev \
     libswresample-dev \
     libswscale-dev \
     pkg-config
-```
-
-On macOS install:
-
-```bash
-brew install ffmpeg pkg-config
-```
-
-On Windows, download and extract the
-[BtbN FFmpeg 9.0 GPL shared build](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n9.0-latest-win64-gpl-shared-9.0.zip).
-Point `ffmpeg-sys-next` to the extracted directory and make the DLLs available
-while compiling:
-
-```powershell
-$env:FFMPEG_DIR = "C:\path\to\ffmpeg-n9.0-latest-win64-gpl-shared-9.0"
-$env:PATH = "$env:FFMPEG_DIR\bin;$env:PATH"
-cargo build
 ```
 
 When compiling against a manually installed FFmpeg, make sure `pkg-config` can find the `.pc` files, for example:
@@ -54,8 +38,7 @@ development files for the same libsrt installation as your FFmpeg build.
 If libsrt or its `srt.pc` file is unavailable, ffplayout still builds and SRT
 ingest can still work through an FFmpeg build that supports it. In that case,
 libsrt's native messages may appear directly on stderr instead of in the
-ffplayout logs. The provided static Docker build installs `srt.pc` alongside
-libsrt, so its logger integration is enabled automatically.
+NoAr logs.
 
 `libavfilter` and `libavdevice` are optional and disabled by default to reduce
 the runtime and static-build footprint. ffplayout currently uses its own media
@@ -64,13 +47,10 @@ such as DeckLink are unavailable in the normal build.
 
 Enable them independently with the `ffmpeg-filter` or `ffmpeg-device` Cargo
 feature. Local builds additionally need `libavfilter-dev` or `libavdevice-dev`.
-The static-build script maps those features to FFmpeg automatically, for
-example:
 
-```bash
-CARGO_FEATURES=desktop,embed_frontend,ffmpeg-filter,ffmpeg-device \\
-    ./scripts/build.sh debian-static
-```
+The engine can also open a local desktop window (`desktop` feature, needs
+`libasound2-dev` and a graphical session). The Docker image is built without
+it, and the web interface does not offer it.
 
 ## Processing Benchmark
 
@@ -101,37 +81,6 @@ immediately before encoding. The process therefore needs access to the render
 device, normally through the `render` group, in addition to a matching GPU
 driver.
 
-### Create Debian DEB and RHEL RPM Packages
-
-Install the packaging tools:
-
-- `cargo install cargo-deb`
-- `cargo install cargo-generate-rpm`
-
-Build packages on the target distribution and architecture. `ffmpeg-next` links
-against the system FFmpeg libraries, so cross-compilation also requires a target
-sysroot containing matching FFmpeg development libraries and `pkg-config`
-metadata. Rust's `--target` option alone is not sufficient.
-
-For Debian-based systems:
-
-```bash
-cargo build --release -p ffplayout
-cargo deb --no-build -p ffplayout
-```
-
-For RHEL-based systems, build the release binary first, then generate the RPM
-from `backend/app`:
-
-```bash
-cargo build --release -p ffplayout
-cd backend/app
-cargo generate-rpm
-```
-
-For cross-compiled packages, provide a complete, compatible target FFmpeg
-environment and verify the resulting binary on the target system.
-
 ## Generate types for Frontend
 The frontend uses TypeScript, to generate types for the rust structs run: `cargo test`.
 
@@ -140,7 +89,7 @@ The generated types are written next to the frontend sources that import them.
 ## Database migrations on `main`
 
 Database migrations added on the `main` branch are considered unstable until
-the next ffplayout version containing them is released. Before that release,
+the next NoAr version containing them is released. Before that release,
 an existing migration may still be changed, reordered, or combined with
 another migration.
 
@@ -154,17 +103,10 @@ schema changes require a new migration.
 
 ## Setup Frontend
 
-Make sure to install the dependencies:
+Install the dependencies:
 
 ```bash
-# yarn
-yarn install
-
-# npm
-npm install
-
-# pnpm
-pnpm install --shamefully-hoist
+npm ci
 ```
 
 ## Development Server
@@ -183,11 +125,10 @@ Build the application for production:
 npm run build
 ```
 
-Check out the [deployment documentation](https://vuejs.org/guide/quick-start.html) for more information.
+## Run NoAr in development mode
 
-## Run ffplayout in development mode
-
-1. run backend: `cargo run -- -l 127.0.0.1:8787`
+1. run backend: `cargo run -- -l 127.0.0.1:8787` (set `DB` and the
+   `NOAR_SETUP_*` paths to a folder of your own, as the Dockerfile does)
 2. in a second terminal:
     1. install packages: `npm ci`
     2. run frontend: `npm run dev`
