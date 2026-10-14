@@ -98,18 +98,27 @@ jobs:
       - name: Rust tests and lint on Linux
         if: runner.os == 'Linux'
         run: |
-          # Failing tests and compiler errors also show up as annotations on
-          # the run summary, so they can be read without the full log.
+          # Failing tests, lints and compiler errors also show up as
+          # annotations on the run summary, so they can be read without the
+          # full log.
           set -o pipefail
-          if ! cargo test --no-default-features 2>&1 | tee test.log; then
-            grep -E "^---- |panicked at|^error(\[|:)|^test .* FAILED" test.log \
-              | head -40 \
-              | sed 's/^/::error title=cargo test::/'
-            exit 1
-          fi
-          cargo clippy --no-default-features --all-targets -- --deny warnings
-          cargo fmt --all -- --check
-          cargo build --no-default-features --features embed_frontend
+
+          check() {
+            local name=$1
+            shift
+
+            if ! "$@" 2>&1 | tee step.log; then
+              grep -E "^---- |panicked at|^(error|warning)(\[|:)| --> |^test .* FAILED|^Diff in" step.log \
+                | head -60 \
+                | sed "s/^/::error title=$name::/"
+              exit 1
+            fi
+          }
+
+          check "cargo test" cargo test --no-default-features
+          check "cargo clippy" cargo clippy --no-default-features --all-targets -- --deny warnings
+          check "cargo fmt" cargo fmt --all -- --check
+          check "cargo build" cargo build --no-default-features --features embed_frontend
 
       - name: Rust build on macOS
         if: runner.os == 'macOS'
