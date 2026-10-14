@@ -95,7 +95,7 @@ pub async fn get_xmltv(
 /// are served.
 ///
 /// ```BASH
-/// curl -X GET 'http://127.0.0.1:8787/xmltv/1/images/Jornal/poster.jpg'
+/// curl -X GET 'http://127.0.0.1:8787/xmltv/1/images/Morning%20News/poster.jpg'
 /// ```
 pub async fn get_xmltv_image(
     State(state): State<AppState>,

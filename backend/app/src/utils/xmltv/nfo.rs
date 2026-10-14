@@ -281,8 +281,8 @@ fn push_reference(text: &mut String, reference: &BytesRef) {
 /// Turn the raw bytes of an `.nfo` file into text.
 ///
 /// Most files are UTF-8, but files written by Windows tools are often UTF-16
-/// (with a byte order mark) or Windows-1252, which is common for Portuguese
-/// text like "Programação".
+/// (with a byte order mark) or Windows-1252, which older editors still use
+/// for accented Latin text.
 pub fn decode_nfo_bytes(bytes: &[u8]) -> String {
     if let Some(rest) = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
         return String::from_utf8_lossy(rest).into_owned();

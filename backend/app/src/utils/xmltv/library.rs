@@ -4,7 +4,7 @@
 //!
 //! ```text
 //! storage/
-//!   Jornal da Manhã/          <- program folder
+//!   Morning News/             <- program folder
 //!     tvshow.nfo              <- program metadata (any *.nfo name works)
 //!     poster.jpg              <- program poster
 //!     fanart.jpg              <- program backdrop

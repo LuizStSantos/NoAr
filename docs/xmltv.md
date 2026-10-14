@@ -1,163 +1,167 @@
-**Guia de programação XMLTV**
+**XMLTV Program Guide**
 ================
 
-O ffplayout gera um guia XMLTV (EPG) a partir das playlists do canal e dos
-arquivos `.nfo` colocados na pasta de cada programa. As imagens das pastas
-(pôster, fanart, miniatura do episódio) entram no guia como links, servidos
-pelo próprio ffplayout.
+ffplayout builds an XMLTV guide (EPG) from the channel's playlists and the
+`.nfo` files placed in each program folder. Images from those folders (poster,
+fanart, episode thumbnail) are linked from the guide and served by ffplayout
+itself.
 
-O guia é público, como os arquivos HLS, para que players IPTV (Kodi, Jellyfin,
-TiviMate, Plex etc.) possam baixá-lo sem login.
+The guide is public, like the HLS files, so IPTV players (Kodi, Jellyfin,
+TiviMate, Plex, etc.) can load it without logging in.
 
 ```text
-http://<servidor>:8787/xmltv/<id-do-canal>/guide.xml
+http://<server>:8787/xmltv/<channel-id>/guide.xml
 ```
 
-## Organização das pastas
+## Folder layout
 
-Cada programa tem sua pasta dentro do storage do canal, com um `.nfo` no
-formato do Kodi:
+Each program has its own folder inside the channel storage, with a Kodi-style
+`.nfo` file:
 
 ```text
 storage/
-  Jornal da Manhã/
-    tvshow.nfo                 <- dados do programa
-    poster.jpg                 <- pôster do programa
-    fanart.jpg                 <- imagem larga (fundo)
-    bloco 1.mp4
-    bloco 2.mp4
-  Novela Amor de Verão/
-    programa.nfo
+  Morning News/
+    tvshow.nfo               <- program metadata
+    poster.jpg               <- program poster
+    fanart.jpg               <- wide image (backdrop)
+    part 1.mp4
+    part 2.mp4
+  Summer Love/
+    tvshow.nfo
     poster.png
-    Temporada 1/               <- subpastas herdam o .nfo do programa
-      Capítulo 01.mp4
-      Capítulo 01.nfo          <- opcional: dados do episódio
-      Capítulo 01-thumb.jpg    <- opcional: imagem do episódio
-  Filmes/
-    O Grande Filme (2019)/
+    Season 1/                <- subfolders inherit the program .nfo
+      Episode 01.mp4
+      Episode 01.nfo         <- optional: episode metadata
+      Episode 01-thumb.jpg   <- optional: episode image
+  Movies/
+    The Big Movie (2019)/
       movie.nfo
       poster.jpg
-      filme.mp4
+      movie.mp4
 ```
 
-### O `.nfo` do programa
+### Program `.nfo`
 
-O ffplayout procura o `.nfo` do programa na pasta do vídeo e depois em cada
-pasta acima, até chegar (sem incluir) à raiz do storage. Nomes preferidos, nesta
-ordem: `tvshow.nfo`, `programa.nfo`, `program.nfo`, `show.nfo`, `movie.nfo`,
-`folder.nfo`. Se nenhum existir, vale qualquer outro `.nfo` da pasta que não
-tenha o mesmo nome de um vídeo.
+The program `.nfo` is searched for in the clip's folder and then in each parent
+folder, up to (but not including) the storage root. Preferred names, in this
+order: `tvshow.nfo`, `programa.nfo`, `program.nfo`, `show.nfo`, `movie.nfo`,
+`folder.nfo`. If none of them exists, any other `.nfo` in the folder is used,
+as long as it does not share its name with a video.
 
 ```xml
 <tvshow>
-  <title>Jornal da Manhã</title>
-  <plot>As principais notícias do dia.</plot>
-  <genre>Jornalismo</genre>
-  <mpaa>BR:L</mpaa>
+  <title>Morning News</title>
+  <plot>The day's top stories.</plot>
+  <genre>News</genre>
+  <mpaa>US:TV-G</mpaa>
   <premiered>2019-03-04</premiered>
-  <actor><name>Ana Souza</name><role>Apresentadora</role></actor>
+  <actor><name>Jane Doe</name><role>Host</role></actor>
   <thumb aspect="poster">poster.jpg</thumb>
 </tvshow>
 ```
 
-### O `.nfo` do episódio (opcional)
+### Episode `.nfo` (optional)
 
-Um `.nfo` com o mesmo nome do vídeo descreve só aquele vídeo. O título dele vira
-o subtítulo no guia, e a sinopse, a data, a temporada e o episódio dele têm
-prioridade sobre os do programa.
+An `.nfo` with the same name as a video describes only that video. Its title
+becomes the sub-title in the guide, and its plot, date, season and episode take
+priority over the program's.
 
 ```xml
 <episodedetails>
-  <title>O Reencontro</title>
+  <title>The Return</title>
   <season>1</season>
   <episode>1</episode>
   <aired>2026-10-14</aired>
-  <plot>Helena volta à cidade depois de dez anos.</plot>
+  <plot>Helen comes back to town after ten years.</plot>
 </episodedetails>
 ```
 
-Se não houver `.nfo` de programa, o `.nfo` do vídeo é usado como o próprio
-programa (útil para um filme ao lado de `nome-do-filme.nfo`), a menos que seja
-um `<episodedetails>`.
+When there is no program `.nfo`, the video's own `.nfo` is used as the program
+itself (useful for a movie next to `movie-name.nfo`), unless it is an
+`<episodedetails>` file.
 
-### Campos lidos
+### Fields read
 
-| Campo do `.nfo` | No XMLTV |
+| `.nfo` field | XMLTV element |
 | --- | --- |
-| `title` | `title` (programa) ou `sub-title` (episódio) |
-| `showtitle` | `title`, quando só existe o `.nfo` do episódio |
+| `title` | `title` (program) or `sub-title` (episode) |
+| `showtitle` | `title`, when only the episode `.nfo` exists |
 | `plot`, `outline` | `desc` |
-| `genre` | `category` (programa e episódio somados) |
+| `genre` | `category` (program and episode genres combined) |
 | `premiered`, `aired`, `releasedate`, `year` | `date` |
-| `season`, `episode` | `episode-num` (`xmltv_ns` e `onscreen`, ex. `S01E02`) |
-| `mpaa`, `certification` | `rating`; `BR:14` vira sistema `BR`, valor `14` |
+| `season`, `episode` | `episode-num` (`xmltv_ns` and `onscreen`, e.g. `S01E02`) |
+| `mpaa`, `certification` | `rating`; `US:TV-G` becomes system `US`, value `TV-G` |
 | `director`, `actor`, `credits` | `credits` |
 | `country` | `country` |
-| `thumb`, `fanart` | imagens, quando não há arquivo de imagem na pasta |
+| `thumb`, `fanart` | images, when the folder has no matching image file |
 
-Arquivos em UTF-8, UTF-16 e Windows-1252 (comum em arquivos salvos no Bloco de
-Notas) são lidos corretamente. Um `.nfo` quebrado ou que só contém um link não
-derruba o guia: vale o que puder ser lido.
+Files encoded as UTF-8, UTF-16 and Windows-1252 are all read correctly. A broken
+`.nfo`, or one that only contains a link, does not break the guide: whatever can
+be read is used.
 
-### Imagens
+### Images
 
-Extensões aceitas: `jpg`, `jpeg`, `png`, `webp`, `gif`.
+Supported extensions: `jpg`, `jpeg`, `png`, `webp`, `gif`.
 
-| Tipo | Arquivos procurados |
+| Type | File names looked for |
 | --- | --- |
-| Pôster do programa | `poster`, `folder`, `cover`, `capa`, `show` |
-| Imagem larga do programa | `landscape`, `thumb`, `fanart`, `backdrop`, `background` |
-| Imagem do episódio | `<vídeo>-thumb`, `<vídeo>` |
-| Pôster de um filme avulso | `<vídeo>-poster`, `<vídeo>` |
+| Program poster | `poster`, `folder`, `cover`, `capa`, `show` |
+| Program wide image | `landscape`, `thumb`, `fanart`, `backdrop`, `background` |
+| Episode image | `<video>-thumb`, `<video>` |
+| Poster of a standalone movie | `<video>-poster`, `<video>` |
 
-O `<icon>` de cada programa no guia usa a imagem do episódio, depois o pôster,
-depois a imagem larga. Todas também saem como `<image type="poster|backdrop|still">`.
-Um `<thumb>` com endereço `http(s)://` é usado como está.
+The `<icon>` of each guide entry uses the episode image, then the poster, then
+the wide image. All of them are also written as
+`<image type="poster|backdrop|still">`. A `<thumb>` with an `http(s)://` address
+is used as it is.
 
-O logo do canal (configuração de logo da saída) vira o ícone do canal no guia.
+The channel logo (from the output logo setting) becomes the channel icon in the
+guide.
 
-## Como o guia é montado
+## How the guide is built
 
-- Os horários seguem a playlist, como na tela de programação do ffplayout.
-- Vídeos seguidos do mesmo programa viram uma única entrada no guia (ex. os
-  blocos de um telejornal). Episódios com `.nfo` próprio ficam separados.
-- Comerciais (`"ad": true` na playlist) e o filler configurado não aparecem:
-  o tempo deles é somado ao programa que interrompem.
-- Sem `.nfo`, o título vem do título do item na playlist ou do nome do arquivo.
+- Times follow the playlist, the same way as the program view in ffplayout.
+- Consecutive videos of the same program become a single guide entry (e.g. the
+  parts of a news show). Episodes with their own `.nfo` stay separate.
+- Ads (`"ad": true` in the playlist) and the configured filler are not listed:
+  their time is added to the program they interrupt.
+- Without an `.nfo`, the title comes from the playlist item title or the file
+  name.
 
-## Parâmetros
+## Query parameters
 
-Todos opcionais:
+All optional:
 
-| Parâmetro | Padrão | Uso |
+| Parameter | Default | Purpose |
 | --- | --- | --- |
-| `days` | `7` | Dias a partir do início de hoje (1 a 14). |
-| `lang` | — | Idioma de títulos e descrições, ex. `pt` ou `pt-BR`. |
-| `tvg_id` | `ffplayout.<id>` | Id do canal no guia; deve ser igual ao `tvg-id` da lista M3U. |
-| `base_url` | endereço da requisição | Endereço público para os links das imagens, quando há proxy reverso em subpasta. |
+| `days` | `7` | Days from the start of today (1 to 14). |
+| `lang` | — | Language of titles and descriptions, e.g. `en` or `pt-BR`. |
+| `tvg_id` | `ffplayout.<id>` | Channel id in the guide; must match the `tvg-id` in the M3U list. |
+| `base_url` | request address | Public address for image links, when a reverse proxy serves ffplayout under a sub path. |
 
-Exemplo:
-
-```text
-https://tv.exemplo.com.br/xmltv/1/guide.xml?days=3&lang=pt&tvg_id=TVExemplo.br
-```
-
-E na lista M3U do player:
+Example:
 
 ```text
-#EXTM3U url-tvg="https://tv.exemplo.com.br/xmltv/1/guide.xml?tvg_id=TVExemplo.br"
-#EXTINF:-1 tvg-id="TVExemplo.br",TV Exemplo
-https://tv.exemplo.com.br/public/1/live/stream.m3u8
+https://tv.example.org/xmltv/1/guide.xml?days=3&lang=en&tvg_id=ExampleTV.us
 ```
 
-Atrás de nginx ou outro proxy, envie `X-Forwarded-Proto` e `X-Forwarded-Host`
-para que os links das imagens usem o endereço público.
-
-## Imagens no servidor
+And in the player's M3U list:
 
 ```text
-/xmltv/<id-do-canal>/images/<caminho-dentro-do-storage>
+#EXTM3U url-tvg="https://tv.example.org/xmltv/1/guide.xml?tvg_id=ExampleTV.us"
+#EXTINF:-1 tvg-id="ExampleTV.us",Example TV
+https://tv.example.org/public/1/live/stream.m3u8
 ```
 
-Só arquivos de imagem dentro do storage do canal são servidos; vídeos, `.nfo`
-e caminhos que saem do storage (inclusive por links simbólicos) são recusados.
+Behind nginx or another proxy, send `X-Forwarded-Proto` and `X-Forwarded-Host`
+so image links use the public address.
+
+## Image route
+
+```text
+/xmltv/<channel-id>/images/<path-inside-storage>
+```
+
+Only image files inside the channel storage are served; videos, `.nfo` files
+and paths that leave the storage (including through symbolic links) are
+rejected.
