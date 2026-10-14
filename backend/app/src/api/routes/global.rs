@@ -16,8 +16,6 @@ use crate::{
 
 #[derive(Debug, Serialize)]
 pub struct GlobalSettingsResponse {
-    /// Folder of the log files, set at installation.
-    logs: String,
     smtp_server: String,
     smtp_user: String,
     smtp_password_set: bool,
@@ -30,7 +28,6 @@ pub struct GlobalSettingsResponse {
 impl From<GlobalSettings> for GlobalSettingsResponse {
     fn from(settings: GlobalSettings) -> Self {
         Self {
-            logs: settings.logs,
             smtp_server: settings.smtp_server,
             smtp_user: settings.smtp_user,
             smtp_password_set: !settings.smtp_password.is_empty(),

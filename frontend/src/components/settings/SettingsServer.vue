@@ -190,11 +190,7 @@ async function sendTest() {
         </SectionCard>
 
         <SectionCard :title="t('settings.server.logs')">
-            <label class="field-label max-w-2xl">
-                {{ t('settings.server.logsFolder') }}
-                <input :value="server.logs" class="field-input font-mono text-[13px]" readonly />
-                <span class="field-hint">{{ t('settings.server.logsHint') }}</span>
-            </label>
+            <p class="m-0 text-muted">{{ t('settings.server.logsHint') }}</p>
         </SectionCard>
 
         <SaveBar :changes="changes" :saving="saving" @save="save" @discard="discard" />

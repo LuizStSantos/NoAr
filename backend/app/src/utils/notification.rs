@@ -358,7 +358,7 @@ mod tests {
         let request = receiver.await.unwrap().to_ascii_lowercase();
         assert!(request.starts_with("post /base/alerts http/1.1\r\n"));
         assert!(request.contains("authorization: bearer secret\r\n"));
-        assert!(request.contains("title: NoAr channel 7 error\r\n"));
+        assert!(request.contains("title: noar channel 7 error\r\n"));
         assert!(request.contains("priority: 4\r\n"));
         assert!(request.contains("tags: warning,broadcast\r\n"));
         assert!(request.ends_with("test message"));

@@ -1088,8 +1088,8 @@ export default {
             token: 'Access token',
             tokenSet: 'Token set; type to change it',
             logs: 'Log files',
-            logsFolder: 'Folder',
-            logsHint: 'Set at installation. In Docker it lives inside ./data.',
+            logsHint:
+                'Their folder is set at installation. In Docker they are in ./data/logs on the server, and the Log page shows them.',
         },
     },
 }

@@ -1091,8 +1091,8 @@ export default {
             token: 'Token de acesso',
             tokenSet: 'Token configurado; digite para trocar',
             logs: 'Arquivos de registro',
-            logsFolder: 'Pasta',
-            logsHint: 'Definida na instalação. No Docker, fica dentro de ./data.',
+            logsHint:
+                'A pasta é definida na instalação. No Docker, os registros ficam em ./data/logs no servidor, e a página Registro mostra o conteúdo.',
         },
     },
 }

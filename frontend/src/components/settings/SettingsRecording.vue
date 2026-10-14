@@ -149,7 +149,9 @@ const recordingNow = computed(() => recording.value?.enable && playlistStore.pla
         <SectionCard :title="t('settings.recording.what')">
             <RadioCards v-model="source" :options="sources" :label="t('settings.recording.what')" />
             <p v-if="sources.find((item) => item.value === source)?.disabled" class="m-0 text-[13px] text-accent-text">
-                <i class="bi bi-exclamation-triangle me-1" aria-hidden="true" />{{ t('settings.recording.sourceMismatch') }}
+                <i class="bi bi-exclamation-triangle me-1" aria-hidden="true" />{{
+                    t('settings.recording.sourceMismatch')
+                }}
             </p>
             <div v-if="source === 'hls_variant'" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <label class="field-label">

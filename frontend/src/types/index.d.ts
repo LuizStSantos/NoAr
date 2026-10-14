@@ -113,8 +113,6 @@ declare global {
     }
 
     interface GlobalSettings {
-        /** Folder of the log files, set at installation. */
-        logs?: string
         smtp_server: string
         smtp_user: string
         smtp_password_set: boolean

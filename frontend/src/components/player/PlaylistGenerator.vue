@@ -166,11 +166,14 @@ async function generatePlaylist() {
 }
 </script>
 <template>
-    <div class="z-50 fixed inset-0 flex justify-center bg-black/30 overflow-auto py-5">
+    <div class="z-50 fixed inset-0 flex justify-center bg-black/50 overflow-auto py-5 px-4">
         <div
-            class="relative flex flex-col bg-base-100 w-200 min-w-75 max-w-[90vw] h-170 my-auto rounded-md p-5 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="t('player.generateProgram')"
+            class="relative flex flex-col bg-base-100 border border-line-strong w-200 min-w-75 max-w-full h-170 my-auto rounded-box p-5 shadow-2xl"
         >
-            <div class="font-bold text-lg">{{ t('player.generateProgram') }}</div>
+            <h2 class="m-0 font-semibold text-[16px]">{{ t('player.generateProgram') }}</h2>
 
             <div class="h-[calc(100%-95px)] mt-3">
                 <div role="tablist" class="tabs tabs-border">
@@ -206,12 +209,12 @@ async function generatePlaylist() {
                             </div>
 
                             <ul
-                                class="h-118.75 border border-base-content/30 rounded-sm overflow-auto bg-base-300 m-1 py-1"
+                                class="h-118.75 border border-line-strong rounded-field overflow-auto bg-field m-1 py-1"
                             >
                                 <li
                                     v-for="folder in mediaStore.folderList.folders"
                                     :key="folder.uid"
-                                    class="even:bg-base-200 px-2 w-full"
+                                    class="even:bg-raised px-2 py-0.5 w-full"
                                 >
                                     <div class="grid grid-cols-[auto_24px]">
                                         <button
@@ -234,7 +237,7 @@ async function generatePlaylist() {
                                         </button>
                                         <div v-if="!generateFromAll" class="text-center">
                                             <input
-                                                class="checkbox checkbox-xs rounded"
+                                                class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
                                                 type="checkbox"
                                                 @change="
                                                     setSelectedFolder(
@@ -293,7 +296,7 @@ async function generatePlaylist() {
                                 </div>
                             </div>
                             <div
-                                class="h-118.75 border border-base-content/30 rounded-sm grid bg-base-300 m-1"
+                                class="h-118.75 border border-line-strong rounded-field grid bg-field m-1"
                                 :class="width < 740 ? 'grid-cols-1' : 'grid-cols-[300px_auto]'"
                             >
                                 <VirtualList
@@ -311,7 +314,7 @@ async function generatePlaylist() {
                                         <li
                                             :id="`folder-${item.uid}`"
                                             :key="item.uid"
-                                            class="even:bg-base-200 cursor-grabbing px-2 w-full"
+                                            class="even:bg-raised cursor-grabbing px-2 py-0.5 w-full"
                                         >
                                             <button
                                                 class="w-full truncate text-left"
@@ -369,7 +372,7 @@ async function generatePlaylist() {
                                                 <input
                                                     v-model="item.shuffle"
                                                     type="checkbox"
-                                                    class="checkbox checkbox-xs rounded"
+                                                    class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
                                                 />
                                                 <span>{{ t('player.shuffle') }}</span>
                                             </label>
@@ -388,7 +391,7 @@ async function generatePlaylist() {
                                                 <li
                                                     :id="`path-${item.uid}`"
                                                     :key="item.uid"
-                                                    class="py-0 even:bg-base-200 px-2"
+                                                    class="py-0 even:bg-raised px-2"
                                                 >
                                                     <i class="bi-folder-fill" />
                                                     {{ item.name }}
@@ -420,29 +423,29 @@ async function generatePlaylist() {
                         <input
                             v-model="generateFromAll"
                             type="checkbox"
-                            class="checkbox checkbox-xs rounded"
+                            class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
                             @change="resetCheckboxes()"
                         />
                     </label>
                     <label class="label cursor-pointer gap-2">
                         <span class="label-text">{{ t('player.shuffle') }}</span>
-                        <input v-model="simpleShuffle" type="checkbox" class="checkbox checkbox-xs rounded" />
+                        <input
+                            v-model="simpleShuffle"
+                            type="checkbox"
+                            class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
+                        />
                     </label>
                 </div>
-                <div class="join ms-2">
+                <div class="flex gap-2 ms-3">
                     <button
                         type="button"
-                        class="btn btn-sm btn-primary join-item"
+                        class="btn-quiet"
                         @click="(resetCheckboxes(), resetTemplate(), (simpleShuffle = false), close())"
                     >
                         {{ t('cancel') }}
                     </button>
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-primary join-item"
-                        @click="(generatePlaylist(), close())"
-                    >
-                        {{ t('ok') }}
+                    <button type="button" class="btn-main" @click="(generatePlaylist(), close())">
+                        {{ t('onair.generate') }}
                     </button>
                 </div>
             </div>

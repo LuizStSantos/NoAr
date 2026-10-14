@@ -111,9 +111,7 @@ async function backToProgramme() {
                     {{ channelNow.format('HH:mm:ss') }}
                 </div>
             </div>
-            <div class="text-right text-muted text-[13px]">
-                {{ dateLabel }}<br />{{ configStore.timezone }}
-            </div>
+            <div class="text-right text-muted text-[13px]">{{ dateLabel }}<br />{{ configStore.timezone }}</div>
         </div>
 
         <div

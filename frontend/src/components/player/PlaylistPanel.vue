@@ -55,6 +55,8 @@ const toggled = reactive(new Map<string, boolean>())
 const reveal = reactive(new Map<string, { before: number; after: number }>())
 
 const editing = ref<{ uid: string; item: PlaylistItem } | null>(null)
+/** Clips just edited; their program stays open so the change can be seen. */
+const recent = ref<string[]>([])
 const newRemote = ref<PlaylistItem | null>(null)
 const picker = ref<'source' | 'audio' | null>(null)
 const dropAt = ref<number | null>(null)
@@ -98,6 +100,7 @@ async function load(date: string) {
     playlistStore.listDate = date
     editing.value = null
     newRemote.value = null
+    recent.value = []
     toggled.clear()
     reveal.clear()
 
@@ -326,7 +329,7 @@ function anchorOf(group: ProgrammeGroup): number {
         }
     }
 
-    const added = containsUid(group, playlistStore.addedUids)
+    const added = containsUid(group, [...playlistStore.addedUids, ...recent.value])
 
     if (added >= 0) {
         return added
@@ -346,7 +349,14 @@ function isExpanded(id: string, group: ProgrammeGroup, position: number): boolea
         return choice
     }
 
-    if (anchorOf(group) !== group.first || groupStatus(group) === 'current') {
+    if (groupStatus(group) === 'current') {
+        return true
+    }
+
+    // Programs with the clip being edited, or clips just added or changed.
+    const touched = [...playlistStore.addedUids, ...recent.value, ...(editing.value ? [editing.value.uid] : [])]
+
+    if (containsUid(group, touched) >= 0) {
         return true
     }
 
@@ -498,7 +508,10 @@ function applyEdit(updated: PlaylistItem, parts: number) {
     const index = playlistStore.playlist.findIndex((item) => item.uid === editing.value?.uid)
 
     if (index >= 0) {
-        playlistStore.playlist.splice(index, 1, ...split(updated, parts))
+        const items = split(updated, parts)
+
+        playlistStore.playlist.splice(index, 1, ...items)
+        recent.value = items.map((item) => item.uid)
         playlistStore.touch()
     }
 
