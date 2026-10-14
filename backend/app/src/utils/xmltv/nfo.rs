@@ -303,9 +303,9 @@ pub fn decode_nfo_bytes(bytes: &[u8]) -> String {
 }
 
 fn decode_utf16(bytes: &[u8], to_unit: fn([u8; 2]) -> u16) -> String {
-    let units = bytes
-        .chunks_exact(2)
-        .map(|pair| to_unit([pair[0], pair[1]]));
+    // A trailing odd byte cannot form a UTF-16 unit and is dropped.
+    let (pairs, _) = bytes.as_chunks::<2>();
+    let units = pairs.iter().map(|pair| to_unit(*pair));
 
     char::decode_utf16(units)
         .map(|unit| unit.unwrap_or(char::REPLACEMENT_CHARACTER))
