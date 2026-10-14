@@ -1665,6 +1665,7 @@ dependencies = [
  "notify-debouncer-full",
  "path-clean",
  "protect-axum",
+ "quick-xml",
  "rand 0.10.3",
  "real",
  "regex",

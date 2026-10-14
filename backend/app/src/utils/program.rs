@@ -83,10 +83,7 @@ pub async fn build_program(
         .and_then(|preset| Regex::new(&preset.filename_regex).ok());
 
     for date in date_range {
-        let mut naive = NaiveDateTime::parse_from_str(
-            &format!("{date} {}", sec_to_time(start_sec)),
-            "%Y-%m-%d %H:%M:%S%.3f",
-        )?;
+        let mut naive = playlist_day_start(&date, start_sec)?;
 
         let playlist = match read_playlist(config, date.clone()).await {
             Ok(p) => p,
@@ -129,7 +126,21 @@ pub async fn build_program(
     Ok(program)
 }
 
-fn channel_datetime(timezone: Tz, naive: NaiveDateTime) -> Result<DateTime<Tz>, ServiceError> {
+/// Local time at which the playlist of `date` (`YYYY-MM-DD`) starts.
+pub(crate) fn playlist_day_start(
+    date: &str,
+    start_sec: f64,
+) -> Result<NaiveDateTime, ServiceError> {
+    Ok(NaiveDateTime::parse_from_str(
+        &format!("{date} {}", sec_to_time(start_sec)),
+        "%Y-%m-%d %H:%M:%S%.3f",
+    )?)
+}
+
+pub(crate) fn channel_datetime(
+    timezone: Tz,
+    naive: NaiveDateTime,
+) -> Result<DateTime<Tz>, ServiceError> {
     timezone
         .from_local_datetime(&naive)
         .earliest()

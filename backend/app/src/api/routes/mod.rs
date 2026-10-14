@@ -38,6 +38,7 @@ mod public;
 mod setup;
 mod system;
 mod user;
+mod xmltv;
 
 pub use channel::*;
 pub use control::*;
@@ -52,6 +53,7 @@ pub use public::*;
 pub use setup::*;
 pub use system::*;
 pub use user::*;
+pub use xmltv::*;
 
 use crate::{
     db::models::Role,

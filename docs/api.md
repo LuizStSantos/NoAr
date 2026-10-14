@@ -252,3 +252,14 @@ http://127.0.0.1:8787/public/1/live/master.m3u8
 
 Use nginx or another web server for production HLS delivery. The built-in route
 is appropriate for previewing and simple deployments.
+
+## Public XMLTV guide
+
+The program guide and its artwork are public, so IPTV players can load them
+without authentication. See [XMLTV / EPG](/docs/xmltv.md) for the folder layout
+and `.nfo` fields.
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/xmltv/{id}/guide.xml` | XMLTV guide. Optional query parameters: `days` (1-14, default 7), `lang`, `tvg_id`, `base_url`. |
+| `GET` | `/xmltv/{id}/images/{path}` | Image file below the channel storage root. Other file types return `404`. |

@@ -28,6 +28,7 @@ pub mod system;
 pub mod task_runner;
 pub mod text;
 pub mod time_machine;
+pub mod xmltv;
 
 use crate::{
     ARGS,

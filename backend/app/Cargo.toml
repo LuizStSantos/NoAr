@@ -73,6 +73,7 @@ nix = { version = "0.31", features = ["user", "fs"] }
 notify = "8.0"
 notify-debouncer-full = { version = "*", default-features = false }
 path-clean = "1.0"
+quick-xml = "0.41"
 protect-axum = "0.2"
 rand = "0.10"
 real = { version = "0.1", features = ["axum"] }

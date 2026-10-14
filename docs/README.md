@@ -29,6 +29,10 @@ Use WebVTT sidecar files as HLS subtitles.
 
 Generate playlists based on template.
 
+### **[XMLTV / EPG](/docs/xmltv.md)**
+
+Program guide built from the playlists and the `.nfo` files in each program folder, with artwork.
+
 ### **[Remote Sources](/docs/remote_source.md)**
 
 Use of remote sources, like https://example.org/video.mp4

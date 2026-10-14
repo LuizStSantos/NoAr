@@ -22,6 +22,8 @@ mod configuration;
 mod files;
 #[path = "api/users.rs"]
 mod users;
+#[path = "api/xmltv.rs"]
+mod xmltv;
 
 use ffplayout::{
     api::{

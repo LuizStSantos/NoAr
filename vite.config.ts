@@ -29,6 +29,7 @@ export default defineConfig({
             '/public': { target: 'http://127.0.0.1:8787', changeOrigin: true },
             '/file': { target: 'http://127.0.0.1:8787', changeOrigin: true },
             '/hls': { target: 'http://127.0.0.1:8787', changeOrigin: true },
+            '/xmltv': { target: 'http://127.0.0.1:8787', changeOrigin: true },
         },
     },
 })
