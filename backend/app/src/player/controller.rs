@@ -7,9 +7,7 @@ use std::{
     },
 };
 
-use ff_engine::{
-    AudioEffectsControl, AudioLevel, LiveLoudnessConfig, PlaybackControl, TextOverlayState,
-};
+use ff_engine::{AudioEffectsControl, AudioLevel, LiveLoudnessConfig, PlaybackControl};
 use log::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
@@ -26,10 +24,7 @@ use crate::{
     db::{handles, models::Channel},
     file::{init_storage, local::LocalStorage},
     player::{output::player, schedule::ScheduleState, utils::Media},
-    utils::{
-        config::PlayoutConfig, errors::ServiceError, logging::Target, system::SystemStat,
-        text::text_config,
-    },
+    utils::{config::PlayoutConfig, errors::ServiceError, logging::Target, system::SystemStat},
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -118,7 +113,6 @@ pub struct ChannelManager {
     pub live_loudness: ff_engine::LiveLoudnessControl,
     pub loudness_meter: ff_engine::LoudnessMeterControl,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
-    pub text_overlay: TextOverlayState,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
     pub schedule: Arc<ScheduleState>,
     pub shutdown: CancellationToken,
@@ -166,11 +160,6 @@ impl ChannelManager {
             config.audio.loudness_scope != "off",
             loudness_config(&config.audio),
         );
-        let text_overlay = TextOverlayState::default();
-        if let Some(preset) = config.text.preset.as_ref() {
-            let text = (!preset.use_filename).then(|| preset.text.clone());
-            text_overlay.set(Some(text_config(preset, text, preset.use_filename)));
-        }
 
         Ok(Self {
             id: channel.id,
@@ -206,7 +195,6 @@ impl ChannelManager {
             live_loudness,
             loudness_meter: ff_engine::LoudnessMeterControl::default(),
             audio_level: Arc::new(StdMutex::new(None)),
-            text_overlay,
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
             schedule: Arc::new(ScheduleState::default()),
             shutdown,

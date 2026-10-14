@@ -52,12 +52,6 @@ const router = createRouter({
             meta: { showHeader: true },
         },
         {
-            path: '/message',
-            name: 'message',
-            component: () => import('@/views/MessageView.vue'),
-            meta: { showHeader: true },
-        },
-        {
             path: '/logging',
             name: 'logging',
             component: () => import('@/views/LoggingView.vue'),

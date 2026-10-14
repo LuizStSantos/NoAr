@@ -51,7 +51,7 @@ export type Playlist = { day_start: string, length: string, infinit: boolean, };
  *
  * This we init ones, when ffplayout is starting and use them globally in the hole program.
  */
-export type PlayoutConfig = { general: General, mail: Mail, notification: Notification, logging: Logging, processing: Processing, audio: Audio, ingest: Ingest, playlist: Playlist, storage: Storage, text: Text, task: Task, recording: Recording, output: Output, };
+export type PlayoutConfig = { general: General, mail: Mail, notification: Notification, logging: Logging, processing: Processing, audio: Audio, ingest: Ingest, playlist: Playlist, storage: Storage, task: Task, recording: Recording, output: Output, };
 
 export type ProcessMode = "folder" | "playlist";
 
@@ -66,5 +66,3 @@ export type Storage = { filler: string, extensions: Array<string>, shuffle: bool
 export type StreamType = "rtmp" | "srt" | "udp" | "custom";
 
 export type Task = { enable: boolean, path: string, };
-
-export type Text = { preset_id: number | null, };

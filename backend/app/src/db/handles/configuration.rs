@@ -113,7 +113,6 @@ pub async fn select_configuration(
         storage.filler AS storage_filler,
         storage.extensions AS storage_extensions,
         storage.shuffle AS storage_shuffle,
-        text.id AS text_preset_id,
         task.enable AS task_enable, task.path AS task_path,
         output.id AS output_id
     FROM config c
@@ -125,7 +124,6 @@ pub async fn select_configuration(
     JOIN config_audio audio ON audio.config_id = c.id
     JOIN config_playlist playlist ON playlist.config_id = c.id
     JOIN config_storage storage ON storage.config_id = c.id
-    LEFT JOIN config_text_presets text ON text.config_id = c.id AND text.persistent = 1
     JOIN config_task task ON task.config_id = c.id
     JOIN config_output output ON output.config_id = c.id AND output.active = 1
     WHERE c.channel_id = $1";
@@ -380,7 +378,6 @@ pub async fn update_configuration_on(
     .bind(config.storage.shuffle)
     .execute(&mut *connection)
     .await?;
-    activate_text_preset(connection, id, config.text.preset_id).await?;
     sqlx::query("UPDATE config_task SET enable = $2, path = $3 WHERE config_id = $1")
         .bind(id)
         .bind(config.task.enable)
@@ -416,34 +413,6 @@ async fn activate_output(
     }
 
     Ok(result)
-}
-
-async fn activate_text_preset(
-    connection: &mut SqliteConnection,
-    config_id: i32,
-    preset_id: Option<i32>,
-) -> Result<(), ProcessError> {
-    sqlx::query("UPDATE config_text_presets SET persistent = 0 WHERE config_id = $1")
-        .bind(config_id)
-        .execute(&mut *connection)
-        .await?;
-
-    if let Some(preset_id) = preset_id {
-        let result = sqlx::query(
-            "UPDATE config_text_presets SET persistent = 1 WHERE config_id = $1 AND id = $2",
-        )
-        .bind(config_id)
-        .bind(preset_id)
-        .execute(&mut *connection)
-        .await?;
-        if result.rows_affected() != 1 {
-            return Err(ProcessError::Custom(format!(
-                "Text preset {preset_id} does not belong to config {config_id}"
-            )));
-        }
-    }
-
-    Ok(())
 }
 
 pub async fn update_configuration_volume(
@@ -603,7 +572,6 @@ mod tests {
         assert_eq!(migrated_listener.2, 100);
         assert_eq!(config.playlist_length, "12:00:00");
         assert_eq!(config.storage_filler, "custom/filler.mp4");
-        assert_eq!(config.text_preset_id, Some(4));
         assert!(config.task_enable);
         assert_eq!(config.task_path, "/opt/task");
         assert_eq!(config.output_id, 2);
@@ -842,41 +810,6 @@ mod tests {
         );
         transaction.rollback().await.unwrap();
         assert_eq!(select_configuration(&pool, 1).await.unwrap().output_id, 2);
-    }
-
-    #[tokio::test]
-    async fn text_preset_selection_is_unique_and_can_be_cleared() {
-        let pool = pool().await;
-        assert_eq!(
-            select_configuration(&pool, 1).await.unwrap().text_preset_id,
-            None
-        );
-
-        let mut transaction = pool.begin().await.unwrap();
-        activate_text_preset(&mut transaction, 1, Some(1))
-            .await
-            .unwrap();
-        transaction.commit().await.unwrap();
-        assert_eq!(
-            select_configuration(&pool, 1).await.unwrap().text_preset_id,
-            Some(1)
-        );
-        assert!(
-            sqlx::query("UPDATE config_text_presets SET persistent = 1 WHERE id = 2")
-                .execute(&pool)
-                .await
-                .is_err()
-        );
-
-        let mut transaction = pool.begin().await.unwrap();
-        activate_text_preset(&mut transaction, 1, None)
-            .await
-            .unwrap();
-        transaction.commit().await.unwrap();
-        assert_eq!(
-            select_configuration(&pool, 1).await.unwrap().text_preset_id,
-            None
-        );
     }
 
     #[tokio::test]

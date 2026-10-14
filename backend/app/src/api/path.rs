@@ -30,7 +30,6 @@ pub fn routes() -> Router<AppState> {
                 .route("/channel/{id}", delete(remove_channel))
                 .route("/channels", get(get_all_channels))
                 .route("/global", get(get_global).put(update_global))
-                .route("/control/{id}/text", post(send_text_message))
                 .route("/control/{id}/playout", post(control_playout))
                 .route("/control/{id}/audio", put(update_audio_effects))
                 .route("/control/{id}/media/current", get(media_current))
@@ -58,13 +57,6 @@ pub fn routes() -> Router<AppState> {
                 )
                 .route("/playout/outputs/{id}", get(get_playout_outputs))
                 .route("/playout/codecs/{id}", get(get_playout_codecs))
-                .route("/text/fonts", get(get_font_families))
-                .route("/presets/{id}", get(get_presets))
-                .route(
-                    "/presets/{channel}/{id}",
-                    put(update_preset).delete(delete_preset),
-                )
-                .route("/presets/{id}", post(add_preset))
                 .route("/program/{id}", get(get_program))
                 .route(
                     "/schedule/{id}",

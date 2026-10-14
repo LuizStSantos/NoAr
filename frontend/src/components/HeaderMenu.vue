@@ -25,7 +25,6 @@ const menuItems = ref([
     { label: 'player', name: t('button.player'), link: '/player' },
     { label: 'schedule', name: t('button.schedule'), link: '/schedule' },
     { label: 'media', name: t('button.media'), link: '/media' },
-    { label: 'message', name: t('button.message'), link: '/message' },
     { label: 'logging', name: t('button.logging'), link: '/logging' },
 ])
 

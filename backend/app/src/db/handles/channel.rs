@@ -155,7 +155,6 @@ pub async fn create_channel_records(
     let config_id =
         handles::insert_configuration(&mut transaction, channel.id, &ingest_url).await?;
     handles::insert_source(&mut transaction, config_id).await?;
-    handles::new_channel_presets(&mut *transaction, config_id).await?;
 
     for (index, output) in outputs.iter().enumerate() {
         handles::insert_output(&mut *transaction, config_id, output, index == 0).await?;
@@ -401,7 +400,6 @@ mod tests {
             "config_task",
             "config_output",
             "config_recording",
-            "config_text_presets",
         ] {
             let query = format!(
                 "SELECT COUNT(*) FROM {table} WHERE {} = $1",

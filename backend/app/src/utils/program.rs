@@ -1,7 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeDelta, TimeZone};
 use chrono_tz::Tz;
 use log::*;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -75,13 +74,6 @@ pub async fn build_program(
             before.format("%Y-%m-%d")
         ],
     );
-    let filename_regex = config
-        .text
-        .preset
-        .as_ref()
-        .filter(|preset| preset.use_filename)
-        .and_then(|preset| Regex::new(&preset.filename_regex).ok());
-
     for date in date_range {
         let mut naive = playlist_day_start(&date, start_sec)?;
 
@@ -96,16 +88,8 @@ pub async fn build_program(
         for item in playlist.program {
             let start = channel_datetime(timezone, naive)?;
 
-            let source = match filename_regex
-                .as_ref()
-                .and_then(|regex| regex.captures(&item.source))
-            {
-                Some(t) => t[1].to_string(),
-                None => item.source,
-            };
-
             let p_item = ProgramItem {
-                source,
+                source: item.source,
                 start: start.format("%Y-%m-%d %H:%M:%S%.3f%:z").to_string(),
                 title: item.title,
                 r#in: item.seek,

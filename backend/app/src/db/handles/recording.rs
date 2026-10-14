@@ -33,7 +33,7 @@ pub async fn insert_recording(
 ) -> Result<SqliteQueryResult, ProcessError> {
     // Each channel gets its own recording directory by default so that
     // multiple channels never write their segments into the same folder.
-    let default_path = format!("/var/lib/ffplayout/recordings/{channel_id}");
+    let default_path = format!("/data/recordings/{channel_id}");
     Ok(
         sqlx::query("INSERT INTO config_recording (config_id, path) VALUES ($1, $2)")
             .bind(config_id)

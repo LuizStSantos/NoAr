@@ -8,7 +8,6 @@ use std::{
 use ff_engine::{
     AsyncPlayout, AudioLevelCallback, ClipResult, HlsHealth, LiveInputBackend, LiveListenerConfig,
     LogLevel, LogoConfig, LogoFade, OutputConfig, RecordingConfig, RecordingEncodeConfig,
-    TextOverlayState,
 };
 use log::*;
 use tokio::time::sleep;
@@ -53,7 +52,6 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         manager.live_loudness.clone(),
         manager.loudness_meter.clone(),
         manager.audio_level.clone(),
-        manager.text_overlay.clone(),
         desktop_control_callback(manager.clone()),
     )?;
     let playout = open_playout(&config, output_config.clone()).await?;
@@ -481,7 +479,6 @@ fn engine_output_config(
     live_loudness: ff_engine::LiveLoudnessControl,
     loudness_meter: ff_engine::LoudnessMeterControl,
     audio_level: std::sync::Arc<std::sync::Mutex<Option<ff_engine::AudioLevel>>>,
-    text_overlay_state: TextOverlayState,
     desktop_control_callback: ff_engine::DesktopControlCallback,
 ) -> Result<OutputConfig, ServiceError> {
     let width = config.output.width;
@@ -539,7 +536,6 @@ fn engine_output_config(
                 }
             })))
             .with_logo(logo)
-            .with_text_overlay_state(text_overlay_state)
             .with_desktop_fullscreen(config.output.desktop_fullscreen)
             .with_desktop_control_callback(desktop_control_callback)
             .with_logging(ffmpeg_log_level, ingest_log_level)

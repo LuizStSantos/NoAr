@@ -12,13 +12,10 @@ use crate::{
         routes::{AuthUser, ensure_any_authority},
         state::AppState,
     },
-    db::{
-        handles,
-        models::{Role, TextPreset},
-    },
+    db::{handles, models::Role},
     player::utils::get_data_map,
     utils::{
-        control::{ControlParams, Process, ProcessCtl, control_state, send_message},
+        control::{ControlParams, Process, ProcessCtl, control_state},
         errors::ServiceError,
     },
 };
@@ -58,58 +55,6 @@ pub async fn update_audio_effects(
     manager.config.write().await.audio.volume = update.volume;
 
     Ok(Json("Success"))
-}
-
-/// ### ffplayout controlling
-///
-/// here we communicate with the engine for:
-/// - jump to last or next clip
-/// - reset playlist state
-/// - get infos about current, next, last clip
-/// - send text to the engine, for overlaying it (as lower third etc.)
-///
-/// **Send Text to ffplayout**
-///
-/// ```BASH
-/// curl -X POST http://127.0.0.1:8787/api/control/1/text \
-/// -H 'Content-Type: application/json' -H 'Authorization: Bearer <TOKEN>' \
-/// -d '{"name": "Message", "text": "Hello from ffplayout", "position_x": "center", "position_y": "end:72", "font_size": 24, "text_color": "#ffffff", "background_enabled": true}'
-/// ```
-pub async fn send_text_message(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    Json(data): Json<TextPreset>,
-) -> Result<Json<serde_json::Map<String, serde_json::Value>>, ServiceError> {
-    ensure_any_authority(
-        &details,
-        &[&Role::GlobalAdmin, &Role::ChannelAdmin, &Role::User],
-    )?;
-    user.ensure_channel_or_admin(id)?;
-
-    let manager = {
-        let guard = state.controller.read().await;
-        guard.get(id)
-    }
-    .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
-
-    if data.persistent && data.id <= 0 {
-        return Err(ServiceError::BadRequest(
-            "persistent text overlays require a saved preset".to_string(),
-        ));
-    }
-    handles::set_persistent_preset(&state.pool, id, data.persistent.then_some(data.id)).await?;
-    {
-        let mut config = manager.config.write().await;
-        config.text.preset_id = data.persistent.then_some(data.id);
-        config.text.preset = data.persistent.then_some(data.clone());
-    }
-
-    match send_message(manager, data).await {
-        Ok(res) => Ok(Json(res)),
-        Err(e) => Err(e),
-    }
 }
 
 /// **Control Playout**

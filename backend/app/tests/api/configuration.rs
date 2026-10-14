@@ -2,7 +2,7 @@ use super::*;
 
 #[tokio::test]
 #[serial]
-async fn configuration_output_and_preset_routes_cover_crud_and_permissions() {
+async fn configuration_and_output_routes_cover_crud_and_permissions() {
     let (_, manager, pool) = prepare_config().await;
     let controller = Arc::new(RwLock::new(ChannelController::new()));
     controller.write().await.add(manager.clone());
@@ -173,122 +173,6 @@ async fn configuration_output_and_preset_routes_cover_crud_and_permissions() {
     assert_eq!(runtime_config.notification.token, "push-secret");
     drop(runtime_config);
 
-    let preset = TextPreset {
-        name: "HTTP preset".to_string(),
-        text: "Initial text".to_string(),
-        use_filename: true,
-        ..TextPreset::default()
-    };
-    let add_response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/api/presets/1")
-                .header("authorization", format!("Bearer {admin_token}"))
-                .header("content-type", "application/json")
-                .body(Body::from(serde_json::to_vec(&preset).unwrap()))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(add_response.status(), StatusCode::OK);
-    let preset_id: i32 =
-        sqlx::query_scalar("SELECT id FROM config_text_presets WHERE name = 'HTTP preset'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-    let presets_response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/api/presets/1")
-                .header("authorization", format!("Bearer {admin_token}"))
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(presets_response.status(), StatusCode::OK);
-    let presets_body = to_bytes(presets_response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let presets: Vec<serde_json::Value> = serde_json::from_slice(&presets_body).unwrap();
-    assert!(
-        presets
-            .iter()
-            .any(|preset| preset["id"].as_i64() == Some(i64::from(preset_id)))
-    );
-
-    let mut updated_preset = preset;
-    updated_preset.id = preset_id;
-    updated_preset.text = "Updated text".to_string();
-    let update_response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("PUT")
-                .uri(format!("/api/presets/1/{preset_id}"))
-                .header("authorization", format!("Bearer {admin_token}"))
-                .header("content-type", "application/json")
-                .body(Body::from(serde_json::to_vec(&updated_preset).unwrap()))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(update_response.status(), StatusCode::OK);
-    assert_eq!(
-        handles::select_preset(&pool, 1, preset_id)
-            .await
-            .unwrap()
-            .text,
-        "Updated text"
-    );
-    updated_preset.persistent = true;
-    let persistent_response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/api/control/1/text")
-                .header("authorization", format!("Bearer {admin_token}"))
-                .header("content-type", "application/json")
-                .body(Body::from(serde_json::to_vec(&updated_preset).unwrap()))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(persistent_response.status(), StatusCode::OK);
-    assert!(
-        handles::select_preset(&pool, 1, preset_id)
-            .await
-            .unwrap()
-            .persistent
-    );
-
-    updated_preset.persistent = false;
-    let transient_response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/api/control/1/text")
-                .header("authorization", format!("Bearer {admin_token}"))
-                .header("content-type", "application/json")
-                .body(Body::from(serde_json::to_vec(&updated_preset).unwrap()))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(transient_response.status(), StatusCode::OK);
-    assert_eq!(
-        handles::select_configuration(&pool, 1)
-            .await
-            .unwrap()
-            .text_preset_id,
-        None
-    );
-
     config.audio.loudness_scope = "all".to_string();
     config.audio.compressor_ratio = 4.0;
     config.audio.compressor_attack_ms = 10.0;
@@ -307,7 +191,6 @@ async fn configuration_output_and_preset_routes_cover_crud_and_permissions() {
     config.mail.subject = "Updated through API".to_string();
     config.notification.topic = "ffplayout-alerts".to_string();
     config.notification.tags = "warning,broadcast".to_string();
-    config.text.preset_id = Some(preset_id);
     let update_config_response = app
         .clone()
         .oneshot(
@@ -344,7 +227,6 @@ async fn configuration_output_and_preset_routes_cover_crud_and_permissions() {
     assert_eq!(stored.mail_subject, "Updated through API");
     assert_eq!(stored.notification_topic, "ffplayout-alerts");
     assert_eq!(stored.notification_tags, "warning,broadcast");
-    assert_eq!(stored.text_preset_id, Some(preset_id));
 
     let mut invalid = config.clone();
     invalid.mail.subject = "Must roll back".to_string();
@@ -403,37 +285,6 @@ async fn configuration_output_and_preset_routes_cover_crud_and_permissions() {
         "Updated through API"
     );
 
-    let mut invalid_preset = config.clone();
-    invalid_preset.text.preset_id = Some(i32::MAX);
-    let invalid_preset_response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("PUT")
-                .uri("/api/playout/config/1")
-                .header("authorization", format!("Bearer {admin_token}"))
-                .header("content-type", "application/json")
-                .body(Body::from(serde_json::to_vec(&invalid_preset).unwrap()))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(invalid_preset_response.status(), StatusCode::BAD_REQUEST);
-
-    let missing_response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("DELETE")
-                .uri(format!("/api/presets/999/{preset_id}"))
-                .header("authorization", format!("Bearer {admin_token}"))
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(missing_response.status(), StatusCode::NOT_FOUND);
-
     sqlx::query("UPDATE auth_user SET role_id = 3 WHERE username = 'admin'")
         .execute(&pool)
         .await
@@ -459,35 +310,16 @@ async fn configuration_output_and_preset_routes_cover_crud_and_permissions() {
     let user_login_json: serde_json::Value = serde_json::from_slice(&user_login_body).unwrap();
     let user_token = user_login_json["access"].as_str().unwrap();
     let forbidden_response = app
-        .clone()
         .oneshot(
             Request::builder()
-                .uri("/api/presets/999")
+                .method("PUT")
+                .uri("/api/playout/config/1")
                 .header("authorization", format!("Bearer {user_token}"))
-                .body(Body::empty())
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&config).unwrap()))
                 .unwrap(),
         )
         .await
         .unwrap();
     assert_eq!(forbidden_response.status(), StatusCode::FORBIDDEN);
-
-    let delete_response = app
-        .oneshot(
-            Request::builder()
-                .method("DELETE")
-                .uri(format!("/api/presets/1/{preset_id}"))
-                .header("authorization", format!("Bearer {admin_token}"))
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(delete_response.status(), StatusCode::OK);
-    assert_eq!(
-        handles::select_configuration(&pool, 1)
-            .await
-            .unwrap()
-            .text_preset_id,
-        None
-    );
 }

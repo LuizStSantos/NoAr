@@ -184,7 +184,6 @@ pub struct PlayoutConfig {
     pub ingest: Ingest,
     pub playlist: Playlist,
     pub storage: Storage,
-    pub text: Text,
     pub task: Task,
     pub recording: Recording,
     #[serde(alias = "out")]
@@ -875,24 +874,6 @@ impl Storage {
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
 #[ts(export, export_to = "playout_config.d.ts")]
-pub struct Text {
-    pub preset_id: Option<i32>,
-    #[ts(skip)]
-    #[serde(skip_serializing, skip_deserializing)]
-    pub preset: Option<models::TextPreset>,
-}
-
-impl Text {
-    fn new(config: &models::Configuration, preset: Option<models::TextPreset>) -> Self {
-        Self {
-            preset_id: config.text_preset_id,
-            preset,
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
-#[ts(export, export_to = "playout_config.d.ts")]
 pub struct Task {
     pub enable: bool,
     pub path: PathBuf,
@@ -1273,10 +1254,6 @@ impl PlayoutConfig {
         }
 
         let channel = Channel::new(&global, channel);
-        let text_preset = match config.text_preset_id {
-            Some(id) => Some(handles::select_preset(pool, channel_id, id).await?),
-            None => None,
-        };
         let general = General::new(&config);
         let mail = Mail::new(&global, &config);
         let notification = Notification::new(&global, &config);
@@ -1286,7 +1263,6 @@ impl PlayoutConfig {
         let listeners = handles::select_live_inputs(pool, config.id).await?;
         let ingest = Ingest { listeners };
         let mut playlist = Playlist::new(&config);
-        let text = Text::new(&config, text_preset);
         let task = Task::new(&config);
         let recording = Recording::new(&recording_config);
         let output = Output::new(&config, outputs);
@@ -1333,7 +1309,6 @@ impl PlayoutConfig {
             ingest,
             playlist,
             storage,
-            text,
             task,
             recording,
             output,

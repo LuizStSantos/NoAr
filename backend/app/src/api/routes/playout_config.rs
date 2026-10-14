@@ -271,11 +271,6 @@ pub async fn update_playout_config(
 
     data.processing.logo = logo;
     data.storage.filler = filler;
-    if let Some(preset_id) = data.text.preset_id {
-        handles::select_preset(&state.pool, id, preset_id)
-            .await
-            .map_err(|_| ServiceError::BadRequest("invalid text preset".to_string()))?;
-    }
     data.processing
         .hls_subtitle()
         .map_err(ServiceError::BadRequest)?;

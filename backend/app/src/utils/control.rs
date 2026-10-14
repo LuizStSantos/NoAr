@@ -6,12 +6,12 @@ use serde_json::{Map, Value, json};
 use sqlx::{Pool, Sqlite};
 
 use crate::{
-    db::{handles, models::TextPreset},
+    db::handles,
     player::{
         controller::ChannelManager,
         utils::{get_delta, get_media_map},
     },
-    utils::{errors::ServiceError, text::text_config},
+    utils::errors::ServiceError,
 };
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -89,26 +89,6 @@ impl fmt::Display for PlayerCtl {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Process {
     pub command: ProcessCtl,
-}
-
-pub async fn send_message(
-    manager: ChannelManager,
-    message: TextPreset,
-) -> Result<Map<String, Value>, ServiceError> {
-    let mut data_map = Map::new();
-
-    let text = (!message.text.trim().is_empty()).then(|| message.text.clone());
-    if text.is_none() && !message.use_filename {
-        manager.text_overlay.clear();
-        data_map.insert("message".to_string(), json!("text overlay cleared"));
-        return Ok(data_map);
-    }
-
-    manager
-        .text_overlay
-        .set(Some(text_config(&message, text, message.use_filename)));
-    data_map.insert("message".to_string(), json!("text overlay updated"));
-    Ok(data_map)
 }
 
 pub async fn control_state(

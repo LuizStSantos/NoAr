@@ -36,7 +36,7 @@ use ffplayout::{
     },
     db::{
         handles, init_globales,
-        models::{Role, TextPreset, User},
+        models::{Role, User},
     },
     extract,
     player::controller::{ChannelController, ChannelManager},
