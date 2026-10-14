@@ -110,7 +110,35 @@ const clipAtTime = computed(() => {
     return null
 })
 
+/**
+ * An event listed in the guide (a live, for example) on air at the chosen
+ * time. The player never cuts a running event, so a new one waits for its end.
+ */
+const eventOnAir = computed(() => {
+    const at = timeToSeconds(time.value || '00:00:00')
+    const ownStart = props.draft?.event ? `${date.value}T${props.draft.event.start_time}` : ''
+
+    return (
+        props.grade.find(
+            (entry) =>
+                entry.scheduled &&
+                entry.start !== ownStart &&
+                secondsFromDay(entry.start, date.value) <= at &&
+                at < secondsFromDay(entry.stop, date.value),
+        ) ?? null
+    )
+})
+
 const entryPreview = computed(() => {
+    const block = eventOnAir.value
+
+    if (block) {
+        return t('schedule.waitsFor', {
+            time: secondsToTime(secondsFromDay(block.stop, date.value)),
+            title: block.title,
+        })
+    }
+
     const clip = clipAtTime.value
 
     if (!clip) {
@@ -128,7 +156,7 @@ const entryPreview = computed(() => {
 const preview = computed(() => {
     const clip = clipAtTime.value
 
-    if (!clip || !total.value) {
+    if (!clip || !total.value || eventOnAir.value) {
         return null
     }
 
@@ -137,33 +165,52 @@ const preview = computed(() => {
     const clipName = programName(clip.start, clip.item)
     const nextName = clip.next ? programName(clip.end, clip.next) : ''
     const nextLength = clip.next ? clip.next.out - clip.next.in : 0
-    const windowStart = Math.max(clip.start, at - 300)
-    const span = clip.end - windowStart + nextLength
-    const width = (seconds: number) => `${Math.max(4, (seconds / span) * 100)}%`
-    const before = [
-        { label: clipName, width: width(clip.end - windowStart), color: '#4a4a4a' },
-        ...(nextName ? [{ label: nextName, width: width(nextLength), color: '#5a5a5a' }] : []),
-    ]
-    const after =
-        entryMode.value === 'after_clip'
-            ? [
-                  before[0]!,
-                  { label: formatLength(total.value), width: width(total.value), color: SCHEDULE_COLORS.after_clip },
-                  ...(nextName ? [{ label: nextName, width: width(nextLength), color: '#5a5a5a' }] : []),
-              ]
-            : [
-                  { label: clipName, width: width(at - windowStart), color: '#4a4a4a' },
-                  { label: formatLength(total.value), width: width(total.value), color: SCHEDULE_COLORS.interrupt },
-                  {
-                      label: afterMode.value === 'continue' ? clipName : nextName || clipName,
-                      width: width(afterMode.value === 'continue' ? clip.end - at : nextLength),
-                      color: '#5a5a5a',
-                  },
-              ]
+    // Show at least half a minute of what airs before the event enters.
+    const windowStart = Math.min(Math.max(clip.start, at - 300), start - 30)
+    const leftOfClip = clip.end - at
+    const event = (color: string) => ({ label: formatLength(total.value), seconds: total.value, color, event: true })
+    const programme = (label: string, seconds: number, color = '#4a4a4a') => ({ label, seconds, color, event: false })
+    const before = [programme(clipName, clip.end - windowStart), programme(nextName, nextLength, '#5a5a5a')]
+    let after
+
+    if (entryMode.value === 'after_clip') {
+        after = [
+            programme(clipName, clip.end - windowStart),
+            event(SCHEDULE_COLORS.after_clip),
+            programme(nextName, nextLength, '#5a5a5a'),
+        ]
+    } else if (afterMode.value === 'continue') {
+        after = [
+            programme(clipName, at - windowStart),
+            event(SCHEDULE_COLORS.interrupt),
+            programme(clipName, leftOfClip),
+            programme(nextName, nextLength, '#5a5a5a'),
+        ]
+    } else {
+        // Back on the clock: the event's length is skipped from what follows.
+        after = [
+            programme(clipName, at - windowStart),
+            event(SCHEDULE_COLORS.interrupt),
+            programme(clipName, Math.max(0, leftOfClip - total.value)),
+            programme(nextName, nextLength - Math.max(0, total.value - leftOfClip), '#5a5a5a'),
+        ]
+    }
+
+    const sum = (parts: { seconds: number }[]) => parts.reduce((all, part) => all + part.seconds, 0)
+    const span = Math.max(sum(before), sum(after))
+    // The event stays visible even when it is short next to the programme.
+    const bars = (parts: { label: string; seconds: number; color: string; event: boolean }[]) =>
+        parts
+            .filter((part) => part.seconds > 0 && part.label)
+            .map((part) => ({
+                label: part.label,
+                color: part.color,
+                width: `${Math.max(part.event ? 6 : 0, (part.seconds / span) * 100)}%`,
+            }))
 
     return {
-        before,
-        after,
+        before: bars(before),
+        after: bars(after),
         ticks: [windowStart, start, start + total.value].map(secondsToTime),
     }
 })

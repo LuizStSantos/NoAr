@@ -434,6 +434,7 @@ export default {
         schedule: 'Agendar',
         entersAt: 'Entra às {time}, no fim de “{clip}”.',
         cutsAt: 'Corta “{clip}” às {time}.',
+        waitsFor: 'Entra às {time}, quando “{title}” terminar: um agendamento não corta outro.',
         newLive: 'Nova live',
         scheduleLive: 'Agendar live',
         testSignal: 'Testar sinal',

@@ -738,7 +738,7 @@ watch(zoom, scrollToFocus)
                                 </button>
                                 <div
                                     v-if="ghost"
-                                    class="absolute top-1.5 bottom-1.5 w-32 rounded border-2 border-dashed border-accent bg-accent/15 text-accent px-2 py-1 text-[13px] font-semibold pointer-events-none z-10"
+                                    class="absolute top-1.5 bottom-1.5 w-32 rounded border-2 border-dashed border-accent bg-base-300 text-accent px-2 py-1 text-[13px] font-semibold whitespace-nowrap pointer-events-none z-20"
                                     :style="{ left: left(ghost.seconds) }"
                                 >
                                     {{ ghost.label }}

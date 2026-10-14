@@ -433,6 +433,7 @@ export default {
         schedule: 'Schedule',
         entersAt: 'Starts at {time}, when “{clip}” ends.',
         cutsAt: 'Cuts “{clip}” at {time}.',
+        waitsFor: 'Starts at {time}, when “{title}” ends: events never cut each other.',
         newLive: 'New live',
         scheduleLive: 'Schedule live',
         testSignal: 'Test signal',
