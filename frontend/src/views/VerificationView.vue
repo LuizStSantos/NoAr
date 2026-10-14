@@ -54,7 +54,7 @@ async function verify() {
         </RouterLink>
         <div class="w-full h-full flex justify-center items-center">
             <div class="w-96 min-w-full flex flex-col justify-center items-center px-4">
-                <h1 class="text-6xl xs:text-8xl">ffplayout</h1>
+                <h1 class="text-6xl xs:text-8xl">NoAr</h1>
 
                 <form class="mt-10" @submit.prevent="verify">
                     <input

@@ -1,9 +1,9 @@
 **XMLTV Program Guide**
 ================
 
-ffplayout builds an XMLTV guide (EPG) from the channel's playlists and the
+NoAr builds an XMLTV guide (EPG) from the channel's playlists and the
 `.nfo` files placed in each program folder. Images from those folders (poster,
-fanart, episode thumbnail) are linked from the guide and served by ffplayout
+fanart, episode thumbnail) are linked from the guide and served by NoAr
 itself.
 
 The guide is public, like the HLS files, so IPTV players (Kodi, Jellyfin,
@@ -120,7 +120,7 @@ guide.
 
 ## How the guide is built
 
-- Times follow the playlist, the same way as the program view in ffplayout.
+- Times follow the playlist, the same way as the program view in NoAr.
 - Consecutive videos of the same program become a single guide entry (e.g. the
   parts of a news show). Episodes with their own `.nfo` stay separate.
 - Ads (`"ad": true` in the playlist) and the configured filler are not listed:
@@ -136,8 +136,8 @@ All optional:
 | --- | --- | --- |
 | `days` | `7` | Days from the start of today (1 to 14). |
 | `lang` | — | Language of titles and descriptions, e.g. `en` or `pt-BR`. |
-| `tvg_id` | `ffplayout.<id>` | Channel id in the guide; must match the `tvg-id` in the M3U list. |
-| `base_url` | request address | Public address for image links, when a reverse proxy serves ffplayout under a sub path. |
+| `tvg_id` | `noar.<id>` | Channel id in the guide; must match the `tvg-id` in the M3U list. |
+| `base_url` | request address | Public address for image links, when a reverse proxy serves NoAr under a sub path. |
 
 Example:
 

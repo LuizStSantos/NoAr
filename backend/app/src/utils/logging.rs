@@ -207,7 +207,7 @@ impl MultiFileLogger {
                 FileSpec::default()
                     .suppress_timestamp()
                     .directory(&self.log_path)
-                    .basename("ffplayout")
+                    .basename("noar")
                     .discriminant(channel.to_string()),
             )
             .format(file_formatter)

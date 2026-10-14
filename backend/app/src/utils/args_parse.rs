@@ -29,12 +29,12 @@ const DEFAULT_LISTEN_ADDRESS: &str = "127.0.0.1:8787";
 
 #[derive(Parser, Debug, Default, Clone)]
 #[clap(version,
-    about = "ffplayout - 24/7 broadcasting solution",
-    long_about = Some("ffplayout - 24/7 broadcasting solution\n
+    about = "NoAr - 24/7 broadcasting solution",
+    long_about = Some("NoAr - 24/7 broadcasting solution\n
 Stream dynamic playlists or folder contents with the power of ffmpeg.
 The target can be an HLS playlist, rtmp/srt/udp server, desktop player
 or any other output supported by ffmpeg.\n
-ffplayout also provides a web frontend and API to control streaming,
+NoAr also provides a web frontend and API to control streaming,
 manage config, files, text overlay, etc."),
 next_line_help = false,
 )]
@@ -88,7 +88,7 @@ pub struct Args {
     #[clap(long, env, help_heading = Some("Initial Setup / General"), help = "Path to public files, also HLS playlists")]
     pub public: Option<String>,
 
-    #[clap(long, help_heading = Some("Initial Setup / Playlist"), help = "Path to playlist, or playlist root folder")]
+    #[clap(long, env, help_heading = Some("Initial Setup / Playlist"), help = "Path to playlist, or playlist root folder")]
     pub playlists: Option<String>,
 
     #[clap(long, help_heading = Some("General"), help = "Add or update a global admin user")]

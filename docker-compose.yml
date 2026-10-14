@@ -1,0 +1,27 @@
+# NoAr: 24/7 playout with scheduler and XMLTV guide.
+#
+#   docker compose up -d          # start (builds the image the first time)
+#   docker compose logs -f        # follow the logs
+#   docker compose pull && docker compose up -d   # update to a published image
+#
+# Then open http://<server>:8787 and complete the setup page.
+
+services:
+  noar:
+    image: ghcr.io/luizstsantos/noar:latest
+    build: .
+    container_name: noar
+    restart: unless-stopped
+    environment:
+      # Time zone used for playlists, schedules and the guide.
+      TZ: America/Sao_Paulo
+    volumes:
+      # Media, playlists, database, HLS output and logs.
+      - ./data:/data
+    ports:
+      # Web interface, API, HLS and XMLTV guide.
+      - "8787:8787"
+      # Live ingest listeners. Match these to the listeners you configure
+      # in the channel settings (RTMP over TCP, SRT over UDP).
+      - "1936:1936"
+      - "9000:9000/udp"

@@ -92,7 +92,7 @@ function toggleTheme() {
 <template>
     <div class="navbar bg-base-100 min-h-13 p-0 shadow-md">
         <RouterLink class="navbar-brand min-w-11.5 p-2" to="/">
-            <img src="@/assets/images/ffplayout-small.png" class="img-fluid" alt="Logo" width="30" height="30" />
+            <img src="@/assets/images/noar-logo.svg" class="img-fluid" alt="NoAr" width="30" height="30" />
         </RouterLink>
         <div class="navbar-end w-1/5 grow">
             <label class="swap swap-rotate me-2 2sm:hidden">

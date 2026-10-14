@@ -125,7 +125,7 @@ build-print = "1"
 winresource = "0.1"
 
 [[bin]]
-name = "ffplayout"
+name = "noar"
 path = "src/main.rs"
 
 # DEBIAN DEB PACKAGE
@@ -139,7 +139,7 @@ suggests = ["ffmpeg"]
 copyright = "Copyright (c) 2024, Jonathan Baecker. All rights reserved."
 assets = [
     [
-        "target/release/ffplayout",
+        "target/release/noar",
         "/usr/bin/",
         "755",
     ],
@@ -175,7 +175,7 @@ systemd-units = { enable = true, unit-scripts = "../../assets" }
 [package.metadata.deb.variants.arm64]
 assets = [
     [
-        "target/release/ffplayout",
+        "target/release/noar",
         "/usr/bin/",
         "755",
     ],
@@ -211,7 +211,7 @@ assets = [
 name = "ffplayout"
 license = "GPL-3.0"
 assets = [
-    { source = "../../target/release/ffplayout", dest = "/usr/bin/ffplayout", mode = "755" },
+    { source = "../../target/release/noar", dest = "/usr/bin/noar", mode = "755" },
     { source = "../../assets/ffplayout.service", dest = "/lib/systemd/system/ffplayout.service", mode = "644" },
     { source = "../../README.md", dest = "/usr/share/doc/ffplayout/README", mode = "644" },
     { source = "../../assets/ffplayout.1.gz", dest = "/usr/share/man/man1/ffplayout.1.gz", mode = "644", doc = true },

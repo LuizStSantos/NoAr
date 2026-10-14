@@ -78,7 +78,7 @@ pub async fn read_log_file(
     };
 
     let log_path = log_file_path()
-        .join(format!("ffplayout_{channel_id}{date_str}.log"))
+        .join(format!("noar_{channel_id}{date_str}.log"))
         .clean();
     let file_size = fs::metadata(&log_path).await?.len() as f64;
 

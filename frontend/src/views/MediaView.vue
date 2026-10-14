@@ -61,7 +61,7 @@ const inputFiles = ref([] as File[])
 const fileInputName = ref()
 const lastPath = ref('')
 
-document.title = `${t('button.media')} | ffplayout`
+document.title = `${t('button.media')} | NoAr`
 
 onMounted(async () => {
     const config_extensions = configStore.playout.storage.extensions

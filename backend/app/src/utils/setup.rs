@@ -16,12 +16,12 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     db::{
         handles,
-        models::{InitialSetup, SetupSettings},
+        models::{GlobalSettings, InitialSetup, SetupSettings},
     },
     file::init_storage,
     player::controller::ChannelController,
     utils::{
-        channels::initialize_channels, errors::ServiceError, mail::MailQueue,
+        args_parse::Args, channels::initialize_channels, errors::ServiceError, mail::MailQueue,
         paths::validate_directory_path, system::SystemStat,
     },
 };
@@ -36,6 +36,27 @@ pub struct SetupRequest {
     pub mail: String,
     pub password: String,
     pub two_factor: bool,
+}
+
+/// Values the setup form starts with: the stored settings, with the paths
+/// given as arguments or environment variables taking precedence. The Docker
+/// image sets them, so its setup page already points at the data volume.
+pub fn setup_defaults(settings: GlobalSettings, args: &Args) -> SetupSettings {
+    let mut defaults = SetupSettings::from(settings);
+    let overrides = [
+        (&mut defaults.logs, &args.logs),
+        (&mut defaults.playlists, &args.playlists),
+        (&mut defaults.public, &args.public),
+        (&mut defaults.storage, &args.storage),
+    ];
+
+    for (field, value) in overrides {
+        if let Some(value) = value.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
+            *field = value.to_string();
+        }
+    }
+
+    defaults
 }
 
 fn validate_setup_paths(settings: &SetupSettings) -> Result<(), ServiceError> {
@@ -360,6 +381,32 @@ mod tests {
             smtp_starttls: false,
             smtp_port: 465,
         }
+    }
+
+    #[test]
+    fn setup_defaults_prefer_path_arguments_over_stored_settings() {
+        let stored = GlobalSettings {
+            logs: "/var/log/ffplayout".to_string(),
+            playlists: "/var/lib/ffplayout/playlists".to_string(),
+            public: "/var/lib/ffplayout/public".to_string(),
+            storage: "/var/lib/ffplayout/media".to_string(),
+            smtp_password: "secret".to_string(),
+            ..GlobalSettings::default()
+        };
+        let args = Args {
+            storage: Some("/data/media".to_string()),
+            playlists: Some(" /data/playlists ".to_string()),
+            logs: Some(String::new()),
+            ..Args::default()
+        };
+
+        let defaults = setup_defaults(stored, &args);
+
+        assert_eq!(defaults.storage, "/data/media");
+        assert_eq!(defaults.playlists, "/data/playlists");
+        assert_eq!(defaults.public, "/var/lib/ffplayout/public");
+        assert_eq!(defaults.logs, "/var/log/ffplayout");
+        assert!(defaults.smtp_password.is_empty());
     }
 
     #[test]

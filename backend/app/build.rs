@@ -81,12 +81,22 @@ fn main() {
             println!("cargo:rerun-if-changed={path}");
         }
 
-        if !Path::new(RUN_P_BIN).exists() {
-            info!("run-p not found, installing frontend dependencies with npm ci");
-            run_npm(&["ci"]);
-        }
+        // The Docker image builds the frontend in its own stage and copies
+        // frontend/dist in, so the Rust stage does not need Node.js.
+        println!("cargo:rerun-if-env-changed=NOAR_FRONTEND_PREBUILT");
+        let prebuilt = std::env::var("NOAR_FRONTEND_PREBUILT").as_deref() == Ok("1")
+            && Path::new("../../frontend/dist/index.html").is_file();
 
-        run_npm(&["run", "build"]);
+        if prebuilt {
+            info!("Using the prebuilt frontend in frontend/dist");
+        } else {
+            if !Path::new(RUN_P_BIN).exists() {
+                info!("run-p not found, installing frontend dependencies with npm ci");
+                run_npm(&["ci"]);
+            }
+
+            run_npm(&["run", "build"]);
+        }
     }
 
     println!("cargo:rerun-if-env-changed=FFPLAYOUT_VAAPI_SHARED");

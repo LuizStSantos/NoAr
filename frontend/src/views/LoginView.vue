@@ -63,7 +63,9 @@ async function login() {
 <template>
     <div class="w-full min-h-screen xs:h-full flex justify-center items-center">
         <div class="w-96 min-w-full flex flex-col justify-center items-center px-4">
-            <h1 class="text-6xl xs:text-8xl">ffplayout</h1>
+            <h1 class="text-6xl xs:text-8xl flex items-center gap-4">
+                <img src="@/assets/images/noar-logo.svg" alt="" class="w-14 h-14 xs:w-20 xs:h-20" />NoAr
+            </h1>
 
             <form class="mt-10" @submit.prevent="login">
                 <input

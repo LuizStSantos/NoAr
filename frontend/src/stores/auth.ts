@@ -10,7 +10,7 @@ type LoginResult = {
 
 type AuthChannelMessage = { type: 'tokens-updated'; access: string; refresh: string } | { type: 'logout' }
 
-const AUTH_CHANNEL_NAME = 'ffplayout-auth'
+const AUTH_CHANNEL_NAME = 'noar-auth'
 
 let refreshRequest: Promise<boolean> | null = null
 let authChannel: BroadcastChannel | null = null

@@ -167,7 +167,7 @@ async fn async_main() -> Result<(), ProcessError> {
         #[cfg(not(debug_assertions))]
         let app = app.merge(admin_ui_routes());
 
-        info!(target: Target::Console.as_str(), "Running ffplayout, listen on http://{conn}");
+        info!(target: Target::Console.as_str(), "Running NoAr, listen on http://{conn}");
 
         tokio::select! {
             result = axum::serve(listener, app) => {
@@ -254,7 +254,7 @@ async fn async_main() -> Result<(), ProcessError> {
     } else if !ARGS.user_set {
         error!(
             target: Target::Console.as_str(),
-            "Run ffplayout with correct parameters! For example:\n    -l 127.0.0.1:8787\n    --channel 1 2 --foreground\n    --channel 1 --generate 2025-01-20 - 2025-01-25\nRun ffplayout -h for more information."
+            "Run noar with correct parameters! For example:\n    -l 127.0.0.1:8787\n    --channel 1 2 --foreground\n    --channel 1 --generate 2025-01-20 - 2025-01-25\nRun noar -h for more information."
         );
     }
 

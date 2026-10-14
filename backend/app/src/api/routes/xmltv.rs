@@ -42,9 +42,9 @@ pub struct XmltvQuery {
 /// * `days`: days from the start of today, 1 to 14 (default 7)
 /// * `lang`: language code for titles and descriptions, e.g. `pt`
 /// * `tvg_id`: channel id in the guide, matching the `tvg-id` in the M3U
-///   (default `ffplayout.<channel id>`)
+///   (default `noar.<channel id>`)
 /// * `base_url`: public address for image links, when a reverse proxy serves
-///   ffplayout under a sub path (e.g. `https://example.org/tv`)
+///   NoAr under a sub path (e.g. `https://example.org/tv`)
 pub async fn get_xmltv(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -68,7 +68,7 @@ pub async fn get_xmltv(
             .tvg_id
             .map(|tvg_id| tvg_id.trim().to_string())
             .filter(|tvg_id| !tvg_id.is_empty())
-            .unwrap_or_else(|| format!("ffplayout.{id}")),
+            .unwrap_or_else(|| format!("noar.{id}")),
         name,
     };
     let options = XmltvOptions {

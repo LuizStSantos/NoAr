@@ -102,11 +102,8 @@ pub async fn build_xmltv(
         0,
         "tv",
         &[
-            ("generator-info-name", "ffplayout"),
-            (
-                "generator-info-url",
-                "https://github.com/ffplayout/ffplayout",
-            ),
+            ("generator-info-name", "NoAr"),
+            ("generator-info-url", "https://github.com/LuizStSantos/noar"),
         ],
     );
 

@@ -2,6 +2,7 @@ use axum::{Json, extract::State};
 use serde::Serialize;
 
 use crate::{
+    ARGS,
     api::state::AppState,
     db::handles,
     utils::{errors::ServiceError, setup},
@@ -24,7 +25,7 @@ pub async fn get_setup_status(
 
     Ok(Json(SetupStatus {
         required,
-        settings: required.then(|| settings.into()),
+        settings: required.then(|| setup::setup_defaults(settings, &ARGS)),
     }))
 }
 

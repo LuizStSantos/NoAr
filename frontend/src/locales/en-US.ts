@@ -226,9 +226,9 @@ export default {
         placeholderToken: 'Token',
         help: 'Help',
         generalHelp:
-            'Sometimes it can happen that a file is corrupt but still playable. This can produce a streaming error for all following files. The only solution in this case is to stop ffplayout and start it again.',
+            'Sometimes it can happen that a file is corrupt but still playable. This can produce a streaming error for all following files. The only solution in this case is to stop NoAr and start it again.',
         stopThreshold:
-            'The threshold stops ffplayout if it is asynchronous in time above this value. A number below 3 can cause unexpected errors.',
+            'The threshold stops NoAr if it is asynchronous in time above this value. A number below 3 can cause unexpected errors.',
         mailHelp: `Send error messages to an email address, such as missing clips, missing or invalid playlist format, etc.. Leave the recipient blank if you don't need this.`,
         mailInterval:
             'The interval refers to the number of seconds until a new email is sent; the value must be in increments of 10 and not lower then 30 seconds.',
@@ -304,19 +304,19 @@ export default {
         encodingSettings: 'Encoding settings',
         audioEncoderOptions: 'Advanced audio encoder options',
         audioEncoderOptionsHelp:
-            'Additional FFmpeg options for the selected audio encoder. Settings managed by ffplayout cannot be overridden; unsupported names or values are rejected when saving.',
+            'Additional FFmpeg options for the selected audio encoder. Settings managed by NoAr cannot be overridden; unsupported names or values are rejected when saving.',
         addAudioOption: 'Add audio option',
         audioOptionName: 'Option name',
         audioOptionValue: 'Value',
         protocolOptions: 'Output protocol options',
         protocolOptionsHelp:
-            'Transport options used when opening an RTMP, SRT, UDP, or supported custom network output. Examples: SRT latency=2000000 or UDP pkt_size=1316. Values, including passphrases, are stored and returned unchanged. ffplayout-managed timeouts cannot be overridden.',
+            'Transport options used when opening an RTMP, SRT, UDP, or supported custom network output. Examples: SRT latency=2000000 or UDP pkt_size=1316. Values, including passphrases, are stored and returned unchanged. NoAr-managed timeouts cannot be overridden.',
         addProtocolOption: 'Add protocol option',
         protocolOptionName: 'Option name',
         protocolOptionValue: 'Value',
         muxerOptions: 'Muxer options',
         muxerOptionsHelp:
-            'Additional FFmpeg muxer options for this output. For HLS, set hls_flags to program_date_time to emit EXT-X-PROGRAM-DATE-TIME. Required ffplayout options remain enforced.',
+            'Additional FFmpeg muxer options for this output. For HLS, set hls_flags to program_date_time to emit EXT-X-PROGRAM-DATE-TIME. Required NoAr options remain enforced.',
         addMuxerOption: 'Add Muxer Option',
         muxerOptionName: 'Option name',
         muxerOptionValue: 'Value',
@@ -339,7 +339,7 @@ export default {
         addHlsVariant: 'Add Variant',
         remove: 'Remove',
         restartTile: 'Restart Playout',
-        restartText: 'Restart ffplayout to apply changes?',
+        restartText: 'Restart NoAr to apply changes?',
         updatePlayoutSuccess: 'Update playout config success!',
         updatePlayoutFailed: 'Update playout config failed!',
         forbiddenPlaylistPath: 'Access forbidden: Playlist folder cannot be opened.',
@@ -347,7 +347,7 @@ export default {
         publicPath: 'Public (HLS) Path',
         playlistPath: 'Playlist Path',
         storagePath: 'Storage Path',
-        sharedStorage: 'ffplayout runs inside a container, use the same storage root for all channels!',
+        sharedStorage: 'NoAr runs inside a container, use the same storage root for all channels!',
         timezone: 'Timezone',
     },
     setup: {
