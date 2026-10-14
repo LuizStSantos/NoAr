@@ -98,7 +98,15 @@ jobs:
       - name: Rust tests and lint on Linux
         if: runner.os == 'Linux'
         run: |
-          cargo test --no-default-features
+          # Failing tests and compiler errors also show up as annotations on
+          # the run summary, so they can be read without the full log.
+          set -o pipefail
+          if ! cargo test --no-default-features 2>&1 | tee test.log; then
+            grep -E "^---- |panicked at|^error(\[|:)|^test .* FAILED" test.log \
+              | head -40 \
+              | sed 's/^/::error title=cargo test::/'
+            exit 1
+          fi
           cargo clippy --no-default-features --all-targets -- --deny warnings
           cargo fmt --all -- --check
           cargo build --no-default-features --features embed_frontend
