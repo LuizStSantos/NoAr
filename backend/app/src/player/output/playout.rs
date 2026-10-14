@@ -312,6 +312,7 @@ async fn play_loop(
                         source: node.source.clone(),
                         title: node.title.clone(),
                         position: node.seek + clip_started.elapsed().as_secs_f64(),
+                        program: None,
                     });
                 }
 

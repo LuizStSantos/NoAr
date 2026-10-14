@@ -143,6 +143,15 @@ impl Listing {
     }
 }
 
+/// Title of the program a clip belongs to, from its `.nfo` files.
+pub async fn program_title(storage: &Path, source: &str) -> Option<String> {
+    let clip = NfoLibrary::new(storage).lookup(source).await;
+
+    clip.program
+        .and_then(|nfo| nfo.title.clone())
+        .or_else(|| clip.episode.and_then(|nfo| nfo.show_title.clone()))
+}
+
 pub fn has_image_extension(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
@@ -450,6 +459,13 @@ mod tests {
         assert_eq!(second.program_key, first.program_key);
         assert!(second.episode.is_none());
         assert!(second.artwork.still.is_none());
+        assert_eq!(
+            program_title(&storage.0, &other.to_string_lossy())
+                .await
+                .as_deref(),
+            Some("Novela")
+        );
+        assert_eq!(program_title(&storage.0, "/elsewhere/a.mp4").await, None);
     }
 
     #[tokio::test]

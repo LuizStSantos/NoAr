@@ -41,6 +41,7 @@ declare global {
         source: string
         title: string | null
         position: number
+        program: string | null
     }
 
     interface ActiveScheduleEvent {

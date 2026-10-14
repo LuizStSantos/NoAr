@@ -62,6 +62,9 @@ pub struct InterruptedClip {
     pub title: Option<String>,
     /// Seconds into the clip where it was cut.
     pub position: f64,
+    /// Title of the program the clip belongs to, from its `.nfo`; filled in
+    /// when the status is reported.
+    pub program: Option<String>,
 }
 
 /// The event on air, as reported to the web interface.

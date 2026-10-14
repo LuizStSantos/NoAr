@@ -112,7 +112,10 @@ watch(i, load)
                     <template v-if="active.after_mode === 'continue' && active.interrupted">
                         {{
                             t('schedule.returnsTo', {
-                                title: active.interrupted.title || fileStem(active.interrupted.source),
+                                title:
+                                    active.interrupted.program ||
+                                    active.interrupted.title ||
+                                    fileStem(active.interrupted.source),
                                 position: formatLength(active.interrupted.position),
                             })
                         }}

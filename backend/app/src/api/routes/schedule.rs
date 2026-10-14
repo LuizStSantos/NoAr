@@ -29,7 +29,7 @@ use crate::{
             occurrence_now, occurrence_views, parse_date, prepare_event,
         },
         time_machine::time_now,
-        xmltv::{GuideBlock, guide_blocks},
+        xmltv::{GuideBlock, guide_blocks, library::program_title},
     },
 };
 
@@ -297,8 +297,15 @@ pub async fn get_schedule_status(
         .map(|occurrence| OccurrenceView::new(occurrence, Some("running".to_string())))
         .collect();
 
+    let mut active = manager.schedule.active();
+
+    if let Some(clip) = active.as_mut().and_then(|event| event.interrupted.as_mut()) {
+        let storage = manager.config.read().await.channel.storage.clone();
+        clip.program = program_title(&storage, &clip.source).await;
+    }
+
     Ok(Json(ScheduleStatus {
-        active: manager.schedule.active(),
+        active,
         queued,
         next,
     }))
