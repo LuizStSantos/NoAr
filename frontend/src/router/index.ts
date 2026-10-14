@@ -40,6 +40,12 @@ const router = createRouter({
             meta: { showHeader: true },
         },
         {
+            path: '/schedule',
+            name: 'schedule',
+            component: () => import('@/views/ScheduleView.vue'),
+            meta: { showHeader: true },
+        },
+        {
             path: '/media',
             name: 'media',
             component: () => import('@/views/MediaView.vue'),

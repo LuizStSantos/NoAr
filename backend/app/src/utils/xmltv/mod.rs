@@ -7,11 +7,12 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeDelta};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use chrono_tz::Tz;
 use log::*;
 use path_clean::PathClean;
 use quick_xml::escape::escape;
+use serde::Serialize;
 use tokio::fs;
 
 pub mod library;
@@ -74,9 +75,33 @@ struct Programme {
     source: String,
     playlist_title: Option<String>,
     clip: ClipMetadata,
+    /// Placed by a scheduled event.
+    scheduled: bool,
 }
 
 impl Programme {
+    /// Guide title and sub-title, from the `.nfo` files, the playlist title
+    /// or the file name.
+    fn titles(&self) -> (String, Option<String>) {
+        let program = self.clip.program.as_deref();
+        let episode = self.clip.episode.as_deref();
+        let playlist_title = self.playlist_title.as_deref();
+        let title = program
+            .and_then(|nfo| nfo.title.as_deref())
+            .or_else(|| episode.and_then(|nfo| nfo.show_title.as_deref()))
+            .or(playlist_title)
+            .or_else(|| episode.and_then(|nfo| nfo.title.as_deref()))
+            .map(str::to_string)
+            .unwrap_or_else(|| title_from_file_name(&self.source));
+        let sub_title = episode
+            .and_then(|nfo| nfo.title.as_deref())
+            .or(program.and(playlist_title))
+            .filter(|sub_title| *sub_title != title)
+            .map(str::to_string);
+
+        (title, sub_title)
+    }
+
     fn is_same_programme(&self, clip: &ClipMetadata, playlist_title: &Option<String>) -> bool {
         self.clip.program_key == clip.program_key
             && self.clip.episode_key == clip.episode_key
@@ -98,9 +123,7 @@ pub async fn build_xmltv(
     let from = now.date_naive().and_time(NaiveTime::MIN);
     let to = from + TimeDelta::try_days(days).unwrap_or_default();
 
-    let slots = collect_slots(config, from, to).await?;
-    let slots = apply_schedule(slots, &occurrences_between(events, from, to));
-    let programmes = group_programmes(config, slots).await;
+    let programmes = programmes_between(config, events, from, to).await?;
     let images = ImageUrls {
         base: &options.image_base_url,
         storage: config.channel.storage.clean(),
@@ -149,6 +172,60 @@ pub async fn build_xmltv(
     xml.close(0, "tv");
 
     Ok(xml.finish())
+}
+
+/// The guide's programmes overlapping `[from, to)`: playlists, scheduled
+/// events placed the way the player airs them, clips grouped by program.
+async fn programmes_between(
+    config: &PlayoutConfig,
+    events: &[ScheduleEvent],
+    from: NaiveDateTime,
+    to: NaiveDateTime,
+) -> Result<Vec<Programme>, ServiceError> {
+    let slots = collect_slots(config, from, to).await?;
+    let slots = apply_schedule(slots, &occurrences_between(events, from, to));
+
+    Ok(group_programmes(config, slots).await)
+}
+
+/// One entry of the guide, for the scheduler's timeline.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct GuideBlock {
+    /// Local `YYYY-MM-DDTHH:MM:SS`.
+    pub start: String,
+    pub stop: String,
+    pub title: String,
+    pub sub_title: Option<String>,
+    /// Placed by a scheduled event shown in the guide.
+    pub scheduled: bool,
+}
+
+/// The day's guide as the scheduler shows it: program names from the
+/// `.nfo` files and times moved by scheduled events.
+pub async fn guide_blocks(
+    config: &PlayoutConfig,
+    events: &[ScheduleEvent],
+    date: NaiveDate,
+) -> Result<Vec<GuideBlock>, ServiceError> {
+    let from = date.and_time(NaiveTime::MIN);
+    let to = from + TimeDelta::try_days(1).unwrap_or_default();
+    let format = |time: NaiveDateTime| time.format("%Y-%m-%dT%H:%M:%S").to_string();
+
+    Ok(programmes_between(config, events, from, to)
+        .await?
+        .into_iter()
+        .map(|programme| {
+            let (title, sub_title) = programme.titles();
+
+            GuideBlock {
+                start: format(programme.start),
+                stop: format(programme.stop),
+                title,
+                sub_title,
+                scheduled: programme.scheduled,
+            }
+        })
+        .collect())
 }
 
 /// Place every playlist entry between `from` and `to` on the timeline.
@@ -269,6 +346,7 @@ async fn group_programmes(config: &PlayoutConfig, slots: Vec<Slot>) -> Vec<Progr
             source: slot.source,
             playlist_title,
             clip,
+            scheduled: slot.scheduled,
         });
     }
 
@@ -426,21 +504,9 @@ fn write_programme(
 ) {
     let program = programme.clip.program.as_deref();
     let episode = programme.clip.episode.as_deref();
-    let playlist_title = programme.playlist_title.as_deref();
     let start = start.format("%Y%m%d%H%M%S %z").to_string();
     let stop = stop.format("%Y%m%d%H%M%S %z").to_string();
-
-    let title = program
-        .and_then(|nfo| nfo.title.as_deref())
-        .or_else(|| episode.and_then(|nfo| nfo.show_title.as_deref()))
-        .or(playlist_title)
-        .or_else(|| episode.and_then(|nfo| nfo.title.as_deref()))
-        .map(str::to_string)
-        .unwrap_or_else(|| title_from_file_name(&programme.source));
-    let sub_title = episode
-        .and_then(|nfo| nfo.title.as_deref())
-        .or(program.and(playlist_title))
-        .filter(|sub_title| *sub_title != title);
+    let (title, sub_title) = programme.titles();
     let description = episode
         .and_then(Nfo::description)
         .or_else(|| program.and_then(Nfo::description));
@@ -453,7 +519,7 @@ fn write_programme(
     );
     xml.localized(2, "title", &[], &title);
 
-    if let Some(sub_title) = sub_title {
+    if let Some(sub_title) = &sub_title {
         xml.localized(2, "sub-title", &[], sub_title);
     }
 

@@ -30,6 +30,7 @@ dayjs.extend(timezone)
 dayjs.extend(utc)
 
 import PlayerControl from '@/components/player/PlayerControl.vue'
+import OnAirPanel from '@/components/schedule/OnAirPanel.vue'
 import MediaBrowser from '@/components/MediaBrowser.vue'
 import PlaylistTable from '@/components/player/PlaylistTable.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
@@ -398,6 +399,7 @@ async function deletePlaylist(del: boolean) {
 <template>
     <div class="h-full">
         <PlayerControl />
+        <OnAirPanel />
         <div class="flex justify-end p-1">
             <div class="h-8 flex">
                 <div class="text-warning flex-none flex justify-end p-2">

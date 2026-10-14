@@ -29,6 +29,7 @@ use crate::{
             occurrence_now, occurrence_views, parse_date, prepare_event,
         },
         time_machine::time_now,
+        xmltv::{GuideBlock, guide_blocks},
     },
 };
 
@@ -112,6 +113,28 @@ pub async fn get_schedule_day(
         date: day(0),
         occurrences: occurrence_views(&events, &runs, from, to),
     }))
+}
+
+/// **The day's programme**
+///
+/// Guide entries of the day, with program names from the `.nfo` files and
+/// times moved by the scheduled events; the scheduler's timeline shows them.
+pub async fn get_schedule_grade(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    Query(query): Query<ScheduleQuery>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<GuideBlock>>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let config = manager.config.read().await.clone();
+    let date = match query.date.as_deref() {
+        Some(date) => parse_date(date).map_err(ServiceError::BadRequest)?,
+        None => time_now(&config.channel.timezone).date_naive(),
+    };
+    let events = handles::select_schedule_events(&state.pool, id).await?;
+
+    Ok(Json(guide_blocks(&config, &events, date).await?))
 }
 
 /// **All scheduled events of a channel**

@@ -75,6 +75,20 @@ async fn schedule_routes_manage_events_and_lives_for_allowed_users_only() {
     assert_eq!(day["occurrences"].as_array().unwrap().len(), 1);
     assert_eq!(day["occurrences"][0]["start"], "2026-10-14T13:00:00");
 
+    let (status, grade) = send(
+        &fixture,
+        "GET",
+        "/api/schedule/1/grade?date=2026-10-14",
+        Some(&token),
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{grade}");
+    assert!(
+        grade.as_array().unwrap().is_empty(),
+        "no playlist in the fixture"
+    );
+
     let (status, weekend) = send(
         &fixture,
         "GET",

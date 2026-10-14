@@ -25,7 +25,11 @@ use crate::{
         handles,
         models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind},
     },
-    player::{controller::ChannelManager, output::play_plain},
+    player::{
+        controller::ChannelManager,
+        output::play_plain,
+        utils::{Media, time_in_seconds},
+    },
     utils::{
         config::PlayoutConfig,
         errors::ServiceError,
@@ -484,6 +488,7 @@ async fn play_clips(
         };
 
         manager.schedule.set_item(source.clone());
+        show_on_air(manager, &path.to_string_lossy(), &event.title, duration).await;
         info!(channel = id;
             "Play scheduled clip for <span class=\"log-number\">{duration:.1}</span> s: <span class=\"log-addr\">{}</span>",
             path.display()
@@ -560,6 +565,7 @@ async fn play_live(
         if signal {
             lost_since = None;
             manager.schedule.set_item(protocol.to_string());
+            show_on_air(manager, &url, &event.title, remaining).await;
             info!(channel = id;
                 "Live <span class=\"log-addr\">{}</span> on air from {protocol} for <span class=\"log-number\">{remaining:.0}</span> s",
                 event.title
@@ -615,6 +621,26 @@ async fn play_live(
             });
         }
     }
+}
+
+/// Report the event's clip as the media on air, so the player view shows
+/// its name and progress instead of the interrupted clip.
+async fn show_on_air(manager: &ChannelManager, source: &str, title: &str, duration: f64) {
+    let begin = {
+        let channel = manager.channel.lock().await;
+
+        time_in_seconds(&channel.timezone) + channel.time_shift
+    };
+    let mut media = Media::new(0, source, false).await;
+
+    media.index = None;
+    media.begin = Some(begin);
+    media.seek = 0.0;
+    media.out = duration;
+    media.duration = duration;
+    media.title = Some(title.to_string());
+
+    *manager.current_media.lock().await = Some(media);
 }
 
 /// What airs while a live waits for its signal: the filler clip when one is
