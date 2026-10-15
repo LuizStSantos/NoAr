@@ -1,5 +1,6 @@
 use std::{
     env,
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 
@@ -80,7 +81,13 @@ pub async fn read_log_file(
     let log_path = log_file_path()
         .join(format!("noar_{channel_id}{date_str}.log"))
         .clean();
-    let file_size = fs::metadata(&log_path).await?.len() as f64;
+
+    // A channel that logged nothing on that day has no file: no lines.
+    let file_size = match fs::metadata(&log_path).await {
+        Ok(metadata) => metadata.len() as f64,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(String::new()),
+        Err(error) => return Err(error.into()),
+    };
 
     let log_content = if download || file_size < 5000000.0 {
         let content = fs::read_to_string(log_path).await?;
@@ -168,4 +175,20 @@ pub fn is_running_in_container() -> bool {
     }
 
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono_tz::Tz;
+
+    use super::read_log_file;
+
+    #[tokio::test]
+    async fn a_day_without_a_log_file_has_no_lines() {
+        let lines = read_log_file(&987_654, "2001-01-01", Tz::UTC, false)
+            .await
+            .unwrap();
+
+        assert!(lines.is_empty());
+    }
 }

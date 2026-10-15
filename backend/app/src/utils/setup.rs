@@ -21,8 +21,13 @@ use crate::{
     file::init_storage,
     player::controller::ChannelController,
     utils::{
-        args_parse::Args, channels::initialize_channels, errors::ServiceError, mail::MailQueue,
-        paths::validate_directory_path, system::SystemStat,
+        args_parse::Args,
+        channels::initialize_channels,
+        errors::ServiceError,
+        logging::{log_file_path, set_log_dir},
+        mail::MailQueue,
+        paths::validate_directory_path,
+        system::SystemStat,
     },
 };
 
@@ -142,8 +147,9 @@ pub async fn complete_setup(
             path.to_string()
         }
     };
+    let log_dir = PathBuf::from(&settings.logs);
     let paths = [
-        PathBuf::from(&settings.logs),
+        log_dir.clone(),
         PathBuf::from(channel_path(&settings.public)),
         PathBuf::from(channel_path(&settings.playlists)),
         PathBuf::from(channel_path(&settings.storage)),
@@ -172,6 +178,12 @@ pub async fn complete_setup(
     }
 
     let snapshot = handles::initialize_setup_with_rollback(pool, &setup).await?;
+
+    // Log into the chosen folder from now on, so the log page finds the lines
+    // without a restart.
+    let previous_log_dir = log_file_path();
+    set_log_dir(log_dir);
+
     let pending_controllers = Arc::new(RwLock::new(ChannelController::new()));
     let pending_queues = Arc::new(Mutex::new(Vec::new()));
     let pending_shutdown = shutdown.child_token();
@@ -186,6 +198,7 @@ pub async fn complete_setup(
     .await;
 
     if let Err(error) = result {
+        set_log_dir(previous_log_dir);
         pending_shutdown.cancel();
         let managers = pending_controllers.read().await.managers.clone();
 

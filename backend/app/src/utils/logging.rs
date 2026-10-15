@@ -1,9 +1,9 @@
 use std::{
-    collections::{HashMap, hash_map},
+    collections::HashMap,
     env, fmt,
     io::{self, IsTerminal, Write},
-    path::PathBuf,
-    sync::{Arc, LazyLock, Mutex as StdMutex, RwLock},
+    path::{Path, PathBuf},
+    sync::{Arc, LazyLock, Mutex as StdMutex, PoisonError, RwLock},
     time::Instant,
 };
 
@@ -184,52 +184,88 @@ fn cpu_bench_line_count(message: &str) -> Option<usize> {
     .then(|| message.lines().count().max(1))
 }
 
+/// The open log file of one channel and the folder it was opened in.
+struct ChannelLog {
+    dir: PathBuf,
+    writer: Arc<FileLogWriter>,
+}
+
+/// Writes each channel to its own daily file (`noar_<channel>.log`).
 pub struct MultiFileLogger {
-    log_path: PathBuf,
-    writers: RwLock<HashMap<i32, Arc<FileLogWriter>>>,
+    /// Where the files go; asked on every line, so a folder change (the
+    /// setup choosing it) takes effect without a restart.
+    log_dir: Box<dyn Fn() -> PathBuf + Send + Sync>,
+    writers: RwLock<HashMap<i32, ChannelLog>>,
 }
 
 impl MultiFileLogger {
-    pub fn new(log_path: PathBuf) -> Self {
+    pub fn new(log_dir: impl Fn() -> PathBuf + Send + Sync + 'static) -> Self {
         Self {
-            log_path,
+            log_dir: Box::new(log_dir),
             writers: RwLock::new(HashMap::new()),
         }
     }
 
     fn get_writer(&self, channel: i32) -> io::Result<Arc<FileLogWriter>> {
-        // Lock the writers HashMap
-        let mut writers = self.writers.write().unwrap();
+        let dir = (self.log_dir)();
 
-        // Check if the writer already exists
-        if let hash_map::Entry::Vacant(entry) = writers.entry(channel) {
-            let writer = FileLogWriter::builder(
-                FileSpec::default()
-                    .suppress_timestamp()
-                    .directory(&self.log_path)
-                    .basename("noar")
-                    .discriminant(channel.to_string()),
-            )
-            .format(file_formatter)
-            .append()
-            .rotate(
-                Criterion::Age(Age::Day),
-                Naming::TimestampsCustomFormat {
-                    current_infix: Some(""),
-                    format: "%Y-%m-%d",
-                },
-                Cleanup::KeepLogFiles(ARGS.log_backup_count.unwrap_or(14)),
-            )
-            .try_build()
-            .map_err(|e| io::Error::other(e.to_string()))?;
-
-            let arc_writer = Arc::new(writer);
-            entry.insert(arc_writer.clone());
-            Ok(arc_writer)
-        } else {
-            Ok(writers.get(&channel).unwrap().clone())
+        if let Some(log) = self
+            .writers
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&channel)
+            && log.dir == dir
+        {
+            return Ok(log.writer.clone());
         }
+
+        let mut writers = self.writers.write().unwrap_or_else(PoisonError::into_inner);
+
+        // Another thread may have opened it while this one waited for the lock.
+        if let Some(log) = writers.get(&channel)
+            && log.dir == dir
+        {
+            return Ok(log.writer.clone());
+        }
+
+        if let Some(previous) = writers.remove(&channel) {
+            // The folder changed: finish the old file before leaving it.
+            previous.writer.flush()?;
+        }
+
+        let writer = Arc::new(channel_file_writer(&dir, channel)?);
+        writers.insert(
+            channel,
+            ChannelLog {
+                dir,
+                writer: writer.clone(),
+            },
+        );
+
+        Ok(writer)
     }
+}
+
+fn channel_file_writer(dir: &Path, channel: i32) -> io::Result<FileLogWriter> {
+    FileLogWriter::builder(
+        FileSpec::default()
+            .suppress_timestamp()
+            .directory(dir)
+            .basename("noar")
+            .discriminant(channel.to_string()),
+    )
+    .format(file_formatter)
+    .append()
+    .rotate(
+        Criterion::Age(Age::Day),
+        Naming::TimestampsCustomFormat {
+            current_infix: Some(""),
+            format: "%Y-%m-%d",
+        },
+        Cleanup::KeepLogFiles(ARGS.log_backup_count.unwrap_or(14)),
+    )
+    .try_build()
+    .map_err(|e| io::Error::other(e.to_string()))
 }
 
 impl LogWriter for MultiFileLogger {
@@ -243,10 +279,12 @@ impl LogWriter for MultiFileLogger {
     }
 
     fn flush(&self) -> io::Result<()> {
-        let writers = self.writers.read().unwrap();
-        for writer in writers.values() {
-            writer.flush()?;
+        let writers = self.writers.read().unwrap_or_else(PoisonError::into_inner);
+
+        for log in writers.values() {
+            log.writer.flush()?;
         }
+
         Ok(())
     }
 }
@@ -346,7 +384,7 @@ pub struct LogDefault {
 impl LogDefault {
     pub fn new(mail_queues: Arc<Mutex<Vec<Arc<Mutex<MailQueue>>>>>, console: LogConsole) -> Self {
         Self {
-            file: Box::new(MultiFileLogger::new(log_file_path())),
+            file: Box::new(MultiFileLogger::new(log_file_path)),
             console,
             mail: LogMailer::new(mail_queues.clone()),
             notifier: LogNotifier::new(mail_queues),
@@ -564,24 +602,63 @@ fn file_formatter(
     write!(w, "{time} {log_line}")
 }
 
+/// Folder of the channel log files, once resolved. The writer and the log
+/// page both read it, so they never look in different folders.
+static LOG_DIR: RwLock<Option<PathBuf>> = RwLock::new(None);
+
+/// Folder the channel log files are written to and read from.
 pub fn log_file_path() -> PathBuf {
-    let config = GLOBAL_SETTINGS.get().unwrap();
-    let mut log_path = PathBuf::from(&ARGS.logs.as_ref().unwrap_or(&config.logs));
-
-    if !log_path.is_absolute() {
-        log_path = env::current_dir().unwrap().join(log_path);
+    if let Some(dir) = LOG_DIR
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .as_ref()
+    {
+        return dir.clone();
     }
 
-    if !log_path.is_dir() {
-        // Before the setup the stored path usually does not exist yet. The
-        // Docker image names its log folder, so the first run logs there too.
-        log_path = env::var_os("NOAR_SETUP_LOGS")
-            .map(PathBuf::from)
-            .filter(|path| path.is_absolute() && path.is_dir())
-            .unwrap_or_else(|| env::current_dir().unwrap());
+    let mut cached = LOG_DIR.write().unwrap_or_else(PoisonError::into_inner);
+
+    cached.get_or_insert_with(resolve_log_dir).clone()
+}
+
+/// Move the channel log files to `dir`, for example once the setup created
+/// the folder. Each channel continues in the new folder with its next line.
+pub fn set_log_dir(dir: PathBuf) {
+    *LOG_DIR.write().unwrap_or_else(PoisonError::into_inner) = Some(dir);
+}
+
+fn resolve_log_dir() -> PathBuf {
+    let current_dir = env::current_dir().unwrap_or_default();
+    let global = GLOBAL_SETTINGS.get();
+    let setup_completed = global.is_some_and(|config| config.setup_completed);
+    let configured = ARGS
+        .logs
+        .clone()
+        .or_else(|| global.map(|config| config.logs.clone()))
+        .filter(|path| !path.is_empty());
+
+    if let Some(configured) = configured {
+        let path = current_dir.join(configured);
+
+        // A finished installation logs where it was told to, even when the
+        // folder was removed since; before the setup the stored path is only
+        // a default and is not created.
+        if path.is_dir() || (setup_completed && std::fs::create_dir_all(&path).is_ok()) {
+            return path;
+        }
     }
 
-    log_path
+    // Before the setup, use the log folder the Docker image names. Create it,
+    // because the image's empty data volume hides the folder built into it.
+    if let Some(setup_dir) = env::var_os("NOAR_SETUP_LOGS")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        && std::fs::create_dir_all(&setup_dir).is_ok()
+    {
+        return setup_dir;
+    }
+
+    current_dir
 }
 
 /// Initialize our logging, to have:
@@ -726,11 +803,17 @@ pub async fn log_middleware(real_ip: RealIp, req: Request<Body>, next: Next) -> 
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        env, fs,
+        sync::{Arc, Mutex as StdMutex},
+    };
+
+    use flexi_logger::{DeferredNow, writers::LogWriter};
     use log::{Level, Record};
 
     use super::{
-        LogConsole, cpu_bench_line_count, explicitly_targets_console, format_level, html_to_ansi,
-        record_channel,
+        LogConsole, MultiFileLogger, cpu_bench_line_count, explicitly_targets_console,
+        format_level, html_to_ansi, record_channel,
     };
 
     #[test]
@@ -778,6 +861,38 @@ mod tests {
         let output = String::from_utf8(output).unwrap();
         assert!(output.contains("\x1b[1;35mconnection lost\x1b[0m"));
         assert!(output.ends_with('\n'));
+    }
+
+    #[test]
+    fn channel_files_follow_a_changed_log_folder() {
+        let root = env::temp_dir().join(format!("noar-log-folders-{}", std::process::id()));
+        let first = root.join("first");
+        let second = root.join("second");
+        fs::create_dir_all(&first).unwrap();
+        fs::create_dir_all(&second).unwrap();
+
+        let current = Arc::new(StdMutex::new(first.clone()));
+        let source = current.clone();
+        let logger = MultiFileLogger::new(move || source.lock().unwrap().clone());
+        let key_values = ("channel", 7_i64);
+        let record = Record::builder()
+            .level(Level::Info)
+            .key_values(&key_values)
+            .args(format_args!("line for the log page"))
+            .build();
+        let mut now = DeferredNow::new();
+
+        logger.write(&mut now, &record).unwrap();
+        *current.lock().unwrap() = second.clone();
+        logger.write(&mut now, &record).unwrap();
+        logger.flush().unwrap();
+
+        for dir in [&first, &second] {
+            let content = fs::read_to_string(dir.join("noar_7.log")).unwrap();
+            assert!(content.contains("line for the log page"), "{dir:?}");
+        }
+
+        fs::remove_dir_all(root).ok();
     }
 
     #[test]
