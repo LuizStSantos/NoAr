@@ -301,6 +301,9 @@ pub struct LogReq {
     timezone: Tz,
     #[serde(default)]
     download: bool,
+    /// Byte offset to read from: the `x-log-next` of the previous read.
+    #[serde(default)]
+    from: u64,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

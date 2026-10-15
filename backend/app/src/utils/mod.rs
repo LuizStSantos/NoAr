@@ -1,6 +1,6 @@
 use std::{
     env,
-    io::ErrorKind,
+    io::{ErrorKind, SeekFrom},
     path::{Path, PathBuf},
 };
 
@@ -8,7 +8,10 @@ use chrono::{format::ParseErrorKind, prelude::*};
 use chrono_tz::Tz;
 use log::*;
 use path_clean::PathClean;
-use tokio::fs;
+use tokio::{
+    fs,
+    io::{AsyncReadExt, AsyncSeekExt},
+};
 
 use serde::{Deserialize, Deserializer, de};
 
@@ -66,12 +69,29 @@ pub fn public_path() -> PathBuf {
     public_path
 }
 
+/// Largest part of a log file read at once, unless it is downloaded.
+const MAX_LOG_READ: u64 = 5_000_000;
+
+/// Lines of a channel's log file.
+#[derive(Debug, PartialEq, Eq)]
+pub struct LogChunk {
+    /// Complete lines from the requested offset on, timestamps in the
+    /// requested time zone.
+    pub text: String,
+    /// Byte offset after the last complete line, where the next read starts.
+    pub next: u64,
+}
+
+/// Read a channel's log of `date` (today when empty) from byte `from` on.
+/// Only complete lines are returned, so a line still being written comes
+/// with the next read.
 pub async fn read_log_file(
     channel_id: &i32,
     date: &str,
     timezone: Tz,
     download: bool,
-) -> Result<String, ServiceError> {
+    from: u64,
+) -> Result<LogChunk, ServiceError> {
     let date_str = if date.is_empty() {
         String::new()
     } else {
@@ -83,30 +103,58 @@ pub async fn read_log_file(
         .clean();
 
     // A channel that logged nothing on that day has no file: no lines.
-    let file_size = match fs::metadata(&log_path).await {
-        Ok(metadata) => metadata.len() as f64,
-        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(String::new()),
+    let size = match fs::metadata(&log_path).await {
+        Ok(metadata) => metadata.len(),
+        Err(error) if error.kind() == ErrorKind::NotFound => {
+            return Ok(LogChunk {
+                text: String::new(),
+                next: 0,
+            });
+        }
         Err(error) => return Err(error.into()),
     };
 
-    let log_content = if download || file_size < 5000000.0 {
-        let content = fs::read_to_string(log_path).await?;
-        let content = timestamps_to_timezone(&content, timezone);
+    // Today's file starts over at midnight: an offset past its end belonged
+    // to yesterday's file.
+    let start = if from > size { 0 } else { from };
+    let length = size - start;
 
-        if download {
-            remove_html(&content)
-        } else {
-            content
-        }
+    if !download && length > MAX_LOG_READ {
+        error!("Log file to big: {}", sizeof_fmt(length as f64));
+
+        return Ok(LogChunk {
+            text: format!(
+                "The log file is larger ({}) than the hard limit of 5MB, the probability is very high that something is wrong with the playout.\nCheck this on the server with `less {log_path:?}`.",
+                sizeof_fmt(length as f64)
+            ),
+            next: size,
+        });
+    }
+
+    let mut file = fs::File::open(&log_path).await?;
+    let mut bytes = Vec::new();
+
+    file.seek(SeekFrom::Start(start)).await?;
+    file.take(length).read_to_end(&mut bytes).await?;
+
+    if !download {
+        let complete = bytes
+            .iter()
+            .rposition(|byte| *byte == b'\n')
+            .map_or(0, |index| index + 1);
+
+        bytes.truncate(complete);
+    }
+
+    let next = start + bytes.len() as u64;
+    let content = timestamps_to_timezone(&String::from_utf8_lossy(&bytes), timezone);
+    let text = if download {
+        remove_html(&content)
     } else {
-        error!("Log file to big: {}", sizeof_fmt(file_size));
-        format!(
-            "The log file is larger ({}) than the hard limit of 5MB, the probability is very high that something is wrong with the playout.\nCheck this on the server with `less {log_path:?}`.",
-            sizeof_fmt(file_size)
-        )
+        content
     };
 
-    Ok(log_content)
+    Ok(LogChunk { text, next })
 }
 
 /// get human readable file size
@@ -181,14 +229,36 @@ pub fn is_running_in_container() -> bool {
 mod tests {
     use chrono_tz::Tz;
 
-    use super::read_log_file;
+    use super::{logging::set_log_dir, read_log_file};
 
     #[tokio::test]
-    async fn a_day_without_a_log_file_has_no_lines() {
-        let lines = read_log_file(&987_654, "2001-01-01", Tz::UTC, false)
+    async fn log_reads_continue_after_the_last_complete_line() {
+        let dir = std::env::temp_dir().join(format!("noar-log-read-{}", std::process::id()));
+        let file = dir.join("noar_987654_2001-01-02.log");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(&file, "first\nsecond\npart").unwrap();
+        set_log_dir(dir.clone());
+
+        let read = |from| read_log_file(&987_654, "2001-01-02", Tz::UTC, false, from);
+        let chunk = read(0).await.unwrap();
+
+        assert_eq!(chunk.text, "first\nsecond\n");
+        assert_eq!(chunk.next, 13);
+
+        std::fs::write(&file, "first\nsecond\npartial line\n").unwrap();
+
+        assert_eq!(read(chunk.next).await.unwrap().text, "partial line\n");
+        assert_eq!(
+            read(500).await.unwrap().next,
+            26,
+            "an offset past the end starts over"
+        );
+
+        let missing = read_log_file(&987_654, "2001-01-01", Tz::UTC, false, 0)
             .await
             .unwrap();
 
-        assert!(lines.is_empty());
+        assert_eq!(missing.text, "");
+        std::fs::remove_dir_all(dir).ok();
     }
 }

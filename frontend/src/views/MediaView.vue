@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
+import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 
 import { useAuth } from '@/stores/auth'
@@ -26,6 +27,7 @@ const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const mediaStore = useMedia()
+const route = useRoute()
 const { mediaType, fileSize } = stringFormatter()
 const { uploadTask, currentNumber, currentProgress, uploading, resetUploadState, uploadFiles } = useFileUpload()
 
@@ -202,7 +204,10 @@ async function loadDisk() {
 }
 
 onMounted(async () => {
-    await load(current.value)
+    // Other pages link to a folder with `?path=` (the log, for example).
+    const linked = typeof route.query.path === 'string' ? storageJoin(route.query.path) : null
+
+    await load(linked ?? current.value)
     loadDisk()
 })
 
