@@ -19,9 +19,15 @@ pub struct PathObject {
     parent: Option<String>,
     parent_folders: Option<Vec<String>>,
     folders: Option<Vec<String>>,
+    /// Subfolders with a program sheet (`.nfo`) of their own.
+    #[serde(default)]
+    sheet_folders: Option<Vec<String>>,
     files: Option<Vec<VideoFile>>,
     #[serde(default)]
     pub folders_only: bool,
+    /// List every file, not only the media the channel can play.
+    #[serde(default)]
+    pub all_files: bool,
     #[serde(default)]
     pub recursive: bool,
 }
@@ -33,8 +39,10 @@ impl PathObject {
             parent,
             parent_folders: Some(vec![]),
             folders: Some(vec![]),
+            sheet_folders: Some(vec![]),
             files: Some(vec![]),
             folders_only: false,
+            all_files: false,
             recursive: false,
         }
     }
@@ -50,6 +58,22 @@ pub struct MoveObject {
 pub struct VideoFile {
     name: String,
     duration: f64,
+    /// Size in bytes.
+    #[serde(default)]
+    size: u64,
+    /// Last change, seconds since the Unix epoch.
+    #[serde(default)]
+    modified: Option<i64>,
+    /// Whether the channel can play it (its extension is a media one).
+    #[serde(default = "default_true")]
+    media: bool,
+    /// Whether it has a sheet of its own (`<name>.nfo` next to it).
+    #[serde(default)]
+    sheet: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 pub async fn init_storage(

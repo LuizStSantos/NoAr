@@ -216,3 +216,132 @@ async fn file_and_public_routes_reject_encoded_traversal_and_external_symlinks()
         }
     }
 }
+
+#[tokio::test]
+#[serial]
+async fn sheets_and_artwork_are_edited_through_the_storage_routes() {
+    let fixture = security_fixture().await;
+    let storage = fixture.root.join("storage");
+    tokio::fs::create_dir_all(storage.join("Jornal"))
+        .await
+        .unwrap();
+    tokio::fs::write(storage.join("Jornal/bloco1.mp4"), b"")
+        .await
+        .unwrap();
+    let token = access_token(&fixture.state, 1).await;
+    let call = |method: &'static str, uri: &'static str, body: serde_json::Value| {
+        let app = fixture.app.clone();
+        let token = token.clone();
+
+        async move {
+            let response = app
+                .oneshot(json_request(method, uri, Some(&token), body))
+                .await
+                .unwrap();
+            let status = response.status();
+            let bytes = to_bytes(response.into_body(), 1 << 20).await.unwrap();
+
+            (
+                status,
+                serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_default(),
+            )
+        }
+    };
+
+    let (status, sheet) = call("POST", "/api/file/1/sheet", json!({"path": "Jornal"})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sheet["file"], serde_json::Value::Null);
+    assert_eq!(sheet["kind"], "program");
+
+    let (status, sheet) = call(
+        "PUT",
+        "/api/file/1/sheet",
+        json!({
+            "path": "Jornal",
+            "kind": "program",
+            "fields": {"title": "Jornal da Noite", "genres": ["Jornalismo"], "rating": "Livre"}
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{sheet}");
+    assert_eq!(sheet["file"], "Jornal/tvshow.nfo");
+    assert_eq!(sheet["fields"]["title"], "Jornal da Noite");
+    assert!(
+        tokio::fs::read_to_string(storage.join("Jornal/tvshow.nfo"))
+            .await
+            .unwrap()
+            .contains("<genre>Jornalismo</genre>")
+    );
+
+    let (status, _) = call(
+        "PUT",
+        "/api/file/1/sheet",
+        json!({"path": "Jornal", "raw": "<tvshow><title>Broken</tvshow"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let (status, browse) = call("POST", "/api/file/1/browse", json!({"source": "/"})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(browse["sheet_folders"], json!(["Jornal"]));
+
+    let boundary = "noar-artwork";
+    let mut body = format!(
+        "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"cover.png\"\r\nContent-Type: image/png\r\n\r\n"
+    )
+    .into_bytes();
+    body.extend_from_slice(b"\x89PNG\r\n\x1a\n\0\0\0\0");
+    body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+
+    let upload = |token: String| {
+        Request::builder()
+            .method("PUT")
+            .uri("/api/file/1/artwork?path=Jornal&kind=poster")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .header("authorization", format!("Bearer {token}"))
+            .body(Body::from(body.clone()))
+            .unwrap()
+    };
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(upload(token.clone()))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let sheet: serde_json::Value =
+        serde_json::from_slice(&to_bytes(response.into_body(), 1 << 20).await.unwrap()).unwrap();
+    assert_eq!(sheet["poster"], "Jornal/poster.png");
+
+    let (status, sheet) = call(
+        "POST",
+        "/api/file/1/artwork/remove",
+        json!({"path": "Jornal", "kind": "poster"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sheet["poster"], serde_json::Value::Null);
+
+    let (status, _) = call("POST", "/api/file/1/sheet", json!({"path": "../outside"})).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            "/api/file/2/sheet",
+            Some(&token),
+            json!({"path": "Jornal"}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        response.status(),
+        StatusCode::FORBIDDEN,
+        "no access to channel 2"
+    );
+}

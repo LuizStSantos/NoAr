@@ -169,6 +169,14 @@ declare global {
     interface FileObject {
         name: string
         duration: number
+        /** Size in bytes. */
+        size?: number
+        /** Last change, seconds since the Unix epoch. */
+        modified?: number | null
+        /** Whether the channel can play it. */
+        media?: boolean
+        /** Whether it has a sheet of its own (`<name>.nfo`). */
+        sheet?: boolean
     }
 
     interface Folder {
@@ -181,7 +189,41 @@ declare global {
         parent: string
         parent_folders: Folder[]
         folders: Folder[]
+        /** Subfolders with a program sheet of their own. */
+        sheet_folders?: string[]
         files: FileObject[]
+    }
+
+    type SheetKind = 'program' | 'movie' | 'episode'
+    type ArtworkKind = 'poster' | 'backdrop' | 'still'
+
+    interface SheetFields {
+        title: string
+        plot: string
+        genres: string[]
+        rating: string
+        year: string
+        premiered: string
+        countries: string[]
+        actors: string[]
+        directors: string[]
+        season: number | null
+        episode: number | null
+    }
+
+    /** The `.nfo` sheet of a program folder or a clip, with its artwork. */
+    interface MediaSheet {
+        clip: boolean
+        kind: SheetKind
+        /** Storage path of the `.nfo`, when there is one. */
+        file: string | null
+        /** Storage path of the folder whose program sheet applies here. */
+        inherited_from: string | null
+        fields: SheetFields
+        raw: string
+        poster: string | null
+        backdrop: string | null
+        still: string | null
     }
 
     interface FolderObject {

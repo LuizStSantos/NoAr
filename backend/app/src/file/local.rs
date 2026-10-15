@@ -1,6 +1,8 @@
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     sync::{Arc, atomic::AtomicBool},
+    time::UNIX_EPOCH,
 };
 
 #[cfg(target_family = "unix")]
@@ -27,7 +29,7 @@ use crate::file::{
     watcher::watch,
 };
 use crate::player::utils::{Media, file_extension, include_file_extension, probe_media};
-use crate::utils::{config::PlayoutConfig, errors::ServiceError};
+use crate::utils::{config::PlayoutConfig, errors::ServiceError, xmltv::sheet::has_program_sheet};
 
 #[derive(Clone, Debug)]
 pub struct LocalStorage {
@@ -91,61 +93,99 @@ impl LocalStorage {
             obj.parent_folders = Some(parent_folders);
         }
 
-        let mut paths_obj = fs::read_dir(path).await?;
+        let mut paths_obj = fs::read_dir(&path).await?;
 
         let mut files = vec![];
         let mut folders = vec![];
+        let mut sheet_stems = HashSet::new();
+        let extensions = self.extensions.read().await.clone();
 
         while let Some(child) = paths_obj.next_entry().await? {
             let f_meta = child.metadata().await?;
+            let name = child.file_name().to_string_lossy().to_string();
 
             // ignore hidden files/folders on unix
-            if child.path().to_string_lossy().to_string().contains("/.") {
+            if name.starts_with('.') {
                 continue;
             }
 
             if f_meta.is_dir() {
-                folders.push(
-                    child
-                        .path()
-                        .file_name()
-                        .unwrap()
-                        .to_string_lossy()
-                        .to_string(),
-                );
-            } else if f_meta.is_file()
-                && !path_obj.folders_only
-                && let Some(ext) = file_extension(&child.path())
-                && self
-                    .extensions
-                    .read()
-                    .await
-                    .contains(&ext.to_string().to_lowercase())
-            {
-                files.push(child.path());
+                folders.push(name);
+                continue;
+            }
+
+            if !f_meta.is_file() || path_obj.folders_only {
+                continue;
+            }
+
+            let extension = file_extension(&child.path())
+                .map(str::to_lowercase)
+                .unwrap_or_default();
+
+            if extension == "nfo" {
+                sheet_stems.insert(name[..name.len() - 4].to_lowercase());
+            }
+
+            let media = extensions.contains(&extension);
+
+            if media || path_obj.all_files {
+                files.push((child.path(), f_meta, media));
             }
         }
 
         folders.path_sort(natural_lexical_cmp);
-        files.path_sort(natural_lexical_cmp);
+        files.sort_by(|(a, ..), (b, ..)| {
+            natural_lexical_cmp(&a.to_string_lossy(), &b.to_string_lossy())
+        });
         let mut media_files = vec![];
 
-        for file in files {
-            match probe_media(file.to_string_lossy().as_ref()).await {
-                Ok(probe) => {
-                    let duration = probe.format.duration.unwrap_or_default();
-
-                    let video = VideoFile {
-                        name: file.file_name().unwrap().to_string_lossy().to_string(),
-                        duration,
-                    };
-                    media_files.push(video);
+        for (file, metadata, media) in files {
+            let name = file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let stem = file
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_lowercase();
+            let duration = if media {
+                match probe_media(file.to_string_lossy().as_ref()).await {
+                    Ok(probe) => probe.format.duration.unwrap_or_default(),
+                    Err(e) => {
+                        error!("{e:?}");
+                        continue;
+                    }
                 }
-                Err(e) => error!("{e:?}"),
+            } else {
+                0.0
             };
+
+            media_files.push(VideoFile {
+                sheet: media && sheet_stems.contains(&stem),
+                name,
+                duration,
+                size: metadata.len(),
+                modified: metadata
+                    .modified()
+                    .ok()
+                    .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+                    .and_then(|age| i64::try_from(age.as_secs()).ok()),
+                media,
+            });
+        }
+
+        let mut sheet_folders = vec![];
+
+        for folder in &folders {
+            if has_program_sheet(&path.join(folder)).await {
+                sheet_folders.push(folder.clone());
+            }
         }
 
         obj.folders = Some(folders);
+        obj.sheet_folders = Some(sheet_folders);
         obj.files = Some(media_files);
 
         Ok(obj)

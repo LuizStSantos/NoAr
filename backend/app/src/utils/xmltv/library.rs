@@ -43,8 +43,9 @@ const PROGRAM_NFO_NAMES: [&str; 6] = [
     "folder.nfo",
 ];
 
-const POSTER_NAMES: [&str; 5] = ["poster", "folder", "cover", "capa", "show"];
-const BACKDROP_NAMES: [&str; 5] = ["landscape", "thumb", "fanart", "backdrop", "background"];
+pub(crate) const POSTER_NAMES: [&str; 5] = ["poster", "folder", "cover", "capa", "show"];
+pub(crate) const BACKDROP_NAMES: [&str; 5] =
+    ["landscape", "thumb", "fanart", "backdrop", "background"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Image {
@@ -89,29 +90,34 @@ impl ClipMetadata {
 
 /// File names of one folder, looked up case-insensitively.
 #[derive(Debug, Default)]
-struct Listing {
+pub(crate) struct Listing {
     /// Lowercase name -> name on disk.
     files: HashMap<String, String>,
 }
 
 impl Listing {
-    fn find(&self, name: &str) -> Option<&str> {
+    /// Every file name as it is on disk.
+    pub(crate) fn names(&self) -> impl Iterator<Item = &str> {
+        self.files.values().map(String::as_str)
+    }
+
+    pub(crate) fn find(&self, name: &str) -> Option<&str> {
         self.files.get(&name.to_lowercase()).map(String::as_str)
     }
 
-    fn find_image(&self, stem: &str) -> Option<&str> {
+    pub(crate) fn find_image(&self, stem: &str) -> Option<&str> {
         IMAGE_EXTENSIONS
             .iter()
             .find_map(|extension| self.find(&format!("{stem}.{extension}")))
     }
 
-    fn find_any_image(&self, stems: &[&str]) -> Option<&str> {
+    pub(crate) fn find_any_image(&self, stems: &[&str]) -> Option<&str> {
         stems.iter().find_map(|stem| self.find_image(stem))
     }
 
     /// The program `.nfo` of this folder. An `.nfo` named after another file in
     /// the folder (`episode.nfo` next to `episode.mp4`) belongs to that file.
-    fn program_nfo(&self) -> Option<&str> {
+    pub(crate) fn program_nfo(&self) -> Option<&str> {
         if let Some(name) = PROGRAM_NFO_NAMES.iter().find_map(|name| self.find(name)) {
             return Some(name);
         }
@@ -141,6 +147,24 @@ impl Listing {
             .and_then(|name| self.files.get(*name))
             .map(String::as_str)
     }
+}
+
+/// The file names of `dir`; empty when it cannot be read.
+pub(crate) async fn read_listing(dir: &Path) -> Listing {
+    let mut listing = Listing::default();
+
+    match fs::read_dir(dir).await {
+        Ok(mut entries) => {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                if let Ok(name) = entry.file_name().into_string() {
+                    listing.files.insert(name.to_lowercase(), name);
+                }
+            }
+        }
+        Err(e) => debug!("XMLTV: cannot read folder {dir:?}: {e}"),
+    }
+
+    listing
 }
 
 /// Title of the program a clip belongs to, from its `.nfo` files.
@@ -331,20 +355,7 @@ impl NfoLibrary {
             return listing.clone();
         }
 
-        let mut listing = Listing::default();
-
-        match fs::read_dir(dir).await {
-            Ok(mut entries) => {
-                while let Ok(Some(entry)) = entries.next_entry().await {
-                    if let Ok(name) = entry.file_name().into_string() {
-                        listing.files.insert(name.to_lowercase(), name);
-                    }
-                }
-            }
-            Err(e) => debug!("XMLTV: cannot read folder {dir:?}: {e}"),
-        }
-
-        let listing = Arc::new(listing);
+        let listing = Arc::new(read_listing(dir).await);
         self.listings.insert(dir.to_path_buf(), listing.clone());
 
         listing

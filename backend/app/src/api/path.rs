@@ -8,6 +8,7 @@ use crate::{
     api::{auth, routes::*, state::AppState},
     file::MAX_UPLOAD_REQUEST_SIZE,
     sse,
+    utils::xmltv::sheet::MAX_ARTWORK_BYTES,
 };
 
 fn auth_routes() -> Router<AppState> {
@@ -45,6 +46,12 @@ pub fn routes() -> Router<AppState> {
                         .put(upload_file)
                         .layer(DefaultBodyLimit::max(MAX_UPLOAD_REQUEST_SIZE)),
                 )
+                .route("/file/{id}/sheet", post(get_sheet).put(update_sheet))
+                .route(
+                    "/file/{id}/artwork",
+                    put(upload_artwork).layer(DefaultBodyLimit::max(MAX_ARTWORK_BYTES + 64 * 1024)),
+                )
+                .route("/file/{id}/artwork/remove", post(delete_artwork))
                 .route("/file/{id}/import", put(import_playlist))
                 .route("/file/{id}/access-token", post(create_file_access_token))
                 .route("/log/{id}", get(get_log))

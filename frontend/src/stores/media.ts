@@ -32,7 +32,11 @@ export const useMedia = defineStore('media', {
 
     getters: {},
     actions: {
-        async getTree(path: string, foldersOnly: boolean = false) {
+        /**
+         * Load a storage folder. `foldersOnly` fills the folder picker list;
+         * `allFiles` also lists files the channel cannot play (sheets, images).
+         */
+        async getTree(path: string, foldersOnly: boolean = false, allFiles: boolean = false) {
             if (!foldersOnly) {
                 this.isLoading = true
             }
@@ -47,7 +51,7 @@ export const useMedia = defineStore('media', {
             await authFetch<any>(`/api/file/${id}/browse`, {
                 method: 'POST',
                 headers: { ...configStore.contentType, ...authStore.authHeader },
-                body: JSON.stringify({ source: path, folders_only: foldersOnly }),
+                body: JSON.stringify({ source: path, folders_only: foldersOnly, all_files: allFiles }),
             })
                 .then((data) => {
                     const pathStr = `${data.parent}/` + data.source

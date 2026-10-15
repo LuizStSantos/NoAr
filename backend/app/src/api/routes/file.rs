@@ -1,4 +1,4 @@
-use std::{env, io};
+use std::{env, io, path::PathBuf};
 
 use axum::{
     Json,
@@ -21,7 +21,13 @@ use crate::{
     db::models::Role,
     file::{MoveObject, PathObject, UploadStatus, UploadStatusQuery, norm_abs_path},
     player::utils::import::import_file,
-    utils::errors::ServiceError,
+    utils::{
+        errors::ServiceError,
+        xmltv::sheet::{
+            ArtworkKind, MediaSheet, SheetUpdate, read_sheet, remove_artwork, save_artwork,
+            save_sheet,
+        },
+    },
 };
 
 #[derive(Debug, Deserialize)]
@@ -356,4 +362,149 @@ pub async fn import_playlist(
     fs::remove_file(path).await?;
 
     Ok(Json(response))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SheetRequest {
+    /// Storage path of a folder or clip.
+    path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SheetSaveRequest {
+    path: String,
+    #[serde(flatten)]
+    update: SheetUpdate,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ArtworkRequest {
+    path: String,
+    kind: ArtworkKind,
+}
+
+/// The storage folder of a channel the user may edit, and `path` inside it.
+async fn storage_target(
+    state: &AppState,
+    id: i32,
+    user: &AuthUser,
+    details: &AuthDetails<Role>,
+    path: &str,
+) -> Result<(PathBuf, PathBuf), ServiceError> {
+    ensure_any_authority(
+        details,
+        &[&Role::GlobalAdmin, &Role::ChannelAdmin, &Role::User],
+    )?;
+    user.ensure_channel_or_admin(id)?;
+
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let (target, _, _) = norm_abs_path(&storage, path)?;
+
+    Ok((storage, target))
+}
+
+/// **Read a sheet**
+///
+/// The `.nfo` sheet of a program folder, or of a clip, with its artwork.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/file/1/sheet -H 'Content-Type: application/json'
+/// -d '{"path": "Morning News"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_sheet(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<SheetRequest>,
+) -> Result<Json<MediaSheet>, ServiceError> {
+    let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
+
+    Ok(Json(read_sheet(&storage, &target).await?))
+}
+
+/// **Save a sheet**
+///
+/// Writes the form fields (keeping other elements of an existing file), or
+/// `raw`, the `.nfo` text as it is.
+///
+/// ```BASH
+/// curl -X PUT http://127.0.0.1:8787/api/file/1/sheet -H 'Content-Type: application/json'
+/// -d '{"path": "Morning News", "kind": "program", "fields": {"title": "Morning News"}}' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn update_sheet(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<SheetSaveRequest>,
+) -> Result<Json<MediaSheet>, ServiceError> {
+    let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
+
+    Ok(Json(save_sheet(&storage, &target, request.update).await?))
+}
+
+/// **Upload artwork**
+///
+/// Stores the image of the `file` field as the poster, backdrop or (clips
+/// only) still of a folder or clip.
+///
+/// ```BASH
+/// curl -X PUT 'http://127.0.0.1:8787/api/file/1/artwork?path=Morning%20News&kind=poster' \
+/// -H 'Authorization: Bearer <TOKEN>' -F 'file=@poster.jpg'
+/// ```
+pub async fn upload_artwork(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    Query(request): Query<ArtworkRequest>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    mut payload: Multipart,
+) -> Result<Json<MediaSheet>, ServiceError> {
+    let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
+
+    while let Some(field) = payload
+        .next_field()
+        .await
+        .map_err(|error| ServiceError::BadRequest(error.to_string()))?
+    {
+        if field.name() != Some("file") {
+            continue;
+        }
+
+        let bytes = field
+            .bytes()
+            .await
+            .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
+
+        return Ok(Json(
+            save_artwork(&storage, &target, request.kind, &bytes).await?,
+        ));
+    }
+
+    Err(ServiceError::BadRequest("No image was sent".to_string()))
+}
+
+/// **Remove artwork**
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/file/1/artwork/remove -H 'Content-Type: application/json'
+/// -d '{"path": "Morning News", "kind": "backdrop"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn delete_artwork(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<ArtworkRequest>,
+) -> Result<Json<MediaSheet>, ServiceError> {
+    let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
+
+    Ok(Json(remove_artwork(&storage, &target, request.kind).await?))
 }

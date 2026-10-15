@@ -17,6 +17,7 @@ use tokio::fs;
 
 pub mod library;
 pub mod nfo;
+pub mod sheet;
 
 use crate::{
     db::models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind},

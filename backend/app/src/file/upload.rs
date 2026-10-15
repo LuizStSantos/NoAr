@@ -36,11 +36,22 @@ const ALLOWED_MIME_TYPES: &[&str] = &[
     "text/csv",
     "text/plain",
     "text/xml",
+    "video/mp2t",
     "video/mp4",
+    "video/mpeg",
     "video/ogg",
     "video/quicktime",
     "video/webm",
+    "video/x-flv",
+    "video/x-m4v",
+    "video/x-matroska",
+    "video/x-msvideo",
 ];
+
+/// Extensions accepted although their MIME type is not in the list: `.nfo`
+/// sheets (XML text the MIME tables do not know) and broadcast video
+/// containers the tables map to other types (`.ts` is also TypeScript).
+const ALLOWED_EXTENSIONS: &[&str] = &["nfo", "ts", "m2ts", "mts", "mxf"];
 
 pub(crate) const MAX_UPLOAD_SIZE: u64 = 4096 * 1024 * 1024;
 pub(crate) const MAX_CHUNK_SIZE: u64 = 10 * 1024 * 1024;
@@ -107,8 +118,14 @@ fn validate_mime_type(filename: &str) -> Result<(), ServiceError> {
     let mime_type = mime_guess::from_path(filename)
         .first_or_octet_stream()
         .to_string();
+    let extension = Path::new(filename)
+        .extension()
+        .map(|extension| extension.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
 
-    if ALLOWED_MIME_TYPES.contains(&mime_type.as_str()) {
+    if ALLOWED_MIME_TYPES.contains(&mime_type.as_str())
+        || ALLOWED_EXTENSIONS.contains(&extension.as_str())
+    {
         Ok(())
     } else {
         Err(ServiceError::BadRequest(format!(
@@ -526,6 +543,16 @@ mod tests {
         assert!(validate_chunk(4, 7, 6, 3).is_err());
         assert!(sanitize_upload_filename("/").is_err());
         assert!(sanitize_upload_filename("video.exe").is_err());
+
+        for name in [
+            "filme.mkv",
+            "bloco.ts",
+            "tvshow.nfo",
+            "Episódio 1.NFO",
+            "poster.jpg",
+        ] {
+            assert!(sanitize_upload_filename(name).is_ok(), "{name}");
+        }
     }
 
     #[test]
