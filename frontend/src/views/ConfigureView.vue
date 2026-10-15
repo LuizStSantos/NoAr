@@ -100,7 +100,7 @@ watch(
     <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 flex flex-wrap gap-6 items-start">
         <aside
             :aria-label="t('settings.sectionsLabel')"
-            class="flex-[1_1_240px] w-full lg:max-w-[280px] flex flex-col gap-4 lg:sticky lg:top-[80px]"
+            class="flex-[1_1_240px] w-full lg:max-w-[280px] flex flex-col gap-4 lg:sticky lg:top-16"
         >
             <label class="field-label">
                 {{ t('nav.channel') }}

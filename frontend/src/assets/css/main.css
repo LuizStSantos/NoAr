@@ -159,6 +159,12 @@ body {
     line-height: 1.45;
 }
 
+/* Keep the scrollbar space reserved, so pages do not shift sideways when a
+   short page (no scrollbar) follows a long one. */
+html {
+    scrollbar-gutter: stable;
+}
+
 .tabular {
     font-variant-numeric: tabular-nums;
 }
