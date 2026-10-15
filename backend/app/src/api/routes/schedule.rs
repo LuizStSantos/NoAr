@@ -26,7 +26,7 @@ use crate::{
         schedule::{
             OccurrenceView, ScheduleEventInput,
             live::{LiveSource, NewLive, SignalTest, list_lives, save_live, test_signal},
-            occurrence_now, occurrence_views, parse_date, prepare_event,
+            occurrence_now, occurrence_views, parse_date, prepare_event, timing_changed,
         },
         time_machine::time_now,
         xmltv::{GuideBlock, guide_blocks, library::program_title},
@@ -185,12 +185,26 @@ pub async fn update_schedule_event(
 ) -> Result<Json<ScheduleEvent>, ServiceError> {
     let manager = authorized_manager(&state, id, &user, &details).await?;
     let config = manager.config.read().await.clone();
+    let not_found = || ServiceError::NotFound(format!("Event {event_id} not found"));
+    let previous = handles::select_schedule_event(&state.pool, id, event_id)
+        .await?
+        .ok_or_else(not_found)?;
     let event = prepare_event(&config, event_id, input).await?;
 
     if !handles::update_schedule_event(&state.pool, &event).await? {
-        return Err(ServiceError::NotFound(format!(
-            "Event {event_id} not found"
-        )));
+        return Err(not_found());
+    }
+
+    // An event moved to a later time today must play again, even when its
+    // earlier time already ran or failed (for example a live without signal).
+    if timing_changed(&previous, &event) {
+        let today = time_now(&config.channel.timezone)
+            .naive_local()
+            .date()
+            .format("%Y-%m-%d")
+            .to_string();
+
+        handles::reset_schedule_runs_from(&state.pool, event_id, &today).await?;
     }
 
     manager.schedule.invalidate();

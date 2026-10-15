@@ -13,7 +13,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chrono::{NaiveDate, TimeDelta};
+use chrono::{NaiveDateTime, TimeDelta};
 use ff_engine::{AsyncPlayout, ClipResult, NavigationBlocked};
 use log::*;
 use serde::Serialize;
@@ -220,7 +220,9 @@ impl ScheduleState {
 
 /// Check for due events until `cancel` fires. Runs beside the play loop.
 pub async fn run_ticker(manager: ChannelManager, cancel: CancellationToken) {
-    let mut seen: HashSet<(i32, NaiveDate)> = HashSet::new();
+    // Occurrences already looked at, by event and start: an event moved to a
+    // new time is a new occurrence and is looked at again.
+    let mut seen: HashSet<(i32, NaiveDateTime)> = HashSet::new();
 
     loop {
         tokio::select! {
@@ -236,7 +238,7 @@ pub async fn run_ticker(manager: ChannelManager, cancel: CancellationToken) {
 
 async fn tick(
     manager: &ChannelManager,
-    seen: &mut HashSet<(i32, NaiveDate)>,
+    seen: &mut HashSet<(i32, NaiveDateTime)>,
 ) -> Result<(), ServiceError> {
     let events = match manager.schedule.cached_events() {
         Some(events) => events,
@@ -252,7 +254,7 @@ async fn tick(
     let due = occurrences_between(&events, now - grace, now + seconds(1.0));
 
     for occurrence in due.into_iter().filter(|o| o.start <= now) {
-        let key = (occurrence.event.id, occurrence.date);
+        let key = (occurrence.event.id, occurrence.start);
 
         if !seen.insert(key) {
             continue;
@@ -288,7 +290,9 @@ async fn tick(
         }
     }
 
-    seen.retain(|(_, date)| *date >= now.date() - TimeDelta::try_days(2).unwrap_or_default());
+    seen.retain(|(_, start)| {
+        start.date() >= now.date() - TimeDelta::try_days(2).unwrap_or_default()
+    });
 
     if manager.schedule.wants_interrupt() && request_interrupt(manager).await {
         manager.schedule.interrupt_sent();

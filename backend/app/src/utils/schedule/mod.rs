@@ -46,6 +46,17 @@ impl Occurrence {
     }
 }
 
+/// Whether an edit moved the event in time, so occurrences that already
+/// played (or failed) should be allowed to play again at the new time.
+pub fn timing_changed(before: &ScheduleEvent, after: &ScheduleEvent) -> bool {
+    before.kind != after.kind
+        || before.start_date != after.start_date
+        || before.start_time != after.start_time
+        || before.end_time != after.end_time
+        || before.repeat_days != after.repeat_days
+        || (!before.enabled && after.enabled)
+}
+
 pub fn parse_date(value: &str) -> Result<NaiveDate, String> {
     NaiveDate::parse_from_str(value.trim(), "%Y-%m-%d")
         .map_err(|_| format!("invalid date '{value}', expected YYYY-MM-DD"))
@@ -403,6 +414,32 @@ mod tests {
 
     fn at(value: &str) -> NaiveDateTime {
         NaiveDateTime::parse_from_str(value, "%F %T").unwrap()
+    }
+
+    #[test]
+    fn only_a_change_in_time_counts_as_moving_the_event() {
+        let before = event(ScheduleKind::Live);
+        let mut renamed = before.clone();
+        renamed.title = "Jogo".to_string();
+        renamed.entry_mode = EntryMode::Interrupt;
+
+        assert!(!timing_changed(&before, &renamed));
+
+        let mut later = before.clone();
+        later.start_time = "14:00:00".to_string();
+
+        assert!(timing_changed(&before, &later));
+
+        let mut longer = before.clone();
+        longer.end_time = Some("15:00:00".to_string());
+
+        assert!(timing_changed(&before, &longer));
+
+        let mut disabled = before.clone();
+        disabled.enabled = false;
+
+        assert!(!timing_changed(&before, &disabled));
+        assert!(timing_changed(&disabled, &before));
     }
 
     #[test]

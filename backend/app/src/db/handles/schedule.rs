@@ -145,6 +145,26 @@ pub async fn select_schedule_runs(
     .await?)
 }
 
+/// Forget the runs of an event's occurrences from `from_date` (`YYYY-MM-DD`)
+/// on, except one on air, so a moved event plays again at its new time.
+/// Returns how many runs were forgotten.
+pub async fn reset_schedule_runs_from(
+    pool: &SqlitePool,
+    event_id: i32,
+    from_date: &str,
+) -> Result<u64, ProcessError> {
+    let result = sqlx::query(
+        "DELETE FROM schedule_runs
+         WHERE event_id = $1 AND occurrence >= $2 AND status != 'running'",
+    )
+    .bind(event_id)
+    .bind(from_date)
+    .execute(pool)
+    .await?;
+
+    Ok(result.rows_affected())
+}
+
 /// Claim an occurrence before it goes on air. Returns `false` when it was
 /// already claimed, so each occurrence plays at most once.
 pub async fn claim_schedule_run(
@@ -289,5 +309,40 @@ mod tests {
         assert_eq!(runs.len(), 1);
         assert_eq!(runs[0].status, "done");
         assert!(runs[0].finished_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn resetting_runs_keeps_past_days_and_the_one_on_air() {
+        let pool = pool().await;
+        let id = insert_schedule_event(&pool, &event()).await.unwrap();
+
+        for (date, status) in [
+            ("2026-10-13", "done"),
+            ("2026-10-14", "failed"),
+            ("2026-10-15", "running"),
+            ("2026-10-16", "done"),
+        ] {
+            assert!(claim_schedule_run(&pool, id, date, status).await.unwrap());
+        }
+
+        assert_eq!(
+            reset_schedule_runs_from(&pool, id, "2026-10-14")
+                .await
+                .unwrap(),
+            2
+        );
+
+        let runs = select_schedule_runs(&pool, 1, "2026-10-01", "2026-10-31")
+            .await
+            .unwrap();
+        let mut left: Vec<_> = runs.iter().map(|run| run.occurrence.as_str()).collect();
+        left.sort_unstable();
+
+        assert_eq!(left, ["2026-10-13", "2026-10-15"]);
+        assert!(
+            claim_schedule_run(&pool, id, "2026-10-14", "running")
+                .await
+                .unwrap()
+        );
     }
 }

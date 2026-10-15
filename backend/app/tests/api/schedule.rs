@@ -203,3 +203,75 @@ async fn schedule_routes_manage_events_and_lives_for_allowed_users_only() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(events.as_array().unwrap().len(), 1);
 }
+
+#[tokio::test]
+#[serial]
+async fn moving_an_event_lets_it_play_again_at_the_new_time() {
+    let fixture = security_fixture().await;
+    let token = access_token(&fixture.state, 1).await;
+    let storage = fixture.root.join("storage");
+    let clip = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests_assets/storage/media_mix/ad.mp4");
+    tokio::fs::create_dir_all(storage.join("Breaks"))
+        .await
+        .unwrap();
+    tokio::fs::copy(&clip, storage.join("Breaks/ad.mp4"))
+        .await
+        .unwrap();
+
+    let mut event = json!({
+        "kind": "media",
+        "sources": ["Breaks/ad.mp4"],
+        "start_date": "2026-10-14",
+        "start_time": "20:30",
+        "repeat_days": 127,
+        "entry_mode": "interrupt",
+        "after_mode": "continue"
+    });
+    let (status, created) = send(
+        &fixture,
+        "POST",
+        "/api/schedule/1",
+        Some(&token),
+        event.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+
+    let id = created["id"].as_i64().unwrap() as i32;
+    let item = format!("/api/schedule/1/{id}");
+    let pool = &fixture.state.pool;
+    let runs = |pool| async move {
+        let mut days: Vec<String> =
+            handles::select_schedule_runs(pool, 1, "2000-01-01", "2099-12-31")
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|run| run.occurrence)
+                .collect();
+        days.sort_unstable();
+        days
+    };
+
+    // One run long ago and one still to come (as if it already failed).
+    for day in ["2000-01-01", "2099-01-01"] {
+        assert!(
+            handles::claim_schedule_run(pool, id, day, "failed")
+                .await
+                .unwrap()
+        );
+    }
+
+    // A new title alone keeps the runs.
+    event["title"] = json!("Plantão");
+    let (status, _) = send(&fixture, "PUT", &item, Some(&token), event.clone()).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(runs(pool).await, ["2000-01-01", "2099-01-01"]);
+
+    // A new time forgets the runs from today on, so it can play again.
+    event["start_time"] = json!("21:00");
+    let (status, updated) = send(&fixture, "PUT", &item, Some(&token), event.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{updated}");
+    assert_eq!(updated["start_time"], "21:00:00");
+    assert_eq!(runs(pool).await, ["2000-01-01"]);
+}
