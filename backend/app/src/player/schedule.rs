@@ -23,11 +23,11 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     db::{
         handles,
-        models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind},
+        models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind, UnfinishedRun},
     },
     player::{
         controller::ChannelManager,
-        output::play_plain,
+        output::{play_plain, play_plain_from},
         utils::{Media, time_in_seconds},
     },
     utils::{
@@ -54,6 +54,12 @@ const LIVE_RETRY_SECONDS: f64 = 5.0;
 
 /// A signal check younger than this is trusted when the live goes on air.
 const FRESH_SIGNAL: Duration = Duration::from_secs(10);
+
+/// An occurrence with less time left than this is not resumed after a stop.
+const RESUME_MIN_SECONDS: f64 = 5.0;
+
+/// How the moment an occurrence went on air is stored.
+const ON_AIR_FORMAT: &str = "%Y-%m-%d %H:%M:%S%.3f";
 
 /// The clip that was cut by an interrupting event.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -85,11 +91,21 @@ pub struct ActiveEvent {
     started: Instant,
 }
 
+/// Where an occurrence that was on air when the playout stopped picks up.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Resume {
+    /// When it first went on air, channel time.
+    on_air_at: NaiveDateTime,
+    /// The programme's time shift before it first went on air.
+    shift_before: Option<f64>,
+}
+
 #[derive(Debug)]
 struct Queued {
     occurrence: Occurrence,
     /// When the live source last answered a signal check.
     signal_checked: Option<Instant>,
+    resume: Option<Resume>,
 }
 
 #[derive(Debug, Default)]
@@ -100,6 +116,9 @@ struct Inner {
     active: Option<ActiveEvent>,
     abort: bool,
     interrupt_wanted: bool,
+    /// Counts player starts, so work left over from an earlier start (a live
+    /// waiting for its signal) can tell it is outdated.
+    generation: u64,
 }
 
 /// Scheduler state shared by the ticker, the play loop and the API.
@@ -126,9 +145,30 @@ impl ScheduleState {
         inner.active = None;
         inner.abort = false;
         inner.interrupt_wanted = false;
+        inner.generation += 1;
+    }
+
+    fn generation(&self) -> u64 {
+        self.lock().generation
     }
 
     fn queue(&self, occurrence: Occurrence, signal_checked: Option<Instant>) {
+        self.push(occurrence, signal_checked, None);
+    }
+
+    /// Queue an occurrence that was on air when the playout stopped; it goes
+    /// back on air right away.
+    fn queue_resumed(&self, mut occurrence: Occurrence, resume: Resume) {
+        occurrence.event.entry_mode = EntryMode::Interrupt;
+        self.push(occurrence, None, Some(resume));
+    }
+
+    fn push(
+        &self,
+        occurrence: Occurrence,
+        signal_checked: Option<Instant>,
+        resume: Option<Resume>,
+    ) {
         let mut inner = self.lock();
 
         if occurrence.event.entry_mode == EntryMode::Interrupt {
@@ -138,6 +178,7 @@ impl ScheduleState {
         inner.queue.push_back(Queued {
             occurrence,
             signal_checked,
+            resume,
         });
     }
 
@@ -301,10 +342,121 @@ async fn tick(
     Ok(())
 }
 
+/// What a new start of the playout does with an occurrence the stop cut.
+#[derive(Debug, PartialEq)]
+enum ResumePlan {
+    /// It was on air and has time left: back on air where it was.
+    OnAir(Resume),
+    /// It waited for its start (a clip to end, a live signal): wait again.
+    Wait,
+    /// Its time is over.
+    Over { aired: bool },
+}
+
+fn resume_plan(occurrence: &Occurrence, run: &UnfinishedRun, now: NaiveDateTime) -> ResumePlan {
+    let on_air_at = run
+        .on_air_at
+        .as_deref()
+        .and_then(|value| NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%.f").ok());
+    let end = match (occurrence.event.kind, on_air_at) {
+        (ScheduleKind::Media, Some(on_air_at)) => on_air_at + seconds(occurrence.event.duration),
+        _ => occurrence.end,
+    };
+
+    if seconds_between(now, end) < RESUME_MIN_SECONDS {
+        return ResumePlan::Over {
+            aired: on_air_at.is_some(),
+        };
+    }
+
+    match on_air_at {
+        Some(on_air_at) => ResumePlan::OnAir(Resume {
+            on_air_at,
+            shift_before: run.shift_before,
+        }),
+        None => ResumePlan::Wait,
+    }
+}
+
+/// After the playout (re)starts, pick up the occurrences its stop cut: one
+/// still inside its time goes back on air where it was (a live keeps its end
+/// time), one that waited for its start waits again, and the others are
+/// closed. Without this a restart during an event fell back to the playlist.
+pub(crate) async fn resume_unfinished(manager: &ChannelManager) {
+    if let Err(error) = try_resume_unfinished(manager).await {
+        warn!(channel = manager.id; "Scheduler: cannot resume cut events: {error}");
+    }
+}
+
+async fn try_resume_unfinished(manager: &ChannelManager) -> Result<(), ServiceError> {
+    let timezone = manager.config.read().await.channel.timezone;
+    let now = time_now(&timezone).naive_local();
+    let day = TimeDelta::try_days(1).unwrap_or_default();
+    let since = (now - day).date().format("%Y-%m-%d").to_string();
+    let runs = handles::select_unfinished_runs(&manager.db_pool, manager.id, &since).await?;
+
+    if runs.is_empty() {
+        return Ok(());
+    }
+
+    let events = handles::select_schedule_events(&manager.db_pool, manager.id).await?;
+    let occurrences = occurrences_between(&events, now - day - day, now + seconds(1.0));
+
+    for run in runs {
+        let Some(occurrence) = occurrences
+            .iter()
+            .find(|occurrence| {
+                occurrence.event.id == run.event_id && occurrence.date_key() == run.occurrence
+            })
+            .cloned()
+        else {
+            // Removed, disabled or moved since it was cut.
+            close_run(manager, run.event_id, &run.occurrence, "skipped").await;
+            continue;
+        };
+
+        match resume_plan(&occurrence, &run, now) {
+            ResumePlan::OnAir(resume) => {
+                info!(channel = manager.id;
+                    "Scheduled event <span class=\"log-addr\">{}</span> was cut by the stop; it goes back on air",
+                    occurrence.event.title
+                );
+                manager.schedule.queue_resumed(occurrence, resume);
+            }
+            ResumePlan::Wait => match occurrence.event.kind {
+                ScheduleKind::Media => manager.schedule.queue(occurrence, None),
+                ScheduleKind::Live => {
+                    tokio::spawn(queue_when_signal_answers(manager.clone(), occurrence));
+                }
+            },
+            ResumePlan::Over { aired } => {
+                let status = if aired { "done" } else { "skipped" };
+
+                close_run(manager, run.event_id, &run.occurrence, status).await;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn close_run(manager: &ChannelManager, event_id: i32, occurrence: &str, status: &str) {
+    if let Err(error) =
+        handles::finish_schedule_run(&manager.db_pool, event_id, occurrence, status).await
+    {
+        error!(channel = manager.id; "Unable to save the scheduled event state: {error}");
+    }
+}
+
+fn seconds_between(from: NaiveDateTime, to: NaiveDateTime) -> f64 {
+    (to - from).num_milliseconds() as f64 / 1000.0
+}
+
 /// Wait until the live source answers before taking over, so a missing
 /// signal never cuts the programme. Gives up after the event's retry time.
 async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurrence) {
     let id = manager.id;
+    let generation = manager.schedule.generation();
     let event = occurrence.event.clone();
     let Some(path) = event.sources.first() else {
         return;
@@ -323,15 +475,24 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
     };
 
     loop {
+        // The playout stopped or restarted meanwhile. The occurrence stays
+        // claimed, and the next start waits for its signal again.
+        if manager.schedule.generation() != generation || !manager.is_alive.load(Ordering::SeqCst) {
+            return;
+        }
+
         let timezone = manager.config.read().await.channel.timezone;
         let now = time_now(&timezone).naive_local();
 
-        if occurrence.end - now <= seconds(5.0) || !manager.is_alive.load(Ordering::SeqCst) {
+        if occurrence.end - now <= seconds(5.0) {
             break;
         }
 
         if test_signal(&url).await.is_ok_and(|test| test.ok) {
-            manager.schedule.queue(occurrence, Some(Instant::now()));
+            if manager.schedule.generation() == generation {
+                manager.schedule.queue(occurrence, Some(Instant::now()));
+            }
+
             return;
         }
 
@@ -394,15 +555,35 @@ pub(crate) async fn play_queued_event(
     let occurrence = queued.occurrence;
     let event = occurrence.event.clone();
     let channel_id = config.general.channel_id;
-    let shift_before = manager.channel.lock().await.time_shift;
-    let started = Instant::now();
+    let now = time_now(&config.channel.timezone).naive_local();
+    let resume = queued.resume;
+    let current_shift = manager.channel.lock().await.time_shift;
+    // A resumed occurrence counts from its first start, so the programme
+    // afterwards continues as if the playout had never stopped.
+    let shift_before = resume
+        .and_then(|resume| resume.shift_before)
+        .unwrap_or(current_shift);
+    let on_air_at = resume.map_or(now, |resume| resume.on_air_at);
+    let already_aired = seconds_between(on_air_at, now).max(0.0);
+    let started = Instant::now()
+        .checked_sub(Duration::from_secs_f64(already_aired))
+        .unwrap_or_else(Instant::now);
     let planned_seconds = match event.kind {
         ScheduleKind::Media => event.duration,
-        ScheduleKind::Live => {
-            let now = time_now(&config.channel.timezone).naive_local();
-            (occurrence.end - now).num_milliseconds() as f64 / 1000.0
-        }
+        ScheduleKind::Live => seconds_between(on_air_at, occurrence.end),
     };
+
+    if let Err(error) = handles::mark_schedule_run_on_air(
+        &manager.db_pool,
+        event.id,
+        &occurrence.date_key(),
+        &on_air_at.format(ON_AIR_FORMAT).to_string(),
+        shift_before,
+    )
+    .await
+    {
+        error!(channel = channel_id; "Unable to save the scheduled event state: {error}");
+    }
 
     manager.schedule.lock().active = Some(ActiveEvent {
         event_id: event.id,
@@ -418,13 +599,20 @@ pub(crate) async fn play_queued_event(
     });
     manager.schedule.lock().abort = false;
 
-    info!(channel = channel_id;
-        "Scheduled event <span class=\"log-addr\">{}</span> on air",
-        event.title
-    );
+    if resume.is_some() {
+        info!(channel = channel_id;
+            "Scheduled event <span class=\"log-addr\">{}</span> back on air after <span class=\"log-number\">{already_aired:.1}</span> s",
+            event.title
+        );
+    } else {
+        info!(channel = channel_id;
+            "Scheduled event <span class=\"log-addr\">{}</span> on air",
+            event.title
+        );
+    }
 
     let result = match event.kind {
-        ScheduleKind::Media => play_clips(manager, config, playout, &event).await,
+        ScheduleKind::Media => play_clips(manager, config, playout, &event, already_aired).await,
         ScheduleKind::Live => {
             play_live(manager, config, playout, &occurrence, queued.signal_checked).await
         }
@@ -445,6 +633,17 @@ pub(crate) async fn play_queued_event(
     manager.channel.lock().await.time_shift = shift;
     manager.list_init.store(true, Ordering::SeqCst);
     manager.schedule.lock().active = None;
+
+    // The playout stopping cut the event: it stays open, and the next start
+    // puts it back on air if its time is not over.
+    if !manager.is_alive.load(Ordering::SeqCst) {
+        info!(channel = channel_id;
+            "Scheduled event <span class=\"log-addr\">{}</span> stopped with the playout",
+            event.title
+        );
+
+        return result.map(|end| Some(end.stopped));
+    }
 
     let status = match &result {
         Ok(EventEnd {
@@ -473,11 +672,14 @@ struct EventEnd {
     stopped: bool,
 }
 
+/// Play the event's clips in order, leaving out the first `skip` seconds (the
+/// part a resumed event already aired).
 async fn play_clips(
     manager: &ChannelManager,
     config: &PlayoutConfig,
     playout: &AsyncPlayout,
     event: &ScheduleEvent,
+    mut skip: f64,
 ) -> Result<EventEnd, ServiceError> {
     let id = config.general.channel_id;
     let mut completed = true;
@@ -494,15 +696,23 @@ async fn play_clips(
             continue;
         };
 
+        if skip >= duration {
+            skip -= duration;
+            continue;
+        }
+
+        let seek = std::mem::take(&mut skip);
+        let length = duration - seek;
+
         manager.schedule.set_item(source.clone());
-        show_on_air(manager, &path.to_string_lossy(), &event.title, duration).await;
+        show_on_air(manager, &path.to_string_lossy(), &event.title, length).await;
         info!(channel = id;
-            "Play scheduled clip for <span class=\"log-number\">{duration:.1}</span> s: <span class=\"log-addr\">{}</span>",
+            "Play scheduled clip for <span class=\"log-number\">{length:.1}</span> s from <span class=\"log-number\">{seek:.1}</span> s: <span class=\"log-addr\">{}</span>",
             path.display()
         );
 
         if matches!(
-            play_plain(playout, config, &path.to_string_lossy(), duration).await?,
+            play_plain_from(playout, config, &path.to_string_lossy(), seek, length).await?,
             ClipResult::Stopped
         ) {
             return Ok(EventEnd {
@@ -663,16 +873,7 @@ fn waiting_source(config: &PlayoutConfig) -> String {
 }
 
 async fn finish_run(manager: &ChannelManager, occurrence: &Occurrence, status: &str) {
-    if let Err(error) = handles::finish_schedule_run(
-        &manager.db_pool,
-        occurrence.event.id,
-        &occurrence.date_key(),
-        status,
-    )
-    .await
-    {
-        error!(channel = manager.id; "Unable to save the scheduled event state: {error}");
-    }
+    close_run(manager, occurrence.event.id, &occurrence.date_key(), status).await;
 }
 
 #[cfg(test)]
@@ -695,6 +896,87 @@ mod tests {
         event
             .occurrence_on(parse_date("2026-10-14").unwrap())
             .unwrap()
+    }
+
+    fn at(value: &str) -> NaiveDateTime {
+        NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S").unwrap()
+    }
+
+    fn run(on_air_at: Option<&str>) -> UnfinishedRun {
+        UnfinishedRun {
+            event_id: 1,
+            occurrence: "2026-10-14".to_string(),
+            on_air_at: on_air_at.map(str::to_string),
+            shift_before: on_air_at.map(|_| -12.5),
+        }
+    }
+
+    #[test]
+    fn a_cut_clip_event_resumes_only_inside_its_length() {
+        // 30 s of clips, on air at 13:00:02 because it waited for a clip.
+        let clips = occurrence(1, EntryMode::AfterClip);
+        let cut = run(Some("2026-10-14 13:00:02.000"));
+
+        assert_eq!(
+            resume_plan(&clips, &cut, at("2026-10-14 13:00:20")),
+            ResumePlan::OnAir(Resume {
+                on_air_at: at("2026-10-14 13:00:02"),
+                shift_before: Some(-12.5),
+            })
+        );
+        assert_eq!(
+            resume_plan(&clips, &cut, at("2026-10-14 13:00:29")),
+            ResumePlan::Over { aired: true }
+        );
+        assert_eq!(
+            resume_plan(&clips, &run(None), at("2026-10-14 13:00:10")),
+            ResumePlan::Wait
+        );
+        assert_eq!(
+            resume_plan(&clips, &run(None), at("2026-10-14 13:05:00")),
+            ResumePlan::Over { aired: false }
+        );
+    }
+
+    #[test]
+    fn a_cut_live_resumes_until_its_end_time() {
+        let mut live = occurrence(1, EntryMode::Interrupt);
+        live.event.kind = ScheduleKind::Live;
+        live.end = at("2026-10-14 14:00:00");
+        let cut = run(Some("2026-10-14 13:00:00.250"));
+
+        assert!(matches!(
+            resume_plan(&live, &cut, at("2026-10-14 13:40:00")),
+            ResumePlan::OnAir(_)
+        ));
+        assert_eq!(
+            resume_plan(&live, &cut, at("2026-10-14 13:59:58")),
+            ResumePlan::Over { aired: true }
+        );
+    }
+
+    #[test]
+    fn a_restart_outdates_work_of_the_earlier_start() {
+        let state = ScheduleState::default();
+        let before = state.generation();
+
+        state.queue_resumed(
+            occurrence(1, EntryMode::AfterClip),
+            Resume {
+                on_air_at: at("2026-10-14 13:00:00"),
+                shift_before: None,
+            },
+        );
+
+        assert!(
+            state.wants_interrupt(),
+            "a resumed event goes on air at once"
+        );
+
+        state.reset();
+
+        assert_ne!(state.generation(), before);
+        assert!(!state.has_queued());
     }
 
     #[test]

@@ -99,8 +99,10 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         info!(channel = config.general.channel_id; "Started {count} live listener(s)");
     }
 
-    // Scheduled events: the ticker queues them, the play loop airs them.
+    // Scheduled events: the ticker queues them, the play loop airs them. An
+    // event cut by the stop goes back on air first.
     manager.schedule.reset();
+    schedule::resume_unfinished(&manager).await;
     let ticker_cancel = CancellationToken::new();
     let ticker = tokio::spawn(schedule::run_ticker(manager.clone(), ticker_cancel.clone()));
 
@@ -740,10 +742,22 @@ pub(crate) async fn play_plain(
     source: &str,
     duration: f64,
 ) -> Result<ClipResult, ServiceError> {
+    play_plain_from(playout, config, source, 0.0, duration).await
+}
+
+/// Like [`play_plain`], starting `seek` seconds into the source and playing
+/// `duration` seconds from there.
+pub(crate) async fn play_plain_from(
+    playout: &AsyncPlayout,
+    config: &PlayoutConfig,
+    source: &str,
+    seek: f64,
+    duration: f64,
+) -> Result<ClipResult, ServiceError> {
     playout
         .play_with_timing_logo_fade_rate_and_audio(
             source.to_string(),
-            None,
+            (seek > 0.0).then_some(seek),
             Some(duration),
             None,
             subtitle_media_path(config, source),

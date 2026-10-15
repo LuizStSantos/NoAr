@@ -1,6 +1,6 @@
 mod playout;
 
-pub(crate) use playout::play_plain;
+pub(crate) use playout::{play_plain, play_plain_from};
 
 use crate::{player::controller::ChannelManager, utils::errors::ServiceError};
 

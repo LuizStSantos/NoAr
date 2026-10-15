@@ -1,7 +1,7 @@
 use sqlx::sqlite::SqlitePool;
 
 use crate::{
-    db::models::{ScheduleEvent, ScheduleRun},
+    db::models::{ScheduleEvent, ScheduleRun, UnfinishedRun},
     utils::errors::ProcessError,
 };
 
@@ -141,6 +141,50 @@ pub async fn select_schedule_runs(
     .bind(channel_id)
     .bind(from_date)
     .bind(to_date)
+    .fetch_all(pool)
+    .await?)
+}
+
+/// Note when a claimed occurrence went on air and the programme's time shift
+/// at that moment. A resumed occurrence keeps the values of its first start.
+pub async fn mark_schedule_run_on_air(
+    pool: &SqlitePool,
+    event_id: i32,
+    occurrence: &str,
+    on_air_at: &str,
+    shift_before: f64,
+) -> Result<(), ProcessError> {
+    sqlx::query(
+        "UPDATE schedule_runs
+         SET on_air_at = COALESCE(on_air_at, $3), shift_before = COALESCE(shift_before, $4)
+         WHERE event_id = $1 AND occurrence = $2",
+    )
+    .bind(event_id)
+    .bind(occurrence)
+    .bind(on_air_at)
+    .bind(shift_before)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+/// Occurrences of the channel's events from `from_date` on that were claimed
+/// but never finished, because the playout stopped while they waited or aired.
+pub async fn select_unfinished_runs(
+    pool: &SqlitePool,
+    channel_id: i32,
+    from_date: &str,
+) -> Result<Vec<UnfinishedRun>, ProcessError> {
+    Ok(sqlx::query_as(
+        "SELECT run.event_id, run.occurrence, run.on_air_at, run.shift_before
+         FROM schedule_runs run
+         JOIN schedule_events event ON event.id = run.event_id
+         WHERE event.channel_id = $1 AND run.status = 'running' AND run.occurrence >= $2
+         ORDER BY run.occurrence, run.on_air_at",
+    )
+    .bind(channel_id)
+    .bind(from_date)
     .fetch_all(pool)
     .await?)
 }
@@ -309,6 +353,51 @@ mod tests {
         assert_eq!(runs.len(), 1);
         assert_eq!(runs[0].status, "done");
         assert!(runs[0].finished_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn unfinished_runs_keep_when_they_first_went_on_air() {
+        let pool = pool().await;
+        let id = insert_schedule_event(&pool, &event()).await.unwrap();
+
+        for date in ["2026-10-13", "2026-10-14"] {
+            assert!(
+                claim_schedule_run(&pool, id, date, "running")
+                    .await
+                    .unwrap()
+            );
+        }
+
+        finish_schedule_run(&pool, id, "2026-10-13", "done")
+            .await
+            .unwrap();
+        mark_schedule_run_on_air(&pool, id, "2026-10-14", "2026-10-14 20:30:00.000", -4.0)
+            .await
+            .unwrap();
+        // A resumed start does not move the first one.
+        mark_schedule_run_on_air(&pool, id, "2026-10-14", "2026-10-14 20:45:00.000", 0.0)
+            .await
+            .unwrap();
+
+        let runs = select_unfinished_runs(&pool, 1, "2026-10-13")
+            .await
+            .unwrap();
+
+        assert_eq!(
+            runs,
+            [UnfinishedRun {
+                event_id: id,
+                occurrence: "2026-10-14".to_string(),
+                on_air_at: Some("2026-10-14 20:30:00.000".to_string()),
+                shift_before: Some(-4.0),
+            }]
+        );
+        assert!(
+            select_unfinished_runs(&pool, 2, "2026-10-13")
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[tokio::test]

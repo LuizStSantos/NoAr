@@ -674,3 +674,17 @@ pub struct ScheduleRun {
     pub started_at: Option<String>,
     pub finished_at: Option<String>,
 }
+
+/// An occurrence claimed to play that did not finish: it waited for its
+/// start or was on air when the playout stopped.
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
+pub struct UnfinishedRun {
+    pub event_id: i32,
+    /// `YYYY-MM-DD` of the occurrence.
+    pub occurrence: String,
+    /// Local time it went on air, `YYYY-MM-DD HH:MM:SS%.3f`; `None` while it
+    /// had not started.
+    pub on_air_at: Option<String>,
+    /// The programme's time shift when it went on air.
+    pub shift_before: Option<f64>,
+}
