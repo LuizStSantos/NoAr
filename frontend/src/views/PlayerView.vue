@@ -18,7 +18,6 @@ import { stringFormatter } from '@/composables/helper'
 import { fileName, isRemoteSource, type LibraryFile } from '@/composables/player'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
-import { useMedia } from '@/stores/media'
 import { usePlaylist } from '@/stores/playlist'
 import { useProgrammes } from '@/stores/programmes'
 import { useSchedule } from '@/stores/schedule'
@@ -27,7 +26,6 @@ const { t } = useI18n()
 const { mediaType } = stringFormatter()
 const configStore = useConfig()
 const indexStore = useIndex()
-const mediaStore = useMedia()
 const playlistStore = usePlaylist()
 const programmes = useProgrammes()
 const scheduleStore = useSchedule()
@@ -86,7 +84,6 @@ function addFile(file: LibraryFile) {
 }
 
 function openGenerator() {
-    mediaStore.getTree('', true)
     showGenerator.value = true
 }
 

@@ -4,7 +4,6 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
-@import 'splitpanes/dist/splitpanes.css';
 @import 'tailwindcss';
 @plugin "daisyui";
 
@@ -245,7 +244,6 @@ html {
     }
 }
 
-.dp__input,
 .file-input,
 .input,
 .select,
@@ -282,46 +280,4 @@ html {
 .alert-error {
     @apply text-error-content border-error;
     --alert-color: var(--color-error);
-}
-
-.splitpanes--horizontal > .splitpanes__splitter {
-    position: relative;
-    border-top: 1px solid var(--color-base-content);
-    border-bottom: 1px solid var(--color-base-content);
-    opacity: 0.4;
-    height: 6px !important;
-}
-
-.splitpanes--vertical > .splitpanes__splitter {
-    position: relative;
-    border-left: 1px solid var(--color-base-content);
-    border-right: 1px solid var(--color-base-content);
-    opacity: 0.4;
-    width: 6px !important;
-}
-
-.splitpanes--horizontal > .splitpanes__splitter::before {
-    content: '';
-    position: absolute;
-    background-color: var(--color-base-content);
-    transform: translateY(-50%);
-    top: 50%;
-    left: 50%;
-    height: 2px;
-    width: 30px;
-    transition: background-color 0.3s;
-    margin-left: -1px;
-}
-
-.splitpanes--vertical > .splitpanes__splitter::before {
-    content: '';
-    position: absolute;
-    background-color: var(--color-base-content);
-    transform: translateY(-50%);
-    top: 50%;
-    left: 50%;
-    width: 2px;
-    height: 30px;
-    transition: background-color 0.3s;
-    margin-left: -1px;
 }

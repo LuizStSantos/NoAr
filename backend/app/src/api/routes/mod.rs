@@ -285,6 +285,9 @@ pub struct PathsObj {
     #[serde(default)]
     shuffle: bool,
     template: Option<Template>,
+    /// Only return the playlist, without saving it.
+    #[serde(default)]
+    draft: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

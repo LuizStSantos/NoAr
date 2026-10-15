@@ -1,454 +1,609 @@
 <script setup lang="ts">
-import VirtualList from 'vue-virtual-sortable'
-import dayjs from 'dayjs'
-
-import { ref, nextTick } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useWindowSize } from '@vueuse/core'
-import { isEqual } from 'es-toolkit/predicate'
 
+import FolderTree from '@/components/storage/FolderTree.vue'
 import { authFetch } from '@/composables/authFetch'
 import { playlistOperations } from '@/composables/helper'
-import { useAuth } from '@/stores/auth'
-import { useIndex } from '@/stores/index'
+import { clockShort, totalLength } from '@/composables/player'
+import { baseName, listFolders, storageJoin } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
-import { useMedia } from '@/stores/media'
+import { useIndex } from '@/stores/index'
 import { usePlaylist } from '@/stores/playlist'
 
+/**
+ * Builds a day from storage folders, or from blocks of folders at set times.
+ * The result goes into the playlist as unsaved changes to review and save.
+ */
+const props = defineProps<{ close: () => void }>()
+
 const { t } = useI18n()
-const { width } = useWindowSize({ initialWidth: 800 })
-const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
-const mediaStore = useMedia()
 const playlistStore = usePlaylist()
-
 const { processPlaylist } = playlistOperations()
 
-const genGroup = ref({ name: 'genGroup', pull: 'clone', put: false })
-const targetGroup = ref({ name: 'genGroup', pull: true, put: true })
+interface Block {
+    id: number
+    /** `HH:MM:SS` */
+    start: string
+    /** `HH:MM:SS` */
+    duration: string
+    shuffle: boolean
+    paths: string[]
+}
 
-defineProps({
-    close: {
-        type: Function,
-        default() {
-            return ''
-        },
-    },
+const mode = ref<'folders' | 'blocks'>('folders')
+const channelId = computed(() => configStore.channels[configStore.i]?.id ?? 0)
+const dayStart = computed(() => configStore.playout.playlist?.startInSec ?? 0)
+const dayLength = computed(() => configStore.playout.playlist?.lengthInSec || 86400)
+
+// Folders mode
+const browsePath = ref('')
+const folders = ref<string[]>([])
+const sheetFolders = ref<string[]>([])
+const loadingFolders = ref(false)
+const chosen = ref<string[]>([])
+const wholeStorage = ref(false)
+const shuffle = ref(true)
+const fill = ref<'replace' | 'complete'>('replace')
+
+// Blocks mode
+let nextId = 1
+const blocks = ref<Block[]>([newBlock(dayStart.value)])
+const pickerFor = ref<number | null>(null)
+
+const generating = ref(false)
+
+const currentLength = computed(() => playlistStore.playlist.reduce((sum, item) => sum + (item.out - item.in), 0))
+const missing = computed(() => Math.max(0, dayLength.value - currentLength.value))
+const crumbs = computed(() => {
+    const parts = browsePath.value ? browsePath.value.split('/') : []
+
+    return [
+        { name: t('storage.root'), path: '' },
+        ...parts.map((name, index) => ({ name, path: parts.slice(0, index + 1).join('/') })),
+    ]
 })
 
-const advancedGenerator = ref(false)
-const selectedFolders = ref([] as string[])
-const generateFromAll = ref(false)
-const simpleShuffle = ref(false)
-const template = ref({
-    sources: [
-        {
-            start: configStore.playout.playlist.day_start,
-            duration: '02:00:00',
-            shuffle: false,
-            paths: [],
-        },
-    ],
-} as Template)
+function toClock(seconds: number): string {
+    const value = ((Math.round(seconds) % 86400) + 86400) % 86400
+    const pad = (number: number) => String(number).padStart(2, '0')
 
-function setSelectedFolder(event: any, folder: string) {
-    if (event.target.checked) {
-        selectedFolders.value.push(folder)
+    return `${pad(Math.floor(value / 3600))}:${pad(Math.floor((value % 3600) / 60))}:${pad(value % 60)}`
+}
+
+function toSeconds(clock: string): number {
+    const [hours = 0, minutes = 0, seconds = 0] = clock.split(':').map(Number)
+
+    return (hours || 0) * 3600 + (minutes || 0) * 60 + (seconds || 0)
+}
+
+function newBlock(start: number, duration = 7200): Block {
+    return { id: nextId++, start: toClock(start), duration: toClock(duration), shuffle: false, paths: [] }
+}
+
+/** Seconds after the day start, so blocks after midnight sort after the evening. */
+function offsetOf(block: Block): number {
+    return (toSeconds(block.start) - dayStart.value + 86400) % 86400
+}
+
+const coverage = computed(() => {
+    const spans = blocks.value
+        .map((block) => ({ block, from: offsetOf(block), to: offsetOf(block) + toSeconds(block.duration) }))
+        .sort((a, b) => a.from - b.from)
+    const gaps: { from: number; to: number }[] = []
+    const overlaps: string[] = []
+    let reached = 0
+
+    for (const span of spans) {
+        if (span.from > reached) {
+            gaps.push({ from: reached, to: span.from })
+        } else if (span.from < reached) {
+            overlaps.push(span.block.start.slice(0, 5))
+        }
+
+        reached = Math.max(reached, span.to)
+    }
+
+    if (reached < dayLength.value) {
+        gaps.push({ from: reached, to: dayLength.value })
+    }
+
+    const percent = (seconds: number) => Math.min(100, (seconds / dayLength.value) * 100)
+
+    return {
+        spans: spans.map((span) => ({
+            id: span.block.id,
+            left: percent(span.from),
+            width: Math.max(0.5, percent(span.to) - percent(span.from)),
+            empty: !span.block.paths.length,
+        })),
+        gaps: gaps.map((gap) => ({
+            ...gap,
+            left: percent(gap.from),
+            width: percent(gap.to) - percent(gap.from),
+            label: `${clockShort(dayStart.value + gap.from)}–${clockShort(dayStart.value + gap.to)}`,
+        })),
+        overlaps,
+        open: gaps.reduce((sum, gap) => sum + gap.to - gap.from, 0),
+        end: reached,
+    }
+})
+
+const ticks = computed(() =>
+    Array.from({ length: 5 }, (_, index) => clockShort(dayStart.value + (dayLength.value / 4) * index)),
+)
+
+const canGenerate = computed(() => {
+    if (generating.value) {
+        return false
+    }
+
+    if (mode.value === 'folders') {
+        return wholeStorage.value || chosen.value.length > 0
+    }
+
+    return blocks.value.length > 0 && blocks.value.every((block) => block.paths.length && toSeconds(block.duration) > 0)
+})
+
+async function browse(path: string) {
+    loadingFolders.value = true
+
+    try {
+        const listing = await listFolders(channelId.value, path)
+
+        browsePath.value = path
+        folders.value = listing.folders
+        sheetFolders.value = listing.sheetFolders
+    } catch (e) {
+        indexStore.msgAlert('error', e instanceof Error ? e.message : String(e), 4)
+    } finally {
+        loadingFolders.value = false
+    }
+}
+
+function toggleFolder(path: string) {
+    chosen.value = chosen.value.includes(path) ? chosen.value.filter((item) => item !== path) : [...chosen.value, path]
+}
+
+function addBlock() {
+    const end = coverage.value.end
+
+    blocks.value.push(newBlock(dayStart.value + end, Math.min(7200, Math.max(1800, dayLength.value - end))))
+}
+
+function removeBlock(id: number) {
+    blocks.value = blocks.value.filter((block) => block.id !== id)
+}
+
+function addPath(block: Block, path: string) {
+    if (path && !block.paths.includes(path)) {
+        block.paths.push(path)
+    }
+
+    pickerFor.value = null
+}
+
+async function generate() {
+    generating.value = true
+
+    const body: Record<string, unknown> = { draft: true }
+
+    if (mode.value === 'folders') {
+        body.shuffle = shuffle.value
+
+        if (!wholeStorage.value) {
+            body.paths = chosen.value
+        }
     } else {
-        const index = selectedFolders.value.indexOf(folder)
+        body.template = {
+            sources: [...blocks.value]
+                .sort((a, b) => offsetOf(a) - offsetOf(b))
+                .map((block) => ({
+                    start: block.start,
+                    duration: block.duration,
+                    shuffle: block.shuffle,
+                    paths: block.paths,
+                })),
+        }
+    }
 
-        if (index > -1) {
-            selectedFolders.value.splice(index, 1)
+    try {
+        const response = await authFetch<{ program: PlaylistItem[] }>(
+            `/api/playlist/${channelId.value}/generate/${playlistStore.listDate}`,
+            {
+                method: 'POST',
+                headers: configStore.contentType,
+                body: JSON.stringify(body),
+            },
+        )
+        const generated = processPlaylist(playlistStore.listDate, response.program, false)
+
+        if (mode.value === 'folders' && fill.value === 'complete') {
+            const added: PlaylistItem[] = []
+            let length = 0
+
+            for (const item of generated) {
+                if (length >= missing.value) {
+                    break
+                }
+
+                added.push(item)
+                length += item.out - item.in
+            }
+
+            playlistStore.playlist = [...playlistStore.playlist, ...added]
+            playlistStore.addedUids = [...playlistStore.addedUids, ...added.map((item) => item.uid)]
+        } else {
+            playlistStore.playlist = generated
+        }
+
+        playlistStore.touch()
+        playlistStore.scrollToItem = true
+        indexStore.msgAlert('success', t('generator.done'), 3)
+        props.close()
+    } catch (e: any) {
+        indexStore.msgAlert('error', e?.data ?? e?.message ?? String(e), 6)
+    } finally {
+        generating.value = false
+    }
+}
+
+function onKey(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+        if (pickerFor.value !== null) {
+            pickerFor.value = null
+        } else {
+            props.close()
         }
     }
 }
 
-function resetCheckboxes() {
-    selectedFolders.value = []
-    const checkboxes = document.getElementsByClassName('folder-check') as HTMLCollectionOf<HTMLInputElement>
-
-    if (checkboxes) {
-        for (const box of checkboxes) {
-            box.checked = false
-        }
+watch(missing, (value) => {
+    if (value <= 0 && fill.value === 'complete') {
+        fill.value = 'replace'
     }
-}
+})
 
-function addFolderToTemplate(event: any) {
-    const n = event.newIndex
+onMounted(() => {
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKey)
+    browse('')
+})
 
-    const media = event.item
-    const storagePath = configStore.channels[configStore.i]?.storage
-    const navPath = mediaStore.folderCrumbs[mediaStore.folderCrumbs.length - 1]?.path
-    const sourcePath = `${storagePath}/${navPath}/${media.name}`.replace(/\/[/]+/g, '/')
-    event.item.path = sourcePath
-
-    nextTick(() => {
-        if (event.list.filter((item: any) => isEqual(item, event.item)).length > 1) {
-            event.list.splice(n, 1)
-        }
-    })
-}
-
-function resetTemplate() {
-    template.value.sources = []
-}
-
-function removeTemplate(item: TemplateItem) {
-    const index = template.value.sources.indexOf(item)
-
-    template.value.sources.splice(index, 1)
-}
-
-function addTemplate() {
-    const last = template.value.sources[template.value.sources.length - 1]
-    let start = dayjs('2000-01-01T00:00:00')
-
-    if (last) {
-        const t = dayjs(`2000-01-01T${last.duration}`)
-        start = dayjs(`2000-01-01T${last.start}`)
-            .add(t.hour(), 'hour')
-            .add(t.minute(), 'minute')
-            .add(t.second(), 'second')
-    }
-
-    template.value.sources.push({
-        start: start.format('HH:mm:ss'),
-        duration: '02:00:00',
-        shuffle: false,
-        paths: [],
-    })
-}
-
-async function generatePlaylist() {
-    playlistStore.isLoading = true
-    const body = {} as BodyObject
-
-    if (selectedFolders.value.length > 0 && !generateFromAll.value) {
-        body.paths = selectedFolders.value
-    }
-
-    if (advancedGenerator.value) {
-        template.value.sources.forEach((item) => {
-            item.paths = item.paths = item.paths
-                .map((p) => (typeof p === 'string' ? p : p?.path))
-                .filter((p) => typeof p === 'string')
-        })
-        body.template = template.value
-    } else {
-        body.shuffle = simpleShuffle.value
-    }
-
-    await authFetch<any>(
-        `/api/playlist/${configStore.channels[configStore.i]?.id}/generate/${playlistStore.listDate}`,
-        {
-            method: 'POST',
-            headers: { ...configStore.contentType, ...authStore.authHeader },
-            body: JSON.stringify(body),
-        },
-    )
-        .then((response: any) => {
-            playlistStore.playlist = processPlaylist(playlistStore.listDate, response.program, false)
-            indexStore.msgAlert('success', t('player.generateDone'), 2)
-        })
-        .catch((e: any) => {
-            indexStore.msgAlert('error', e.data ? e.data : e, 4)
-        })
-
-    // reset selections
-    resetCheckboxes()
-    resetTemplate()
-    simpleShuffle.value = false
-
-    playlistStore.scrollToItem = true
-    playlistStore.isLoading = false
-}
+onBeforeUnmount(() => {
+    document.body.style.overflow = ''
+    window.removeEventListener('keydown', onKey)
+})
 </script>
 <template>
-    <div class="z-50 fixed inset-0 flex justify-center bg-black/50 overflow-auto py-5 px-4">
-        <div
+    <div class="z-50 fixed inset-0 flex justify-center bg-black/55 overflow-auto py-6 px-4" @click.self="close()">
+        <section
             role="dialog"
             aria-modal="true"
-            :aria-label="t('player.generateProgram')"
-            class="relative flex flex-col bg-base-100 border border-line-strong w-200 min-w-75 max-w-full h-170 my-auto rounded-box p-5 shadow-2xl"
+            aria-labelledby="generator-title"
+            class="my-auto w-full max-w-[720px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl flex flex-col"
         >
-            <h2 class="m-0 font-semibold text-[16px]">{{ t('player.generateProgram') }}</h2>
+            <header class="flex items-start gap-3 px-5 pt-5 pb-3">
+                <div class="flex-1 min-w-0">
+                    <h2 id="generator-title" class="m-0 text-lg font-semibold">{{ t('generator.title') }}</h2>
+                    <p class="m-0 text-[13px] text-muted">
+                        {{ t('generator.day', { date: playlistStore.listDate, start: clockShort(dayStart) }) }}
+                    </p>
+                </div>
+                <button type="button" class="btn-icon" :aria-label="t('storage.close')" @click="close()">
+                    <i class="bi bi-x-lg" aria-hidden="true" />
+                </button>
+            </header>
 
-            <div class="h-[calc(100%-95px)] mt-3">
-                <div role="tablist" class="tabs tabs-border">
-                    <input
-                        type="radio"
-                        name="my_tabs_2"
+            <div class="px-5">
+                <div
+                    role="tablist"
+                    :aria-label="t('generator.how')"
+                    class="grid grid-cols-2 bg-base-200 border border-line-strong rounded-[10px] p-[3px]"
+                >
+                    <button
+                        v-for="option in ['folders', 'blocks'] as const"
+                        :key="option"
+                        type="button"
                         role="tab"
-                        class="tab"
-                        :aria-label="t('player.simple')"
-                        checked
-                        @change="advancedGenerator = false"
-                    />
-                    <div role="tabpanel" class="tab-content w-full pt-3">
-                        <div class="w-full">
-                            <div class="grid">
-                                <nav class="breadcrumbs px-3 pt-0">
-                                    <ul>
-                                        <li v-for="(crumb, index) in mediaStore.folderCrumbs" :key="index">
-                                            <button
-                                                v-if="
-                                                    mediaStore.folderCrumbs.length > 1 &&
-                                                    mediaStore.folderCrumbs.length - 1 > index
-                                                "
-                                                @click="mediaStore.getTree(crumb.path, true)"
-                                            >
-                                                <i class="bi-folder-fill me-1" />
-                                                {{ crumb.text }}
-                                            </button>
-                                            <span v-else><i class="bi-folder-fill me-1" />{{ crumb.text }}</span>
-                                        </li>
-                                    </ul>
-                                </nav>
-                            </div>
+                        :aria-selected="mode === option"
+                        class="border-0 rounded-lg min-h-9.5 cursor-pointer"
+                        :class="mode === option ? 'bg-base-300 text-base-content' : 'bg-transparent text-muted'"
+                        @click="mode = option"
+                    >
+                        {{ option === 'folders' ? t('generator.folders') : t('generator.blocks') }}
+                    </button>
+                </div>
+            </div>
 
-                            <ul
-                                class="h-118.75 border border-line-strong rounded-field overflow-auto bg-field m-1 py-1"
+            <div v-if="mode === 'folders'" class="px-5 py-4 flex flex-col gap-3.5">
+                <div class="flex flex-wrap items-center gap-2 text-[13px] text-muted">
+                    <nav :aria-label="t('storage.path')" class="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+                        <template v-for="(crumb, index) in crumbs" :key="crumb.path">
+                            <i v-if="index > 0" class="bi bi-chevron-right text-[10px]" aria-hidden="true" />
+                            <button
+                                type="button"
+                                class="bg-transparent border-0 p-0 cursor-pointer"
+                                :class="
+                                    index === crumbs.length - 1
+                                        ? 'text-base-content'
+                                        : 'text-muted hover:text-base-content'
+                                "
+                                :disabled="wholeStorage"
+                                @click="browse(crumb.path)"
                             >
-                                <li
-                                    v-for="folder in mediaStore.folderList.folders"
-                                    :key="folder.uid"
-                                    class="even:bg-raised px-2 py-0.5 w-full"
-                                >
-                                    <div class="grid grid-cols-[auto_24px]">
-                                        <button
-                                            class="truncate text-left"
-                                            @click="
-                                                ;[
-                                                    (selectedFolders = []),
-                                                    mediaStore.getTree(
-                                                        `/${mediaStore.folderList.source}/${folder.name}`.replace(
-                                                            /\/[/]+/g,
-                                                            '/',
-                                                        ),
-                                                        true,
-                                                    ),
-                                                ]
-                                            "
-                                        >
-                                            <i class="bi-folder-fill" />
-                                            {{ folder.name }}
-                                        </button>
-                                        <div v-if="!generateFromAll" class="text-center">
-                                            <input
-                                                class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
-                                                type="checkbox"
-                                                @change="
-                                                    setSelectedFolder(
-                                                        $event,
-                                                        `/${mediaStore.folderList.source}/${folder.name}`.replace(
-                                                            /\/[/]+/g,
-                                                            '/',
-                                                        ),
-                                                    )
-                                                "
-                                            />
-                                        </div>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
+                                {{ crumb.name }}
+                            </button>
+                        </template>
+                    </nav>
+                    <span>{{ t('generator.chosen', { count: chosen.length }, chosen.length) }}</span>
+                </div>
 
+                <ul
+                    class="relative m-0 p-1 list-none border border-line-strong rounded-[10px] bg-base-200 max-h-[300px] min-h-[120px] overflow-y-auto"
+                    :class="wholeStorage ? 'opacity-50 pointer-events-none' : ''"
+                >
+                    <li v-if="loadingFolders" class="absolute inset-0 flex items-center justify-center bg-base-200/70">
+                        <span class="loading loading-spinner" />
+                    </li>
+                    <li
+                        v-for="folder in folders"
+                        :key="folder"
+                        class="flex items-center gap-2.5 px-2 min-h-11 rounded-lg"
+                        :class="chosen.includes(storageJoin(browsePath, folder)) ? 'bg-accent-soft' : ''"
+                    >
+                        <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm checkbox-accent rounded-[4px]"
+                            :checked="chosen.includes(storageJoin(browsePath, folder))"
+                            :aria-label="folder"
+                            @change="toggleFolder(storageJoin(browsePath, folder))"
+                        />
+                        <span class="flex-1 min-w-0 truncate">{{ folder }}</span>
+                        <span
+                            v-if="sheetFolders.includes(folder)"
+                            class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
+                        >
+                            {{ t('storage.sheetBadge') }}
+                        </span>
+                        <button
+                            type="button"
+                            class="btn-icon min-w-8 min-h-8 text-muted"
+                            :aria-label="t('storage.open', { name: folder })"
+                            @click="browse(storageJoin(browsePath, folder))"
+                        >
+                            <i class="bi bi-chevron-right text-xs" aria-hidden="true" />
+                        </button>
+                    </li>
+                    <li v-if="!loadingFolders && !folders.length" class="px-3 py-4 text-muted text-[13px]">
+                        {{ t('generator.noFolders') }}
+                    </li>
+                </ul>
+
+                <div v-if="chosen.length && !wholeStorage" class="flex flex-wrap gap-1.5">
+                    <span
+                        v-for="path in chosen"
+                        :key="path"
+                        class="inline-flex items-center gap-1 bg-base-300 rounded-md ps-2 text-[13px]"
+                        :title="path"
+                    >
+                        {{ baseName(path) }}
+                        <button
+                            type="button"
+                            class="btn-icon min-w-6 min-h-6 text-muted"
+                            :aria-label="t('generator.removeFolder', { name: baseName(path) })"
+                            @click="toggleFolder(path)"
+                        >
+                            <i class="bi bi-x" aria-hidden="true" />
+                        </button>
+                    </span>
+                </div>
+
+                <label class="flex items-center gap-2.5 text-[13px] cursor-pointer">
                     <input
-                        type="radio"
-                        name="my_tabs_2"
-                        role="tab"
-                        class="tab"
-                        :aria-label="t('player.advanced')"
-                        @change=";((advancedGenerator = true), resetCheckboxes())"
+                        v-model="wholeStorage"
+                        type="checkbox"
+                        class="checkbox checkbox-sm checkbox-accent rounded-[4px]"
                     />
-                    <div role="tabpanel" class="tab-content pt-3">
-                        <div class="w-full">
-                            <div class="grid grid-cols-[auto_48px] px-3 pt-0">
-                                <nav class="breadcrumbs pt-0">
-                                    <ul>
-                                        <li v-for="(crumb, index) in mediaStore.folderCrumbs" :key="index">
-                                            <button
-                                                v-if="
-                                                    mediaStore.folderCrumbs.length > 1 &&
-                                                    mediaStore.folderCrumbs.length - 1 > index
-                                                "
-                                                @click="mediaStore.getTree(crumb.path, true)"
-                                            >
-                                                <i class="bi-folder-fill me-1" />
-                                                {{ crumb.text }}
-                                            </button>
-                                            <span v-else><i class="bi-folder-fill me-1" />{{ crumb.text }}</span>
-                                        </li>
-                                    </ul>
-                                </nav>
-                                <div class="flex justify-end">
+                    {{ t('generator.wholeStorage') }}
+                </label>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <fieldset
+                        class="border border-line-strong rounded-[10px] px-3 pt-1.5 pb-2.5 m-0 flex flex-col gap-1"
+                    >
+                        <legend class="text-xs text-muted px-1">{{ t('generator.order') }}</legend>
+                        <label class="flex items-center gap-2.5 min-h-8.5 cursor-pointer">
+                            <input v-model="shuffle" type="radio" :value="false" class="radio radio-xs radio-accent" />
+                            {{ t('generator.inOrder') }}
+                        </label>
+                        <label class="flex items-center gap-2.5 min-h-8.5 cursor-pointer">
+                            <input v-model="shuffle" type="radio" :value="true" class="radio radio-xs radio-accent" />
+                            {{ t('generator.shuffled') }}
+                        </label>
+                    </fieldset>
+                    <fieldset
+                        class="border border-line-strong rounded-[10px] px-3 pt-1.5 pb-2.5 m-0 flex flex-col gap-1"
+                    >
+                        <legend class="text-xs text-muted px-1">{{ t('generator.fill') }}</legend>
+                        <label class="flex items-center gap-2.5 min-h-8.5 cursor-pointer">
+                            <input v-model="fill" type="radio" value="replace" class="radio radio-xs radio-accent" />
+                            {{ t('generator.replace') }}
+                        </label>
+                        <label
+                            class="flex items-center gap-2.5 min-h-8.5"
+                            :class="missing > 0 && playlistStore.playlist.length ? 'cursor-pointer' : 'opacity-50'"
+                        >
+                            <input
+                                v-model="fill"
+                                type="radio"
+                                value="complete"
+                                class="radio radio-xs radio-accent"
+                                :disabled="missing <= 0 || !playlistStore.playlist.length"
+                            />
+                            {{ t('generator.complete', { length: totalLength(missing) }) }}
+                        </label>
+                    </fieldset>
+                </div>
+            </div>
+
+            <div v-else class="px-5 py-4 flex flex-col gap-3">
+                <div class="flex flex-col gap-1" :aria-label="t('generator.coverage')" role="group">
+                    <div class="relative h-5.5 rounded-md overflow-hidden bg-base-200">
+                        <span
+                            v-for="gap in coverage.gaps"
+                            :key="`gap-${gap.from}`"
+                            class="absolute top-0 bottom-0 bg-on-air-soft"
+                            :style="{ left: `${gap.left}%`, width: `${gap.width}%` }"
+                        />
+                        <span
+                            v-for="(span, index) in coverage.spans"
+                            :key="span.id"
+                            class="absolute top-0 bottom-0 border-e-2 border-base-100"
+                            :class="span.empty ? 'bg-base-300' : index % 2 ? 'bg-accent-soft' : 'bg-accent/60'"
+                            :style="{ left: `${span.left}%`, width: `${span.width}%` }"
+                        />
+                    </div>
+                    <div class="flex justify-between font-mono text-[11px] text-subtle" aria-hidden="true">
+                        <span v-for="(tick, index) in ticks" :key="index">{{ tick }}</span>
+                    </div>
+                </div>
+
+                <ol class="m-0 p-0 list-none flex flex-col gap-2">
+                    <li
+                        v-for="block in blocks"
+                        :key="block.id"
+                        class="relative border border-line-strong rounded-[10px] p-3 grid gap-2.5 grid-cols-2 sm:grid-cols-[124px_100px_minmax(0,1fr)_auto_auto] items-end"
+                    >
+                        <label class="field-label">
+                            {{ t('generator.start') }}
+                            <input v-model="block.start" type="time" step="1" class="field-input font-mono px-2" />
+                        </label>
+                        <label class="field-label">
+                            {{ t('generator.length') }}
+                            <input
+                                v-model="block.duration"
+                                pattern="[0-9]{2}:[0-9]{2}(:[0-9]{2})?"
+                                placeholder="02:00:00"
+                                class="field-input font-mono px-2"
+                            />
+                        </label>
+                        <div class="field-label col-span-2 sm:col-span-1">
+                            {{ t('generator.blockFolders') }}
+                            <div class="flex flex-wrap gap-1.5 items-center min-h-10">
+                                <span
+                                    v-for="path in block.paths"
+                                    :key="path"
+                                    class="inline-flex items-center gap-1 bg-base-300 text-base-content rounded-md ps-2 text-[13px]"
+                                    :title="path"
+                                >
+                                    {{ baseName(path) }}
                                     <button
                                         type="button"
-                                        class="btn btn-sm btn-primary"
-                                        :title="t('player.addBlock')"
-                                        @click="addTemplate()"
+                                        class="btn-icon min-w-6 min-h-6 text-muted"
+                                        :aria-label="t('generator.removeFolder', { name: baseName(path) })"
+                                        @click="block.paths = block.paths.filter((item) => item !== path)"
                                     >
-                                        <i class="bi bi-folder-plus" />
+                                        <i class="bi bi-x" aria-hidden="true" />
                                     </button>
-                                </div>
-                            </div>
-                            <div
-                                class="h-118.75 border border-line-strong rounded-field grid bg-field m-1"
-                                :class="width < 740 ? 'grid-cols-1' : 'grid-cols-[300px_auto]'"
-                            >
-                                <VirtualList
-                                    id="genSource"
-                                    v-model="mediaStore.folderList.folders"
-                                    class="h-full py-1 border-base-content/30"
-                                    :group="genGroup"
-                                    :data-key="'uid'"
-                                    :class="width < 740 ? 'h-60 border-b' : 'border-e'"
-                                    chosen-class="cursor-grabbing"
-                                    wrap-tag="ul"
-                                    :sortable="false"
+                                </span>
+                                <button
+                                    type="button"
+                                    class="border border-dashed border-accent/50 text-accent-text rounded-md px-2 min-h-8 text-[13px] bg-transparent cursor-pointer"
+                                    :aria-expanded="pickerFor === block.id"
+                                    @click="pickerFor = pickerFor === block.id ? null : block.id"
                                 >
-                                    <template #item="{ item }">
-                                        <li
-                                            :id="`folder-${item.uid}`"
-                                            :key="item.uid"
-                                            class="even:bg-raised cursor-grabbing px-2 py-0.5 w-full"
-                                        >
-                                            <button
-                                                class="w-full truncate text-left"
-                                                @click="
-                                                    ;[
-                                                        (selectedFolders = []),
-                                                        mediaStore.getTree(
-                                                            `/${mediaStore.folderList.source}/${item.name}`.replace(
-                                                                /\/[/]+/g,
-                                                                '/',
-                                                            ),
-                                                            true,
-                                                        ),
-                                                    ]
-                                                "
-                                            >
-                                                <i class="bi-folder-fill" />
-                                                {{ item.name }}
-                                            </button>
-                                        </li>
-                                    </template>
-                                </VirtualList>
-                                <ul class="overflow-auto px-1 pb-1">
-                                    <li
-                                        v-for="item in template.sources"
-                                        :key="item.start"
-                                        class="flex flex-col gap-1 justify-center items-center border border-base-content/30 rounded-sm mt-1 p-1"
-                                    >
-                                        <div
-                                            class="w-full flex flex-wrap xs:grid xs:grid-cols-[58px_64px_67px_64px_minmax(90px,1fr)] xs:join"
-                                        >
-                                            <div
-                                                class="input input-sm join-item px-1 text-center bg-base-200 leading-7"
-                                            >
-                                                {{ t('player.start') }}:
-                                            </div>
-                                            <input
-                                                v-model="item.start"
-                                                type="text"
-                                                class="input input-sm join-item px-1 text-center"
-                                            />
-                                            <div
-                                                class="input input-sm join-item px-1 text-center bg-base-200 leading-7"
-                                            >
-                                                {{ t('player.duration') }}:
-                                            </div>
-                                            <input
-                                                v-model="item.duration"
-                                                type="text"
-                                                class="input input-sm join-item px-1 text-center"
-                                            />
-                                            <label
-                                                class="h-8 join-item px-2 flex items-center justify-start gap-2 bg-base-200 border border-base-content/20 cursor-pointer"
-                                            >
-                                                <input
-                                                    v-model="item.shuffle"
-                                                    type="checkbox"
-                                                    class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
-                                                />
-                                                <span>{{ t('player.shuffle') }}</span>
-                                            </label>
-                                        </div>
-
-                                        <VirtualList
-                                            v-model="item.paths"
-                                            :group="targetGroup"
-                                            :data-key="'uid'"
-                                            class="w-full border border-base-content/30 rounded"
-                                            :style="`height: ${item.paths ? item.paths.length * 23 + 31 : 300}px`"
-                                            wrap-tag="ul"
-                                            @drop="addFolderToTemplate"
-                                        >
-                                            <template #item="{ item }">
-                                                <li
-                                                    :id="`path-${item.uid}`"
-                                                    :key="item.uid"
-                                                    class="py-0 even:bg-raised px-2"
-                                                >
-                                                    <i class="bi-folder-fill" />
-                                                    {{ item.name }}
-                                                </li>
-                                            </template>
-                                        </VirtualList>
-
-                                        <div class="w-full flex justify-end">
-                                            <button
-                                                type="button"
-                                                class="btn btn-sm bg-base-100"
-                                                @click="removeTemplate(item)"
-                                            >
-                                                <i class="bi-trash" />
-                                            </button>
-                                        </div>
-                                    </li>
-                                </ul>
+                                    + {{ t('generator.addFolder') }}
+                                </button>
                             </div>
                         </div>
-                    </div>
+                        <label class="flex items-center gap-2 min-h-10 text-[13px] cursor-pointer">
+                            <input
+                                v-model="block.shuffle"
+                                type="checkbox"
+                                class="checkbox checkbox-sm checkbox-accent rounded-[4px]"
+                            />
+                            {{ t('generator.shuffledShort') }}
+                        </label>
+                        <button
+                            type="button"
+                            class="btn-icon text-error justify-self-end"
+                            :aria-label="t('generator.removeBlock', { start: block.start.slice(0, 5) })"
+                            @click="removeBlock(block.id)"
+                        >
+                            <i class="bi bi-trash" aria-hidden="true" />
+                        </button>
+
+                        <div
+                            v-if="pickerFor === block.id"
+                            class="col-span-full border border-line rounded-lg bg-base-200 p-1.5 max-h-60 overflow-y-auto"
+                        >
+                            <p class="m-0 px-2 pb-1 text-xs text-muted">{{ t('generator.pickHint') }}</p>
+                            <ul class="m-0 p-0">
+                                <FolderTree
+                                    :channel-id="channelId"
+                                    path=""
+                                    :label="t('storage.root')"
+                                    current=""
+                                    @open="(path) => addPath(block, path)"
+                                />
+                            </ul>
+                        </div>
+                    </li>
+                </ol>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <button type="button" class="btn-quiet" :disabled="coverage.end >= dayLength" @click="addBlock">
+                        + {{ t('generator.addBlock', { time: clockShort(dayStart + coverage.end) }) }}
+                    </button>
+                    <span
+                        v-for="gap in coverage.gaps"
+                        :key="`warn-${gap.from}`"
+                        class="inline-flex items-center gap-1.5 text-[13px] text-on-air-text"
+                    >
+                        <i class="bi bi-exclamation-circle" aria-hidden="true" />{{
+                            t('generator.gap', { range: gap.label })
+                        }}
+                    </span>
+                    <span
+                        v-if="coverage.overlaps.length"
+                        class="inline-flex items-center gap-1.5 text-[13px] text-accent-text"
+                    >
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true" />{{
+                            t('generator.overlap', { times: coverage.overlaps.join(', ') })
+                        }}
+                    </span>
                 </div>
             </div>
 
-            <div class="flex h-14 pt-6 justify-end items-center">
-                <div v-if="!advancedGenerator" class="flex gap-4">
-                    <label class="label cursor-pointer gap-2">
-                        <span class="label-text">{{ t('player.all') }}</span>
-                        <input
-                            v-model="generateFromAll"
-                            type="checkbox"
-                            class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
-                            @change="resetCheckboxes()"
-                        />
-                    </label>
-                    <label class="label cursor-pointer gap-2">
-                        <span class="label-text">{{ t('player.shuffle') }}</span>
-                        <input
-                            v-model="simpleShuffle"
-                            type="checkbox"
-                            class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
-                        />
-                    </label>
-                </div>
-                <div class="flex gap-2 ms-3">
-                    <button
-                        type="button"
-                        class="btn-quiet"
-                        @click="(resetCheckboxes(), resetTemplate(), (simpleShuffle = false), close())"
-                    >
-                        {{ t('cancel') }}
-                    </button>
-                    <button type="button" class="btn-main" @click="(generatePlaylist(), close())">
-                        {{ t('onair.generate') }}
-                    </button>
-                </div>
-            </div>
-        </div>
+            <p
+                class="mx-5 mb-0 flex gap-2 items-start text-[13px] text-base-content/85 bg-raised rounded-[10px] px-3 py-2.5"
+            >
+                <i class="bi bi-info-circle mt-0.5" aria-hidden="true" />{{ t('generator.draftHint') }}
+            </p>
+
+            <footer class="flex flex-wrap items-center gap-2.5 px-5 py-4 mt-4 border-t border-line">
+                <span class="text-[13px] text-muted">
+                    <template v-if="mode === 'blocks'">
+                        {{
+                            coverage.open
+                                ? t('generator.missing', { length: totalLength(coverage.open) })
+                                : t('generator.covered')
+                        }}
+                    </template>
+                    <template v-else-if="fill === 'complete'">
+                        {{ t('generator.completeSummary', { length: totalLength(missing) }) }}
+                    </template>
+                    <template v-else>{{ t('generator.replaceSummary', { length: totalLength(dayLength) }) }}</template>
+                </span>
+                <div class="flex-auto" />
+                <button type="button" class="btn-quiet" @click="close()">{{ t('cancel') }}</button>
+                <button type="button" class="btn-main" :disabled="!canGenerate" @click="generate">
+                    <span v-if="generating" class="loading loading-spinner loading-xs" />{{ t('generator.generate') }}
+                </button>
+            </footer>
+        </section>
     </div>
 </template>

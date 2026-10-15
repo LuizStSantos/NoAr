@@ -131,6 +131,9 @@ pub async fn save_playlist(
 /// --data '{ "paths": [<list of paths>], "shuffle": true }' # <- data is optional
 /// ```
 ///
+/// With `"draft": true` the playlist is only returned, not saved, so it can
+/// be reviewed (and saved like any edit) even when the day has a playlist.
+///
 /// Or with template:
 /// ```BASH
 /// curl -X POST http://127.0.0.1:8787/api/playlist/1/generate/2023-00-05
@@ -182,7 +185,7 @@ pub async fn gen_playlist(
         config.general.template = obj.template.clone();
     }
 
-    match generate_playlist(manager, shuffle).await {
+    match generate_playlist(manager, shuffle, !obj.draft).await {
         Ok(playlist) => Ok(Json(playlist)),
         Err(e) => Err(e),
     }

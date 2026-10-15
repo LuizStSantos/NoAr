@@ -94,9 +94,13 @@ pub async fn write_playlist(
     Err(ServiceError::InternalServerError)
 }
 
+/// Generate the playlist of the date set in the channel config. With
+/// `write` it is saved (and refused when the day already has one); without,
+/// it is only returned.
 pub async fn generate_playlist(
     manager: ChannelManager,
     shuffle_override: Option<bool>,
+    write: bool,
 ) -> Result<JsonPlaylist, ServiceError> {
     let (template, storage_root) = {
         let mut config = manager.config.write().await;
@@ -124,7 +128,7 @@ pub async fn generate_playlist(
         }
     }
 
-    match playlist_generator(&manager, shuffle_override).await {
+    match playlist_generator(&manager, shuffle_override, write).await {
         Ok(playlists) => {
             if playlists.is_empty() {
                 Err(ServiceError::Conflict(

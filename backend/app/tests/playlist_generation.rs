@@ -100,7 +100,7 @@ async fn test_generate_playlist_from_folder() {
 
     manager.update_config(config).await;
 
-    let playlist = generate_playlist(manager, None).await;
+    let playlist = generate_playlist(manager, None, true).await;
     let path_1 = current_path.join("playlists/2023/09/2023-09-11.json");
 
     assert!(playlist.is_ok());
@@ -151,7 +151,7 @@ async fn test_generate_playlist_from_template() {
 
     manager.update_config(config).await;
 
-    let playlist = generate_playlist(manager, None).await;
+    let playlist = generate_playlist(manager, None, true).await;
 
     let path_1 = current_path.join("playlists/2023/09/2023-09-12.json");
 

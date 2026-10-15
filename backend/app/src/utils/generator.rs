@@ -196,10 +196,12 @@ pub async fn generate_from_template(
     FolderSource::from_list(manager, media_list).await
 }
 
-/// Generate playlists
+/// Generate playlists. With `write`, each one is saved unless the day already
+/// has a playlist; without, they are only returned (a draft to review).
 pub async fn playlist_generator(
     manager: &ChannelManager,
     shuffle_override: Option<bool>,
+    write: bool,
 ) -> Result<Vec<JsonPlaylist>, Error> {
     let mut config = manager.config.read().await.clone();
     if let Some(shuffle) = shuffle_override {
@@ -259,9 +261,11 @@ pub async fn playlist_generator(
         let mut length = 0.0;
         let mut round = 0;
 
-        fs::create_dir_all(playlist_path).await?;
+        if write {
+            fs::create_dir_all(playlist_path).await?;
+        }
 
-        if playlist_file.is_file() {
+        if write && playlist_file.is_file() {
             warn!(
                 target: Target::All.as_str(), channel = id;
                 "Playlist exists, skip: <span class=\"log-addr\">{}</span>",
@@ -315,8 +319,10 @@ pub async fn playlist_generator(
             }
         }
 
-        let json: String = serde_json::to_string_pretty(&playlist)?;
-        fs::write(playlist_file, json).await?;
+        if write {
+            let json: String = serde_json::to_string_pretty(&playlist)?;
+            fs::write(playlist_file, json).await?;
+        }
 
         playlists.push(playlist);
     }
