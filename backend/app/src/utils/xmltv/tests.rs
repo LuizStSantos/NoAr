@@ -199,6 +199,7 @@ async fn clip_programmes_group_like_the_guide() {
         source: path.to_string_lossy().to_string(),
         title: title.map(str::to_string),
         ad,
+        length: 600.0,
     };
     let programmes = clip_programmes(
         &config,
@@ -457,4 +458,135 @@ fn delays_stop_at_the_end_of_the_playlist_day() {
 
     assert_eq!(slots[0].start, at("2026-10-15 05:55:00"));
     assert_eq!(slots[0].stop, at("2026-10-15 06:00:00"));
+}
+
+#[tokio::test]
+async fn short_clips_without_a_sheet_are_inserts_of_the_programme() {
+    let storage = TempDir::new();
+
+    storage.file(
+        "Jornal/tvshow.nfo",
+        "<tvshow><title>Jornal</title></tvshow>",
+    );
+    let block_1 = storage.file("Jornal/bloco1.mp4", "");
+    let block_2 = storage.file("Jornal/bloco2.mp4", "");
+    let ident = storage.file("00-assets/vinheta.mp4", "");
+    let film = storage.file("Filmes/longa.mp4", "");
+
+    let mut config = PlayoutConfig::default();
+    config.channel.storage = storage.0.clone();
+
+    let query = |path: &std::path::Path, length: f64| ClipQuery {
+        source: path.to_string_lossy().to_string(),
+        title: None,
+        ad: false,
+        length,
+    };
+    let programmes = clip_programmes(
+        &config,
+        vec![
+            query(&ident, 10.0),
+            query(&block_1, 600.0),
+            query(&ident, 10.0),
+            query(&ident, 15.0),
+            query(&block_2, 600.0),
+            query(&film, 5400.0),
+            query(&ident, 10.0),
+        ],
+    )
+    .await;
+    let inserts: Vec<bool> = programmes.iter().map(|p| p.insert).collect();
+
+    // Nothing before the first ident to extend; the film has no sheet but is
+    // long, so it is a programme of its own.
+    assert_eq!(inserts, [false, false, true, true, false, false, true]);
+}
+
+#[test]
+fn insert_runs_count_the_whole_run_and_skip_breaks() {
+    let clip = |key: &str, described: bool, is_break: bool, length: f64| RunClip {
+        key: key.to_string(),
+        described,
+        is_break,
+        length,
+    };
+
+    assert_eq!(
+        insert_runs(&[
+            clip("show", true, false, 600.0),
+            clip("", false, true, 30.0),
+            clip("promo", false, false, 200.0),
+            clip("promo", false, false, 200.0),
+            clip("show", true, false, 600.0),
+            clip("short show", true, false, 60.0),
+        ]),
+        [false, false, false, false, false, false],
+        "400 s of promos are too long for an insert; described clips never are"
+    );
+    assert_eq!(
+        insert_runs(&[
+            clip("show", false, false, 1200.0),
+            clip("", false, true, 30.0),
+            clip("show", false, false, 60.0),
+            clip("ident", false, false, 5.0),
+        ]),
+        [false, false, false, true],
+        "the programme continuing after a break is not an insert"
+    );
+}
+
+#[tokio::test]
+async fn guide_folds_short_idents_into_the_programme_they_interrupt() {
+    let storage = TempDir::new();
+    let playlists = TempDir::new();
+    let timezone = Tz::America__Sao_Paulo;
+    let today = time_now(&Some(timezone)).date_naive();
+
+    storage.file(
+        "Jornal/tvshow.nfo",
+        "<tvshow><title>Jornal</title></tvshow>",
+    );
+    let block_1 = storage.file("Jornal/bloco1.mp4", "");
+    let block_2 = storage.file("Jornal/bloco2.mp4", "");
+    let ident = storage.file("00-assets/vinheta.mp4", "");
+    let film = storage.file("Filmes/longa.mp4", "");
+    let playlist = serde_json::json!({
+        "date": today.format("%Y-%m-%d").to_string(),
+        "program": [
+            clip(&block_1, 600.0),
+            clip(&ident, 10.0),
+            clip(&block_2, 590.0),
+            clip(&ident, 10.0),
+            clip(&film, 5400.0),
+        ]
+    });
+    playlists.file(
+        &today.format("%Y/%m/%Y-%m-%d.json").to_string(),
+        &playlist.to_string(),
+    );
+
+    let mut config = PlayoutConfig::default();
+    config.channel.storage = storage.0.clone();
+    config.channel.playlists = playlists.0.clone();
+    config.channel.timezone = Some(timezone);
+    config.playlist.start_sec = Some(0.0);
+    let channel = XmltvChannel {
+        id: "canal".to_string(),
+        name: "Canal".to_string(),
+    };
+    let options = XmltvOptions {
+        days: 1,
+        lang: None,
+        image_base_url: String::new(),
+    };
+
+    let xml = build_xmltv(&config, &channel, &[], &options).await.unwrap();
+    let day = today.format("%Y%m%d").to_string();
+
+    assert_eq!(texts_of(&xml, "title"), ["Jornal", "longa"]);
+    // Both idents belong to the news: the first one between its blocks, the
+    // second one before the film.
+    assert!(xml.contains(&format!(
+        "<programme start=\"{day}000000 -0300\" stop=\"{day}002010 -0300\""
+    )));
 }

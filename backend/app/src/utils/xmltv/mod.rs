@@ -237,6 +237,9 @@ pub struct ClipQuery {
     pub title: Option<String>,
     #[serde(default)]
     pub ad: bool,
+    /// Seconds the clip plays (`out - in`).
+    #[serde(default)]
+    pub length: f64,
 }
 
 /// The guide programme a playlist clip belongs to.
@@ -248,6 +251,79 @@ pub struct ClipProgramme {
     pub sub_title: Option<String>,
     /// Ads and filler, which extend the programme they interrupt.
     pub is_break: bool,
+    /// A short clip without a sheet (an ident, a promo) placed inside or
+    /// after a programme; it extends that programme too.
+    pub insert: bool,
+}
+
+/// Longest run of clips without a sheet or title that counts as an insert,
+/// like a station ident or a promo: it extends the programme it interrupts
+/// instead of starting a guide entry of its own.
+pub const INSERT_MAX_SECONDS: f64 = 300.0;
+
+/// What [`insert_runs`] needs to know about one clip.
+struct RunClip {
+    key: String,
+    /// Has a `.nfo` or a playlist title, so it is meant to be seen.
+    described: bool,
+    is_break: bool,
+    length: f64,
+}
+
+/// Which clips are inserts: runs of consecutive clips with the same key, no
+/// description and at most [`INSERT_MAX_SECONDS`] in total, after a
+/// programme with another key. Breaks do not start or end a programme.
+fn insert_runs(clips: &[RunClip]) -> Vec<bool> {
+    let mut inserts = vec![false; clips.len()];
+    let mut programme_key: Option<&str> = None;
+    let mut index = 0;
+
+    while index < clips.len() {
+        let first = &clips[index];
+
+        if first.is_break {
+            index += 1;
+            continue;
+        }
+
+        let mut end = index + 1;
+
+        while end < clips.len() && !clips[end].is_break && clips[end].key == first.key {
+            end += 1;
+        }
+
+        let length: f64 = clips[index..end].iter().map(|clip| clip.length).sum();
+        let is_insert = programme_key.is_some_and(|key| key != first.key)
+            && !first.described
+            && length <= INSERT_MAX_SECONDS;
+
+        if is_insert {
+            inserts[index..end].fill(true);
+        } else {
+            programme_key = Some(&first.key);
+        }
+
+        index = end;
+    }
+
+    inserts
+}
+
+/// Key of the guide entry a clip belongs to.
+fn programme_key(clip: &ClipMetadata, playlist_title: Option<&str>) -> String {
+    format!(
+        "{}|{}|{}",
+        clip.program_key.display(),
+        clip.episode_key
+            .as_ref()
+            .map(|key| key.display().to_string())
+            .unwrap_or_default(),
+        playlist_title.unwrap_or_default()
+    )
+}
+
+fn is_described(clip: &ClipMetadata, playlist_title: Option<&str>) -> bool {
+    clip.program.is_some() || clip.episode.is_some() || playlist_title.is_some()
 }
 
 /// Program names of playlist clips, as the guide will show them. The player
@@ -256,6 +332,7 @@ pub async fn clip_programmes(config: &PlayoutConfig, clips: Vec<ClipQuery>) -> V
     let mut library = NfoLibrary::new(&config.channel.storage);
     let filler = filler_path(config);
     let mut programmes = Vec::with_capacity(clips.len());
+    let mut runs = Vec::with_capacity(clips.len());
 
     for query in clips {
         let is_break = query.ad
@@ -267,15 +344,15 @@ pub async fn clip_programmes(config: &PlayoutConfig, clips: Vec<ClipQuery>) -> V
             .title
             .map(|title| title.trim().to_string())
             .filter(|title| !title.is_empty());
-        let key = format!(
-            "{}|{}|{}",
-            clip.program_key.display(),
-            clip.episode_key
-                .as_ref()
-                .map(|key| key.display().to_string())
-                .unwrap_or_default(),
-            playlist_title.as_deref().unwrap_or_default()
-        );
+        let key = programme_key(&clip, playlist_title.as_deref());
+
+        runs.push(RunClip {
+            key: key.clone(),
+            described: is_described(&clip, playlist_title.as_deref()),
+            is_break,
+            length: query.length,
+        });
+
         let programme = Programme {
             start: NaiveDateTime::default(),
             stop: NaiveDateTime::default(),
@@ -291,7 +368,12 @@ pub async fn clip_programmes(config: &PlayoutConfig, clips: Vec<ClipQuery>) -> V
             title,
             sub_title,
             is_break,
+            insert: false,
         });
+    }
+
+    for (programme, insert) in programmes.iter_mut().zip(insert_runs(&runs)) {
+        programme.insert = insert;
     }
 
     programmes
@@ -380,15 +462,11 @@ async fn group_programmes(config: &PlayoutConfig, slots: Vec<Slot>) -> Vec<Progr
     let mut library = NfoLibrary::new(&config.channel.storage);
     let filler = filler_path(config);
     let mut programmes: Vec<Programme> = vec![];
+    let mut entries = Vec::with_capacity(slots.len());
 
     for slot in slots {
         if is_break(&slot, filler.as_deref()) {
-            if let Some(previous) = programmes.last_mut()
-                && is_contiguous(previous.stop, slot.start)
-            {
-                previous.stop = slot.stop;
-            }
-
+            entries.push((slot, None));
             continue;
         }
 
@@ -397,9 +475,48 @@ async fn group_programmes(config: &PlayoutConfig, slots: Vec<Slot>) -> Vec<Progr
         // describes what it plays.
         let playlist_title = slot
             .title
+            .clone()
             .filter(|_| !(slot.scheduled && clip.program.is_some()))
             .map(|title| title.trim().to_string())
             .filter(|title| !title.is_empty());
+
+        entries.push((slot, Some((clip, playlist_title))));
+    }
+
+    let runs: Vec<RunClip> = entries
+        .iter()
+        .map(|(slot, entry)| match entry {
+            Some((clip, title)) => RunClip {
+                key: programme_key(clip, title.as_deref()),
+                described: is_described(clip, title.as_deref()),
+                is_break: false,
+                length: (slot.stop - slot.start).num_milliseconds() as f64 / 1000.0,
+            },
+            None => RunClip {
+                key: String::new(),
+                described: false,
+                is_break: true,
+                length: 0.0,
+            },
+        })
+        .collect();
+    let inserts = insert_runs(&runs);
+
+    for ((slot, entry), insert) in entries.into_iter().zip(inserts) {
+        // Breaks and inserts extend the programme they interrupt.
+        let extends = entry.is_none() || insert;
+
+        if extends
+            && let Some(previous) = programmes.last_mut()
+            && is_contiguous(previous.stop, slot.start)
+        {
+            previous.stop = slot.stop;
+            continue;
+        }
+
+        let Some((clip, playlist_title)) = entry else {
+            continue;
+        };
 
         if let Some(previous) = programmes.last_mut()
             && is_contiguous(previous.stop, slot.start)

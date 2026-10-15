@@ -73,6 +73,30 @@ const importFile = ref<File | null>(null)
 const showDelete = ref(false)
 const pendingDate = ref<string | null>(null)
 
+/** Grouped by program, or one running list of clips. */
+const view = ref<'program' | 'flat'>(readSetting('player-view') === 'flat' ? 'flat' : 'program')
+/** uids of the selected clips. */
+const selected = ref<string[]>([])
+/** Last clip clicked, where a Shift-click range starts. */
+const anchorUid = ref<string | null>(null)
+const moveTime = ref<string | null>(null)
+
+function readSetting(key: string): string | null {
+    try {
+        return localStorage.getItem(key)
+    } catch {
+        return null
+    }
+}
+
+watch(view, (value) => {
+    try {
+        localStorage.setItem('player-view', value)
+    } catch {
+        // Only a convenience: the choice is not kept.
+    }
+})
+
 onClickOutside(menu, () => (menuOpen.value = false))
 
 const channel = computed(() => configStore.channels[configStore.i])
@@ -101,6 +125,7 @@ async function load(date: string) {
     editing.value = null
     newRemote.value = null
     recent.value = []
+    selected.value = []
     toggled.clear()
     reveal.clear()
 
@@ -375,7 +400,61 @@ type Row =
     | { type: 'more'; id: string; direction: 'before' | 'after'; count: number }
     | { type: 'live'; live: LiveRow }
 
+/** The running list: clips around the one on air (or the first), with lives in between. */
+function flatRows(): Row[] {
+    const list: Row[] = []
+    const pendingLives = [...lives.value].sort((a, b) => a.start - b.start)
+    const items = playlistStore.playlist
+    const extra = reveal.get('flat') ?? { before: 0, after: 0 }
+    const touched = [...playlistStore.addedUids, ...recent.value, ...(editing.value ? [editing.value.uid] : [])]
+    const touchedIndex = items.findIndex((item) => touched.includes(item.uid))
+    const anchor = touchedIndex >= 0 ? touchedIndex : Math.max(onAirIndex.value, 0)
+    const from = Math.max(0, anchor - 3 - extra.before)
+    const to = Math.min(items.length - 1, anchor + PAGE * 3 + extra.after)
+
+    if (from > 0) {
+        list.push({ type: 'more', id: 'flat', direction: 'before', count: Math.min(MORE, from) })
+    }
+
+    // Lives before the shown clips stay hidden with them.
+    const firstBegin = items[from]?.begin ?? 0
+
+    while (from > 0 && pendingLives[0] && pendingLives[0].start < firstBegin) {
+        pendingLives.shift()
+    }
+
+    for (let index = from; index <= to; index++) {
+        const item = items[index]
+
+        if (!item) {
+            continue
+        }
+
+        while (pendingLives[0] && pendingLives[0].start <= (item.begin ?? 0)) {
+            list.push({ type: 'live', live: pendingLives.shift()! })
+        }
+
+        if (editing.value?.uid === item.uid) {
+            list.push({ type: 'editor', index })
+        } else {
+            list.push({ type: 'clip', index, item, past: onAirIndex.value >= 0 && index < onAirIndex.value })
+        }
+    }
+
+    if (to < items.length - 1) {
+        list.push({ type: 'more', id: 'flat', direction: 'after', count: Math.min(MORE, items.length - 1 - to) })
+    } else {
+        list.push(...pendingLives.map((live) => ({ type: 'live' as const, live })))
+    }
+
+    return list
+}
+
 const rows = computed<Row[]>(() => {
+    if (view.value === 'flat') {
+        return flatRows()
+    }
+
     const list: Row[] = []
     const pendingLives = [...lives.value].sort((a, b) => a.start - b.start)
 
@@ -428,6 +507,175 @@ const rows = computed<Row[]>(() => {
     return list
 })
 
+function setAllGroups(open: boolean) {
+    for (const { id } of keyedGroups.value) {
+        toggled.set(id, open)
+    }
+}
+
+/** Open a program from the day map and bring it into view. */
+async function jumpTo(id: string) {
+    view.value = 'program'
+    toggled.set(id, true)
+    await nextTick()
+    document.getElementById(`group-${id}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+}
+
+/** The day as a strip: programs, lives and scheduled clips by their time. */
+const dayMap = computed(() => {
+    const start = dayStart.value
+    const length = configStore.playout.playlist?.lengthInSec || 86400
+    const percent = (seconds: number) => Math.min(100, Math.max(0, ((seconds - start) / length) * 100))
+    const blocks = keyedGroups.value.map(({ group, id }) => ({
+        id,
+        title: group.title,
+        left: percent(group.start),
+        width: Math.max(0.15, percent(group.end) - percent(group.start)),
+        status: groupStatus(group),
+        range: `${clockShort(group.start)}–${clockShort(group.end)}`,
+    }))
+    const liveBlocks = lives.value.map((live) => ({
+        key: live.key,
+        title: live.title,
+        left: percent(live.start),
+        width: Math.max(0.3, percent(live.end) - percent(live.start)),
+        range: `${clockShort(live.start)}–${clockShort(live.end)}`,
+    }))
+    const markers = dayEvents.value
+        .filter((event) => event.occurrence.event.kind !== 'live')
+        .map((event) => ({
+            key: `${event.occurrence.event.id}-${event.occurrence.start}`,
+            title: `${event.occurrence.event.title} · ${clockShort(event.start)}`,
+            left: percent(event.start),
+        }))
+    const ticks = Array.from({ length: 9 }, (_, index) => clockShort(start + (length / 8) * index))
+    const now = viewingOnAir.value && playlistStore.playoutIsRunning ? percent(playlistNow.value) : null
+
+    return { blocks, liveBlocks, markers, ticks, now }
+})
+
+// ---------------------------------------------------------------------------
+// Selection and actions on several clips
+
+const selectedIndices = computed(() =>
+    playlistStore.playlist
+        .map((item, index) => (selected.value.includes(item.uid) ? index : -1))
+        .filter((index) => index >= 0),
+)
+const selectionIsBreak = computed(() => selectedIndices.value.every((index) => playlistStore.playlist[index]?.ad))
+
+function toggleSelect(item: PlaylistItem, event: MouseEvent) {
+    const items = playlistStore.playlist
+    const anchor = anchorUid.value ? items.findIndex((entry) => entry.uid === anchorUid.value) : -1
+    const index = items.findIndex((entry) => entry.uid === item.uid)
+
+    if (event.shiftKey && anchor >= 0 && index >= 0) {
+        const [from, to] = anchor < index ? [anchor, index] : [index, anchor]
+        const range = items.slice(from, to + 1).map((entry) => entry.uid)
+
+        selected.value = [...new Set([...selected.value, ...range])]
+    } else if (selected.value.includes(item.uid)) {
+        selected.value = selected.value.filter((uid) => uid !== item.uid)
+    } else {
+        selected.value = [...selected.value, item.uid]
+    }
+
+    anchorUid.value = item.uid
+}
+
+/** Take the selected clips out of the list, keeping their order. */
+function takeSelected(): PlaylistItem[] {
+    const taken = playlistStore.playlist.filter((item) => selected.value.includes(item.uid))
+
+    playlistStore.playlist = playlistStore.playlist.filter((item) => !selected.value.includes(item.uid))
+
+    return taken
+}
+
+/** Move the selected clips one place up or down, as one block. */
+function shiftSelection(step: -1 | 1) {
+    const indices = selectedIndices.value
+
+    if (!indices.length) {
+        return
+    }
+
+    const first = indices[0] as number
+    const last = indices[indices.length - 1] as number
+
+    if ((step < 0 && first === 0) || (step > 0 && last === playlistStore.playlist.length - 1)) {
+        return
+    }
+
+    const neighbour = playlistStore.playlist[step < 0 ? first - 1 : last + 1]
+    const taken = takeSelected()
+    const at = playlistStore.playlist.findIndex((item) => item.uid === neighbour?.uid)
+
+    playlistStore.playlist.splice(step < 0 ? at : at + 1, 0, ...taken)
+    playlistStore.touch()
+}
+
+function duplicateSelection() {
+    const indices = selectedIndices.value
+    const copies = indices.map((index) => ({ ...cloneDeep(playlistStore.playlist[index]!), uid: genUID() }))
+
+    if (copies.length) {
+        insertAt((indices[indices.length - 1] as number) + 1, copies)
+        selected.value = copies.map((item) => item.uid)
+    }
+}
+
+function toggleBreakSelection() {
+    const value = !selectionIsBreak.value
+
+    for (const index of selectedIndices.value) {
+        const item = playlistStore.playlist[index]
+
+        if (item) {
+            item.ad = value
+        }
+    }
+
+    playlistStore.touch()
+}
+
+function removeSelection() {
+    takeSelected()
+    selected.value = []
+    playlistStore.touch()
+}
+
+function openMoveTime() {
+    const first = playlistStore.playlist[selectedIndices.value[0] ?? -1]
+
+    moveTime.value = clockTime(first?.begin ?? dayStart.value).slice(0, 8)
+}
+
+/** Put the selected clips before the clip that plays at the chosen time. */
+function moveToTime(confirm: boolean) {
+    const value = moveTime.value
+
+    moveTime.value = null
+
+    if (!confirm || !value) {
+        return
+    }
+
+    const [hours = 0, minutes = 0, seconds = 0] = value.split(':').map(Number)
+    let target = hours * 3600 + minutes * 60 + seconds
+
+    if (target < dayStart.value) {
+        target += 86400
+    }
+
+    const taken = takeSelected()
+    const at = playlistStore.playlist.findIndex((item) => (item.begin ?? 0) + (item.out - item.in) > target)
+
+    playlistStore.playlist.splice(at < 0 ? playlistStore.playlist.length : at, 0, ...taken)
+    taken.forEach((item) => markAdded(item.uid))
+    playlistStore.touch()
+}
+
 function showMore(id: string, direction: 'before' | 'after') {
     const current = reveal.get(id) ?? { before: 0, after: 0 }
 
@@ -435,11 +683,19 @@ function showMore(id: string, direction: 'before' | 'after') {
 }
 
 function groupSummary(group: ProgrammeGroup, status: string): string {
-    const clips = group.last - group.first + 1
+    const clips = group.last - group.first + 1 - group.inserts - group.breaks
     const parts = [
         `${clockShort(group.start)}–${clockShort(group.end)}`,
         t('onair.clipCount', { total: clips.toLocaleString(locale.value) }, clips),
     ]
+
+    if (group.inserts) {
+        parts.push(t('onair.insertCount', { count: group.inserts }, group.inserts))
+    }
+
+    if (group.breaks) {
+        parts.push(t('onair.breakCount', { count: group.breaks }, group.breaks))
+    }
 
     if (status === 'past') {
         parts.push(t('onair.aired'))
@@ -487,11 +743,6 @@ function addFile(file: LibraryFile) {
 
 function removeItem(index: number) {
     playlistStore.playlist.splice(index, 1)
-    playlistStore.touch()
-}
-
-function toggleAd(item: PlaylistItem) {
-    item.ad = !item.ad
     playlistStore.touch()
 }
 
@@ -571,8 +822,10 @@ function hasPayload(event: DragEvent) {
 }
 
 function rowDragStart(event: DragEvent, item: PlaylistItem) {
+    const uids = selected.value.includes(item.uid) ? selected.value : [item.uid]
+
     dragRow.value = item.uid
-    event.dataTransfer?.setData(ROW_DRAG_TYPE, item.uid)
+    event.dataTransfer?.setData(ROW_DRAG_TYPE, JSON.stringify(uids))
 
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move'
@@ -627,19 +880,30 @@ function drop(event: DragEvent) {
         return
     }
 
-    const from = playlistStore.playlist.findIndex((item) => item.uid === uid)
+    let uids: string[] = []
 
-    if (from < 0 || from === index || from + 1 === index) {
+    try {
+        uids = JSON.parse(uid || '[]')
+    } catch {
+        uids = uid ? [uid] : []
+    }
+
+    const items = playlistStore.playlist
+    const moving = items.filter((item) => uids.includes(item.uid))
+    const target = items[index]
+
+    if (!moving.length || (target && uids.includes(target.uid))) {
         return
     }
 
-    const [moved] = playlistStore.playlist.splice(from, 1)
+    // Insert before the clip that was at the drop place, or at the end.
+    const rest = items.filter((item) => !uids.includes(item.uid))
+    const at = target ? rest.findIndex((item) => item.uid === target.uid) : rest.length
 
-    if (moved) {
-        playlistStore.playlist.splice(from < index ? index - 1 : index, 0, moved)
-        markAdded(moved.uid)
-        playlistStore.touch()
-    }
+    rest.splice(at, 0, ...moving)
+    playlistStore.playlist = rest
+    moving.forEach((item) => markAdded(item.uid))
+    playlistStore.touch()
 }
 
 function dropClass(before: number, after: number) {
@@ -846,6 +1110,31 @@ defineExpose({ addFile })
                     )
                 }}
             </span>
+            <div
+                role="group"
+                :aria-label="t('onair.viewMode')"
+                class="inline-flex bg-base-200 border border-line-strong rounded-field p-[3px]"
+            >
+                <button
+                    v-for="mode in ['program', 'flat'] as const"
+                    :key="mode"
+                    type="button"
+                    :aria-pressed="view === mode"
+                    class="border-0 rounded-md px-3 min-h-8 text-[13px] cursor-pointer"
+                    :class="view === mode ? 'bg-base-300 text-base-content' : 'bg-transparent text-muted'"
+                    @click="view = mode"
+                >
+                    {{ mode === 'program' ? t('onair.viewByProgram') : t('onair.viewFlat') }}
+                </button>
+            </div>
+            <template v-if="view === 'program' && programmes.groups.length > 1">
+                <button type="button" class="link-accent text-[13px] text-muted" @click="setAllGroups(true)">
+                    {{ t('onair.openAll') }}
+                </button>
+                <button type="button" class="link-accent text-[13px] text-muted" @click="setAllGroups(false)">
+                    {{ t('onair.closeAll') }}
+                </button>
+            </template>
             <div class="flex-auto" />
             <span v-if="unsaved" class="inline-flex items-center gap-1.5 text-accent-text text-[13px]">
                 <span class="dot w-1.75 h-1.75 bg-accent" aria-hidden="true" />{{ t('onair.unsaved', unsaved) }}
@@ -914,6 +1203,92 @@ defineExpose({ addFile })
             <ClipEditor :item="newRemote" :storage="storage" remote @apply="applyRemote" @cancel="newRemote = null" />
         </div>
 
+        <div
+            v-if="!infinite && playlistStore.playlist.length && !playlistStore.isLoading"
+            :aria-label="t('onair.dayMap')"
+            role="group"
+            class="px-4 pt-3 pb-3.5 flex flex-col gap-1.5 border-b border-line"
+        >
+            <div class="relative h-8.5 rounded-lg overflow-hidden bg-base-200">
+                <button
+                    v-for="(block, position) in dayMap.blocks"
+                    :key="block.id"
+                    type="button"
+                    class="absolute top-0 bottom-0 border-0 border-e-2 border-base-100 px-1.5 text-left text-xs truncate cursor-pointer"
+                    :class="[
+                        block.status === 'current'
+                            ? 'bg-accent-soft text-accent-text outline-2 -outline-offset-2 outline-accent'
+                            : position % 2
+                              ? 'bg-base-300 text-base-content/80'
+                              : 'bg-raised text-base-content/80',
+                        block.status === 'past' ? 'opacity-55' : '',
+                    ]"
+                    :style="{ left: `${block.left}%`, width: `${block.width}%` }"
+                    :title="`${block.title} · ${block.range}`"
+                    :aria-label="`${block.title} · ${block.range}`"
+                    @click="jumpTo(block.id)"
+                >
+                    {{ block.width > 4 ? block.title : '' }}
+                </button>
+                <span
+                    v-for="live in dayMap.liveBlocks"
+                    :key="live.key"
+                    class="absolute top-0 bottom-0 bg-live text-base-100 text-[10px] font-semibold px-1 flex items-center overflow-hidden pointer-events-none"
+                    :style="{ left: `${live.left}%`, width: `${live.width}%` }"
+                    :title="`${live.title} · ${live.range}`"
+                    >LIVE</span
+                >
+                <span
+                    v-for="marker in dayMap.markers"
+                    :key="marker.key"
+                    class="absolute top-0 w-0 h-0 border-x-[6px] border-x-transparent border-t-8 border-t-accent -ms-1.5 pointer-events-none"
+                    :style="{ left: `${marker.left}%` }"
+                    :title="marker.title"
+                    aria-hidden="true"
+                />
+                <span
+                    v-if="dayMap.now !== null"
+                    class="absolute -top-0.5 -bottom-0.5 w-0.5 bg-on-air pointer-events-none"
+                    :style="{ left: `${dayMap.now}%` }"
+                    aria-hidden="true"
+                />
+            </div>
+            <div class="flex justify-between font-mono text-[11px] text-subtle" aria-hidden="true">
+                <span v-for="(tick, index) in dayMap.ticks" :key="index">{{ tick }}</span>
+            </div>
+        </div>
+
+        <div
+            v-if="selected.length"
+            class="bg-accent-soft border-b border-accent/30 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px]"
+        >
+            <span class="font-semibold">{{
+                t('onair.selectedClips', { count: selected.length }, selected.length)
+            }}</span>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="shiftSelection(-1)">
+                <i class="bi bi-arrow-up" aria-hidden="true" />{{ t('onair.moveUp') }}
+            </button>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="shiftSelection(1)">
+                <i class="bi bi-arrow-down" aria-hidden="true" />{{ t('onair.moveDown') }}
+            </button>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="openMoveTime">
+                {{ t('onair.moveToTime') }}
+            </button>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="duplicateSelection">
+                {{ t('onair.duplicate') }}
+            </button>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="toggleBreakSelection">
+                {{ selectionIsBreak ? t('onair.unmarkBreak') : t('onair.markBreak') }}
+            </button>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px] text-error" @click="removeSelection">
+                {{ t('onair.removeSelected') }}
+            </button>
+            <div class="flex-auto" />
+            <button type="button" class="link-accent text-base-content/80" @click="selected = []">
+                {{ t('onair.clearSelection') }}
+            </button>
+        </div>
+
         <div v-if="playlistStore.isLoading" class="py-16 flex justify-center">
             <span class="loading loading-spinner" />
         </div>
@@ -938,11 +1313,13 @@ defineExpose({ addFile })
             <table class="w-full min-w-[760px] border-collapse text-[13px]" @dragend="dragEnd">
                 <thead>
                     <tr class="text-muted text-left text-xs">
-                        <th class="px-4 py-2.5 font-medium w-[100px]">{{ t('onair.time') }}</th>
+                        <th class="ps-4 pe-1 py-2.5 w-[36px]">
+                            <span class="sr-only">{{ t('onair.select') }}</span>
+                        </th>
+                        <th class="px-2 py-2.5 font-medium w-[96px]">{{ t('onair.time') }}</th>
                         <th class="px-2 py-2.5 font-medium">{{ t('onair.programFile') }}</th>
                         <th class="px-2 py-2.5 font-medium w-[72px]">{{ t('onair.length') }}</th>
                         <th class="px-2 py-2.5 font-medium w-[120px]">{{ t('onair.inOut') }}</th>
-                        <th class="px-2 py-2.5 font-medium w-[48px]" :title="t('onair.commercial')">Ad</th>
                         <th class="px-4 py-2.5 w-[128px]">
                             <span class="sr-only">{{ t('onair.actions') }}</span>
                         </th>
@@ -965,7 +1342,8 @@ defineExpose({ addFile })
                     >
                         <tr
                             v-if="row.type === 'group'"
-                            class="border-t border-line"
+                            :id="`group-${row.id}`"
+                            class="border-t border-line scroll-mt-20"
                             :class="[
                                 row.status === 'past' ? 'text-subtle' : '',
                                 row.expanded && row.status !== 'past'
@@ -975,10 +1353,11 @@ defineExpose({ addFile })
                             ]"
                             @dragover="dragOverRow($event, row.group.first, row.group.last + 1)"
                         >
-                            <td class="px-4 py-2.5 font-mono" :class="row.status === 'past' ? '' : 'text-muted'">
+                            <td />
+                            <td class="px-2 py-2.5 font-mono" :class="row.status === 'past' ? '' : 'text-muted'">
                                 {{ clockTime(row.group.start) }}
                             </td>
-                            <td class="px-2 py-2.5" colspan="5">
+                            <td class="px-2 py-2.5" colspan="4">
                                 <button
                                     class="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-7 text-left bg-transparent border-0 p-0 cursor-pointer"
                                     :aria-expanded="row.expanded"
@@ -1029,9 +1408,21 @@ defineExpose({ addFile })
                             ]"
                             @dragover="dragOverRow($event, row.index, row.index + 1)"
                         >
+                            <td class="ps-4 pe-1 py-1.5">
+                                <input
+                                    type="checkbox"
+                                    class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
+                                    :checked="selected.includes(row.item.uid)"
+                                    :aria-label="t('onair.selectClip', { name: fileName(row.item.source) })"
+                                    @click="toggleSelect(row.item, $event)"
+                                />
+                            </td>
                             <td
-                                class="ps-7.5 pe-4 py-1.5 font-mono"
-                                :class="row.index === onAirIndex ? 'text-accent-text' : row.past ? '' : 'text-muted'"
+                                class="py-1.5 font-mono"
+                                :class="[
+                                    view === 'program' ? 'ps-5 pe-2' : 'px-2',
+                                    row.index === onAirIndex ? 'text-accent-text' : row.past ? '' : 'text-muted',
+                                ]"
                             >
                                 {{ clockTime(row.item.begin) }}
                             </td>
@@ -1076,6 +1467,24 @@ defineExpose({ addFile })
                                         }}</template>
                                     </span>
                                     <span
+                                        v-if="row.item.ad || programmes.roleOf(row.index) === 'break'"
+                                        class="text-[11px] text-muted border border-line-strong rounded px-1.5 flex-none"
+                                    >
+                                        {{ t('onair.breakTag') }}
+                                    </span>
+                                    <span
+                                        v-else-if="programmes.roleOf(row.index) === 'insert'"
+                                        class="text-[11px] text-after-clip border border-after-clip/40 rounded px-1.5 flex-none"
+                                    >
+                                        {{ t('onair.insertTag') }}
+                                    </span>
+                                    <span
+                                        v-if="view === 'flat' && programmes.groupOf(row.index)"
+                                        class="text-xs text-subtle truncate flex-none max-w-[30%]"
+                                    >
+                                        {{ programmes.groupOf(row.index)?.title }}
+                                    </span>
+                                    <span
                                         v-if="playlistStore.addedUids.includes(row.item.uid)"
                                         class="text-accent-text text-xs flex-none"
                                     >
@@ -1089,15 +1498,6 @@ defineExpose({ addFile })
                             <td class="px-2 py-1.5 font-mono">{{ lengthLabel(row.item.out - row.item.in) }}</td>
                             <td class="px-2 py-1.5 font-mono" :class="row.past ? '' : 'text-muted'">
                                 {{ lengthLabel(row.item.in) }} · {{ lengthLabel(row.item.out) }}
-                            </td>
-                            <td class="px-2 py-1.5">
-                                <input
-                                    type="checkbox"
-                                    class="checkbox checkbox-xs checkbox-accent rounded-[4px]"
-                                    :checked="row.item.ad"
-                                    :aria-label="t('onair.markCommercial')"
-                                    @change="toggleAd(row.item)"
-                                />
                             </td>
                             <td class="px-4 py-1.5 text-right whitespace-nowrap">
                                 <span class="row-actions">
@@ -1123,10 +1523,11 @@ defineExpose({ addFile })
                         </tr>
 
                         <tr v-else-if="row.type === 'editor' && editing" class="border-t border-raised bg-raised">
-                            <td class="ps-7.5 pe-4 pt-3 pb-1 font-mono align-top">
+                            <td />
+                            <td class="px-2 pt-3 pb-1 font-mono align-top">
                                 {{ clockTime(playlistStore.playlist[row.index]?.begin ?? 0) }}
                             </td>
-                            <td class="px-2 pe-4 pt-3 pb-4" colspan="5">
+                            <td class="px-2 pe-4 pt-3 pb-4" colspan="4">
                                 <ClipEditor
                                     :item="editing.item"
                                     :storage="storage"
@@ -1138,7 +1539,7 @@ defineExpose({ addFile })
                         </tr>
 
                         <tr v-else-if="row.type === 'more'" class="border-t border-raised">
-                            <td class="ps-7.5 pe-4 py-2" colspan="6">
+                            <td class="ps-14 pe-4 py-2" colspan="6">
                                 <button class="link-accent min-h-7" @click="showMore(row.id, row.direction)">
                                     {{
                                         row.direction === 'before'
@@ -1150,8 +1551,9 @@ defineExpose({ addFile })
                         </tr>
 
                         <tr v-else-if="row.type === 'live'" class="border-t border-line bg-live-soft">
-                            <td class="px-4 py-2.5 font-mono text-live">{{ clockTime(row.live.start) }}</td>
-                            <td class="px-2 py-2.5" colspan="5">
+                            <td />
+                            <td class="px-2 py-2.5 font-mono text-live">{{ clockTime(row.live.start) }}</td>
+                            <td class="px-2 py-2.5" colspan="4">
                                 <span class="flex flex-wrap items-center gap-2 min-h-7">
                                     <span
                                         class="bg-live text-base-100 text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded"
@@ -1184,7 +1586,7 @@ defineExpose({ addFile })
                         @dragover="dragOverEnd"
                     >
                         <td colspan="6" class="px-4 py-3 text-xs text-subtle text-center">
-                            {{ t('onair.dropAtEnd') }}
+                            {{ t('onair.dropAtEnd') }} · {{ t('onair.selectHint') }}
                         </td>
                     </tr>
                 </tbody>
@@ -1199,6 +1601,27 @@ defineExpose({ addFile })
         >
             <div class="w-[min(520px,90vw)] max-h-[60vh] flex flex-col">
                 <StoragePicker @pick="pick" />
+            </div>
+        </GenericModal>
+
+        <GenericModal
+            :show="moveTime !== null"
+            :title="t('onair.moveToTitle', { count: selected.length }, selected.length)"
+            :ok-label="t('onair.move')"
+            :modal-action="moveToTime"
+        >
+            <div class="flex flex-col gap-3 w-[min(380px,85vw)]">
+                <label class="field-label">
+                    {{ t('onair.moveToLabel') }}
+                    <input
+                        :value="moveTime ?? ''"
+                        type="time"
+                        step="1"
+                        class="field-input font-mono"
+                        @input="moveTime = ($event.target as HTMLInputElement).value"
+                    />
+                </label>
+                <p class="m-0 text-sm text-muted">{{ t('onair.moveToHint') }}</p>
             </div>
         </GenericModal>
 

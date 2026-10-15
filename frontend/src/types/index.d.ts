@@ -287,6 +287,8 @@ declare global {
         title: string
         sub_title: string | null
         is_break: boolean
+        /** A short clip without a sheet (ident, promo) inside a program. */
+        insert: boolean
     }
 
     interface AudioLevel {

@@ -20,6 +20,10 @@ export interface ProgrammeGroup {
     /** Playlist seconds; may run past 86400 after midnight. */
     start: number
     end: number
+    /** Short clips without a sheet (idents, promos) inside the program. */
+    inserts: number
+    /** Ads and filler inside the program. */
+    breaks: number
 }
 
 function parentFolder(source: string): string {
@@ -39,7 +43,9 @@ export const useProgrammes = defineStore('programmes', () => {
     const signature = ref('')
 
     function currentSignature(): string {
-        return JSON.stringify(playlistStore.playlist.map((item) => [item.source, item.title ?? '', Boolean(item.ad)]))
+        return JSON.stringify(
+            playlistStore.playlist.map((item) => [item.source, item.title ?? '', Boolean(item.ad), item.out - item.in]),
+        )
     }
 
     async function refresh() {
@@ -56,6 +62,7 @@ export const useProgrammes = defineStore('programmes', () => {
             source: item.source,
             title: item.title || null,
             ad: Boolean(item.ad),
+            length: Math.max(0, item.out - item.in),
         }))
 
         if (!clips.length) {
@@ -94,6 +101,7 @@ export const useProgrammes = defineStore('programmes', () => {
             title: item.title || folder || fileName(item.source),
             sub_title: null,
             is_break: Boolean(item.ad),
+            insert: false,
         }
     }
 
@@ -105,9 +113,12 @@ export const useProgrammes = defineStore('programmes', () => {
             const end = (item.begin ?? 0) + (item.out - item.in)
             const last = list[list.length - 1]
 
-            if (last && (entry.is_break || entry.key === last.key)) {
+            // Breaks and inserts belong to the program they interrupt.
+            if (last && (entry.is_break || entry.insert || entry.key === last.key)) {
                 last.last = index
                 last.end = end
+                last.breaks += entry.is_break ? 1 : 0
+                last.inserts += entry.insert && !entry.is_break ? 1 : 0
                 return
             }
 
@@ -120,6 +131,8 @@ export const useProgrammes = defineStore('programmes', () => {
                 last: index,
                 start: item.begin ?? 0,
                 end,
+                inserts: 0,
+                breaks: 0,
             })
         })
 
@@ -130,5 +143,22 @@ export const useProgrammes = defineStore('programmes', () => {
         return groups.value.find((group) => group.first <= index && index <= group.last)
     }
 
-    return { entries, groups, refresh, groupOf }
+    /** How a clip sits in its program: an ad or filler, an insert, or a part of it. */
+    function roleOf(index: number): 'break' | 'insert' | null {
+        const item = playlistStore.playlist[index]
+
+        if (!item) {
+            return null
+        }
+
+        const entry = entryAt(index, item)
+
+        if (entry.is_break) {
+            return 'break'
+        }
+
+        return entry.insert ? 'insert' : null
+    }
+
+    return { entries, groups, refresh, groupOf, roleOf }
 })
