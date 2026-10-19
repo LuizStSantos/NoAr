@@ -2,7 +2,9 @@ use axum::{
     Json,
     extract::{Path, Query, State},
 };
+use chrono::NaiveDate;
 use protect_axum::authorities::AuthDetails;
+use serde::Deserialize;
 
 use crate::{
     api::{
@@ -13,6 +15,7 @@ use crate::{
     file::norm_abs_path,
     player::utils::JsonPlaylist,
     utils::{
+        episodes::{ProgramEpisodes, program_episodes},
         errors::ServiceError,
         playlist::{delete_playlist, generate_playlist, read_playlist, write_playlist},
         xmltv::{ClipProgramme, ClipQuery, clip_programmes},
@@ -221,4 +224,51 @@ pub async fn del_playlist(
         Ok(m) => Ok(Json(m)),
         Err(e) => Err(e),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EpisodesQuery {
+    /// Program folder, relative to the storage.
+    folder: String,
+    /// Day being edited, `YYYY-MM-DD`.
+    date: String,
+    /// The folder's last clip in that day, when it already has one.
+    after: Option<String>,
+}
+
+/// **Program episodes**
+///
+/// The videos of a program folder in episode order, the last one that aired
+/// and the index of the next one, to add a program to a playlist.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/playlist/1/episodes \
+/// -H 'Content-Type: application/json' -H 'Authorization: Bearer <TOKEN>' \
+/// --data '{ "folder": "Sucesso no Campo", "date": "2026-10-19" }'
+/// ```
+pub async fn get_program_episodes(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(query): Json<EpisodesQuery>,
+) -> Result<Json<ProgramEpisodes>, ServiceError> {
+    ensure_any_authority(
+        &details,
+        &[&Role::GlobalAdmin, &Role::ChannelAdmin, &Role::User],
+    )?;
+    user.ensure_channel_or_admin(id)?;
+
+    let date = NaiveDate::parse_from_str(&query.date, "%Y-%m-%d")
+        .map_err(|_| ServiceError::BadRequest(format!("Invalid date: {}", query.date)))?;
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
+    let config = manager.config.read().await.clone();
+
+    Ok(Json(
+        program_episodes(&config, &query.folder, date, query.after.as_deref()).await?,
+    ))
 }

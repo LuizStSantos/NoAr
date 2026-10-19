@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useDebounceFn } from '@vueuse/core'
 import { useHead } from '@unhead/vue'
 
+import AddProgramDialog from '@/components/player/AddProgramDialog.vue'
 import LibraryPanel from '@/components/player/LibraryPanel.vue'
 import LivePreview from '@/components/player/LivePreview.vue'
 import NowPanel from '@/components/player/NowPanel.vue'
@@ -15,7 +16,7 @@ import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
-import { fileName, isRemoteSource, type LibraryFile } from '@/composables/player'
+import { fileName, isRemoteSource, type AddPlace, type LibraryFile } from '@/composables/player'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { usePlaylist } from '@/stores/playlist'
@@ -32,6 +33,8 @@ const scheduleStore = useSchedule()
 
 const playlistPanel = ref<InstanceType<typeof PlaylistPanel>>()
 const showGenerator = ref(false)
+/** A program folder being added, from the library (+) or dropped at an index. */
+const program = ref<{ folder: string; dropIndex: number | null } | null>(null)
 const preview = ref<{ name: string; url: string; options: Record<string, unknown> | null } | null>(null)
 
 let statusTimer: ReturnType<typeof setInterval> | undefined
@@ -81,6 +84,11 @@ watch(() => [playlistStore.listDate, configStore.i], loadDay)
 
 function addFile(file: LibraryFile) {
     playlistPanel.value?.addFile(file)
+}
+
+function addProgram(files: LibraryFile[], place: AddPlace, label: string) {
+    playlistPanel.value?.addFiles(files, place, label)
+    program.value = null
 }
 
 function openGenerator() {
@@ -149,6 +157,7 @@ async function openPreview(source: string) {
                 :allow-add="playlistMode"
                 @preview="openPreview"
                 @add="addFile"
+                @add-program="(folder) => (program = { folder, dropIndex: null })"
             />
             <PlaylistPanel
                 v-if="playlistMode"
@@ -156,6 +165,7 @@ async function openPreview(source: string) {
                 class="flex-[999_1_640px]"
                 @preview="openPreview"
                 @generate="openGenerator"
+                @add-program="(folder, index) => (program = { folder, dropIndex: index })"
             />
             <section v-else class="card-box flex-[999_1_640px] p-6 flex flex-col gap-2">
                 <h2 class="m-0 text-[15px] font-semibold">{{ t('onair.folderModeTitle') }}</h2>
@@ -182,5 +192,12 @@ async function openPreview(source: string) {
         </GenericModal>
 
         <PlaylistGenerator v-if="showGenerator" :close="() => (showGenerator = false)" />
+        <AddProgramDialog
+            v-if="program"
+            :folder="program.folder"
+            :drop-index="program.dropIndex"
+            @close="program = null"
+            @add="addProgram"
+        />
     </div>
 </template>

@@ -60,6 +60,7 @@ pub fn routes() -> Router<AppState> {
                 .route("/playlist/{id}", post(save_playlist))
                 .route("/playlist/{id}/generate/{date}", post(gen_playlist))
                 .route("/playlist/{id}/programs", post(playlist_programs))
+                .route("/playlist/{id}/episodes", post(get_program_episodes))
                 .route("/playlist/{id}/{date}", delete(del_playlist))
                 .route(
                     "/playout/config/{id}",

@@ -5,28 +5,34 @@ import { storeToRefs } from 'pinia'
 
 import { authFetch } from '@/composables/authFetch'
 import { stringFormatter } from '@/composables/helper'
-import { LIBRARY_DRAG_TYPE, isGuideAsset, lengthLabel, type LibraryFile } from '@/composables/player'
+import { FOLDER_DRAG_TYPE, LIBRARY_DRAG_TYPE, isGuideAsset, lengthLabel, type LibraryFile } from '@/composables/player'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
+import { useIndex } from '@/stores/index'
 
 const props = defineProps<{ allowAdd: boolean }>()
-const emit = defineEmits<{ preview: [path: string]; add: [file: LibraryFile] }>()
+const emit = defineEmits<{ preview: [path: string]; add: [file: LibraryFile]; addProgram: [folder: string] }>()
 
 const { t } = useI18n()
 const { mediaType } = stringFormatter()
 const authStore = useAuth()
 const configStore = useConfig()
+const indexStore = useIndex()
 const { i } = storeToRefs(configStore)
 
 interface BrowseResult {
     source: string
     parent: string
     folders: string[]
+    sheet_folders?: string[]
     files: { name: string; duration: number }[]
 }
 
 const source = ref('')
 const folders = ref<string[]>([])
+const sheetFolders = ref<string[]>([])
+const creating = ref(false)
+const newFolder = ref('')
 const files = ref<{ name: string; duration: number }[]>([])
 const search = ref('')
 const loading = ref(false)
@@ -74,6 +80,7 @@ async function open(path: string) {
 
         source.value = joinPath(data.source ?? path)
         folders.value = data.folders ?? []
+        sheetFolders.value = data.sheet_folders ?? []
         files.value = data.files ?? []
         search.value = ''
     } catch (err) {
@@ -96,6 +103,44 @@ function dragStart(event: DragEvent, name: string, duration: number) {
     }
 }
 
+function dragFolder(event: DragEvent, folder: string) {
+    event.dataTransfer?.setData(FOLDER_DRAG_TYPE, joinPath(source.value, folder))
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'copy'
+    }
+}
+
+/** Create a folder inside the one on screen, without leaving the Player. */
+async function createFolder() {
+    const name = newFolder.value.trim()
+    const id = configStore.channels[configStore.i]?.id
+
+    if (!name || !id) {
+        creating.value = false
+        return
+    }
+
+    if (folders.value.some((folder) => folder.toLowerCase() === name.toLowerCase())) {
+        indexStore.msgAlert('warning', t('storage.folderExists'), 3)
+        return
+    }
+
+    try {
+        await authFetch(`/api/file/${id}/create-folder`, {
+            method: 'POST',
+            headers: configStore.contentType,
+            body: JSON.stringify({ source: `/${joinPath(source.value, name)}` }),
+        })
+        creating.value = false
+        newFolder.value = ''
+        indexStore.msgAlert('success', t('onair.folderCreated', { name }), 2)
+        await open(source.value)
+    } catch (e: any) {
+        indexStore.msgAlert('error', e?.data ?? e?.message ?? String(e), 5)
+    }
+}
+
 function iconOf(kind: string) {
     return kind === 'audio' ? 'bi-music-note-beamed' : kind === 'image' ? 'bi-image' : 'bi-film'
 }
@@ -105,8 +150,16 @@ watch(i, () => open(''))
 </script>
 <template>
     <aside :aria-label="t('onair.library')" class="card-box p-3.5 flex flex-col gap-2.5 min-h-0">
-        <div class="flex items-center justify-between">
-            <h2 class="m-0 text-[15px] font-semibold">{{ t('onair.library') }}</h2>
+        <div class="flex items-center gap-2">
+            <h2 class="m-0 text-[15px] font-semibold flex-1">{{ t('onair.library') }}</h2>
+            <button
+                type="button"
+                class="btn-quiet min-h-9 px-2.5 text-[13px]"
+                :aria-expanded="creating"
+                @click="creating = !creating"
+            >
+                <i class="bi bi-folder-plus" aria-hidden="true" />{{ t('storage.newFolder') }}
+            </button>
             <RouterLink
                 :to="{ path: '/media', query: { channel: configStore.channels[configStore.i]?.id } }"
                 class="btn-icon border border-line-strong text-muted"
@@ -116,6 +169,16 @@ watch(i, () => open(''))
                 <i class="bi bi-upload" aria-hidden="true" />
             </RouterLink>
         </div>
+        <form v-if="creating" class="flex gap-2" @submit.prevent="createFolder">
+            <input
+                v-model="newFolder"
+                :aria-label="t('storage.folderName')"
+                :placeholder="t('storage.folderName')"
+                class="field-input flex-1 min-w-0"
+                @keydown.esc="creating = false"
+            />
+            <button type="submit" class="btn-main px-3" :disabled="!newFolder.trim()">{{ t('onair.create') }}</button>
+        </form>
         <label
             class="flex items-center gap-2 bg-field border border-line-strong rounded-field px-2.5 min-h-9.5 text-muted"
         >
@@ -154,13 +217,34 @@ watch(i, () => open(''))
                     <i class="bi bi-chevron-left text-xs" aria-hidden="true" />{{ t('onair.back') }}
                 </button>
             </li>
-            <li v-for="folder in shownFolders" :key="`d-${folder}`">
+            <li
+                v-for="folder in shownFolders"
+                :key="`d-${folder}`"
+                class="flex items-center rounded-field hover:bg-raised"
+                :draggable="props.allowAdd"
+                @dragstart="dragFolder($event, folder)"
+            >
                 <button
-                    class="w-full flex items-center gap-2.5 px-2 py-2 rounded-field min-h-10 text-left hover:bg-raised cursor-pointer"
+                    class="flex-1 min-w-0 flex items-center gap-2.5 px-2 py-2 min-h-10 text-left cursor-pointer"
                     @click="open(joinPath(source, folder))"
                 >
                     <i class="bi bi-folder2 text-muted" aria-hidden="true" />
                     <span class="truncate">{{ folder }}</span>
+                    <span
+                        v-if="sheetFolders.includes(folder)"
+                        class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
+                    >
+                        {{ t('storage.sheetBadge') }}
+                    </span>
+                </button>
+                <button
+                    v-if="props.allowAdd"
+                    class="btn-icon min-w-8 min-h-8 me-1 text-muted"
+                    :aria-label="t('onair.addProgram', { name: folder })"
+                    :title="t('onair.addProgram', { name: folder })"
+                    @click="emit('addProgram', joinPath(source, folder))"
+                >
+                    <i class="bi bi-plus-lg" aria-hidden="true" />
                 </button>
             </li>
             <li

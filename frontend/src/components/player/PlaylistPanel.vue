@@ -16,7 +16,9 @@ import { authFetch } from '@/composables/authFetch'
 import { playlistOperations } from '@/composables/helper'
 import { useOnAir } from '@/composables/onAir'
 import {
+    FOLDER_DRAG_TYPE,
     LIBRARY_DRAG_TYPE,
+    type AddPlace,
     ROW_DRAG_TYPE,
     clockShort,
     clockTime,
@@ -34,7 +36,7 @@ import { usePlaylist } from '@/stores/playlist'
 import { useProgrammes, type ProgrammeGroup } from '@/stores/programmes'
 import { useSchedule } from '@/stores/schedule'
 
-const emit = defineEmits<{ preview: [path: string]; generate: [] }>()
+const emit = defineEmits<{ preview: [path: string]; generate: []; addProgram: [folder: string, index: number] }>()
 
 const { t, locale } = useI18n()
 const { genUID } = playlistOperations()
@@ -729,6 +731,39 @@ function insertAt(index: number, items: PlaylistItem[]) {
     playlistStore.touch()
 }
 
+function placeIndex(place: AddPlace): number {
+    if (typeof place === 'number') {
+        return Math.min(Math.max(0, place), playlistStore.playlist.length)
+    }
+
+    if (place === 'onair' && onAirIndex.value >= 0) {
+        return onAirIndex.value + 1
+    }
+
+    return playlistStore.playlist.length
+}
+
+/** Add several clips together (a program) and say where they start. */
+function addFiles(files: LibraryFile[], place: AddPlace, label: string) {
+    const index = placeIndex(place)
+
+    insertAt(index, files.map(itemFromFile))
+    playlistStore.scrollToItem = true
+    indexStore.msgAlert(
+        'success',
+        t(
+            'onair.addedProgram',
+            {
+                name: label,
+                count: files.length,
+                time: clockTime(playlistStore.playlist[index]?.begin ?? 0),
+            },
+            files.length,
+        ),
+        3,
+    )
+}
+
 /** Add a file from the library, after the clip on air or at the end. */
 function addFile(file: LibraryFile) {
     const index = onAirIndex.value >= 0 ? onAirIndex.value + 1 : playlistStore.playlist.length
@@ -818,7 +853,7 @@ function pick(file: { path: string; name: string; duration: number }) {
 function hasPayload(event: DragEvent) {
     const types = event.dataTransfer?.types ?? []
 
-    return types.includes(LIBRARY_DRAG_TYPE) || types.includes(ROW_DRAG_TYPE)
+    return types.includes(LIBRARY_DRAG_TYPE) || types.includes(ROW_DRAG_TYPE) || types.includes(FOLDER_DRAG_TYPE)
 }
 
 function rowDragStart(event: DragEvent, item: PlaylistItem) {
@@ -866,12 +901,19 @@ function dragEnd() {
 function drop(event: DragEvent) {
     const index = dropAt.value
     const media = event.dataTransfer?.getData(LIBRARY_DRAG_TYPE)
+    const folder = event.dataTransfer?.getData(FOLDER_DRAG_TYPE)
     const uid = event.dataTransfer?.getData(ROW_DRAG_TYPE)
 
     event.preventDefault()
     dragEnd()
 
     if (index === null) {
+        return
+    }
+
+    if (folder) {
+        // A whole program: ask what to add from it.
+        emit('addProgram', folder, index)
         return
     }
 
@@ -1056,7 +1098,7 @@ onBeforeUnmount(() => {
     menuOpen.value = false
 })
 
-defineExpose({ addFile })
+defineExpose({ addFile, addFiles })
 </script>
 <template>
     <section :aria-label="t('onair.playlist')" class="card-box min-w-0">

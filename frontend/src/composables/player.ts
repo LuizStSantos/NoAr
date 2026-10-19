@@ -10,6 +10,12 @@ export interface LibraryFile {
 
 export const LIBRARY_DRAG_TYPE = 'application/x-noar-media'
 
+/** Where new clips go: after the clip on air, at the end, or before an index. */
+export type AddPlace = 'onair' | 'end' | number
+
+/** A whole program folder dragged from the library; carries its storage path. */
+export const FOLDER_DRAG_TYPE = 'application/x-noar-folder'
+
 /** Rows of the playlist dragged to another place. */
 export const ROW_DRAG_TYPE = 'application/x-noar-row'
 

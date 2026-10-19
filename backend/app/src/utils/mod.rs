@@ -19,6 +19,7 @@ pub mod args_parse;
 pub mod channels;
 pub mod config;
 pub mod control;
+pub mod episodes;
 pub mod errors;
 pub mod generator;
 pub mod logging;
