@@ -13,7 +13,9 @@ concurrency:
 jobs:
   # NoAr runs in Docker on Linux, so this checks the same build the image uses.
   build:
-    runs-on: ubuntu-latest
+    # The FFmpeg 7 PPA below is built for Ubuntu 24.04; ubuntu-latest moves to
+    # 26.04 from October 2026, where the PPA does not install.
+    runs-on: ubuntu-24.04
 
     env:
       CARGO_INCREMENTAL: 0
