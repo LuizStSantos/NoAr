@@ -1,4 +1,5 @@
 import { authFetch, authFetchRaw } from '@/composables/authFetch'
+import { randomId } from '@/composables/browser'
 import { useHelper } from '@/composables/helper'
 
 /** Where and how one file is sent. */
@@ -50,7 +51,7 @@ export async function sendFileInChunks<T = string>(
     const parallelUploads = request.parallelUploads || DEFAULT_PARALLEL_UPLOADS
     const fileSize = Number(file.size)
     const uploadKey = `${request.url}\0${file.name}\0${fileSize}\0${file.lastModified}`
-    const batchId = request.batchId || uploadBatches.get(uploadKey) || crypto.randomUUID()
+    const batchId = request.batchId || uploadBatches.get(uploadKey) || randomId()
 
     uploadBatches.set(uploadKey, batchId)
 

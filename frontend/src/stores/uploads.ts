@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+import { randomId } from '@/composables/browser'
 import { sendFileInChunks } from '@/composables/chunkedUpload'
 
 /**
@@ -71,7 +72,7 @@ export const useUploads = defineStore('uploads', () => {
             }
 
             items.value.push({
-                id: crypto.randomUUID(),
+                id: randomId(),
                 channelId,
                 folder,
                 file,

@@ -8,6 +8,7 @@ import { useHead } from '@unhead/vue'
 import { useRouter } from 'vue-router'
 
 import { authFetchRaw } from '@/composables/authFetch'
+import { copyText } from '@/composables/browser'
 import { LEVEL_RANK, foldRepeats, parseLog, type LogLevel, type LogLine, type LogRow } from '@/composables/logLines'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -225,7 +226,7 @@ async function download() {
 
 async function copyLine(line: LogLine) {
     try {
-        await navigator.clipboard.writeText(`[${line.stamp}] [${line.level ?? ''}] ${line.plain}`)
+        await copyText(`[${line.stamp}] [${line.level ?? ''}] ${line.plain}`)
         indexStore.msgAlert('success', t('log.copied'), 2)
     } catch {
         // Clipboard access can be refused; nothing else to do.
