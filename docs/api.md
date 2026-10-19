@@ -219,6 +219,10 @@ rejected.
 | `PUT` | `/api/file/{id}/import?file=list.m3u&date=YYYY-MM-DD` | `multipart/form-data` with a file field |
 | `POST` | `/api/file/{id}/access-token` | `{ "filename": "folder/file.mp4" }` |
 
+The browse response lists `folders`, `files` (with `duration`, `size`,
+`modified` and whether a video has its own `sheet`), `sheet_folders` (the
+subfolders with a program sheet) and `movie_folders` (the films among them).
+
 The upload status response is `{ "received_ranges": [[start, end], ...] }`.
 Each `PUT` request contains `fileName`, `start`, `end`, `size`, `batch_id`, and
 `chunk` fields. A batch ID identifies concurrent attempts in the running

@@ -191,6 +191,8 @@ declare global {
         folders: Folder[]
         /** Subfolders with a program sheet of their own. */
         sheet_folders?: string[]
+        /** The films among `sheet_folders`. */
+        movie_folders?: string[]
         files: FileObject[]
     }
 

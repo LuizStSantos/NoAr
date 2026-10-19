@@ -19,18 +19,27 @@ export function baseName(path: string): string {
 
 export interface FolderListing {
     folders: string[]
+    /** Subfolders with a program sheet; `movieFolders` are the films among them. */
     sheetFolders: string[]
+    movieFolders: string[]
 }
 
 /** The subfolders of a storage folder, for the folder tree. */
 export async function listFolders(channelId: number, path: string): Promise<FolderListing> {
-    const data = await authFetch<{ folders?: string[]; sheet_folders?: string[] }>(`/api/file/${channelId}/browse`, {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ source: `/${path}`, folders_only: true }),
-    })
+    const data = await authFetch<{ folders?: string[]; sheet_folders?: string[]; movie_folders?: string[] }>(
+        `/api/file/${channelId}/browse`,
+        {
+            method: 'POST',
+            headers: JSON_HEADERS,
+            body: JSON.stringify({ source: `/${path}`, folders_only: true }),
+        },
+    )
 
-    return { folders: data.folders ?? [], sheetFolders: data.sheet_folders ?? [] }
+    return {
+        folders: data.folders ?? [],
+        sheetFolders: data.sheet_folders ?? [],
+        movieFolders: data.movie_folders ?? [],
+    }
 }
 
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {

@@ -40,6 +40,15 @@ storage/
       movie.mp4
 ```
 
+A series needs only its program `.nfo`: every video in the folder and its
+subfolders gets the program's title, synopsis and poster in the guide, and
+an episode `.nfo` only adds what is particular to one episode (its title,
+season and number, image). Storage shows such folders as *series* (or
+*film* for a `movie.nfo`), and its file table shows how each video appears in
+the guide and whether it uses the series sheet or one of its own. Dates in
+file names (`show-16.10.26.mp4`) only order the episodes; they never show up
+in the guide.
+
 ### Program `.nfo`
 
 The program `.nfo` is searched for in the clip's folder and then in each parent

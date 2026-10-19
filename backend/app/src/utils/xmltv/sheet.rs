@@ -391,6 +391,22 @@ pub async fn has_program_sheet(dir: &Path) -> bool {
     read_listing(dir).await.program_nfo().is_some()
 }
 
+/// The kind of a folder's own program sheet: a program or series (one
+/// sheet for every episode), or a film.
+pub async fn program_sheet_kind(dir: &Path) -> Option<SheetKind> {
+    let listing = read_listing(dir).await;
+    let name = listing.program_nfo()?;
+    let raw = fs::read(dir.join(name))
+        .await
+        .map(|bytes| decode_nfo_bytes(&bytes))
+        .unwrap_or_default();
+
+    Some(SheetKind::from_nfo(
+        parse_nfo(&raw).kind,
+        SheetKind::Program,
+    ))
+}
+
 /// The nearest parent folder (inside the storage) with a program sheet.
 async fn inherited_program(storage: &Path, dir: &Path) -> Option<PathBuf> {
     let mut parent = dir.parent()?.to_path_buf();
@@ -746,6 +762,24 @@ mod tests {
         assert!(check_xml("<tvshow><title>A</title></tvshow>").is_ok());
         assert!(check_xml("<tvshow><title>A</tvshow>").is_err());
         assert!(check_xml("just text").is_err());
+    }
+
+    #[tokio::test]
+    async fn folder_sheets_tell_series_from_films() {
+        let storage = TempStorage::new();
+        storage.file("Serie/tvshow.nfo", b"<tvshow><title>Serie</title></tvshow>");
+        storage.file("Filme/movie.nfo", b"<movie><title>Filme</title></movie>");
+        storage.file("Avulso/clip.mp4", b"");
+
+        assert_eq!(
+            program_sheet_kind(&storage.0.join("Serie")).await,
+            Some(SheetKind::Program)
+        );
+        assert_eq!(
+            program_sheet_kind(&storage.0.join("Filme")).await,
+            Some(SheetKind::Movie)
+        );
+        assert_eq!(program_sheet_kind(&storage.0.join("Avulso")).await, None);
     }
 
     #[tokio::test]

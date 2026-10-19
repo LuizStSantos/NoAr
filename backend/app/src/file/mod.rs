@@ -22,6 +22,9 @@ pub struct PathObject {
     /// Subfolders with a program sheet (`.nfo`) of their own.
     #[serde(default)]
     sheet_folders: Option<Vec<String>>,
+    /// The ones among `sheet_folders` whose sheet is a film's.
+    #[serde(default)]
+    movie_folders: Option<Vec<String>>,
     files: Option<Vec<VideoFile>>,
     #[serde(default)]
     pub folders_only: bool,
@@ -40,6 +43,7 @@ impl PathObject {
             parent_folders: Some(vec![]),
             folders: Some(vec![]),
             sheet_folders: Some(vec![]),
+            movie_folders: Some(vec![]),
             files: Some(vec![]),
             folders_only: false,
             all_files: false,

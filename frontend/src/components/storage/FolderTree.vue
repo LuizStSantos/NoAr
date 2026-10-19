@@ -15,13 +15,15 @@ const props = withDefaults(
         path: string
         label: string
         hasSheet?: boolean
+        /** The sheet is a film's, not a series'. */
+        movie?: boolean
         /** Storage path of the folder shown in the page. */
         current: string
         /** Bumped by the page after changes, so open folders reload. */
         version?: number
         depth?: number
     }>(),
-    { hasSheet: false, version: 0, depth: 0 },
+    { hasSheet: false, movie: false, version: 0, depth: 0 },
 )
 
 const emit = defineEmits<{
@@ -36,6 +38,7 @@ const loaded = ref(false)
 const loading = ref(false)
 const folders = ref<string[]>([])
 const sheetFolders = ref<string[]>([])
+const movieFolders = ref<string[]>([])
 const dragOver = ref(false)
 /** The version this folder last loaded at; passed down so subfolders reload
  * after it, and a removed subfolder disappears instead of reloading. */
@@ -55,6 +58,7 @@ async function load() {
 
         folders.value = listing.folders
         sheetFolders.value = listing.sheetFolders
+        movieFolders.value = listing.movieFolders
         loaded.value = true
         loadedVersion.value = props.version
     } catch {
@@ -144,7 +148,7 @@ function onDrop(event: DragEvent) {
                     class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
                     :title="t('storage.hasSheet')"
                 >
-                    {{ t('storage.sheetBadge') }}
+                    {{ movie ? t('storage.movieBadge') : t('storage.seriesBadge') }}
                 </span>
             </button>
         </div>
@@ -156,6 +160,7 @@ function onDrop(event: DragEvent) {
                 :path="storageJoin(path, folder)"
                 :label="folder"
                 :has-sheet="sheetFolders.includes(folder)"
+                :movie="movieFolders.includes(folder)"
                 :current="current"
                 :version="loadedVersion"
                 :depth="depth + 1"

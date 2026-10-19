@@ -104,6 +104,45 @@ function isVideo(file?: FileObject): boolean {
 }
 
 const videos = computed(() => mediaStore.folderTree.files.filter((file) => isVideo(file)))
+/** How each video of the open folder shows up in the guide: title and episode. */
+const guide = ref<Record<string, { title: string; sub_title: string | null }>>({})
+/** The open folder's videos use a series or film sheet (its own or a parent's). */
+const folderSheet = computed(() => {
+    if (!sheet.value || (!sheet.value.file && !sheet.value.inherited_from)) {
+        return null
+    }
+
+    return sheet.value.kind === 'movie' ? 'movie' : 'series'
+})
+
+async function loadGuide() {
+    const storage = (configStore.channels[configStore.i]?.storage ?? '').replace(/\/+$/, '')
+    const files = videos.value.slice(0, 300)
+
+    if (!files.length || !storage) {
+        guide.value = {}
+        return
+    }
+
+    try {
+        const found = await authFetch<{ title: string; sub_title: string | null }[]>(
+            `/api/playlist/${channelId.value}/programs`,
+            {
+                method: 'POST',
+                headers: configStore.contentType,
+                body: JSON.stringify(
+                    files.map((file) => ({ source: `${storage}/${storageJoin(current.value, file.name)}` })),
+                ),
+            },
+        )
+
+        guide.value = Object.fromEntries(
+            files.map((file, index) => [file.name, found[index] ?? { title: '', sub_title: null }]),
+        )
+    } catch {
+        guide.value = {}
+    }
+}
 const summary = computed(() => {
     const seconds = videos.value.reduce((sum, file) => sum + (file.duration || 0), 0)
 
@@ -113,6 +152,7 @@ const allSelected = computed(
     () => rows.value.length > 0 && rows.value.every((row) => selected.value.includes(row.name)),
 )
 const sheetFolders = computed(() => mediaStore.folderTree.sheet_folders ?? [])
+const movieFolders = computed(() => mediaStore.folderTree.movie_folders ?? [])
 
 function clock(seconds: number): string {
     const total = Math.round(seconds)
@@ -212,6 +252,10 @@ onMounted(async () => {
 })
 
 watch(current, loadSheet, { immediate: true })
+watch(
+    () => [mediaStore.folderTree.files, sheet.value],
+    () => loadGuide(),
+)
 
 watch(channelId, async () => {
     await load('')
@@ -719,6 +763,7 @@ const uploadAccept = computed(() =>
                                     <th class="px-2 py-2.5 font-medium w-20">{{ t('storage.duration') }}</th>
                                     <th class="px-2 py-2.5 font-medium w-24">{{ t('storage.size') }}</th>
                                     <th class="px-2 py-2.5 font-medium w-40">{{ t('storage.modified') }}</th>
+                                    <th class="px-2 py-2.5 font-medium">{{ t('storage.guideColumn') }}</th>
                                     <th class="px-2 py-2.5 font-medium w-36">{{ t('storage.sheetColumn') }}</th>
                                     <th class="ps-2 pe-4 py-2.5 w-40">
                                         <span class="sr-only">{{ t('storage.actions') }}</span>
@@ -759,7 +804,11 @@ const uploadAccept = computed(() =>
                                                 v-if="sheetFolders.includes(row.name)"
                                                 class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
                                             >
-                                                {{ t('storage.sheetBadge') }}
+                                                {{
+                                                    movieFolders.includes(row.name)
+                                                        ? t('storage.movieBadge')
+                                                        : t('storage.seriesBadge')
+                                                }}
                                             </span>
                                         </button>
                                         <span v-else class="flex items-center gap-2.5 min-h-7 min-w-0">
@@ -775,11 +824,19 @@ const uploadAccept = computed(() =>
                                     <td class="px-2 py-2 font-mono">
                                         {{ isVideo(row.file) ? clock(row.file?.duration ?? 0) : '' }}
                                     </td>
-                                    <td class="px-2 py-2 font-mono text-muted">
+                                    <td class="px-2 py-2 font-mono text-muted whitespace-nowrap">
                                         {{ row.file ? fileSize(row.file.size, 1) || '0 B' : '' }}
                                     </td>
                                     <td class="px-2 py-2 text-muted whitespace-nowrap">
                                         {{ row.file ? modifiedLabel(row.file) : '' }}
+                                    </td>
+                                    <td class="px-2 py-2 min-w-48">
+                                        <span v-if="row.file && guide[row.name]?.title" class="block truncate max-w-64">
+                                            {{ guide[row.name]?.title }}
+                                            <span v-if="guide[row.name]?.sub_title" class="text-muted">
+                                                · {{ guide[row.name]?.sub_title }}
+                                            </span>
+                                        </span>
                                     </td>
                                     <td class="px-2 py-2">
                                         <template v-if="row.file && isVideo(row.file)">
@@ -790,9 +847,29 @@ const uploadAccept = computed(() =>
                                                 @click="editorPath = storageJoin(current, row.name)"
                                             >
                                                 <i class="bi bi-check-lg" aria-hidden="true" />{{
-                                                    t('storage.editSheet')
+                                                    t('storage.ownSheet')
                                                 }}
                                             </button>
+                                            <span
+                                                v-else-if="folderSheet"
+                                                class="inline-flex items-center gap-2 whitespace-nowrap"
+                                            >
+                                                <span class="text-muted">
+                                                    {{
+                                                        folderSheet === 'movie'
+                                                            ? t('storage.movieSheetUsed')
+                                                            : t('storage.seriesSheetUsed')
+                                                    }}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    class="link-accent text-xs"
+                                                    :aria-label="t('storage.createEpisodeSheet', { name: row.name })"
+                                                    @click="editorPath = storageJoin(current, row.name)"
+                                                >
+                                                    + {{ t('storage.episodeShort') }}
+                                                </button>
+                                            </span>
                                             <button
                                                 v-else
                                                 type="button"

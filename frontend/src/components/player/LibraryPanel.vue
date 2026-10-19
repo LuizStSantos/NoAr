@@ -25,12 +25,14 @@ interface BrowseResult {
     parent: string
     folders: string[]
     sheet_folders?: string[]
+    movie_folders?: string[]
     files: { name: string; duration: number }[]
 }
 
 const source = ref('')
 const folders = ref<string[]>([])
 const sheetFolders = ref<string[]>([])
+const movieFolders = ref<string[]>([])
 const creating = ref(false)
 const newFolder = ref('')
 const files = ref<{ name: string; duration: number }[]>([])
@@ -81,6 +83,7 @@ async function open(path: string) {
         source.value = joinPath(data.source ?? path)
         folders.value = data.folders ?? []
         sheetFolders.value = data.sheet_folders ?? []
+        movieFolders.value = data.movie_folders ?? []
         files.value = data.files ?? []
         search.value = ''
     } catch (err) {
@@ -234,7 +237,7 @@ watch(i, () => open(''))
                         v-if="sheetFolders.includes(folder)"
                         class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
                     >
-                        {{ t('storage.sheetBadge') }}
+                        {{ movieFolders.includes(folder) ? t('storage.movieBadge') : t('storage.seriesBadge') }}
                     </span>
                 </button>
                 <button

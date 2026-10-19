@@ -43,6 +43,7 @@ const dayLength = computed(() => configStore.playout.playlist?.lengthInSec || 86
 const browsePath = ref('')
 const folders = ref<string[]>([])
 const sheetFolders = ref<string[]>([])
+const movieFolders = ref<string[]>([])
 const loadingFolders = ref(false)
 const chosen = ref<string[]>([])
 const wholeStorage = ref(false)
@@ -175,6 +176,7 @@ async function browse(path: string) {
         browsePath.value = path
         folders.value = listing.folders
         sheetFolders.value = listing.sheetFolders
+        movieFolders.value = listing.movieFolders
     } catch (e) {
         indexStore.msgAlert('error', e instanceof Error ? e.message : String(e), 4)
     } finally {
@@ -391,7 +393,7 @@ onBeforeUnmount(() => {
                             v-if="sheetFolders.includes(folder)"
                             class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
                         >
-                            {{ t('storage.sheetBadge') }}
+                            {{ movieFolders.includes(folder) ? t('storage.movieBadge') : t('storage.seriesBadge') }}
                         </span>
                         <button
                             type="button"

@@ -29,7 +29,11 @@ use crate::file::{
     watcher::watch,
 };
 use crate::player::utils::{Media, file_extension, include_file_extension, probe_media};
-use crate::utils::{config::PlayoutConfig, errors::ServiceError, xmltv::sheet::has_program_sheet};
+use crate::utils::{
+    config::PlayoutConfig,
+    errors::ServiceError,
+    xmltv::sheet::{SheetKind, program_sheet_kind},
+};
 
 #[derive(Clone, Debug)]
 pub struct LocalStorage {
@@ -177,15 +181,22 @@ impl LocalStorage {
         }
 
         let mut sheet_folders = vec![];
+        let mut movie_folders = vec![];
 
         for folder in &folders {
-            if has_program_sheet(&path.join(folder)).await {
-                sheet_folders.push(folder.clone());
+            match program_sheet_kind(&path.join(folder)).await {
+                Some(SheetKind::Movie) => {
+                    sheet_folders.push(folder.clone());
+                    movie_folders.push(folder.clone());
+                }
+                Some(_) => sheet_folders.push(folder.clone()),
+                None => {}
             }
         }
 
         obj.folders = Some(folders);
         obj.sheet_folders = Some(sheet_folders);
+        obj.movie_folders = Some(movie_folders);
         obj.files = Some(media_files);
 
         Ok(obj)

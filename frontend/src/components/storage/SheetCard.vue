@@ -79,7 +79,7 @@ function picked(event: Event, done: (file: File) => void) {
 
         <div class="flex-[1_1_360px] min-w-0 flex flex-col gap-2.5">
             <div class="flex flex-wrap items-center gap-2 text-xs text-muted uppercase tracking-[0.08em]">
-                {{ sheet.kind === 'movie' ? t('storage.card.movieSheet') : t('storage.card.programSheet') }}
+                {{ sheet.kind === 'movie' ? t('storage.card.movieSheet') : t('storage.card.seriesSheet') }}
                 <span class="normal-case tracking-normal font-mono text-subtle">{{ baseName(sheet.file ?? '') }}</span>
             </div>
             <h2 id="sheet-card-title" class="m-0 text-[22px] font-semibold">{{ title }}</h2>
@@ -104,6 +104,14 @@ function picked(event: Event, done: (file: File) => void) {
             </div>
             <p v-if="fields?.plot" class="m-0 text-base-content/85 max-w-3xl line-clamp-3">{{ fields.plot }}</p>
             <p v-else class="m-0 text-muted">{{ t('storage.card.noPlot') }}</p>
+            <p
+                v-if="sheet.kind !== 'movie'"
+                class="m-0 flex gap-2 items-start bg-raised rounded-[10px] px-3 py-2.5 text-[13px] max-w-3xl"
+            >
+                <i class="bi bi-check2 text-ok mt-px" aria-hidden="true" />{{
+                    t('storage.card.seriesHint', { count: videos }, videos)
+                }}
+            </p>
             <div class="flex flex-wrap gap-x-4 gap-y-2 text-[13px]">
                 <span :class="sheet.poster ? 'text-ok' : 'text-accent-text'">
                     <i
