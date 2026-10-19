@@ -104,14 +104,14 @@ async function backToProgramme() {
 </script>
 <template>
     <section :aria-label="t('onair.now')" class="card-box px-5 py-4.5 flex flex-col gap-4.5">
-        <div class="flex items-end justify-between gap-3">
+        <div class="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
             <div>
                 <div class="text-muted text-xs uppercase tracking-[0.08em]">{{ t('onair.now') }}</div>
                 <div class="font-mono text-[40px] sm:text-[52px] font-medium leading-[1.05] tabular">
                     {{ channelNow.format('HH:mm:ss') }}
                 </div>
             </div>
-            <div class="text-right text-muted text-[13px]">{{ dateLabel }}<br />{{ configStore.timezone }}</div>
+            <div class="ms-auto text-right text-muted text-[13px]">{{ dateLabel }}<br />{{ configStore.timezone }}</div>
         </div>
 
         <div
