@@ -2,6 +2,7 @@
 //! web interface without access to the host (or Docker).
 
 use std::{
+    path::{Path, PathBuf},
     sync::{
         LazyLock,
         atomic::{AtomicBool, Ordering},
@@ -52,6 +53,34 @@ pub fn restart_requested() -> bool {
     RESTART_REQUESTED.load(Ordering::SeqCst)
 }
 
+/// The file this process runs. When it was replaced while running (an
+/// update or a rebuild), Linux names the old one `<path> (deleted)`: use the
+/// new file at the same path, or else the name the program was started with.
+fn program_path() -> std::io::Result<PathBuf> {
+    let current = std::env::current_exe()?;
+
+    if current.exists() {
+        return Ok(current);
+    }
+
+    let replaced = without_deleted_suffix(&current);
+
+    if replaced.exists() {
+        return Ok(replaced);
+    }
+
+    std::env::args_os()
+        .next()
+        .map(PathBuf::from)
+        .ok_or_else(|| std::io::Error::other("the program name is unknown"))
+}
+
+fn without_deleted_suffix(path: &Path) -> PathBuf {
+    let text = path.to_string_lossy();
+
+    PathBuf::from(text.strip_suffix(" (deleted)").unwrap_or(&text))
+}
+
 /// Replace this process with a new run of the same program and arguments.
 /// It keeps the process id, so under Docker the container keeps running
 /// and no restart policy is needed. Returns only if that fails.
@@ -59,7 +88,7 @@ pub fn restart_requested() -> bool {
 pub fn exec_again() -> std::io::Error {
     use std::os::unix::process::CommandExt;
 
-    let program = match std::env::current_exe() {
+    let program = match program_path() {
         Ok(program) => program,
         Err(error) => return error,
     };
@@ -86,6 +115,19 @@ mod tests {
 
         assert_eq!(first, started_at());
         assert!(first > 1_700_000_000);
+    }
+
+    #[test]
+    fn a_replaced_program_is_found_at_its_old_path() {
+        assert_eq!(
+            without_deleted_suffix(Path::new("/usr/local/bin/noar (deleted)")),
+            Path::new("/usr/local/bin/noar")
+        );
+        assert_eq!(
+            without_deleted_suffix(Path::new("/usr/local/bin/noar")),
+            Path::new("/usr/local/bin/noar")
+        );
+        assert!(program_path().unwrap().exists());
     }
 
     #[tokio::test]
