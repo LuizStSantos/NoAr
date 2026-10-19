@@ -101,7 +101,10 @@ watch(
 )
 
 function onDragOver(event: DragEvent) {
-    if (event.dataTransfer?.types.includes('application/x-noar-files')) {
+    const types = event.dataTransfer?.types ?? []
+
+    // Rows moved from the list, or files from the computer to upload here.
+    if (types.includes('application/x-noar-files') || types.includes('Files')) {
         event.preventDefault()
         dragOver.value = true
     }

@@ -5,10 +5,10 @@ import { useHead } from '@unhead/vue'
 import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 
-import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useMedia } from '@/stores/media'
+import { useUploads } from '@/stores/uploads'
 
 import FolderTree from '@/components/storage/FolderTree.vue'
 import SheetCard from '@/components/storage/SheetCard.vue'
@@ -20,16 +20,14 @@ import { authFetch } from '@/composables/authFetch'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
 import { baseName, readSheet, storageJoin, uploadArtwork } from '@/composables/storage'
-import { useFileUpload } from '@/composables/useFileUpload'
 
 const { t, locale } = useI18n()
-const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const mediaStore = useMedia()
 const route = useRoute()
 const { mediaType, fileSize } = stringFormatter()
-const { uploadTask, currentNumber, currentProgress, uploading, resetUploadState, uploadFiles } = useFileUpload()
+const uploads = useUploads()
 
 const DRAG_TYPE = 'application/x-noar-files'
 const IMAGE_TYPES = ['jpg', 'jpeg', 'png', 'webp', 'gif']
@@ -60,7 +58,6 @@ const treeVersion = ref(0)
 const disk = ref<{ total: number; free: number } | null>(null)
 const dropActive = ref(false)
 const uploadInput = ref<HTMLInputElement>()
-const nfoUploading = ref(false)
 
 const renameTarget = ref<Row | null>(null)
 const renameValue = ref('')
@@ -203,6 +200,16 @@ async function load(path: string) {
     await mediaStore.getTree(`/${path}`, false, allFiles.value)
 }
 
+// A queued file reached the folder on screen (or the folder of its sheet).
+watch(
+    () => uploads.landed,
+    (landed) => {
+        if (landed && landed.channelId === channelId.value && landed.folder === current.value) {
+            refresh()
+        }
+    },
+)
+
 async function refresh() {
     await mediaStore.getTree(`/${current.value}`, false, allFiles.value)
     selected.value = selected.value.filter((name) => rows.value.some((row) => row.name === name))
@@ -250,6 +257,16 @@ onMounted(async () => {
     await load(linked ?? current.value)
     loadDisk()
 })
+
+// A link to a folder while the page is open (the uploads panel, for example).
+watch(
+    () => route.query.path,
+    (path) => {
+        if (typeof path === 'string' && storageJoin(path) !== current.value) {
+            load(storageJoin(path))
+        }
+    },
+)
 
 watch(current, loadSheet, { immediate: true })
 watch(
@@ -332,6 +349,15 @@ function droppedNames(event: DragEvent): string[] {
 }
 
 function dropOnFolder(target: string, event: DragEvent) {
+    const files = Array.from(event.dataTransfer?.files ?? [])
+
+    if (files.length) {
+        // Files from the computer go straight into that folder.
+        dropActive.value = false
+        upload(files, target)
+        return
+    }
+
     const names = droppedNames(event)
 
     if (names.length) {
@@ -339,8 +365,20 @@ function dropOnFolder(target: string, event: DragEvent) {
     }
 }
 
+/** A drop on a folder row goes into that folder, not the open one. */
+function dropOnRow(row: Row, event: DragEvent) {
+    if (!row.folder) {
+        return
+    }
+
+    event.stopPropagation()
+    dropOnFolder(storageJoin(current.value, row.name), event)
+}
+
 function allowFolderDrop(event: DragEvent) {
-    if (event.dataTransfer?.types.includes(DRAG_TYPE)) {
+    const types = event.dataTransfer?.types ?? []
+
+    if (types.includes(DRAG_TYPE) || types.includes('Files')) {
         event.preventDefault()
     }
 }
@@ -370,56 +408,34 @@ function onPickFiles(event: Event) {
     input.value = ''
 }
 
-async function upload(files: File[]) {
-    const existing = new Set(mediaStore.folderTree.files.map((file) => file.name))
+/** Queue files for a folder (the open one by default); they upload in the
+ * background while the page is used, or left. */
+function upload(files: File[], folder = current.value) {
+    const existing = new Set(folder === current.value ? mediaStore.folderTree.files.map((file) => file.name) : [])
     const fresh = files.filter((file) => {
         if (existing.has(file.name)) {
             indexStore.msgAlert('warning', t('storage.fileExists', { name: file.name }), 4)
             return false
         }
 
+        if (uploads.pending(channelId.value, folder, file.name)) {
+            indexStore.msgAlert('warning', t('storage.alreadyQueued', { name: file.name }), 4)
+            return false
+        }
+
         return true
     })
 
-    if (!fresh.length || uploading.value) {
+    if (!fresh.length) {
         return
     }
 
-    const folder = current.value
-
-    try {
-        await uploadFiles(fresh, {
-            buildRequest: (_file, currentIndex, batchCount) => ({
-                url: `/api/file/${channelId.value}/upload?path=${encodeURIComponent(folder)}`,
-                headers: authStore.authHeader,
-                method: 'PUT',
-                currentIndex,
-                batchCount,
-            }),
-        })
-        indexStore.msgAlert('success', t('storage.uploadDone'), 2)
-    } catch (e) {
-        failed(e)
-    }
-
-    resetUploadState()
-
-    if (folder === current.value) {
-        await refresh()
-    }
+    uploads.add(channelId.value, folder, fresh)
 }
 
-async function uploadNfo(file: File) {
-    nfoUploading.value = true
-
-    try {
-        // Saved as the folder's program sheet, whatever the file was called.
-        const named = new File([file], 'tvshow.nfo', { type: 'text/xml' })
-
-        await upload([named])
-    } finally {
-        nfoUploading.value = false
-    }
+function uploadNfo(file: File) {
+    // Saved as the folder's program sheet, whatever the file was called.
+    upload([new File([file], 'tvshow.nfo', { type: 'text/xml' })])
 }
 
 async function cardArtwork(kind: ArtworkKind, file: File) {
@@ -624,7 +640,7 @@ const uploadAccept = computed(() =>
             <button type="button" class="btn-quiet min-h-10.5" @click="showCreate = true">
                 <i class="bi bi-folder-plus" aria-hidden="true" />{{ t('storage.newFolder') }}
             </button>
-            <button type="button" class="btn-main min-h-10.5" :disabled="uploading" @click="uploadInput?.click()">
+            <button type="button" class="btn-main min-h-10.5" @click="uploadInput?.click()">
                 <i class="bi bi-upload" aria-hidden="true" />{{ t('storage.upload') }}
             </button>
             <input ref="uploadInput" type="file" multiple class="hidden" :accept="uploadAccept" @change="onPickFiles" />
@@ -779,7 +795,7 @@ const uploadAccept = computed(() =>
                                     draggable="true"
                                     @dragstart="dragRow($event, row)"
                                     @dragover="row.folder && allowFolderDrop($event)"
-                                    @drop.prevent="row.folder && dropOnFolder(storageJoin(current, row.name), $event)"
+                                    @drop.prevent="dropOnRow(row, $event)"
                                 >
                                     <td class="ps-4 pe-2 py-2">
                                         <input
@@ -947,24 +963,6 @@ const uploadAccept = computed(() =>
                                 : t('storage.dropHere')
                         }}
                     </button>
-                </section>
-
-                <section
-                    v-if="uploading || nfoUploading"
-                    aria-live="polite"
-                    class="bg-raised border border-line-strong rounded-box px-4 py-3 flex flex-col gap-2"
-                >
-                    <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[13px]">
-                        <span class="font-semibold">
-                            {{ t('storage.uploading', { current: currentNumber, total: Math.max(currentNumber, 1) }) }}
-                        </span>
-                        <span class="font-mono text-muted truncate">{{ uploadTask }}</span>
-                        <div class="flex-auto" />
-                        <span class="font-mono">{{ currentProgress }}%</span>
-                    </div>
-                    <div class="h-1.5 rounded bg-base-200 overflow-hidden">
-                        <div class="h-full bg-accent transition-[width]" :style="{ width: `${currentProgress}%` }" />
-                    </div>
                 </section>
             </main>
         </div>

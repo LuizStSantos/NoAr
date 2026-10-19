@@ -9,11 +9,22 @@ import { locales } from '@/i18n'
 import { useIndex } from '@/stores/index'
 
 import AlertMsg from '@/components/utils/AlertMsg.vue'
+import UploadTray from '@/components/utils/UploadTray.vue'
+import { useUploads } from '@/stores/uploads'
 import HeaderMenu from '@/components/HeaderMenu.vue'
 
 const { locale } = useI18n()
 const indexStore = useIndex()
+const uploads = useUploads()
 const route = useRoute()
+
+// Closing or reloading the tab would stop the uploads: ask first.
+window.addEventListener('beforeunload', (event) => {
+    if (uploads.busy) {
+        event.preventDefault()
+        event.returnValue = ''
+    }
+})
 
 usePlayoutStatusStream()
 
@@ -88,6 +99,7 @@ const showHeader = computed(() => route.meta.showHeader === true)
             <RouterView />
         </main>
 
+        <UploadTray v-if="showHeader" />
         <AlertMsg />
     </div>
 </template>

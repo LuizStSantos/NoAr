@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { useFileUpload } from '@/composables/useFileUpload'
+import { sendFileInChunks } from '@/composables/chunkedUpload'
 import { EVERY_DAY, MONDAY_TO_FRIDAY, SCHEDULE_COLORS, WEEKDAY_BITS, useScheduleText } from '@/composables/schedule'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
@@ -18,7 +18,6 @@ const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
-const { uploadFile } = useFileUpload()
 
 type Protocol = 'SRT' | 'RTMP' | 'HLS'
 
@@ -174,7 +173,7 @@ async function uploadPoster(folder: string) {
     const renamed = new File([file], `poster.${extension}`, { type: file.type })
     const id = configStore.channels[configStore.i]?.id
 
-    await uploadFile(renamed, {
+    await sendFileInChunks(renamed, {
         url: `/api/file/${id}/upload?path=${encodeURIComponent(folder)}`,
         headers: authStore.authHeader,
         method: 'PUT',
