@@ -348,3 +348,89 @@ async fn sheets_and_artwork_are_edited_through_the_storage_routes() {
         "no access to channel 2"
     );
 }
+
+#[tokio::test]
+#[serial]
+async fn a_folder_marked_as_commercials_makes_its_clips_breaks() {
+    let fixture = security_fixture().await;
+    let storage = fixture.root.join("storage");
+    tokio::fs::create_dir_all(storage.join("Breaks/Sponsors"))
+        .await
+        .unwrap();
+    tokio::fs::write(storage.join("Breaks/Sponsors/ad.mp4"), b"")
+        .await
+        .unwrap();
+    let token = access_token(&fixture.state, 1).await;
+    let call = |method: &'static str, uri: &'static str, body: serde_json::Value| {
+        let app = fixture.app.clone();
+        let token = token.clone();
+
+        async move {
+            let response = app
+                .oneshot(json_request(method, uri, Some(&token), body))
+                .await
+                .unwrap();
+            let status = response.status();
+            let bytes = to_bytes(response.into_body(), 1 << 20).await.unwrap();
+
+            (
+                status,
+                serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_default(),
+            )
+        }
+    };
+
+    let (status, _) = call(
+        "PUT",
+        "/api/file/1/commercial",
+        json!({"path": "Breaks", "commercial": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert!(storage.join("Breaks/.comercial").is_file());
+
+    let (status, root) = call(
+        "POST",
+        "/api/file/1/browse",
+        json!({"source": "/", "folders_only": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(root["commercial_folders"], json!(["Breaks"]));
+
+    let (_, sponsors) = call(
+        "POST",
+        "/api/file/1/browse",
+        json!({"source": "/Breaks/Sponsors"}),
+    )
+    .await;
+    assert_eq!(sponsors["commercial"], "Breaks");
+
+    let source = storage.join("Breaks/Sponsors/ad.mp4");
+    let (status, programmes) = call(
+        "POST",
+        "/api/playlist/1/programs",
+        json!([{"source": source.to_string_lossy(), "ad": false, "length": 30.0}]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{programmes}");
+    assert_eq!(programmes[0]["commercial"], true);
+    assert_eq!(programmes[0]["is_break"], true);
+
+    let (status, _) = call(
+        "PUT",
+        "/api/file/1/commercial",
+        json!({"path": "Breaks", "commercial": false}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert!(!storage.join("Breaks/.comercial").exists());
+
+    let (status, _) = call(
+        "PUT",
+        "/api/file/1/commercial",
+        json!({"path": "../outside", "commercial": true}),
+    )
+    .await;
+    assert!(status.is_client_error(), "{status}");
+}

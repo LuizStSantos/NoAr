@@ -18,6 +18,7 @@ const emit = defineEmits<{
     artwork: [kind: ArtworkKind, file: File]
     uploadNfo: [file: File]
     openFolder: [path: string]
+    markCommercial: []
 }>()
 
 const { t } = useI18n()
@@ -186,6 +187,9 @@ function picked(event: Event, done: (file: File) => void) {
                 <button type="button" class="btn-main" @click="emit('edit')">{{ t('storage.card.create') }}</button>
                 <button type="button" class="btn-quiet" @click="nfoInput?.click()">
                     {{ t('storage.card.uploadNfo') }}
+                </button>
+                <button type="button" class="btn-quiet border-after-clip/50" @click="emit('markCommercial')">
+                    <i class="bi bi-megaphone text-after-clip" aria-hidden="true" />{{ t('storage.commercial.mark') }}
                 </button>
             </div>
         </div>

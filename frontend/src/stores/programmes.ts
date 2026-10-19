@@ -182,5 +182,10 @@ export const useProgrammes = defineStore('programmes', () => {
         return entry.insert ? 'insert' : null
     }
 
-    return { entries, groups, refresh, groupOf, roleOf }
+    /** Whether a clip comes from a commercials folder. */
+    function isCommercial(index: number): boolean {
+        return entries.value.length === playlistStore.playlist.length && Boolean(entries.value[index]?.commercial)
+    }
+
+    return { entries, groups, refresh, groupOf, roleOf, isCommercial }
 })

@@ -22,6 +22,7 @@ pub mod sheet;
 use crate::{
     db::models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind},
     utils::{
+        commercial::CommercialFolders,
         config::PlayoutConfig,
         errors::ServiceError,
         playlist::read_playlist,
@@ -184,7 +185,24 @@ async fn programmes_between(
     to: NaiveDateTime,
 ) -> Result<Vec<Programme>, ServiceError> {
     let slots = collect_slots(config, from, to).await?;
-    let slots = apply_schedule(slots, &occurrences_between(events, from, to));
+    let mut occurrences = occurrences_between(events, from, to);
+    let mut commercials = CommercialFolders::new(&config.channel.storage);
+
+    // Events made only of commercials stay out of the guide, even when they
+    // were saved before their folder was marked.
+    for occurrence in &mut occurrences {
+        if occurrence.event.kind == ScheduleKind::Media
+            && occurrence
+                .event
+                .sources
+                .iter()
+                .all(|source| commercials.contains(source))
+        {
+            occurrence.event.show_in_guide = false;
+        }
+    }
+
+    let slots = apply_schedule(slots, &occurrences);
 
     Ok(group_programmes(config, slots).await)
 }
@@ -254,6 +272,8 @@ pub struct ClipProgramme {
     /// A short clip without a sheet (an ident, a promo) placed inside or
     /// after a programme; it extends that programme too.
     pub insert: bool,
+    /// From a commercials folder: a break whatever the playlist says.
+    pub commercial: bool,
 }
 
 /// Longest run of clips without a sheet or title that counts as an insert,
@@ -330,12 +350,15 @@ fn is_described(clip: &ClipMetadata, playlist_title: Option<&str>) -> bool {
 /// uses this to group a playlist, including changes that are not saved yet.
 pub async fn clip_programmes(config: &PlayoutConfig, clips: Vec<ClipQuery>) -> Vec<ClipProgramme> {
     let mut library = NfoLibrary::new(&config.channel.storage);
+    let mut commercials = CommercialFolders::new(&config.channel.storage);
     let filler = filler_path(config);
     let mut programmes = Vec::with_capacity(clips.len());
     let mut runs = Vec::with_capacity(clips.len());
 
     for query in clips {
+        let commercial = commercials.contains(&query.source);
         let is_break = query.ad
+            || commercial
             || filler
                 .as_deref()
                 .is_some_and(|filler| Path::new(&query.source).clean().starts_with(filler));
@@ -369,6 +392,7 @@ pub async fn clip_programmes(config: &PlayoutConfig, clips: Vec<ClipQuery>) -> V
             sub_title,
             is_break,
             insert: false,
+            commercial,
         });
     }
 
@@ -398,6 +422,7 @@ async fn collect_slots(
     let first_day = from.date() - TimeDelta::try_days(1).unwrap_or_default();
     let day_count = (to.date() - first_day).num_days();
     let mut slots: Vec<Slot> = vec![];
+    let mut commercials = CommercialFolders::new(&config.channel.storage);
 
     for offset in 0..=day_count {
         let date = (first_day + TimeDelta::try_days(offset).unwrap_or_default())
@@ -428,13 +453,15 @@ async fn collect_slots(
             let stop = (begin + duration).min(day_end);
 
             if duration > TimeDelta::zero() && stop > from {
+                let ad = media.ad || commercials.contains(&media.source);
+
                 slots.push(Slot {
                     start: begin,
                     stop,
                     day_end,
                     source: media.source,
                     title: media.title,
-                    ad: media.ad,
+                    ad,
                     scheduled: false,
                 });
             }

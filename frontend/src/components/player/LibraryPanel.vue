@@ -26,6 +26,8 @@ interface BrowseResult {
     folders: string[]
     sheet_folders?: string[]
     movie_folders?: string[]
+    live_folders?: string[]
+    commercial_folders?: string[]
     files: { name: string; duration: number }[]
 }
 
@@ -33,6 +35,8 @@ const source = ref('')
 const folders = ref<string[]>([])
 const sheetFolders = ref<string[]>([])
 const movieFolders = ref<string[]>([])
+const liveFolders = ref<string[]>([])
+const commercialFolders = ref<string[]>([])
 const creating = ref(false)
 const newFolder = ref('')
 const files = ref<{ name: string; duration: number }[]>([])
@@ -84,6 +88,8 @@ async function open(path: string) {
         folders.value = data.folders ?? []
         sheetFolders.value = data.sheet_folders ?? []
         movieFolders.value = data.movie_folders ?? []
+        liveFolders.value = data.live_folders ?? []
+        commercialFolders.value = data.commercial_folders ?? []
         files.value = data.files ?? []
         search.value = ''
     } catch (err) {
@@ -234,7 +240,19 @@ watch(i, () => open(''))
                     <i class="bi bi-folder2 text-muted" aria-hidden="true" />
                     <span class="truncate">{{ folder }}</span>
                     <span
-                        v-if="sheetFolders.includes(folder)"
+                        v-if="commercialFolders.includes(folder)"
+                        class="text-[11px] text-after-clip border border-after-clip/50 rounded-md px-1.5 leading-4"
+                    >
+                        {{ t('storage.commercial.badge') }}
+                    </span>
+                    <span
+                        v-else-if="liveFolders.includes(folder)"
+                        class="text-[11px] text-live border border-live/50 rounded-md px-1.5 leading-4"
+                    >
+                        {{ t('storage.live.badge') }}
+                    </span>
+                    <span
+                        v-else-if="sheetFolders.includes(folder)"
                         class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
                     >
                         {{ movieFolders.includes(folder) ? t('storage.movieBadge') : t('storage.seriesBadge') }}

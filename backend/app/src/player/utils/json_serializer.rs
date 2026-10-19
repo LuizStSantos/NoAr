@@ -15,7 +15,7 @@ use crate::{
             time_from_header,
         },
     },
-    utils::config::DUMMY_LEN,
+    utils::{commercial::CommercialFolders, config::DUMMY_LEN},
 };
 
 /// This is our main playlist object, it holds all necessary information for the current day.
@@ -76,6 +76,7 @@ fn default_channel() -> String {
 pub fn set_defaults(config: &PlayoutConfig, playlist: &mut JsonPlaylist) {
     let mut start_sec = playlist.start_sec.unwrap();
     let mut length = 0.0;
+    let mut commercials = CommercialFolders::new(&config.storage.path);
 
     // Add extra values to every media clip
     for (i, item) in playlist.program.iter_mut().enumerate() {
@@ -92,6 +93,9 @@ pub fn set_defaults(config: &PlayoutConfig, playlist: &mut JsonPlaylist) {
                 *path = new_path.to_string_lossy().to_string();
             }
         }
+
+        // Clips from a commercials folder play as commercials, marked or not.
+        item.ad = item.ad || commercials.contains(&item.source);
 
         let dur = item.out - item.seek;
         start_sec += dur;

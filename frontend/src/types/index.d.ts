@@ -195,6 +195,10 @@ declare global {
         movie_folders?: string[]
         /** Subfolders holding a live's address file. */
         live_folders?: string[]
+        /** Subfolders marked as commercials folders. */
+        commercial_folders?: string[]
+        /** The commercials folder the browsed folder lies in (itself or a parent). */
+        commercial?: string | null
         files: FileObject[]
     }
 
@@ -293,6 +297,8 @@ declare global {
         is_break: boolean
         /** A short clip without a sheet (ident, promo) inside a program. */
         insert: boolean
+        /** From a commercials folder: a break whatever the playlist says. */
+        commercial?: boolean
     }
 
     interface AudioLevel {

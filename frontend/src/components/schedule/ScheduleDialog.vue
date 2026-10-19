@@ -17,6 +17,8 @@ import {
     timeToSeconds,
     useScheduleText,
 } from '@/composables/schedule'
+import { commercialPaths } from '@/composables/storage'
+import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
 
@@ -25,6 +27,7 @@ const emit = defineEmits<{ close: []; saved: [] }>()
 
 const { t } = useI18n()
 const { weekdayLetters } = useScheduleText()
+const configStore = useConfig()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
 
@@ -63,6 +66,40 @@ watch(
     },
     { immediate: true },
 )
+
+/** Paths of the chosen material that lie in a commercials folder. */
+const commercials = ref<Set<string>>(new Set())
+const allCommercial = computed(
+    () => sources.value.length > 0 && sources.value.every((source) => commercials.value.has(source.path)),
+)
+
+watch(
+    () => sources.value.map((source) => source.path).join('\n'),
+    async () => {
+        const paths = sources.value.map((source) => source.path)
+        const id = configStore.channels[configStore.i]?.id
+
+        if (!id) {
+            return
+        }
+
+        try {
+            const flags = await commercialPaths(id, paths)
+
+            commercials.value = new Set(paths.filter((_, index) => flags[index]))
+        } catch {
+            commercials.value = new Set()
+        }
+    },
+    { immediate: true },
+)
+
+// Commercials never show in the guide.
+watch(allCommercial, (all) => {
+    if (all) {
+        showInGuide.value = false
+    }
+})
 
 const total = computed(() => {
     const known = sources.value.reduce((sum, source) => sum + (source.duration || 0), 0)
@@ -316,6 +353,13 @@ async function save() {
                             <span class="flex-1 min-w-0 truncate" :title="source.path">{{
                                 source.name || fileName(source.path)
                             }}</span>
+                            <span
+                                v-if="commercials.has(source.path)"
+                                class="text-[11px] text-after-clip border border-after-clip/50 rounded px-1.5 flex-none"
+                                :title="t('onair.commercialHint')"
+                            >
+                                {{ t('onair.commercialTag') }}
+                            </span>
                             <span class="text-base-content/60 tabular-nums">
                                 {{ source.duration ? formatLength(source.duration) : '' }}
                             </span>
@@ -535,12 +579,22 @@ async function save() {
                     </div>
                 </div>
 
-                <label class="flex items-center justify-between gap-4 border-t border-base-300 pt-4 cursor-pointer">
+                <label
+                    class="flex items-center justify-between gap-4 border-t border-base-300 pt-4"
+                    :class="allCommercial ? '' : 'cursor-pointer'"
+                >
                     <span class="flex flex-col gap-0.5">
-                        <span>{{ t('schedule.showInGuide') }}</span>
-                        <span class="text-xs text-subtle">{{ t('schedule.showInGuideHelp') }}</span>
+                        <span :class="allCommercial ? 'text-muted' : ''">{{ t('schedule.showInGuide') }}</span>
+                        <span class="text-xs text-subtle">{{
+                            allCommercial ? t('schedule.commercialsNotInGuide') : t('schedule.showInGuideHelp')
+                        }}</span>
                     </span>
-                    <input v-model="showInGuide" type="checkbox" class="toggle toggle-accent" />
+                    <input
+                        v-model="showInGuide"
+                        type="checkbox"
+                        class="toggle toggle-accent"
+                        :disabled="allCommercial"
+                    />
                 </label>
 
                 <p v-if="error" class="text-error text-sm" role="alert">{{ error }}</p>

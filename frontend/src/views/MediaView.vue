@@ -11,6 +11,7 @@ import { useMedia } from '@/stores/media'
 import { useSchedule } from '@/stores/schedule'
 import { useUploads } from '@/stores/uploads'
 
+import CommercialCard from '@/components/storage/CommercialCard.vue'
 import FolderTree from '@/components/storage/FolderTree.vue'
 import ImageViewer, { type ViewerImage } from '@/components/storage/ImageViewer.vue'
 import LiveCard from '@/components/storage/LiveCard.vue'
@@ -23,7 +24,7 @@ import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 import { authFetch } from '@/composables/authFetch'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
-import { baseName, imageUrl, readSheet, storageJoin, uploadArtwork } from '@/composables/storage'
+import { baseName, imageUrl, markCommercial, readSheet, storageJoin, uploadArtwork } from '@/composables/storage'
 
 const { t, locale } = useI18n()
 const configStore = useConfig()
@@ -339,6 +340,29 @@ const allSelected = computed(
 )
 const sheetFolders = computed(() => mediaStore.folderTree.sheet_folders ?? [])
 const liveFolders = computed(() => mediaStore.folderTree.live_folders ?? [])
+const commercialFolders = computed(() => mediaStore.folderTree.commercial_folders ?? [])
+/** The commercials folder the open folder lies in (itself or a parent). */
+const commercialOf = computed(() => (current.value ? (mediaStore.folderTree.commercial ?? null) : null))
+const commercialBusy = ref(false)
+
+async function setCommercial(path: string, commercial: boolean) {
+    commercialBusy.value = true
+
+    try {
+        await markCommercial(channelId.value, path, commercial)
+        indexStore.msgAlert(
+            'success',
+            commercial ? t('storage.commercial.marked') : t('storage.commercial.unmarked'),
+            2,
+        )
+        treeVersion.value++
+        await refresh()
+    } catch (e) {
+        failed(e)
+    } finally {
+        commercialBusy.value = false
+    }
+}
 
 // A live's folder: its address file, the live as the Scheduler knows it, and
 // the last signal test.
@@ -1029,6 +1053,15 @@ const uploadAccept = computed(() =>
                     @artwork="cardArtwork"
                     @schedule="scheduleLive(currentLive?.path)"
                 />
+                <CommercialCard
+                    v-else-if="commercialOf"
+                    :folder="current"
+                    :marked="commercialOf"
+                    :summary="summary"
+                    :busy="commercialBusy"
+                    @unmark="commercialOf && setCommercial(commercialOf, false)"
+                    @open="load"
+                />
                 <SheetCard
                     v-else-if="current && sheet"
                     :channel-id="channelId"
@@ -1040,6 +1073,7 @@ const uploadAccept = computed(() =>
                     @artwork="cardArtwork"
                     @upload-nfo="uploadNfo"
                     @open-folder="load"
+                    @mark-commercial="setCommercial(current, true)"
                 />
 
                 <section
@@ -1263,7 +1297,13 @@ const uploadAccept = computed(() =>
                                             <i class="bi text-muted" :class="fileIcon(row)" aria-hidden="true" />
                                             <span class="truncate font-medium">{{ row.name }}</span>
                                             <span
-                                                v-if="liveFolders.includes(row.name)"
+                                                v-if="commercialFolders.includes(row.name)"
+                                                class="text-[11px] text-after-clip border border-after-clip/50 rounded-md px-1.5 leading-4"
+                                            >
+                                                {{ t('storage.commercial.badge') }}
+                                            </span>
+                                            <span
+                                                v-else-if="liveFolders.includes(row.name)"
                                                 class="text-[11px] text-live border border-live/50 rounded-md px-1.5 leading-4"
                                             >
                                                 {{ t('storage.live.badge') }}
@@ -1342,7 +1382,21 @@ const uploadAccept = computed(() =>
                                         {{ row.file ? modifiedLabel(row.file) : '' }}
                                     </td>
                                     <td class="px-2 py-2 min-w-48">
-                                        <span v-if="row.file && guide[row.name]?.title" class="block truncate max-w-64">
+                                        <span
+                                            v-if="commercialOf && row.file && isVideo(row.file)"
+                                            class="inline-flex items-center gap-2 whitespace-nowrap"
+                                        >
+                                            <span
+                                                class="text-[11px] text-after-clip border border-after-clip/50 rounded px-1.5"
+                                            >
+                                                {{ t('onair.commercialTag') }}
+                                            </span>
+                                            <span class="text-muted">{{ t('storage.commercial.notInGuide') }}</span>
+                                        </span>
+                                        <span
+                                            v-else-if="row.file && guide[row.name]?.title"
+                                            class="block truncate max-w-64"
+                                        >
                                             {{ guide[row.name]?.title }}
                                             <span v-if="guide[row.name]?.sub_title" class="text-muted">
                                                 · {{ guide[row.name]?.sub_title }}

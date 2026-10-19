@@ -1511,8 +1511,17 @@ defineExpose({ addFile, addFiles })
                                                 : fileName(row.item.source)
                                         }}</template>
                                     </span>
+                                    <template v-if="programmes.isCommercial(row.index)">
+                                        <span
+                                            class="text-[11px] text-after-clip border border-after-clip/50 rounded px-1.5 flex-none"
+                                            :title="t('onair.commercialHint')"
+                                        >
+                                            {{ t('onair.commercialTag') }}
+                                        </span>
+                                        <span class="text-xs text-subtle flex-none">{{ t('onair.noLogo') }}</span>
+                                    </template>
                                     <span
-                                        v-if="row.item.ad || programmes.roleOf(row.index) === 'break'"
+                                        v-else-if="row.item.ad || programmes.roleOf(row.index) === 'break'"
                                         class="text-[11px] text-muted border border-line-strong rounded px-1.5 flex-none"
                                     >
                                         {{ t('onair.breakTag') }}
@@ -1576,6 +1585,11 @@ defineExpose({ addFile, addFiles })
                                 <ClipEditor
                                     :item="editing.item"
                                     :storage="storage"
+                                    :commercial="
+                                        programmes.isCommercial(
+                                            playlistStore.playlist.findIndex((item) => item.uid === editing?.uid),
+                                        )
+                                    "
                                     @apply="applyEdit"
                                     @cancel="editing = null"
                                     @pick="picker = $event"

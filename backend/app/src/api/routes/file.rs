@@ -25,6 +25,7 @@ use crate::{
     file::{MoveObject, PathObject, UploadStatus, UploadStatusQuery, norm_abs_path},
     player::utils::import::import_file,
     utils::{
+        commercial::set_commercial,
         errors::ServiceError,
         xmltv::sheet::{
             ArtworkKind, MediaSheet, SheetUpdate, read_sheet, remove_artwork, save_artwork,
@@ -468,6 +469,36 @@ pub async fn update_sheet(
     let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
 
     Ok(Json(save_sheet(&storage, &target, request.update).await?))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CommercialRequest {
+    /// Storage folder, relative to the storage.
+    path: String,
+    commercial: bool,
+}
+
+/// **Mark a commercials folder**
+///
+/// Everything in a commercials folder and its subfolders plays as a
+/// commercial: no logo, and no entry of its own in the guide.
+///
+/// ```BASH
+/// curl -X PUT http://127.0.0.1:8787/api/file/1/commercial -H 'Content-Type: application/json'
+/// -d '{"path": "Breaks", "commercial": true}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn mark_commercial(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<CommercialRequest>,
+) -> Result<StatusCode, ServiceError> {
+    let (storage, _) = storage_target(&state, id, &user, &details, &request.path).await?;
+
+    set_commercial(&storage, &request.path, request.commercial).await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// **Upload artwork**

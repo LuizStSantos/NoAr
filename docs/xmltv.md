@@ -132,8 +132,9 @@ guide.
 - Times follow the playlist, the same way as the program view in NoAr.
 - Consecutive videos of the same program become a single guide entry (e.g. the
   parts of a news show). Episodes with their own `.nfo` stay separate.
-- Ads (`"ad": true` in the playlist) and the configured filler are not listed:
-  their time is added to the program they interrupt.
+- Ads (`"ad": true` in the playlist), clips from a
+  [commercials folder](commercials.md) and the configured filler are not
+  listed: their time is added to the program they interrupt.
 - Without an `.nfo`, the title comes from the playlist item title or the file
   name.
 

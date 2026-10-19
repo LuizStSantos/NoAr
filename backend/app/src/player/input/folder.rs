@@ -11,7 +11,7 @@ use crate::{
         controller::ChannelManager,
         utils::{Media, include_file_extension, time_in_seconds},
     },
-    utils::config::PlayoutConfig,
+    utils::{commercial::CommercialFolders, config::PlayoutConfig},
 };
 
 /// Folder Sources
@@ -43,6 +43,8 @@ impl FolderSource {
             );
         }
 
+        let mut commercials = CommercialFolders::new(&config.storage.path);
+
         for path in &path_list {
             if !path.is_dir() {
                 error!(channel = id; "Path not exists: <span class=\"log-addr\">{path:?}</span>");
@@ -52,7 +54,8 @@ impl FolderSource {
 
             while let Some(Ok(entry)) = entries.next().await {
                 if entry.path().is_file() && include_file_extension(config, &entry.path()) {
-                    let media = Media::new(0, &entry.path().to_string_lossy(), false).await;
+                    let mut media = Media::new(0, &entry.path().to_string_lossy(), false).await;
+                    media.ad = commercials.contains(&media.source);
                     media_list.push(media);
                 }
             }

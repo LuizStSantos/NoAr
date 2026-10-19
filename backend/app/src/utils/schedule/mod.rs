@@ -18,7 +18,7 @@ pub mod live;
 use crate::{
     db::models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind, ScheduleRun},
     file::norm_abs_path,
-    utils::{config::PlayoutConfig, errors::ServiceError},
+    utils::{commercial::CommercialFolders, config::PlayoutConfig, errors::ServiceError},
 };
 
 /// Longest a clip event may run, a guard against picking the wrong files.
@@ -332,6 +332,12 @@ pub async fn prepare_event(
     };
 
     let relative_sources: Vec<String> = sources.into_iter().map(|(_, rel)| rel).collect();
+    let mut commercials = CommercialFolders::new(storage);
+    // Commercials never show in the guide.
+    let all_commercials = input.kind == ScheduleKind::Media
+        && relative_sources
+            .iter()
+            .all(|source| commercials.contains(source));
     let title = match input.title.trim() {
         "" => default_title(input.kind, &relative_sources),
         title => title.to_string(),
@@ -350,7 +356,7 @@ pub async fn prepare_event(
         repeat_days: input.repeat_days,
         entry_mode: input.entry_mode,
         after_mode: input.after_mode,
-        show_in_guide: input.show_in_guide,
+        show_in_guide: input.show_in_guide && !all_commercials,
         retry_seconds: input.retry_seconds.min(3600),
         enabled: input.enabled,
     })

@@ -93,6 +93,9 @@ pub enum ClipResult {
 pub struct LogoFade {
     pub fade_in: bool,
     pub fade_out: bool,
+    /// Keep the logo off for the whole clip (a commercial). The next clip that
+    /// shows the logo fades it back in.
+    pub hidden: bool,
 }
 
 pub struct Playout {

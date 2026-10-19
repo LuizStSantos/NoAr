@@ -22,6 +22,9 @@ Baecker and keeps its engine and API, adding:
 - **Storage**: program folders with their guide sheet edited in the browser,
   poster and wide image, series with one sheet for every episode, and uploads
   that keep going in the background while you work on other pages.
+- **Commercials folders**: mark a folder once and everything in it plays as a
+  commercial in playlists and scheduled breaks: out of the guide and without
+  the logo ([docs](docs/commercials.md)).
 - **XMLTV guide** built from the playlists and a Kodi-style `.nfo` file in each
   program folder, with posters and episode images ([docs](docs/xmltv.md)).
 - **Playlist generator**: fill a day from the folders you pick, or block by

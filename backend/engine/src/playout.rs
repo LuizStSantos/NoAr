@@ -67,6 +67,8 @@ pub(crate) struct Timeline {
     audio_pts: i64,
     text_pts: i64,
     logo_opacity: f64,
+    /// The last clip kept the logo off; the next one fades it back in.
+    logo_hidden: bool,
     // Live ingest preserves source PTS until the receiver maps both tracks
     // onto the continuous playout timeline. File playback always uses the
     // normal monotonically increasing timeline values.
@@ -82,6 +84,7 @@ impl Timeline {
             audio_pts: 0,
             text_pts: 0,
             logo_opacity: 1.0,
+            logo_hidden: false,
             source_timestamp_mode: false,
             live_audio_source_us: None,
             live_video_source_us: None,
@@ -104,8 +107,23 @@ impl Timeline {
         self.live_video_source_us = None;
     }
 
+    /// After a clip that kept the logo off, the next clip that shows it fades
+    /// it back in, whatever its own plan says.
+    pub(crate) fn resume_logo(&self, fade: LogoFade) -> LogoFade {
+        if self.logo_hidden && !fade.hidden {
+            LogoFade {
+                fade_in: true,
+                ..fade
+            }
+        } else {
+            fade
+        }
+    }
+
     pub(crate) fn finish_logo_fade(&mut self, fade: LogoFade) {
-        if fade.fade_out {
+        self.logo_hidden = fade.hidden;
+
+        if fade.hidden || fade.fade_out {
             self.logo_opacity = 0.0;
         } else if fade.fade_in {
             self.logo_opacity = 1.0;
@@ -164,6 +182,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
     // Playlist timing can carry a source offset. Live transports have no
     // stable timeline to seek in, so always begin at their current edge.
     let source_seek_seconds = (!source_is_live).then_some(seek_seconds).flatten();
+    let logo_fade = timeline.resume_logo(logo_fade);
     let logo_fade_plan = LogoFadePlan::new(timeline.video_pts, duration_seconds, cfg, logo_fade);
     let mut external_audio = external_audio_path
         .map(|audio_path| {
@@ -421,6 +440,7 @@ impl MediaFadePlan {
 pub(crate) struct LogoFadePlan {
     fade_in: bool,
     fade_out: bool,
+    hidden: bool,
     start_pts: i64,
     end_pts: Option<i64>,
     frames: i64,
@@ -444,6 +464,7 @@ impl LogoFadePlan {
         Self {
             fade_in: fade.fade_in,
             fade_out: fade.fade_out,
+            hidden: fade.hidden,
             start_pts,
             end_pts,
             frames: (LOGO_FADE_SECONDS * f64::from(cfg.fps)).round().max(1.0) as i64,
@@ -458,6 +479,10 @@ impl LogoFadePlan {
     }
 
     fn opacity_at(self, pts: i64, current_opacity: f64) -> f64 {
+        if self.hidden {
+            return 0.0;
+        }
+
         let mut opacity = current_opacity;
 
         if self.fade_in {
@@ -479,6 +504,7 @@ impl LogoFadePlan {
         timeline.finish_logo_fade(LogoFade {
             fade_in: self.fade_in,
             fade_out: self.fade_out,
+            hidden: self.hidden,
         });
     }
 }
@@ -3031,6 +3057,36 @@ mod tests {
         assert!(!has_valid_time_base(Rational(0, 1)));
         assert!(!has_valid_time_base(Rational(1, 0)));
         assert!(has_valid_time_base(Rational(1, 90_000)));
+    }
+
+    #[test]
+    fn a_commercial_keeps_the_logo_off_and_the_next_clip_brings_it_back() {
+        let cfg = OutputConfig::new(320, 240, 25, 48_000);
+        let mut timeline = Timeline::new();
+        let commercial = LogoFade {
+            hidden: true,
+            ..LogoFade::default()
+        };
+        let plan = LogoFadePlan::new(0, Some(10.0), &cfg, timeline.resume_logo(commercial));
+
+        assert_eq!(plan.opacity_at(0, timeline.logo_opacity), 0.0);
+        assert_eq!(plan.opacity_at(100, timeline.logo_opacity), 0.0);
+
+        plan.finish(&mut timeline);
+
+        // The programme after it says nothing about the logo, and still gets it
+        // back with a fade.
+        let program = timeline.resume_logo(LogoFade::default());
+        let plan = LogoFadePlan::new(250, Some(60.0), &cfg, program);
+
+        assert!(program.fade_in);
+        assert_eq!(plan.opacity_at(250, timeline.logo_opacity), 0.0);
+        assert_eq!(plan.opacity_at(250 + 100, timeline.logo_opacity), 1.0);
+
+        plan.finish(&mut timeline);
+
+        assert_eq!(timeline.logo_opacity, 1.0);
+        assert!(!timeline.resume_logo(LogoFade::default()).fade_in);
     }
 
     #[test]

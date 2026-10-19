@@ -31,6 +31,7 @@ use crate::{
         utils::{Media, time_in_seconds},
     },
     utils::{
+        commercial::CommercialFolders,
         config::PlayoutConfig,
         errors::ServiceError,
         schedule::{
@@ -683,6 +684,7 @@ async fn play_clips(
 ) -> Result<EventEnd, ServiceError> {
     let id = config.general.channel_id;
     let mut completed = true;
+    let mut commercials = CommercialFolders::new(&config.channel.storage);
 
     for source in &event.sources {
         if manager.schedule.take_abort() {
@@ -712,7 +714,15 @@ async fn play_clips(
         );
 
         if matches!(
-            play_plain_from(playout, config, &path.to_string_lossy(), seek, length).await?,
+            play_plain_from(
+                playout,
+                config,
+                &path.to_string_lossy(),
+                seek,
+                length,
+                commercials.contains(source),
+            )
+            .await?,
             ClipResult::Stopped
         ) {
             return Ok(EventEnd {

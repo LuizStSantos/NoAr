@@ -28,6 +28,13 @@ pub struct PathObject {
     /// Subfolders holding a live's address file (`.live`).
     #[serde(default)]
     live_folders: Option<Vec<String>>,
+    /// Subfolders marked as commercials folders.
+    #[serde(default)]
+    commercial_folders: Option<Vec<String>>,
+    /// The commercials folder the browsed folder lies in (itself or a parent),
+    /// relative to the storage.
+    #[serde(default)]
+    commercial: Option<String>,
     files: Option<Vec<VideoFile>>,
     #[serde(default)]
     pub folders_only: bool,
@@ -48,6 +55,8 @@ impl PathObject {
             sheet_folders: Some(vec![]),
             movie_folders: Some(vec![]),
             live_folders: Some(vec![]),
+            commercial_folders: Some(vec![]),
+            commercial: None,
             files: Some(vec![]),
             folders_only: false,
             all_files: false,

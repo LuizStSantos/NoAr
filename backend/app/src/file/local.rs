@@ -30,6 +30,7 @@ use crate::file::{
 };
 use crate::player::utils::{Media, file_extension, include_file_extension, probe_media};
 use crate::utils::{
+    commercial::{COMMERCIAL_MARKER, CommercialFolders},
     config::PlayoutConfig,
     errors::ServiceError,
     schedule::live::LIVE_EXTENSION,
@@ -184,6 +185,7 @@ impl LocalStorage {
         let mut sheet_folders = vec![];
         let mut movie_folders = vec![];
         let mut live_folders = vec![];
+        let mut commercial_folders = vec![];
 
         for folder in &folders {
             match program_sheet_kind(&path.join(folder)).await {
@@ -198,12 +200,31 @@ impl LocalStorage {
             if holds_live(&path.join(folder)).await {
                 live_folders.push(folder.clone());
             }
+
+            if fs::try_exists(path.join(folder).join(COMMERCIAL_MARKER))
+                .await
+                .unwrap_or(false)
+            {
+                commercial_folders.push(folder.clone());
+            }
         }
+
+        let root = self.root.read().await.clone();
+        let commercial = CommercialFolders::new(&root)
+            .folder_of(&path.join(COMMERCIAL_MARKER).to_string_lossy())
+            .and_then(|folder| {
+                folder
+                    .strip_prefix(&root)
+                    .ok()
+                    .map(|relative| relative.to_string_lossy().to_string())
+            });
 
         obj.folders = Some(folders);
         obj.sheet_folders = Some(sheet_folders);
         obj.movie_folders = Some(movie_folders);
         obj.live_folders = Some(live_folders);
+        obj.commercial_folders = Some(commercial_folders);
+        obj.commercial = commercial;
         obj.files = Some(media_files);
 
         Ok(obj)

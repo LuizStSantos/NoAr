@@ -292,6 +292,9 @@ async fn play_loop(
                 LogoFade {
                     fade_in: !is_ad && node.last_ad,
                     fade_out: !is_ad && node.next_ad,
+                    // Commercials keep the logo off even without a programme
+                    // fading it out before them (a playlist that opens on one).
+                    hidden: is_ad,
                 },
                 playout_rate,
             )
@@ -743,17 +746,18 @@ pub(crate) async fn play_plain(
     source: &str,
     duration: f64,
 ) -> Result<ClipResult, ServiceError> {
-    play_plain_from(playout, config, source, 0.0, duration).await
+    play_plain_from(playout, config, source, 0.0, duration, false).await
 }
 
 /// Like [`play_plain`], starting `seek` seconds into the source and playing
-/// `duration` seconds from there.
+/// `duration` seconds from there. A commercial keeps the logo off.
 pub(crate) async fn play_plain_from(
     playout: &AsyncPlayout,
     config: &PlayoutConfig,
     source: &str,
     seek: f64,
     duration: f64,
+    commercial: bool,
 ) -> Result<ClipResult, ServiceError> {
     playout
         .play_with_timing_logo_fade_rate_and_audio(
@@ -762,7 +766,10 @@ pub(crate) async fn play_plain_from(
             Some(duration),
             None,
             subtitle_media_path(config, source),
-            LogoFade::default(),
+            LogoFade {
+                hidden: commercial,
+                ..LogoFade::default()
+            },
             1.0,
         )
         .await

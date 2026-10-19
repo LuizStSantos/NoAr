@@ -42,6 +42,15 @@ async fn xmltv_guide_and_images_are_public_and_confined_to_image_files_in_storag
     .await;
     write(storage.join("Show/poster.jpg"), b"jpeg-bytes").await;
     write(storage.join("Show/ep.mp4"), b"video").await;
+    // A clip from a commercials folder joins the programme around it, even
+    // with a sheet of its own and without being marked as an ad.
+    write(storage.join("Breaks/.comercial"), b"").await;
+    write(
+        storage.join("Breaks/tvshow.nfo"),
+        "<tvshow><title>Spot de Verão</title></tvshow>".as_bytes(),
+    )
+    .await;
+    write(storage.join("Breaks/spot.mp4"), b"video").await;
     let playlist = json!({
         "date": today.format("%Y-%m-%d").to_string(),
         "program": [{
@@ -49,6 +58,11 @@ async fn xmltv_guide_and_images_are_public_and_confined_to_image_files_in_storag
             "in": 0.0,
             "out": 600.0,
             "duration": 600.0,
+        }, {
+            "source": storage.join("Breaks/spot.mp4").to_string_lossy(),
+            "in": 0.0,
+            "out": 30.0,
+            "duration": 30.0,
         }]
     });
     write(
@@ -74,6 +88,7 @@ async fn xmltv_guide_and_images_are_public_and_confined_to_image_files_in_storag
     assert!(xml.contains("<channel id=\"meu.canal\">"), "{xml}");
     assert!(xml.contains("<title>Meu Show</title>"), "{xml}");
     assert!(xml.contains("<desc>Ao vivo</desc>"), "{xml}");
+    assert!(!xml.contains("Spot de Verão"), "{xml}");
     assert!(
         xml.contains("<icon src=\"http://tv.test:8787/xmltv/1/images/Show/poster.jpg\"/>"),
         "{xml}"

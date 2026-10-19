@@ -13,6 +13,10 @@ Breaks, clips and lives at a set time over the running programme.
 
 Program guide built from the playlists and the `.nfo` files in each program folder, with artwork.
 
+### **[Commercials folders](/docs/commercials.md)**
+
+Folders whose clips play as commercials everywhere: out of the guide and without the logo.
+
 ### **[Folder Mode](/docs/folder_mode.md)**
 
 Play the content of a folder instead of daily playlists.

@@ -24,6 +24,8 @@ export interface FolderListing {
     movieFolders: string[]
     /** Subfolders holding a live's address file. */
     liveFolders: string[]
+    /** Subfolders marked as commercials folders. */
+    commercialFolders: string[]
 }
 
 /** The subfolders of a storage folder, for the folder tree. */
@@ -33,6 +35,7 @@ export async function listFolders(channelId: number, path: string): Promise<Fold
         sheet_folders?: string[]
         movie_folders?: string[]
         live_folders?: string[]
+        commercial_folders?: string[]
     }>(`/api/file/${channelId}/browse`, {
         method: 'POST',
         headers: JSON_HEADERS,
@@ -44,6 +47,7 @@ export async function listFolders(channelId: number, path: string): Promise<Fold
         sheetFolders: data.sheet_folders ?? [],
         movieFolders: data.movie_folders ?? [],
         liveFolders: data.live_folders ?? [],
+        commercialFolders: data.commercial_folders ?? [],
     }
 }
 
@@ -83,6 +87,30 @@ export function removeArtwork(channelId: number, path: string, kind: ArtworkKind
         headers: JSON_HEADERS,
         body: JSON.stringify({ path, kind }),
     })
+}
+
+/** Mark a storage folder as a commercials folder, or remove the mark. */
+export async function markCommercial(channelId: number, path: string, commercial: boolean): Promise<void> {
+    await authFetch(`/api/file/${channelId}/commercial`, {
+        method: 'PUT',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ path, commercial }),
+    })
+}
+
+/** Which of these storage paths lie in a commercials folder. */
+export async function commercialPaths(channelId: number, paths: string[]): Promise<boolean[]> {
+    if (!paths.length) {
+        return []
+    }
+
+    const found = await authFetch<ClipProgramme[]>(`/api/playlist/${channelId}/programs`, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify(paths.map((source) => ({ source }))),
+    })
+
+    return paths.map((_, index) => Boolean(found[index]?.commercial))
 }
 
 /** A short-lived address to show a storage image in an `<img>`. */

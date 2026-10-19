@@ -57,8 +57,10 @@ continues.
 Events appear in the [XMLTV guide](xmltv.md) at the time they air, and the
 programme around them moves the same way the player moves it. Events with
 `show_in_guide` off (the default for breaks) are added to the programme they
-interrupt instead of being listed. A live's guide entry uses its folder's
-`tvshow.nfo` and poster.
+interrupt instead of being listed; events made only of clips from a
+[commercials folder](commercials.md) are never listed and take the logo off
+while they play. A live's guide entry uses its folder's `tvshow.nfo` and
+poster.
 
 ## API
 

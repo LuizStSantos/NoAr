@@ -10,6 +10,8 @@ const props = defineProps<{
     storage: string
     /** A new remote entry, which needs an address and a length. */
     remote?: boolean
+    /** From a commercials folder: always a commercial. */
+    commercial?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -165,9 +167,23 @@ function apply() {
         </div>
 
         <p v-if="error" class="m-0 text-sm text-error" role="alert">{{ error }}</p>
+        <p v-if="commercial" id="clip-commercial-hint" class="m-0 text-[13px] text-muted">
+            {{ t('onair.commercialFromFolder') }}
+        </p>
 
         <div class="flex flex-wrap items-center gap-x-4.5 gap-y-2">
-            <label class="flex items-center gap-2.5 min-h-10 cursor-pointer">
+            <label v-if="commercial" class="flex items-center gap-2.5 min-h-10 text-muted">
+                <input
+                    type="checkbox"
+                    role="switch"
+                    class="toggle toggle-sm toggle-accent"
+                    checked
+                    disabled
+                    aria-describedby="clip-commercial-hint"
+                />
+                {{ t('onair.commercial') }}
+            </label>
+            <label v-else class="flex items-center gap-2.5 min-h-10 cursor-pointer">
                 <input v-model="draft.ad" type="checkbox" role="switch" class="toggle toggle-sm toggle-accent" />
                 {{ t('onair.commercial') }}
             </label>

@@ -48,6 +48,7 @@ pub fn routes() -> Router<AppState> {
                         .layer(DefaultBodyLimit::max(MAX_UPLOAD_REQUEST_SIZE)),
                 )
                 .route("/file/{id}/sheet", post(get_sheet).put(update_sheet))
+                .route("/file/{id}/commercial", put(mark_commercial))
                 .route(
                     "/file/{id}/artwork",
                     put(upload_artwork).layer(DefaultBodyLimit::max(MAX_ARTWORK_BYTES + 64 * 1024)),
