@@ -13,6 +13,9 @@ type AuthChannelMessage = { type: 'tokens-updated'; access: string; refresh: str
 const AUTH_CHANNEL_NAME = 'noar-auth'
 
 let refreshRequest: Promise<boolean> | null = null
+// Kept in memory only while a two-factor login waits for its code, so the
+// code can be sent again without asking for the password once more.
+let pendingPassword = ''
 let authChannel: BroadcastChannel | null = null
 
 function broadcastAuthMessage(message: AuthChannelMessage) {
@@ -90,6 +93,7 @@ export const useAuth = defineStore('auth', {
 
             this.isLogin = true
             this.verificationPending = false
+            pendingPassword = ''
             this.jwtToken = token
             this.jwtRefresh = refresh
             this.authHeader = { Authorization: `Bearer ${token}` }
@@ -145,6 +149,16 @@ export const useAuth = defineStore('auth', {
 
         cancelVerification() {
             this.verificationPending = false
+            pendingPassword = ''
+        },
+
+        /** Ask for a new code with the password of the pending login. */
+        async resendVerificationCode(): Promise<LoginResult> {
+            if (!pendingPassword) {
+                return { status: 400, verificationRequired: false }
+            }
+
+            return this.obtainVerificationCode(pendingPassword)
         },
 
         async obtainVerificationCode(password: string): Promise<LoginResult> {
@@ -168,6 +182,8 @@ export const useAuth = defineStore('auth', {
                     this.updateToken(data.access, data.refresh)
                     return { status: response.status, verificationRequired: false }
                 }
+
+                pendingPassword = password
 
                 return { status: response.status, verificationRequired: true }
             } catch {

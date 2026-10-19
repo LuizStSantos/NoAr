@@ -159,9 +159,11 @@ body {
 }
 
 /* Keep the scrollbar space reserved, so pages do not shift sideways when a
-   short page (no scrollbar) follows a long one. */
+   short page (no scrollbar) follows a long one. The page color also fills
+   that space. */
 html {
     scrollbar-gutter: stable;
+    background-color: var(--color-base-200);
 }
 
 .tabular {

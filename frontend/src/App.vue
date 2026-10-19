@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
 
 import { usePlayoutStatusStream } from '@/composables/playoutStatus'
+import { locales } from '@/i18n'
 import { useIndex } from '@/stores/index'
 
 import AlertMsg from '@/components/utils/AlertMsg.vue'
@@ -16,9 +17,35 @@ const route = useRoute()
 
 usePlayoutStatusStream()
 
-const language = localStorage.getItem('language')
+/** The saved language, or the first browser language NoAr has. */
+function startLanguage(): string {
+    let saved: string | null = null
 
-locale.value = language || 'en'
+    try {
+        saved = localStorage.getItem('language')
+    } catch {
+        // Storage can be unavailable (private mode); use the browser's.
+    }
+
+    if (saved) {
+        return saved
+    }
+
+    for (const language of navigator.languages ?? [navigator.language]) {
+        const code = language.toLowerCase()
+        const match =
+            locales.find((item) => item.code === code) ??
+            locales.find((item) => item.code.split('-')[0] === code.split('-')[0])
+
+        if (match) {
+            return match.code
+        }
+    }
+
+    return 'en'
+}
+
+locale.value = startLanguage()
 
 const darkThemeMq = window.matchMedia('(prefers-color-scheme: dark)')
 const theme = ref(localStorage.getItem('theme'))
