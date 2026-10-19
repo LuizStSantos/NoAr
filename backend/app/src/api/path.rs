@@ -36,6 +36,7 @@ pub fn routes() -> Router<AppState> {
                 .route("/control/{id}/audio", put(update_audio_effects))
                 .route("/control/{id}/media/current", get(media_current))
                 .route("/control/{id}/process", post(process_control))
+                .route("/preview/{id}", get(get_preview))
                 .route("/file/{id}/browse", post(file_browser))
                 .route("/file/{id}/create-folder", post(add_dir))
                 .route("/file/{id}/rename", post(move_rename))

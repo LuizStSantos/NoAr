@@ -155,6 +155,23 @@ curl -X POST http://127.0.0.1:8787/api/control/1/process \
   --data '{"command":"restart"}'
 ```
 
+## Live preview
+
+| Method | Endpoint | Access | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/preview/{id}` | `GA, CA, U` | The channel output as a live MPEG-TS stream (`video/mp2t`). |
+
+The Player shows this stream. It is a copy of the packets the output
+encoders already produced, so it costs no extra encoding, works the same for
+HLS, RTMP and SRT outputs, and plays about a second behind the air. The
+response never ends while the client reads it; nothing is sent while the
+playout is stopped, and a client that falls behind skips ahead.
+
+```bash
+curl -N http://127.0.0.1:8787/api/preview/1 \
+  -H 'Authorization: Bearer <ACCESS_TOKEN>' | ffplay -
+```
+
 ## Playlists and programme data
 
 | Method | Endpoint | Access | Description |

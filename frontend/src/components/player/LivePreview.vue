@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import mpegts from 'mpegts.js'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import LiveVideo from '@/components/player/LiveVideo.vue'
 import { useOnAir } from '@/composables/onAir'
 import { storageLabel, uptimeLabel } from '@/composables/player'
+import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { usePlaylist } from '@/stores/playlist'
 import { useSchedule } from '@/stores/schedule'
 
 const { t } = useI18n()
+const authStore = useAuth()
 const configStore = useConfig()
 const playlistStore = usePlaylist()
 const scheduleStore = useSchedule()
@@ -18,7 +21,77 @@ const { currentTitle } = useOnAir()
 const muted = ref(true)
 
 const channel = computed(() => configStore.channels[configStore.i])
-const previewUrl = computed(() => channel.value?.preview_url ?? '')
+/** Optional outside address (public HLS, CDN) set in the channel settings. */
+const addressUrl = computed(() => channel.value?.preview_url?.trim() ?? '')
+const directUrl = computed(() => (channel.value ? `/api/preview/${channel.value.id}` : ''))
+
+type PreviewSource = 'direct' | 'address'
+
+function savedSource(id: number | undefined): PreviewSource {
+    try {
+        return localStorage.getItem(`noar.preview.${id}`) === 'address' ? 'address' : 'direct'
+    } catch {
+        return 'direct'
+    }
+}
+
+const source = ref<PreviewSource>(savedSource(channel.value?.id))
+const useAddress = computed(() => source.value === 'address' && addressUrl.value !== '')
+/** Browsers without live Media Source playback (older iPhones) cannot play the direct stream. */
+const directSupported = mpegts.getFeatureList().mseLivePlayback
+const direct = computed(() => !useAddress.value && directSupported && configStore.playout.output?.mode !== 'desktop')
+/** NoAr's own HLS output, the fallback where the direct stream does not play. */
+const hlsUrl = computed(() => {
+    const output = configStore.playout.output
+
+    if (!channel.value || output?.mode !== 'hls') {
+        return ''
+    }
+
+    return `/public/${channel.value.id}/live/${output.hls_playlist_name?.trim() || 'stream'}.m3u8`
+})
+/** Live sources only have something to show while the playout runs. */
+const previewUrl = computed(() => {
+    if (useAddress.value) {
+        return addressUrl.value
+    }
+
+    if (!playlistStore.playoutIsRunning) {
+        return ''
+    }
+
+    if (direct.value) {
+        return directUrl.value
+    }
+
+    return directSupported ? '' : addressUrl.value || hlsUrl.value
+})
+const placeholder = computed(() => {
+    if (configStore.playout.output?.mode === 'desktop') {
+        return t('onair.noPreview')
+    }
+
+    if (!playlistStore.playoutIsRunning) {
+        return t('onair.previewWhenRunning')
+    }
+
+    return t('onair.previewUnsupported')
+})
+
+function chooseSource(value: PreviewSource) {
+    source.value = value
+
+    try {
+        localStorage.setItem(`noar.preview.${channel.value?.id}`, value)
+    } catch {
+        // Only remembered for this visit.
+    }
+}
+
+watch(
+    () => channel.value?.id,
+    (id) => (source.value = savedSource(id)),
+)
 
 /** What feeds the output right now. */
 const sourceLabel = computed(() => {
@@ -88,16 +161,20 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
 <template>
     <section :aria-label="t('onair.output')" class="flex flex-col gap-2.5">
         <div class="relative aspect-video bg-[#0b0c0d] rounded-box overflow-hidden border border-line">
-            <LiveVideo v-if="previewUrl" :key="previewUrl" :src="previewUrl" :muted="muted" />
+            <LiveVideo
+                v-if="previewUrl"
+                :key="`${source}:${previewUrl}`"
+                :src="previewUrl"
+                :direct="direct"
+                :token="authStore.jwtToken"
+                :muted="muted"
+            />
             <div
                 v-else
                 class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#8e8c88] text-sm p-6 text-center"
             >
                 <i class="bi bi-camera-video-off text-2xl" aria-hidden="true" />
-                {{ t('onair.noPreview') }}
-                <RouterLink :to="{ path: '/configure/general', query: { channel: channel?.id } }" class="link-accent">
-                    {{ t('onair.setPreview') }}
-                </RouterLink>
+                {{ placeholder }}
             </div>
 
             <div class="absolute top-3.5 left-3.5 flex gap-2">
@@ -117,12 +194,34 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                     sourceLabel
                 }}</span>
             </div>
-            <span
-                v-if="outputLabel"
-                class="absolute top-3.5 right-3.5 bg-[rgba(23,24,26,0.86)] text-[#c9c7c3] font-mono text-xs px-2.5 py-1 rounded-md hidden sm:inline"
-            >
-                {{ outputLabel }}
-            </span>
+            <div class="absolute top-3.5 right-3.5 flex items-center gap-2">
+                <span
+                    v-if="outputLabel"
+                    class="bg-[rgba(23,24,26,0.86)] text-[#c9c7c3] font-mono text-xs px-2.5 py-1 rounded-md hidden sm:inline"
+                >
+                    {{ outputLabel }}
+                </span>
+                <div
+                    v-if="addressUrl"
+                    role="radiogroup"
+                    :aria-label="t('onair.previewSource')"
+                    class="flex bg-[rgba(23,24,26,0.86)] rounded-md p-0.5 text-xs"
+                >
+                    <button
+                        v-for="option in ['direct', 'address'] as const"
+                        :key="option"
+                        type="button"
+                        role="radio"
+                        :aria-checked="source === option"
+                        :title="option === 'direct' ? t('onair.previewDirectHint') : addressUrl"
+                        class="px-2 py-0.5 rounded cursor-pointer"
+                        :class="source === option ? 'bg-[#3c3e44] text-[#e8e6e3]' : 'text-[#a9a7a3]'"
+                        @click="chooseSource(option)"
+                    >
+                        {{ option === 'direct' ? t('onair.previewDirect') : t('onair.previewAddress') }}
+                    </button>
+                </div>
+            </div>
 
             <div
                 class="absolute inset-x-0 bottom-0 bg-[rgba(11,12,13,0.82)] px-4 py-3 flex items-center gap-3.5 text-[#e8e6e3]"

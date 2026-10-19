@@ -83,3 +83,16 @@ The base stream is configured directly in the output settings. Additional HLS va
 
 **It is recommended to serve the HLS stream with nginx or another web server,
 and not with ffplayout (which is more meant for previewing).**
+
+## Player preview
+
+Whatever the output mode (HLS, RTMP, SRT), the Player shows NoAr's own
+copy of the encoded output: the first rendition is also sent, as MPEG-TS, to
+a local UDP port, and the browser receives it from
+[`/api/preview/{id}`](api.md#live-preview) about a second behind the air.
+Nothing is encoded twice. Browsers without live Media Source playback (older
+iPhones) fall back to the HLS output, when the channel has one.
+
+The outside preview address in Settings › General is optional. Set it only to
+check the output another way, such as the public HLS of a CDN; the Player then
+shows a *Direct / Address* switch.

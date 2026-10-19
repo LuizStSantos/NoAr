@@ -36,6 +36,7 @@ use crate::{
 
 use super::{
     hls,
+    preview::PreviewMuxer,
     recording::{self, RecordingMonitor, RecordingMuxer},
     vtt,
 };
@@ -60,6 +61,7 @@ pub(super) struct EncodedOutput {
     recording_video_stream_index: usize,
     transcoded_recording: Option<Box<Self>>,
     recording_monitor: Option<RecordingMonitor>,
+    preview: Option<PreviewMuxer>,
     channel_id: Option<i32>,
 }
 
@@ -239,6 +241,7 @@ impl EncodedOutput {
         recording_cfg.audio_level_callback = None;
         recording_cfg.audio_frame_callback = None;
         recording_cfg.recording = None;
+        recording_cfg.preview_url = None;
         let (pattern, monitor) = recording::prepare_recording(recording_config)?;
         let mut output = Self::open(
             pattern
@@ -545,6 +548,24 @@ impl EncodedOutput {
         } else {
             None
         };
+        let preview = cfg
+            .preview_url
+            .as_deref()
+            .filter(|_| !matches!(output_format, EncodedFormat::Recording { .. }))
+            .and_then(|url| {
+                let opened = match (video_streams.first(), audio_streams.first()) {
+                    (Some(video), Some(audio)) => {
+                        PreviewMuxer::open(url, &video.encoder, &audio.encoder)
+                    }
+                    _ => Err(anyhow!("the output has no audio and video stream")),
+                };
+
+                opened
+                    .inspect_err(|error| {
+                        log::warn!(channel = cfg.channel_id.unwrap_or_default(); "Player preview disabled: {error}");
+                    })
+                    .ok()
+            });
         let transcoded_recording = if let Some(recording_config) = cfg.recording.as_ref()
             && recording_config.encode.is_some()
         {
@@ -582,6 +603,7 @@ impl EncodedOutput {
             recording_video_stream_index,
             transcoded_recording,
             recording_monitor: None,
+            preview,
             channel_id: cfg.channel_id,
         })
     }
@@ -891,6 +913,12 @@ impl EncodedOutput {
 
             self.octx.write_trailer()?;
 
+            if let Some(preview) = self.preview.take()
+                && let Err(error) = preview.finish()
+            {
+                log::warn!(channel = self.channel_id.unwrap_or_default(); "Player preview: {error}");
+            }
+
             if let Some(recording) = self.recording.take()
                 && let Err(error) = recording.finish()
             {
@@ -961,6 +989,16 @@ impl EncodedOutput {
             if let Some(error) = recording_error {
                 self.disable_copy_recording(error);
             }
+
+            if index == 0
+                && let Some(error) = self
+                    .preview
+                    .as_mut()
+                    .and_then(|preview| preview.write_video(&packet, time_base).err())
+            {
+                self.disable_preview(error);
+            }
+
             self.write_packet(&mut packet, stream_index, time_base)?;
         }
 
@@ -987,10 +1025,26 @@ impl EncodedOutput {
             if let Some(error) = recording_error {
                 self.disable_copy_recording(error);
             }
+
+            if index == 0
+                && let Some(error) = self
+                    .preview
+                    .as_mut()
+                    .and_then(|preview| preview.write_audio(&packet, time_base).err())
+            {
+                self.disable_preview(error);
+            }
+
             self.write_packet(&mut packet, stream_index, time_base)?;
         }
 
         Ok(())
+    }
+
+    /// The preview is a convenience: a failure stops it, never the output.
+    fn disable_preview(&mut self, error: anyhow::Error) {
+        self.preview.take();
+        log::warn!(channel = self.channel_id.unwrap_or_default(); "Player preview disabled: {error}");
     }
 
     fn disable_copy_recording(&mut self, error: anyhow::Error) {
@@ -1578,6 +1632,141 @@ mod open_tests {
         }
         output.finish().unwrap();
         fs::remove_dir_all(&directory).unwrap();
+    }
+
+    /// Collect what the preview sends while `encode` runs, as one file.
+    fn record_preview(name: &str, encode: impl FnOnce(String)) -> std::path::PathBuf {
+        let receiver = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        // Wait long enough for the encoder to start, then stop at the first
+        // quiet half second after the data.
+        receiver
+            .set_read_timeout(Some(std::time::Duration::from_secs(10)))
+            .unwrap();
+        let url = format!(
+            "udp://127.0.0.1:{}?pkt_size=1316",
+            receiver.local_addr().unwrap().port()
+        );
+        let reader = std::thread::spawn(move || {
+            let mut stream = Vec::new();
+            let mut datagram = [0_u8; 2048];
+
+            while let Ok(size) = receiver.recv(&mut datagram) {
+                stream.extend_from_slice(&datagram[..size]);
+                receiver
+                    .set_read_timeout(Some(std::time::Duration::from_millis(500)))
+                    .unwrap();
+            }
+
+            stream
+        });
+
+        encode(url);
+
+        let stream = reader.join().unwrap();
+        let path = env::temp_dir().join(format!("noar_preview_{name}_{}.ts", process::id()));
+        fs::write(&path, &stream).unwrap();
+
+        path
+    }
+
+    /// One second of black video and silence.
+    fn encode_second(output: &mut EncodedOutput) {
+        for index in 0..25 {
+            let mut video = frame::Video::new(Pixel::YUV420P, 320, 240);
+            video.set_pts(Some(index));
+            video.data_mut(0).fill(16);
+            video.data_mut(1).fill(128);
+            video.data_mut(2).fill(128);
+            output.encode_video(&video).unwrap();
+        }
+
+        let frame_size = output.audio_frame_size();
+
+        for index in 0..48_000 / frame_size {
+            let mut audio = frame::Audio::new(
+                Sample::F32(ffmpeg::format::sample::Type::Planar),
+                frame_size,
+                ChannelLayout::STEREO,
+            );
+            audio.set_rate(48_000);
+            audio.set_pts(Some((index * frame_size) as i64));
+
+            for channel in 0..2 {
+                audio.plane_mut::<f32>(channel).fill(0.0);
+            }
+
+            output.encode_audio(&audio).unwrap();
+        }
+    }
+
+    fn probe_streams(path: &std::path::Path) -> String {
+        let probe = Command::new("ffprobe")
+            .args([
+                "-v",
+                "error",
+                "-show_entries",
+                "stream=codec_name,width",
+                "-of",
+                "default=noprint_wrappers=1",
+            ])
+            .arg(path)
+            .output()
+            .expect("ffprobe is required for FFmpeg integration tests");
+        fs::remove_file(path).ok();
+        assert!(
+            probe.status.success(),
+            "{}",
+            String::from_utf8_lossy(&probe.stderr)
+        );
+
+        String::from_utf8(probe.stdout).unwrap()
+    }
+
+    #[test]
+    fn preview_copies_a_global_header_output_as_transport_stream() {
+        ffmpeg::init().ok();
+        let target = env::temp_dir().join(format!("noar_preview_main_{}.flv", process::id()));
+        let preview = record_preview("flv", |url| {
+            let cfg = OutputConfig::new(320, 240, 25, 48_000).with_preview_url(Some(url));
+            let mut output = EncodedOutput::open(
+                target.to_str().unwrap(),
+                &cfg,
+                EncodedFormat::Stream {
+                    muxer: "flv".to_string(),
+                },
+            )
+            .unwrap();
+
+            assert!(output.preview.is_some(), "the preview opens");
+            encode_second(&mut output);
+            output.finish().unwrap();
+        });
+        fs::remove_file(&target).ok();
+
+        let streams = probe_streams(&preview);
+
+        assert!(streams.contains("codec_name=h264"), "{streams}");
+        assert!(streams.contains("width=320"), "{streams}");
+        assert!(streams.contains("codec_name=aac"), "{streams}");
+    }
+
+    #[test]
+    fn preview_without_address_stays_off() {
+        ffmpeg::init().ok();
+        let path = env::temp_dir().join(format!("noar_no_preview_{}.ts", process::id()));
+        let cfg = OutputConfig::new(320, 240, 25, 48_000);
+        let output = EncodedOutput::open(
+            path.to_str().unwrap(),
+            &cfg,
+            EncodedFormat::Stream {
+                muxer: "mpegts".to_string(),
+            },
+        )
+        .unwrap();
+
+        assert!(output.preview.is_none());
+        output.finish().unwrap();
+        fs::remove_file(&path).ok();
     }
 
     #[test]

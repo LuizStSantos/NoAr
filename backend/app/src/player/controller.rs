@@ -23,7 +23,7 @@ use crate::{
     ARGS,
     db::{handles, models::Channel},
     file::{init_storage, local::LocalStorage},
-    player::{output::player, schedule::ScheduleState, utils::Media},
+    player::{output::player, preview::PreviewFeed, schedule::ScheduleState, utils::Media},
     utils::{config::PlayoutConfig, errors::ServiceError, logging::Target, system::SystemStat},
 };
 
@@ -117,6 +117,8 @@ pub struct ChannelManager {
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
     pub schedule: Arc<ScheduleState>,
+    /// Low-latency copy of the output for the Player.
+    pub preview: Arc<PreviewFeed>,
     pub shutdown: CancellationToken,
     pub system: SystemStat,
 }
@@ -162,6 +164,7 @@ impl ChannelManager {
             config.audio.loudness_scope != "off",
             loudness_config(&config.audio),
         );
+        let preview = PreviewFeed::bind(channel.id, shutdown.clone()).await?;
 
         Ok(Self {
             id: channel.id,
@@ -200,6 +203,7 @@ impl ChannelManager {
             audio_level: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
             schedule: Arc::new(ScheduleState::default()),
+            preview: Arc::new(preview),
             shutdown,
             system,
         })

@@ -9,6 +9,7 @@ use ffmpeg_next::frame;
 pub(crate) mod desktop;
 mod encoded;
 mod hls;
+mod preview;
 mod recording;
 mod vtt;
 

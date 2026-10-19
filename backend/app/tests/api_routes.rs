@@ -22,6 +22,8 @@ mod configuration;
 mod files;
 #[path = "api/playlists.rs"]
 mod playlists;
+#[path = "api/preview.rs"]
+mod preview;
 #[path = "api/schedule.rs"]
 mod schedule;
 #[path = "api/users.rs"]

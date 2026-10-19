@@ -16,10 +16,11 @@ Baecker and keeps its engine, web interface and API, adding:
   time over whatever is on air, either waiting for the current clip to end or
   interrupting it and resuming at the exact point, without dropping the
   output ([docs](docs/scheduler.md)).
-- **New Player**: live preview, a clock with what is on air and what comes
-  next, transport controls, and the day's playlist grouped by program the way
-  the guide names it, with drag and drop from the library and clip editing in
-  place.
+- **New Player**: live preview straight from the output (about a second
+  behind the air, for HLS, RTMP or SRT), a clock with what is on air and what
+  comes next, transport controls, and the day's playlist grouped by program
+  the way the guide names it, with drag and drop from the library and clip
+  editing in place.
 - **New settings**: eleven pages in a side menu, with search, unsaved-change
   markers and one save bar.
 - **Docker-only install**: one command, then a setup page in the browser.

@@ -53,7 +53,8 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         manager.loudness_meter.clone(),
         manager.audio_level.clone(),
         desktop_control_callback(manager.clone()),
-    )?;
+    )?
+    .with_preview_url(Some(manager.preview.url().to_string()));
     let playout = open_playout(&config, output_config.clone()).await?;
     *manager.playback_control.lock().await = playout.playback_control();
     if config.output.mode == OutputMode::Desktop {

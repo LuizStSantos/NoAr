@@ -133,7 +133,8 @@ async function addChannel(confirm: boolean) {
     const id = Math.max(...configStore.channels.map((channel) => channel.id)) + 1
     const channel = {
         name: newName.value.trim(),
-        preview_url: `${window.location.protocol}//${window.location.host}/public/${id}/live/stream.m3u8`,
+        // The Player shows the direct preview; an outside address is optional.
+        preview_url: '',
         extra_extensions: base.extra_extensions,
         active: false,
         public: `${withoutId(base.public)}/${id}`,

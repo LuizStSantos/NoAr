@@ -282,6 +282,10 @@ pub struct OutputConfig {
     pub channel_id: Option<i32>,
     pub desktop_control_callback: Option<DesktopControlCallback>,
     pub recording: Option<RecordingConfig>,
+    /// Address that receives a live MPEG-TS copy of the first encoded
+    /// rendition, for a low-latency preview (for example
+    /// `udp://127.0.0.1:41000?pkt_size=1316`).
+    pub preview_url: Option<String>,
 }
 
 /// Settings for a segmented Matroska recording derived from an encoded output.
@@ -1390,6 +1394,7 @@ impl OutputConfig {
             channel_id: None,
             desktop_control_callback: None,
             recording: None,
+            preview_url: None,
         }
     }
 
@@ -1503,6 +1508,11 @@ impl OutputConfig {
 
     pub fn with_recording(mut self, recording: Option<RecordingConfig>) -> Self {
         self.recording = recording;
+        self
+    }
+
+    pub fn with_preview_url(mut self, preview_url: Option<String>) -> Self {
+        self.preview_url = preview_url;
         self
     }
 
