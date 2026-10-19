@@ -274,7 +274,7 @@ export default {
     },
     generator: {
         title: 'Generate programming',
-        day: 'Day {date} · starts at {start}',
+        day: '{date} · {start} to {end}',
         how: 'How to generate',
         folders: 'Pick folders',
         blocks: 'Build by time',

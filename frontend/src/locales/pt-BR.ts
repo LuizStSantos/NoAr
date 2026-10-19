@@ -274,7 +274,7 @@ export default {
     },
     generator: {
         title: 'Gerar programação',
-        day: 'Dia {date} · começa às {start}',
+        day: '{date} · {start} até {end}',
         how: 'Como gerar',
         folders: 'Escolher pastas',
         blocks: 'Montar por horário',

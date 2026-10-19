@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import dayjs from 'dayjs'
 
 import FolderTree from '@/components/storage/FolderTree.vue'
 import { authFetch } from '@/composables/authFetch'
@@ -17,7 +18,7 @@ import { usePlaylist } from '@/stores/playlist'
  */
 const props = defineProps<{ close: () => void }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const configStore = useConfig()
 const indexStore = useIndex()
 const playlistStore = usePlaylist()
@@ -55,6 +56,13 @@ const pickerFor = ref<number | null>(null)
 
 const generating = ref(false)
 
+const dayLabel = computed(() => {
+    const label = dayjs(`${playlistStore.listDate}T12:00:00`)
+        .locale(locale.value.toLowerCase())
+        .format('ddd, D MMM YYYY')
+
+    return label.charAt(0).toUpperCase() + label.slice(1)
+})
 const currentLength = computed(() => playlistStore.playlist.reduce((sum, item) => sum + (item.out - item.in), 0))
 const missing = computed(() => Math.max(0, dayLength.value - currentLength.value))
 const crumbs = computed(() => {
@@ -77,6 +85,17 @@ function toSeconds(clock: string): number {
     const [hours = 0, minutes = 0, seconds = 0] = clock.split(':').map(Number)
 
     return (hours || 0) * 3600 + (minutes || 0) * 60 + (seconds || 0)
+}
+
+/** Tidy a typed time (`6`, `6:30`, `06:30:00`) into `HH:MM:SS`. */
+function normalizeClock(value: string, maxHours: number): string {
+    const [hours = 0, minutes = 0, seconds = 0] = value
+        .trim()
+        .split(':')
+        .map((part) => Math.max(0, Math.floor(Number(part) || 0)))
+    const pad = (number: number) => String(number).padStart(2, '0')
+
+    return `${pad(Math.min(maxHours, hours))}:${pad(Math.min(59, minutes))}:${pad(Math.min(59, seconds))}`
 }
 
 function newBlock(start: number, duration = 7200): Block {
@@ -289,7 +308,13 @@ onBeforeUnmount(() => {
                 <div class="flex-1 min-w-0">
                     <h2 id="generator-title" class="m-0 text-lg font-semibold">{{ t('generator.title') }}</h2>
                     <p class="m-0 text-[13px] text-muted">
-                        {{ t('generator.day', { date: playlistStore.listDate, start: clockShort(dayStart) }) }}
+                        {{
+                            t('generator.day', {
+                                date: dayLabel,
+                                start: clockShort(dayStart),
+                                end: clockShort(dayStart + dayLength),
+                            })
+                        }}
                     </p>
                 </div>
                 <button type="button" class="btn-icon" :aria-label="t('storage.close')" @click="close()">
@@ -475,19 +500,28 @@ onBeforeUnmount(() => {
                     <li
                         v-for="block in blocks"
                         :key="block.id"
-                        class="relative border border-line-strong rounded-[10px] p-3 grid gap-2.5 grid-cols-2 sm:grid-cols-[124px_100px_minmax(0,1fr)_auto_auto] items-end"
+                        class="relative border border-line-strong rounded-[10px] p-3 grid gap-2.5 grid-cols-2 sm:grid-cols-[100px_100px_minmax(0,1fr)_auto_auto] items-end"
                     >
                         <label class="field-label">
                             {{ t('generator.start') }}
-                            <input v-model="block.start" type="time" step="1" class="field-input font-mono px-2" />
+                            <input
+                                v-model="block.start"
+                                inputmode="numeric"
+                                pattern="[0-9]{1,2}(:[0-9]{1,2}){0,2}"
+                                placeholder="06:00:00"
+                                class="field-input font-mono px-2"
+                                @change="block.start = normalizeClock(block.start, 23)"
+                            />
                         </label>
                         <label class="field-label">
                             {{ t('generator.length') }}
                             <input
                                 v-model="block.duration"
-                                pattern="[0-9]{2}:[0-9]{2}(:[0-9]{2})?"
+                                inputmode="numeric"
+                                pattern="[0-9]{1,2}(:[0-9]{1,2}){0,2}"
                                 placeholder="02:00:00"
                                 class="field-input font-mono px-2"
+                                @change="block.duration = normalizeClock(block.duration, 24)"
                             />
                         </label>
                         <div class="field-label col-span-2 sm:col-span-1">
@@ -585,7 +619,7 @@ onBeforeUnmount(() => {
             </p>
 
             <footer class="flex flex-wrap items-center gap-2.5 px-5 py-4 mt-4 border-t border-line">
-                <span class="text-[13px] text-muted">
+                <span class="basis-full sm:basis-auto text-[13px] text-muted">
                     <template v-if="mode === 'blocks'">
                         {{
                             coverage.open
