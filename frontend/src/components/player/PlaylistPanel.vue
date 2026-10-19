@@ -175,6 +175,9 @@ function openDatePicker() {
 }
 
 async function scrollToOnAir() {
+    // The program names merge the first folder groups and move every row, so
+    // the on-air clip is only looked for once they are in.
+    await programmes.refresh()
     await nextTick()
 
     const index = onAirIndex.value

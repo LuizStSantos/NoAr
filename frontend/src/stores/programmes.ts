@@ -41,6 +41,8 @@ export const useProgrammes = defineStore('programmes', () => {
 
     const entries = ref<ClipProgramme[]>([])
     const signature = ref('')
+    /** The lookup on its way, so callers that wait for it share one request. */
+    let inFlight: { signature: string; done: Promise<void> } | null = null
 
     function currentSignature(): string {
         return JSON.stringify(
@@ -48,8 +50,8 @@ export const useProgrammes = defineStore('programmes', () => {
         )
     }
 
+    /** Look the names up for the playlist as it is now; resolves once they are in. */
     async function refresh() {
-        const authStore = useAuth()
         const configStore = useConfig()
         const id = configStore.channels[configStore.i]?.id
         const wanted = currentSignature()
@@ -58,6 +60,26 @@ export const useProgrammes = defineStore('programmes', () => {
             return
         }
 
+        if (inFlight?.signature === wanted) {
+            return inFlight.done
+        }
+
+        const done = lookup(id, wanted)
+
+        inFlight = { signature: wanted, done }
+
+        try {
+            await done
+        } finally {
+            if (inFlight?.done === done) {
+                inFlight = null
+            }
+        }
+    }
+
+    async function lookup(id: number, wanted: string) {
+        const authStore = useAuth()
+        const configStore = useConfig()
         const clips = playlistStore.playlist.map((item) => ({
             source: item.source,
             title: item.title || null,
