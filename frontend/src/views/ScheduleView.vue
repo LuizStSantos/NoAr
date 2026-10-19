@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n'
 import { useElementSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useHead } from '@unhead/vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import GenericModal from '@/components/utils/GenericModal.vue'
 import LiveDialog from '@/components/schedule/LiveDialog.vue'
@@ -41,6 +42,8 @@ const { repeatLabel, entryLabel, afterLabel } = useScheduleText()
 const configStore = useConfig()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
+const route = useRoute()
+const router = useRouter()
 const { i } = storeToRefs(configStore)
 
 useHead({ title: computed(() => t('button.schedule')) })
@@ -468,8 +471,30 @@ const nextUp = computed(() =>
     ),
 )
 
+/** A link from Storage (`?live=<path>`) opens the live, ready to schedule. */
+function openLinkedLive() {
+    const path = route.query.live
+
+    if (typeof path !== 'string') {
+        return
+    }
+
+    const live = scheduleStore.lives.find((item) => item.path === path)
+
+    router.replace({ query: { ...route.query, live: undefined } })
+
+    if (live) {
+        newLive()
+
+        if (liveDraft.value) {
+            liveDraft.value = { ...liveDraft.value, live }
+        }
+    }
+}
+
 onMounted(async () => {
     await Promise.all([refresh(), scheduleStore.loadLives().catch(() => undefined)])
+    openLinkedLive()
     scrollToFocus()
     refreshTimer = setInterval(refresh, 5000)
     clockTimer = setInterval(() => (nowSeconds.value = secondsOfDay()), 1000)

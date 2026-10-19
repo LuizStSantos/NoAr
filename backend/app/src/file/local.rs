@@ -32,6 +32,7 @@ use crate::player::utils::{Media, file_extension, include_file_extension, probe_
 use crate::utils::{
     config::PlayoutConfig,
     errors::ServiceError,
+    schedule::live::LIVE_EXTENSION,
     xmltv::sheet::{SheetKind, program_sheet_kind},
 };
 
@@ -182,6 +183,7 @@ impl LocalStorage {
 
         let mut sheet_folders = vec![];
         let mut movie_folders = vec![];
+        let mut live_folders = vec![];
 
         for folder in &folders {
             match program_sheet_kind(&path.join(folder)).await {
@@ -192,11 +194,16 @@ impl LocalStorage {
                 Some(_) => sheet_folders.push(folder.clone()),
                 None => {}
             }
+
+            if holds_live(&path.join(folder)).await {
+                live_folders.push(folder.clone());
+            }
         }
 
         obj.folders = Some(folders);
         obj.sheet_folders = Some(sheet_folders);
         obj.movie_folders = Some(movie_folders);
+        obj.live_folders = Some(live_folders);
         obj.files = Some(media_files);
 
         Ok(obj)
@@ -536,6 +543,27 @@ impl LocalStorage {
     }
 }
 
+/// Whether a folder holds a live's address file (`.live`) directly.
+async fn holds_live(dir: &Path) -> bool {
+    let Ok(mut entries) = fs::read_dir(dir).await else {
+        return false;
+    };
+
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+
+        if path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case(LIVE_EXTENSION))
+            && path.is_file()
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
 async fn rename_only(source: &PathBuf, target: &PathBuf) -> Result<MoveObject, ServiceError> {
     match fs::rename(source, target).await {
         Ok(_) => Ok(MoveObject {
@@ -615,6 +643,38 @@ mod tests {
 
         assert!(!base.join("old-name").exists());
         assert!(base.join("new-name").is_dir());
+        fs::remove_dir_all(base).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn browse_marks_the_folders_of_lives() {
+        let base = std::env::temp_dir().join(format!(
+            "ffplayout-storage-lives-{}-{}",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        ));
+        let storage = LocalStorage::new(base.clone(), Vec::new()).await.unwrap();
+        fs::create_dir_all(base.join("Lives/Big Match"))
+            .await
+            .unwrap();
+        fs::create_dir_all(base.join("Lives/Empty")).await.unwrap();
+        fs::write(
+            base.join("Lives/Big Match/signal.live"),
+            "srt://203.0.113.10:9000\n",
+        )
+        .await
+        .unwrap();
+
+        let listing = storage
+            .browser(&PathObject {
+                source: "Lives".to_string(),
+                folders_only: true,
+                ..PathObject::default()
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(listing.live_folders, Some(vec!["Big Match".to_string()]));
         fs::remove_dir_all(base).await.unwrap();
     }
 

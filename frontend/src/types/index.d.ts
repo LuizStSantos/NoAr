@@ -193,6 +193,8 @@ declare global {
         sheet_folders?: string[]
         /** The films among `sheet_folders`. */
         movie_folders?: string[]
+        /** Subfolders holding a live's address file. */
+        live_folders?: string[]
         files: FileObject[]
     }
 

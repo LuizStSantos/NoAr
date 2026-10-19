@@ -2,16 +2,19 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useMedia } from '@/stores/media'
+import { useSchedule } from '@/stores/schedule'
 import { useUploads } from '@/stores/uploads'
 
 import FolderTree from '@/components/storage/FolderTree.vue'
 import ImageViewer, { type ViewerImage } from '@/components/storage/ImageViewer.vue'
+import LiveCard from '@/components/storage/LiveCard.vue'
+import LiveEditor from '@/components/storage/LiveEditor.vue'
 import SheetCard from '@/components/storage/SheetCard.vue'
 import SheetEditor from '@/components/storage/SheetEditor.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
@@ -27,6 +30,8 @@ const configStore = useConfig()
 const indexStore = useIndex()
 const mediaStore = useMedia()
 const route = useRoute()
+const router = useRouter()
+const scheduleStore = useSchedule()
 const { mediaType, fileSize } = stringFormatter()
 const uploads = useUploads()
 
@@ -107,7 +112,7 @@ const rows = computed<Row[]>(() => {
     const needle = filter.value.trim().toLowerCase()
     const folders: Row[] = mediaStore.folderTree.folders.map((folder) => ({ name: folder.name, folder: true }))
     const files: Row[] = mediaStore.folderTree.files
-        .filter((file) => view.value === 'all' || isVideo(file))
+        .filter((file) => view.value === 'all' || isLiveFolder.value || isVideo(file))
         .map((file) => ({ name: file.name, folder: false, file }))
 
     return [...folders, ...files].filter((row) => !needle || row.name.toLowerCase().includes(needle))
@@ -333,6 +338,137 @@ const allSelected = computed(
     () => rows.value.length > 0 && rows.value.every((row) => selected.value.includes(row.name)),
 )
 const sheetFolders = computed(() => mediaStore.folderTree.sheet_folders ?? [])
+const liveFolders = computed(() => mediaStore.folderTree.live_folders ?? [])
+
+// A live's folder: its address file, the live as the Scheduler knows it, and
+// the last signal test.
+const liveFile = computed(() => mediaStore.folderTree.files.find((file) => extension(file.name) === 'live'))
+const isLiveFolder = computed(() => Boolean(current.value && liveFile.value))
+const currentLive = computed(() => {
+    const file = liveFile.value
+
+    if (!file) {
+        return null
+    }
+
+    const path = storageJoin(current.value, file.name)
+
+    return scheduleStore.lives.find((live) => live.path === path) ?? null
+})
+const liveEditor = ref<{ live: LiveSource | null } | null>(null)
+const liveTests = reactive(new Map<string, { ok: boolean; text: string; at: string }>())
+const liveTesting = ref(false)
+
+const liveNext = computed(() => {
+    const path = currentLive.value?.path
+
+    if (!path) {
+        return ''
+    }
+
+    const active = scheduleStore.status.active
+
+    if (active?.kind === 'live' && active.item === path) {
+        return t('storage.live.onAirNow')
+    }
+
+    const next = scheduleStore.status.next.find(
+        (occurrence) => occurrence.event.kind === 'live' && occurrence.event.sources.includes(path),
+    )
+
+    if (!next) {
+        return t('storage.live.noSchedule')
+    }
+
+    return t('storage.live.nextAt', {
+        day:
+            next.start.slice(0, 10) === dayjs().format('YYYY-MM-DD')
+                ? t('storage.live.today')
+                : t('storage.live.tomorrow'),
+        start: next.start.slice(11, 16),
+        end: next.end.slice(11, 16),
+    })
+})
+
+async function loadLiveInfo() {
+    await Promise.all([
+        scheduleStore.loadLives().catch(() => undefined),
+        scheduleStore.loadStatus().catch(() => undefined),
+    ])
+}
+
+async function testLive() {
+    const live = currentLive.value
+
+    if (!live) {
+        return
+    }
+
+    liveTesting.value = true
+
+    try {
+        const result = await scheduleStore.testSignal(live.url)
+
+        liveTests.set(live.path, { ok: result.ok, text: result.error ?? '', at: dayjs().format('HH:mm') })
+    } catch (e) {
+        liveTests.set(live.path, {
+            ok: false,
+            text: e instanceof Error ? e.message : String(e),
+            at: dayjs().format('HH:mm'),
+        })
+    } finally {
+        liveTesting.value = false
+    }
+}
+
+function scheduleLive(path?: string) {
+    if (path) {
+        router.push({ path: '/schedule', query: { live: path } })
+    }
+}
+
+async function liveSaved(live: LiveSource, schedule: boolean) {
+    liveEditor.value = null
+    await loadLiveInfo()
+
+    if (schedule) {
+        scheduleLive(live.path)
+        return
+    }
+
+    const folder = live.path.split('/').slice(0, -1).join('/')
+
+    treeVersion.value++
+
+    if (folder === current.value) {
+        await refresh()
+    } else {
+        await load(folder)
+    }
+}
+
+/** What each file of a live's folder is for. */
+function liveRole(name: string): string {
+    const lower = name.toLowerCase()
+
+    if (extension(lower) === 'live') {
+        return t('storage.live.fileAddress')
+    }
+
+    if (lower === 'tvshow.nfo') {
+        return t('storage.live.fileGuide')
+    }
+
+    if (isImage(lower) && lower.startsWith('poster')) {
+        return t('storage.live.filePoster')
+    }
+
+    if (isImage(lower) && /^(fanart|backdrop|background|landscape)/.test(lower)) {
+        return t('storage.live.fileBackdrop')
+    }
+
+    return ''
+}
 const movieFolders = computed(() => mediaStore.folderTree.movie_folders ?? [])
 
 function clock(seconds: number): string {
@@ -365,6 +501,10 @@ function fileIcon(row: Row): string {
 
     if (ext === 'nfo') {
         return 'bi-file-earmark-text'
+    }
+
+    if (ext === 'live') {
+        return 'bi-broadcast'
     }
 
     if (IMAGE_TYPES.includes(ext)) {
@@ -453,6 +593,7 @@ watch(
 )
 
 watch(current, loadSheet, { immediate: true })
+watch(isLiveFolder, (live) => live && loadLiveInfo(), { immediate: true })
 watch(
     () => [mediaStore.folderTree.files, sheet.value],
     () => loadGuide(),
@@ -821,6 +962,9 @@ const uploadAccept = computed(() =>
             <button type="button" class="btn-quiet min-h-10.5" @click="showCreate = true">
                 <i class="bi bi-folder-plus" aria-hidden="true" />{{ t('storage.newFolder') }}
             </button>
+            <button type="button" class="btn-quiet min-h-10.5 border-live/60" @click="liveEditor = { live: null }">
+                <i class="bi bi-broadcast text-live" aria-hidden="true" />{{ t('storage.live.new') }}
+            </button>
             <button type="button" class="btn-main min-h-10.5" @click="uploadInput?.click()">
                 <i class="bi bi-upload" aria-hidden="true" />{{ t('storage.upload') }}
             </button>
@@ -869,8 +1013,21 @@ const uploadAccept = computed(() =>
             </aside>
 
             <main class="flex-[999_1_640px] min-w-0 flex flex-col gap-4">
+                <LiveCard
+                    v-if="isLiveFolder"
+                    :channel-id="channelId"
+                    :sheet="sheet"
+                    :live="currentLive"
+                    :next="liveNext"
+                    :test="currentLive ? (liveTests.get(currentLive.path) ?? null) : null"
+                    :testing="liveTesting"
+                    @edit="liveEditor = { live: currentLive }"
+                    @test="testLive"
+                    @poster="cardArtwork('poster', $event)"
+                    @schedule="scheduleLive(currentLive?.path)"
+                />
                 <SheetCard
-                    v-if="current && sheet"
+                    v-else-if="current && sheet"
                     :channel-id="channelId"
                     :folder="current"
                     :sheet="sheet"
@@ -890,12 +1047,15 @@ const uploadAccept = computed(() =>
                     @drop.prevent="onDropFiles"
                 >
                     <div class="flex flex-wrap items-center gap-x-3.5 gap-y-2.5 px-4 py-3 border-b border-line">
-                        <h2 class="m-0 text-[15px] font-semibold">{{ t('storage.files') }}</h2>
-                        <span class="font-mono text-xs bg-raised rounded-md px-2 py-1">{{
+                        <h2 class="m-0 text-[15px] font-semibold">
+                            {{ isLiveFolder ? t('storage.live.files') : t('storage.files') }}
+                        </h2>
+                        <span v-if="!isLiveFolder" class="font-mono text-xs bg-raised rounded-md px-2 py-1">{{
                             view === 'images' ? imagesSummary : summary
                         }}</span>
                         <div class="flex-auto" />
                         <div
+                            v-if="!isLiveFolder"
                             role="group"
                             :aria-label="t('storage.show')"
                             class="inline-flex bg-base-200 border border-line-strong rounded-field p-[3px]"
@@ -946,7 +1106,7 @@ const uploadAccept = computed(() =>
                         </button>
                     </div>
 
-                    <div v-if="view === 'images'" class="relative">
+                    <div v-if="view === 'images' && !isLiveFolder" class="relative">
                         <div
                             v-if="mediaStore.isLoading"
                             class="absolute inset-0 z-10 flex justify-center pt-10 bg-base-100/60"
@@ -1100,7 +1260,13 @@ const uploadAccept = computed(() =>
                                             <i class="bi text-muted" :class="fileIcon(row)" aria-hidden="true" />
                                             <span class="truncate font-medium">{{ row.name }}</span>
                                             <span
-                                                v-if="sheetFolders.includes(row.name)"
+                                                v-if="liveFolders.includes(row.name)"
+                                                class="text-[11px] text-live border border-live/50 rounded-md px-1.5 leading-4"
+                                            >
+                                                {{ t('storage.live.badge') }}
+                                            </span>
+                                            <span
+                                                v-else-if="sheetFolders.includes(row.name)"
                                                 class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
                                             >
                                                 {{
@@ -1122,7 +1288,15 @@ const uploadAccept = computed(() =>
                                                 @load="imageLoaded($event, row.file)"
                                                 @error="imageFailed(row.file)"
                                             />
-                                            <i v-else class="bi text-muted" :class="fileIcon(row)" aria-hidden="true" />
+                                            <i
+                                                v-else
+                                                class="bi"
+                                                :class="[
+                                                    fileIcon(row),
+                                                    extension(row.name) === 'live' ? 'text-live' : 'text-muted',
+                                                ]"
+                                                aria-hidden="true"
+                                            />
                                             <button
                                                 v-if="isImage(row.name)"
                                                 type="button"
@@ -1137,6 +1311,12 @@ const uploadAccept = computed(() =>
                                                 :class="row.file?.media === false ? 'text-muted' : ''"
                                             >
                                                 {{ row.name }}
+                                            </span>
+                                            <span
+                                                v-if="isLiveFolder && liveRole(row.name)"
+                                                class="text-xs text-subtle whitespace-nowrap"
+                                            >
+                                                · {{ liveRole(row.name) }}
                                             </span>
                                         </span>
                                     </td>
@@ -1353,6 +1533,15 @@ const uploadAccept = computed(() =>
                 <VideoPlayer reference="previewPlayer" :options="preview.options" />
             </div>
         </GenericModal>
+
+        <LiveEditor
+            v-if="liveEditor"
+            :channel-id="channelId"
+            :live="liveEditor.live"
+            :sheet="liveEditor.live ? sheet : null"
+            @close="liveEditor = null"
+            @saved="liveSaved"
+        />
 
         <ImageViewer
             v-if="viewerIndex !== null && viewerImages.length"

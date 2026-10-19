@@ -78,7 +78,10 @@ pub fn routes() -> Router<AppState> {
                 .route("/schedule/{id}/grade", get(get_schedule_grade))
                 .route("/schedule/{id}/status", get(get_schedule_status))
                 .route("/schedule/{id}/stop", post(stop_schedule_event))
-                .route("/schedule/{id}/lives", get(get_lives).post(add_live))
+                .route(
+                    "/schedule/{id}/lives",
+                    get(get_lives).post(add_live).put(update_live),
+                )
                 .route("/schedule/{id}/lives/test", post(test_live_signal))
                 .route(
                     "/schedule/{id}/{event_id}",

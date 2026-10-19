@@ -22,23 +22,28 @@ export interface FolderListing {
     /** Subfolders with a program sheet; `movieFolders` are the films among them. */
     sheetFolders: string[]
     movieFolders: string[]
+    /** Subfolders holding a live's address file. */
+    liveFolders: string[]
 }
 
 /** The subfolders of a storage folder, for the folder tree. */
 export async function listFolders(channelId: number, path: string): Promise<FolderListing> {
-    const data = await authFetch<{ folders?: string[]; sheet_folders?: string[]; movie_folders?: string[] }>(
-        `/api/file/${channelId}/browse`,
-        {
-            method: 'POST',
-            headers: JSON_HEADERS,
-            body: JSON.stringify({ source: `/${path}`, folders_only: true }),
-        },
-    )
+    const data = await authFetch<{
+        folders?: string[]
+        sheet_folders?: string[]
+        movie_folders?: string[]
+        live_folders?: string[]
+    }>(`/api/file/${channelId}/browse`, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ source: `/${path}`, folders_only: true }),
+    })
 
     return {
         folders: data.folders ?? [],
         sheetFolders: data.sheet_folders ?? [],
         movieFolders: data.movie_folders ?? [],
+        liveFolders: data.live_folders ?? [],
     }
 }
 

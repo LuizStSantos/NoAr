@@ -221,6 +221,37 @@ pub async fn save_live(storage: &Path, live: NewLive) -> Result<LiveSource, Serv
         .ok_or_else(|| ServiceError::Conflict("the live was saved but cannot be read".into()))
 }
 
+/// Change the address of an existing live, wherever its `.live` file is,
+/// leaving its guide data and artwork as they are.
+pub async fn update_live_address(
+    storage: &Path,
+    path: &str,
+    url: &str,
+) -> Result<LiveSource, ServiceError> {
+    let url = validate_live_url(url).map_err(ServiceError::BadRequest)?;
+    let (live_file, _, _) = norm_abs_path(storage, path)?;
+
+    ensure_path_within_root(storage, &live_file)?;
+
+    let is_live = live_file
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case(LIVE_EXTENSION));
+
+    if !is_live
+        || !fs::metadata(&live_file)
+            .await
+            .is_ok_and(|meta| meta.is_file())
+    {
+        return Err(ServiceError::NotFound(format!("{path} is not a live")));
+    }
+
+    fs::write(&live_file, format!("{url}\n")).await?;
+
+    describe_live(storage, &live_file)
+        .await
+        .ok_or_else(|| ServiceError::Conflict("the live was saved but cannot be read".into()))
+}
+
 fn live_folder(storage: &Path, name: &str) -> Result<PathBuf, ServiceError> {
     let (folder, _, _) = norm_abs_path(storage, &format!("{LIVES_FOLDER}/{name}"))?;
 
@@ -368,6 +399,50 @@ mod tests {
         assert_eq!(listed[0].title.as_deref(), Some("Big Match — live"));
         assert!(nfo.contains("<plot>Teams &amp; fans</plot>"));
         assert!(nfo.contains("<mpaa>BR:L</mpaa>"));
+    }
+
+    #[tokio::test]
+    async fn a_live_address_changes_without_touching_its_guide() {
+        let storage = TempStorage::new();
+        let saved = save_live(
+            &storage.0,
+            NewLive {
+                name: "Big Match".to_string(),
+                url: "srt://203.0.113.10:9000".to_string(),
+                guide: LiveGuide {
+                    plot: "Teams".to_string(),
+                    ..LiveGuide::default()
+                },
+            },
+        )
+        .await
+        .unwrap();
+        let nfo = storage.0.join("Lives/Big Match/tvshow.nfo");
+        let before = std::fs::read_to_string(&nfo).unwrap();
+
+        let changed =
+            update_live_address(&storage.0, &saved.path, " rtmp://203.0.113.20/live/key ")
+                .await
+                .unwrap();
+
+        assert_eq!(changed.url, "rtmp://203.0.113.20/live/key");
+        assert_eq!(changed.protocol, "RTMP");
+        assert_eq!(std::fs::read_to_string(&nfo).unwrap(), before);
+        assert!(
+            update_live_address(&storage.0, "Lives/Big Match/tvshow.nfo", "srt://x:1")
+                .await
+                .is_err()
+        );
+        assert!(
+            update_live_address(&storage.0, &saved.path, "file:///etc/passwd")
+                .await
+                .is_err()
+        );
+        assert!(
+            update_live_address(&storage.0, "../outside.live", "srt://x:1")
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]

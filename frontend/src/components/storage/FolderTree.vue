@@ -17,13 +17,15 @@ const props = withDefaults(
         hasSheet?: boolean
         /** The sheet is a film's, not a series'. */
         movie?: boolean
+        /** The folder holds a live. */
+        live?: boolean
         /** Storage path of the folder shown in the page. */
         current: string
         /** Bumped by the page after changes, so open folders reload. */
         version?: number
         depth?: number
     }>(),
-    { hasSheet: false, movie: false, version: 0, depth: 0 },
+    { hasSheet: false, movie: false, live: false, version: 0, depth: 0 },
 )
 
 const emit = defineEmits<{
@@ -39,6 +41,7 @@ const loading = ref(false)
 const folders = ref<string[]>([])
 const sheetFolders = ref<string[]>([])
 const movieFolders = ref<string[]>([])
+const liveFolders = ref<string[]>([])
 const dragOver = ref(false)
 /** The version this folder last loaded at; passed down so subfolders reload
  * after it, and a removed subfolder disappears instead of reloading. */
@@ -59,6 +62,7 @@ async function load() {
         folders.value = listing.folders
         sheetFolders.value = listing.sheetFolders
         movieFolders.value = listing.movieFolders
+        liveFolders.value = listing.liveFolders
         loaded.value = true
         loadedVersion.value = props.version
     } catch {
@@ -147,7 +151,14 @@ function onDrop(event: DragEvent) {
                 <i class="bi" :class="open ? 'bi-folder2-open' : 'bi-folder'" aria-hidden="true" />
                 <span class="truncate flex-1">{{ label }}</span>
                 <span
-                    v-if="hasSheet"
+                    v-if="live"
+                    class="text-[11px] text-live border border-live/50 rounded-md px-1.5 leading-4"
+                    :title="t('storage.live.badgeHint')"
+                >
+                    {{ t('storage.live.badge') }}
+                </span>
+                <span
+                    v-else-if="hasSheet"
                     class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
                     :title="t('storage.hasSheet')"
                 >
@@ -164,6 +175,7 @@ function onDrop(event: DragEvent) {
                 :label="folder"
                 :has-sheet="sheetFolders.includes(folder)"
                 :movie="movieFolders.includes(folder)"
+                :live="liveFolders.includes(folder)"
                 :current="current"
                 :version="loadedVersion"
                 :depth="depth + 1"

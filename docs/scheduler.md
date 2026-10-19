@@ -31,6 +31,8 @@ event waits until the ingest ends.
 ## Lives
 
 A live is a folder in the storage, normally created from the web interface:
+**Nova live** in Storage (where the folder of a live also shows its address,
+a signal test and its next time in the Scheduler) or in the Scheduler.
 
 ```text
 Lives/
@@ -74,6 +76,7 @@ All routes need a login with access to the channel.
 | `GET` | `/api/schedule/{id}/status` | Event on air, waiting events and the next 24 hours |
 | `GET` | `/api/schedule/{id}/lives` | Lives in the storage |
 | `POST` | `/api/schedule/{id}/lives` | Create or update a live: `{"name", "url", "guide": {"title", "plot", "genre", "rating"}}` |
+| `PUT` | `/api/schedule/{id}/lives` | Change the address of a live, keeping its guide data: `{"path", "url"}` |
 | `POST` | `/api/schedule/{id}/lives/test` | Check a source: `{"url"}` |
 
 An event:

@@ -157,6 +157,28 @@ async fn schedule_routes_manage_events_and_lives_for_allowed_users_only() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(lives[0]["title"], "Big Match live");
 
+    let (status, changed) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/lives",
+        Some(&token),
+        json!({"path": live["path"], "url": "rtmp://203.0.113.20/live/key"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{changed}");
+    assert_eq!(changed["protocol"], "RTMP");
+    assert_eq!(changed["title"], "Big Match live");
+
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/lives",
+        Some(&token),
+        json!({"path": "Breaks/ad.mp4", "url": "srt://203.0.113.10:9000"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
     let (status, _) = send(
         &fixture,
         "POST",

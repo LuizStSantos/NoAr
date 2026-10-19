@@ -116,6 +116,15 @@ export const useSchedule = defineStore('schedule', {
             })
         },
 
+        /** Change the address of an existing live; its guide data stays. */
+        async updateLive(path: string, url: string): Promise<LiveSource> {
+            return authFetch<LiveSource>(`/api/schedule/${channelId()}/lives`, {
+                method: 'PUT',
+                headers: headers(true),
+                body: JSON.stringify({ path, url }),
+            })
+        },
+
         async testSignal(url: string): Promise<SignalTest> {
             return authFetch<SignalTest>(`/api/schedule/${channelId()}/lives/test`, {
                 method: 'POST',

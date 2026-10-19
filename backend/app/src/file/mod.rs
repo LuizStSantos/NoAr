@@ -25,6 +25,9 @@ pub struct PathObject {
     /// The ones among `sheet_folders` whose sheet is a film's.
     #[serde(default)]
     movie_folders: Option<Vec<String>>,
+    /// Subfolders holding a live's address file (`.live`).
+    #[serde(default)]
+    live_folders: Option<Vec<String>>,
     files: Option<Vec<VideoFile>>,
     #[serde(default)]
     pub folders_only: bool,
@@ -44,6 +47,7 @@ impl PathObject {
             folders: Some(vec![]),
             sheet_folders: Some(vec![]),
             movie_folders: Some(vec![]),
+            live_folders: Some(vec![]),
             files: Some(vec![]),
             folders_only: false,
             all_files: false,

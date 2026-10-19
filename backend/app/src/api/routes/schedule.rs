@@ -25,7 +25,10 @@ use crate::{
         errors::ServiceError,
         schedule::{
             OccurrenceView, ScheduleEventInput,
-            live::{LiveSource, NewLive, SignalTest, list_lives, save_live, test_signal},
+            live::{
+                LiveSource, NewLive, SignalTest, list_lives, save_live, test_signal,
+                update_live_address,
+            },
             occurrence_now, occurrence_views, parse_date, prepare_event, timing_changed,
         },
         time_machine::time_now,
@@ -57,6 +60,13 @@ pub struct ScheduleStatus {
 
 #[derive(Debug, Deserialize)]
 pub struct SignalRequest {
+    url: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LiveAddress {
+    /// Path of the `.live` file, relative to the storage.
+    path: String,
     url: String,
 }
 
@@ -353,6 +363,30 @@ pub async fn add_live(
     let storage = manager.config.read().await.channel.storage.clone();
 
     Ok(Json(save_live(&storage, live).await?))
+}
+
+/// **Change the address of a live**
+///
+/// Rewrites the live's `.live` file; its guide data and artwork stay.
+///
+/// ```BASH
+/// curl -X PUT http://127.0.0.1:8787/api/schedule/1/lives -H 'Content-Type: application/json' \
+/// -d '{"path":"Lives/Big Match/signal.live","url":"srt://203.0.113.10:9000"}' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn update_live(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(live): Json<LiveAddress>,
+) -> Result<Json<LiveSource>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let storage = manager.config.read().await.channel.storage.clone();
+
+    Ok(Json(
+        update_live_address(&storage, &live.path, &live.url).await?,
+    ))
 }
 
 /// **Test a live signal**
