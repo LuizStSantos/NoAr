@@ -9,6 +9,8 @@ const configStore = useConfig()
 
 const player = ref()
 
+const emit = defineEmits<{ error: [message: string] }>()
+
 const props = defineProps({
     options: {
         type: Object,
@@ -36,6 +38,8 @@ onMounted(() => {
     })
 
     player.value.on('error', () => {
+        emit('error', player.value?.error()?.message ?? '')
+
         setTimeout(() => {
             configStore.showPlayer = false
 
@@ -53,8 +57,8 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-    <div>
-        <div v-if="options.sources">
+    <div class="w-full">
+        <div v-if="options.sources" class="w-full">
             <video
                 :id="reference"
                 class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9"

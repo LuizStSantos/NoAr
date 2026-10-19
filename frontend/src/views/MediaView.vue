@@ -77,7 +77,7 @@ const deleteNames = ref<string[]>([])
 const deleteRecursive = ref(false)
 const moveNames = ref<string[]>([])
 const moveTarget = ref('')
-const preview = ref<{ name: string; options: any } | null>(null)
+const preview = ref<{ name: string; options: any; failed: boolean } | null>(null)
 
 useHead({ title: computed(() => t('storage.title')) })
 
@@ -900,11 +900,14 @@ async function openPreview(row: Row) {
 
         preview.value = {
             name: row.name,
+            failed: false,
             options: {
                 liveui: false,
                 controls: true,
-                suppressNotSupportedError: true,
-                autoplay: false,
+                autoplay: true,
+                playsinline: true,
+                // The page says it in its own words, below the player.
+                errorDisplay: false,
                 preload: 'auto',
                 sources: [
                     {
@@ -1305,6 +1308,15 @@ const uploadAccept = computed(() =>
                                             >
                                                 {{ row.name }}
                                             </button>
+                                            <button
+                                                v-else-if="isVideo(row.file)"
+                                                type="button"
+                                                class="truncate bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
+                                                :aria-label="t('storage.preview', { name: row.name })"
+                                                @click="openPreview(row)"
+                                            >
+                                                {{ row.name }}
+                                            </button>
                                             <span
                                                 v-else
                                                 class="truncate"
@@ -1529,8 +1541,17 @@ const uploadAccept = computed(() =>
             :modal-action="() => (preview = null)"
             :hide-buttons="true"
         >
-            <div v-if="preview" class="w-5xl max-w-full aspect-video flex items-center justify-center">
-                <VideoPlayer reference="previewPlayer" :options="preview.options" />
+            <div v-if="preview" class="w-5xl max-w-full flex flex-col gap-3">
+                <div class="w-full aspect-video bg-black rounded-field overflow-hidden">
+                    <VideoPlayer
+                        reference="previewPlayer"
+                        :options="preview.options"
+                        @error="preview && (preview.failed = true)"
+                    />
+                </div>
+                <p v-if="preview.failed" class="m-0 text-[13px] text-error" role="alert">
+                    {{ t('storage.previewFailed') }}
+                </p>
             </div>
         </GenericModal>
 

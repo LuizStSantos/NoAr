@@ -3,7 +3,10 @@ use std::{env, io, path::PathBuf};
 use axum::{
     Json,
     extract::{Multipart, Path, Query, State},
-    http::{HeaderMap, StatusCode, header::AUTHORIZATION},
+    http::{
+        HeaderMap, HeaderValue, StatusCode,
+        header::{AUTHORIZATION, CONTENT_DISPOSITION, CONTENT_TYPE},
+    },
     response::Response,
 };
 use protect_axum::authorities::AuthDetails;
@@ -312,7 +315,24 @@ pub async fn get_file(
         return Err(ServiceError::Unauthorized("Missing token".to_string()));
     }
 
-    stream_file(&path, &headers).await
+    let mut response = stream_file(&path, &headers).await?;
+
+    // Shown in the page (video and image previews), so it needs its real type:
+    // Safari, on the iPhone and iPad above all, does not play a video sent as
+    // a download. A download link still saves it with its name.
+    if let Ok(mime) = HeaderValue::from_str(
+        mime_guess::from_path(&path)
+            .first_or_octet_stream()
+            .essence_str(),
+    ) {
+        response.headers_mut().insert(CONTENT_TYPE, mime);
+    }
+
+    response
+        .headers_mut()
+        .insert(CONTENT_DISPOSITION, HeaderValue::from_static("inline"));
+
+    Ok(response)
 }
 
 /// **Import playlist**

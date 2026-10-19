@@ -116,6 +116,9 @@ async fn file_routes_enforce_tokens_channels_and_exact_range_responses() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+    // Previews play in the page, Safari included: the real type, not a download.
+    assert_eq!(response.headers()["content-type"], "video/mp4");
+    assert_eq!(response.headers()["content-disposition"], "inline");
     assert_eq!(
         to_bytes(response.into_body(), 100).await.unwrap().as_ref(),
         b"0123456789"

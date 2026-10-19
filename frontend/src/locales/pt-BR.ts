@@ -295,6 +295,8 @@ export default {
         createSheet: 'Criar ficha',
         editSheet: 'Ficha · editar',
         preview: 'Pré-visualizar {name}',
+        previewFailed:
+            'O navegador não conseguiu tocar este arquivo. Ele pode estar num formato que o navegador não abre, mesmo tocando normalmente no ar.',
         rename: 'Renomear {name}',
         move: 'Mover {name}',
         remove: 'Excluir {name}',

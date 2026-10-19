@@ -295,6 +295,8 @@ export default {
         createSheet: 'Create sheet',
         editSheet: 'Sheet · edit',
         preview: 'Preview {name}',
+        previewFailed:
+            'The browser could not play this file. It may be in a format browsers do not open, even though it plays fine on air.',
         rename: 'Rename {name}',
         move: 'Move {name}',
         remove: 'Delete {name}',
