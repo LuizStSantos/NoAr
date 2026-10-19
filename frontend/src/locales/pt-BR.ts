@@ -1027,6 +1027,33 @@ export default {
         otherPagesUnsaved: 'Alterações não salvas em: {pages}.',
         restartsOnSave: 'Salvar esta página reinicia o playout',
         restartPending: 'Algumas mudanças salvas valem depois de reiniciar o playout.',
+        restart: {
+            now: 'Reiniciar agora',
+            playout: 'Playout de {name}',
+            running: 'No ar há {time}',
+            onAir: 'No ar',
+            stopped: 'Parado',
+            start: 'Iniciar o playout',
+            started: 'Playout iniciado.',
+            restarted: 'Playout reiniciado.',
+            playoutTitle: 'Reiniciar o playout de {name}?',
+            playoutText:
+                'A saída para por 2 a 5 segundos e volta no ponto certo da programação. Um agendamento que está no ar continua de onde estava.',
+            playoutHint: 'Use depois de mudar a saída, a ingestão ou a playlist, ou se a imagem travar.',
+            server: 'Reiniciar o NoAr',
+            serverInfo: 'Ligado há {time} · {running} de {channels} canais no ar',
+            serverHint:
+                'Todos os canais param por alguns segundos. O NoAr volta sozinho e cada canal continua de onde a programação está.',
+            serverTitle: 'Reiniciar o NoAr?',
+            serverText:
+                'Todos os canais param por alguns segundos e voltam sozinhos, cada um no ponto certo da programação.',
+            serverConfirmHint:
+                'Use se algo travou ou depois de mudar arquivos no servidor. Quem estiver com o NoAr aberto vê a página recarregar.',
+            restarting: 'Reiniciando o NoAr…',
+            restartingHint: 'A página volta sozinha em alguns segundos.',
+            late: 'O NoAr ainda não voltou',
+            lateHint: 'Confira o servidor, por exemplo com docker compose logs noar.',
+        },
         restartNow: 'Reiniciar o playout',
         later: 'Depois',
         unsavedTitle: 'Alterações não salvas',

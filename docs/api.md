@@ -132,6 +132,16 @@ performs the final device and codec compatibility check when the playout opens.
 Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 `pcm_s16le` do not use bitrate settings.
 
+## Server
+
+| Method | Endpoint | Access | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/system/server` | `GA` | `{ "started_at", "version", "channels", "channels_running" }`; `started_at` is the Unix time this run started. |
+| `POST` | `/api/system/restart` | `GA` | Answers, then stops every channel and starts NoAr again in the same process. |
+
+After a restart the channels that were running start again by themselves. A
+client can wait for `started_at` to change to know the new run is up.
+
 ## Playout control
 
 | Method | Endpoint | Access | Request body |

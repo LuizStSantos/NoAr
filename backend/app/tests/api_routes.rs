@@ -26,6 +26,8 @@ mod playlists;
 mod preview;
 #[path = "api/schedule.rs"]
 mod schedule;
+#[path = "api/server.rs"]
+mod server;
 #[path = "api/users.rs"]
 mod users;
 #[path = "api/xmltv.rs"]

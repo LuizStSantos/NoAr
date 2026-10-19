@@ -49,6 +49,15 @@ port in `docker-compose.yml`, using the same number inside and outside. Lives
 that NoAr pulls itself (scheduled SRT caller, RTMP or HLS sources) need no
 published port.
 
+## Restarting
+
+*Settings › Server and e-mail › Restart NoAr* (global administrators) stops
+every channel and starts NoAr again inside the same process, so the container
+keeps running and no restart policy is involved. The channels that were on
+air start again by themselves, and a scheduled event on air resumes where it
+was. To restart only one channel's playout, use the playout card at the top
+of the settings menu.
+
 ## Time zone
 
 Set `TZ` in `docker-compose.yml` before the first start. Playlists, schedules

@@ -88,6 +88,8 @@ pub fn routes() -> Router<AppState> {
                     post(trigger_schedule_event),
                 )
                 .route("/setup", get(get_setup_status).post(complete_setup))
+                .route("/system/server", get(get_server_info))
+                .route("/system/restart", post(restart_server))
                 .route("/system/{id}", get(get_system_stat))
                 .route("/user", get(get_user))
                 .route(

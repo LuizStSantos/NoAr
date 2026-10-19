@@ -5,6 +5,7 @@ import { useHead } from '@unhead/vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { cloneDeep } from 'es-toolkit/object'
 
+import PlayoutCard from '@/components/settings/PlayoutCard.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { useConfig } from '@/stores/config'
 import { useSettings, type SettingsSectionName } from '@/stores/settings'
@@ -115,6 +116,8 @@ watch(
                     </option>
                 </select>
             </label>
+
+            <PlayoutCard />
 
             <label
                 class="hidden lg:flex items-center gap-2 bg-base-100 border border-line-strong rounded-field px-2.5 min-h-10 text-muted"

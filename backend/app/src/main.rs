@@ -42,6 +42,7 @@ use ffplayout::{
         logging::{Target, init_logging, log_middleware},
         mail::{self, MailQueue},
         playlist::generate_playlist,
+        server,
         system::SystemStat,
         time_machine::set_mock_time,
     },
@@ -76,13 +77,20 @@ fn main() -> Result<(), ProcessError> {
         .init();
 
     #[cfg(any(feature = "desktop", feature = "desktop-cpu"))]
-    {
-        ff_engine::run_desktop_on_main_thread(run_async_main)
-            .map_err(|error| ProcessError::Custom(format!("Desktop runtime failed: {error:#}")))?
-    }
+    ff_engine::run_desktop_on_main_thread(run_async_main)
+        .map_err(|error| ProcessError::Custom(format!("Desktop runtime failed: {error:#}")))??;
 
     #[cfg(not(any(feature = "desktop", feature = "desktop-cpu")))]
-    run_async_main()
+    run_async_main()?;
+
+    if server::restart_requested() {
+        // Everything is stopped and flushed: run the program again.
+        let error = server::exec_again();
+
+        return Err(ProcessError::Custom(format!("Restart failed: {error}")));
+    }
+
+    Ok(())
 }
 
 fn run_async_main() -> Result<(), ProcessError> {
@@ -167,6 +175,7 @@ async fn async_main() -> Result<(), ProcessError> {
         #[cfg(not(debug_assertions))]
         let app = app.merge(admin_ui_routes());
 
+        server::mark_started();
         info!(target: Target::Console.as_str(), "Running NoAr, listen on http://{conn}");
 
         tokio::select! {
@@ -175,7 +184,7 @@ async fn async_main() -> Result<(), ProcessError> {
             }
             _ = shutdown_signal() => {}
             _ = shutdown.cancelled() => {
-                info!(target: Target::Console.as_str(), "Shutdown requested by desktop player");
+                info!(target: Target::Console.as_str(), "Shutdown requested");
             }
         }
     } else if ARGS.drop_db {

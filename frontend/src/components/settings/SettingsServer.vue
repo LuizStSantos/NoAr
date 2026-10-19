@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 
+import RestartDialog from '@/components/settings/RestartDialog.vue'
 import SaveBar from '@/components/settings/SaveBar.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import { authFetch } from '@/composables/authFetch'
 import { countChanges } from '@/composables/diff'
+import { uptimeLabel } from '@/composables/player'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -39,7 +41,90 @@ async function load() {
     }
 }
 
-onMounted(load)
+interface ServerInfo {
+    started_at: number
+    version: string
+    channels: number
+    channels_running: number
+}
+
+/** How long to wait for NoAr to come back after a restart. */
+const RESTART_TIMEOUT_MS = 120_000
+
+const info = ref<ServerInfo | null>(null)
+const now = ref(Date.now())
+const askingRestart = ref(false)
+const restarting = ref<'waiting' | 'late' | null>(null)
+let clock: ReturnType<typeof setInterval> | undefined
+let poll: ReturnType<typeof setTimeout> | undefined
+
+const serverLine = computed(() =>
+    info.value
+        ? t('settings.restart.serverInfo', {
+              time: uptimeLabel(Math.max(60, now.value / 1000 - info.value.started_at)),
+              running: info.value.channels_running,
+              channels: info.value.channels,
+          })
+        : '',
+)
+
+async function loadInfo() {
+    try {
+        info.value = await authFetch<ServerInfo>('/api/system/server')
+    } catch {
+        info.value = null
+    }
+}
+
+/** Ask NoAr to restart, then reload the page once a new run answers. */
+async function restartServer() {
+    const before = info.value?.started_at ?? 0
+    const deadline = Date.now() + RESTART_TIMEOUT_MS
+
+    askingRestart.value = false
+    restarting.value = 'waiting'
+
+    try {
+        await authFetch('/api/system/restart', { method: 'POST' })
+    } catch (e: any) {
+        restarting.value = null
+        indexStore.msgAlert('error', e?.data ?? e?.message ?? String(e), 5)
+        return
+    }
+
+    const check = async () => {
+        try {
+            const response = await fetch('/api/system/server', { headers: authStore.authHeader })
+
+            if (response.ok && (await response.json()).started_at !== before) {
+                window.location.reload()
+                return
+            }
+        } catch {
+            // Not back yet.
+        }
+
+        if (Date.now() > deadline) {
+            restarting.value = 'late'
+            return
+        }
+
+        poll = setTimeout(check, 1500)
+    }
+
+    poll = setTimeout(check, 1500)
+}
+
+onMounted(() => {
+    load()
+    loadInfo()
+    clock = setInterval(() => (now.value = Date.now()), 30_000)
+})
+
+onBeforeUnmount(() => {
+    clearInterval(clock)
+    clearTimeout(poll)
+})
 
 async function save() {
     if (!server.value) {
@@ -102,6 +187,57 @@ async function sendTest() {
     <div>
         <h1 class="m-0 text-xl font-semibold">{{ t('settings.sections.server') }}</h1>
         <p class="mt-1 mb-0 text-muted">{{ t('settings.server.intro') }}</p>
+    </div>
+
+    <section
+        :aria-labelledby="'server-restart'"
+        class="card-box px-5 py-4.5 flex flex-wrap items-center gap-x-5 gap-y-3.5"
+    >
+        <div class="flex-[1_1_360px] flex flex-col gap-1">
+            <h2 id="server-restart" class="m-0 text-base font-semibold">NoAr</h2>
+            <span v-if="serverLine" class="text-base-content/85">{{ serverLine }}</span>
+            <span class="text-[13px] text-muted">{{ t('settings.restart.serverHint') }}</span>
+        </div>
+        <button
+            type="button"
+            class="btn-quiet text-on-air-text border-on-air/40 hover:bg-on-air-soft!"
+            :disabled="restarting !== null"
+            @click="askingRestart = true"
+        >
+            <i class="bi bi-power" aria-hidden="true" />{{ t('settings.restart.server') }}
+        </button>
+    </section>
+
+    <RestartDialog
+        :show="askingRestart"
+        :title="t('settings.restart.serverTitle')"
+        :text="t('settings.restart.serverText')"
+        :hint="t('settings.restart.serverConfirmHint')"
+        @close="askingRestart = false"
+        @confirm="restartServer"
+    />
+
+    <div
+        v-if="restarting"
+        class="z-50 fixed inset-0 flex items-center justify-center bg-black/70 px-4"
+        role="status"
+        aria-live="polite"
+    >
+        <div
+            class="w-full max-w-[420px] bg-base-100 border border-line-strong rounded-[16px] px-6 py-6 flex flex-col items-center gap-3 text-center"
+        >
+            <template v-if="restarting === 'waiting'">
+                <span class="loading loading-spinner loading-lg text-accent" />
+                <h2 class="m-0 text-lg font-semibold">{{ t('settings.restart.restarting') }}</h2>
+                <p class="m-0 text-muted">{{ t('settings.restart.restartingHint') }}</p>
+            </template>
+            <template v-else>
+                <i class="bi bi-exclamation-circle text-3xl text-on-air-text" aria-hidden="true" />
+                <h2 class="m-0 text-lg font-semibold">{{ t('settings.restart.late') }}</h2>
+                <p class="m-0 text-muted">{{ t('settings.restart.lateHint') }}</p>
+                <button type="button" class="btn-quiet" @click="restarting = null">{{ t('storage.close') }}</button>
+            </template>
+        </div>
     </div>
 
     <template v-if="server">

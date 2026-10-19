@@ -1025,6 +1025,33 @@ export default {
         otherPagesUnsaved: 'Unsaved changes in: {pages}.',
         restartsOnSave: 'Saving this page restarts the playout',
         restartPending: 'Some saved changes take effect after the playout restarts.',
+        restart: {
+            now: 'Restart now',
+            playout: '{name} playout',
+            running: 'On air for {time}',
+            onAir: 'On air',
+            stopped: 'Stopped',
+            start: 'Start the playout',
+            started: 'Playout started.',
+            restarted: 'Playout restarted.',
+            playoutTitle: 'Restart the {name} playout?',
+            playoutText:
+                'The output stops for 2 to 5 seconds and comes back at the right point of the schedule. A scheduled event on air goes on where it was.',
+            playoutHint: 'Use it after changing the output, the ingest or the playlist, or when the picture freezes.',
+            server: 'Restart NoAr',
+            serverInfo: 'Up for {time} · {running} of {channels} channels on air',
+            serverHint:
+                'Every channel stops for a few seconds. NoAr comes back by itself and each channel goes on where the schedule is.',
+            serverTitle: 'Restart NoAr?',
+            serverText:
+                'Every channel stops for a few seconds and comes back by itself, each at the right point of its schedule.',
+            serverConfirmHint:
+                'Use it when something is stuck or after changing files on the server. Anyone with NoAr open sees the page reload.',
+            restarting: 'Restarting NoAr…',
+            restartingHint: 'The page comes back by itself in a few seconds.',
+            late: 'NoAr is not back yet',
+            lateHint: 'Check the server, for example with docker compose logs noar.',
+        },
         restartNow: 'Restart the playout',
         later: 'Later',
         unsavedTitle: 'Unsaved changes',
