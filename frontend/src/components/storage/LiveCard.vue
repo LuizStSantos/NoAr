@@ -20,7 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     edit: []
     test: []
-    poster: [file: File]
+    artwork: [kind: ArtworkKind, file: File]
     schedule: []
 }>()
 
@@ -28,6 +28,7 @@ const { t } = useI18n()
 
 const posterUrl = ref('')
 const posterInput = ref<HTMLInputElement>()
+const backdropInput = ref<HTMLInputElement>()
 const reveal = ref(false)
 
 const fields = computed(() => props.sheet?.fields)
@@ -91,12 +92,12 @@ const address = computed(() => {
 
 const canReveal = computed(() => Boolean(props.live) && masked(props.live?.url ?? '') !== props.live?.url)
 
-function picked(event: Event) {
+function picked(event: Event, kind: ArtworkKind) {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
 
     if (file) {
-        emit('poster', file)
+        emit('artwork', kind, file)
     }
 
     input.value = ''
@@ -185,6 +186,25 @@ function picked(event: Event) {
                 </span>
             </div>
 
+            <div class="flex flex-wrap gap-x-4 gap-y-2 text-[13px]">
+                <span :class="sheet?.poster ? 'text-ok' : 'text-accent-text'">
+                    <i
+                        class="bi me-1"
+                        :class="sheet?.poster ? 'bi-check-lg' : 'bi-exclamation-circle'"
+                        aria-hidden="true"
+                    />
+                    {{ sheet?.poster ? t('storage.card.poster') : t('storage.card.noPoster') }}
+                </span>
+                <span :class="sheet?.backdrop ? 'text-ok' : 'text-accent-text'">
+                    <i
+                        class="bi me-1"
+                        :class="sheet?.backdrop ? 'bi-check-lg' : 'bi-exclamation-circle'"
+                        aria-hidden="true"
+                    />
+                    {{ sheet?.backdrop ? t('storage.card.backdrop') : t('storage.card.noBackdrop') }}
+                </span>
+            </div>
+
             <div class="flex flex-wrap gap-2 mt-0.5">
                 <button
                     type="button"
@@ -201,6 +221,10 @@ function picked(event: Event) {
                     <i class="bi bi-image" aria-hidden="true" />
                     {{ sheet?.poster ? t('storage.card.changePoster') : t('storage.card.addPoster') }}
                 </button>
+                <button type="button" class="btn-quiet" @click="backdropInput?.click()">
+                    <i class="bi bi-upload" aria-hidden="true" />
+                    {{ sheet?.backdrop ? t('storage.card.changeBackdrop') : t('storage.card.addBackdrop') }}
+                </button>
                 <button type="button" class="link-accent px-1.5 min-h-10" :disabled="!live" @click="emit('schedule')">
                     {{ t('storage.live.schedule') }} →
                 </button>
@@ -216,7 +240,14 @@ function picked(event: Event) {
             type="file"
             class="hidden"
             accept="image/jpeg,image/png,image/webp,image/gif"
-            @change="picked"
+            @change="picked($event, 'poster')"
+        />
+        <input
+            ref="backdropInput"
+            type="file"
+            class="hidden"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            @change="picked($event, 'backdrop')"
         />
     </section>
 </template>

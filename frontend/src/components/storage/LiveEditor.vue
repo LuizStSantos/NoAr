@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { emptyFields, imageUrl, saveSheet, storageJoin, uploadArtwork } from '@/composables/storage'
@@ -45,9 +45,14 @@ const guideTitle = ref(fields?.title ?? '')
 const plot = ref(fields?.plot ?? '')
 const genre = ref(fields?.genres.join(', ') ?? '')
 const rating = ref(fields?.rating || 'Livre')
-const poster = ref<File | null>(null)
-const posterPreview = ref('')
-const currentPoster = ref('')
+/** The two guide images: the poster (upright) and the wide image (fanart). */
+type GuideImage = 'poster' | 'backdrop'
+
+const GUIDE_IMAGES: GuideImage[] = ['poster', 'backdrop']
+
+const chosen = reactive<Record<GuideImage, File | null>>({ poster: null, backdrop: null })
+const previews = reactive<Record<GuideImage, string>>({ poster: '', backdrop: '' })
+const saved = reactive<Record<GuideImage, string>>({ poster: '', backdrop: '' })
 const signal = ref<SignalTest | null>(null)
 const testing = ref(false)
 const saving = ref(false)
@@ -79,41 +84,45 @@ function folderOf(path: string): string {
 }
 
 onMounted(async () => {
-    if (props.sheet?.poster) {
-        try {
-            currentPoster.value = await imageUrl(props.channelId, props.sheet.poster)
-        } catch {
-            // The drop area stays empty.
+    for (const kind of GUIDE_IMAGES) {
+        const path = props.sheet?.[kind]
+
+        if (path) {
+            try {
+                saved[kind] = await imageUrl(props.channelId, path)
+            } catch {
+                // The drop area stays empty.
+            }
         }
     }
 })
 
-function setPoster(file: File | null) {
-    if (posterPreview.value) {
-        URL.revokeObjectURL(posterPreview.value)
+function choose(kind: GuideImage, file: File | null) {
+    if (previews[kind]) {
+        URL.revokeObjectURL(previews[kind])
     }
 
-    poster.value = file
-    posterPreview.value = file ? URL.createObjectURL(file) : ''
+    chosen[kind] = file
+    previews[kind] = file ? URL.createObjectURL(file) : ''
 }
 
-function pickPoster(event: Event) {
+function pickImage(kind: GuideImage, event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
 
     if (file?.type.startsWith('image/')) {
-        setPoster(file)
+        choose(kind, file)
     }
 }
 
-function dropPoster(event: DragEvent) {
+function dropImage(kind: GuideImage, event: DragEvent) {
     const file = event.dataTransfer?.files?.[0]
 
     if (file?.type.startsWith('image/')) {
-        setPoster(file)
+        choose(kind, file)
     }
 }
 
-onBeforeUnmount(() => setPoster(null))
+onBeforeUnmount(() => GUIDE_IMAGES.forEach((kind) => choose(kind, null)))
 
 async function testSignal() {
     const address = url.value.trim()
@@ -203,9 +212,15 @@ async function save(schedule: boolean) {
             })
         }
 
-        if (poster.value) {
+        for (const kind of GUIDE_IMAGES) {
+            const file = chosen[kind]
+
+            if (!file) {
+                continue
+            }
+
             try {
-                await uploadArtwork(props.channelId, folderOf(live.path), 'poster', poster.value)
+                await uploadArtwork(props.channelId, folderOf(live.path), kind, file)
             } catch (err) {
                 indexStore.msgAlert('warning', t('schedule.posterFailed', { error: String(err) }), 4)
             }
@@ -295,57 +310,66 @@ async function save(schedule: boolean) {
 
                 <div class="border-t border-base-300 pt-4 flex flex-col gap-3">
                     <span class="font-semibold">{{ t('schedule.inGuide') }}</span>
-                    <div class="grid grid-cols-[132px_minmax(0,1fr)] gap-4">
-                        <label
-                            class="h-44 border border-dashed border-base-content/40 rounded-md bg-base-200 flex flex-col items-center justify-center gap-1 text-xs text-subtle text-center p-2 cursor-pointer overflow-hidden"
-                            @dragover.prevent
-                            @drop.prevent="dropPoster"
+                    <div class="flex gap-4">
+                        <div
+                            v-for="kind in GUIDE_IMAGES"
+                            :key="kind"
+                            class="flex flex-col gap-1.5"
+                            :class="kind === 'poster' ? 'w-[132px] flex-none' : 'flex-1 min-w-0'"
                         >
-                            <img
-                                v-if="posterPreview || currentPoster"
-                                :src="posterPreview || currentPoster"
-                                alt=""
-                                class="w-full h-full object-cover rounded"
-                            />
-                            <template v-else>
-                                <i class="bi bi-image text-2xl" aria-hidden="true" />
-                                {{ t('schedule.posterDrop') }}
-                            </template>
-                            <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                class="sr-only"
-                                :aria-label="t('storage.live.poster')"
-                                @change="pickPoster"
-                            />
+                            <span class="text-xs text-muted">{{ t(`storage.live.image.${kind}`) }}</span>
+                            <label
+                                class="h-44 border border-dashed border-base-content/40 rounded-md bg-base-200 flex flex-col items-center justify-center gap-1 text-xs text-subtle text-center p-2 cursor-pointer overflow-hidden"
+                                @dragover.prevent
+                                @drop.prevent="dropImage(kind, $event)"
+                            >
+                                <img
+                                    v-if="previews[kind] || saved[kind]"
+                                    :src="previews[kind] || saved[kind]"
+                                    alt=""
+                                    class="w-full h-full rounded"
+                                    :class="kind === 'poster' ? 'object-cover' : 'object-contain'"
+                                />
+                                <template v-else>
+                                    <i class="bi bi-image text-2xl" aria-hidden="true" />
+                                    {{ t(`storage.live.image.${kind}Drop`) }}
+                                </template>
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    class="sr-only"
+                                    :aria-label="t(`storage.live.image.${kind}`)"
+                                    @change="pickImage(kind, $event)"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2.5">
+                        <label class="field-label">
+                            {{ t('schedule.guideTitle') }}
+                            <input v-model="guideTitle" class="field-input" :placeholder="name" />
                         </label>
-                        <div class="flex flex-col gap-2.5">
+                        <label class="field-label">
+                            {{ t('schedule.description') }}
+                            <textarea v-model="plot" rows="2" class="field-input py-2 resize-none" />
+                        </label>
+                        <div class="grid grid-cols-2 gap-2.5">
                             <label class="field-label">
-                                {{ t('schedule.guideTitle') }}
-                                <input v-model="guideTitle" class="field-input" :placeholder="name" />
+                                {{ t('schedule.genre') }}
+                                <input v-model="genre" class="field-input" />
                             </label>
                             <label class="field-label">
-                                {{ t('schedule.description') }}
-                                <textarea v-model="plot" rows="2" class="field-input py-2 resize-none" />
+                                {{ t('schedule.rating') }}
+                                <select v-model="rating" class="field-input">
+                                    <option v-for="value in ratingOptions" :key="value" :value="value">
+                                        {{
+                                            value === 'Livre'
+                                                ? t('storage.sheet.ratingFree')
+                                                : t('storage.sheet.ratingAge', { age: value })
+                                        }}
+                                    </option>
+                                </select>
                             </label>
-                            <div class="grid grid-cols-2 gap-2.5">
-                                <label class="field-label">
-                                    {{ t('schedule.genre') }}
-                                    <input v-model="genre" class="field-input" />
-                                </label>
-                                <label class="field-label">
-                                    {{ t('schedule.rating') }}
-                                    <select v-model="rating" class="field-input">
-                                        <option v-for="value in ratingOptions" :key="value" :value="value">
-                                            {{
-                                                value === 'Livre'
-                                                    ? t('storage.sheet.ratingFree')
-                                                    : t('storage.sheet.ratingAge', { age: value })
-                                            }}
-                                        </option>
-                                    </select>
-                                </label>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -357,7 +381,8 @@ async function save(schedule: boolean) {
                     }}/
    signal.live   <span class="text-base-content/50">← {{ t('schedule.fileAddress') }}</span>
    tvshow.nfo    <span class="text-base-content/50">← {{ t('schedule.fileGuide') }}</span>
-   poster.jpg    <span class="text-base-content/50">← {{ t('schedule.filePoster') }}</span></pre>
+   poster.jpg    <span class="text-base-content/50">← {{ t('schedule.filePoster') }}</span>
+   fanart.jpg    <span class="text-base-content/50">← {{ t('storage.live.fileBackdrop') }}</span></pre>
                 </div>
                 <p v-if="!editing" class="m-0 text-[13px] text-muted">{{ t('storage.live.scheduleLater') }}</p>
 

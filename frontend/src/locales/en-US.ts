@@ -238,7 +238,12 @@ export default {
             fileGuide: 'guide sheet',
             filePoster: 'poster',
             fileBackdrop: 'wide image',
-            poster: 'Poster of the live',
+            image: {
+                poster: 'Poster',
+                posterDrop: 'Drag the poster here or click',
+                backdrop: 'Wide image',
+                backdropDrop: 'Drag the wide image (16:9) here or click',
+            },
             renameHint: 'To change the name, rename the folder in Storage.',
             savedAs: 'Saved in Storage as',
             scheduleLater: 'Then schedule it: the live shows up in the Lives tab of the Scheduler.',

@@ -1026,7 +1026,7 @@ const uploadAccept = computed(() =>
                     :testing="liveTesting"
                     @edit="liveEditor = { live: currentLive }"
                     @test="testLive"
-                    @poster="cardArtwork('poster', $event)"
+                    @artwork="cardArtwork"
                     @schedule="scheduleLive(currentLive?.path)"
                 />
                 <SheetCard

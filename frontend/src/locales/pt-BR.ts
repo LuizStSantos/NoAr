@@ -238,7 +238,12 @@ export default {
             fileGuide: 'ficha do guia',
             filePoster: 'pôster',
             fileBackdrop: 'imagem de fundo',
-            poster: 'Pôster da live',
+            image: {
+                poster: 'Pôster',
+                posterDrop: 'Arraste o pôster ou clique',
+                backdrop: 'Imagem de fundo',
+                backdropDrop: 'Arraste a imagem larga (16:9) ou clique',
+            },
             renameHint: 'Para mudar o nome, renomeie a pasta no Armazenamento.',
             savedAs: 'Fica salva no Armazenamento como',
             scheduleLater: 'Depois é só agendar: a live aparece na aba Lives do Agendador.',
