@@ -197,10 +197,10 @@ function stateClass(tone: string): string {
     return (
         {
             accent: 'bg-accent text-accent-content font-semibold',
-            waiting: 'bg-accent/15 text-accent',
-            error: 'bg-error/15 text-error',
-            muted: 'bg-base-200 text-base-content/60',
-            neutral: 'bg-base-200 text-base-content/80',
+            waiting: 'bg-accent-soft text-accent-text',
+            error: 'bg-on-air-soft text-on-air-text',
+            muted: 'bg-base-200 text-muted',
+            neutral: 'bg-base-200 text-base-content/85',
         }[tone] ?? ''
     )
 }
@@ -490,41 +490,51 @@ watch(zoom, scrollToFocus)
 </script>
 
 <template>
-    <div class="min-h-[calc(100vh-56px)] flex flex-col">
-        <div class="flex flex-wrap items-center gap-2.5 px-4 py-3 border-b border-base-300">
-            <div class="join border border-base-content/30 rounded-md">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 pt-5 pb-8 flex flex-col gap-4">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2.5">
+            <div class="me-2">
+                <h1 class="m-0 text-xl font-semibold">{{ t('button.schedule') }}</h1>
+                <p class="m-0 text-muted">{{ t('schedule.intro') }}</p>
+            </div>
+            <div class="flex items-center bg-base-100 border border-line-strong rounded-[10px]">
                 <button
-                    class="btn btn-sm btn-ghost join-item"
+                    class="btn-icon min-w-10 min-h-10 rounded-e-none rounded-s-[10px]"
                     :aria-label="t('schedule.previousDay')"
                     @click="changeDay(-1)"
                 >
-                    <i class="bi bi-chevron-left" />
+                    <i class="bi bi-chevron-left" aria-hidden="true" />
                 </button>
-                <label class="join-item flex items-center gap-2 px-2 text-sm cursor-pointer">
-                    <i class="bi bi-calendar3" />
+                <label
+                    class="flex items-center gap-2 px-3 min-h-10 border-x border-line-strong text-[15px] cursor-pointer"
+                >
+                    <i class="bi bi-calendar3 text-muted" aria-hidden="true" />
                     <span class="capitalize">{{ dateLabel }}</span>
                     <input v-model="date" type="date" class="sr-only" :aria-label="t('schedule.day')" />
                 </label>
                 <button
-                    class="btn btn-sm btn-ghost join-item"
+                    class="btn-icon min-w-10 min-h-10 rounded-s-none rounded-e-[10px]"
                     :aria-label="t('schedule.nextDay')"
                     @click="changeDay(1)"
                 >
-                    <i class="bi bi-chevron-right" />
+                    <i class="bi bi-chevron-right" aria-hidden="true" />
                 </button>
             </div>
-            <button class="btn btn-sm btn-outline border-base-content/30" :disabled="isToday" @click="changeDay(0)">
+            <button class="btn-quiet rounded-[10px]" :disabled="isToday" @click="changeDay(0)">
                 {{ t('schedule.today') }}
             </button>
-            <div class="join" role="group" :aria-label="t('schedule.zoom')">
+            <div
+                class="flex bg-base-100 border border-line-strong rounded-[10px] p-[3px]"
+                role="group"
+                :aria-label="t('schedule.zoom')"
+            >
                 <button
                     v-for="option in zoomOptions"
                     :key="option.minutes"
-                    class="btn btn-sm join-item"
+                    class="border-0 rounded-lg min-w-13 min-h-8.5 cursor-pointer"
                     :class="
                         zoom === option.minutes
-                            ? 'bg-base-content/25 border-base-content/30'
-                            : 'btn-outline border-base-content/30'
+                            ? 'bg-base-300 text-base-content font-semibold'
+                            : 'bg-transparent text-muted hover:text-base-content'
                     "
                     :aria-pressed="zoom === option.minutes"
                     @click="zoom = option.minutes"
@@ -532,25 +542,30 @@ watch(zoom, scrollToFocus)
                     {{ option.label }}
                 </button>
             </div>
-            <div class="flex-1" />
-            <button class="btn btn-sm btn-outline border-base-content/30" @click="newLive">
-                <i class="bi bi-broadcast" /> {{ t('schedule.newLive') }}
+            <div class="flex-auto" />
+            <button class="btn-quiet rounded-[10px]" @click="newLive">
+                <i class="bi bi-broadcast" aria-hidden="true" />{{ t('schedule.newLive') }}
             </button>
-            <button class="btn btn-sm btn-accent font-bold" @click="newMaterial">
-                <i class="bi bi-plus-lg" /> {{ t('schedule.scheduleMaterial') }}
+            <button class="btn-main rounded-[10px] px-4.5" @click="newMaterial">
+                <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('schedule.scheduleMaterial') }}
             </button>
         </div>
 
-        <div class="flex flex-wrap gap-4 p-4 items-start flex-1">
+        <div class="flex flex-wrap gap-4 items-start">
             <aside
-                class="flex-[1_1_260px] max-w-80 bg-base-100 border border-base-300 rounded-lg flex flex-col max-h-[calc(100vh-150px)]"
+                :aria-label="t('schedule.materials')"
+                class="card-box flex-[1_1_280px] w-full lg:max-w-[320px] flex flex-col lg:sticky lg:top-[72px] max-h-[70vh] lg:max-h-[calc(100vh-96px)]"
             >
-                <div role="tablist" class="flex border-b border-base-300">
+                <div role="tablist" class="grid grid-cols-2 border-b border-line">
                     <button
                         role="tab"
                         :aria-selected="tab === 'storage'"
-                        class="flex-1 min-h-11 border-b-2 cursor-pointer"
-                        :class="tab === 'storage' ? 'border-accent' : 'border-transparent text-base-content/60'"
+                        class="min-h-11.5 border-0 border-b-2 bg-transparent cursor-pointer"
+                        :class="
+                            tab === 'storage'
+                                ? 'border-accent text-base-content font-semibold'
+                                : 'border-transparent text-muted'
+                        "
                         @click="tab = 'storage'"
                     >
                         {{ t('button.media') }}
@@ -558,21 +573,25 @@ watch(zoom, scrollToFocus)
                     <button
                         role="tab"
                         :aria-selected="tab === 'lives'"
-                        class="flex-1 min-h-11 border-b-2 cursor-pointer"
-                        :class="tab === 'lives' ? 'border-accent' : 'border-transparent text-base-content/60'"
+                        class="min-h-11.5 border-0 border-b-2 bg-transparent cursor-pointer"
+                        :class="
+                            tab === 'lives'
+                                ? 'border-accent text-base-content font-semibold'
+                                : 'border-transparent text-muted'
+                        "
                         @click="tab = 'lives'"
                     >
                         {{ t('schedule.lives') }}
                     </button>
                 </div>
-                <div class="p-3 flex flex-col gap-2.5 min-h-0 overflow-auto">
+                <div class="p-3.5 flex flex-col gap-2.5 min-h-0 overflow-auto">
                     <StoragePicker v-if="tab === 'storage'" draggable />
                     <template v-else>
-                        <ul class="flex flex-col gap-0.5">
+                        <ul class="m-0 p-0 list-none flex flex-col gap-0.5">
                             <li
                                 v-for="live in scheduleStore.lives"
                                 :key="live.path"
-                                class="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-base-200 cursor-grab"
+                                class="flex items-center gap-2.5 px-2.5 min-h-10 rounded-lg hover:bg-raised cursor-grab"
                                 draggable="true"
                                 @dragstart="dragLive($event, live)"
                             >
@@ -585,51 +604,55 @@ watch(zoom, scrollToFocus)
                                     live.title || live.name
                                 }}</span>
                                 <span
-                                    class="badge badge-sm badge-outline"
+                                    class="text-xs border rounded-md px-1.5 leading-5"
                                     :style="{ borderColor: SCHEDULE_COLORS.live }"
                                 >
                                     {{ live.protocol }}
                                 </span>
                             </li>
-                            <li v-if="!scheduleStore.lives.length" class="text-sm text-base-content/60 px-2 py-3">
+                            <li v-if="!scheduleStore.lives.length" class="text-muted px-2 py-3">
                                 {{ t('schedule.noLives') }}
                             </li>
                         </ul>
-                        <button class="btn btn-sm btn-outline border-base-content/30" @click="newLive">
-                            <i class="bi bi-plus-lg" /> {{ t('schedule.newLive') }}
+                        <button class="btn-quiet" @click="newLive">
+                            <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('schedule.newLive') }}
                         </button>
                     </template>
-                    <p class="text-xs text-base-content/60 leading-relaxed">{{ t('schedule.dragHint') }}</p>
+                    <p class="m-0 text-[13px] text-subtle leading-relaxed">{{ t('schedule.dragHint') }}</p>
                 </div>
             </aside>
 
             <main class="flex-[999_1_560px] min-w-0 flex flex-col gap-4">
-                <section :aria-label="t('schedule.timeline')" class="bg-base-100 border border-base-300 rounded-lg p-4">
-                    <div class="flex flex-wrap gap-4 text-xs text-base-content/80 mb-3">
-                        <span class="flex items-center gap-1.5"
-                            ><span class="w-3 h-3 rounded-sm bg-[#4a4a4a]" />{{ t('schedule.legendGrade') }}</span
+                <section :aria-label="t('schedule.timeline')" class="card-box px-4.5 py-4">
+                    <div class="flex flex-wrap gap-x-4.5 gap-y-2 text-[13px] text-base-content/85 mb-3.5">
+                        <span class="flex items-center gap-2"
+                            ><span class="w-3 h-3 rounded-[3px] bg-[#4a4a4a]" />{{ t('schedule.legendGrade') }}</span
                         >
-                        <span class="flex items-center gap-1.5"
-                            ><span class="w-3 h-3 rounded-sm" :style="{ background: SCHEDULE_COLORS.after_clip }" />{{
-                                t('schedule.afterClip')
-                            }}</span
+                        <span class="flex items-center gap-2"
+                            ><span
+                                class="w-3 h-3 rounded-[3px]"
+                                :style="{ background: SCHEDULE_COLORS.after_clip }"
+                            />{{ t('schedule.afterClip') }}</span
                         >
-                        <span class="flex items-center gap-1.5"
-                            ><span class="w-3 h-3 rounded-sm" :style="{ background: SCHEDULE_COLORS.interrupt }" />{{
+                        <span class="flex items-center gap-2"
+                            ><span class="w-3 h-3 rounded-[3px]" :style="{ background: SCHEDULE_COLORS.interrupt }" />{{
                                 t('schedule.interrupt')
                             }}</span
                         >
-                        <span class="flex items-center gap-1.5"
-                            ><span class="w-3 h-3 rounded-sm" :style="{ background: SCHEDULE_COLORS.live }" />{{
+                        <span class="flex items-center gap-2"
+                            ><span class="w-3 h-3 rounded-[3px]" :style="{ background: SCHEDULE_COLORS.live }" />{{
                                 t('schedule.live')
                             }}</span
                         >
                     </div>
 
                     <div ref="scroller" class="overflow-x-auto overflow-y-hidden pb-2">
-                        <div class="grid gap-y-2.5" :style="{ gridTemplateColumns: `${LABEL_WIDTH}px ${laneWidth}px` }">
+                        <div
+                            class="grid gap-y-2.5 w-max"
+                            :style="{ gridTemplateColumns: `${LABEL_WIDTH}px ${laneWidth}px` }"
+                        >
                             <div class="sticky left-0 z-20 bg-base-100" />
-                            <div class="relative h-5 text-xs text-base-content/60 tabular-nums">
+                            <div class="relative h-5 font-mono text-[13px] text-muted">
                                 <span
                                     v-for="tick in ticks"
                                     :key="tick.second"
@@ -640,11 +663,13 @@ watch(zoom, scrollToFocus)
                                 </span>
                             </div>
 
-                            <div class="sticky left-0 z-20 bg-base-100 text-xs text-base-content/80 flex items-center">
+                            <div
+                                class="sticky left-0 z-20 bg-base-100 text-[13px] text-base-content/85 flex items-center"
+                            >
                                 {{ t('schedule.grade') }}
                             </div>
                             <div
-                                class="relative h-16 bg-base-200 rounded-md"
+                                class="relative h-16 bg-base-200 rounded-lg"
                                 @dragover="dragOver($event, 'grade')"
                                 @dragleave="dragLeave"
                                 @drop="drop"
@@ -652,8 +677,8 @@ watch(zoom, scrollToFocus)
                                 <div
                                     v-for="(block, index) in gradeBlocks"
                                     :key="`g${index}`"
-                                    class="absolute top-1.5 bottom-1.5 rounded px-2.5 py-1.5 overflow-hidden border-r-2 border-base-200"
-                                    :class="block.scheduled ? 'text-[#1c1c1c]' : 'bg-[#4a4a4a] text-white'"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1.5 overflow-hidden border-r-2 border-base-200"
+                                    :class="block.scheduled ? 'text-[#1c1c1c]' : 'bg-[#44464c] text-white'"
                                     :style="{
                                         left: left(block.start),
                                         width: width(block.start, block.end, 2),
@@ -662,7 +687,7 @@ watch(zoom, scrollToFocus)
                                     :title="`${block.label}${block.detail ? ` — ${block.detail}` : ''} · ${secondsToTime(block.start)} – ${secondsToTime(block.end)}`"
                                 >
                                     <div class="text-sm font-semibold truncate">{{ block.label }}</div>
-                                    <div class="text-xs opacity-75 truncate tabular-nums">
+                                    <div class="font-mono text-xs opacity-80 truncate">
                                         {{ secondsToTime(block.start).slice(0, 5) }} –
                                         {{ secondsToTime(block.end).slice(0, 5) }}
                                     </div>
@@ -679,7 +704,7 @@ watch(zoom, scrollToFocus)
                                         :style="{ left: left(nowSeconds) }"
                                     />
                                     <div
-                                        class="absolute -top-8 -translate-x-1/2 bg-accent text-accent-content text-[11px] font-bold px-1.5 rounded z-10 whitespace-nowrap pointer-events-none"
+                                        class="absolute -top-8 -translate-x-1/2 bg-accent text-accent-content text-xs font-semibold px-1.5 rounded z-10 whitespace-nowrap pointer-events-none"
                                         :style="{ left: left(nowSeconds) }"
                                     >
                                         {{ t('schedule.now') }} {{ secondsToTime(nowSeconds).slice(0, 5) }}
@@ -687,11 +712,13 @@ watch(zoom, scrollToFocus)
                                 </template>
                             </div>
 
-                            <div class="sticky left-0 z-20 bg-base-100 text-xs text-base-content/80 flex items-center">
+                            <div
+                                class="sticky left-0 z-20 bg-base-100 text-[13px] text-base-content/85 flex items-center"
+                            >
                                 {{ t('schedule.events') }}
                             </div>
                             <div
-                                class="relative h-16 bg-base-200 rounded-md"
+                                class="relative h-16 bg-base-200 rounded-lg"
                                 @dragover="dragOver($event, 'events')"
                                 @dragleave="dragLeave"
                                 @drop="drop"
@@ -699,7 +726,7 @@ watch(zoom, scrollToFocus)
                                 <button
                                     v-for="block in eventBlocks"
                                     :key="`${block.occurrence.event.id}-${block.occurrence.start}`"
-                                    class="absolute top-1.5 bottom-1.5 rounded px-2.5 py-1 overflow-hidden text-left cursor-grab min-w-30"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1 overflow-hidden text-left cursor-grab min-w-30 border-0"
                                     :class="{
                                         'opacity-50': block.occurrence.status === 'done',
                                         'ring-2 ring-error': block.occurrence.status === 'failed',
@@ -717,16 +744,16 @@ watch(zoom, scrollToFocus)
                                     @dragstart="dragEvent($event, block.occurrence)"
                                     @click="edit(block.occurrence)"
                                 >
-                                    <div class="text-[13px] font-bold truncate flex items-center gap-1.5">
+                                    <div class="text-sm font-semibold truncate flex items-center gap-1.5">
                                         <span
                                             v-if="block.occurrence.event.kind === 'live'"
-                                            class="bg-[#1c1c1c] text-[#ffb1a3] text-[10px] px-1 rounded"
+                                            class="bg-[#1c1c1c] text-[#ffb1a3] text-[11px] px-1 rounded"
                                         >
                                             {{ t('schedule.liveBadge') }}
                                         </span>
                                         {{ block.occurrence.event.title }}
                                     </div>
-                                    <div class="text-xs opacity-80 tabular-nums truncate">
+                                    <div class="font-mono text-xs opacity-85 truncate">
                                         {{ secondsToTime(block.start).slice(0, 5) }}
                                         <template v-if="block.occurrence.event.kind === 'live'">
                                             – {{ secondsToTime(block.end).slice(0, 5) }}</template
@@ -738,7 +765,7 @@ watch(zoom, scrollToFocus)
                                 </button>
                                 <div
                                     v-if="ghost"
-                                    class="absolute top-1.5 bottom-1.5 w-32 rounded border-2 border-dashed border-accent bg-base-300 text-accent px-2 py-1 text-[13px] font-semibold whitespace-nowrap pointer-events-none z-20"
+                                    class="absolute top-1.5 bottom-1.5 w-34 rounded-md border-2 border-dashed border-accent bg-base-300 text-accent-text px-2 py-1 text-sm font-semibold whitespace-nowrap pointer-events-none z-20"
                                     :style="{ left: left(ghost.seconds) }"
                                 >
                                     {{ ghost.label }}
@@ -748,12 +775,12 @@ watch(zoom, scrollToFocus)
                     </div>
                 </section>
 
-                <section :aria-label="t('schedule.todayEvents')" class="bg-base-100 border border-base-300 rounded-lg">
-                    <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
-                        <h2 class="text-[15px] font-semibold">
+                <section :aria-label="t('schedule.todayEvents')" class="card-box">
+                    <div class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
+                        <h2 class="m-0 text-base font-semibold">
                             {{ isToday ? t('schedule.todayEvents') : t('schedule.dayEvents') }}
                         </h2>
-                        <span class="text-xs text-base-content/60">
+                        <span class="text-[13px] text-muted">
                             {{
                                 t(
                                     'schedule.countScheduled',
@@ -775,25 +802,25 @@ watch(zoom, scrollToFocus)
                         </span>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-215 text-[13px]">
+                        <table class="w-full min-w-215 text-sm">
                             <thead>
-                                <tr class="text-left text-base-content/60">
-                                    <th class="px-4 py-2.5 font-medium">{{ t('schedule.time') }}</th>
+                                <tr class="text-left text-[13px] text-muted">
+                                    <th class="px-4.5 py-2.5 font-medium">{{ t('schedule.time') }}</th>
                                     <th class="px-2 py-2.5 font-medium">{{ t('schedule.material') }}</th>
                                     <th class="px-2 py-2.5 font-medium">{{ t('schedule.howEnters') }}</th>
                                     <th class="px-2 py-2.5 font-medium">{{ t('schedule.afterwards') }}</th>
                                     <th class="px-2 py-2.5 font-medium">{{ t('schedule.inGuide') }}</th>
                                     <th class="px-2 py-2.5 font-medium">{{ t('schedule.state') }}</th>
-                                    <th class="px-4 py-2.5 font-medium text-right">{{ t('schedule.actions') }}</th>
+                                    <th class="px-4.5 py-2.5 font-medium text-right">{{ t('schedule.actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
                                     v-for="block in eventBlocks"
                                     :key="`row-${block.occurrence.event.id}-${block.occurrence.start}`"
-                                    class="border-t border-base-200"
+                                    class="border-t border-line"
                                 >
-                                    <td class="px-4 py-3 tabular-nums align-top">
+                                    <td class="px-4.5 py-3 font-mono align-top">
                                         <template v-if="block.occurrence.event.kind === 'live'">
                                             {{ splitDateTime(block.occurrence.start).time.slice(0, 5) }} –
                                             {{ splitDateTime(block.occurrence.end).time.slice(0, 5) }}
@@ -810,14 +837,14 @@ watch(zoom, scrollToFocus)
                                     <td class="px-2 py-3 align-top">
                                         {{ block.occurrence.event.kind === 'live' ? `${t('schedule.live')} · ` : ''
                                         }}{{ block.occurrence.event.title }}
-                                        <div class="text-xs text-base-content/60 truncate max-w-72">
+                                        <div class="text-[13px] text-muted truncate max-w-72">
                                             {{ sourcesLabel(block.occurrence.event) }}
                                         </div>
                                     </td>
                                     <td class="px-2 py-3 align-top">
                                         <span class="inline-flex items-center gap-1.5">
                                             <span
-                                                class="w-2 h-2 rounded-sm"
+                                                class="w-2.5 h-2.5 rounded-[3px]"
                                                 :style="{ background: block.color }"
                                                 aria-hidden="true"
                                             />
@@ -827,7 +854,7 @@ watch(zoom, scrollToFocus)
                                     <td class="px-2 py-3 align-top">{{ afterLabel(block.occurrence.event) }}</td>
                                     <td
                                         class="px-2 py-3 align-top"
-                                        :class="{ 'text-base-content/60': !block.occurrence.event.show_in_guide }"
+                                        :class="{ 'text-muted': !block.occurrence.event.show_in_guide }"
                                     >
                                         {{
                                             block.occurrence.event.show_in_guide ? t('schedule.yes') : t('schedule.no')
@@ -835,41 +862,41 @@ watch(zoom, scrollToFocus)
                                     </td>
                                     <td class="px-2 py-3 align-top">
                                         <span
-                                            class="rounded px-2 py-0.5 text-xs whitespace-nowrap"
+                                            class="rounded-md px-2 py-0.5 text-[13px] whitespace-nowrap"
                                             :class="stateClass(occurrenceState(block.occurrence).tone)"
                                         >
                                             {{ occurrenceState(block.occurrence).label }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap align-top">
+                                    <td class="px-4.5 py-2 text-right whitespace-nowrap align-top">
                                         <button
-                                            class="btn btn-sm btn-square btn-outline border-base-content/30"
+                                            class="btn-icon min-w-10 min-h-10 border border-line-strong"
                                             :aria-label="t('schedule.playNow')"
                                             :title="t('schedule.playNow')"
                                             @click="trigger(block.occurrence)"
                                         >
-                                            <i class="bi bi-lightning-charge" />
+                                            <i class="bi bi-lightning-charge" aria-hidden="true" />
                                         </button>
                                         <button
-                                            class="btn btn-sm btn-square btn-outline border-base-content/30 ms-1"
+                                            class="btn-icon min-w-10 min-h-10 border border-line-strong ms-1.5"
                                             :aria-label="t('schedule.edit')"
                                             :title="t('schedule.edit')"
                                             @click="edit(block.occurrence)"
                                         >
-                                            <i class="bi bi-pencil" />
+                                            <i class="bi bi-pencil" aria-hidden="true" />
                                         </button>
                                         <button
-                                            class="btn btn-sm btn-square btn-outline border-base-content/30 ms-1"
+                                            class="btn-icon min-w-10 min-h-10 border border-line-strong text-error ms-1.5"
                                             :aria-label="t('schedule.remove')"
                                             :title="t('schedule.remove')"
                                             @click="deleting = block.occurrence.event"
                                         >
-                                            <i class="bi bi-trash" />
+                                            <i class="bi bi-trash" aria-hidden="true" />
                                         </button>
                                     </td>
                                 </tr>
                                 <tr v-if="!eventBlocks.length">
-                                    <td colspan="7" class="px-4 py-6 text-center text-base-content/60">
+                                    <td colspan="7" class="px-4 py-7 text-center text-muted">
                                         {{ t('schedule.empty') }}
                                     </td>
                                 </tr>

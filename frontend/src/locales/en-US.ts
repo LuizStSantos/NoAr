@@ -641,6 +641,8 @@ export default {
         updateFailed: 'Update user profile failed!',
     },
     schedule: {
+        intro: 'What goes on air over the playlist.',
+        materials: 'Materials',
         weekdayLetters: 'S,M,T,W,T,F,S',
         weekdayShort: 'Sun,Mon,Tue,Wed,Thu,Fri,Sat',
         once: 'once',

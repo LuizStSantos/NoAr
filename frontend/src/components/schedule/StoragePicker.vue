@@ -100,19 +100,32 @@ watch(i, () => open(''))
 </script>
 
 <template>
-    <div class="flex flex-col gap-2 min-h-0">
-        <label class="input input-sm w-full">
-            <i class="bi bi-search opacity-60" />
-            <input v-model="search" type="search" :placeholder="t('schedule.searchMaterial')" />
+    <div class="flex flex-col gap-2.5 min-h-0">
+        <label
+            class="flex items-center gap-2 bg-field border border-line-strong rounded-[10px] px-3 min-h-10 text-muted focus-within:outline-2 focus-within:outline-accent focus-within:outline-offset-1"
+        >
+            <i class="bi bi-search" aria-hidden="true" />
+            <input
+                v-model="search"
+                type="search"
+                :placeholder="t('schedule.searchMaterial')"
+                class="flex-1 min-w-0 bg-transparent border-0 outline-none text-base-content"
+            />
         </label>
 
-        <nav class="text-xs text-base-content/70 flex flex-wrap items-center gap-1" :aria-label="t('schedule.folder')">
-            <button class="hover:text-accent cursor-pointer" @click="open('')">
-                <i class="bi bi-hdd" /> {{ t('button.media') }}
+        <nav class="text-[13px] text-muted flex flex-wrap items-center gap-1.5" :aria-label="t('schedule.folder')">
+            <button
+                class="bg-transparent border-0 p-0 text-inherit hover:text-base-content cursor-pointer"
+                @click="open('')"
+            >
+                <i class="bi bi-hdd me-1" aria-hidden="true" />{{ t('button.media') }}
             </button>
             <template v-for="(crumb, index) in crumbs" :key="index">
-                <span>/</span>
-                <button class="hover:text-accent cursor-pointer" @click="open(crumbs.slice(0, index + 1).join('/'))">
+                <i class="bi bi-chevron-right text-[10px]" aria-hidden="true" />
+                <button
+                    class="bg-transparent border-0 p-0 text-inherit hover:text-base-content cursor-pointer"
+                    @click="open(crumbs.slice(0, index + 1).join('/'))"
+                >
                     {{ crumb }}
                 </button>
             </template>
@@ -121,40 +134,41 @@ watch(i, () => open(''))
         <div v-if="loading" class="py-4 flex justify-center">
             <span class="loading loading-spinner loading-sm" />
         </div>
-        <p v-else-if="error" class="text-error text-sm">{{ error }}</p>
+        <p v-else-if="error" class="m-0 text-error">{{ error }}</p>
 
-        <ul v-else class="flex flex-col gap-0.5 overflow-auto">
+        <ul v-else class="m-0 p-0 list-none flex flex-col gap-0.5 overflow-auto">
             <li v-for="folder in shownFolders" :key="`d-${folder}`">
                 <button
-                    class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-base-200 text-left cursor-pointer"
+                    class="w-full flex items-center gap-2.5 px-2.5 min-h-10 rounded-lg bg-transparent border-0 text-inherit hover:bg-raised text-left cursor-pointer"
                     @click="open(joinPath(source, folder))"
                 >
-                    <i class="bi bi-folder-fill text-base-content/60" />
-                    <span class="truncate">{{ folder }}</span>
+                    <i class="bi bi-folder2 text-muted" aria-hidden="true" />
+                    <span class="flex-1 min-w-0 truncate">{{ folder }}</span>
+                    <i class="bi bi-chevron-right text-[11px] text-subtle" aria-hidden="true" />
                 </button>
             </li>
             <li
                 v-for="file in shownFiles"
                 :key="`f-${file.name}`"
-                class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-base-200"
+                class="flex items-center gap-2.5 px-2.5 min-h-10 rounded-lg hover:bg-raised"
                 :class="{ 'cursor-grab': props.draggable }"
                 :draggable="props.draggable"
                 @dragstart="dragStart($event, file.name, file.duration)"
             >
-                <i v-if="props.draggable" class="bi bi-grip-vertical text-base-content/50" aria-hidden="true" />
-                <i v-else class="bi bi-film text-base-content/60" aria-hidden="true" />
-                <span class="flex-1 min-w-0 truncate">{{ file.name }}</span>
-                <span class="text-xs text-base-content/60 tabular-nums">{{ formatLength(file.duration) }}</span>
+                <i v-if="props.draggable" class="bi bi-grip-vertical text-subtle" aria-hidden="true" />
+                <i v-else class="bi bi-film text-muted" aria-hidden="true" />
+                <span class="flex-1 min-w-0 truncate" :title="file.name">{{ file.name }}</span>
+                <span class="font-mono text-xs text-muted">{{ formatLength(file.duration) }}</span>
                 <button
                     v-if="!props.draggable"
-                    class="btn btn-xs btn-ghost"
+                    class="btn-icon min-w-8 min-h-8"
                     :aria-label="t('schedule.addFile', { name: file.name })"
                     @click="emit('pick', item(file.name, file.duration))"
                 >
-                    <i class="bi bi-plus-lg" />
+                    <i class="bi bi-plus-lg" aria-hidden="true" />
                 </button>
             </li>
-            <li v-if="!shownFolders.length && !shownFiles.length" class="text-sm text-base-content/60 px-2 py-3">
+            <li v-if="!shownFolders.length && !shownFiles.length" class="text-muted px-2.5 py-3">
                 {{ t('schedule.emptyFolder') }}
             </li>
         </ul>

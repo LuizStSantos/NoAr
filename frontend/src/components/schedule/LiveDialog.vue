@@ -266,11 +266,7 @@ async function save(schedule: boolean) {
                     <i class="bi bi-broadcast" :style="{ color: SCHEDULE_COLORS.live }" />
                     {{ existing ? t('schedule.scheduleLive') : t('schedule.newLive') }}
                 </h2>
-                <button
-                    class="btn btn-sm btn-ghost btn-circle"
-                    :aria-label="t('schedule.close')"
-                    @click="emit('close')"
-                >
+                <button class="btn-icon" :aria-label="t('schedule.close')" @click="emit('close')">
                     <i class="bi bi-x-lg" />
                 </button>
             </div>
@@ -281,42 +277,37 @@ async function save(schedule: boolean) {
                         <i class="bi bi-broadcast" :style="{ color: SCHEDULE_COLORS.live }" />
                         <div class="flex-1 min-w-0">
                             <div class="font-semibold truncate">{{ existing.title || existing.name }}</div>
-                            <div class="font-mono text-xs text-base-content/70 truncate">{{ existing.url }}</div>
+                            <div class="font-mono text-xs text-muted truncate">{{ existing.url }}</div>
                         </div>
-                        <span class="badge badge-sm badge-outline" :style="{ borderColor: SCHEDULE_COLORS.live }">
+                        <span
+                            class="text-xs border rounded-md px-1.5 leading-5"
+                            :style="{ borderColor: SCHEDULE_COLORS.live }"
+                        >
                             {{ existing.protocol }}
                         </span>
-                        <button
-                            class="btn btn-sm btn-outline border-base-content/30"
-                            :disabled="testing"
-                            @click="testSignal"
-                        >
+                        <button class="btn-quiet" :disabled="testing" @click="testSignal">
                             <span v-if="testing" class="loading loading-spinner loading-xs" />
                             {{ t('schedule.testSignal') }}
                         </button>
                     </div>
                 </template>
                 <template v-else>
-                    <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                    <label class="field-label">
                         {{ t('schedule.name') }}
-                        <input
-                            v-model="name"
-                            class="input w-full text-sm"
-                            :placeholder="t('schedule.liveNamePlaceholder')"
-                        />
+                        <input v-model="name" class="field-input" :placeholder="t('schedule.liveNamePlaceholder')" />
                     </label>
 
                     <div class="flex flex-col gap-2">
-                        <div class="text-xs text-base-content/70">{{ t('schedule.signal') }}</div>
-                        <div class="join w-fit" role="group" :aria-label="t('schedule.protocol')">
+                        <div class="text-xs text-muted">{{ t('schedule.signal') }}</div>
+                        <div class="flex w-fit" role="group" :aria-label="t('schedule.protocol')">
                             <button
                                 v-for="option in ['SRT', 'RTMP', 'HLS'] as Protocol[]"
                                 :key="option"
-                                class="btn btn-sm join-item"
+                                class="border min-h-9 px-4 cursor-pointer first:rounded-s-field last:rounded-e-field -ms-px first:ms-0"
                                 :class="
                                     protocol === option
-                                        ? 'text-[#1c1c1c] font-bold'
-                                        : 'btn-outline border-base-content/30'
+                                        ? 'text-[#1c1c1c] font-semibold'
+                                        : 'bg-transparent border-line-strong text-base-content'
                                 "
                                 :style="
                                     protocol === option
@@ -332,15 +323,11 @@ async function save(schedule: boolean) {
                         <div class="flex gap-2">
                             <input
                                 v-model="url"
-                                class="input flex-1 min-w-0 font-mono text-sm"
+                                class="field-input flex-1 min-w-0 font-mono"
                                 :aria-label="t('schedule.address')"
                                 :placeholder="PLACEHOLDERS[protocol]"
                             />
-                            <button
-                                class="btn btn-outline border-base-content/30"
-                                :disabled="testing"
-                                @click="testSignal"
-                            >
+                            <button class="btn-quiet" :disabled="testing" @click="testSignal">
                                 <span v-if="testing" class="loading loading-spinner loading-xs" />
                                 {{ t('schedule.testSignal') }}
                             </button>
@@ -359,17 +346,17 @@ async function save(schedule: boolean) {
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
-                    <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                    <label class="field-label">
                         {{ t('schedule.day') }}
-                        <input v-model="date" type="date" class="input w-full text-sm" />
+                        <input v-model="date" type="date" class="field-input" />
                     </label>
-                    <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                    <label class="field-label">
                         {{ t('schedule.starts') }}
-                        <input v-model="start" type="time" step="1" class="input w-full text-sm tabular-nums" />
+                        <input v-model="start" type="time" step="1" class="field-input font-mono" />
                     </label>
-                    <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                    <label class="field-label">
                         {{ t('schedule.ends') }}
-                        <input v-model="end" type="time" step="1" class="input w-full text-sm tabular-nums" />
+                        <input v-model="end" type="time" step="1" class="field-input font-mono" />
                     </label>
                 </div>
 
@@ -377,8 +364,12 @@ async function save(schedule: boolean) {
                     <button
                         v-for="mode in ['once', 'daily', 'weekdays'] as const"
                         :key="mode"
-                        class="btn btn-sm"
-                        :class="repeatMode === mode ? 'btn-accent' : 'btn-outline border-base-content/30'"
+                        class="rounded-field border min-h-9 px-3.5 cursor-pointer"
+                        :class="
+                            repeatMode === mode
+                                ? 'bg-accent text-accent-content border-accent font-semibold'
+                                : 'bg-transparent border-line-strong text-base-content'
+                        "
                         :aria-pressed="repeatMode === mode"
                         @click="repeatMode = mode"
                     >
@@ -389,8 +380,12 @@ async function save(schedule: boolean) {
                         <button
                             v-for="(bit, index) in WEEKDAY_BITS"
                             :key="bit"
-                            class="btn btn-sm btn-circle"
-                            :class="repeatDays & bit ? 'btn-accent' : 'btn-outline border-base-content/30'"
+                            class="rounded-full border w-9 h-9 cursor-pointer"
+                            :class="
+                                repeatDays & bit
+                                    ? 'bg-accent text-accent-content border-accent font-semibold'
+                                    : 'bg-transparent border-line-strong text-base-content'
+                            "
                             :aria-pressed="Boolean(repeatDays & bit)"
                             :aria-label="t('schedule.weekdayShort').split(',')[index]"
                             @click="toggleDay(bit)"
@@ -402,7 +397,7 @@ async function save(schedule: boolean) {
 
                 <div class="grid grid-cols-2 gap-4">
                     <fieldset class="flex flex-col gap-2">
-                        <legend class="text-xs text-base-content/70 mb-2">{{ t('schedule.whenStarting') }}</legend>
+                        <legend class="text-xs text-muted mb-2">{{ t('schedule.whenStarting') }}</legend>
                         <label class="flex gap-2 items-center cursor-pointer">
                             <input v-model="entryMode" type="radio" value="interrupt" class="radio radio-sm" />
                             {{ t('schedule.liveOnTime') }}
@@ -413,7 +408,7 @@ async function save(schedule: boolean) {
                         </label>
                     </fieldset>
                     <fieldset class="flex flex-col gap-2">
-                        <legend class="text-xs text-base-content/70 mb-2">{{ t('schedule.whenEnding') }}</legend>
+                        <legend class="text-xs text-muted mb-2">{{ t('schedule.whenEnding') }}</legend>
                         <label class="flex gap-2 items-center cursor-pointer">
                             <input v-model="afterMode" type="radio" value="clock" class="radio radio-sm" />
                             {{ t('schedule.liveBackOnClock') }}
@@ -425,9 +420,9 @@ async function save(schedule: boolean) {
                     </fieldset>
                 </div>
 
-                <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                <label class="field-label">
                     {{ t('schedule.ifSignalDrops') }}
-                    <select v-model.number="retrySeconds" class="select w-full text-sm">
+                    <select v-model.number="retrySeconds" class="field-input">
                         <option v-for="seconds in RETRY_OPTIONS" :key="seconds" :value="seconds">
                             {{ t('schedule.retryFor', { minutes: seconds / 60 }) }}
                         </option>
@@ -439,10 +434,10 @@ async function save(schedule: boolean) {
                         <span class="font-semibold">{{ t('schedule.inGuide') }}</span>
                         <input v-model="showInGuide" type="checkbox" class="toggle toggle-accent" />
                     </label>
-                    <p v-if="existing" class="text-xs text-base-content/60">{{ t('schedule.guideFromFolder') }}</p>
+                    <p v-if="existing" class="text-xs text-subtle">{{ t('schedule.guideFromFolder') }}</p>
                     <div v-else class="grid grid-cols-[132px_minmax(0,1fr)] gap-4">
                         <label
-                            class="h-44 border border-dashed border-base-content/40 rounded-md bg-base-200 flex flex-col items-center justify-center gap-1 text-xs text-base-content/60 text-center p-2 cursor-pointer overflow-hidden"
+                            class="h-44 border border-dashed border-base-content/40 rounded-md bg-base-200 flex flex-col items-center justify-center gap-1 text-xs text-subtle text-center p-2 cursor-pointer overflow-hidden"
                             @dragover.prevent
                             @drop.prevent="dropPoster"
                         >
@@ -464,22 +459,22 @@ async function save(schedule: boolean) {
                             />
                         </label>
                         <div class="flex flex-col gap-2.5">
-                            <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                            <label class="field-label">
                                 {{ t('schedule.guideTitle') }}
-                                <input v-model="guideTitle" class="input input-sm w-full text-sm" :placeholder="name" />
+                                <input v-model="guideTitle" class="field-input" :placeholder="name" />
                             </label>
-                            <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                            <label class="field-label">
                                 {{ t('schedule.description') }}
-                                <textarea v-model="plot" rows="2" class="textarea w-full text-sm resize-none" />
+                                <textarea v-model="plot" rows="2" class="field-input py-2 resize-none" />
                             </label>
                             <div class="grid grid-cols-2 gap-2.5">
-                                <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                                <label class="field-label">
                                     {{ t('schedule.genre') }}
-                                    <input v-model="genre" class="input input-sm w-full text-sm" />
+                                    <input v-model="genre" class="field-input" />
                                 </label>
-                                <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                                <label class="field-label">
                                     {{ t('schedule.rating') }}
-                                    <select v-model="rating" class="select select-sm w-full text-sm">
+                                    <select v-model="rating" class="field-input">
                                         <option v-for="value in RATINGS" :key="value" :value="value">
                                             {{ value === 'L' ? t('schedule.ratingFree') : value }}
                                         </option>
@@ -491,7 +486,7 @@ async function save(schedule: boolean) {
                 </div>
 
                 <div v-if="!existing && safeName" class="bg-base-200 rounded-md px-3 py-2.5 flex flex-col gap-1">
-                    <div class="text-xs text-base-content/60">{{ t('schedule.savedAs') }}</div>
+                    <div class="text-xs text-subtle">{{ t('schedule.savedAs') }}</div>
                     <pre class="font-mono text-xs leading-relaxed whitespace-pre-wrap">Lives/{{ safeName }}/
    signal.live   <span class="text-base-content/50">← {{ t('schedule.fileAddress') }}</span>
    tvshow.nfo    <span class="text-base-content/50">← {{ t('schedule.fileGuide') }}</span>
@@ -502,16 +497,11 @@ async function save(schedule: boolean) {
             </div>
 
             <div class="flex justify-end gap-2 px-5 py-3 border-t border-base-300">
-                <button class="btn btn-outline border-base-content/30" @click="emit('close')">{{ t('cancel') }}</button>
-                <button
-                    v-if="!existing"
-                    class="btn btn-outline border-base-content/30"
-                    :disabled="saving"
-                    @click="save(false)"
-                >
+                <button class="btn-quiet" @click="emit('close')">{{ t('cancel') }}</button>
+                <button v-if="!existing" class="btn-quiet" :disabled="saving" @click="save(false)">
                     {{ t('schedule.saveOnly') }}
                 </button>
-                <button class="btn btn-accent font-bold" :disabled="saving" @click="save(true)">
+                <button class="btn-main" :disabled="saving" @click="save(true)">
                     <span v-if="saving" class="loading loading-spinner loading-sm" />
                     {{ existing ? t('schedule.schedule') : t('schedule.saveAndSchedule') }}
                 </button>

@@ -642,6 +642,8 @@ export default {
         updateFailed: 'Atualização do perfil do usuário falhou!',
     },
     schedule: {
+        intro: 'O que entra por cima da playlist.',
+        materials: 'Materiais',
         weekdayLetters: 'D,S,T,Q,Q,S,S',
         weekdayShort: 'dom,seg,ter,qua,qui,sex,sáb',
         once: 'uma vez',

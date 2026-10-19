@@ -298,18 +298,14 @@ async function save() {
                 <h2 id="schedule-dialog-title" class="text-lg font-semibold">
                     {{ draft.event ? t('schedule.editMaterial') : t('schedule.scheduleMaterial') }}
                 </h2>
-                <button
-                    class="btn btn-sm btn-ghost btn-circle"
-                    :aria-label="t('schedule.close')"
-                    @click="emit('close')"
-                >
+                <button class="btn-icon" :aria-label="t('schedule.close')" @click="emit('close')">
                     <i class="bi bi-x-lg" />
                 </button>
             </div>
 
             <div class="px-5 py-4 flex flex-col gap-5">
                 <div class="flex flex-col gap-2">
-                    <div class="text-xs text-base-content/70">{{ t('schedule.materialOrder') }}</div>
+                    <div class="text-xs text-muted">{{ t('schedule.materialOrder') }}</div>
                     <ul class="flex flex-col gap-1.5">
                         <li
                             v-for="(source, index) in sources"
@@ -324,7 +320,7 @@ async function save() {
                                 {{ source.duration ? formatLength(source.duration) : '' }}
                             </span>
                             <button
-                                class="btn btn-xs btn-ghost"
+                                class="btn-icon min-w-8 min-h-8"
                                 :aria-label="t('schedule.moveUp')"
                                 :disabled="index === 0"
                                 @click="moveSource(index, -1)"
@@ -332,7 +328,7 @@ async function save() {
                                 <i class="bi bi-arrow-up" />
                             </button>
                             <button
-                                class="btn btn-xs btn-ghost"
+                                class="btn-icon min-w-8 min-h-8"
                                 :aria-label="t('schedule.moveDown')"
                                 :disabled="index === sources.length - 1"
                                 @click="moveSource(index, 1)"
@@ -340,7 +336,7 @@ async function save() {
                                 <i class="bi bi-arrow-down" />
                             </button>
                             <button
-                                class="btn btn-xs btn-ghost"
+                                class="btn-icon min-w-8 min-h-8"
                                 :aria-label="t('schedule.remove')"
                                 @click="removeSource(index)"
                             >
@@ -366,34 +362,38 @@ async function save() {
                     </div>
                 </div>
 
-                <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                <label class="field-label">
                     {{ t('schedule.name') }}
                     <input
                         v-model="title"
-                        class="input w-full text-sm"
+                        class="field-input"
                         :placeholder="sources[0] ? fileStem(sources[0].path) : t('schedule.namePlaceholder')"
                     />
                 </label>
 
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                    <label class="field-label">
                         {{ t('schedule.day') }}
-                        <input v-model="date" type="date" class="input w-full text-sm" required />
+                        <input v-model="date" type="date" class="field-input" required />
                     </label>
-                    <label class="flex flex-col gap-1 text-xs text-base-content/70">
+                    <label class="field-label">
                         {{ t('schedule.time') }}
-                        <input v-model="time" type="time" step="1" class="input w-full text-sm tabular-nums" required />
+                        <input v-model="time" type="time" step="1" class="field-input font-mono" required />
                     </label>
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <div class="text-xs text-base-content/70">{{ t('schedule.repeat') }}</div>
+                    <div class="text-xs text-muted">{{ t('schedule.repeat') }}</div>
                     <div class="flex flex-wrap items-center gap-1.5">
                         <button
                             v-for="mode in ['once', 'daily', 'weekdays'] as const"
                             :key="mode"
-                            class="btn btn-sm"
-                            :class="repeatMode === mode ? 'btn-accent' : 'btn-outline border-base-content/30'"
+                            class="rounded-field border min-h-9 px-3.5 cursor-pointer"
+                            :class="
+                                repeatMode === mode
+                                    ? 'bg-accent text-accent-content border-accent font-semibold'
+                                    : 'bg-transparent border-line-strong text-base-content'
+                            "
                             :aria-pressed="repeatMode === mode"
                             @click="repeatMode = mode"
                         >
@@ -404,8 +404,12 @@ async function save() {
                             <button
                                 v-for="(bit, index) in WEEKDAY_BITS"
                                 :key="bit"
-                                class="btn btn-sm btn-circle"
-                                :class="repeatDays & bit ? 'btn-accent' : 'btn-outline border-base-content/30'"
+                                class="rounded-full border w-9 h-9 cursor-pointer"
+                                :class="
+                                    repeatDays & bit
+                                        ? 'bg-accent text-accent-content border-accent font-semibold'
+                                        : 'bg-transparent border-line-strong text-base-content'
+                                "
                                 :aria-pressed="Boolean(repeatDays & bit)"
                                 :aria-label="t('schedule.weekdayShort').split(',')[index]"
                                 @click="toggleDay(bit)"
@@ -417,7 +421,7 @@ async function save() {
                 </div>
 
                 <fieldset class="flex flex-col gap-2">
-                    <legend class="text-xs text-base-content/70 mb-2">{{ t('schedule.howEnters') }}</legend>
+                    <legend class="text-xs text-muted mb-2">{{ t('schedule.howEnters') }}</legend>
                     <label
                         class="flex gap-3 items-start rounded-lg px-4 py-3 cursor-pointer border"
                         :style="
@@ -473,7 +477,7 @@ async function save() {
                 </fieldset>
 
                 <fieldset class="flex flex-col gap-2">
-                    <legend class="text-xs text-base-content/70 mb-2">{{ t('schedule.afterwards') }}</legend>
+                    <legend class="text-xs text-muted mb-2">{{ t('schedule.afterwards') }}</legend>
                     <label class="flex gap-2 items-center cursor-pointer">
                         <input v-model="afterMode" type="radio" value="continue" class="radio radio-sm" />
                         <span>
@@ -495,7 +499,7 @@ async function save() {
                 </fieldset>
 
                 <div v-if="preview" class="flex flex-col gap-2">
-                    <div class="text-xs text-base-content/70">{{ t('schedule.howItAirs') }}</div>
+                    <div class="text-xs text-muted">{{ t('schedule.howItAirs') }}</div>
                     <div class="grid grid-cols-[56px_minmax(0,1fr)] gap-x-3 gap-y-1.5 items-center text-xs">
                         <span class="text-base-content/60">{{ t('schedule.before') }}</span>
                         <div class="flex h-7 rounded overflow-hidden">
@@ -534,7 +538,7 @@ async function save() {
                 <label class="flex items-center justify-between gap-4 border-t border-base-300 pt-4 cursor-pointer">
                     <span class="flex flex-col gap-0.5">
                         <span>{{ t('schedule.showInGuide') }}</span>
-                        <span class="text-xs text-base-content/60">{{ t('schedule.showInGuideHelp') }}</span>
+                        <span class="text-xs text-subtle">{{ t('schedule.showInGuideHelp') }}</span>
                     </span>
                     <input v-model="showInGuide" type="checkbox" class="toggle toggle-accent" />
                 </label>
@@ -543,8 +547,8 @@ async function save() {
             </div>
 
             <div class="flex justify-end gap-2 px-5 py-3 border-t border-base-300">
-                <button class="btn btn-outline border-base-content/30" @click="emit('close')">{{ t('cancel') }}</button>
-                <button class="btn btn-accent font-bold" :disabled="saving" @click="save">
+                <button class="btn-quiet" @click="emit('close')">{{ t('cancel') }}</button>
+                <button class="btn-main" :disabled="saving" @click="save">
                     <span v-if="saving" class="loading loading-spinner loading-sm" />
                     {{ t('schedule.schedule') }}
                 </button>
