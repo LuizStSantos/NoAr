@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
 import { useRoute } from 'vue-router'
@@ -11,6 +11,7 @@ import { useMedia } from '@/stores/media'
 import { useUploads } from '@/stores/uploads'
 
 import FolderTree from '@/components/storage/FolderTree.vue'
+import ImageViewer, { type ViewerImage } from '@/components/storage/ImageViewer.vue'
 import SheetCard from '@/components/storage/SheetCard.vue'
 import SheetEditor from '@/components/storage/SheetEditor.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
@@ -19,7 +20,7 @@ import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 import { authFetch } from '@/composables/authFetch'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
-import { baseName, readSheet, storageJoin, uploadArtwork } from '@/composables/storage'
+import { baseName, imageUrl, readSheet, storageJoin, uploadArtwork } from '@/composables/storage'
 
 const { t, locale } = useI18n()
 const configStore = useConfig()
@@ -49,7 +50,11 @@ const crumbs = computed(() => {
     ]
 })
 
-const allFiles = ref(readSetting('storage-all-files') === 'true')
+type FileView = 'videos' | 'images' | 'all'
+
+const FILE_VIEWS: FileView[] = ['videos', 'images', 'all']
+
+const view = ref<FileView>(initialView())
 const filter = ref('')
 const selected = ref<string[]>([])
 const sheet = ref<MediaSheet | null>(null)
@@ -67,7 +72,7 @@ const deleteNames = ref<string[]>([])
 const deleteRecursive = ref(false)
 const moveNames = ref<string[]>([])
 const moveTarget = ref('')
-const preview = ref<{ name: string; url: string; video: boolean; options?: any } | null>(null)
+const preview = ref<{ name: string; options: any } | null>(null)
 
 useHead({ title: computed(() => t('storage.title')) })
 
@@ -87,20 +92,199 @@ function writeSetting(key: string, value: string) {
     }
 }
 
+function initialView(): FileView {
+    const saved = readSetting('storage-view')
+
+    if (FILE_VIEWS.includes(saved as FileView)) {
+        return saved as FileView
+    }
+
+    // The earlier two-way choice.
+    return readSetting('storage-all-files') === 'true' ? 'all' : 'videos'
+}
+
 const rows = computed<Row[]>(() => {
     const needle = filter.value.trim().toLowerCase()
     const folders: Row[] = mediaStore.folderTree.folders.map((folder) => ({ name: folder.name, folder: true }))
-    const files: Row[] = mediaStore.folderTree.files.map((file) => ({ name: file.name, folder: false, file }))
+    const files: Row[] = mediaStore.folderTree.files
+        .filter((file) => view.value === 'all' || isVideo(file))
+        .map((file) => ({ name: file.name, folder: false, file }))
 
     return [...folders, ...files].filter((row) => !needle || row.name.toLowerCase().includes(needle))
 })
 
 /** Playable video or audio; images can be in the channel's extensions too. */
 function isVideo(file?: FileObject): boolean {
-    return Boolean(file) && file?.media !== false && !IMAGE_TYPES.includes(extension(file?.name ?? ''))
+    return Boolean(file) && file?.media !== false && !isImage(file?.name ?? '')
+}
+
+function isImage(name: string): boolean {
+    return IMAGE_TYPES.includes(extension(name))
 }
 
 const videos = computed(() => mediaStore.folderTree.files.filter((file) => isVideo(file)))
+const images = computed(() => mediaStore.folderTree.files.filter((file) => isImage(file.name)))
+const shownImages = computed(() => {
+    const needle = filter.value.trim().toLowerCase()
+
+    return images.value.filter((file) => !needle || file.name.toLowerCase().includes(needle))
+})
+
+// Images are shown from short-lived addresses, fetched a few at a time.
+const imageUrls = reactive(new Map<string, string>())
+const imageDims = reactive(new Map<string, string>())
+const retried = new Set<string>()
+let imagesFolder: string | null = null
+
+/** Changes when the file does, so a replaced image is not taken from the cache. */
+function imageKey(file: FileObject): string {
+    return `${file.name}:${file.modified ?? ''}:${file.size ?? ''}`
+}
+
+async function loadImageUrls() {
+    const folder = current.value
+
+    if (imagesFolder !== folder) {
+        imageUrls.clear()
+        imageDims.clear()
+        retried.clear()
+        imagesFolder = folder
+    }
+
+    if (view.value === 'videos' || !channelId.value) {
+        return
+    }
+
+    const queue = images.value.filter((file) => !imageUrls.has(imageKey(file)))
+
+    async function worker() {
+        for (let file = queue.shift(); file; file = queue.shift()) {
+            try {
+                const url = await imageUrl(channelId.value, storageJoin(folder, file.name))
+
+                if (folder === current.value) {
+                    imageUrls.set(imageKey(file), url)
+                }
+            } catch {
+                // The row keeps its icon.
+            }
+        }
+    }
+
+    await Promise.all([worker(), worker(), worker(), worker()])
+}
+
+/** An address expired (they last a quarter of an hour): ask for a new one once. */
+function imageFailed(file: FileObject) {
+    const key = imageKey(file)
+
+    if (!retried.has(key)) {
+        retried.add(key)
+        imageUrls.delete(key)
+        loadImageUrls()
+    }
+}
+
+function imageLoaded(event: Event, file: FileObject) {
+    const element = event.target as HTMLImageElement
+
+    if (element.naturalWidth) {
+        imageDims.set(imageKey(file), `${element.naturalWidth}×${element.naturalHeight}`)
+    }
+}
+
+const imagesSummary = computed(() => {
+    const bytes = images.value.reduce((sum, file) => sum + (file.size ?? 0), 0)
+
+    return t(
+        'storage.images.summary',
+        { count: images.value.length, size: fileSize(bytes, 1) || '0 B' },
+        images.value.length,
+    )
+})
+
+/** Whose artwork the open folder holds, for the image labels. */
+const artworkOwner = computed<'series' | 'movie' | 'folder'>(() => {
+    if (!sheet.value?.file) {
+        return 'folder'
+    }
+
+    return sheet.value.kind === 'movie' ? 'movie' : 'series'
+})
+
+/** Name of the open folder's poster or wide image, when it is a file here. */
+function artworkHere(path: string | null | undefined): string | null {
+    if (!path) {
+        return null
+    }
+
+    const parts = storageJoin(path).split('/')
+    const name = parts.pop() ?? ''
+
+    return parts.join('/') === current.value ? name : null
+}
+
+const posterHere = computed(() => artworkHere(sheet.value?.poster))
+const backdropHere = computed(() => artworkHere(sheet.value?.backdrop))
+
+const viewerIndex = ref<number | null>(null)
+const viewerBusy = ref(false)
+const viewerImages = computed<ViewerImage[]>(() =>
+    shownImages.value.map((file) => ({
+        key: imageKey(file),
+        name: file.name,
+        url: imageUrls.get(imageKey(file)) ?? null,
+        size: file.size ?? 0,
+        dims: imageDims.get(imageKey(file)) ?? null,
+    })),
+)
+
+// The image on screen was deleted or renamed away.
+watch(
+    () => viewerImages.value.length,
+    (length) => {
+        if (viewerIndex.value !== null && viewerIndex.value >= length) {
+            viewerIndex.value = length ? length - 1 : null
+        }
+    },
+)
+
+function openViewer(name: string) {
+    const position = shownImages.value.findIndex((file) => file.name === name)
+
+    if (position >= 0) {
+        viewerIndex.value = position
+        loadImageUrls()
+    }
+}
+
+/** Make an image of the folder its poster or wide image. */
+async function useAsArtwork(kind: ArtworkKind, name: string) {
+    const file = images.value.find((item) => item.name === name)
+    const url = file ? imageUrls.get(imageKey(file)) : null
+
+    if (!url) {
+        return
+    }
+
+    viewerBusy.value = true
+
+    try {
+        const response = await fetch(url)
+
+        if (!response.ok) {
+            throw new Error(response.statusText || String(response.status))
+        }
+
+        const blob = await response.blob()
+
+        await cardArtwork(kind, new File([blob], name, { type: blob.type }))
+    } catch (e) {
+        failed(e)
+    } finally {
+        viewerBusy.value = false
+    }
+}
 /** How each video of the open folder shows up in the guide: title and episode. */
 const guide = ref<Record<string, { title: string; sub_title: string | null }>>({})
 /** The open folder's videos use a series or film sheet (its own or a parent's). */
@@ -197,7 +381,7 @@ function canPreview(row: Row): boolean {
 async function load(path: string) {
     selected.value = []
     filter.value = ''
-    await mediaStore.getTree(`/${path}`, false, allFiles.value)
+    await mediaStore.getTree(`/${path}`, false, true)
 }
 
 // A queued file reached the folder on screen (or the folder of its sheet).
@@ -211,7 +395,7 @@ watch(
 )
 
 async function refresh() {
-    await mediaStore.getTree(`/${current.value}`, false, allFiles.value)
+    await mediaStore.getTree(`/${current.value}`, false, true)
     selected.value = selected.value.filter((name) => rows.value.some((row) => row.name === name))
     treeVersion.value++
     await loadSheet()
@@ -279,10 +463,12 @@ watch(channelId, async () => {
     loadDisk()
 })
 
-watch(allFiles, (value) => {
-    writeSetting('storage-all-files', String(value))
-    mediaStore.getTree(`/${current.value}`, false, value)
+watch(view, (value) => {
+    writeSetting('storage-view', value)
+    selected.value = []
 })
+
+watch([() => mediaStore.folderTree.files, view], () => loadImageUrls())
 
 function toggle(name: string) {
     selected.value = selected.value.includes(name)
@@ -442,7 +628,7 @@ async function cardArtwork(kind: ArtworkKind, file: File) {
     try {
         sheet.value = await uploadArtwork(channelId.value, current.value, kind, file)
         indexStore.msgAlert('success', t('storage.artwork.saved'), 2)
-        await mediaStore.getTree(`/${current.value}`, false, allFiles.value)
+        await mediaStore.getTree(`/${current.value}`, false, true)
     } catch (e) {
         failed(e)
     }
@@ -453,7 +639,7 @@ async function onSheetSaved(next: MediaSheet) {
         sheet.value = next
     }
 
-    await mediaStore.getTree(`/${current.value}`, false, allFiles.value)
+    await mediaStore.getTree(`/${current.value}`, false, true)
     treeVersion.value++
 }
 
@@ -569,28 +755,23 @@ async function openPreview(row: Row) {
 
     try {
         const url = await createFilePreviewUrl(channelId.value, path)
-        const video = row.file?.media !== false
         const ext = extension(row.name)
 
         preview.value = {
             name: row.name,
-            url,
-            video,
-            options: video
-                ? {
-                      liveui: false,
-                      controls: true,
-                      suppressNotSupportedError: true,
-                      autoplay: false,
-                      preload: 'auto',
-                      sources: [
-                          {
-                              type: mediaType(row.name) === 'audio' ? `audio/${ext}` : `video/${ext}`,
-                              src: url,
-                          },
-                      ],
-                  }
-                : undefined,
+            options: {
+                liveui: false,
+                controls: true,
+                suppressNotSupportedError: true,
+                autoplay: false,
+                preload: 'auto',
+                sources: [
+                    {
+                        type: mediaType(row.name) === 'audio' ? `audio/${ext}` : `video/${ext}`,
+                        src: url,
+                    },
+                ],
+            },
         }
     } catch (e) {
         failed(e)
@@ -710,7 +891,9 @@ const uploadAccept = computed(() =>
                 >
                     <div class="flex flex-wrap items-center gap-x-3.5 gap-y-2.5 px-4 py-3 border-b border-line">
                         <h2 class="m-0 text-[15px] font-semibold">{{ t('storage.files') }}</h2>
-                        <span class="font-mono text-xs bg-raised rounded-md px-2 py-1">{{ summary }}</span>
+                        <span class="font-mono text-xs bg-raised rounded-md px-2 py-1">{{
+                            view === 'images' ? imagesSummary : summary
+                        }}</span>
                         <div class="flex-auto" />
                         <div
                             role="group"
@@ -718,17 +901,24 @@ const uploadAccept = computed(() =>
                             class="inline-flex bg-base-200 border border-line-strong rounded-field p-[3px]"
                         >
                             <button
-                                v-for="option in [false, true]"
-                                :key="String(option)"
+                                v-for="option in FILE_VIEWS"
+                                :key="option"
                                 type="button"
-                                :aria-pressed="allFiles === option"
-                                class="border-0 rounded-md px-3 min-h-8 text-[13px] cursor-pointer"
-                                :class="
-                                    allFiles === option ? 'bg-base-300 text-base-content' : 'bg-transparent text-muted'
-                                "
-                                @click="allFiles = option"
+                                :aria-pressed="view === option"
+                                class="border-0 rounded-md px-3 min-h-8 text-[13px] cursor-pointer inline-flex items-center gap-1.5"
+                                :class="view === option ? 'bg-base-300 text-base-content' : 'bg-transparent text-muted'"
+                                @click="view = option"
                             >
-                                {{ option ? t('storage.allFiles') : t('storage.videos') }}
+                                {{
+                                    option === 'videos'
+                                        ? t('storage.videos')
+                                        : option === 'images'
+                                          ? t('storage.images.tab')
+                                          : t('storage.allFiles')
+                                }}
+                                <span v-if="option !== 'all'" class="font-mono text-xs">{{
+                                    option === 'videos' ? videos.length : images.length
+                                }}</span>
                             </button>
                         </div>
                     </div>
@@ -756,7 +946,100 @@ const uploadAccept = computed(() =>
                         </button>
                     </div>
 
-                    <div class="relative overflow-x-auto">
+                    <div v-if="view === 'images'" class="relative">
+                        <div
+                            v-if="mediaStore.isLoading"
+                            class="absolute inset-0 z-10 flex justify-center pt-10 bg-base-100/60"
+                        >
+                            <span class="loading loading-spinner loading-lg" />
+                        </div>
+                        <ul
+                            v-if="shownImages.length"
+                            class="m-0 p-4 list-none grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3.5"
+                        >
+                            <li
+                                v-for="file in shownImages"
+                                :key="file.name"
+                                class="group relative bg-raised border border-line rounded-xl overflow-hidden hover:border-line-strong focus-within:border-accent"
+                                draggable="true"
+                                @dragstart="dragRow($event, { name: file.name, folder: false, file })"
+                            >
+                                <button
+                                    type="button"
+                                    class="w-full h-[150px] bg-base-300 border-0 p-0 cursor-pointer flex items-center justify-center"
+                                    :aria-label="t('storage.images.view', { name: file.name })"
+                                    @click="openViewer(file.name)"
+                                >
+                                    <img
+                                        v-if="imageUrls.get(imageKey(file))"
+                                        :src="imageUrls.get(imageKey(file))"
+                                        alt=""
+                                        class="max-w-full max-h-full object-contain"
+                                        loading="lazy"
+                                        @load="imageLoaded($event, file)"
+                                        @error="imageFailed(file)"
+                                    />
+                                    <i v-else class="bi bi-image text-2xl text-muted" aria-hidden="true" />
+                                </button>
+                                <div
+                                    class="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                                >
+                                    <button
+                                        type="button"
+                                        class="btn-icon bg-base-100/90 text-base-content"
+                                        :aria-label="t('storage.images.view', { name: file.name })"
+                                        @click="openViewer(file.name)"
+                                    >
+                                        <i class="bi bi-eye" aria-hidden="true" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn-icon bg-base-100/90 text-base-content"
+                                        :aria-label="t('storage.rename', { name: file.name })"
+                                        @click="startRename({ name: file.name, folder: false, file })"
+                                    >
+                                        <i class="bi bi-pencil" aria-hidden="true" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn-icon bg-base-100/90 text-error"
+                                        :aria-label="t('storage.remove', { name: file.name })"
+                                        @click="deleteNames = [file.name]"
+                                    >
+                                        <i class="bi bi-trash" aria-hidden="true" />
+                                    </button>
+                                </div>
+                                <div class="px-3 py-2.5 flex flex-col gap-1 text-[13px]">
+                                    <span class="truncate" :title="file.name">{{ file.name }}</span>
+                                    <span class="font-mono text-xs text-muted">{{
+                                        [imageDims.get(imageKey(file)), fileSize(file.size ?? 0, 1) || '0 B']
+                                            .filter(Boolean)
+                                            .join(' · ')
+                                    }}</span>
+                                    <span
+                                        v-if="file.name === posterHere"
+                                        class="self-start text-[11px] text-ok border border-ok/40 rounded-md px-1.5 leading-4"
+                                    >
+                                        {{ t(`storage.images.posterBadge.${artworkOwner}`) }}
+                                    </span>
+                                    <span
+                                        v-if="file.name === backdropHere"
+                                        class="self-start text-[11px] text-ok border border-ok/40 rounded-md px-1.5 leading-4"
+                                    >
+                                        {{ t('storage.images.backdropBadge') }}
+                                    </span>
+                                </div>
+                            </li>
+                        </ul>
+                        <p v-else-if="filter" class="m-0 px-4 py-6 text-muted">
+                            {{ t('storage.noMatch', { filter }) }}
+                        </p>
+                        <p v-else-if="!mediaStore.isLoading" class="m-0 px-4 pt-6 pb-2 text-muted">
+                            {{ t('storage.images.empty') }} {{ t('storage.images.emptyHint') }}
+                        </p>
+                    </div>
+
+                    <div v-else class="relative overflow-x-auto">
                         <div
                             v-if="mediaStore.isLoading"
                             class="absolute inset-0 z-10 flex justify-center pt-10 bg-base-100/60"
@@ -828,8 +1111,28 @@ const uploadAccept = computed(() =>
                                             </span>
                                         </button>
                                         <span v-else class="flex items-center gap-2.5 min-h-7 min-w-0">
-                                            <i class="bi text-muted" :class="fileIcon(row)" aria-hidden="true" />
+                                            <img
+                                                v-if="
+                                                    row.file && isImage(row.name) && imageUrls.get(imageKey(row.file))
+                                                "
+                                                :src="imageUrls.get(imageKey(row.file))"
+                                                alt=""
+                                                class="size-7 shrink-0 rounded object-cover bg-base-300"
+                                                loading="lazy"
+                                                @load="imageLoaded($event, row.file)"
+                                                @error="imageFailed(row.file)"
+                                            />
+                                            <i v-else class="bi text-muted" :class="fileIcon(row)" aria-hidden="true" />
+                                            <button
+                                                v-if="isImage(row.name)"
+                                                type="button"
+                                                class="truncate bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
+                                                @click="openViewer(row.name)"
+                                            >
+                                                {{ row.name }}
+                                            </button>
                                             <span
+                                                v-else
                                                 class="truncate"
                                                 :class="row.file?.media === false ? 'text-muted' : ''"
                                             >
@@ -904,10 +1207,18 @@ const uploadAccept = computed(() =>
                                                 v-if="canPreview(row)"
                                                 type="button"
                                                 class="btn-icon text-muted"
-                                                :aria-label="t('storage.preview', { name: row.name })"
-                                                @click="openPreview(row)"
+                                                :aria-label="
+                                                    isImage(row.name)
+                                                        ? t('storage.images.view', { name: row.name })
+                                                        : t('storage.preview', { name: row.name })
+                                                "
+                                                @click="isImage(row.name) ? openViewer(row.name) : openPreview(row)"
                                             >
-                                                <i class="bi bi-play-fill" aria-hidden="true" />
+                                                <i
+                                                    class="bi"
+                                                    :class="isImage(row.name) ? 'bi-eye' : 'bi-play-fill'"
+                                                    aria-hidden="true"
+                                                />
                                             </button>
                                             <button
                                                 type="button"
@@ -1039,9 +1350,23 @@ const uploadAccept = computed(() =>
             :hide-buttons="true"
         >
             <div v-if="preview" class="w-5xl max-w-full aspect-video flex items-center justify-center">
-                <VideoPlayer v-if="preview.video" reference="previewPlayer" :options="preview.options" />
-                <img v-else :src="preview.url" class="max-w-full max-h-[70vh] object-contain" :alt="preview.name" />
+                <VideoPlayer reference="previewPlayer" :options="preview.options" />
             </div>
         </GenericModal>
+
+        <ImageViewer
+            v-if="viewerIndex !== null && viewerImages.length"
+            v-model="viewerIndex"
+            :images="viewerImages"
+            :folder="crumbs[crumbs.length - 1]?.name ?? ''"
+            :poster="posterHere"
+            :backdrop="backdropHere"
+            :owner="artworkOwner"
+            :can-use="Boolean(current)"
+            :busy="viewerBusy"
+            @close="viewerIndex = null"
+            @use="useAsArtwork"
+            @loaded="(key, dims) => imageDims.set(key, dims)"
+        />
     </div>
 </template>
