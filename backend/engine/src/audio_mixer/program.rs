@@ -219,6 +219,18 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
         self.output.audio_frame_size()
     }
 
+    fn held_video_frame(&self) -> Option<frame::Video> {
+        // Frames held back for the lookahead are newer than the output's.
+        self.pending
+            .iter()
+            .rev()
+            .find_map(|pending| match pending {
+                PendingFrame::Video(frame) => reference_video_frame(frame).ok(),
+                PendingFrame::Audio { .. } => None,
+            })
+            .or_else(|| self.output.held_video_frame())
+    }
+
     fn handles_loudness(&self) -> bool {
         true
     }

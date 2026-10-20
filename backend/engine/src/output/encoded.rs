@@ -29,6 +29,7 @@ use crate::{
             engine_audio_sample_format, validate_output_metadata, validate_output_protocol_options,
             video_codec_uses_bitrate,
         },
+        ffmpeg::reference_video_frame,
         ffmpeg_capabilities::validate_muxer_options,
         helper::{is_network_url, open_network_output},
     },
@@ -38,11 +39,13 @@ use super::{
     hls,
     preview::PreviewMuxer,
     recording::{self, RecordingMonitor, RecordingMuxer},
+    timestamps::{DtsGuard, WarnThrottle},
     vtt,
 };
 
 pub(super) struct EncodedOutput {
     octx: format::context::Output,
+    dts_guard: DtsGuard,
     video_streams: Vec<VideoOutputStream>,
     audio_streams: Vec<AudioOutputStream>,
     subtitle_streams: Vec<SubtitleOutputStream>,
@@ -54,6 +57,11 @@ pub(super) struct EncodedOutput {
     audio_buffer: [VecDeque<f32>; 2],
     audio_buffer_pts: Option<i64>,
     audio_sample_rate: u32,
+    /// Timestamp of the last frame given to the video encoders.
+    last_video_pts: Option<i64>,
+    last_video_frame: Option<frame::Video>,
+    late_video: WarnThrottle,
+    late_audio: WarnThrottle,
     clock: PlayoutClock,
     pace_output: bool,
     hls_health: Option<HlsHealth>,
@@ -555,7 +563,12 @@ impl EncodedOutput {
             .and_then(|url| {
                 let opened = match (video_streams.first(), audio_streams.first()) {
                     (Some(video), Some(audio)) => {
-                        PreviewMuxer::open(url, &video.encoder, &audio.encoder)
+                        PreviewMuxer::open(
+                            url,
+                            &video.encoder,
+                            &audio.encoder,
+                            cfg.channel_id.unwrap_or_default(),
+                        )
                     }
                     _ => Err(anyhow!("the output has no audio and video stream")),
                 };
@@ -580,8 +593,15 @@ impl EncodedOutput {
             None
         };
 
+        let dts_guard = DtsGuard::new(
+            &octx,
+            if pace_output { "Output" } else { "Recording" },
+            cfg.channel_id.unwrap_or_default(),
+        );
+
         Ok(Self {
             octx,
+            dts_guard,
             video_streams,
             audio_streams,
             subtitle_streams,
@@ -596,6 +616,10 @@ impl EncodedOutput {
             audio_buffer: [VecDeque::new(), VecDeque::new()],
             audio_buffer_pts: None,
             audio_sample_rate: cfg.sample_rate,
+            last_video_pts: None,
+            last_video_frame: None,
+            late_video: WarnThrottle::default(),
+            late_audio: WarnThrottle::default(),
             clock: PlayoutClock::new(),
             pace_output,
             hls_health,
@@ -620,6 +644,26 @@ impl EncodedOutput {
     }
 
     pub(super) fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+        // A frame at or before the last one repeats a moment already sent;
+        // encoded, it gives the muxer a timestamp it refuses.
+        if let Some(pts) = frame.pts() {
+            if let Some(last) = self.last_video_pts
+                && pts <= last
+            {
+                if let Some(count) = self.late_video.hit() {
+                    log::warn!(channel = self.channel_id.unwrap_or_default();
+                        "Video frame {pts} came after frame {last}; dropped ({count} so far)"
+                    );
+                }
+
+                return Ok(());
+            }
+
+            self.last_video_pts = Some(pts);
+        }
+
+        self.last_video_frame = reference_video_frame(frame).ok();
+
         benchmark::measure(Stage::EncodeMux, || {
             for index in 0..self.video_streams.len() {
                 let stream = &mut self.video_streams[index];
@@ -656,6 +700,12 @@ impl EncodedOutput {
         Ok(())
     }
 
+    pub(super) fn held_video_frame(&self) -> Option<frame::Video> {
+        self.last_video_frame
+            .as_ref()
+            .and_then(|frame| reference_video_frame(frame).ok())
+    }
+
     pub(super) fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
         self.encode_audio_with_effects(frame, true)
     }
@@ -673,6 +723,22 @@ impl EncodedOutput {
             return Ok(());
         }
 
+        // Samples before the end of what the encoder already has would reuse
+        // its timestamps: leave them out.
+        let overlap = self.audio_overlap(frame.pts());
+
+        if overlap > 0
+            && let Some(count) = self.late_audio.hit()
+        {
+            log::warn!(channel = self.channel_id.unwrap_or_default();
+                "Audio frame overlaps the last one by {overlap} sample(s); left out ({count} so far)"
+            );
+        }
+
+        if overlap >= frame.samples() {
+            return Ok(());
+        }
+
         let mut frame = frame.clone();
         benchmark::measure(Stage::AudioProcess, || {
             if apply_effects {
@@ -681,16 +747,16 @@ impl EncodedOutput {
 
             self.audio_level_meter.process_frame(&frame);
             self.loudness_meter.process_frame(&frame);
-            self.align_audio_buffer_to_frame_pts(frame.pts())?;
+            let pts = frame.pts().map(|pts| pts + overlap as i64);
+            self.align_audio_buffer_to_frame_pts(pts)?;
 
             if self.audio_buffer[0].is_empty() {
-                self.audio_buffer_pts = frame.pts();
+                self.audio_buffer_pts = pts;
             }
 
             for channel in 0..self.audio_buffer.len() {
                 self.audio_buffer[channel].extend(
-                    frame
-                        .plane::<f32>(channel)
+                    frame.plane::<f32>(channel)[overlap..]
                         .iter()
                         .map(|sample| if sample.is_finite() { *sample } else { 0.0 }),
                 );
@@ -709,6 +775,17 @@ impl EncodedOutput {
         }
 
         Ok(())
+    }
+
+    /// Samples at the start of a frame with timestamp `pts` that come before
+    /// the end of the audio already buffered or encoded.
+    fn audio_overlap(&self, pts: Option<i64>) -> usize {
+        let (Some(pts), Some(buffer_pts)) = (pts, self.audio_buffer_pts) else {
+            return 0;
+        };
+        let end = buffer_pts + self.audio_buffer[0].len() as i64;
+
+        usize::try_from(end - pts).unwrap_or(0)
     }
 
     fn align_audio_buffer_to_frame_pts(&mut self, frame_pts: Option<i64>) -> Result<()> {
@@ -879,6 +956,7 @@ impl EncodedOutput {
 
         packet.set_stream(stream_index);
         packet.rescale_ts(encoder_time_base, stream_time_base);
+        self.dts_guard.fix(packet, stream_index);
 
         if self.pace_output {
             self.clock
@@ -2297,6 +2375,85 @@ mod open_tests {
 
         output.finish().unwrap();
         assert!(path.exists(), "expected stream.ts to exist");
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn repeated_timestamps_do_not_fail_an_mpegts_output() {
+        ffmpeg::init().ok();
+        let dir = env::temp_dir().join(format!("stream_repeat_test_{}", process::id()));
+        fs::remove_dir_all(&dir).ok();
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("stream.ts");
+        let mut output = EncodedOutput::open(
+            path.to_str().unwrap(),
+            &OutputConfig::new(320, 240, 25, 48_000),
+            EncodedFormat::Stream {
+                muxer: "mpegts".to_string(),
+            },
+        )
+        .unwrap();
+        let frame_size = output.audio_frame_size() as i64;
+
+        // A stretch of video and audio sent twice, as after a bad switch.
+        for pts in (0..10).chain(5..20) {
+            let mut video = frame::Video::new(Pixel::YUV420P, 320, 240);
+            video.set_pts(Some(pts));
+            video.data_mut(0).fill(16);
+            video.data_mut(1).fill(128);
+            video.data_mut(2).fill(128);
+            output.encode_video(&video).unwrap();
+        }
+
+        for index in (0..10).chain(4..30) {
+            let mut audio = frame::Audio::new(
+                Sample::F32(ffmpeg::format::sample::Type::Planar),
+                frame_size as usize,
+                ChannelLayout::STEREO,
+            );
+            audio.set_rate(48_000);
+            audio.set_pts(Some(index * frame_size));
+
+            for channel in 0..2 {
+                audio.plane_mut::<f32>(channel).fill(0.0);
+            }
+
+            output.encode_audio(&audio).unwrap();
+        }
+
+        output.finish().unwrap();
+
+        let packets = Command::new("ffprobe")
+            .args([
+                "-v",
+                "error",
+                "-show_entries",
+                "packet=stream_index,dts",
+                "-of",
+                "csv=p=0",
+            ])
+            .arg(&path)
+            .output()
+            .unwrap();
+        let mut last = [i64::MIN; 2];
+        let mut counts = [0; 2];
+
+        for line in String::from_utf8_lossy(&packets.stdout).lines() {
+            let (stream, dts) = line.split_once(',').unwrap();
+            let stream: usize = stream.parse().unwrap();
+            let dts: i64 = dts.trim_end_matches(',').parse().unwrap();
+
+            assert!(
+                dts > last[stream],
+                "stream {stream}: {dts} after {}",
+                last[stream]
+            );
+            last[stream] = dts;
+            counts[stream] += 1;
+        }
+
+        assert_eq!(counts[0], 20, "each video moment once");
+        assert!(counts[1] >= 29, "each audio moment once: {}", counts[1]);
         fs::remove_dir_all(&dir).ok();
     }
 

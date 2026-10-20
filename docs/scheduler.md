@@ -55,6 +55,16 @@ during the live, the channel's filler (or black) airs while NoAr retries; after
 the event's retry time (`retry_seconds`, two minutes by default) the programme
 continues.
 
+The output never stops for a live source. While NoAr connects to it, the
+last picture stays on screen with silence (usually under a second), and the
+signal checks run while the programme or the filler is airing. Stopping or
+restarting the playout ends a live on air right away; the next start puts it
+back on air if its time is not over.
+
+Avoid pointing a live at one of the channel's own [live inputs](live_ingest.md)
+(the same port): NoAr would be calling itself. Send the encoder to the live
+input instead, which takes over the channel on its own.
+
 ## Guide
 
 Events appear in the [XMLTV guide](xmltv.md) at the time they air, and the

@@ -2,6 +2,7 @@ use anyhow::{Context, Result, anyhow};
 use ffmpeg::{codec, format, util::rational::Rational};
 use ffmpeg_next as ffmpeg;
 
+use super::timestamps::DtsGuard;
 use crate::utils::ffmpeg::reference_packet;
 
 /// Sends a live MPEG-TS copy of the encoded output to a local address, so the
@@ -10,6 +11,7 @@ use crate::utils::ffmpeg::reference_packet;
 /// encoders already produced: nothing is encoded twice.
 pub(super) struct PreviewMuxer {
     octx: format::context::Output,
+    dts_guard: DtsGuard,
     video_stream_index: usize,
     audio_stream_index: usize,
 }
@@ -19,6 +21,7 @@ impl PreviewMuxer {
         url: &str,
         video_encoder: &codec::encoder::video::Encoder,
         audio_encoder: &codec::encoder::audio::Encoder,
+        channel_id: i32,
     ) -> Result<Self> {
         if url.trim().is_empty() {
             return Err(anyhow!("preview address must not be empty"));
@@ -53,6 +56,7 @@ impl PreviewMuxer {
         }
 
         Ok(Self {
+            dts_guard: DtsGuard::new(&octx, "Player preview", channel_id),
             octx,
             video_stream_index,
             audio_stream_index,
@@ -90,6 +94,7 @@ impl PreviewMuxer {
         let mut packet = reference_packet(packet)?;
         packet.set_stream(stream_index);
         packet.rescale_ts(encoder_time_base, stream_time_base);
+        self.dts_guard.fix(&mut packet, stream_index);
         // Written as they come instead of interleaved: the encoders already
         // deliver audio and video in step, and waiting would add delay.
         packet.write(&mut self.octx)?;

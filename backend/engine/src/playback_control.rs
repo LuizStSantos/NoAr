@@ -37,6 +37,12 @@ impl PlaybackControl {
         self.skip_current.store(true, Ordering::SeqCst);
     }
 
+    /// Withdraw a skip that no clip has taken yet, when what it was meant to
+    /// cut ended on its own: it must not cut what comes next.
+    pub fn cancel_skip(&self) {
+        self.skip_current.store(false, Ordering::SeqCst);
+    }
+
     pub fn restart_playout(&self) {
         self.restart.store(true, Ordering::SeqCst);
     }

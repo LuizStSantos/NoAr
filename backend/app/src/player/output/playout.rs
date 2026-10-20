@@ -92,8 +92,10 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         })
         .collect();
     let count = listeners.len();
-    // Background work that ends with the play loop.
+    // Background work that ends with the play loop, also when the stop gives
+    // up waiting and drops this run.
     let ticker_cancel = CancellationToken::new();
+    let _ticker_guard = ticker_cancel.clone().drop_guard();
     let mut ingest_watcher = None;
 
     as_run::close_unfinished(&manager).await;
@@ -144,6 +146,8 @@ async fn play_hls(
         .hls_health()
         .ok_or_else(|| ServiceError::Conflict("HLS output has no health monitor".to_string()))?;
     let watchdog_token = CancellationToken::new();
+    // A dropped run must not leave its watchdog restarting the next one.
+    let _watchdog_guard = watchdog_token.clone().drop_guard();
     let mut watchdog = tokio::spawn(hls_watchdog(
         config.general.channel_id,
         hls_health,
@@ -801,8 +805,9 @@ fn playout_duration(node: &Media) -> Option<f64> {
     (node.out > node.seek).then_some(node.out - node.seek)
 }
 
+/// The whole cause chain: "failed to generate fallback" alone hides why.
 fn engine_error(error: impl fmt::Display) -> ServiceError {
-    ServiceError::Conflict(error.to_string())
+    ServiceError::Conflict(format!("{error:#}"))
 }
 
 fn request_shutdown(shutdown: &CancellationToken) {

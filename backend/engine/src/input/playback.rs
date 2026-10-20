@@ -755,6 +755,14 @@ impl<O: FrameOutput> FrameOutput for LiveOverrideOutput<'_, O> {
         self.output.audio_frame_size()
     }
 
+    fn held_video_frame(&self) -> Option<frame::Video> {
+        self.live
+            .last_video_frame
+            .as_ref()
+            .and_then(|frame| reference_video_frame(frame).ok())
+            .or_else(|| self.output.held_video_frame())
+    }
+
     fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
         if !self.live.active
             && let Some(pts) = frame.pts()

@@ -13,12 +13,14 @@ use ffmpeg::{codec, format, util::rational::Rational};
 use ffmpeg_next as ffmpeg;
 use sysinfo::{Disk, Disks};
 
+use super::timestamps::DtsGuard;
 use crate::{RecordingConfig, utils::ffmpeg::reference_packet};
 
 static RECORDING_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 pub(super) struct RecordingMuxer {
     octx: format::context::Output,
+    dts_guard: DtsGuard,
     video_stream_index: usize,
     audio_stream_index: usize,
     monitor: RecordingMonitor,
@@ -67,6 +69,7 @@ impl RecordingMuxer {
         reject_unused_options(octx.write_header_with(options)?)?;
 
         Ok(Self {
+            dts_guard: DtsGuard::new(&octx, "Recording", monitor.channel_id.unwrap_or_default()),
             octx,
             video_stream_index,
             audio_stream_index,
@@ -108,6 +111,7 @@ impl RecordingMuxer {
         let mut packet = reference_packet(packet)?;
         packet.set_stream(stream_index);
         packet.rescale_ts(encoder_time_base, stream_time_base);
+        self.dts_guard.fix(&mut packet, stream_index);
         packet.write_interleaved(&mut self.octx)?;
 
         Ok(())

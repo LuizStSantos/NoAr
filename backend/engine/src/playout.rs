@@ -1,4 +1,10 @@
-use std::{error::Error, fmt, time::Instant};
+use std::{
+    error::Error,
+    fmt,
+    sync::mpsc::{self, RecvTimeoutError},
+    thread,
+    time::{Duration, Instant},
+};
 
 use anyhow::{Context, Result, anyhow};
 use ffmpeg_next::{
@@ -18,7 +24,7 @@ use crate::{
     utils::{
         config::{OutputConfig, TextOverlayState},
         ffmpeg::{make_video_frame_writable, reference_video_frame},
-        helper::{even, is_live_input, open_media_input},
+        helper::{even, is_live_input, is_network_url, open_media_input},
     },
 };
 
@@ -206,7 +212,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             external_audio.as_mut(),
         )
     } else {
-        let ictx = open_media_input(path)?;
+        let ictx = open_input(path, cfg, timeline, output, playback_control)?;
         play_opened_input(
             path,
             ictx,
@@ -262,7 +268,7 @@ fn play_looped_clip<O: FrameOutput>(
         check_playback_control(playback_control)?;
         let before_video_pts = timeline.video_pts;
         let before_audio_pts = timeline.audio_pts;
-        let ictx = open_media_input(path)?;
+        let ictx = open_input(path, cfg, timeline, output, playback_control)?;
         play_opened_input(
             path,
             ictx,
@@ -869,6 +875,74 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
     }
 
     result
+}
+
+/// Opens `path`. A network source connects and probes on a helper thread
+/// while the output goes on with its last picture and silence: an output
+/// that stops for the second or more a live source needs to answer makes
+/// every receiver stutter.
+fn open_input<O: FrameOutput>(
+    path: &str,
+    cfg: &OutputConfig,
+    timeline: &mut Timeline,
+    output: &mut O,
+    playback_control: &PlaybackControl,
+) -> Result<format::context::Input> {
+    if !is_network_url(path) {
+        return Ok(open_media_input(path)?);
+    }
+
+    let (sender, receiver) = mpsc::sync_channel(1);
+    let source = path.to_string();
+
+    thread::Builder::new()
+        .name("ff-open-input".to_string())
+        .spawn(move || {
+            // After a skip nobody waits any more; the input closes here.
+            let _ = sender.send(open_media_input(&source));
+        })
+        .context("failed to start the input thread")?;
+
+    let frame_time = Duration::from_secs_f64(1.0 / f64::from(cfg.fps.max(1)));
+    let started = Instant::now();
+    let mut held = None;
+    let mut frames = 0_u32;
+
+    loop {
+        // One frame per frame time, so a quick server shows nothing held.
+        let due = started + frame_time * (frames + 1);
+
+        match receiver.recv_timeout(due.saturating_duration_since(Instant::now())) {
+            Ok(opened) => {
+                if frames > 0 {
+                    debug!(channel = cfg.channel_id.unwrap_or_default();
+                        "Held the picture for {frames} frame(s) while {path} connected"
+                    );
+                }
+
+                return Ok(opened?);
+            }
+            Err(RecvTimeoutError::Timeout) => {
+                check_playback_control(playback_control)?;
+
+                let picture = held.get_or_insert_with(|| {
+                    output
+                        .held_video_frame()
+                        .unwrap_or_else(|| black_video_frame_for_config(cfg))
+                });
+                let mut frame = reference_video_frame(picture)?;
+
+                frame.set_pts(Some(timeline.video_pts));
+                output.encode_video(&frame)?;
+                timeline.video_pts += 1;
+                synchronize_silence_to_video(cfg, timeline, output, playback_control)?;
+                frames += 1;
+            }
+            Err(RecvTimeoutError::Disconnected) => {
+                return Err(anyhow!("opening {path} stopped unexpectedly"));
+            }
+        }
+    }
 }
 
 fn seek_input(ictx: &mut format::context::Input, seek_seconds: f64) -> Result<()> {
@@ -2541,6 +2615,8 @@ mod tests {
             Arc,
             atomic::{AtomicUsize, Ordering},
         },
+        thread,
+        time::{Duration, Instant},
     };
 
     use anyhow::Result;
@@ -2555,7 +2631,7 @@ mod tests {
     use super::{
         AudioDecoder, FrameRateConverter, InputPlaybackOptions, LogoFade, LogoFadePlan,
         MediaFadePlan, PlaybackControl, Rational, Timeline, VideoDecoder, apply_audio_fade,
-        fallback_video_time_base, fit_dimensions, has_valid_time_base, padding_to_sync,
+        fallback_video_time_base, fit_dimensions, has_valid_time_base, open_input, padding_to_sync,
         parse_duration_us, play_clip, play_clip_with_external_audio, play_opened_input,
         resample_audio_frame, should_loop_input, should_play_loop_iteration,
         single_frame_repeat_frames, synchronize_after_skip, synchronize_declared_stream_ends,
@@ -2660,6 +2736,81 @@ mod tests {
 
             Ok(self.reset_on_skip)
         }
+    }
+
+    #[test]
+    fn a_slow_network_source_keeps_the_output_going_while_it_connects() {
+        use std::{
+            io::{Read, Write},
+            net::TcpListener,
+        };
+
+        // A server that answers after 400 ms, and then only with "not found".
+        let server = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = server.local_addr().unwrap();
+        let answer = thread::spawn(move || {
+            let (mut connection, _) = server.accept().unwrap();
+            let mut request = [0_u8; 1024];
+            let _ = connection.read(&mut request);
+
+            thread::sleep(Duration::from_millis(400));
+            let _ = connection.write_all(
+                b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            );
+        });
+        let cfg = OutputConfig::new(320, 240, 25, 48_000);
+        let mut timeline = Timeline::new();
+        let mut output = RecordingOutput::default();
+        let started = Instant::now();
+
+        let opened = open_input(
+            &format!("http://{address}/live.ts"),
+            &cfg,
+            &mut timeline,
+            &mut output,
+            &PlaybackControl::default(),
+        );
+
+        answer.join().unwrap();
+        assert!(opened.is_err());
+
+        // About one frame per 40 ms of waiting, never more than time allows.
+        let frames = output.video_frames.len() as u128;
+        let waited = started.elapsed().as_millis();
+
+        assert!(frames >= 8, "{frames} frames held in {waited} ms");
+        assert!(
+            frames <= waited / 40 + 1,
+            "{frames} frames held in {waited} ms"
+        );
+        assert!(
+            output
+                .video_frames
+                .windows(2)
+                .all(|pair| pair[1].2 == pair[0].2 + 1)
+        );
+        // Silence keeps up with the held picture.
+        assert_eq!(timeline.audio_pts, timeline.video_pts * 48_000 / 25);
+    }
+
+    #[test]
+    fn a_local_source_opens_without_holding_anything() {
+        let cfg = OutputConfig::new(320, 240, 25, 48_000);
+        let mut timeline = Timeline::new();
+        let mut output = RecordingOutput::default();
+
+        assert!(
+            open_input(
+                "/does/not/exist.mp4",
+                &cfg,
+                &mut timeline,
+                &mut output,
+                &PlaybackControl::default(),
+            )
+            .is_err()
+        );
+        assert!(output.video_frames.is_empty());
+        assert_eq!(timeline.video_pts, 0);
     }
 
     #[test]

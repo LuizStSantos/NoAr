@@ -11,6 +11,7 @@ mod encoded;
 mod hls;
 mod preview;
 mod recording;
+mod timestamps;
 mod vtt;
 
 #[cfg(feature = "desktop-base")]
@@ -46,6 +47,12 @@ pub(crate) trait FrameOutput {
     fn audio_frame_size(&self) -> usize;
 
     fn encode_video(&mut self, frame: &frame::Video) -> Result<()>;
+
+    /// The newest picture on its way out, to hold on screen while a source
+    /// connects. `None` holds black.
+    fn held_video_frame(&self) -> Option<frame::Video> {
+        None
+    }
 
     /// Realtime outputs can decline a full queue so live ingest can pad audio
     /// and observe cancellation before retrying the same video frame.
@@ -261,6 +268,14 @@ impl Output {
 impl FrameOutput for Output {
     fn audio_frame_size(&self) -> usize {
         Self::audio_frame_size(self)
+    }
+
+    fn held_video_frame(&self) -> Option<frame::Video> {
+        match &self.kind {
+            OutputKind::Encoded(output) => output.held_video_frame(),
+            #[cfg(feature = "desktop-base")]
+            OutputKind::Desktop(_) => None,
+        }
     }
 
     fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {

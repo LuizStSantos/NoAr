@@ -17,7 +17,7 @@ use chrono::{NaiveDateTime, TimeDelta};
 use ff_engine::{AsyncPlayout, ClipResult, NavigationBlocked};
 use log::*;
 use serde::Serialize;
-use tokio::time::sleep;
+use tokio::{task::JoinHandle, time::sleep};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -479,7 +479,7 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
     loop {
         // The playout stopped or restarted meanwhile. The occurrence stays
         // claimed, and the next start waits for its signal again.
-        if manager.schedule.generation() != generation || !manager.is_alive.load(Ordering::SeqCst) {
+        if manager.schedule.generation() != generation || stopping(&manager) {
             return;
         }
 
@@ -551,6 +551,11 @@ pub(crate) async fn play_queued_event(
     playout: &AsyncPlayout,
     interrupted: Option<InterruptedClip>,
 ) -> Result<Option<bool>, ServiceError> {
+    // A stopping playout airs nothing new; the queue starts over with it.
+    if stopping(manager) {
+        return Ok(None);
+    }
+
     let Some(queued) = manager.schedule.take_queued() else {
         return Ok(None);
     };
@@ -657,7 +662,7 @@ pub(crate) async fn play_queued_event(
 
     // The playout stopping cut the event: it stays open, and the next start
     // puts it back on air if its time is not over.
-    if !manager.is_alive.load(Ordering::SeqCst) {
+    if stopping(manager) {
         info!(channel = channel_id;
             "Scheduled event <span class=\"log-addr\">{}</span> stopped with the playout",
             event.title
@@ -708,7 +713,7 @@ async fn play_clips(
     let mut commercials = CommercialFolders::new(&config.channel.storage);
 
     for source in &event.sources {
-        if manager.schedule.take_abort() {
+        if manager.schedule.take_abort() || stopping(manager) {
             break;
         }
 
@@ -797,8 +802,9 @@ async fn play_live(
     let retry = Duration::from_secs(u64::from(event.retry_seconds));
     let mut trusted_signal = signal_checked.is_some_and(|checked| checked.elapsed() < FRESH_SIGNAL);
     let mut lost_since: Option<Instant> = None;
-    // The on-air record of the waiting screen, from the first failed check
-    // until the signal answers or the event gives up.
+    let mut check: Option<SignalCheck> = None;
+    // The on-air record of the waiting screen, from when it first airs until
+    // the signal answers or the event gives up.
     let mut waiting: Option<Option<i64>> = None;
     let seconds_left = || {
         let now = time_now(&config.channel.timezone).naive_local();
@@ -807,6 +813,17 @@ async fn play_live(
     };
 
     loop {
+        // The stop cut what aired; going on would put the live back on air
+        // in a playout that is shutting down.
+        if stopping(manager) {
+            end_waiting(manager, &mut waiting, AiredEnd::Stopped).await;
+
+            return Ok(EventEnd {
+                completed: false,
+                stopped: false,
+            });
+        }
+
         if manager.schedule.take_abort() {
             end_waiting(manager, &mut waiting, AiredEnd::cut("skipped", None)).await;
 
@@ -827,10 +844,8 @@ async fn play_live(
             });
         }
 
-        let signal = trusted_signal || test_signal(&url).await.is_ok_and(|test| test.ok);
-        trusted_signal = false;
-
-        if signal {
+        if trusted_signal {
+            trusted_signal = false;
             lost_since = None;
             end_waiting(manager, &mut waiting, AiredEnd::Completed).await;
             manager.schedule.set_item(protocol.to_string());
@@ -861,27 +876,8 @@ async fn play_live(
             continue;
         }
 
-        let lost = *lost_since.get_or_insert_with(Instant::now);
-
-        if lost.elapsed() >= retry {
-            end_waiting(manager, &mut waiting, AiredEnd::Completed).await;
-            error!(channel = id;
-                "Live <span class=\"log-addr\">{}</span>: no signal for {} s; back to the programme",
-                event.title,
-                retry.as_secs()
-            );
-
-            return Ok(EventEnd {
-                completed: false,
-                stopped: false,
-            });
-        }
-
-        manager
-            .schedule
-            .set_item(format!("{protocol} · waiting for signal"));
-        warn!(channel = id; "Live <span class=\"log-addr\">{}</span>: waiting for the signal", event.title);
-
+        // Not known to answer: the waiting screen airs while the source is
+        // checked, so the output never stops for the check.
         let source = waiting_source(config);
 
         if waiting.is_none() {
@@ -890,11 +886,28 @@ async fn play_live(
             waiting = Some(as_run::record_start(manager, entry).await);
         }
 
-        let result = play_plain(playout, config, &source, remaining.min(LIVE_RETRY_SECONDS)).await;
+        manager
+            .schedule
+            .set_item(format!("{protocol} · waiting for signal"));
+
+        let running = check.get_or_insert_with(|| SignalCheck::start(&url));
+        let (answer, result) = wait_on_air(
+            playout,
+            config,
+            &source,
+            remaining.min(LIVE_RETRY_SECONDS),
+            running,
+        )
+        .await;
+
+        if answer.is_some() {
+            check = None;
+        }
 
         match &result {
             Ok(ClipResult::Stopped) => end_waiting(manager, &mut waiting, AiredEnd::Stopped).await,
-            Ok(ClipResult::Skipped) => {
+            // Cut short for the live, whose start closes the record.
+            Ok(ClipResult::Skipped) if answer != Some(true) => {
                 end_waiting(manager, &mut waiting, AiredEnd::cut("skipped", None)).await;
             }
             Err(error) => {
@@ -909,6 +922,95 @@ async fn play_live(
                 stopped: true,
             });
         }
+
+        match answer {
+            Some(true) => trusted_signal = true,
+            Some(false) => {
+                let lost = *lost_since.get_or_insert_with(Instant::now);
+
+                if lost.elapsed() >= retry {
+                    end_waiting(manager, &mut waiting, AiredEnd::Completed).await;
+                    error!(channel = id;
+                        "Live <span class=\"log-addr\">{}</span>: no signal for {} s; back to the programme",
+                        event.title,
+                        retry.as_secs()
+                    );
+
+                    return Ok(EventEnd {
+                        completed: false,
+                        stopped: false,
+                    });
+                }
+
+                warn!(channel = id; "Live <span class=\"log-addr\">{}</span>: waiting for the signal", event.title);
+            }
+            None => {}
+        }
+    }
+}
+
+/// A signal check running beside the playout; dropping it stops the check.
+struct SignalCheck(JoinHandle<bool>);
+
+impl SignalCheck {
+    fn start(url: &str) -> Self {
+        let url = url.to_string();
+
+        Self(tokio::spawn(async move {
+            test_signal(&url).await.is_ok_and(|test| test.ok)
+        }))
+    }
+}
+
+impl Drop for SignalCheck {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+/// Air the waiting screen `source` for up to `seconds` while `check` runs. A
+/// source that answers cuts the waiting screen short. Returns the answer, if
+/// it came, and how the waiting screen ended.
+async fn wait_on_air(
+    playout: &AsyncPlayout,
+    config: &PlayoutConfig,
+    source: &str,
+    seconds: f64,
+    check: &mut SignalCheck,
+) -> (Option<bool>, Result<ClipResult, ServiceError>) {
+    let waiting = play_plain(playout, config, source, seconds);
+
+    tokio::pin!(waiting);
+
+    tokio::select! {
+        result = &mut waiting => {
+            let answer = if check.0.is_finished() {
+                Some((&mut check.0).await.unwrap_or(false))
+            } else {
+                None
+            };
+
+            (answer, result)
+        }
+        answer = &mut check.0 => {
+            let answered = answer.unwrap_or(false);
+
+            if !answered {
+                return (Some(false), waiting.await);
+            }
+
+            let control = playout.playback_control();
+
+            control.skip_current();
+
+            let result = waiting.await;
+
+            // The waiting screen may have ended just before the skip, which
+            // must not cut the live instead.
+            control.cancel_skip();
+
+            (Some(true), result)
+        }
     }
 }
 
@@ -917,7 +1019,7 @@ async fn end_waiting(manager: &ChannelManager, waiting: &mut Option<Option<i64>>
     if let Some(id) = waiting.take() {
         let end = match end {
             // The playout stopping is not an operator's skip.
-            AiredEnd::Cut { .. } if !manager.is_alive.load(Ordering::SeqCst) => AiredEnd::Stopped,
+            AiredEnd::Cut { .. } if stopping(manager) => AiredEnd::Stopped,
             end => end,
         };
 
@@ -955,6 +1057,12 @@ fn waiting_source(config: &PlayoutConfig) -> String {
     } else {
         String::new()
     }
+}
+
+/// The playout is stopping or restarting: an event on air ends with it, and
+/// the next start puts it back on air.
+fn stopping(manager: &ChannelManager) -> bool {
+    !manager.is_alive.load(Ordering::SeqCst)
 }
 
 async fn finish_run(manager: &ChannelManager, occurrence: &Occurrence, status: &str) {
