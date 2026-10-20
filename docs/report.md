@@ -5,6 +5,9 @@ NoAr records what actually goes on air, one entry per item, as it happens.
 The report is built from these entries for the time that already aired, and
 from the playlist and the Scheduler for what is still to come.
 
+A report covers whole playlist days: from the playlist's day start (for
+example 06:00) to the same time the next day.
+
 ## What is recorded
 
 An entry opens when an item starts and closes when it ends:
@@ -34,3 +37,56 @@ shows both times.
 Entries are kept in the database (`as_run` table) with times in Unix
 milliseconds. Only what airs from this version on is recorded; earlier days
 have no record of what actually aired.
+
+## What is still to come
+
+From now on, the report lists the plan: the playlist clips, moved by the
+scheduled events the way the player airs them (an event that waits for the end
+of a clip starts after it; afterwards the programme continues where it stopped
+or on the clock). The current day also follows the player's time shift, so the
+plan picks up where the item on air ends. Days without a playlist only have
+their scheduled events.
+
+## API
+
+All routes need a login with access to the channel.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/report/{id}?from=YYYY-MM-DD&to=YYYY-MM-DD` | Report of the playlist days `from` to `to`, both included, at most 62; `to` defaults to `from` |
+
+```json
+{
+  "timezone": "America/Sao_Paulo",
+  "day_start": "06:00:00",
+  "now": 1792494000000,
+  "recorded_since": 1792490693147,
+  "days": [{"date": "2026-10-20", "start": 1792476000000, "end": 1792562400000, "playlist": true}],
+  "items": [{
+    "day": "2026-10-20",
+    "start": 1792490693147,
+    "end": 1792490769586,
+    "title": "Novela das Seis",
+    "sub_title": "Capítulo 12",
+    "source": "Novela das Seis/cap 12.mp4",
+    "program": "Novela das Seis",
+    "kind": "program",
+    "origin": "playlist",
+    "event_id": null,
+    "event_title": null,
+    "scheduled_at": null,
+    "state": "aired",
+    "status": "cut",
+    "reason": "skipped",
+    "detail": null,
+    "planned_seconds": 316.9,
+    "replaces": null
+  }]
+}
+```
+
+Times are Unix milliseconds. `state` is `aired`, `on_air` (its `end` is when
+it is due to end), `planned`, or `unrecorded` for the plan of a time before the
+first record. A stretch of more than a minute without any record, while the
+playout was stopped, shows as an item of kind `gap`. `program` is the storage
+folder of the program the clip belongs to, when a `.nfo` describes it.

@@ -68,6 +68,8 @@ struct Slot {
     ad: bool,
     /// Placed by a scheduled event rather than the playlist.
     scheduled: bool,
+    /// Index of the event's occurrence in the list given to [`apply_schedule`].
+    occurrence: Option<usize>,
 }
 
 /// One entry of the guide; may cover several consecutive slots.
@@ -85,23 +87,7 @@ impl Programme {
     /// Guide title and sub-title, from the `.nfo` files, the playlist title
     /// or the file name.
     fn titles(&self) -> (String, Option<String>) {
-        let program = self.clip.program.as_deref();
-        let episode = self.clip.episode.as_deref();
-        let playlist_title = self.playlist_title.as_deref();
-        let title = program
-            .and_then(|nfo| nfo.title.as_deref())
-            .or_else(|| episode.and_then(|nfo| nfo.show_title.as_deref()))
-            .or(playlist_title)
-            .or_else(|| episode.and_then(|nfo| nfo.title.as_deref()))
-            .map(str::to_string)
-            .unwrap_or_else(|| title_from_file_name(&self.source));
-        let sub_title = episode
-            .and_then(|nfo| nfo.title.as_deref())
-            .or(program.and(playlist_title))
-            .filter(|sub_title| *sub_title != title)
-            .map(str::to_string);
-
-        (title, sub_title)
+        clip_titles(&self.clip, &self.source, self.playlist_title.as_deref())
     }
 
     fn is_same_programme(&self, clip: &ClipMetadata, playlist_title: &Option<String>) -> bool {
@@ -109,6 +95,31 @@ impl Programme {
             && self.clip.episode_key == clip.episode_key
             && &self.playlist_title == playlist_title
     }
+}
+
+/// Guide title and sub-title of a clip, from the `.nfo` files, the playlist
+/// title or the file name.
+pub(crate) fn clip_titles(
+    clip: &ClipMetadata,
+    source: &str,
+    playlist_title: Option<&str>,
+) -> (String, Option<String>) {
+    let program = clip.program.as_deref();
+    let episode = clip.episode.as_deref();
+    let title = program
+        .and_then(|nfo| nfo.title.as_deref())
+        .or_else(|| episode.and_then(|nfo| nfo.show_title.as_deref()))
+        .or(playlist_title)
+        .or_else(|| episode.and_then(|nfo| nfo.title.as_deref()))
+        .map(str::to_string)
+        .unwrap_or_else(|| title_from_file_name(source));
+    let sub_title = episode
+        .and_then(|nfo| nfo.title.as_deref())
+        .or(program.and(playlist_title))
+        .filter(|sub_title| *sub_title != title)
+        .map(str::to_string);
+
+    (title, sub_title)
 }
 
 /// Build the XMLTV document for one channel, from the start of the current
@@ -463,6 +474,7 @@ async fn collect_slots(
                     title: media.title,
                     ad,
                     scheduled: false,
+                    occurrence: None,
                 });
             }
 
@@ -570,8 +582,60 @@ fn is_contiguous(previous_stop: NaiveDateTime, next_start: NaiveDateTime) -> boo
     (next_start - previous_stop).num_milliseconds().abs() <= 1000
 }
 
+/// One entry of the plan as the report lists it: a playlist clip, or a
+/// scheduled event placed the way the player airs it.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct PlannedSlot {
+    pub start: NaiveDateTime,
+    pub stop: NaiveDateTime,
+    pub source: String,
+    pub title: Option<String>,
+    /// A playlist ad or a clip from a commercials folder.
+    pub ad: bool,
+    /// Index of the event's occurrence in the list given to [`planned_slots`].
+    pub occurrence: Option<usize>,
+}
+
+/// The plan of `[from, to)`: the playlist clips, moved by the scheduled
+/// `occurrences` the way the player airs them. `shift` is the player's time
+/// shift for the playlist day ending at the given time: its clips air that
+/// many seconds earlier (later when negative), as the player has them.
+pub(crate) async fn planned_slots(
+    config: &PlayoutConfig,
+    occurrences: &[Occurrence],
+    from: NaiveDateTime,
+    to: NaiveDateTime,
+    shift: Option<(NaiveDateTime, f64)>,
+) -> Result<Vec<PlannedSlot>, ServiceError> {
+    let margin = shift.map_or(0.0, |(_, shift)| shift.abs());
+    let mut slots = collect_slots(config, from - seconds(margin), to).await?;
+
+    if let Some((day_end, shift)) = shift {
+        let offset = TimeDelta::try_milliseconds((-shift * 1000.0) as i64).unwrap_or_default();
+
+        for slot in slots.iter_mut().filter(|slot| slot.day_end == day_end) {
+            slot.start += offset;
+            slot.stop = (slot.stop + offset).min(day_end);
+        }
+
+        slots.retain(|slot| slot.start < slot.stop);
+    }
+
+    Ok(apply_schedule(slots, occurrences)
+        .into_iter()
+        .map(|slot| PlannedSlot {
+            start: slot.start,
+            stop: slot.stop,
+            source: slot.source,
+            title: slot.title,
+            ad: slot.ad,
+            occurrence: slot.occurrence,
+        })
+        .collect())
+}
+
 /// The configured filler file or folder, if one is set.
-fn filler_path(config: &PlayoutConfig) -> Option<PathBuf> {
+pub(crate) fn filler_path(config: &PlayoutConfig) -> Option<PathBuf> {
     let filler = config.storage.filler_path.clean();
 
     // An empty filler setting resolves to the storage root itself.
@@ -589,7 +653,7 @@ fn is_break(slot: &Slot, filler: Option<&Path>) -> bool {
 /// their time, or after the clip on air for events that wait. Afterwards the
 /// playlist either runs later (continue) or the event covers it (clock).
 fn apply_schedule(mut slots: Vec<Slot>, occurrences: &[Occurrence]) -> Vec<Slot> {
-    for occurrence in occurrences {
+    for (index, occurrence) in occurrences.iter().enumerate() {
         let event = &occurrence.event;
         let start = match event.entry_mode {
             EntryMode::Interrupt => occurrence.start,
@@ -627,6 +691,7 @@ fn apply_schedule(mut slots: Vec<Slot>, occurrences: &[Occurrence]) -> Vec<Slot>
             title: Some(event.title.clone()),
             ad: !event.show_in_guide,
             scheduled: true,
+            occurrence: Some(index),
         });
         slots.sort_by_key(|slot| slot.start);
     }

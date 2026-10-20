@@ -18,6 +18,15 @@ const APPLICATION_SYSTEM_PATHS: &[&str] = &[
     "/var/www",
 ];
 
+/// A path under `storage` as a storage path (relative to it); anything else,
+/// such as a stream address or a file outside the storage, unchanged.
+pub fn storage_relative(storage: &Path, source: &str) -> String {
+    Path::new(source).strip_prefix(storage).map_or_else(
+        |_| source.to_string(),
+        |relative| relative.to_string_lossy().to_string(),
+    )
+}
+
 /// Validates that `value` is a safe, absolute directory path: non-empty, absolute,
 /// free of `.`/`..` components, and (when it falls under a protected system
 /// directory) only allowed when it also lives under one of ffplayout's own

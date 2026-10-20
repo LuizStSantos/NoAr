@@ -29,6 +29,7 @@ pub mod notification;
 pub mod paths;
 pub mod playlist;
 pub mod program;
+pub mod report;
 pub mod schedule;
 pub mod server;
 pub mod setup;

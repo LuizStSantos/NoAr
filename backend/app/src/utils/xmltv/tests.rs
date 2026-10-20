@@ -327,6 +327,7 @@ fn playlist_slot(start: NaiveDateTime, stop: NaiveDateTime, source: &str) -> Slo
         title: None,
         ad: false,
         scheduled: false,
+        occurrence: None,
     }
 }
 

@@ -2,7 +2,7 @@
 //! item starts and closes when it ends, with why it ended early. Recording
 //! never stops the playout: a failed write is only logged.
 
-use std::{path::Path, sync::atomic::Ordering, time::Duration};
+use std::{sync::atomic::Ordering, time::Duration};
 
 use chrono::{NaiveDateTime, TimeZone};
 use ff_engine::{ClipResult, PlaybackControl};
@@ -21,6 +21,8 @@ use crate::{
     },
     utils::{
         config::{PlayoutConfig, ProcessMode},
+        paths::storage_relative,
+        schedule::event_name,
         time_machine::time_now,
     },
 };
@@ -86,7 +88,7 @@ pub fn programme_entry(config: &PlayoutConfig, node: &Media) -> NewAsRunEntry {
     };
 
     NewAsRunEntry {
-        source: storage_path(config, &node.source),
+        source: storage_relative(&config.channel.storage, &node.source),
         title: node.title.clone().filter(|title| !title.trim().is_empty()),
         kind,
         origin,
@@ -95,7 +97,7 @@ pub fn programme_entry(config: &PlayoutConfig, node: &Media) -> NewAsRunEntry {
         replaces: node
             .replaces
             .as_deref()
-            .map(|source| storage_path(config, source)),
+            .map(|source| storage_relative(&config.channel.storage, source)),
         ..NewAsRunEntry::default()
     }
 }
@@ -140,7 +142,7 @@ pub fn waiting_entry(
     source: &str,
 ) -> NewAsRunEntry {
     NewAsRunEntry {
-        source: storage_path(config, source),
+        source: storage_relative(&config.channel.storage, source),
         kind: "filler",
         replaces: event.sources.first().cloned(),
         ..event_entry(event, scheduled_at)
@@ -155,26 +157,6 @@ fn event_entry(event: &ScheduleEvent, scheduled_at: Option<i64>) -> NewAsRunEntr
         scheduled_at,
         ..NewAsRunEntry::default()
     }
-}
-
-/// The event's title, or the name of its live folder or first clip when it
-/// has none.
-pub fn event_name(event: &ScheduleEvent) -> String {
-    if !event.title.trim().is_empty() {
-        return event.title.clone();
-    }
-
-    let Some(source) = event.sources.first() else {
-        return String::new();
-    };
-    let path = Path::new(source);
-    let name = if source.ends_with(".live") {
-        path.parent().and_then(Path::file_name)
-    } else {
-        path.file_stem()
-    };
-
-    name.map_or_else(|| source.clone(), |name| name.to_string_lossy().to_string())
 }
 
 /// Unix milliseconds of a channel-local time, such as an occurrence's start.
@@ -335,17 +317,6 @@ async fn insert(manager: &ChannelManager, entry: &NewAsRunEntry, cut_by: CutBy<'
             None
         }
     }
-}
-
-/// A path under the channel's storage as a storage path; anything else (a
-/// stream address, a filler outside the storage) unchanged.
-fn storage_path(config: &PlayoutConfig, source: &str) -> String {
-    Path::new(source)
-        .strip_prefix(&config.channel.storage)
-        .map_or_else(
-            |_| source.to_string(),
-            |relative| relative.to_string_lossy().to_string(),
-        )
 }
 
 fn now_millis() -> i64 {

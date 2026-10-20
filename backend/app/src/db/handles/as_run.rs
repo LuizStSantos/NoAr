@@ -114,6 +114,19 @@ pub async fn close_open_as_run(
     Ok(result.rows_affected())
 }
 
+/// When the channel's first recorded item went on air, Unix milliseconds.
+pub async fn select_first_as_run_start(
+    pool: &SqlitePool,
+    channel_id: i32,
+) -> Result<Option<i64>, ProcessError> {
+    let row = sqlx::query("SELECT MIN(started_at) AS first FROM as_run WHERE channel_id = $1")
+        .bind(channel_id)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(row.get("first"))
+}
+
 /// Items on air at some point of `[from, to)`, Unix milliseconds, in order.
 pub async fn select_as_run(
     pool: &SqlitePool,

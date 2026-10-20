@@ -71,6 +71,7 @@ pub fn routes() -> Router<AppState> {
                 .route("/playout/outputs/{id}", get(get_playout_outputs))
                 .route("/playout/codecs/{id}", get(get_playout_codecs))
                 .route("/program/{id}", get(get_program))
+                .route("/report/{id}", get(get_report))
                 .route(
                     "/schedule/{id}",
                     get(get_schedule_day).post(add_schedule_event),

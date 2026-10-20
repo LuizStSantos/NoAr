@@ -146,6 +146,26 @@ pub fn occurrences_between(
     occurrences
 }
 
+/// The event's title, or the name of its live folder or first clip when it
+/// has none.
+pub fn event_name(event: &ScheduleEvent) -> String {
+    if !event.title.trim().is_empty() {
+        return event.title.clone();
+    }
+
+    let Some(source) = event.sources.first() else {
+        return String::new();
+    };
+    let path = Path::new(source);
+    let name = if source.ends_with(".live") {
+        path.parent().and_then(Path::file_name)
+    } else {
+        path.file_stem()
+    };
+
+    name.map_or_else(|| source.clone(), |name| name.to_string_lossy().to_string())
+}
+
 pub fn seconds(value: f64) -> TimeDelta {
     TimeDelta::try_milliseconds((value.max(0.0) * 1000.0) as i64).unwrap_or_default()
 }
