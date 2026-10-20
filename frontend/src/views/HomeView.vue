@@ -6,6 +6,7 @@ import { useHead } from '@unhead/vue'
 import { useConfig } from '@/stores/config'
 
 import SystemStats from '@/components/SystemStats.vue'
+import UpdateNotice from '@/components/UpdateNotice.vue'
 
 const { t } = useI18n()
 const configStore = useConfig()
@@ -22,6 +23,7 @@ useHead({
                 {{ t('home.subtitle', { channel: configStore.channels[configStore.i]?.name ?? '' }) }}
             </p>
         </div>
+        <UpdateNotice />
         <SystemStats v-if="configStore.channels.length > 0" />
     </div>
 </template>

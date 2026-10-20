@@ -12,8 +12,15 @@ use crate::{
         routes::{AuthUser, ensure_any_authority},
         state::AppState,
     },
-    db::models::Role,
-    utils::{errors::ServiceError, server},
+    db::{
+        handles,
+        models::{Role, UpdateSettings},
+    },
+    utils::{
+        errors::ServiceError,
+        server,
+        update::{self, UpdateStatus},
+    },
 };
 
 /// ### System Statistics
@@ -102,4 +109,56 @@ pub async fn restart_server(
     server::request_restart(state.shutdown.clone());
 
     Ok(Json("Restarting"))
+}
+
+/// ### Update status
+///
+/// The installed version and the newest published image, as of the last
+/// check.
+///
+/// ```BASH
+/// curl -X GET http://127.0.0.1:8787/api/system/update -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_update_status(
+    State(state): State<AppState>,
+    details: AuthDetails<Role>,
+) -> Result<Json<UpdateStatus>, ServiceError> {
+    ensure_any_authority(&details, &[&Role::GlobalAdmin])?;
+
+    Ok(Json(update::status(&state.pool).await?))
+}
+
+/// ### Check for an update
+///
+/// Ask GitHub for the newest published image now.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/system/update/check -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn check_for_update(
+    State(state): State<AppState>,
+    details: AuthDetails<Role>,
+) -> Result<Json<UpdateStatus>, ServiceError> {
+    ensure_any_authority(&details, &[&Role::GlobalAdmin])?;
+
+    Ok(Json(update::check(&state.pool).await?))
+}
+
+/// ### Update settings
+///
+/// Turn the check every six hours on or off.
+///
+/// ```BASH
+/// curl -X PUT http://127.0.0.1:8787/api/system/update/settings -H 'Content-Type: application/json' \
+/// -d '{ "auto_check": true }' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn save_update_settings(
+    State(state): State<AppState>,
+    details: AuthDetails<Role>,
+    Json(settings): Json<UpdateSettings>,
+) -> Result<Json<UpdateStatus>, ServiceError> {
+    ensure_any_authority(&details, &[&Role::GlobalAdmin])?;
+    handles::update_update_settings(&state.pool, &settings).await?;
+
+    Ok(Json(update::status(&state.pool).await?))
 }

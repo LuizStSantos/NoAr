@@ -9,6 +9,7 @@ pub mod refresh_token;
 pub mod schedule;
 pub mod setup;
 pub mod source;
+pub mod update;
 pub mod user;
 
 pub use as_run::*;
@@ -22,4 +23,5 @@ pub use refresh_token::*;
 pub use schedule::*;
 pub use setup::*;
 pub use source::*;
+pub use update::*;
 pub use user::*;

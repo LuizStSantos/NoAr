@@ -138,6 +138,9 @@ Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 | --- | --- | --- | --- |
 | `GET` | `/api/system/server` | `GA` | `{ "started_at", "version", "channels", "channels_running" }`; `started_at` is the Unix time this run started. |
 | `POST` | `/api/system/restart` | `GA` | Answers, then stops every channel and starts NoAr again in the same process. |
+| `GET` | `/api/system/update` | `GA` | Installed version and commit, the newest published image (`latest`: commit, publish time, changes), `available`, `checked_at`, `error` and `auto_check`, as of the last check. |
+| `POST` | `/api/system/update/check` | `GA` | Asks GitHub now (at most every 20 s) and answers like `GET /api/system/update`. |
+| `PUT` | `/api/system/update/settings` | `GA` | `{ "auto_check": bool }`: check every six hours or not. |
 
 After a restart the channels that were running start again by themselves. A
 client can wait for `started_at` to change to know the new run is up.

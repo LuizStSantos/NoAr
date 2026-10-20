@@ -9,12 +9,14 @@ import PlayoutCard from '@/components/settings/PlayoutCard.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { useConfig } from '@/stores/config'
 import { useSettings, type SettingsSectionName } from '@/stores/settings'
+import { useUpdates } from '@/stores/updates'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const configStore = useConfig()
 const settings = useSettings()
+const updates = useUpdates()
 
 const search = ref('')
 const pendingChannel = ref<number | null>(null)
@@ -160,6 +162,12 @@ watch(
                         "
                     >
                         <span class="flex-auto">{{ t(`settings.sections.${section.name}`) }}</span>
+                        <span
+                            v-if="section.name === 'updates' && updates.available"
+                            class="text-[11px] font-semibold text-accent-content bg-accent rounded-full px-1.5"
+                        >
+                            {{ t('settings.updates.badge') }}
+                        </span>
                         <span
                             v-if="settings.changedSections.includes(section.name)"
                             class="dot bg-accent"

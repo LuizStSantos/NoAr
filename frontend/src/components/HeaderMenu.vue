@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { onClickOutside } from '@vueuse/core'
@@ -9,6 +9,7 @@ import { useAuth } from '@/stores/auth'
 import { useIndex } from '@/stores/index'
 import { useConfig } from '@/stores/config'
 import { usePlaylist } from '@/stores/playlist'
+import { useUpdates } from '@/stores/updates'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -18,6 +19,7 @@ const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const playlistStore = usePlaylist()
+const updates = useUpdates()
 
 const menuOpen = ref(false)
 const userMenu = ref<HTMLElement>()
@@ -35,6 +37,8 @@ const navItems = computed(() => [
 ])
 
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
+
+onMounted(() => updates.watchStatus())
 
 function isActive(path: string) {
     return path === '/' ? route.path === '/' : route.path.startsWith(path)
@@ -95,6 +99,12 @@ async function logout() {
                     "
                 >
                     {{ item.label }}
+                    <span
+                        v-if="item.name === 'configure' && updates.available"
+                        class="dot bg-accent ms-1.5 align-middle"
+                        role="img"
+                        :aria-label="t('settings.updates.dot')"
+                    />
                 </RouterLink>
             </nav>
 

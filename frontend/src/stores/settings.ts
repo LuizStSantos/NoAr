@@ -19,6 +19,7 @@ export type SettingsSectionName =
     | 'advanced'
     | 'users'
     | 'server'
+    | 'updates'
 
 export interface SettingsSection {
     name: SettingsSectionName
@@ -63,6 +64,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     { name: 'advanced', group: 'channel', roles: ADMINS, keys: ['general', 'logging', 'task'] },
     { name: 'users', group: 'system', roles: ALL, keys: [] },
     { name: 'server', group: 'system', roles: ['global_admin'], keys: [] },
+    { name: 'updates', group: 'system', roles: ['global_admin'], keys: [] },
 ]
 
 export function getPath(source: unknown, path: string): unknown {

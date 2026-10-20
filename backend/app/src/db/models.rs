@@ -689,6 +689,13 @@ pub struct UnfinishedRun {
     pub shift_before: Option<f64>,
 }
 
+/// How NoAr looks for new versions of itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UpdateSettings {
+    /// Look for a newer image every six hours.
+    pub auto_check: bool,
+}
+
 /// One item that went on air, from `as_run`. Times are Unix milliseconds.
 #[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
 pub struct AsRunEntry {

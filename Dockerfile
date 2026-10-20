@@ -46,6 +46,8 @@ COPY migrations ./migrations
 COPY --from=frontend /src/frontend/dist ./frontend/dist
 
 ENV NOAR_FRONTEND_PREBUILT=1
+# The commit being built, so NoAr can tell when a newer image is published.
+ARG NOAR_COMMIT=""
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
     cargo build --release --locked --package ffplayout --no-default-features --features embed_frontend && \

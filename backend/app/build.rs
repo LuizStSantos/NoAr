@@ -77,6 +77,9 @@ fn main() {
         }
     }
 
+    // The commit the image is built from, for the update check.
+    println!("cargo:rerun-if-env-changed=NOAR_COMMIT");
+
     println!("cargo:rerun-if-env-changed=FFPLAYOUT_VAAPI_SHARED");
     if matches!(std::env::var("FFPLAYOUT_VAAPI_SHARED").as_deref(), Ok("1")) {
         println!("cargo:rustc-link-lib=dylib=va-drm");

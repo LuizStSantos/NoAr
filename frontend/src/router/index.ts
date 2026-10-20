@@ -153,6 +153,12 @@ const router = createRouter({
                     component: () => import('@/components/settings/SettingsServer.vue'),
                     meta: { showHeader: true, roles: ['global_admin'] },
                 },
+                {
+                    path: 'updates',
+                    name: 'settings-updates',
+                    component: () => import('@/components/settings/SettingsUpdates.vue'),
+                    meta: { showHeader: true, roles: ['global_admin'] },
+                },
             ],
         },
     ],

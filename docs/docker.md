@@ -90,6 +90,20 @@ GitHub Actions. While the package is private on GitHub, servers need
 that. With the image published, `docker compose pull && docker compose up -d`
 updates without building.
 
+## Updates
+
+NoAr checks every six hours whether a newer image was published: it asks the
+GitHub API for the last successful image build of `main` and compares its
+commit with the one it was built from (the image build passes it in as the
+`NOAR_COMMIT` build argument). A newer image lights a dot on Settings and a
+notice on the home page for the global administrator; **Settings › Updates**
+lists what changed and shows the command that updates the server. The check
+can be turned off on that page, and **Check now** runs it at once.
+
+A fork that publishes its own image sets `NOAR_UPDATE_REPOSITORY=owner/repo`
+on the container so the check looks there. An image built locally has no
+commit to compare: the page then only shows the newest published one.
+
 ## Behind a reverse proxy
 
 Forward `X-Forwarded-Proto` and `X-Forwarded-Host` so XMLTV image links use

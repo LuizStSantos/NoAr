@@ -45,6 +45,7 @@ use ffplayout::{
         server,
         system::SystemStat,
         time_machine::set_mock_time,
+        update,
     },
 };
 
@@ -176,6 +177,7 @@ async fn async_main() -> Result<(), ProcessError> {
         let app = app.merge(admin_ui_routes());
 
         server::mark_started();
+        update::spawn_checker(pool.clone(), shutdown.clone());
         info!(target: Target::Console.as_str(), "Running NoAr, listen on http://{conn}");
 
         tokio::select! {
