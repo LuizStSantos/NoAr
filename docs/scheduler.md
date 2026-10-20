@@ -32,14 +32,17 @@ event waits until the ingest ends.
 
 A live is a folder in the storage, normally created from the web interface:
 **Nova live** in Storage (where the folder of a live also shows its address,
-a signal test and its next time in the Scheduler) or in the Scheduler.
+a signal test and its next time in the Scheduler) or in the Scheduler. Both use
+the same form: name, signal, poster, wide image, guide title, description,
+genre and rating; the Scheduler adds the time fields.
 
 ```text
 Lives/
   Big Match/
     signal.live   one line: the source address
     tvshow.nfo    guide data, as for any program
-    poster.jpg    guide image
+    poster.jpg    guide poster
+    fanart.jpg    wide image
 ```
 
 Supported addresses: `srt://` (caller), `rtmp://`, `rtmps://`, `http(s)://`
@@ -59,8 +62,8 @@ programme around them moves the same way the player moves it. Events with
 `show_in_guide` off (the default for breaks) are added to the programme they
 interrupt instead of being listed; events made only of clips from a
 [commercials folder](commercials.md) are never listed and take the logo off
-while they play. A live's guide entry uses its folder's `tvshow.nfo` and
-poster.
+while they play. A live's guide entry uses its folder's `tvshow.nfo`,
+poster and wide image.
 
 ## API
 
