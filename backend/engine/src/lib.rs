@@ -39,6 +39,8 @@ pub use input::live::{
     LiveInputBackend, LiveListenerConfig, LiveReceiver, live_protocol_available,
     spawn_live_listeners, spawn_rtmp_listener,
 };
+use input::preload::Preloaded;
+pub use input::preload::{PreloadSignal, Preloader};
 #[cfg(all(feature = "desktop-base", feature = "tokio"))]
 pub use output::desktop::thread::run_on_main_thread as run_desktop_on_main_thread;
 pub use output::resolved_variant_playlist_path;
@@ -105,6 +107,7 @@ pub struct Playout {
     timeline: Timeline,
     fallback_duration: f64,
     playback_control: PlaybackControl,
+    preloader: Preloader,
 }
 
 #[derive(Clone)]
@@ -148,6 +151,7 @@ pub struct AsyncPlayout {
     commands: mpsc::Sender<AsyncCommand>,
     completion: Option<WorkerCompletion>,
     playback_control: PlaybackControl,
+    preloader: Preloader,
     hls_health: Option<HlsHealth>,
 }
 
@@ -220,10 +224,13 @@ impl AsyncPlayout {
         let (ready_tx, ready_rx) = oneshot::channel();
         let playback_control = PlaybackControl::default();
         let worker_playback_control = playback_control.clone();
+        let preloader = Preloader::default();
+        let worker_preloader = preloader.clone();
 
         let worker = thread::spawn(move || match open() {
             Ok(mut playout) => {
                 playout.playback_control = worker_playback_control;
+                playout.preloader = worker_preloader;
                 let _ = ready_tx.send(Ok(()));
                 run_async_playout_worker(playout, command_rx);
             }
@@ -237,6 +244,7 @@ impl AsyncPlayout {
             commands,
             completion: Some(WorkerCompletion::Thread(worker)),
             playback_control,
+            preloader,
             hls_health: None,
         };
         ready_rx
@@ -251,6 +259,11 @@ impl AsyncPlayout {
 
     pub fn hls_health(&self) -> Option<HlsHealth> {
         self.hls_health.clone()
+    }
+
+    /// Opens sources ahead of their turn; a play of the same path takes it.
+    pub fn preloader(&self) -> Preloader {
+        self.preloader.clone()
     }
 
     pub async fn play(&self, path: impl Into<String>) -> Result<ClipResult> {
@@ -600,6 +613,7 @@ impl Playout {
             timeline: Timeline::new(),
             fallback_duration,
             playback_control: PlaybackControl::default(),
+            preloader: Preloader::default(),
         }
     }
 
@@ -659,6 +673,7 @@ impl Playout {
                     subtitles_media_path: None,
                     logo_fade: LogoFade::default(),
                 },
+                None,
             );
             let result = result.and_then(|result| {
                 if !matches!(result, ClipResult::Stopped | ClipResult::Skipped) {
@@ -748,6 +763,7 @@ impl Playout {
     ) -> Result<ClipResult> {
         let external_audio_path = external_audio_path.map(str::to_string);
         let subtitles_media_path = subtitles_media_path.map(str::to_string);
+        let preloaded = self.preloader.take(path);
         self.output.set_playout_rate(playout_rate);
 
         #[cfg(feature = "desktop-base")]
@@ -782,6 +798,7 @@ impl Playout {
                         subtitles_media_path: subtitles_media_path.as_deref(),
                         logo_fade,
                     },
+                    preloaded,
                 );
 
                 if matches!(&result, Ok(ClipResult::LiveEnded))
@@ -822,6 +839,7 @@ impl Playout {
                 subtitles_media_path: subtitles_media_path.as_deref(),
                 logo_fade,
             },
+            preloaded,
         );
 
         if matches!(&result, Ok(ClipResult::LiveEnded))
@@ -834,6 +852,7 @@ impl Playout {
     }
 
     pub fn finish(self) -> Result<()> {
+        self.preloader.clear();
         let result = self.output.finish();
         benchmark::finish();
         result
@@ -864,6 +883,7 @@ fn play_program_clip<O: FrameOutput>(
     fallback_duration: f64,
     playback_control: &PlaybackControl,
     options: PlayOptions<'_>,
+    preloaded: Option<Preloaded>,
 ) -> Result<ClipResult> {
     let mut output = ProgramAudioOutput::new(output, state, config)?;
     let result = if let Some(live) = live.as_mut() {
@@ -876,6 +896,7 @@ fn play_program_clip<O: FrameOutput>(
             fallback_duration,
             playback_control,
             options,
+            preloaded,
         )
     } else {
         play_to_output(
@@ -886,6 +907,7 @@ fn play_program_clip<O: FrameOutput>(
             fallback_duration,
             playback_control,
             options,
+            preloaded,
         )
     };
 
@@ -899,6 +921,7 @@ fn play_program_clip<O: FrameOutput>(
     result
 }
 
+#[allow(clippy::too_many_arguments)]
 fn play_to_output<O: FrameOutput>(
     path: &str,
     config: &OutputConfig,
@@ -907,6 +930,7 @@ fn play_to_output<O: FrameOutput>(
     fallback_duration: f64,
     playback_control: &PlaybackControl,
     options: PlayOptions<'_>,
+    preloaded: Option<Preloaded>,
 ) -> Result<ClipResult> {
     match playout::play_clip_with_external_audio(
         path,
@@ -919,6 +943,7 @@ fn play_to_output<O: FrameOutput>(
         options.subtitles_media_path,
         options.logo_fade,
         playback_control,
+        preloaded,
     ) {
         Ok(()) => Ok(ClipResult::Played),
         Err(error) if error.downcast_ref::<PlaybackRestart>().is_some() => Err(error),
@@ -1021,6 +1046,7 @@ mod tests {
             commands,
             completion: Some(WorkerCompletion::Thread(worker)),
             playback_control: playback_control.clone(),
+            preloader: Preloader::default(),
             hls_health: None,
         };
         let mut responses = Vec::new();

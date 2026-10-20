@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fmt,
-    sync::mpsc::{self, RecvTimeoutError},
+    sync::mpsc::{self, Receiver, RecvTimeoutError},
     thread,
     time::{Duration, Instant},
 };
@@ -19,6 +19,7 @@ use crate::{
     benchmark::{self, Stage},
     compositor::{logo::*, text::TextOverlay},
     input::diagnostics::LiveInputStage,
+    input::preload::{OpenedInput, Preloaded},
     input::timestamps::LiveTimestampTracker,
     output::FrameOutput,
     utils::{
@@ -165,6 +166,7 @@ pub(crate) fn play_clip<O: FrameOutput>(
         subtitles_media_path,
         logo_fade,
         playback_control,
+        None,
     )
 }
 
@@ -183,6 +185,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
     subtitles_media_path: Option<&str>,
     logo_fade: LogoFade,
     playback_control: &PlaybackControl,
+    preloaded: Option<Preloaded>,
 ) -> Result<()> {
     let source_is_live = is_live_input(path);
     // Playlist timing can carry a source offset. Live transports have no
@@ -210,12 +213,13 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             logo_fade_plan,
             playback_control,
             external_audio.as_mut(),
+            preloaded,
         )
     } else {
-        let ictx = open_input(path, cfg, timeline, output, playback_control)?;
+        let opened = open_input(path, cfg, timeline, output, playback_control, preloaded)?;
         play_opened_input(
             path,
-            ictx,
+            opened,
             cfg,
             timeline,
             output,
@@ -254,6 +258,7 @@ fn play_looped_clip<O: FrameOutput>(
     logo_fade_plan: LogoFadePlan,
     playback_control: &PlaybackControl,
     mut external_audio: Option<&mut ExternalAudioInput>,
+    mut preloaded: Option<Preloaded>,
 ) -> Result<()> {
     if !duration_seconds.is_finite() {
         return Err(anyhow!("clip duration must be a finite number"));
@@ -268,10 +273,17 @@ fn play_looped_clip<O: FrameOutput>(
         check_playback_control(playback_control)?;
         let before_video_pts = timeline.video_pts;
         let before_audio_pts = timeline.audio_pts;
-        let ictx = open_input(path, cfg, timeline, output, playback_control)?;
+        let opened = open_input(
+            path,
+            cfg,
+            timeline,
+            output,
+            playback_control,
+            preloaded.take(),
+        )?;
         play_opened_input(
             path,
-            ictx,
+            opened,
             cfg,
             timeline,
             output,
@@ -517,13 +529,18 @@ impl LogoFadePlan {
 
 pub(crate) fn play_opened_input<O: FrameOutput>(
     label: &str,
-    mut ictx: format::context::Input,
+    opened: impl Into<OpenedInput>,
     cfg: &OutputConfig,
     timeline: &mut Timeline,
     output: &mut O,
     options: InputPlaybackOptions<'_>,
     mut external_audio: Option<&mut ExternalAudioInput>,
 ) -> Result<()> {
+    let OpenedInput {
+        input: mut ictx,
+        mut preroll,
+    } = opened.into();
+
     timeline.source_timestamp_mode = options.preserve_source_timestamps;
     timeline.live_audio_source_us = None;
     timeline.live_video_source_us = None;
@@ -686,14 +703,21 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
             diagnostics.set_stage(LiveInputStage::ReadingPacket);
         }
 
-        for (stream, packet) in ictx.packets() {
+        let mut packets = ictx.packets();
+
+        // A preloaded live source first plays what it already received.
+        while let Some((stream_index, packet)) = preroll.pop_front().or_else(|| {
+            packets
+                .next()
+                .map(|(stream, packet)| (stream.index(), packet))
+        }) {
             check_playback_control(options.playback_control)?;
 
             if let Some(diagnostics) = output.input_diagnostics() {
                 diagnostics.packet_received();
             }
 
-            if Some(stream.index()) == video_index {
+            if Some(stream_index) == video_index {
                 if !video_finished && let Some(video) = video.as_mut() {
                     if let Some(diagnostics) = output.input_diagnostics() {
                         diagnostics.set_stage(LiveInputStage::ProcessingVideo);
@@ -731,7 +755,7 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
                         )?;
                     }
                 }
-            } else if Some(stream.index()) == audio_index
+            } else if Some(stream_index) == audio_index
                 && let Some(audio) = audio.as_mut()
             {
                 if let Some(diagnostics) = output.input_diagnostics() {
@@ -877,39 +901,81 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
     result
 }
 
-/// Opens `path`. A network source connects and probes on a helper thread
-/// while the output goes on with its last picture and silence: an output
-/// that stops for the second or more a live source needs to answer makes
-/// every receiver stutter.
+/// Opens `path`, or takes its preload. A network source connects and probes
+/// on a helper thread while the output goes on with its last picture and
+/// silence: an output that stops for the second or more a live source needs
+/// to answer makes every receiver stutter. A preload that failed meanwhile
+/// gives way to an ordinary open.
 fn open_input<O: FrameOutput>(
     path: &str,
     cfg: &OutputConfig,
     timeline: &mut Timeline,
     output: &mut O,
     playback_control: &PlaybackControl,
-) -> Result<format::context::Input> {
-    if !is_network_url(path) {
-        return Ok(open_media_input(path)?);
-    }
+    preloaded: Option<Preloaded>,
+) -> Result<OpenedInput> {
+    let from_preload = preloaded.is_some();
+    let receiver = match preloaded {
+        Some(preloaded) => preloaded.hand_over(),
+        None if !is_network_url(path) => return Ok(open_media_input(path)?.into()),
+        None => open_in_background(path)?,
+    };
 
+    match hold_until_open(path, cfg, timeline, output, playback_control, &receiver)? {
+        Ok(opened) => {
+            if from_preload {
+                debug!(channel = cfg.channel_id.unwrap_or_default();
+                    "Started {path} from its preload ({} packet(s) ready)",
+                    opened.preroll.len()
+                );
+            }
+
+            Ok(opened)
+        }
+        Err(error) if from_preload => {
+            debug!(channel = cfg.channel_id.unwrap_or_default(); "Preload failed: {error}; opening again");
+
+            open_input(path, cfg, timeline, output, playback_control, None)
+        }
+        Err(error) => Err(anyhow!(error)),
+    }
+}
+
+fn open_in_background(path: &str) -> Result<Receiver<Result<OpenedInput, String>>> {
     let (sender, receiver) = mpsc::sync_channel(1);
     let source = path.to_string();
 
     thread::Builder::new()
         .name("ff-open-input".to_string())
         .spawn(move || {
+            let opened = open_media_input(&source)
+                .map(OpenedInput::from)
+                .map_err(|error| format!("cannot open {source}: {error}"));
+
             // After a skip nobody waits any more; the input closes here.
-            let _ = sender.send(open_media_input(&source));
+            let _ = sender.send(opened);
         })
         .context("failed to start the input thread")?;
 
+    Ok(receiver)
+}
+
+/// Wait for `receiver`, writing the last picture with silence once per frame
+/// time, so a quick source shows nothing held.
+fn hold_until_open<O: FrameOutput>(
+    path: &str,
+    cfg: &OutputConfig,
+    timeline: &mut Timeline,
+    output: &mut O,
+    playback_control: &PlaybackControl,
+    receiver: &Receiver<Result<OpenedInput, String>>,
+) -> Result<Result<OpenedInput, String>> {
     let frame_time = Duration::from_secs_f64(1.0 / f64::from(cfg.fps.max(1)));
     let started = Instant::now();
     let mut held = None;
     let mut frames = 0_u32;
 
     loop {
-        // One frame per frame time, so a quick server shows nothing held.
         let due = started + frame_time * (frames + 1);
 
         match receiver.recv_timeout(due.saturating_duration_since(Instant::now())) {
@@ -920,7 +986,7 @@ fn open_input<O: FrameOutput>(
                     );
                 }
 
-                return Ok(opened?);
+                return Ok(opened);
             }
             Err(RecvTimeoutError::Timeout) => {
                 check_playback_control(playback_control)?;
@@ -939,7 +1005,7 @@ fn open_input<O: FrameOutput>(
                 frames += 1;
             }
             Err(RecvTimeoutError::Disconnected) => {
-                return Err(anyhow!("opening {path} stopped unexpectedly"));
+                return Ok(Err(format!("opening {path} stopped unexpectedly")));
             }
         }
     }
@@ -2769,6 +2835,7 @@ mod tests {
             &mut timeline,
             &mut output,
             &PlaybackControl::default(),
+            None,
         );
 
         answer.join().unwrap();
@@ -2794,6 +2861,41 @@ mod tests {
     }
 
     #[test]
+    fn a_preloaded_file_plays_like_one_opened_on_its_turn() {
+        let path = media_mix_asset("av_sync.mp4");
+        let preloader = crate::Preloader::default();
+        let cfg = OutputConfig::new(320, 240, 25, 48_000);
+        let play = |preloaded| {
+            let mut timeline = Timeline::new();
+            let mut output = RecordingOutput::default();
+
+            play_clip_with_external_audio(
+                &path,
+                None,
+                &cfg,
+                &mut timeline,
+                &mut output,
+                None,
+                Some(1.0),
+                None,
+                LogoFade::default(),
+                &PlaybackControl::default(),
+                preloaded,
+            )
+            .unwrap();
+
+            (output.video_frames, output.audio_pts)
+        };
+
+        let opened_on_its_turn = play(None);
+
+        preloader.preload(&path);
+
+        assert_eq!(play(preloader.take(&path)), opened_on_its_turn);
+        assert!(!opened_on_its_turn.0.is_empty());
+    }
+
+    #[test]
     fn a_local_source_opens_without_holding_anything() {
         let cfg = OutputConfig::new(320, 240, 25, 48_000);
         let mut timeline = Timeline::new();
@@ -2806,6 +2908,7 @@ mod tests {
                 &mut timeline,
                 &mut output,
                 &PlaybackControl::default(),
+                None,
             )
             .is_err()
         );
@@ -3502,6 +3605,7 @@ mod tests {
             None,
             LogoFade::default(),
             &PlaybackControl::default(),
+            None,
         )
         .unwrap();
 
@@ -3528,6 +3632,7 @@ mod tests {
             None,
             LogoFade::default(),
             &PlaybackControl::default(),
+            None,
         )
         .unwrap();
 
@@ -3560,6 +3665,7 @@ mod tests {
             None,
             LogoFade::default(),
             &PlaybackControl::default(),
+            None,
         )
         .unwrap();
 
@@ -3592,6 +3698,7 @@ mod tests {
             None,
             LogoFade::default(),
             &PlaybackControl::default(),
+            None,
         )
         .unwrap();
 

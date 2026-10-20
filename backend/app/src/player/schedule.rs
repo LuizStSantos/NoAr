@@ -14,7 +14,7 @@ use std::{
 };
 
 use chrono::{NaiveDateTime, TimeDelta};
-use ff_engine::{AsyncPlayout, ClipResult, NavigationBlocked};
+use ff_engine::{AsyncPlayout, ClipResult, NavigationBlocked, PreloadSignal};
 use log::*;
 use serde::Serialize;
 use tokio::{task::JoinHandle, time::sleep};
@@ -28,7 +28,7 @@ use crate::{
     player::{
         as_run::{self, AiredEnd},
         controller::ChannelManager,
-        output::{play_plain, play_plain_from},
+        output::{play_plain, play_plain_from, preload_later},
         utils::{Media, time_in_seconds},
     },
     utils::{
@@ -37,7 +37,7 @@ use crate::{
         errors::ServiceError,
         schedule::{
             Occurrence, clip_duration,
-            live::{live_protocol, read_live_url, test_signal},
+            live::{live_protocol, read_live_url},
             occurrences_between, seconds,
         },
         time_machine::time_now,
@@ -56,6 +56,11 @@ const LIVE_RETRY_SECONDS: f64 = 5.0;
 
 /// A signal check younger than this is trusted when the live goes on air.
 const FRESH_SIGNAL: Duration = Duration::from_secs(10);
+/// How long a live source gets to send its first packet.
+const SIGNAL_WAIT: Duration = Duration::from_secs(12);
+const SIGNAL_POLL: Duration = Duration::from_millis(200);
+/// Events open what they start with this long before their start.
+const PRELOAD_LEAD_SECONDS: f64 = 10.0;
 
 /// An occurrence with less time left than this is not resumed after a stop.
 const RESUME_MIN_SECONDS: f64 = 5.0;
@@ -266,6 +271,8 @@ pub async fn run_ticker(manager: ChannelManager, cancel: CancellationToken) {
     // Occurrences already looked at, by event and start: an event moved to a
     // new time is a new occurrence and is looked at again.
     let mut seen: HashSet<(i32, NaiveDateTime)> = HashSet::new();
+    // Occurrences whose first clip or live is already opening.
+    let mut preloaded: HashSet<(i32, NaiveDateTime)> = HashSet::new();
 
     loop {
         tokio::select! {
@@ -273,7 +280,7 @@ pub async fn run_ticker(manager: ChannelManager, cancel: CancellationToken) {
             _ = sleep(TICK) => {}
         }
 
-        if let Err(error) = tick(&manager, &mut seen).await {
+        if let Err(error) = tick(&manager, &mut seen, &mut preloaded).await {
             warn!(channel = manager.id; "Scheduler: {error}");
         }
     }
@@ -282,6 +289,7 @@ pub async fn run_ticker(manager: ChannelManager, cancel: CancellationToken) {
 async fn tick(
     manager: &ChannelManager,
     seen: &mut HashSet<(i32, NaiveDateTime)>,
+    preloaded: &mut HashSet<(i32, NaiveDateTime)>,
 ) -> Result<(), ServiceError> {
     let events = match manager.schedule.cached_events() {
         Some(events) => events,
@@ -295,6 +303,13 @@ async fn tick(
     let now = time_now(&timezone).naive_local();
     let grace = TimeDelta::try_seconds(MEDIA_START_GRACE_SECONDS).unwrap_or_default();
     let due = occurrences_between(&events, now - grace, now + seconds(1.0));
+    let upcoming = occurrences_between(&events, now, now + seconds(PRELOAD_LEAD_SECONDS));
+
+    for occurrence in upcoming.into_iter().filter(|o| o.start > now) {
+        if preloaded.insert((occurrence.event.id, occurrence.start)) {
+            preload_event(manager, &occurrence).await;
+        }
+    }
 
     for occurrence in due.into_iter().filter(|o| o.start <= now) {
         let key = (occurrence.event.id, occurrence.start);
@@ -336,6 +351,7 @@ async fn tick(
     seen.retain(|(_, start)| {
         start.date() >= now.date() - TimeDelta::try_days(2).unwrap_or_default()
     });
+    preloaded.retain(|(_, start)| *start > now - TimeDelta::try_hours(1).unwrap_or_default());
 
     if manager.schedule.wants_interrupt() && request_interrupt(manager).await {
         manager.schedule.interrupt_sent();
@@ -490,7 +506,7 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
             break;
         }
 
-        if test_signal(&url).await.is_ok_and(|test| test.ok) {
+        if live_answers(&manager, &url).await {
             if manager.schedule.generation() == generation {
                 manager.schedule.queue(occurrence, Some(Instant::now()));
             }
@@ -514,6 +530,7 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
         "Live <span class=\"log-addr\">{}</span> skipped: the source did not answer",
         event.title
     );
+    manager.preloader.lock().await.clone().forget(&url);
     finish_run(&manager, &occurrence, "failed").await;
 }
 
@@ -632,7 +649,7 @@ pub(crate) async fn play_queued_event(
             .await
         }
         ScheduleKind::Live => {
-            play_live(
+            let result = play_live(
                 manager,
                 config,
                 playout,
@@ -640,7 +657,11 @@ pub(crate) async fn play_queued_event(
                 scheduled_at,
                 queued.signal_checked,
             )
-            .await
+            .await;
+
+            forget_live(manager, &event).await;
+
+            result
         }
     };
     let elapsed = started.elapsed().as_secs_f64();
@@ -712,7 +733,7 @@ async fn play_clips(
     let mut completed = true;
     let mut commercials = CommercialFolders::new(&config.channel.storage);
 
-    for source in &event.sources {
+    for (index, source) in event.sources.iter().enumerate() {
         if manager.schedule.take_abort() || stopping(manager) {
             break;
         }
@@ -742,6 +763,18 @@ async fn play_clips(
         let commercial = commercials.contains(source);
         let entry = as_run::event_clip_entry(event, scheduled_at, source, seek, length, commercial);
         let aired = as_run::record_start(manager, entry).await;
+        let next_preload = match event.sources.get(index + 1) {
+            Some(next) => {
+                let next = config.channel.storage.join(next);
+
+                Some(preload_later(
+                    manager.preloader.lock().await.clone(),
+                    next.to_string_lossy().to_string(),
+                    length,
+                ))
+            }
+            None => None,
+        };
         let result = play_plain_from(
             playout,
             config,
@@ -751,6 +784,11 @@ async fn play_clips(
             commercial,
         )
         .await;
+
+        if let Some(task) = next_preload {
+            task.abort();
+        }
+
         let end = match &result {
             Ok(result) => as_run::event_clip_end(manager, result),
             Err(error) => AiredEnd::Failed(error.to_string()),
@@ -890,7 +928,7 @@ async fn play_live(
             .schedule
             .set_item(format!("{protocol} · waiting for signal"));
 
-        let running = check.get_or_insert_with(|| SignalCheck::start(&url));
+        let running = check.get_or_insert_with(|| SignalCheck::start(manager, &url));
         let (answer, result) = wait_on_air(
             playout,
             config,
@@ -953,12 +991,64 @@ async fn play_live(
 struct SignalCheck(JoinHandle<bool>);
 
 impl SignalCheck {
-    fn start(url: &str) -> Self {
+    fn start(manager: &ChannelManager, url: &str) -> Self {
+        let manager = manager.clone();
         let url = url.to_string();
 
-        Self(tokio::spawn(async move {
-            test_signal(&url).await.is_ok_and(|test| test.ok)
-        }))
+        Self(tokio::spawn(
+            async move { live_answers(&manager, &url).await },
+        ))
+    }
+}
+
+/// Whether the live source is sending. The check is its preload: the
+/// connection stays open for the takeover, so a source that takes one caller
+/// at a time is not called twice, and the switch needs no new connection.
+async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
+    let preloader = manager.preloader.lock().await.clone();
+    let deadline = Instant::now() + SIGNAL_WAIT;
+
+    preloader.preload(url);
+
+    loop {
+        match preloader.signal(url) {
+            Some(PreloadSignal::Ready) => return true,
+            None | Some(PreloadSignal::Failed(_)) => return false,
+            Some(PreloadSignal::Opening | PreloadSignal::Stalled) if Instant::now() >= deadline => {
+                return false;
+            }
+            Some(_) => sleep(SIGNAL_POLL).await,
+        }
+    }
+}
+
+/// Open what an event starts with ahead of its start, so the switch to it
+/// is immediate. A live connects and stays at its live edge.
+async fn preload_event(manager: &ChannelManager, occurrence: &Occurrence) {
+    let Some(source) = occurrence.event.sources.first() else {
+        return;
+    };
+    let path = manager.config.read().await.channel.storage.join(source);
+    let target = match occurrence.event.kind {
+        ScheduleKind::Media => path.to_string_lossy().to_string(),
+        ScheduleKind::Live => match read_live_url(&path).await {
+            Ok(url) => url,
+            Err(_) => return,
+        },
+    };
+
+    manager.preloader.lock().await.clone().preload(&target);
+}
+
+/// Close a live's connection that nothing will take any more.
+async fn forget_live(manager: &ChannelManager, event: &ScheduleEvent) {
+    let Some(source) = event.sources.first() else {
+        return;
+    };
+    let path = manager.config.read().await.channel.storage.join(source);
+
+    if let Ok(url) = read_live_url(&path).await {
+        manager.preloader.lock().await.clone().forget(&url);
     }
 }
 

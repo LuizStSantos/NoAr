@@ -7,7 +7,7 @@ use std::{
     },
 };
 
-use ff_engine::{AudioEffectsControl, AudioLevel, LiveLoudnessConfig, PlaybackControl};
+use ff_engine::{AudioEffectsControl, AudioLevel, LiveLoudnessConfig, PlaybackControl, Preloader};
 use log::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
@@ -116,6 +116,8 @@ pub struct ChannelManager {
     pub loudness_meter: ff_engine::LoudnessMeterControl,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
+    /// Opens the next clip, live or event ahead of its turn.
+    pub preloader: Arc<Mutex<Preloader>>,
     pub schedule: Arc<ScheduleState>,
     /// Low-latency copy of the output for the Player.
     pub preview: Arc<PreviewFeed>,
@@ -202,6 +204,7 @@ impl ChannelManager {
             loudness_meter: ff_engine::LoudnessMeterControl::default(),
             audio_level: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
+            preloader: Arc::new(Mutex::new(Preloader::default())),
             schedule: Arc::new(ScheduleState::default()),
             preview: Arc::new(preview),
             shutdown,

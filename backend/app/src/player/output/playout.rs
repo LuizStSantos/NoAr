@@ -7,10 +7,11 @@ use std::{
 
 use ff_engine::{
     AsyncPlayout, AudioLevelCallback, ClipResult, HlsHealth, LiveInputBackend, LiveListenerConfig,
-    LogLevel, LogoConfig, LogoFade, OutputConfig, RecordingConfig, RecordingEncodeConfig,
+    LogLevel, LogoConfig, LogoFade, OutputConfig, Preloader, RecordingConfig,
+    RecordingEncodeConfig,
 };
 use log::*;
-use tokio::time::sleep;
+use tokio::{task::JoinHandle, time::sleep};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -34,6 +35,8 @@ const HLS_RATE_CORRECTION_MAX_SECONDS: f64 = 2.0;
 const HLS_RATE_CORRECTION_MIN_RATE: f64 = 0.98;
 const HLS_RATE_CORRECTION_MAX_RATE: f64 = 1.02;
 const HLS_RATE_CORRECTION_MAX_DELTA_FACTOR: f64 = 1.0;
+/// The next clip opens this long before the one on air ends.
+const PRELOAD_LEAD_SECONDS: f64 = 10.0;
 
 pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     let config = manager.config.read().await.clone();
@@ -58,6 +61,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     .with_preview_url(Some(manager.preview.url().to_string()));
     let playout = open_playout(&config, output_config.clone()).await?;
     *manager.playback_control.lock().await = playout.playback_control();
+    *manager.preloader.lock().await = playout.preloader();
     if config.output.mode == OutputMode::Desktop {
         #[cfg(feature = "desktop-cpu")]
         info!(channel = config.general.channel_id;
@@ -221,6 +225,8 @@ async fn play_loop(
     let id = config.general.channel_id;
     let mut node_sources = source_generator(manager.clone()).await;
     let mut interrupted: Option<InterruptedClip> = None;
+    // The clip opened ahead for the next turn.
+    let mut preloaded: Option<String> = None;
 
     loop {
         // A due scheduled event airs between clips; afterwards the playlist
@@ -292,7 +298,20 @@ async fn play_loop(
             }
         }
 
+        // Something else came first: the clip opened ahead is not needed.
+        if let Some(path) = preloaded.take_if(|path| *path != node.source) {
+            playout.preloader().forget(&path);
+        }
+
         let duration = playout_duration(&node);
+        let next_preload = match (duration, next_source(&manager).await) {
+            (Some(duration), Some(next)) => {
+                preloaded = Some(next.clone());
+
+                Some(preload_later(playout.preloader(), next, duration))
+            }
+            _ => None,
+        };
         let playout_rate = if config.output.mode == OutputMode::HLS {
             hls_playout_rate(config, &manager, &node, duration).await
         } else {
@@ -318,6 +337,11 @@ async fn play_loop(
                 playout_rate,
             )
             .await;
+
+        if let Some(task) = next_preload {
+            task.abort();
+        }
+
         let end = match &result {
             Ok(result) => as_run::programme_end(&manager, result),
             Err(error) => AiredEnd::Failed(error.to_string()),
@@ -387,6 +411,27 @@ async fn play_loop(
     }
 
     Ok(())
+}
+
+/// The clip after the one on air, in playlist order.
+async fn next_source(manager: &ChannelManager) -> Option<String> {
+    let index = manager.current_index.load(Ordering::SeqCst);
+    let list = manager.current_list.lock().await;
+
+    list.get(index)
+        .map(|media| media.source.clone())
+        .filter(|source| !source.trim().is_empty())
+}
+
+/// Open `next` shortly before the clip on air ends, so the switch to it is
+/// immediate. Earlier would keep a network source waiting for long.
+pub(crate) fn preload_later(preloader: Preloader, next: String, on_air: f64) -> JoinHandle<()> {
+    let wait = Duration::from_secs_f64((on_air - PRELOAD_LEAD_SECONDS).max(0.0));
+
+    tokio::spawn(async move {
+        sleep(wait).await;
+        preloader.preload(&next);
+    })
 }
 
 async fn hls_playout_rate(

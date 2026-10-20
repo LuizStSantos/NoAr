@@ -55,11 +55,17 @@ during the live, the channel's filler (or black) airs while NoAr retries; after
 the event's retry time (`retry_seconds`, two minutes by default) the programme
 continues.
 
-The output never stops for a live source. While NoAr connects to it, the
-last picture stays on screen with silence (usually under a second), and the
-signal checks run while the programme or the filler is airing. Stopping or
-restarting the playout ends a live on air right away; the next start puts it
-back on air if its time is not over.
+The output never stops for a live source. About ten seconds before a live
+starts, NoAr connects to it and keeps receiving, holding only what came since
+the last key frame (a second or two), so the switch is immediate. That
+connection is also the signal check: the source is called once, which
+matters for SRT sources that accept a single caller. If the source is not
+ready by then, NoAr keeps trying while the programme or the filler is airing,
+and while it connects the last picture stays on screen with silence. The
+first clip of an event and the next clip of the playlist are opened the same
+way, shortly before their turn. Stopping or restarting the playout ends a
+live on air right away; the next start puts it back on air if its time is
+not over.
 
 Avoid pointing a live at one of the channel's own [live inputs](live_ingest.md)
 (the same port): NoAr would be calling itself. Send the encoder to the live

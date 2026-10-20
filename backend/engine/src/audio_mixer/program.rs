@@ -612,6 +612,7 @@ mod tests {
                         subtitles_media_path: None,
                         logo_fade: crate::LogoFade::default(),
                     },
+                    None,
                 )
                 .unwrap();
                 assert_eq!(result, crate::ClipResult::Played);
