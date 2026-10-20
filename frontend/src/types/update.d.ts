@@ -18,6 +18,15 @@ declare global {
         url: string
     }
 
+    interface UpdaterStatus {
+        /** Its address and token are set. */
+        configured: boolean
+        /** It answered just now. */
+        connected: boolean
+        address: string | null
+        error: string | null
+    }
+
     interface UpdateStatus {
         version: string
         /** Empty for a build without a commit, such as a local one. */
@@ -31,5 +40,12 @@ declare global {
         error: string | null
         auto_check: boolean
         repository: string
+        /** Install a new version at `update_time` on its own. */
+        auto_update: boolean
+        /** Server time, `HH:MM`. */
+        update_time: string
+        /** A one-off install, Unix milliseconds. */
+        scheduled_at: number | null
+        updater: UpdaterStatus
     }
 }

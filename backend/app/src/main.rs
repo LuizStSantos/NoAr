@@ -45,7 +45,7 @@ use ffplayout::{
         server,
         system::SystemStat,
         time_machine::set_mock_time,
-        update,
+        update, updater,
     },
 };
 
@@ -178,6 +178,7 @@ async fn async_main() -> Result<(), ProcessError> {
 
         server::mark_started();
         update::spawn_checker(pool.clone(), shutdown.clone());
+        updater::spawn_installer(pool.clone(), shutdown.clone());
         info!(target: Target::Console.as_str(), "Running NoAr, listen on http://{conn}");
 
         tokio::select! {

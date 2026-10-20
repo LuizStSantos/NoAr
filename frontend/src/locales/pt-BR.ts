@@ -1798,6 +1798,7 @@ export default {
         },
         updates: {
             intro: 'O NoAr procura versões novas sozinho. Só o administrador global vê esta página.',
+            loading: 'Carregando…',
             newKicker: 'Nova versão disponível',
             newVersion: 'Nova versão',
             publishedAt: 'Publicada em {when}',
@@ -1817,7 +1818,7 @@ export default {
             installed: 'Versão instalada',
             localBuild: 'compilada fora do GitHub, sem como comparar',
             lastCheck: 'Última verificação: {when}',
-            neverChecked: 'Ainda não verificou. A primeira verificação sai um minuto depois de o NoAr iniciar.',
+            neverChecked: 'Ainda não verificou. A primeira verificação sai alguns segundos depois de o NoAr iniciar.',
             newest: 'é a versão mais nova',
             latestIs: 'a última publicada é {commit}',
             checkFailed: 'A última verificação falhou: {error}',
@@ -1828,7 +1829,44 @@ export default {
             autoCheck: 'Procurar versões novas sozinho',
             autoCheckHint: 'A cada 6 horas. Uma versão nova acende um aviso em Configurações e na página inicial.',
             onServer: 'A troca de versão é feita no servidor, na pasta do NoAr:',
-            onServerHint: 'Baixa a imagem publicada mais nova e reinicia o container com ela.',
+            scheduled: 'Atualização agendada para {when}.',
+            scheduledFor: 'Agendada para {when} (horário do servidor).',
+            cancelSchedule: 'Cancelar agendamento',
+            installNow: 'Atualizar agora',
+            or: 'ou',
+            at: 'às',
+            scheduleTime: 'Horário da atualização',
+            schedule: 'Agendar',
+            withUpdater: 'Com o atualizador ligado (veja abaixo), dá para atualizar por aqui.',
+            autoUpdate: 'Atualizar sozinho',
+            autoUpdateHint:
+                'Quando houver versão nova, atualiza no horário escolhido (horário do servidor). Precisa do atualizador.',
+            autoUpdateTime: 'Horário da atualização automática',
+            updaterConnected:
+                'Atualizador conectado ({address}): o botão troca a versão sem precisar entrar no servidor.',
+            updaterDown: 'O atualizador não responde em {address}. Confira no servidor com docker compose ps.',
+            setupTitle: 'Para atualizar por aqui, ligue o atualizador uma vez',
+            setupText:
+                'O atualizador é um segundo container, ao lado do NoAr, que baixa a versão nova e reinicia o NoAr quando você pede. Só ele mexe no Docker; o NoAr não ganha acesso ao servidor.',
+            setupSteps:
+                'No servidor, na pasta do NoAr: pegue o docker-compose.yml desta versão (ele já traz o atualizador), ligue o atualizador e crie a senha dele. Se você mudou o arquivo (portas, fuso horário), refaça as mudanças no novo.',
+            setupDone:
+                'Pronto: aqui aparece "Atualizador conectado" e o botão passa a funcionar. Daí em diante não precisa mais entrar no servidor.',
+            confirmTitle: 'Atualizar o NoAr agora?',
+            confirmText:
+                'O atualizador baixa a versão nova e reinicia o NoAr com ela. Os canais saem do ar por alguns segundos e voltam sozinhos.',
+            progressTitle: 'Atualizando o NoAr',
+            step: {
+                download: 'Baixar a versão nova',
+                downloadHint: 'Os canais continuam no ar enquanto baixa.',
+                restart: 'Reiniciar com a versão nova',
+                restartHint: 'Os canais saem do ar por alguns segundos.',
+                back: 'Canais de volta no ar',
+            },
+            progressHint:
+                'Esta página volta sozinha quando o NoAr responder. Se demorar mais de 3 minutos, ela avisa e mostra como conferir no servidor.',
+            lateTitle: 'Está demorando mais que o normal',
+            lateText: 'Se a imagem já era a mais nova, nada muda. Para ver o que o atualizador fez, no servidor:',
             dot: 'nova versão disponível',
             badge: 'nova',
             notice: 'Nova versão do NoAr disponível',

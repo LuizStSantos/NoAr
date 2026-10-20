@@ -1792,6 +1792,7 @@ export default {
         },
         updates: {
             intro: 'NoAr looks for new versions on its own. Only global admins see this page.',
+            loading: 'Loading…',
             newKicker: 'New version available',
             newVersion: 'New version',
             publishedAt: 'Published on {when}',
@@ -1811,7 +1812,7 @@ export default {
             installed: 'Installed version',
             localBuild: 'built outside GitHub, nothing to compare with',
             lastCheck: 'Last check: {when}',
-            neverChecked: 'Not checked yet. The first check runs a minute after NoAr starts.',
+            neverChecked: 'Not checked yet. The first check runs a few seconds after NoAr starts.',
             newest: 'it is the newest version',
             latestIs: 'the newest published one is {commit}',
             checkFailed: 'The last check failed: {error}',
@@ -1822,7 +1823,44 @@ export default {
             autoCheck: 'Look for new versions on its own',
             autoCheckHint: 'Every 6 hours. A new version lights a notice in Settings and on the home page.',
             onServer: 'Versions are changed on the server, in the NoAr folder:',
-            onServerHint: 'Downloads the newest published image and restarts the container with it.',
+            scheduled: 'Update scheduled for {when}.',
+            scheduledFor: 'Scheduled for {when} (server time).',
+            cancelSchedule: 'Cancel',
+            installNow: 'Update now',
+            or: 'or',
+            at: 'at',
+            scheduleTime: 'Update time',
+            schedule: 'Schedule',
+            withUpdater: 'With the updater on (see below), you can update from here.',
+            autoUpdate: 'Update on its own',
+            autoUpdateHint: 'When there is a new version, updates at the chosen time (server time). Needs the updater.',
+            autoUpdateTime: 'Time of the automatic update',
+            updaterConnected:
+                'Updater connected ({address}): the button changes the version without logging into the server.',
+            updaterDown: 'The updater does not answer at {address}. Look on the server with docker compose ps.',
+            setupTitle: 'To update from here, turn the updater on once',
+            setupText:
+                'The updater is a second container, next to NoAr, that downloads the new version and restarts NoAr with it when you ask. Only it touches Docker; NoAr gets no access to the server.',
+            setupSteps:
+                'On the server, in the NoAr folder: get the docker-compose.yml of this version (it already has the updater), turn the updater on and create its token. If you changed the file (ports, time zone), make the same changes to the new one.',
+            setupDone:
+                'Done: "Updater connected" shows here and the button works. From then on there is no need to log into the server.',
+            confirmTitle: 'Update NoAr now?',
+            confirmText:
+                'The updater downloads the new version and restarts NoAr with it. The channels go off air for a few seconds and come back on their own.',
+            progressTitle: 'Updating NoAr',
+            step: {
+                download: 'Download the new version',
+                downloadHint: 'The channels stay on air while it downloads.',
+                restart: 'Restart with the new version',
+                restartHint: 'The channels go off air for a few seconds.',
+                back: 'Channels back on air',
+            },
+            progressHint:
+                'This page comes back by itself when NoAr answers. If it takes more than 3 minutes, it says so and shows how to look on the server.',
+            lateTitle: 'This is taking longer than usual',
+            lateText:
+                'If the image already was the newest, nothing changes. To see what the updater did, on the server:',
             dot: 'new version available',
             badge: 'new',
             notice: 'A new version of NoAr is available',

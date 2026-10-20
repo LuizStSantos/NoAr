@@ -51,12 +51,31 @@ export const useUpdates = defineStore('updates', () => {
         }
     }
 
-    async function setAutoCheck(autoCheck: boolean) {
+    /** Change some of the settings; the rest keep their value. */
+    async function saveSettings(settings: { auto_check?: boolean; auto_update?: boolean; update_time?: string }) {
         status.value = await authFetch<UpdateStatus>('/api/system/update/settings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ auto_check: autoCheck }),
+            body: JSON.stringify(settings),
         })
+    }
+
+    /** Ask the updater to install the new version now. */
+    async function install() {
+        status.value = await authFetch<UpdateStatus>('/api/system/update/install', { method: 'POST' })
+    }
+
+    /** Install at the next `time` (`HH:MM`) of the server clock. */
+    async function schedule(time: string) {
+        status.value = await authFetch<UpdateStatus>('/api/system/update/schedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ time }),
+        })
+    }
+
+    async function cancelSchedule() {
+        status.value = await authFetch<UpdateStatus>('/api/system/update/schedule', { method: 'DELETE' })
     }
 
     function dismiss() {
@@ -75,7 +94,20 @@ export const useUpdates = defineStore('updates', () => {
         }
     }
 
-    return { status, checking, available, showNotice, load, watchStatus, check, setAutoCheck, dismiss }
+    return {
+        status,
+        checking,
+        available,
+        showNotice,
+        load,
+        watchStatus,
+        check,
+        saveSettings,
+        install,
+        schedule,
+        cancelSchedule,
+        dismiss,
+    }
 })
 
 function readDismissed(): string | null {

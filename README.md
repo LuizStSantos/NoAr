@@ -98,11 +98,11 @@ Set your time zone in `docker-compose.yml` (`TZ`, default
 `America/Sao_Paulo`) and open the ports of the live ingest listeners you
 configure. More in [docs/docker.md](docs/docker.md).
 
-Update:
+Update from **Settings › Updates** (with the `noar-updater` service on, see
+[docs/docker.md](docs/docker.md#updates)), or on the server:
 
 ```sh
-git pull
-docker compose up -d --build
+docker compose pull && docker compose up -d
 ```
 
 ## Features

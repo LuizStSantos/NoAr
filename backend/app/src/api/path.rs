@@ -99,6 +99,11 @@ pub fn routes() -> Router<AppState> {
                 .route("/system/update", get(get_update_status))
                 .route("/system/update/check", post(check_for_update))
                 .route("/system/update/settings", put(save_update_settings))
+                .route("/system/update/install", post(install_update))
+                .route(
+                    "/system/update/schedule",
+                    post(schedule_update).delete(cancel_scheduled_update),
+                )
                 .route("/system/{id}", get(get_system_stat))
                 .route("/user", get(get_user))
                 .route(

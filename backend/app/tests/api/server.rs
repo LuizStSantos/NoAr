@@ -87,6 +87,14 @@ async fn only_a_global_admin_sees_the_update_check() {
     for request in [
         request("GET", "/api/system/update", &user),
         request("POST", "/api/system/update/check", &user),
+        request("POST", "/api/system/update/install", &user),
+        request("DELETE", "/api/system/update/schedule", &user),
+        json_request(
+            "POST",
+            "/api/system/update/schedule",
+            &user,
+            r#"{"time":"03:00"}"#,
+        ),
         json_request(
             "PUT",
             "/api/system/update/settings",
@@ -150,4 +158,76 @@ async fn the_update_check_can_be_turned_off() {
         .unwrap();
 
     assert_eq!(read(response).await["auto_check"], false);
+}
+
+#[tokio::test]
+#[serial]
+async fn an_update_is_scheduled_on_the_server_clock_and_cancelled() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let read = |response: axum::response::Response| async move {
+        serde_json::from_slice::<serde_json::Value>(
+            &to_bytes(response.into_body(), 1 << 16).await.unwrap(),
+        )
+        .unwrap()
+    };
+
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            "/api/system/update/schedule",
+            &admin,
+            r#"{"time":"03:00"}"#,
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let scheduled = read(response).await["scheduled_at"].as_i64().unwrap();
+    let ahead = scheduled - chrono::Utc::now().timestamp_millis();
+
+    assert!(ahead > 0 && ahead <= 24 * 60 * 60 * 1000, "{ahead}");
+
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(request("DELETE", "/api/system/update/schedule", &admin))
+        .await
+        .unwrap();
+
+    assert!(read(response).await["scheduled_at"].is_null());
+
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request(
+            "PUT",
+            "/api/system/update/settings",
+            &admin,
+            r#"{"update_time":"25:00"}"#,
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+#[serial]
+async fn installing_needs_the_updater() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(request("POST", "/api/system/update/install", &admin))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+    assert!(!fixture.state.shutdown.is_cancelled());
 }

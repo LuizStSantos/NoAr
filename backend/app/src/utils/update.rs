@@ -14,7 +14,13 @@ use sqlx::SqlitePool;
 use tokio::{sync::Mutex, time::sleep};
 use tokio_util::sync::CancellationToken;
 
-use crate::{db::handles, utils::errors::ServiceError};
+use crate::{
+    db::handles,
+    utils::{
+        errors::ServiceError,
+        updater::{self, UpdaterStatus},
+    },
+};
 
 /// Where the image is built; a fork can set its own with `NOAR_UPDATE_REPOSITORY`.
 const DEFAULT_REPOSITORY: &str = "LuizStSantos/NoAr";
@@ -23,8 +29,8 @@ const GITHUB_API: &str = "https://api.github.com";
 const IMAGE_WORKFLOW: &str = "docker.yml";
 const IMAGE_BRANCH: &str = "main";
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
-/// The first check waits for the channels to be on air.
-const FIRST_CHECK_AFTER: Duration = Duration::from_secs(60);
+/// The first check lets the channels start first.
+const FIRST_CHECK_AFTER: Duration = Duration::from_secs(15);
 /// A check asked for sooner than this after the last one answers from it:
 /// GitHub allows 60 requests an hour without a login.
 const CHECK_COOLDOWN: Duration = Duration::from_secs(20);
@@ -65,6 +71,13 @@ pub struct UpdateStatus {
     pub error: Option<String>,
     pub auto_check: bool,
     pub repository: String,
+    /// Install a new version at `update_time` on its own.
+    pub auto_update: bool,
+    /// Server time, `HH:MM`.
+    pub update_time: String,
+    /// A one-off install, Unix milliseconds.
+    pub scheduled_at: Option<i64>,
+    pub updater: UpdaterStatus,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -110,9 +123,10 @@ static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .expect("update check HTTP client configuration must be valid")
 });
 
-/// The state of the last check and the settings.
+/// The state of the last check, the settings and the updater.
 pub async fn status(pool: &SqlitePool) -> Result<UpdateStatus, ServiceError> {
     let settings = handles::select_update_settings(pool).await?;
+    let updater = updater::probe().await;
     let checked = CHECKED.read().unwrap_or_else(PoisonError::into_inner);
 
     Ok(UpdateStatus {
@@ -125,7 +139,28 @@ pub async fn status(pool: &SqlitePool) -> Result<UpdateStatus, ServiceError> {
         error: checked.error.clone(),
         auto_check: settings.auto_check,
         repository: repository(),
+        auto_update: settings.auto_update,
+        update_time: settings.update_time,
+        scheduled_at: settings.scheduled_at,
+        updater,
     })
+}
+
+/// A newer image than the installed one is published, as of the last check.
+pub fn is_available() -> bool {
+    CHECKED
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .available
+}
+
+/// How long ago GitHub last answered a check, if it did since the start.
+pub fn checked_ago() -> Option<Duration> {
+    CHECKED
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .at
+        .map(|at| at.elapsed())
 }
 
 /// Ask GitHub for the newest image, unless the last check was moments ago.

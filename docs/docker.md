@@ -104,6 +104,35 @@ A fork that publishes its own image sets `NOAR_UPDATE_REPOSITORY=owner/repo`
 on the container so the check looks there. An image built locally has no
 commit to compare: the page then only shows the newest published one.
 
+### Updating from the settings
+
+The `noar-updater` service of `docker-compose.yml` installs a new version
+when the page asks: it runs [Watchtower](https://github.com/nicholas-fedor/watchtower)
+with only its HTTP API on, so it never updates anything by itself. It is the
+only container that talks to Docker; NoAr only calls its API with a token.
+Turn it on once, in the folder of `docker-compose.yml`:
+
+```sh
+echo "COMPOSE_PROFILES=updater" >> .env
+echo "NOAR_UPDATER_TOKEN=$(openssl rand -hex 24)" >> .env
+docker compose up -d
+```
+
+Settings › Updates then shows **Updater connected**, and offers:
+
+- **Update now**: the updater pulls the newest image and replaces the NoAr
+  container. The channels go off air for a few seconds; a Scheduler event on
+  air goes back on air where it was. The page waits and reloads by itself.
+- **Schedule**: the same at the next given time of the server clock. If NoAr
+  is off at that time, the scheduled update is dropped rather than run late.
+- **Update on its own**: every day at the given time, when a new version is
+  out.
+
+The updater only replaces containers labelled
+`com.centurylinklabs.watchtower.enable: "true"`, which the compose file puts
+on NoAr. A private image needs the `docker login ghcr.io` credentials mounted
+into the updater (the line is in the compose file, commented out).
+
 ## Behind a reverse proxy
 
 Forward `X-Forwarded-Proto` and `X-Forwarded-Host` so XMLTV image links use

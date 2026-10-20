@@ -12,9 +12,15 @@ services:
     build: .
     container_name: noar
     restart: unless-stopped
+    labels:
+      # The updater may replace this container with a newer image.
+      com.centurylinklabs.watchtower.enable: "true"
     environment:
       # Time zone used for playlists, schedules and the guide.
       TZ: America/Sao_Paulo
+      # Lets Settings › Updates install a new version through noar-updater.
+      NOAR_UPDATER_URL: http://noar-updater:8080
+      NOAR_UPDATER_TOKEN: ${NOAR_UPDATER_TOKEN:-}
     volumes:
       # Media, playlists, database, HLS output and logs.
       - ./data:/data
@@ -25,3 +31,29 @@ services:
       # in the channel settings (RTMP over TCP, SRT over UDP).
       - "1936:1936"
       - "9000:9000/udp"
+
+  # Pulls a newer NoAr image and restarts NoAr with it when Settings ›
+  # Updates asks. Only it talks to Docker; NoAr gets no access to the server.
+  # Turn it on once, in the folder of this file:
+  #
+  #   echo "COMPOSE_PROFILES=updater" >> .env
+  #   echo "NOAR_UPDATER_TOKEN=$(openssl rand -hex 24)" >> .env
+  #   docker compose up -d
+  noar-updater:
+    image: nickfedor/watchtower
+    container_name: noar-updater
+    restart: unless-stopped
+    profiles: [updater]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # A private image needs the login of `docker login ghcr.io`:
+      # - ~/.docker/config.json:/config.json:ro
+    environment:
+      TZ: America/Sao_Paulo
+      # Only on request: no updates on its own schedule.
+      WATCHTOWER_HTTP_API_ENDPOINTS: update,health
+      WATCHTOWER_HTTP_API_TOKEN: ${NOAR_UPDATER_TOKEN:-}
+      # Only containers labelled for it, here NoAr.
+      WATCHTOWER_LABEL_ENABLE: "true"
+      # Remove the old image after an update.
+      WATCHTOWER_CLEANUP: "true"

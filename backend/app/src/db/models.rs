@@ -689,11 +689,17 @@ pub struct UnfinishedRun {
     pub shift_before: Option<f64>,
 }
 
-/// How NoAr looks for new versions of itself.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::FromRow)]
+/// How NoAr looks for new versions of itself and installs them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UpdateSettings {
     /// Look for a newer image every six hours.
     pub auto_check: bool,
+    /// Install a newer image at `update_time`, through the updater.
+    pub auto_update: bool,
+    /// Server time, `HH:MM`.
+    pub update_time: String,
+    /// A one-off install, Unix milliseconds.
+    pub scheduled_at: Option<i64>,
 }
 
 /// One item that went on air, from `as_run`. Times are Unix milliseconds.

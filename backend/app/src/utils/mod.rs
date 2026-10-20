@@ -37,6 +37,7 @@ pub mod system;
 pub mod task_runner;
 pub mod time_machine;
 pub mod update;
+pub mod updater;
 pub mod xmltv;
 
 use crate::{
