@@ -26,6 +26,7 @@ use crate::{
         models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind, UnfinishedRun},
     },
     player::{
+        as_run::{self, AiredEnd},
         controller::ChannelManager,
         output::{play_plain, play_plain_from},
         utils::{Media, time_in_seconds},
@@ -612,10 +613,29 @@ pub(crate) async fn play_queued_event(
         );
     }
 
+    let scheduled_at = as_run::local_millis(config, occurrence.start);
     let result = match event.kind {
-        ScheduleKind::Media => play_clips(manager, config, playout, &event, already_aired).await,
+        ScheduleKind::Media => {
+            play_clips(
+                manager,
+                config,
+                playout,
+                &event,
+                scheduled_at,
+                already_aired,
+            )
+            .await
+        }
         ScheduleKind::Live => {
-            play_live(manager, config, playout, &occurrence, queued.signal_checked).await
+            play_live(
+                manager,
+                config,
+                playout,
+                &occurrence,
+                scheduled_at,
+                queued.signal_checked,
+            )
+            .await
         }
     };
     let elapsed = started.elapsed().as_secs_f64();
@@ -680,6 +700,7 @@ async fn play_clips(
     config: &PlayoutConfig,
     playout: &AsyncPlayout,
     event: &ScheduleEvent,
+    scheduled_at: Option<i64>,
     mut skip: f64,
 ) -> Result<EventEnd, ServiceError> {
     let id = config.general.channel_id;
@@ -713,18 +734,26 @@ async fn play_clips(
             path.display()
         );
 
-        if matches!(
-            play_plain_from(
-                playout,
-                config,
-                &path.to_string_lossy(),
-                seek,
-                length,
-                commercials.contains(source),
-            )
-            .await?,
-            ClipResult::Stopped
-        ) {
+        let commercial = commercials.contains(source);
+        let entry = as_run::event_clip_entry(event, scheduled_at, source, seek, length, commercial);
+        let aired = as_run::record_start(manager, entry).await;
+        let result = play_plain_from(
+            playout,
+            config,
+            &path.to_string_lossy(),
+            seek,
+            length,
+            commercial,
+        )
+        .await;
+        let end = match &result {
+            Ok(result) => as_run::event_clip_end(manager, result),
+            Err(error) => AiredEnd::Failed(error.to_string()),
+        };
+
+        as_run::record_end(manager, aired, end).await;
+
+        if matches!(result?, ClipResult::Stopped) {
             return Ok(EventEnd {
                 completed,
                 stopped: true,
@@ -743,6 +772,7 @@ async fn play_live(
     config: &PlayoutConfig,
     playout: &AsyncPlayout,
     occurrence: &Occurrence,
+    scheduled_at: Option<i64>,
     signal_checked: Option<Instant>,
 ) -> Result<EventEnd, ServiceError> {
     let id = config.general.channel_id;
@@ -767,19 +797,30 @@ async fn play_live(
     let retry = Duration::from_secs(u64::from(event.retry_seconds));
     let mut trusted_signal = signal_checked.is_some_and(|checked| checked.elapsed() < FRESH_SIGNAL);
     let mut lost_since: Option<Instant> = None;
+    // The on-air record of the waiting screen, from the first failed check
+    // until the signal answers or the event gives up.
+    let mut waiting: Option<Option<i64>> = None;
+    let seconds_left = || {
+        let now = time_now(&config.channel.timezone).naive_local();
+
+        (occurrence.end - now).num_milliseconds() as f64 / 1000.0
+    };
 
     loop {
         if manager.schedule.take_abort() {
+            end_waiting(manager, &mut waiting, AiredEnd::cut("skipped", None)).await;
+
             return Ok(EventEnd {
                 completed: true,
                 stopped: false,
             });
         }
 
-        let now = time_now(&config.channel.timezone).naive_local();
-        let remaining = (occurrence.end - now).num_milliseconds() as f64 / 1000.0;
+        let remaining = seconds_left();
 
         if remaining < 1.0 {
+            end_waiting(manager, &mut waiting, AiredEnd::Completed).await;
+
             return Ok(EventEnd {
                 completed: true,
                 stopped: false,
@@ -791,6 +832,7 @@ async fn play_live(
 
         if signal {
             lost_since = None;
+            end_waiting(manager, &mut waiting, AiredEnd::Completed).await;
             manager.schedule.set_item(protocol.to_string());
             show_on_air(manager, &url, &event.title, remaining).await;
             info!(channel = id;
@@ -798,10 +840,17 @@ async fn play_live(
                 event.title
             );
 
-            if matches!(
-                play_plain(playout, config, &url, remaining).await?,
-                ClipResult::Stopped
-            ) {
+            let entry = as_run::event_live_entry(event, scheduled_at, remaining);
+            let aired = as_run::record_start(manager, entry).await;
+            let result = play_plain(playout, config, &url, remaining).await;
+            let end = match &result {
+                Ok(result) => as_run::live_end(manager, result, seconds_left()),
+                Err(error) => AiredEnd::Failed(error.to_string()),
+            };
+
+            as_run::record_end(manager, aired, end).await;
+
+            if matches!(result?, ClipResult::Stopped) {
                 return Ok(EventEnd {
                     completed: true,
                     stopped: true,
@@ -815,6 +864,7 @@ async fn play_live(
         let lost = *lost_since.get_or_insert_with(Instant::now);
 
         if lost.elapsed() >= retry {
+            end_waiting(manager, &mut waiting, AiredEnd::Completed).await;
             error!(channel = id;
                 "Live <span class=\"log-addr\">{}</span>: no signal for {} s; back to the programme",
                 event.title,
@@ -832,21 +882,46 @@ async fn play_live(
             .set_item(format!("{protocol} · waiting for signal"));
         warn!(channel = id; "Live <span class=\"log-addr\">{}</span>: waiting for the signal", event.title);
 
-        if matches!(
-            play_plain(
-                playout,
-                config,
-                &waiting_source(config),
-                remaining.min(LIVE_RETRY_SECONDS)
-            )
-            .await?,
-            ClipResult::Stopped
-        ) {
+        let source = waiting_source(config);
+
+        if waiting.is_none() {
+            let entry = as_run::waiting_entry(config, event, scheduled_at, &source);
+
+            waiting = Some(as_run::record_start(manager, entry).await);
+        }
+
+        let result = play_plain(playout, config, &source, remaining.min(LIVE_RETRY_SECONDS)).await;
+
+        match &result {
+            Ok(ClipResult::Stopped) => end_waiting(manager, &mut waiting, AiredEnd::Stopped).await,
+            Ok(ClipResult::Skipped) => {
+                end_waiting(manager, &mut waiting, AiredEnd::cut("skipped", None)).await;
+            }
+            Err(error) => {
+                end_waiting(manager, &mut waiting, AiredEnd::Failed(error.to_string())).await;
+            }
+            Ok(_) => {}
+        }
+
+        if matches!(result?, ClipResult::Stopped) {
             return Ok(EventEnd {
                 completed: false,
                 stopped: true,
             });
         }
+    }
+}
+
+/// Close the on-air record of a live's waiting screen, if one is open.
+async fn end_waiting(manager: &ChannelManager, waiting: &mut Option<Option<i64>>, end: AiredEnd) {
+    if let Some(id) = waiting.take() {
+        let end = match end {
+            // The playout stopping is not an operator's skip.
+            AiredEnd::Cut { .. } if !manager.is_alive.load(Ordering::SeqCst) => AiredEnd::Stopped,
+            end => end,
+        };
+
+        as_run::record_end(manager, id, end).await;
     }
 }
 

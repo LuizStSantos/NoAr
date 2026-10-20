@@ -9,6 +9,10 @@ Install, data folders, ports and updates. Docker is the only supported install.
 
 Breaks, clips and lives at a set time over the running programme.
 
+### **[Report](/docs/report.md)**
+
+What actually aired, recorded item by item, for the daily report.
+
 ### **[XMLTV / EPG](/docs/xmltv.md)**
 
 Program guide built from the playlists and the `.nfo` files in each program folder, with artwork.

@@ -271,6 +271,10 @@ pub struct Media {
     #[serde(default, skip_serializing, skip_deserializing)]
     pub is_placeholder: bool,
 
+    /// The clip a placeholder airs in place of, when that clip was missing.
+    #[serde(default, skip_serializing, skip_deserializing)]
+    pub replaces: Option<String>,
+
     #[serde(default, skip_serializing)]
     pub unit: ProcessUnit,
 }
@@ -317,6 +321,7 @@ impl Media {
             next_ad: false,
             skip: false,
             is_placeholder: false,
+            replaces: None,
             unit: Decoder,
         }
     }
@@ -402,6 +407,7 @@ impl Default for Media {
             next_ad: false,
             skip: false,
             is_placeholder: false,
+            replaces: None,
             unit: Decoder,
         }
     }

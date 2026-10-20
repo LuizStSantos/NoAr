@@ -16,6 +16,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     file::norm_abs_path,
     player::{
+        as_run::{self, AiredEnd},
         controller::{ChannelManager, loudness_config},
         input::source_generator,
         schedule::{self, InterruptedClip},
@@ -91,6 +92,11 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         })
         .collect();
     let count = listeners.len();
+    // Background work that ends with the play loop.
+    let ticker_cancel = CancellationToken::new();
+    let mut ingest_watcher = None;
+
+    as_run::close_unfinished(&manager).await;
 
     if count > 0 {
         playout
@@ -98,13 +104,17 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
             .await
             .map_err(engine_error)?;
         info!(channel = config.general.channel_id; "Started {count} live listener(s)");
+        ingest_watcher = Some(tokio::spawn(as_run::watch_ingest(
+            manager.clone(),
+            playout.playback_control(),
+            ticker_cancel.clone(),
+        )));
     }
 
     // Scheduled events: the ticker queues them, the play loop airs them. An
     // event cut by the stop goes back on air first.
     manager.schedule.reset();
     schedule::resume_unfinished(&manager).await;
-    let ticker_cancel = CancellationToken::new();
     let ticker = tokio::spawn(schedule::run_ticker(manager.clone(), ticker_cancel.clone()));
 
     let result = match config.output.mode {
@@ -114,6 +124,10 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
 
     ticker_cancel.cancel();
     let _ = ticker.await;
+
+    if let Some(watcher) = ingest_watcher {
+        let _ = watcher.await;
+    }
 
     let finish_result = playout.finish().await.map_err(engine_error);
     result?;
@@ -281,8 +295,9 @@ async fn play_loop(
             1.0
         };
         let is_ad = node.ad;
+        let aired = as_run::record_start(&manager, as_run::programme_entry(config, &node)).await;
         let clip_started = std::time::Instant::now();
-        match playout
+        let result = playout
             .play_with_timing_logo_fade_rate_and_audio(
                 node.source.clone(),
                 (node.seek > 0.0).then_some(node.seek),
@@ -298,9 +313,15 @@ async fn play_loop(
                 },
                 playout_rate,
             )
-            .await
-            .map_err(engine_error)?
-        {
+            .await;
+        let end = match &result {
+            Ok(result) => as_run::programme_end(&manager, result),
+            Err(error) => AiredEnd::Failed(error.to_string()),
+        };
+
+        as_run::record_end(&manager, aired, end).await;
+
+        match result.map_err(engine_error)? {
             ClipResult::LiveEnded => {
                 info!(channel = id;
                     "Live input ended; reinitialize playlist at current time"

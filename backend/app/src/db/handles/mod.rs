@@ -1,3 +1,4 @@
+pub mod as_run;
 pub mod channel;
 pub mod configuration;
 pub mod global;
@@ -10,6 +11,7 @@ pub mod setup;
 pub mod source;
 pub mod user;
 
+pub use as_run::*;
 pub use channel::*;
 pub use configuration::*;
 pub use global::*;

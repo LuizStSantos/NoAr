@@ -618,6 +618,9 @@ impl CurrentProgram {
 
             self.manager.list_init.store(true, Ordering::SeqCst);
 
+            // Every branch below swaps the missing clip for a filler or black.
+            node.replaces = (!node.source.is_empty()).then(|| node.source.clone());
+
             let filler = {
                 let fillers = self.manager.filler_list.lock().await;
 

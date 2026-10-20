@@ -688,3 +688,43 @@ pub struct UnfinishedRun {
     /// The programme's time shift when it went on air.
     pub shift_before: Option<f64>,
 }
+
+/// One item that went on air, from `as_run`. Times are Unix milliseconds.
+#[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
+pub struct AsRunEntry {
+    pub id: i64,
+    pub started_at: i64,
+    /// `None` while the item is on air.
+    pub ended_at: Option<i64>,
+    pub source: String,
+    pub title: Option<String>,
+    /// `program`, `commercial`, `live`, `filler` or `ingest`.
+    pub kind: String,
+    /// `playlist`, `folder`, `schedule` or `ingest`.
+    pub origin: String,
+    pub event_id: Option<i64>,
+    pub event_title: Option<String>,
+    pub scheduled_at: Option<i64>,
+    pub seek: f64,
+    pub planned_seconds: f64,
+    pub replaces: Option<String>,
+    /// `on_air`, `completed`, `cut`, `failed` or `stopped`.
+    pub status: String,
+    pub reason: Option<String>,
+    pub detail: Option<String>,
+}
+
+/// An item going on air, as the playout records it.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct NewAsRunEntry {
+    pub source: String,
+    pub title: Option<String>,
+    pub kind: &'static str,
+    pub origin: &'static str,
+    pub event_id: Option<i32>,
+    pub event_title: Option<String>,
+    pub scheduled_at: Option<i64>,
+    pub seek: f64,
+    pub planned_seconds: f64,
+    pub replaces: Option<String>,
+}
