@@ -1,5 +1,6 @@
 import { authFetch } from '@/composables/authFetch'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
+import { useAuth } from '@/stores/auth'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json;charset=UTF-8' }
 
@@ -89,6 +90,79 @@ export function removeArtwork(channelId: number, path: string, kind: ArtworkKind
     })
 }
 
+/** Credit roles in the order of the XMLTV DTD. */
+export const CREDIT_ROLES: CreditRole[] = [
+    'director',
+    'actor',
+    'writer',
+    'adapter',
+    'producer',
+    'composer',
+    'editor',
+    'presenter',
+    'commentator',
+    'guest',
+]
+
+/**
+ * How a person's photo is found: their name the way Kodi names the file
+ * (`Ana Souza` -> `Ana_Souza.jpg`), ignoring case. Matches `photo_key` on the
+ * server.
+ */
+export function photoKey(name: string): string {
+    return name
+        .trim()
+        .split(/\s+/)
+        .join('_')
+        .replace(/[\p{Cc}/\\:*?"<>|]/gu, '')
+        .replace(/^\.+/, '')
+        .toLowerCase()
+}
+
+/**
+ * Upload the photo of a person in the credits of the sheet at `path`;
+ * `progress` gets the share sent, 0 to 1.
+ */
+export async function uploadPhoto(
+    channelId: number,
+    path: string,
+    name: string,
+    file: File,
+    progress: (share: number) => void,
+): Promise<MediaSheet> {
+    const auth = useAuth()
+
+    await auth.inspectToken()
+
+    const body = new FormData()
+    body.append('file', file)
+
+    return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest()
+
+        request.open(
+            'PUT',
+            `/api/file/${channelId}/photo?path=${encodeURIComponent(path)}&name=${encodeURIComponent(name)}`,
+        )
+        request.setRequestHeader('Authorization', `Bearer ${auth.jwtToken}`)
+        request.responseType = 'text'
+        request.upload.onprogress = (event) => {
+            if (event.lengthComputable && event.total > 0) {
+                progress(event.loaded / event.total)
+            }
+        }
+        request.onload = () => {
+            if (request.status >= 200 && request.status < 300) {
+                resolve(JSON.parse(request.responseText) as MediaSheet)
+            } else {
+                reject(new Error(request.responseText || request.statusText))
+            }
+        }
+        request.onerror = () => reject(new Error(request.statusText || 'Network error'))
+        request.send(body)
+    })
+}
+
 /** Mark a storage folder as a commercials folder, or remove the mark. */
 export async function markCommercial(channelId: number, path: string, commercial: boolean): Promise<void> {
     await authFetch(`/api/file/${channelId}/commercial`, {
@@ -128,8 +202,7 @@ export function emptyFields(): SheetFields {
         year: '',
         premiered: '',
         countries: [],
-        actors: [],
-        directors: [],
+        credits: [],
         season: null,
         episode: null,
     }

@@ -10,6 +10,7 @@ use quick_xml::{
     escape::resolve_xml_entity,
     events::{BytesRef, BytesStart, Event},
 };
+use serde::{Deserialize, Serialize};
 
 /// Root element of the `.nfo` file.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -34,10 +35,141 @@ impl NfoKind {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct NfoActor {
+/// What a person did, in the order the XMLTV DTD lists credits.
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum CreditRole {
+    Director,
+    #[default]
+    Actor,
+    Writer,
+    Adapter,
+    Producer,
+    Composer,
+    Editor,
+    Presenter,
+    Commentator,
+    Guest,
+}
+
+impl CreditRole {
+    /// The element of this role inside XMLTV `<credits>`.
+    pub fn xmltv_element(self) -> &'static str {
+        match self {
+            Self::Director => "director",
+            Self::Actor => "actor",
+            Self::Writer => "writer",
+            Self::Adapter => "adapter",
+            Self::Producer => "producer",
+            Self::Composer => "composer",
+            Self::Editor => "editor",
+            Self::Presenter => "presenter",
+            Self::Commentator => "commentator",
+            Self::Guest => "guest",
+        }
+    }
+
+    /// The `<type>` of an `<actor>` entry for this role, the way Jellyfin
+    /// tells crew from cast. A plain actor has none, as Kodi writes it.
+    pub fn nfo_type(self, guest: bool) -> Option<&'static str> {
+        match self {
+            Self::Actor if guest => Some("GuestStar"),
+            Self::Actor => None,
+            Self::Director => Some("Director"),
+            Self::Writer => Some("Writer"),
+            Self::Adapter => Some("Adapter"),
+            Self::Producer => Some("Producer"),
+            Self::Composer => Some("Composer"),
+            Self::Editor => Some("Editor"),
+            Self::Presenter => Some("Presenter"),
+            Self::Commentator => Some("Commentator"),
+            Self::Guest => Some("Guest"),
+        }
+    }
+
+    /// Role and guest flag of an `<actor>` with this `<type>`; unknown types
+    /// are cast.
+    fn from_nfo_type(text: &str) -> (Self, bool) {
+        let normalized: String = text
+            .chars()
+            .filter(|c| c.is_alphanumeric())
+            .flat_map(char::to_lowercase)
+            .collect();
+
+        match normalized.as_str() {
+            "gueststar" => (Self::Actor, true),
+            "director" => (Self::Director, false),
+            "writer" => (Self::Writer, false),
+            "adapter" => (Self::Adapter, false),
+            "producer" => (Self::Producer, false),
+            "composer" => (Self::Composer, false),
+            "editor" => (Self::Editor, false),
+            "presenter" | "host" => (Self::Presenter, false),
+            "commentator" => (Self::Commentator, false),
+            "guest" => (Self::Guest, false),
+            _ => (Self::Actor, false),
+        }
+    }
+}
+
+/// One person in the credits of a sheet.
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Credit {
     pub name: String,
-    pub role: Option<String>,
+    pub role: CreditRole,
+    /// The character an actor plays.
+    pub character: Option<String>,
+    /// An actor's guest appearance.
+    pub guest: bool,
+    /// The `<thumb>` of an `<actor>` entry: a URL or a path relative to the
+    /// `.nfo`. Kept as written; photos in `.actors/` come first.
+    pub thumb: Option<String>,
+}
+
+impl Credit {
+    fn new(role: CreditRole, name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            role,
+            ..Self::default()
+        }
+    }
+
+    /// Whether this is the same person in the same job.
+    pub fn same_as(&self, other: &Self) -> bool {
+        self.role == other.role && self.name.to_lowercase() == other.name.to_lowercase()
+    }
+}
+
+/// The `<actor>` entry being read.
+#[derive(Default)]
+struct ActorEntry {
+    name: String,
+    character: Option<String>,
+    kind: Option<String>,
+    thumb: Option<String>,
+}
+
+impl ActorEntry {
+    fn into_credit(self) -> Credit {
+        let (role, guest) = self
+            .kind
+            .as_deref()
+            .map(CreditRole::from_nfo_type)
+            .unwrap_or_default();
+        let is_cast = role == CreditRole::Actor;
+
+        Credit {
+            name: self.name,
+            role,
+            character: self.character.filter(|_| is_cast),
+            guest,
+            thumb: self.thumb,
+        }
+    }
 }
 
 /// A `<thumb>` entry: a path relative to the `.nfo`, an absolute path or a URL.
@@ -60,9 +192,8 @@ pub struct Nfo {
     pub season: Option<u32>,
     pub episode: Option<u32>,
     pub rating: Option<String>,
-    pub directors: Vec<String>,
-    pub writers: Vec<String>,
-    pub actors: Vec<NfoActor>,
+    /// Everyone in the credits, in the order of the file.
+    pub credits: Vec<Credit>,
     pub countries: Vec<String>,
     pub thumbs: Vec<NfoThumb>,
     pub fanart: Vec<String>,
@@ -104,8 +235,8 @@ impl Nfo {
             "season" => self.season = self.season.or_else(|| value.parse().ok()),
             "episode" => self.episode = self.episode.or_else(|| value.parse().ok()),
             "mpaa" | "certification" => set_once(&mut self.rating, value),
-            "director" => push_split(&mut self.directors, &value),
-            "credits" | "writer" => push_split(&mut self.writers, &value),
+            "director" => self.add_people(CreditRole::Director, &value),
+            "credits" | "writer" => self.add_people(CreditRole::Writer, &value),
             "country" => push_split(&mut self.countries, &value),
             "thumb" => self.thumbs.push(NfoThumb {
                 aspect,
@@ -113,6 +244,26 @@ impl Nfo {
             }),
             _ => {}
         }
+    }
+
+    /// Add the people of a `<director>` or `<credits>` element.
+    fn add_people(&mut self, role: CreditRole, value: &str) {
+        let mut names = vec![];
+
+        push_split(&mut names, value);
+
+        for name in names {
+            self.add_credit(Credit::new(role, &name));
+        }
+    }
+
+    /// Add a person, unless they are already listed in the same job.
+    fn add_credit(&mut self, credit: Credit) {
+        if credit.name.is_empty() || self.credits.iter().any(|known| known.same_as(&credit)) {
+            return;
+        }
+
+        self.credits.push(credit);
     }
 }
 
@@ -156,7 +307,7 @@ pub fn parse_nfo(content: &str) -> Nfo {
     config.allow_dangling_amp = true;
 
     let mut open: Vec<OpenElement> = vec![];
-    let mut actor: Option<NfoActor> = None;
+    let mut actor: Option<ActorEntry> = None;
 
     loop {
         let event = match reader.read_event() {
@@ -171,7 +322,7 @@ pub fn parse_nfo(content: &str) -> Nfo {
                 if open.is_empty() {
                     nfo.kind = NfoKind::from_root(&element.name);
                 } else if open.len() == 1 && element.name == "actor" {
-                    actor = Some(NfoActor::default());
+                    actor = Some(ActorEntry::default());
                 }
 
                 open.push(element);
@@ -206,18 +357,19 @@ pub fn parse_nfo(content: &str) -> Nfo {
 
                 match (open.len(), parent, element.name.as_str()) {
                     (1, _, "actor") => {
-                        if let Some(actor) = actor.take().filter(|a| !a.name.is_empty()) {
-                            nfo.actors.push(actor);
+                        if let Some(actor) = actor.take() {
+                            nfo.add_credit(actor.into_credit());
                         }
                     }
-                    (2, Some("actor"), "name") => {
+                    (2, Some("actor"), field) if !value.is_empty() => {
                         if let Some(actor) = actor.as_mut() {
-                            actor.name = value;
-                        }
-                    }
-                    (2, Some("actor"), "role") if !value.is_empty() => {
-                        if let Some(actor) = actor.as_mut() {
-                            actor.role = Some(value);
+                            match field {
+                                "name" => actor.name = value,
+                                "role" => actor.character = Some(value),
+                                "type" => actor.kind = Some(value),
+                                "thumb" => actor.thumb = Some(value),
+                                _ => {}
+                            }
                         }
                     }
                     (2, Some("fanart"), "thumb") if !value.is_empty() => {
@@ -364,11 +516,58 @@ mod tests {
         assert_eq!(nfo.backdrop_thumb(), Some("https://example.com/wide.jpg"));
         assert_eq!(nfo.fanart, ["fanart.jpg"]);
         assert_eq!(
-            nfo.actors,
-            [NfoActor {
-                name: "Ana Souza".to_string(),
-                role: Some("Apresentadora".to_string()),
+            nfo.credits,
+            [Credit {
+                character: Some("Apresentadora".to_string()),
+                ..Credit::new(CreditRole::Actor, "Ana Souza")
             }]
+        );
+    }
+
+    #[test]
+    fn reads_kodi_and_jellyfin_credits() {
+        let nfo = parse_nfo(
+            r#"<tvshow>
+    <director>Carlos Lima</director>
+    <credits>Júlia Prado / Rui Dias</credits>
+    <writer>Júlia Prado</writer>
+    <actor><name>Ana Souza</name><role>Dona Rosa</role><thumb>https://example.org/ana.jpg</thumb></actor>
+    <actor><name>Pedro Alves</name><role>Seu Zé</role><type>GuestStar</type></actor>
+    <actor><name>Marcos Ribeiro</name><role>ignored</role><type>Presenter</type></actor>
+    <actor><name>Lia Reis</name><type>Producer</type></actor>
+    <actor><name>Carlos Lima</name><type>Director</type></actor>
+    <actor><name>Bia</name><type>Something new</type></actor>
+</tvshow>"#,
+        );
+        let people: Vec<(CreditRole, &str, Option<&str>, bool)> = nfo
+            .credits
+            .iter()
+            .map(|credit| {
+                (
+                    credit.role,
+                    credit.name.as_str(),
+                    credit.character.as_deref(),
+                    credit.guest,
+                )
+            })
+            .collect();
+
+        assert_eq!(
+            people,
+            [
+                (CreditRole::Director, "Carlos Lima", None, false),
+                (CreditRole::Writer, "Júlia Prado", None, false),
+                (CreditRole::Writer, "Rui Dias", None, false),
+                (CreditRole::Actor, "Ana Souza", Some("Dona Rosa"), false),
+                (CreditRole::Actor, "Pedro Alves", Some("Seu Zé"), true),
+                (CreditRole::Presenter, "Marcos Ribeiro", None, false),
+                (CreditRole::Producer, "Lia Reis", None, false),
+                (CreditRole::Actor, "Bia", None, false),
+            ]
+        );
+        assert_eq!(
+            nfo.credits[3].thumb.as_deref(),
+            Some("https://example.org/ana.jpg")
         );
     }
 
@@ -384,7 +583,7 @@ mod tests {
         assert_eq!(nfo.title.as_deref(), Some("Parte 1"));
         assert_eq!((nfo.season, nfo.episode), (Some(2), Some(5)));
         assert_eq!(nfo.premiered.as_deref(), Some("2026-10-01"));
-        assert_eq!(nfo.directors, ["Diretor"]);
+        assert_eq!(nfo.credits, [Credit::new(CreditRole::Director, "Diretor")]);
     }
 
     #[test]

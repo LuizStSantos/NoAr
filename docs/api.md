@@ -223,10 +223,27 @@ rejected.
 | `PUT` | `/api/file/{id}/upload?path=folder` | Chunked `multipart/form-data` upload |
 | `PUT` | `/api/file/{id}/import?file=list.m3u&date=YYYY-MM-DD` | `multipart/form-data` with a file field |
 | `POST` | `/api/file/{id}/access-token` | `{ "filename": "folder/file.mp4" }` |
+| `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
+| `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
+| `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
+| `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
+| `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |
 
 The browse response lists `folders`, `files` (with `duration`, `size`,
 `modified` and whether a video has its own `sheet`), `sheet_folders` (the
 subfolders with a program sheet) and `movie_folders` (the films among them).
+
+A sheet holds the form `fields` (`title`, `plot`, `genres`, `rating`, `year`,
+`premiered`, `countries`, `season`, `episode` and `credits`), the `.nfo` text
+as `raw`, its images, the people's `photos` (photo key, the name with `_` for
+spaces in lower case, to storage path) and, for a clip, the `program` folder
+and its `program_credits`. A credit is
+`{ "name": "Ana Souza", "role": "actor", "character": "Rose", "guest": false }`;
+`role` is one of `director`, `actor`, `writer`, `adapter`, `producer`,
+`composer`, `editor`, `presenter`, `commentator` or `guest`. Photos are stored
+in `.actors/` of the program folder as `Ana_Souza.jpg`, replacing an earlier
+photo of the same person. See [XMLTV](xmltv.md#credits) for how the guide
+lists them.
 
 The upload status response is `{ "received_ranges": [[start, end], ...] }`.
 Each `PUT` request contains `fileName`, `start`, `end`, `size`, `batch_id`, and

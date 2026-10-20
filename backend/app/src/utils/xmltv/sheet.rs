@@ -3,7 +3,11 @@
 //! the way [`super::library`] looks them up, so the guide uses them as soon as
 //! they are saved.
 
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+    slice,
+};
 
 use quick_xml::{
     Reader, Writer,
@@ -15,8 +19,11 @@ use tokio::fs;
 use crate::utils::errors::ServiceError;
 
 use super::{
-    library::{BACKDROP_NAMES, IMAGE_EXTENSIONS, Listing, POSTER_NAMES, read_listing},
-    nfo::{NfoKind, decode_nfo_bytes, parse_nfo},
+    library::{
+        BACKDROP_NAMES, Listing, PHOTO_FOLDER, POSTER_NAMES, has_image_extension, photo_index,
+        photo_stem, read_listing,
+    },
+    nfo::{Credit, CreditRole, NfoKind, decode_nfo_bytes, parse_nfo},
 };
 
 /// Largest image accepted as artwork.
@@ -27,7 +34,7 @@ const MAX_SHEET_BYTES: usize = 512 * 1024;
 
 /// Elements the form fills in. Other elements of an existing file (ids,
 /// ratings of other sites, thumbs, ...) are kept as they are.
-const FORM_ELEMENTS: [&str; 15] = [
+const FORM_ELEMENTS: [&str; 17] = [
     "title",
     "plot",
     "genre",
@@ -40,6 +47,8 @@ const FORM_ELEMENTS: [&str; 15] = [
     "country",
     "actor",
     "director",
+    "credits",
+    "writer",
     "season",
     "episode",
     "showtitle",
@@ -102,8 +111,8 @@ pub struct SheetFields {
     /// First air date, `YYYY-MM-DD`.
     pub premiered: String,
     pub countries: Vec<String>,
-    pub actors: Vec<String>,
-    pub directors: Vec<String>,
+    /// Everyone in the credits, cast and crew.
+    pub credits: Vec<Credit>,
     pub season: Option<u32>,
     pub episode: Option<u32>,
 }
@@ -126,6 +135,16 @@ pub struct MediaSheet {
     pub poster: Option<String>,
     pub backdrop: Option<String>,
     pub still: Option<String>,
+    /// Storage path of the folder whose `.actors/` holds the photos of the
+    /// people of this sheet: the program folder.
+    pub photo_folder: String,
+    /// The photos there: the photo key of a name (`photo_key`) -> storage
+    /// path.
+    pub photos: BTreeMap<String, String>,
+    /// For a clip: the program folder around it, whose people the guide lists
+    /// with the clip's own.
+    pub program: Option<String>,
+    pub program_credits: Vec<Credit>,
 }
 
 /// A change to a sheet: the form fields, or the `.nfo` text as it is.
@@ -242,6 +261,16 @@ pub async fn read_sheet(storage: &Path, path: &Path) -> Result<MediaSheet, Servi
         (None, None) => inherited_program(storage, &target.dir).await,
         _ => None,
     };
+    let program = match target.clip_stem {
+        Some(_) => nearest_program(storage, &target.dir).await,
+        None => None,
+    };
+    let program_credits = match &program {
+        Some(dir) => program_credits(dir).await,
+        None => vec![],
+    };
+    let photo_folder = program.clone().unwrap_or_else(|| target.dir.clone());
+    let photos = photos_in(&photo_folder).await;
     let relative = |path: PathBuf| storage_path(storage, &path);
 
     Ok(MediaSheet {
@@ -261,8 +290,7 @@ pub async fn read_sheet(storage: &Path, path: &Path) -> Result<MediaSheet, Servi
             year: nfo.year.unwrap_or_default(),
             premiered: nfo.premiered.unwrap_or_default(),
             countries: nfo.countries,
-            actors: nfo.actors.into_iter().map(|actor| actor.name).collect(),
-            directors: nfo.directors,
+            credits: nfo.credits,
             season: nfo.season,
             episode: nfo.episode,
         },
@@ -276,7 +304,71 @@ pub async fn read_sheet(storage: &Path, path: &Path) -> Result<MediaSheet, Servi
             .as_ref()
             .and_then(|_| target.artwork(&listing, ArtworkKind::Still))
             .map(relative),
+        photos: photos
+            .into_iter()
+            .map(|(key, name)| {
+                let path = photo_folder.join(PHOTO_FOLDER).join(name);
+
+                (key, relative(path))
+            })
+            .collect(),
+        photo_folder: relative(photo_folder),
+        program: program.map(relative),
+        program_credits,
     })
+}
+
+/// The photos in the `.actors/` folder of `dir`: photo key -> file name.
+async fn photos_in(dir: &Path) -> BTreeMap<String, String> {
+    photo_index(&read_listing(&dir.join(PHOTO_FOLDER)).await)
+}
+
+/// The people of the program sheet in `dir`.
+async fn program_credits(dir: &Path) -> Vec<Credit> {
+    let listing = read_listing(dir).await;
+    let Some(name) = listing.program_nfo() else {
+        return vec![];
+    };
+
+    match fs::read(dir.join(name)).await {
+        Ok(bytes) => parse_nfo(&decode_nfo_bytes(&bytes)).credits,
+        Err(_) => vec![],
+    }
+}
+
+/// Store the photo of the person `name` in the `.actors/` folder of the
+/// program of the folder or clip at `path`. A photo of the same person in
+/// another image type is replaced.
+pub async fn save_photo(
+    storage: &Path,
+    path: &Path,
+    name: &str,
+    bytes: &[u8],
+) -> Result<MediaSheet, ServiceError> {
+    let extension = image_extension(bytes)
+        .ok_or_else(|| ServiceError::BadRequest("Use a JPG, PNG, WebP or GIF image".to_string()))?;
+    let stem = photo_stem(name)
+        .ok_or_else(|| ServiceError::BadRequest("Give the person a name first".to_string()))?;
+
+    if bytes.len() > MAX_ARTWORK_BYTES {
+        return Err(ServiceError::BadRequest(
+            "The image is too large".to_string(),
+        ));
+    }
+
+    let target = Target::new(path).await?;
+    let program = match target.clip_stem {
+        Some(_) => nearest_program(storage, &target.dir).await,
+        None => None,
+    };
+    let folder = program.unwrap_or(target.dir).join(PHOTO_FOLDER);
+
+    fs::create_dir_all(&folder).await?;
+
+    remove_images(&folder, slice::from_ref(&stem)).await?;
+    fs::write(folder.join(format!("{stem}.{extension}")), bytes).await?;
+
+    read_sheet(storage, path).await
 }
 
 /// Save the sheet of the folder or clip at `path` and return it as stored.
@@ -361,7 +453,14 @@ pub async fn remove_artwork(
 
 async fn remove_artwork_files(target: &Target, kind: ArtworkKind) -> Result<(), ServiceError> {
     let (stems, _) = target.artwork_stems(kind)?;
-    let listing = read_listing(&target.dir).await;
+
+    remove_images(&target.dir, &stems).await
+}
+
+/// Remove the images in `dir` named one of `stems`, in any image type and
+/// letter case.
+async fn remove_images(dir: &Path, stems: &[String]) -> Result<(), ServiceError> {
+    let listing = read_listing(dir).await;
 
     for name in listing.names() {
         let path = Path::new(name);
@@ -369,17 +468,13 @@ async fn remove_artwork_files(target: &Target, kind: ArtworkKind) -> Result<(), 
             .file_stem()
             .map(|stem| stem.to_string_lossy().to_lowercase())
             .unwrap_or_default();
-        let is_image = path
-            .extension()
-            .map(|extension| extension.to_string_lossy().to_lowercase())
-            .is_some_and(|extension| IMAGE_EXTENSIONS.contains(&extension.as_str()));
 
-        if is_image
+        if has_image_extension(path)
             && stems
                 .iter()
                 .any(|candidate| candidate.to_lowercase() == stem)
         {
-            fs::remove_file(target.dir.join(name)).await?;
+            fs::remove_file(dir.join(name)).await?;
         }
     }
 
@@ -409,14 +504,20 @@ pub async fn program_sheet_kind(dir: &Path) -> Option<SheetKind> {
 
 /// The nearest parent folder (inside the storage) with a program sheet.
 async fn inherited_program(storage: &Path, dir: &Path) -> Option<PathBuf> {
-    let mut parent = dir.parent()?.to_path_buf();
+    nearest_program(storage, dir.parent()?).await
+}
 
-    while parent.starts_with(storage) && parent != storage {
-        if has_program_sheet(&parent).await {
-            return Some(parent);
+/// `dir` or the nearest parent folder (inside the storage) with a program
+/// sheet: the program a clip in `dir` belongs to, as the guide finds it.
+async fn nearest_program(storage: &Path, dir: &Path) -> Option<PathBuf> {
+    let mut folder = dir.to_path_buf();
+
+    while folder.starts_with(storage) && folder != storage {
+        if has_program_sheet(&folder).await {
+            return Some(folder);
         }
 
-        if !parent.pop() {
+        if !folder.pop() {
             break;
         }
     }
@@ -485,33 +586,18 @@ fn check_xml(text: &str) -> Result<(), ServiceError> {
 }
 
 /// The `.nfo` text for `fields`. Elements of `existing` the form does not
-/// fill in are kept as they were written; actors are kept with their roles
-/// when the list of names did not change.
+/// fill in are kept as they were written.
 pub fn sheet_document(existing: Option<&str>, kind: SheetKind, fields: &SheetFields) -> String {
-    let existing_actors: Option<Vec<String>> = existing.map(|text| {
-        parse_nfo(text)
-            .actors
-            .into_iter()
-            .map(|actor| actor.name)
-            .collect()
-    });
-    let keep_actors = existing_actors.as_ref() == Some(&fields.actors);
-    let replaced: Vec<&str> = FORM_ELEMENTS
-        .iter()
-        .copied()
-        .filter(|name| !(keep_actors && *name == "actor"))
-        .collect();
     let kept = existing
-        .and_then(|text| other_elements(text, &replaced))
+        .and_then(|text| other_elements(text, &FORM_ELEMENTS))
         .unwrap_or_default();
 
-    write_document(kind, fields, keep_actors, &kept).unwrap_or_default()
+    write_document(kind, fields, &kept).unwrap_or_default()
 }
 
 fn write_document(
     kind: SheetKind,
     fields: &SheetFields,
-    keep_actors: bool,
     kept: &[String],
 ) -> std::io::Result<String> {
     let mut writer = Writer::new_with_indent(Vec::new(), b' ', 2);
@@ -549,21 +635,7 @@ fn write_document(
         write_text(&mut writer, "country", country)?;
     }
 
-    for director in &fields.directors {
-        write_text(&mut writer, "director", director)?;
-    }
-
-    if !keep_actors {
-        for actor in fields.actors.iter().map(|name| name.trim()) {
-            if actor.is_empty() {
-                continue;
-            }
-
-            writer
-                .create_element("actor")
-                .write_inner_content(|writer| write_text(writer, "name", actor))?;
-        }
-    }
+    write_credits(&mut writer, &fields.credits)?;
 
     for element in kept {
         writer.write_indent()?;
@@ -576,6 +648,61 @@ fn write_document(
     text.push('\n');
 
     Ok(text)
+}
+
+/// Directors and writers as Kodi writes them (`<director>`, `<credits>`);
+/// everyone else as an `<actor>`, with the `<type>` Jellyfin gives the crew
+/// and guest stars. Unnamed and repeated people are left out.
+fn write_credits(writer: &mut Writer<Vec<u8>>, credits: &[Credit]) -> std::io::Result<()> {
+    let mut written: Vec<Credit> = vec![];
+
+    for credit in sorted_credits(credits) {
+        let name = credit.name.trim();
+
+        if name.is_empty() || written.iter().any(|known| known.same_as(credit)) {
+            continue;
+        }
+
+        written.push(credit.clone());
+
+        match credit.role {
+            CreditRole::Director => write_text(writer, "director", name)?,
+            CreditRole::Writer => write_text(writer, "credits", name)?,
+            role => {
+                writer
+                    .create_element("actor")
+                    .write_inner_content(|writer| {
+                        write_text(writer, "name", name)?;
+
+                        if role == CreditRole::Actor {
+                            write_text(
+                                writer,
+                                "role",
+                                credit.character.as_deref().unwrap_or_default(),
+                            )?;
+                        }
+
+                        write_text(
+                            writer,
+                            "type",
+                            role.nfo_type(credit.guest).unwrap_or_default(),
+                        )?;
+                        write_text(writer, "thumb", credit.thumb.as_deref().unwrap_or_default())
+                    })?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Credits in the order of the XMLTV DTD, keeping the order within a role.
+pub fn sorted_credits(credits: &[Credit]) -> Vec<&Credit> {
+    let mut sorted: Vec<&Credit> = credits.iter().collect();
+
+    sorted.sort_by_key(|credit| credit.role);
+
+    sorted
 }
 
 fn write_text(writer: &mut Writer<Vec<u8>>, name: &str, value: &str) -> std::io::Result<()> {
@@ -684,8 +811,16 @@ mod tests {
             genres: vec!["Variedades".to_string(), "Entrevistas".to_string()],
             rating: "Livre".to_string(),
             year: "2026".to_string(),
-            actors: vec!["Ana".to_string()],
+            credits: vec![person(CreditRole::Actor, "Ana")],
             ..SheetFields::default()
+        }
+    }
+
+    fn person(role: CreditRole, name: &str) -> Credit {
+        Credit {
+            name: name.to_string(),
+            role,
+            ..Credit::default()
         }
     }
 
@@ -700,7 +835,7 @@ mod tests {
         assert_eq!(nfo.title.as_deref(), Some("Programa da Tarde"));
         assert_eq!(nfo.genres, ["Variedades", "Entrevistas"]);
         assert_eq!(nfo.rating.as_deref(), Some("Livre"));
-        assert_eq!(nfo.actors[0].name, "Ana");
+        assert_eq!(nfo.credits, [person(CreditRole::Actor, "Ana")]);
     }
 
     #[test]
@@ -714,7 +849,9 @@ mod tests {
   <actor><name>Ana</name><role>Host</role></actor>
   <namedseason number="1"/>
 </tvshow>"#;
-        let text = sheet_document(Some(existing), SheetKind::Program, &fields());
+        let mut read_back = fields();
+        read_back.credits = parse_nfo(existing).credits;
+        let text = sheet_document(Some(existing), SheetKind::Program, &read_back);
         let nfo = parse_nfo(&text);
 
         assert_eq!(nfo.title.as_deref(), Some("Programa da Tarde"));
@@ -722,15 +859,11 @@ mod tests {
         assert!(text.contains(r#"<uniqueid type="tmdb" default="true">42</uniqueid>"#));
         assert!(text.contains(r#"<thumb aspect="poster">https://example.org/p.jpg</thumb>"#));
         assert!(text.contains(r#"<namedseason number="1"/>"#));
-        assert_eq!(
-            nfo.actors[0].role.as_deref(),
-            Some("Host"),
-            "same names keep roles"
-        );
+        assert_eq!(nfo.credits[0].character.as_deref(), Some("Host"));
         assert!(!text.contains("Old"));
 
         let mut other_actors = fields();
-        other_actors.actors = vec!["Bruno".to_string()];
+        other_actors.credits = vec![person(CreditRole::Actor, "Bruno")];
         let nfo = parse_nfo(&sheet_document(
             Some(existing),
             SheetKind::Movie,
@@ -738,8 +871,51 @@ mod tests {
         ));
 
         assert_eq!(nfo.kind, NfoKind::Movie);
-        assert_eq!(nfo.actors.len(), 1);
-        assert_eq!(nfo.actors[0].name, "Bruno");
+        assert_eq!(nfo.credits, [person(CreditRole::Actor, "Bruno")]);
+    }
+
+    #[test]
+    fn credits_are_written_the_way_kodi_and_jellyfin_read_them() {
+        let mut sheet = fields();
+        sheet.credits = vec![
+            Credit {
+                character: Some("Seu Zé".to_string()),
+                guest: true,
+                ..person(CreditRole::Actor, "Pedro Alves")
+            },
+            person(CreditRole::Presenter, "Marcos Ribeiro"),
+            person(CreditRole::Writer, "Júlia Prado"),
+            Credit {
+                character: Some("Dona Rosa".to_string()),
+                thumb: Some("https://example.org/ana.jpg".to_string()),
+                ..person(CreditRole::Actor, "Ana Souza")
+            },
+            person(CreditRole::Director, "Carlos Lima"),
+            person(CreditRole::Guest, "Paulo Mendes"),
+            person(CreditRole::Director, "carlos lima"),
+            person(CreditRole::Composer, "  "),
+        ];
+
+        let text = sheet_document(None, SheetKind::Program, &sheet);
+        let nfo = parse_nfo(&text);
+
+        assert!(text.contains("<director>Carlos Lima</director>"));
+        assert!(text.contains("<credits>Júlia Prado</credits>"));
+        assert!(text.contains("<type>GuestStar</type>"));
+        assert!(text.contains("<type>Presenter</type>"));
+        assert!(text.contains("<thumb>https://example.org/ana.jpg</thumb>"));
+        assert_eq!(
+            nfo.credits,
+            [
+                sheet.credits[4].clone(),
+                sheet.credits[0].clone(),
+                sheet.credits[3].clone(),
+                sheet.credits[2].clone(),
+                sheet.credits[1].clone(),
+                sheet.credits[5].clone(),
+            ],
+            "XMLTV order, each person once, no blank names"
+        );
     }
 
     #[test]
@@ -822,6 +998,49 @@ mod tests {
         assert!(clip.clip);
         assert_eq!(clip.kind, SheetKind::Episode);
         assert_eq!(clip.inherited_from, None);
+    }
+
+    #[tokio::test]
+    async fn photos_live_in_the_program_folder_and_clips_see_its_people() {
+        let storage = TempStorage::new();
+        let program = storage.0.join("Novela");
+        storage.file(
+            "Novela/tvshow.nfo",
+            b"<tvshow><title>Novela</title><director>Carlos Lima</director></tvshow>",
+        );
+        storage.file("Novela/.actors/carlos_lima.png", PNG);
+        let clip = storage.file("Novela/Temporada 1/cap01.mp4", b"");
+
+        let sheet = save_photo(&storage.0, &clip, " Carlos  Lima ", JPEG)
+            .await
+            .unwrap();
+
+        assert!(program.join(".actors/Carlos_Lima.jpg").exists());
+        assert!(
+            !program.join(".actors/carlos_lima.png").exists(),
+            "the new photo replaces the old one"
+        );
+        assert_eq!(sheet.photo_folder, "Novela");
+        assert_eq!(
+            sheet.photos.get("carlos_lima").map(String::as_str),
+            Some("Novela/.actors/Carlos_Lima.jpg")
+        );
+        assert_eq!(sheet.program.as_deref(), Some("Novela"));
+        assert_eq!(
+            sheet.program_credits,
+            [person(CreditRole::Director, "Carlos Lima")]
+        );
+
+        let program_sheet = read_sheet(&storage.0, &program).await.unwrap();
+
+        assert_eq!(program_sheet.program, None);
+        assert!(program_sheet.photos.contains_key("carlos_lima"));
+        assert!(save_photo(&storage.0, &clip, " / ", JPEG).await.is_err());
+        assert!(
+            save_photo(&storage.0, &clip, "Ana", b"not an image")
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]

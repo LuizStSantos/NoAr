@@ -5,6 +5,7 @@ import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
 import ArtworkSlot from '@/components/storage/ArtworkSlot.vue'
+import CreditsEditor from '@/components/storage/CreditsEditor.vue'
 import { authFetch } from '@/composables/authFetch'
 import { baseName, emptyFields, readSheet, removeArtwork, saveSheet, uploadArtwork } from '@/composables/storage'
 import { useIndex } from '@/stores/index'
@@ -19,7 +20,7 @@ const props = defineProps<{
     path: string
 }>()
 
-const emit = defineEmits<{ close: []; saved: [sheet: MediaSheet] }>()
+const emit = defineEmits<{ close: []; saved: [sheet: MediaSheet]; open: [path: string] }>()
 
 const { t } = useI18n()
 const indexStore = useIndex()
@@ -36,6 +37,8 @@ const tab = ref<'form' | 'file'>('form')
 const saving = ref(false)
 const busyArtwork = ref<ArtworkKind | null>(null)
 const confirmClose = ref(false)
+/** The sheet to open once the changes are kept or dropped. */
+const leaveTo = ref<string | null>(null)
 const confirmDelete = ref(false)
 const genreInput = ref('')
 const firstField = ref<HTMLInputElement>()
@@ -83,14 +86,6 @@ function textList(text: string): string[] {
 const countries = computed({
     get: () => listText(fields.value.countries),
     set: (value: string) => (fields.value.countries = textList(value)),
-})
-const actors = computed({
-    get: () => listText(fields.value.actors),
-    set: (value: string) => (fields.value.actors = textList(value)),
-})
-const directors = computed({
-    get: () => listText(fields.value.directors),
-    set: (value: string) => (fields.value.directors = textList(value)),
 })
 
 function apply(next: MediaSheet) {
@@ -226,10 +221,37 @@ async function deleteSheet() {
 }
 
 function requestClose() {
+    leaveTo.value = null
+
     if (dirty.value) {
         confirmClose.value = true
     } else {
         emit('close')
+    }
+}
+
+/** Open another sheet (the program of an episode) instead of this one. */
+function requestOpen(path: string) {
+    leaveTo.value = path
+
+    if (dirty.value) {
+        confirmClose.value = true
+    } else {
+        emit('open', path)
+    }
+}
+
+function leave() {
+    if (leaveTo.value !== null) {
+        emit('open', leaveTo.value)
+    } else {
+        emit('close')
+    }
+}
+
+function onPhotos(photos: Record<string, string>) {
+    if (sheet.value) {
+        sheet.value = { ...sheet.value, photos }
     }
 }
 
@@ -256,7 +278,7 @@ onBeforeUnmount(() => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="sheet-title"
-            class="w-full max-w-[640px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
+            class="w-full max-w-[800px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
         >
             <header class="flex items-start gap-3 px-5 pt-5 pb-3">
                 <div class="flex-1 min-w-0">
@@ -407,26 +429,20 @@ onBeforeUnmount(() => {
                             {{ t('storage.sheet.plot') }}
                             <textarea v-model="fields.plot" rows="4" class="field-input py-2 resize-y" />
                         </label>
-
-                        <template v-if="kind !== 'episode'">
-                            <label class="field-label col-span-2">
-                                {{ t('storage.sheet.cast') }}
-                                <input
-                                    v-model.lazy="actors"
-                                    :placeholder="t('storage.sheet.commaHint')"
-                                    class="field-input"
-                                />
-                            </label>
-                            <label class="field-label col-span-2">
-                                {{ t('storage.sheet.directors') }}
-                                <input
-                                    v-model.lazy="directors"
-                                    :placeholder="t('storage.sheet.commaHint')"
-                                    class="field-input"
-                                />
-                            </label>
-                        </template>
                     </div>
+
+                    <CreditsEditor
+                        v-model="fields.credits"
+                        class="border-t border-line pt-4"
+                        :channel-id="channelId"
+                        :path="path"
+                        :episode="isClip && kind === 'episode'"
+                        :photos="sheet.photos"
+                        :program-credits="sheet.program_credits"
+                        :program="sheet.program"
+                        @photos="onPhotos"
+                        @open-program="requestOpen"
+                    />
                 </div>
 
                 <div v-else class="px-5 py-4 flex flex-col gap-2">
@@ -510,7 +526,7 @@ onBeforeUnmount(() => {
                         <button type="button" class="btn-quiet" @click="confirmClose = false">
                             {{ t('storage.sheet.keepEditing') }}
                         </button>
-                        <button type="button" class="btn-quiet text-error" @click="emit('close')">
+                        <button type="button" class="btn-quiet text-error" @click="leave">
                             {{ t('storage.sheet.discard') }}
                         </button>
                     </template>

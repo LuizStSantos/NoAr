@@ -54,6 +54,10 @@ pub fn routes() -> Router<AppState> {
                     put(upload_artwork).layer(DefaultBodyLimit::max(MAX_ARTWORK_BYTES + 64 * 1024)),
                 )
                 .route("/file/{id}/artwork/remove", post(delete_artwork))
+                .route(
+                    "/file/{id}/photo",
+                    put(upload_photo).layer(DefaultBodyLimit::max(MAX_ARTWORK_BYTES + 64 * 1024)),
+                )
                 .route("/file/{id}/import", put(import_playlist))
                 .route("/file/{id}/access-token", post(create_file_access_token))
                 .route("/log/{id}", get(get_log))

@@ -24,6 +24,7 @@ storage/
     tvshow.nfo               <- program metadata
     poster.jpg               <- program poster
     fanart.jpg               <- wide image (backdrop)
+    .actors/Jane_Doe.jpg     <- optional: photo of a person in the credits
     part 1.mp4
     part 2.mp4
   Summer Love/
@@ -100,9 +101,52 @@ itself (useful for a movie next to `movie-name.nfo`), unless it is an
 | `premiered`, `aired`, `releasedate`, `year` | `date` |
 | `season`, `episode` | `episode-num` (`xmltv_ns` and `onscreen`, e.g. `S01E02`) |
 | `mpaa`, `certification` | `rating`; `US:TV-G` becomes system `US`, value `TV-G` |
-| `director`, `actor`, `credits` | `credits` |
+| `director`, `credits`, `writer`, `actor` | `credits` (see below) |
 | `country` | `country` |
 | `thumb`, `fanart` | images, when the folder has no matching image file |
+
+### Credits
+
+The guide lists the people in the order of the XMLTV DTD: `director`, `actor`
+(with the character in `role` and `guest="yes"` or `"no"`), `writer`,
+`adapter`, `producer`, `composer`, `editor`, `presenter`, `commentator` and
+`guest`. The program's people come first and the episode's are added to them;
+someone in both, in the same job, is listed once.
+
+In the `.nfo`, directors and writers are written as Kodi does (`<director>`,
+`<credits>`); everyone else is an `<actor>`, and its `<type>` (as Jellyfin
+writes it) gives the job:
+
+```xml
+<director>Carlos Lima</director>
+<credits>Julia Prado</credits>
+<actor><name>Ana Souza</name><role>Rose</role></actor>
+<actor><name>Peter Alves</name><role>Joe</role><type>GuestStar</type></actor>
+<actor><name>Mark Ribeiro</name><type>Presenter</type></actor>
+<actor><name>Paul Mendes</name><type>Guest</type></actor>
+```
+
+| `<type>` | XMLTV element |
+| --- | --- |
+| none, `Actor` | `actor guest="no"` |
+| `GuestStar` | `actor guest="yes"` |
+| `Director`, `Writer`, `Adapter`, `Producer`, `Composer`, `Editor`, `Presenter` (or `Host`), `Commentator`, `Guest` | `director`, `writer`, `adapter`, ... |
+
+A person's photo is an image in the `.actors` folder of the program folder,
+named after them as Kodi does: spaces become `_` (`.actors/Ana_Souza.jpg`),
+in any letter case and image type. Without one, an `<actor>`'s own `<thumb>`
+is used. The guide links the photo as `<image type="person">` inside the
+person's element:
+
+```xml
+<credits>
+  <director>Carlos Lima<image type="person">http://server:8787/xmltv/1/images/Novela/.actors/Carlos_Lima.jpg</image></director>
+  <actor role="Rose" guest="no">Ana Souza</actor>
+</credits>
+```
+
+The program and episode sheets in Storage edit the credits and upload the
+photos.
 
 Files encoded as UTF-8, UTF-16 and Windows-1252 are all read correctly. A broken
 `.nfo`, or one that only contains a link, does not break the guide: whatever can

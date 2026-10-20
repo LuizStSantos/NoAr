@@ -262,7 +262,12 @@ async fn sheets_and_artwork_are_edited_through_the_storage_routes() {
         json!({
             "path": "Jornal",
             "kind": "program",
-            "fields": {"title": "Jornal da Noite", "genres": ["Jornalismo"], "rating": "Livre"}
+            "fields": {
+                "title": "Jornal da Noite",
+                "genres": ["Jornalismo"],
+                "rating": "Livre",
+                "credits": [{"name": "Ana Souza", "role": "presenter"}]
+            }
         }),
     )
     .await;
@@ -275,6 +280,7 @@ async fn sheets_and_artwork_are_edited_through_the_storage_routes() {
             .unwrap()
             .contains("<genre>Jornalismo</genre>")
     );
+    assert_eq!(sheet["fields"]["credits"][0]["role"], "presenter");
 
     let (status, _) = call(
         "PUT",
@@ -296,10 +302,10 @@ async fn sheets_and_artwork_are_edited_through_the_storage_routes() {
     body.extend_from_slice(b"\x89PNG\r\n\x1a\n\0\0\0\0");
     body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
 
-    let upload = |token: String| {
+    let upload = |uri: &str, token: String| {
         Request::builder()
             .method("PUT")
-            .uri("/api/file/1/artwork?path=Jornal&kind=poster")
+            .uri(uri)
             .header(
                 "content-type",
                 format!("multipart/form-data; boundary={boundary}"),
@@ -311,13 +317,34 @@ async fn sheets_and_artwork_are_edited_through_the_storage_routes() {
     let response = fixture
         .app
         .clone()
-        .oneshot(upload(token.clone()))
+        .oneshot(upload(
+            "/api/file/1/artwork?path=Jornal&kind=poster",
+            token.clone(),
+        ))
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     let sheet: serde_json::Value =
         serde_json::from_slice(&to_bytes(response.into_body(), 1 << 20).await.unwrap()).unwrap();
     assert_eq!(sheet["poster"], "Jornal/poster.png");
+
+    // A photo sent from a clip's sheet goes to the program folder.
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(upload(
+            "/api/file/1/photo?path=Jornal/bloco1.mp4&name=Ana%20Souza",
+            token.clone(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let sheet: serde_json::Value =
+        serde_json::from_slice(&to_bytes(response.into_body(), 1 << 20).await.unwrap()).unwrap();
+    assert_eq!(sheet["photos"]["ana_souza"], "Jornal/.actors/Ana_Souza.png");
+    assert_eq!(sheet["program"], "Jornal");
+    assert_eq!(sheet["program_credits"][0]["name"], "Ana Souza");
+    assert!(storage.join("Jornal/.actors/Ana_Souza.png").exists());
 
     let (status, sheet) = call(
         "POST",

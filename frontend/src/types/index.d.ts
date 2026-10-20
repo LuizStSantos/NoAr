@@ -205,6 +205,31 @@ declare global {
     type SheetKind = 'program' | 'movie' | 'episode'
     type ArtworkKind = 'poster' | 'backdrop' | 'still'
 
+    /** A person's job in the credits, in the order of the XMLTV DTD. */
+    type CreditRole =
+        | 'director'
+        | 'actor'
+        | 'writer'
+        | 'adapter'
+        | 'producer'
+        | 'composer'
+        | 'editor'
+        | 'presenter'
+        | 'commentator'
+        | 'guest'
+
+    /** One person in the credits of a sheet. */
+    interface Credit {
+        name: string
+        role: CreditRole
+        /** The character an actor plays. */
+        character: string | null
+        /** An actor's guest appearance. */
+        guest: boolean
+        /** The person's `<thumb>` in the `.nfo`, kept as written. */
+        thumb: string | null
+    }
+
     interface SheetFields {
         title: string
         plot: string
@@ -213,8 +238,7 @@ declare global {
         year: string
         premiered: string
         countries: string[]
-        actors: string[]
-        directors: string[]
+        credits: Credit[]
         season: number | null
         episode: number | null
     }
@@ -232,6 +256,13 @@ declare global {
         poster: string | null
         backdrop: string | null
         still: string | null
+        /** Storage path of the folder whose `.actors/` holds the people's photos. */
+        photo_folder: string
+        /** Photos there: photo key of a name (see `photoKey`) -> storage path. */
+        photos: Record<string, string>
+        /** For a clip: the program folder around it and the people of its sheet. */
+        program: string | null
+        program_credits: Credit[]
     }
 
     interface FolderObject {

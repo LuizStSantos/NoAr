@@ -1531,6 +1531,7 @@ const uploadAccept = computed(() =>
             :path="editorPath"
             @close="editorPath = null"
             @saved="onSheetSaved"
+            @open="editorPath = $event"
         />
 
         <GenericModal :show="renameTarget !== null" :title="t('storage.renameTitle')" :modal-action="finishRename">

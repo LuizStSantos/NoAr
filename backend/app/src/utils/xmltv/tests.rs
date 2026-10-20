@@ -177,6 +177,76 @@ async fn guide_merges_program_parts_absorbs_ads_and_uses_nfo_metadata() {
 }
 
 #[tokio::test]
+async fn guide_credits_list_program_and_episode_people_with_photos() {
+    let storage = TempDir::new();
+    let playlists = TempDir::new();
+    let timezone = Tz::America__Sao_Paulo;
+    let today = time_now(&Some(timezone)).date_naive();
+
+    storage.file(
+        "Novela/tvshow.nfo",
+        "<tvshow><title>Novela</title>\
+         <actor><name>Marcos Ribeiro</name><type>Presenter</type></actor>\
+         <credits>Júlia Prado</credits>\
+         <actor><name>Ana Souza</name><role>Dona Rosa</role>\
+         <thumb>https://example.org/ana.jpg</thumb></actor>\
+         <actor><name>Pedro Alves</name><role>Seu Zé</role><type>GuestStar</type></actor>\
+         <director>Carlos Lima</director></tvshow>",
+    );
+    storage.file("Novela/.actors/Carlos_Lima.jpg", "");
+    storage.file("Novela/.actors/paulo_mendes.png", "");
+    let chapter = storage.file("Novela/Temporada 1/Cap 01.mp4", "");
+    storage.file(
+        "Novela/Temporada 1/Cap 01.nfo",
+        "<episodedetails><title>O começo</title>\
+         <actor><name>Paulo Mendes</name><type>Guest</type></actor>\
+         <actor><name>Ana Souza</name><role>Dona Rosa</role></actor></episodedetails>",
+    );
+
+    let playlist = serde_json::json!({
+        "date": today.format("%Y-%m-%d").to_string(),
+        "program": [clip(&chapter, 1800.0)]
+    });
+    playlists.file(
+        &today.format("%Y/%m/%Y-%m-%d.json").to_string(),
+        &playlist.to_string(),
+    );
+
+    let mut config = PlayoutConfig::default();
+    config.channel.storage = storage.0.clone();
+    config.channel.playlists = playlists.0.clone();
+    config.channel.timezone = Some(timezone);
+    config.playlist.start_sec = Some(0.0);
+    let channel = XmltvChannel {
+        id: "canal.br".to_string(),
+        name: "Canal".to_string(),
+    };
+    let options = XmltvOptions {
+        days: 1,
+        lang: None,
+        image_base_url: "http://tv.local/xmltv/1/images".to_string(),
+    };
+
+    let xml = build_xmltv(&config, &channel, &[], &options).await.unwrap();
+    let photos = "http://tv.local/xmltv/1/images/Novela/.actors";
+
+    assert!(
+        xml.contains(&format!(
+            "    <credits>\n\
+             \x20     <director>Carlos Lima<image type=\"person\">{photos}/Carlos_Lima.jpg</image></director>\n\
+             \x20     <actor role=\"Dona Rosa\" guest=\"no\">Ana Souza<image type=\"person\">https://example.org/ana.jpg</image></actor>\n\
+             \x20     <actor role=\"Seu Zé\" guest=\"yes\">Pedro Alves</actor>\n\
+             \x20     <writer>Júlia Prado</writer>\n\
+             \x20     <presenter>Marcos Ribeiro</presenter>\n\
+             \x20     <guest>Paulo Mendes<image type=\"person\">{photos}/paulo_mendes.png</image></guest>\n\
+             \x20   </credits>\n"
+        )),
+        "{xml}"
+    );
+    assert_eq!(texts_of(&xml, "title"), ["Novela"], "well-formed");
+}
+
+#[tokio::test]
 async fn clip_programmes_group_like_the_guide() {
     let storage = TempDir::new();
 

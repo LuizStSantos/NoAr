@@ -2,6 +2,7 @@ use std::{env, io, path::PathBuf};
 
 use axum::{
     Json,
+    body::Bytes,
     extract::{Multipart, Path, Query, State},
     http::{
         HeaderMap, HeaderValue, StatusCode,
@@ -29,7 +30,7 @@ use crate::{
         errors::ServiceError,
         xmltv::sheet::{
             ArtworkKind, MediaSheet, SheetUpdate, read_sheet, remove_artwork, save_artwork,
-            save_sheet,
+            save_photo, save_sheet,
         },
     },
 };
@@ -404,6 +405,14 @@ pub struct ArtworkRequest {
     kind: ArtworkKind,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PhotoRequest {
+    /// Storage path of the folder or clip whose sheet lists the person.
+    path: String,
+    /// The person, as written in the credits.
+    name: String,
+}
+
 /// The storage folder of a channel the user may edit, and `path` inside it.
 async fn storage_target(
     state: &AppState,
@@ -519,24 +528,52 @@ pub async fn upload_artwork(
     mut payload: Multipart,
 ) -> Result<Json<MediaSheet>, ServiceError> {
     let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
+    let bytes = image_field(&mut payload).await?;
 
+    Ok(Json(
+        save_artwork(&storage, &target, request.kind, &bytes).await?,
+    ))
+}
+
+/// **Upload a person's photo**
+///
+/// Stores the image of the `file` field as the photo of a person in the
+/// credits, in `.actors/` of the program folder (`Ana_Souza.jpg`, as Kodi
+/// names it). The guide links it from the person's credit.
+///
+/// ```BASH
+/// curl -X PUT 'http://127.0.0.1:8787/api/file/1/photo?path=Morning%20News&name=Ana%20Souza' \
+/// -H 'Authorization: Bearer <TOKEN>' -F 'file=@ana.jpg'
+/// ```
+pub async fn upload_photo(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    Query(request): Query<PhotoRequest>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    mut payload: Multipart,
+) -> Result<Json<MediaSheet>, ServiceError> {
+    let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
+    let bytes = image_field(&mut payload).await?;
+
+    Ok(Json(
+        save_photo(&storage, &target, &request.name, &bytes).await?,
+    ))
+}
+
+/// The bytes of the `file` field of an image upload.
+async fn image_field(payload: &mut Multipart) -> Result<Bytes, ServiceError> {
     while let Some(field) = payload
         .next_field()
         .await
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?
     {
-        if field.name() != Some("file") {
-            continue;
+        if field.name() == Some("file") {
+            return field
+                .bytes()
+                .await
+                .map_err(|error| ServiceError::BadRequest(error.to_string()));
         }
-
-        let bytes = field
-            .bytes()
-            .await
-            .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
-
-        return Ok(Json(
-            save_artwork(&storage, &target, request.kind, &bytes).await?,
-        ));
     }
 
     Err(ServiceError::BadRequest("No image was sent".to_string()))

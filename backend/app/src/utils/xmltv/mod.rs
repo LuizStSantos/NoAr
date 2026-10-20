@@ -31,8 +31,8 @@ use crate::{
         time_machine::time_now,
     },
 };
-use library::{ClipMetadata, Image, NfoLibrary, has_image_extension};
-use nfo::Nfo;
+use library::{ClipMetadata, GuideCredit, Image, NfoLibrary, has_image_extension};
+use nfo::{CreditRole, Nfo};
 
 /// Days in the guide when the request does not say.
 pub const DEFAULT_DAYS: u32 = 7;
@@ -805,9 +805,8 @@ fn write_programme(
         xml.localized(2, "desc", &[], description);
     }
 
-    // Credits come from one file, so episode and program casts don't mix.
-    if let Some(credits) = nfos.iter().find(|nfo| has_credits(nfo)) {
-        write_credits(xml, credits);
+    if !programme.clip.credits.is_empty() {
+        write_credits(xml, &programme.clip.credits, images);
     }
 
     if let Some(date) = nfos.iter().find_map(|nfo| xmltv_date(nfo)) {
@@ -872,28 +871,32 @@ fn write_programme(
     xml.close(1, "programme");
 }
 
-fn has_credits(nfo: &Nfo) -> bool {
-    !nfo.directors.is_empty() || !nfo.actors.is_empty() || !nfo.writers.is_empty()
-}
-
-fn write_credits(xml: &mut XmlWriter, nfo: &Nfo) {
+/// The people in DTD order: `role` and `guest` on actors, and a person's
+/// photo as an `<image type="person">`.
+fn write_credits(xml: &mut XmlWriter, credits: &[GuideCredit], images: &ImageUrls) {
     xml.open(2, "credits", &[]);
 
-    for director in &nfo.directors {
-        xml.element(3, "director", &[], Some(director));
-    }
+    for entry in credits {
+        let credit = &entry.credit;
+        let mut attributes = vec![];
 
-    for actor in &nfo.actors {
-        let attributes: &[(&str, &str)] = match &actor.role {
-            Some(role) => &[("role", role)],
-            None => &[],
-        };
+        if credit.role == CreditRole::Actor {
+            if let Some(character) = &credit.character {
+                attributes.push(("role", character.as_str()));
+            }
 
-        xml.element(3, "actor", attributes, Some(&actor.name));
-    }
+            attributes.push(("guest", if credit.guest { "yes" } else { "no" }));
+        }
 
-    for writer in &nfo.writers {
-        xml.element(3, "writer", &[], Some(writer));
+        let photo = entry.photo.as_ref().and_then(|image| images.url(image));
+
+        xml.person(
+            3,
+            credit.role.xmltv_element(),
+            &attributes,
+            &credit.name,
+            photo.as_deref(),
+        );
     }
 
     xml.close(2, "credits");
@@ -1092,6 +1095,30 @@ impl<'a> XmlWriter<'a> {
             }
             None => self.out.push_str("/>\n"),
         }
+    }
+
+    /// A person of the credits, with their photo after the name. Written on
+    /// one line, so the name keeps no layout whitespace.
+    fn person(
+        &mut self,
+        depth: usize,
+        name: &str,
+        attributes: &[(&str, &str)],
+        text: &str,
+        photo: Option<&str>,
+    ) {
+        let Some(photo) = photo else {
+            return self.element(depth, name, attributes, Some(text));
+        };
+
+        self.start_tag(depth, name, attributes);
+        self.out.push('>');
+        self.out.push_str(&escape(xml_safe(text)));
+        self.out.push_str("<image type=\"person\">");
+        self.out.push_str(&escape(xml_safe(photo)));
+        self.out.push_str("</image></");
+        self.out.push_str(name);
+        self.out.push_str(">\n");
     }
 
     /// Element with text and the `lang` attribute, when a language is set.

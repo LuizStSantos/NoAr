@@ -18,7 +18,7 @@
 //! subfolders of the program folder.
 
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -27,7 +27,7 @@ use log::*;
 use path_clean::PathClean;
 use tokio::fs;
 
-use super::nfo::{Nfo, NfoKind, decode_nfo_bytes, parse_nfo};
+use super::nfo::{Credit, Nfo, NfoKind, decode_nfo_bytes, parse_nfo};
 
 /// Image types that can be used as artwork and served by the XMLTV image route.
 pub const IMAGE_EXTENSIONS: [&str; 5] = ["jpg", "jpeg", "png", "webp", "gif"];
@@ -47,6 +47,10 @@ pub(crate) const POSTER_NAMES: [&str; 5] = ["poster", "folder", "cover", "capa",
 pub(crate) const BACKDROP_NAMES: [&str; 5] =
     ["landscape", "thumb", "fanart", "backdrop", "background"];
 
+/// Folder of a program (or film) that holds the photos of its people, named
+/// after them as Kodi does: `.actors/Ana_Souza.jpg`.
+pub const PHOTO_FOLDER: &str = ".actors";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Image {
     /// Absolute path of a file inside the storage.
@@ -63,6 +67,13 @@ pub struct Artwork {
     pub still: Option<Image>,
 }
 
+/// A person in the guide entry of a clip, with their photo.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GuideCredit {
+    pub credit: Credit,
+    pub photo: Option<Image>,
+}
+
 /// Everything known about one clip of the playlist.
 #[derive(Debug, Clone)]
 pub struct ClipMetadata {
@@ -74,6 +85,9 @@ pub struct ClipMetadata {
     pub episode: Option<Arc<Nfo>>,
     pub episode_key: Option<PathBuf>,
     pub artwork: Artwork,
+    /// The people of the program and of the clip, each once, in the order
+    /// of the XMLTV DTD.
+    pub credits: Vec<GuideCredit>,
 }
 
 impl ClipMetadata {
@@ -84,6 +98,7 @@ impl ClipMetadata {
             episode: None,
             episode_key: None,
             artwork: Artwork::default(),
+            credits: vec![],
         }
     }
 }
@@ -176,6 +191,52 @@ pub async fn program_title(storage: &Path, source: &str) -> Option<String> {
         .or_else(|| clip.episode.and_then(|nfo| nfo.show_title.clone()))
 }
 
+/// The name of a person's photo without its extension, as Kodi names it:
+/// spaces become `_`, characters a file name cannot hold are left out.
+pub fn photo_stem(name: &str) -> Option<String> {
+    let stem: String = name
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join("_")
+        .chars()
+        .filter(|c| {
+            !c.is_control() && !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')
+        })
+        .collect();
+    let stem = stem.trim_start_matches('.');
+
+    (!stem.is_empty() && stem.len() <= 200).then(|| stem.to_string())
+}
+
+/// How photos are matched to names: the file stem, ignoring case.
+pub fn photo_key(name: &str) -> Option<String> {
+    photo_stem(name).map(|stem| stem.to_lowercase())
+}
+
+/// The photos of a folder listing, one per person: [`photo_key`] -> file
+/// name, a JPG before other types.
+pub(crate) fn photo_index(listing: &Listing) -> BTreeMap<String, String> {
+    let mut photos = BTreeMap::new();
+
+    for name in listing.names() {
+        let path = Path::new(name);
+
+        if !has_image_extension(path) {
+            continue;
+        }
+
+        let Some(stem) = path.file_stem().map(|stem| stem.to_string_lossy()) else {
+            continue;
+        };
+
+        if let Some(preferred) = listing.find_image(&stem) {
+            photos.insert(stem.to_lowercase(), preferred.to_string());
+        }
+    }
+
+    photos
+}
+
 pub fn has_image_extension(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
@@ -257,6 +318,13 @@ impl NfoLibrary {
                     }
                 };
 
+                let mut sheets = vec![(program.nfo.as_ref(), program.dir.as_path())];
+
+                if let Some(episode) = clip_nfo.as_deref() {
+                    sheets.push((episode, dir.as_path()));
+                }
+
+                metadata.credits = self.guide_credits(&program.dir, &sheets).await;
                 metadata.program_key = program.dir;
                 metadata.program = Some(program.nfo);
                 metadata.episode_key = clip_nfo.as_ref().and(clip_nfo_path);
@@ -298,6 +366,10 @@ impl NfoLibrary {
                     backdrop,
                     still,
                 };
+
+                if let Some(nfo) = clip_nfo.as_deref() {
+                    metadata.credits = self.guide_credits(&dir, &[(nfo, dir.as_path())]).await;
+                }
 
                 if promote {
                     metadata.program = clip_nfo;
@@ -377,6 +449,46 @@ impl NfoLibrary {
         self.nfos.insert(path.to_path_buf(), nfo.clone());
 
         nfo
+    }
+
+    /// The people of `sheets` (the program first), each once, in XMLTV order,
+    /// with their photo in the `.actors/` folder of `photo_dir`, or the
+    /// `<thumb>` of their entry.
+    async fn guide_credits(
+        &mut self,
+        photo_dir: &Path,
+        sheets: &[(&Nfo, &Path)],
+    ) -> Vec<GuideCredit> {
+        if sheets.iter().all(|(nfo, _)| nfo.credits.is_empty()) {
+            return vec![];
+        }
+
+        let folder = photo_dir.join(PHOTO_FOLDER);
+        let listing = self.listing(&folder).await;
+        let photos = photo_index(&listing);
+        let mut credits: Vec<GuideCredit> = vec![];
+
+        for (nfo, nfo_dir) in sheets {
+            for credit in &nfo.credits {
+                if credits.iter().any(|known| known.credit.same_as(credit)) {
+                    continue;
+                }
+
+                let photo = match photo_key(&credit.name).and_then(|key| photos.get(&key)) {
+                    Some(file) => Some(Image::Local(folder.join(file))),
+                    None => self.resolve_thumb(nfo_dir, credit.thumb.as_deref()).await,
+                };
+
+                credits.push(GuideCredit {
+                    credit: credit.clone(),
+                    photo,
+                });
+            }
+        }
+
+        credits.sort_by_key(|entry| entry.credit.role);
+
+        credits
     }
 
     /// Resolve a `<thumb>` value: URLs are used as they are, paths are
