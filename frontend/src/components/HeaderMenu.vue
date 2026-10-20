@@ -29,6 +29,7 @@ const navItems = computed(() => [
     { name: 'player', label: t('nav.player'), path: '/player' },
     { name: 'schedule', label: t('nav.schedule'), path: '/schedule' },
     { name: 'media', label: t('nav.media'), path: '/media' },
+    { name: 'report', label: t('nav.report'), path: '/report' },
     { name: 'logging', label: t('nav.logging'), path: '/logging' },
     { name: 'configure', label: t('nav.configure'), path: '/configure' },
 ])

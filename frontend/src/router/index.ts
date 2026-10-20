@@ -69,6 +69,12 @@ const router = createRouter({
             meta: { showHeader: true },
         },
         {
+            path: '/report',
+            name: 'report',
+            component: () => import('@/views/ReportView.vue'),
+            meta: { showHeader: true },
+        },
+        {
             path: '/logging',
             name: 'logging',
             component: () => import('@/views/LoggingView.vue'),

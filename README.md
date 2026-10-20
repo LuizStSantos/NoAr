@@ -25,6 +25,10 @@ Baecker and keeps its engine and API, adding:
 - **Commercials folders**: mark a folder once and everything in it plays as a
   commercial in playlists and scheduled breaks: out of the guide and without
   the logo ([docs](docs/commercials.md)).
+- **Report**: what aired, with the actual times and how each item ended, and
+  what is still to come, for a day or a period; narrowed to one commercial,
+  program, live or event when needed, and downloaded as a PDF or a
+  spreadsheet ([docs](docs/report.md)).
 - **XMLTV guide** built from the playlists and a Kodi-style `.nfo` file in each
   program folder, with posters and episode images ([docs](docs/xmltv.md)).
 - **Playlist generator**: fill a day from the folders you pick, or block by
@@ -56,6 +60,11 @@ how each video will show up in the guide.
 the videos you pick.
 
 ![Adding a program folder](docs/images/program-folder.png)
+
+**Report**: one commercial on one day, each time it aired, after which
+programme, and the times still planned.
+
+![Report](docs/images/report.png)
 
 **Settings**: live ingest receivers and the playout restart.
 

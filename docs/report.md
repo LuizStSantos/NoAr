@@ -8,6 +8,29 @@ from the playlist and the Scheduler for what is still to come.
 A report covers whole playlist days: from the playlist's day start (for
 example 06:00) to the same time the next day.
 
+## The Relatório tab
+
+**Relatório** in the menu lists a day, or a period of up to 62 days, item by
+item: start, end, length, title, kind (program, commercial, live, waiting
+screen, live ingest), where it came from (playlist or Scheduler event) and how
+it went. A line marks now: above it the actual times, below it the plan.
+
+- **Filters**: the whole range, only what already aired, or only what is to
+  come; the kinds to list; and a field to narrow the report to a file (a
+  commercial), a whole program or commercials folder, a live or a Scheduler
+  event. Several can be chosen at once. Narrowed to items, the list numbers
+  each time on air and names the programme it aired after.
+- **Period**: from one day to another, or this week, this month or last
+  month, day by day with the totals, or every item.
+- **Downloads**: a PDF (A4, to print or send, with the summary and every item)
+  and a spreadsheet (CSV in UTF-8 that opens in Excel and LibreOffice, one line
+  per item with the file path). Both hold what the list shows, with the
+  filters chosen, so the report of one commercial for a month is one file.
+
+Before NoAr recorded what aired (see below), the list shows what was planned,
+with a notice; stretches of more than a minute with nothing on record show as
+off air.
+
 ## What is recorded
 
 An entry opens when an item starts and closes when it ends:
