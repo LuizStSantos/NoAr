@@ -1617,6 +1617,7 @@ fn receive_audio_frames<O: FrameOutput>(
         let mut converted = benchmark::measure(Stage::AudioProcess, || {
             resample_audio_frame(&mut audio.resampler, &raw)
         })?;
+        trim_audio_to_limit(&mut converted, timeline, limit_pts);
         let source_pts = raw
             .timestamp()
             .or_else(|| raw.pts())
@@ -1672,6 +1673,23 @@ fn receive_audio_frames<O: FrameOutput>(
     Ok(())
 }
 
+/// Drops the samples of `frame` past `limit_pts`. A clip then ends where its
+/// duration says, not at the end of its last decoded audio frame, which would
+/// make the video pad a frame to cover it, and every clip a frame longer.
+fn trim_audio_to_limit(frame: &mut frame::Audio, timeline: &Timeline, limit_pts: Option<i64>) {
+    if timeline.source_timestamp_mode {
+        return;
+    }
+
+    if let Some(limit) = limit_pts {
+        let room = limit - timeline.audio_pts;
+
+        if room > 0 && frame.samples() as i64 > room {
+            frame.set_samples(room as usize);
+        }
+    }
+}
+
 fn resample_audio_frame(
     resampler: &mut resampling::Context,
     input: &frame::Audio,
@@ -1722,6 +1740,7 @@ fn flush_audio_resampler<O: FrameOutput>(
         let delay = benchmark::measure(Stage::AudioProcess, || {
             audio.resampler.flush(&mut converted)
         })?;
+        trim_audio_to_limit(&mut converted, timeline, limit_pts);
         let samples = converted.samples() as i64;
 
         if samples == 0 {

@@ -39,6 +39,7 @@ use super::{
     hls,
     preview::PreviewMuxer,
     recording::{self, RecordingMonitor, RecordingMuxer},
+    scte35::{self, SpliceControl},
     timestamps::{DtsGuard, WarnThrottle},
     vtt,
 };
@@ -70,6 +71,8 @@ pub(super) struct EncodedOutput {
     transcoded_recording: Option<Box<Self>>,
     recording_monitor: Option<RecordingMonitor>,
     preview: Option<PreviewMuxer>,
+    /// Breaks to signal, when this output carries SCTE-35.
+    splice: Option<SpliceControl>,
     channel_id: Option<i32>,
 }
 
@@ -250,6 +253,7 @@ impl EncodedOutput {
         recording_cfg.audio_frame_callback = None;
         recording_cfg.recording = None;
         recording_cfg.preview_url = None;
+        recording_cfg.scte35 = None;
         let (pattern, monitor) = recording::prepare_recording(recording_config)?;
         let mut output = Self::open(
             pattern
@@ -312,6 +316,23 @@ impl EncodedOutput {
                 ));
             }
             _ => {}
+        }
+
+        let scte35 = match &output_format {
+            EncodedFormat::Recording { .. } => None,
+            _ if carries_scte35(cfg, &output_format) => cfg.scte35,
+            _ => {
+                if cfg.scte35.is_some() {
+                    cfg.splice_control.unavailable(
+                        "SCTE-35 is sent on MPEG-TS stream outputs (SRT, UDP) only".to_string(),
+                    );
+                }
+                None
+            }
+        };
+
+        if let Some(scte35) = &scte35 {
+            scte35.validate().map_err(anyhow::Error::msg)?;
         }
 
         let pace_output = !matches!(&output_format, EncodedFormat::Recording { .. });
@@ -401,6 +422,23 @@ impl EncodedOutput {
             // preopening the output path because that truncates a standalone
             // playlist before `append_list` can resume it.
             EncodedFormat::Hls { .. } => hls::output_context(&hls_output_path)?,
+            EncodedFormat::Stream { ref muxer } if scte35.is_some() => {
+                let scte35 = scte35.expect("checked by the guard");
+                let time_base = cfg.video_time_base;
+                cfg.splice_control.open_output(
+                    scte35,
+                    cfg.fps,
+                    (i64::from(time_base.0), i64::from(time_base.1)),
+                );
+                scte35::open_output(
+                    path,
+                    muxer,
+                    &cfg.protocol_options,
+                    cfg.splice_control.clone(),
+                    scte35.pid,
+                )
+                .inspect_err(|_| cfg.splice_control.close_output())?
+            }
             EncodedFormat::Stream { ref muxer } if is_network_url(path) => {
                 open_network_output(path, Some(muxer), &cfg.protocol_options)?
             }
@@ -628,6 +666,7 @@ impl EncodedOutput {
             transcoded_recording,
             recording_monitor: None,
             preview,
+            splice: scte35.map(|_| cfg.splice_control.clone()),
             channel_id: cfg.channel_id,
         })
     }
@@ -663,6 +702,12 @@ impl EncodedOutput {
         }
 
         self.last_video_frame = reference_video_frame(frame).ok();
+        // A break starts or ends on this frame: downstream splices there.
+        let key_frame = self
+            .splice
+            .as_ref()
+            .zip(frame.pts())
+            .is_some_and(|(splice, pts)| splice.frame_needs_key_frame(pts));
 
         benchmark::measure(Stage::EncodeMux, || {
             for index in 0..self.video_streams.len() {
@@ -676,6 +721,13 @@ impl EncodedOutput {
                     scaled_frame
                 } else {
                     frame
+                };
+                let forced;
+                let input_frame = if key_frame {
+                    forced = forced_key_frame(input_frame);
+                    &forced
+                } else {
+                    input_frame
                 };
 
                 if let Some(vaapi_upload) = &mut stream.vaapi_upload {
@@ -962,6 +1014,20 @@ impl EncodedOutput {
             self.clock
                 .wait_until(packet.dts().or_else(|| packet.pts()), stream_time_base);
         }
+
+        if let Some(splice) = &self.splice
+            && self
+                .video_streams
+                .first()
+                .is_some_and(|video| video.stream_index == stream_index)
+            && let Some(pts) = packet.pts()
+        {
+            splice.video_packet_muxed(ffmpeg::Rescale::rescale(
+                &pts,
+                stream_time_base,
+                Rational(1, 90_000),
+            ));
+        }
         packet.write_interleaved(&mut self.octx)?;
 
         if let Some(health) = &self.hls_health {
@@ -1159,6 +1225,20 @@ impl EncodedOutput {
     }
 }
 
+/// Whether this output carries SCTE-35: an MPEG-TS stream output with it on.
+fn carries_scte35(cfg: &OutputConfig, output_format: &EncodedFormat) -> bool {
+    cfg.scte35.is_some()
+        && matches!(output_format, EncodedFormat::Stream { muxer } if muxer == "mpegts")
+}
+
+/// A copy of `frame` the encoder must make a key frame of.
+fn forced_key_frame(frame: &frame::Video) -> frame::Video {
+    let mut forced = frame.clone();
+
+    forced.set_kind(ffmpeg::picture::Type::I);
+    forced
+}
+
 fn muxer_options(options: &BTreeMap<String, String>) -> ffmpeg::Dictionary<'static> {
     muxer_options_excluding(options, [])
 }
@@ -1320,6 +1400,12 @@ fn open_video_stream(
 
     let mut options = ffmpeg::Dictionary::new();
     encoder_backend.configure_options(&mut options, cfg, maxrate);
+
+    // Hardware encoders make a plain I-frame of a forced key frame unless
+    // told otherwise; a splice point needs an IDR.
+    if carries_scte35(cfg, &output_format) && video_encoder_has_option(video_codec, "forced-idr") {
+        options.set("forced-idr", "1");
+    }
 
     let mut video_encoder = match output_format {
         EncodedFormat::Auto | EncodedFormat::Stream { .. } | EncodedFormat::Recording { .. } => {
@@ -1749,9 +1835,14 @@ mod open_tests {
 
     /// One second of black video and silence.
     fn encode_second(output: &mut EncodedOutput) {
+        encode_second_from(output, 0);
+    }
+
+    /// The `second`th second of black video and silence.
+    fn encode_second_from(output: &mut EncodedOutput, second: i64) {
         for index in 0..25 {
             let mut video = frame::Video::new(Pixel::YUV420P, 320, 240);
-            video.set_pts(Some(index));
+            video.set_pts(Some(second * 25 + index));
             video.data_mut(0).fill(16);
             video.data_mut(1).fill(128);
             video.data_mut(2).fill(128);
@@ -1767,7 +1858,7 @@ mod open_tests {
                 ChannelLayout::STEREO,
             );
             audio.set_rate(48_000);
-            audio.set_pts(Some((index * frame_size) as i64));
+            audio.set_pts(Some(second * 48_000 + (index * frame_size) as i64));
 
             for channel in 0..2 {
                 audio.plane_mut::<f32>(channel).fill(0.0);
@@ -2374,6 +2465,103 @@ mod open_tests {
 
         output.finish().unwrap();
         assert!(path.exists(), "expected stream.ts to exist");
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn mpegts_output_signals_a_break_on_key_frames() {
+        ffmpeg::init().ok();
+        let dir = env::temp_dir().join(format!("stream_scte35_test_{}", process::id()));
+        fs::remove_dir_all(&dir).ok();
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("stream.ts");
+        let control = SpliceControl::default();
+        let cfg = OutputConfig::new(320, 240, 25, 48_000)
+            .with_scte35(Some(crate::Scte35Config {
+                pid: 500,
+                preroll_seconds: 1.0,
+            }))
+            .with_splice_control(control.clone());
+        let mut output = EncodedOutput::open(
+            path.to_str().unwrap(),
+            &cfg,
+            EncodedFormat::Stream {
+                muxer: "mpegts".to_string(),
+            },
+        )
+        .unwrap();
+
+        // A one second clip, then a one second break.
+        control.plan_next_clip(crate::ClipBreaks {
+            at_start: None,
+            after: Some(1.0),
+        });
+        let event_id = control.clip_started(0, Some(1.0)).unwrap();
+
+        for second in 0..3 {
+            encode_second_from(&mut output, second);
+        }
+
+        output.finish().unwrap();
+        assert!(!control.status().active, "closed with the output");
+
+        let mut input = format::input(&path).unwrap();
+        let scte35 = input
+            .streams()
+            .find(|stream| stream.parameters().id() == codec::Id::SCTE_35)
+            .expect("the PMT lists an SCTE-35 stream")
+            .index();
+        let video = input
+            .streams()
+            .best(ffmpeg::media::Type::Video)
+            .unwrap()
+            .index();
+        let mut splices = Vec::new();
+        let mut key_frames = Vec::new();
+
+        for (stream, packet) in input.packets() {
+            if stream.index() == scte35 {
+                let data = packet.data().unwrap();
+                assert_eq!(scte35::crc32_mpeg2(data), 0);
+                assert_eq!(
+                    u32::from_be_bytes(data[14..18].try_into().unwrap()),
+                    event_id
+                );
+                let time = |bytes: &[u8]| {
+                    (i64::from(bytes[0] & 0x01) << 32)
+                        | i64::from(u32::from_be_bytes(bytes[1..5].try_into().unwrap()))
+                };
+                splices.push((data[19] & 0x80 != 0, time(&data[20..25])));
+            } else if stream.index() == video && packet.is_key() {
+                key_frames.push(packet.pts().unwrap());
+            }
+        }
+
+        let out: Vec<i64> = splices
+            .iter()
+            .filter(|(out, _)| *out)
+            .map(|s| s.1)
+            .collect();
+        let back: Vec<i64> = splices
+            .iter()
+            .filter(|(out, _)| !*out)
+            .map(|s| s.1)
+            .collect();
+        assert!(!out.is_empty() && !back.is_empty(), "{splices:?}");
+        assert!(out.iter().all(|time| *time == out[0]));
+        assert!(back.iter().all(|time| *time == back[0]));
+        assert_eq!(back[0] - out[0], 90_000, "a one second break");
+        assert!(
+            key_frames.contains(&out[0]),
+            "{key_frames:?} has {}",
+            out[0]
+        );
+        assert!(
+            key_frames.contains(&back[0]),
+            "{key_frames:?} has {}",
+            back[0]
+        );
+        assert_eq!(control.status().recent[0].event_id, event_id);
         fs::remove_dir_all(&dir).ok();
     }
 

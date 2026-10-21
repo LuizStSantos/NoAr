@@ -7,8 +7,8 @@ use std::{
 
 use log::*;
 use noar_engine::{
-    AsyncPlayout, AudioLevelCallback, ClipResult, HlsHealth, LiveInputBackend, LiveListenerConfig,
-    LogLevel, LogoConfig, LogoFade, OutputConfig, Preloader, RecordingConfig,
+    AsyncPlayout, AudioLevelCallback, ClipBreaks, ClipResult, HlsHealth, LiveInputBackend,
+    LiveListenerConfig, LogLevel, LogoConfig, LogoFade, OutputConfig, Preloader, RecordingConfig,
     RecordingEncodeConfig,
 };
 use tokio::{task::JoinHandle, time::sleep};
@@ -60,7 +60,8 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         desktop_control_callback(manager.clone()),
     )?
     .with_preview_url(Some(manager.preview.url().to_string()))
-    .with_logo_control(manager.logo_control.clone());
+    .with_logo_control(manager.logo_control.clone())
+    .with_splice_control(manager.splice_control.clone());
     let playout = open_playout(&config, output_config.clone()).await?;
     *manager.playback_control.lock().await = playout.playback_control();
     *manager.preloader.lock().await = playout.preloader();
@@ -229,6 +230,8 @@ async fn play_loop(
     let mut interrupted: Option<InterruptedClip> = None;
     // The clip opened ahead for the next turn.
     let mut preloaded: Option<String> = None;
+    // The run of commercials on air or next has had its SCTE-35 break.
+    let mut break_announced = false;
 
     loop {
         // A due scheduled event airs between clips; afterwards the playlist
@@ -321,6 +324,8 @@ async fn play_loop(
         };
         let is_ad = node.ad;
         let logo_gaps = logo_gaps(&config.channel.storage, &node.source).await;
+        let breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
+        manager.splice_control.plan_next_clip(breaks);
         let aired = as_run::record_start(&manager, as_run::programme_entry(config, &node)).await;
         let clip_started = std::time::Instant::now();
         let result = playout
@@ -344,6 +349,12 @@ async fn play_loop(
 
         if let Some(task) = next_preload {
             task.abort();
+        }
+
+        // A clip cut short called off the break after it; the commercials,
+        // when they come, open one of their own.
+        if breaks.after.is_some() && !matches!(result, Ok(ClipResult::Played)) {
+            break_announced = false;
         }
 
         let end = match &result {
@@ -415,6 +426,80 @@ async fn play_loop(
     }
 
     Ok(())
+}
+
+/// The SCTE-35 break around `node`: one that follows it, announced ahead,
+/// when commercials come next; one that starts with it when it opens a run
+/// of commercials no earlier clip announced.
+async fn playlist_breaks(
+    manager: &ChannelManager,
+    config: &PlayoutConfig,
+    node: &Media,
+    announced: &mut bool,
+) -> ClipBreaks {
+    if !config.scte35.enable {
+        return ClipBreaks::default();
+    }
+
+    // A live that took the channel over hides the playlist's commercials.
+    if manager.playback_control.lock().await.live_status().0 {
+        *announced = false;
+
+        return ClipBreaks::default();
+    }
+
+    if node.ad && *announced {
+        return ClipBreaks::default();
+    }
+
+    let commercials_next: f64 = {
+        let index = manager.current_index.load(Ordering::SeqCst);
+        let list = manager.current_list.lock().await;
+
+        list.iter()
+            .skip(index)
+            .take_while(|media| media.ad)
+            .filter_map(playout_duration)
+            .sum()
+    };
+    let (run, breaks) = if node.ad {
+        let run = playout_duration(node).unwrap_or_default() + commercials_next;
+
+        (
+            run,
+            ClipBreaks {
+                at_start: Some(run),
+                after: None,
+            },
+        )
+    } else {
+        *announced = false;
+
+        if commercials_next <= 0.0 {
+            return ClipBreaks::default();
+        }
+
+        (
+            commercials_next,
+            ClipBreaks {
+                at_start: None,
+                after: Some(commercials_next),
+            },
+        )
+    };
+
+    *announced = true;
+
+    if config.scte35.signals(run) {
+        breaks
+    } else {
+        warn!(channel = config.general.channel_id;
+            "SCTE-35: commercials of <span class=\"log-number\">{run:.1}</span> s not signalled; breaks run from {} to {} s",
+            config.scte35.min_break,
+            config.scte35.max_break
+        );
+        ClipBreaks::default()
+    }
 }
 
 /// The clip after the one on air, in playlist order.
@@ -633,7 +718,8 @@ fn engine_output_config(
             .with_protocol_options(config.output.protocol_options.clone())
             .with_muxer_options(config.output.muxer_options.clone())
             .with_metadata_options(config.output.metadata_options.clone())
-            .with_recording(recording),
+            .with_recording(recording)
+            .with_scte35(config.scte35.engine_config()),
     )
 }
 

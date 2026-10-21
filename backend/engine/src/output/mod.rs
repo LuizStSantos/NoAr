@@ -11,6 +11,7 @@ mod encoded;
 mod hls;
 mod preview;
 mod recording;
+pub(crate) mod scte35;
 mod timestamps;
 mod vtt;
 

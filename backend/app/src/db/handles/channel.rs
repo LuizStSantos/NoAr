@@ -161,6 +161,7 @@ pub async fn create_channel_records(
     }
 
     handles::insert_recording(&mut transaction, config_id, channel.id).await?;
+    handles::insert_scte35(&mut transaction, config_id).await?;
     handles::assign_channel_to_global_admins(&mut *transaction, channel.id).await?;
     transaction.commit().await?;
 
@@ -400,6 +401,7 @@ mod tests {
             "config_task",
             "config_output",
             "config_recording",
+            "config_scte35",
         ] {
             let query = format!(
                 "SELECT COUNT(*) FROM {table} WHERE {} = $1",

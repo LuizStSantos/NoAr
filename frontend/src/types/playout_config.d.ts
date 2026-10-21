@@ -51,7 +51,7 @@ export type Playlist = { day_start: string, length: string, infinit: boolean, };
  *
  * This we init ones, when NoAr is starting and use them globally in the hole program.
  */
-export type PlayoutConfig = { general: General, mail: Mail, notification: Notification, logging: Logging, processing: Processing, audio: Audio, ingest: Ingest, playlist: Playlist, storage: Storage, task: Task, recording: Recording, output: Output, };
+export type PlayoutConfig = { general: General, mail: Mail, notification: Notification, logging: Logging, processing: Processing, audio: Audio, ingest: Ingest, playlist: Playlist, storage: Storage, task: Task, recording: Recording, scte35: Scte35, output: Output, };
 
 export type ProcessMode = "folder" | "playlist";
 
@@ -70,6 +70,25 @@ logo_key: string, };
 export type Recording = { enable: boolean, source: RecordingSource, source_output_id: number | null, variant: string, path: string, segment_duration: number, retention_days: number, minimum_free_space_gb: number, width: number, height: number, video_codec: string, video_options: { [key in string]: string }, audio_codec: string, audio_options: { [key in string]: string }, audio_bitrate: number, };
 
 export type RecordingSource = "hls_variant" | "stream" | "encode";
+
+/**
+ * SCTE-35 ad break signalling. NoAr marks every break the same way and
+ * leaves adapting it to each platform to what receives the stream.
+ */
+export type Scte35 = { enable: boolean, 
+/**
+ * PID the splice messages are carried on.
+ */
+pid: number, 
+/**
+ * Seconds between the first message of a break and its start.
+ */
+preroll: number, 
+/**
+ * Runs of commercials outside these lengths, in seconds, are not
+ * signalled.
+ */
+min_break: number, max_break: number, };
 
 export type Storage = { filler: string, extensions: Array<string>, shuffle: boolean, shared_storage: boolean, };
 
