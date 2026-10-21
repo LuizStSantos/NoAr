@@ -240,6 +240,7 @@ mod tests {
 
     #[tokio::test]
     async fn log_reads_continue_after_the_last_complete_line() {
+        let _log_dir = super::logging::LOG_DIR_TEST_LOCK.lock().await;
         let dir = std::env::temp_dir().join(format!("noar-log-read-{}", std::process::id()));
         let file = dir.join("noar_987654_2001-01-02.log");
         std::fs::create_dir_all(&dir).unwrap();

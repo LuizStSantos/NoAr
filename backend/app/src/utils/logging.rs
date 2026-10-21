@@ -621,6 +621,11 @@ pub fn log_file_path() -> PathBuf {
     cached.get_or_insert_with(resolve_log_dir).clone()
 }
 
+/// Held by tests that move the log folder, which is shared by the whole
+/// process, so one does not read logs from another's folder.
+#[cfg(test)]
+pub(crate) static LOG_DIR_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// Move the channel log files to `dir`, for example once the setup created
 /// the folder. Each channel continues in the new folder with its next line.
 pub fn set_log_dir(dir: PathBuf) {

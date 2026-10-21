@@ -284,6 +284,7 @@ mod tests {
 
     #[tokio::test]
     async fn filesystem_failure_leaves_database_and_runtime_uninitialized() {
+        let _log_dir = crate::utils::logging::LOG_DIR_TEST_LOCK.lock().await;
         let (pool, controllers, queues) = setup_state().await;
         let root = root();
         tokio::fs::create_dir_all(&root).await.unwrap();
@@ -314,6 +315,7 @@ mod tests {
 
     #[tokio::test]
     async fn failed_channel_initialization_rolls_back_setup_and_can_be_retried() {
+        let _log_dir = crate::utils::logging::LOG_DIR_TEST_LOCK.lock().await;
         let (pool, controllers, queues) = setup_state().await;
         let root = root();
         let global_before = handles::select_global(&pool).await.unwrap();
@@ -366,6 +368,7 @@ mod tests {
 
     #[tokio::test]
     async fn concurrent_setup_has_one_winner_and_does_not_create_loser_directories() {
+        let _log_dir = crate::utils::logging::LOG_DIR_TEST_LOCK.lock().await;
         let (pool, controllers, queues) = setup_state().await;
         let root = root();
         let first_root = root.join("first");
