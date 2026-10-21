@@ -34,8 +34,8 @@ const DEFAULT_LISTEN_ADDRESS: &str = "127.0.0.1:8787";
 Stream dynamic playlists or folder contents with the power of ffmpeg.
 The target can be an HLS playlist, rtmp/srt/udp server, desktop player
 or any other output supported by ffmpeg.\n
-NoAr also provides a web frontend and API to control streaming,
-manage config, files, text overlay, etc."),
+NoAr also provides a web interface and an API to control the playout,
+schedule breaks and lives, manage files and settings, and publish an XMLTV guide."),
 next_line_help = false,
 )]
 pub struct Args {
