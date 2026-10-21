@@ -827,20 +827,19 @@ impl TsInjector {
             self.packet(&packet, &mut out);
         }
 
-        let mut chunks = data.chunks_exact(TS_PACKET);
+        let (packets, remainder) = data.as_chunks::<TS_PACKET>();
 
-        for chunk in &mut chunks {
-            let packet: [u8; TS_PACKET] = chunk.try_into().expect("exact chunk");
-            self.packet(&packet, &mut out);
+        for (index, packet) in packets.iter().enumerate() {
+            self.packet(packet, &mut out);
 
             if self.failed {
                 // Hand on the rest untouched.
-                out.extend_from_slice(chunks.remainder());
+                out.extend_from_slice(&data[(index + 1) * TS_PACKET..]);
                 return out;
             }
         }
 
-        self.partial.extend_from_slice(chunks.remainder());
+        self.partial.extend_from_slice(remainder);
 
         out
     }
@@ -962,7 +961,9 @@ fn pat_first_pmt_pid(packet: &[u8; TS_PACKET]) -> Option<u16> {
     }
 
     section[8..section.len() - 4]
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .find(|program| program[0] != 0 || program[1] != 0)
         .map(|program| (u16::from(program[2] & 0x1F) << 8) | u16::from(program[3]))
 }
@@ -1372,12 +1373,11 @@ mod tests {
 
     fn sections_on(stream: &[u8], pid: u16) -> Vec<Vec<u8>> {
         stream
-            .chunks_exact(TS_PACKET)
+            .as_chunks::<TS_PACKET>()
+            .0
+            .iter()
             .filter(|packet| ((u16::from(packet[1] & 0x1F) << 8) | u16::from(packet[2])) == pid)
-            .map(|packet| {
-                let packet: &[u8; TS_PACKET] = packet.try_into().unwrap();
-                psi_section(packet).unwrap().1.to_vec()
-            })
+            .map(|packet| psi_section(packet).unwrap().1.to_vec())
             .collect()
     }
 
@@ -1463,7 +1463,9 @@ mod tests {
 
         // The first copy goes out before the frame two seconds ahead.
         let first = stream
-            .chunks_exact(TS_PACKET)
+            .as_chunks::<TS_PACKET>()
+            .0
+            .iter()
             .position(|packet| packet[2] == (500 & 0xFF) as u8 && packet[1] & 0x1F == 1)
             .unwrap();
         let next_video = &stream[(first + 1) * TS_PACKET..(first + 2) * TS_PACKET];
@@ -1475,7 +1477,9 @@ mod tests {
 
         // Continuity counts on.
         let counters: Vec<u8> = stream
-            .chunks_exact(TS_PACKET)
+            .as_chunks::<TS_PACKET>()
+            .0
+            .iter()
             .filter(|packet| packet[2] == 0xF4 && packet[1] & 0x1F == 1)
             .map(|packet| packet[3] & 0x0F)
             .collect();
