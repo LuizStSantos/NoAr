@@ -70,6 +70,22 @@ export async function guideEntries(channelId: number, storage: string, paths: st
     return paths.map((_, index) => found[index] ?? { title: '', sub_title: null })
 }
 
+/**
+ * The picture that stands for a clip or folder at `path`: its own poster or
+ * still, else the poster of the program around it. Storage path, or null.
+ */
+export async function guidePoster(channelId: number, path: string): Promise<string | null> {
+    const sheet = await readSheet(channelId, path)
+
+    if (sheet.poster || sheet.still) {
+        return sheet.poster || sheet.still
+    }
+
+    const program = sheet.program || sheet.inherited_from
+
+    return program ? (await readSheet(channelId, program)).poster : null
+}
+
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {
     return authFetch<MediaSheet>(`/api/file/${channelId}/sheet`, {
         method: 'POST',

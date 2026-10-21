@@ -4,7 +4,9 @@ import { useI18n } from 'vue-i18n'
 
 import LiveFields from '@/components/live/LiveFields.vue'
 import LiveTimes from '@/components/schedule/LiveTimes.vue'
+import SheetEditor from '@/components/storage/SheetEditor.vue'
 import { EVERY_DAY, MONDAY_TO_FRIDAY, SCHEDULE_COLORS } from '@/composables/schedule'
+import { imageUrl, readSheet } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
@@ -40,6 +42,31 @@ const form = ref<InstanceType<typeof LiveFields>>()
 
 const existing = computed(() => props.draft?.live)
 const channelId = computed(() => configStore.channels[configStore.i]?.id ?? 0)
+/** The folder of an existing live, whose sheet and poster the guide shows. */
+const liveFolder = computed(() => existing.value?.path.split('/').slice(0, -1).join('/') ?? '')
+const liveTitle = ref('')
+const posterUrl = ref('')
+const editingSheet = ref(false)
+
+async function loadSheet() {
+    liveTitle.value = existing.value?.title || existing.value?.name || ''
+    posterUrl.value = ''
+
+    if (!existing.value || !liveFolder.value || !channelId.value) {
+        return
+    }
+
+    try {
+        const sheet = await readSheet(channelId.value, liveFolder.value)
+
+        liveTitle.value = sheet.fields.title || liveTitle.value
+        posterUrl.value = sheet.poster ? await imageUrl(channelId.value, sheet.poster) : ''
+    } catch {
+        posterUrl.value = ''
+    }
+}
+
+watch(existing, loadSheet, { immediate: true })
 
 watch(
     () => props.draft,
@@ -60,6 +87,7 @@ watch(
         showInGuide.value = event?.show_in_guide ?? true
         signal.value = null
         error.value = ''
+        editingSheet.value = false
         formKey.value++
     },
     { immediate: true },
@@ -190,9 +218,10 @@ async function save(schedule: boolean) {
             <div class="px-5 py-4 flex flex-col gap-5">
                 <template v-if="existing">
                     <div class="flex items-center gap-3 bg-base-200 rounded-md px-3 py-2">
-                        <i class="bi bi-broadcast" :style="{ color: SCHEDULE_COLORS.live }" />
+                        <img v-if="posterUrl" :src="posterUrl" alt="" class="w-8 h-12 object-cover rounded flex-none" />
+                        <i v-else class="bi bi-broadcast" :style="{ color: SCHEDULE_COLORS.live }" />
                         <div class="flex-1 min-w-0">
-                            <div class="font-semibold truncate">{{ existing.title || existing.name }}</div>
+                            <div class="font-semibold truncate">{{ liveTitle }}</div>
                             <div class="font-mono text-xs text-muted truncate">{{ existing.url }}</div>
                         </div>
                         <span
@@ -201,6 +230,14 @@ async function save(schedule: boolean) {
                         >
                             {{ existing.protocol }}
                         </span>
+                        <button
+                            class="btn-icon min-w-8 min-h-8"
+                            :aria-label="t('storage.card.edit')"
+                            :title="t('storage.card.edit')"
+                            @click="editingSheet = true"
+                        >
+                            <i class="bi bi-card-text" />
+                        </button>
                         <button class="btn-quiet" :disabled="testing" @click="testSignal">
                             <span v-if="testing" class="loading loading-spinner loading-xs" />
                             {{ t('schedule.testSignal') }}
@@ -271,5 +308,13 @@ async function save(schedule: boolean) {
                 </button>
             </div>
         </div>
+
+        <SheetEditor
+            v-if="editingSheet && liveFolder"
+            :channel-id="channelId"
+            :path="liveFolder"
+            @close="editingSheet = false"
+            @saved="loadSheet"
+        />
     </div>
 </template>
