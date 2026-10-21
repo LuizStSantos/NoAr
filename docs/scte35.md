@@ -1,9 +1,11 @@
 **SCTE-35 study**
 ================
 
-*Status: study, nothing implemented yet. Written for NoAr 1.0.0 (October
-2026), to decide whether and in what order NoAr should signal and read ad
-breaks with SCTE-35.*
+*Status: step 2, SCTE-35 on the SRT/UDP output, is done; how to use it is in
+[Ad breaks (SCTE-35)](ad_breaks.md). Written for NoAr 1.0.0 (October 2026) to
+decide whether and in what order NoAr should signal and read ad breaks, and
+kept up to date with the decisions taken since: one fixed signal from NoAr,
+and per-platform profiles in a [fork of MediaMTX](#mediamtx).*
 
 ## In short
 
@@ -27,6 +29,15 @@ breaks with SCTE-35.*
      commercials.
 
   If the goal is a FAST channel or SSAI, steps 2–3 come first.
+
+**Decided since** (October 2026), for a channel going to Pluto TV and Samsung
+TV Plus through MediaMTX:
+
+- NoAr always sends the **same signal**, the most widely accepted one
+  (below). It does not know which platform the stream goes to.
+- Whatever one platform needs on top, its HLS tags, segment length or
+  command type, is done by a **fork of MediaMTX**, one profile per platform.
+- Step 2 came first and is done: [Ad breaks (SCTE-35)](ad_breaks.md).
 
 ## What SCTE-35 is
 
@@ -190,6 +201,92 @@ Software encoders often send no SCTE-35 at all; check what yours does. The
   break.
 - **Report**: each cue with its ID, so the as-run matches what downstream saw.
 
+## The signal NoAr sends
+
+Settled with the first implementation; [Ad breaks](ad_breaks.md) has the
+details users need.
+
+- `splice_insert`, program splice, never immediate, `pts_adjustment` 0, tier
+  0xFFF.
+- Out of network at the first frame of the break, with `break_duration` and
+  `auto_return`; back into the network at the first frame after it, with the
+  same `splice_event_id`. A break called off after its announcement gets a
+  `splice_event_cancel_indicator`.
+- Each message goes the pre-roll ahead (6 s by default, SCTE 67 asks 4 to
+  8 s), and twice more a second apart.
+- Both splice frames are IDR. The splice times are the PTS the muxer wrote
+  for those frames: NoAr measures the muxer's offset (its delay and the shift
+  for AAC priming) by matching each video packet it hands over with the PES
+  that comes out.
+- Breaks are runs of commercials, 30 to 300 s by default, plus breaks marked
+  by hand.
+
+Making the splice exact needed one change in the engine: a clip's last audio
+frame used to run past the clip's end, and the video padded a frame to cover
+it, so every clip lasted a frame longer than planned and a break announced
+ahead started a frame early. The last audio frame is now cut at the clip's
+end, and clips last exactly their duration.
+
+## Platforms
+
+What the two platforms in view ask for, as far as public documents tell. Ask
+each one for its current written specification before relying on it.
+
+**Pluto TV** ([live stream specification v2.2](https://www.paramount.com/pluto-tv-live-stream-specifications)):
+
+- Pluto pulls HLS from a URL, with 5 s segments of steady length and a list of
+  10. Its guidelines also name RTMP, which FFmpeg cannot carry SCTE-35 in.
+- Video H.264, 1080p at 5–10 Mbps (or 720p), 30 fps, 16:9. Audio AAC-LC
+  stereo, 48 kHz, 96 kb/s, loudness to EBU R128.
+- SCTE-35 both in the playlist (`#EXT-X-CUE-OUT`/`#EXT-X-CUE-IN` and
+  `#EXT-OATCLS-SCTE35`) and in the transport stream of the segments.
+- Breaks of 30 to 300 s, at least four segments between CUE-OUT and CUE-IN,
+  and a duration that does not change once CUE-OUT is out.
+- Streams are tested before they go on the platform; a third party delivering
+  the stream needs Pluto's written approval.
+
+**Samsung TV Plus** has no public specification. Channels usually come in
+through Samsung's content team or a partner (Amagi, Wurl, Frequency), and
+frame-accurate SCTE-35 is expected. Its profile waits for the written
+specification.
+
+## MediaMTX
+
+A stock MediaMTX cannot carry these breaks on. Checked against MediaMTX and
+`bluenviron/mediacommon` in October 2026:
+
+- MediaMTX does not pass an incoming MPEG-TS through. It splits it into
+  tracks and muxes them again for each reader.
+- Its MPEG-TS reader knows video, audio, DVB subtitles and KLV. A
+  `stream_type` 0x86 track is "unsupported" and dropped, with a "skipping
+  track" line in the log.
+- Its HLS muxer (`gohlslib`) writes no ad markers at all.
+
+So everything that comes out of MediaMTX, HLS, SRT, RTMP or WebRTC, has no
+breaks. The plan is a fork of the three libraries (MIT licensed), offered
+upstream so it need not be kept apart for long:
+
+1. **mediacommon**: read and write an SCTE-35 track: sections, not PES, on
+   their PID, with the `CUEI` registration.
+2. **mediamtx**: a track type for it, like KLV, passed on to SRT, UDP and
+   MPEG-TS readers, with the splice times moved along when MediaMTX shifts
+   timestamps.
+3. **gohlslib**: a segment starts at each splice point; the playlist gets the
+   tags of the path's profile; the SCTE-35 track stays in the `.ts` segments
+   when the profile asks for it.
+
+Each MediaMTX path then has a profile: Pluto's (5 s segments,
+`CUE-OUT`/`CUE-IN` with `OATCLS`), one with `EXT-X-DATERANGE`, one that turns
+`splice_insert` into `time_signal` with segmentation descriptors, and
+Samsung's once known.
+
+```
+NoAr ──SRT (MPEG-TS + SCTE-35)──▶ MediaMTX (fork)
+                                     ├─ HLS, Pluto profile ─▶ nginx/CDN ─▶ Pluto TV
+                                     ├─ HLS, Samsung profile ─▶ nginx/CDN ─▶ Samsung TV Plus
+                                     └─ SRT with SCTE-35 (a platform or partner that takes SRT)
+```
+
 ## Testing
 
 - [TSDuck](https://tsduck.io): `tsp -I srt … -P splicemonitor` shows every
@@ -206,18 +303,17 @@ Software encoders often send no SCTE-35 at all; check what yours does. The
 | Step | Scope | Size |
 | --- | --- | --- |
 | 1. Read from lives | Demux, parse, map times, hide the logo, as-run | Small–medium |
-| 2. TS output | Cue queue, key frames, PMT rewrite, section packets, settings, cue API | Medium |
+| 2. TS output (**done**) | Cue queue, key frames, PMT rewrite, section packets, settings, cue API | Medium |
 | 3. HLS output | Playlist tags; segment cutting controlled by NoAr | Medium–large |
 | 4. Pass-through and local ad insertion | Joining 1 with 2–3; playing commercials over a live | Medium |
 
 ## Open questions
 
-- **Where does the channel go?** A FAST platform or SSAI service has its own
-  marker rules (DATERANGE or CUE-OUT, `splice_insert` or `time_signal`,
-  segmentation types, minimum pre-roll, segment alignment). Its partner
-  documentation decides the details of steps 2–3.
-- **Which breaks are ads?** Is every commercial run a break for downstream, or
-  only scheduled breaks?
+- **Where does the channel go?** Answered: Pluto TV and Samsung TV Plus,
+  through MediaMTX. Their written specifications decide the MediaMTX
+  profiles.
+- **Which breaks are ads?** Answered for now: every run of commercials of 30
+  to 300 s, and breaks marked by hand.
 - **Do the lives NoAr receives carry SCTE-35?** If they come from vMix or OBS,
   most likely not, and step 1 waits until a source sends cues.
 
@@ -236,3 +332,9 @@ Software encoders often send no SCTE-35 at all; check what yours does. The
 - [Bitmovin: SCTE-35](https://bitmovin.com/?p=275713)
 - [AWS MediaLive: ad avail mode](https://docs.aws.amazon.com/medialive/latest/ug/getting-ready-set-the-ad-avail-mode.html)
 - [`scte35-splice` crate](https://docs.rs/scte35-splice), [`scte35-reader` crate](https://docs.rs/scte35-reader)
+- [Pluto TV live stream specification](https://www.paramount.com/pluto-tv-live-stream-specifications),
+  [additional content delivery guidelines](https://www.paramount.com/pluto-tv-additional-content-delivery-guidelines)
+- [Frequency: dynamic ad insertion](https://docs.frequency.com/en/distribution-specifications/dynamic-ad-insertion.html)
+- [MediaMTX](https://github.com/bluenviron/mediamtx) (`internal/protocols/mpegts/to_stream.go`),
+  [mediacommon](https://github.com/bluenviron/mediacommon) (`pkg/formats/mpegts/track.go`)
+- [threefive](https://pypi.org/project/threefive/), used to check NoAr's output

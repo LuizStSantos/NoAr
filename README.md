@@ -30,6 +30,10 @@ them it adds:
   into a programme. The logo can also be hidden or swapped on air by API, for
   example from the encoder of a live, with a tutorial in the settings
   ([docs](docs/logo.md)).
+- **Ad breaks (SCTE-35)**: runs of commercials, and breaks marked by hand,
+  are marked in the SRT or UDP output for FAST platforms and ad servers to
+  replace, frame-accurately and announced ahead, with the next break and the
+  one on air shown in the Player ([docs](docs/ad_breaks.md)).
 - **Report**: what aired, with the actual times and how each item ended, and
   what is still to come, for a day or a period; narrowed to one commercial,
   program, live or event when needed, and downloaded as a PDF or a
@@ -41,7 +45,7 @@ them it adds:
   block at set times, as a draft you review before saving
   ([docs](docs/playlist_gen.md)).
 - **Log** that follows the channel live.
-- **Settings**: eleven pages in a side menu, with search, unsaved-change
+- **Settings**: thirteen pages in a side menu, with search, unsaved-change
   markers, one save bar, and a restart of the playout or of the whole of NoAr.
 - **Docker-only install**: one command, then a setup page in the browser.
 
