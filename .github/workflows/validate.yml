@@ -13,15 +13,35 @@ concurrency:
 jobs:
   # NoAr runs in Docker on Linux, so this checks the same build the image uses.
   build:
-    # The FFmpeg 7 PPA below is built for Ubuntu 24.04; ubuntu-latest moves to
-    # 26.04 from October 2026, where the PPA does not install.
     runs-on: ubuntu-24.04
+    # Debian trixie, like the image: its own FFmpeg 7.1 comes from the Debian
+    # mirrors, so the job no longer waits on a Launchpad PPA.
+    container: rust:1-trixie
 
     env:
       CARGO_INCREMENTAL: 0
       CARGO_BUILD_JOBS: 2
 
     steps:
+      - name: Install FFmpeg libraries
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            clang \
+            ffmpeg \
+            fonts-dejavu-core \
+            libavcodec-dev \
+            libavdevice-dev \
+            libavfilter-dev \
+            libavformat-dev \
+            libavutil-dev \
+            libclang-dev \
+            libswresample-dev \
+            libswscale-dev \
+            pkg-config
+          ffmpeg -version
+          test "$(pkg-config --modversion libavformat | cut -d. -f1)" -ge 61
+
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
@@ -34,27 +54,6 @@ jobs:
           rustup component add rustfmt clippy
 
       - uses: Swatinem/rust-cache@v2
-
-      - name: Install FFmpeg libraries
-        run: |
-          # The Launchpad PPA answers 503 now and then; retry instead of failing the job.
-          echo 'Acquire::Retries "10";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
-          sudo apt-get update
-          sudo apt-get install -y \
-            ffmpeg \
-            libavcodec-dev \
-            libavdevice-dev \
-            libavfilter-dev \
-            libavformat-dev \
-            libavutil-dev \
-            libswresample-dev \
-            libswscale-dev \
-            pkg-config
-          ffmpeg -version
-          test "$(pkg-config --modversion libavformat | cut -d. -f1)" -ge 61
 
       - name: Frontend checks
         run: |
