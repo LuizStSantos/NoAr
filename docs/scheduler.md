@@ -63,7 +63,10 @@ matters for SRT sources that accept a single caller. If the source is not
 ready by then, NoAr keeps trying while the programme or the filler is airing,
 and while it connects the last picture stays on screen with silence. The
 first clip of an event and the next clip of the playlist are opened the same
-way, shortly before their turn. Stopping or restarting the playout ends a
+way, shortly before their turn, and so is the clip the programme goes back
+to, ten seconds before a live or an event ends; the live's connection then
+closes beside the clip on air, so leaving a live is as immediate as entering
+it. Stopping or restarting the playout ends a
 live on air right away; the next start puts it back on air if its time is
 not over.
 

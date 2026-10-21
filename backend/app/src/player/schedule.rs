@@ -636,6 +636,14 @@ pub(crate) async fn play_queued_event(
     }
 
     let scheduled_at = as_run::local_millis(config, occurrence.start);
+    let return_preload = preload_return(
+        manager,
+        config,
+        event.after_mode,
+        shift_before,
+        started,
+        planned_seconds,
+    );
     let result = match event.kind {
         ScheduleKind::Media => {
             play_clips(
@@ -664,6 +672,9 @@ pub(crate) async fn play_queued_event(
             result
         }
     };
+
+    return_preload.abort();
+
     let elapsed = started.elapsed().as_secs_f64();
     let shift = match event.after_mode {
         AfterMode::Continue => shift_before - elapsed,
@@ -1038,6 +1049,57 @@ async fn preload_event(manager: &ChannelManager, occurrence: &Occurrence) {
     };
 
     manager.preloader.lock().await.clone().preload(&target);
+}
+
+/// Open the clip the programme goes back to shortly before the event ends,
+/// as an event's start is opened before it: leaving a live or an event is
+/// then as immediate as entering it.
+fn preload_return(
+    manager: &ChannelManager,
+    config: &PlayoutConfig,
+    after_mode: AfterMode,
+    shift_before: f64,
+    started: Instant,
+    planned_seconds: f64,
+) -> JoinHandle<()> {
+    let manager = manager.clone();
+    let timezone = config.channel.timezone;
+    let start_sec = config.playlist.start_sec.unwrap_or_default();
+    let left = planned_seconds - started.elapsed().as_secs_f64();
+    let wait = Duration::from_secs_f64((left - PRELOAD_LEAD_SECONDS).max(0.0));
+
+    tokio::spawn(async move {
+        sleep(wait).await;
+
+        // Where the playlist takes up when the event ends, with the time
+        // shift the event leaves behind.
+        let shift = match after_mode {
+            AfterMode::Continue => {
+                shift_before - (started.elapsed().as_secs_f64() + PRELOAD_LEAD_SECONDS)
+            }
+            AfterMode::Clock => shift_before,
+        };
+        let mut position = time_in_seconds(&timezone) + PRELOAD_LEAD_SECONDS;
+
+        if position < start_sec {
+            position += 86400.0;
+        }
+
+        let source = {
+            let list = manager.current_list.lock().await;
+
+            list.iter()
+                .find(|item| {
+                    item.begin.unwrap_or(start_sec) + item.out - item.seek > position + shift
+                })
+                .map(|item| item.source.clone())
+                .filter(|source| !source.trim().is_empty())
+        };
+
+        if let Some(source) = source {
+            manager.preloader.lock().await.clone().preload(&source);
+        }
+    })
 }
 
 /// Close a live's connection that nothing will take any more.
