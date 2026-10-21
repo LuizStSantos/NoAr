@@ -1,14 +1,15 @@
-# HTTP Push Notifications
+**HTTP push notifications**
+================
 
-ffplayout can send rate-limited log alerts to a topic-based HTTP push service.
+NoAr can send rate-limited log alerts to a topic-based HTTP push service.
 The publish request format is compatible with [ntfy](https://docs.ntfy.sh/publish/),
 including self-hosted ntfy servers. It uses the service's HTTP interface directly;
 no additional notification-specific dependency is required.
 
 ## Configuration
 
-Configure the shared connection under **Configuration → Global → HTTP Push
-Notifications**. This requires a global admin.
+Configure the shared connection in **Settings › Server and e-mail**. This
+requires a global admin.
 
 - **Push Server**: The base HTTP or HTTPS URL, for example `https://ntfy.sh` or
   `https://push.example.org`.
@@ -16,11 +17,10 @@ Notifications**. This requires a global admin.
   service. Leaving the field empty after a token has been saved keeps the
   existing token.
 
-After saving a push server, configure each channel under **Configuration →
-Playout → HTTP Push Notifications**:
+After saving a push server, configure each channel in **Settings › Alerts**:
 
 - **Topic**: The channel/topic path at the push service, for example
-  `ffplayout-alerts`.
+  `noar-alerts`.
 - **Minimum Level**: The lowest log severity that creates a notification.
 - **Tags**: Optional comma-separated tags passed to services that support them,
   such as ntfy.
@@ -31,17 +31,17 @@ restarting playout.
 
 ## Request format
 
-For a server URL of `https://ntfy.sh` and topic `ffplayout-alerts`, ffplayout
+For a server URL of `https://ntfy.sh` and topic `noar-alerts`, NoAr
 sends a `POST` request to:
 
 ```text
-https://ntfy.sh/ffplayout-alerts
+https://ntfy.sh/noar-alerts
 ```
 
 The log message is sent as plain-text request body. Requests contain these
 headers:
 
-- `Title`: Generated as `ffplayout channel <id> <level>`.
+- `Title`: Generated as `NoAr channel <id> <level>`.
 - `Priority`: `5` for fatal errors, `4` for errors, `3` for warnings, and `2`
   for informational messages.
 - `Tags`: Sent when configured for the channel.
@@ -70,7 +70,7 @@ files still retain the complete message, while the same broken source used at
 multiple playlist positions produces one alert.
 
 Errors raised while sending a notification are not sent as notifications
-themselves, which prevents recursive alert loops. Check the ffplayout logs if a
+themselves, which prevents recursive alert loops. Check the NoAr log if a
 push service rejects a request or cannot be reached. HTTP notification requests
 time out after ten seconds so an unresponsive service cannot retain background
 tasks indefinitely.

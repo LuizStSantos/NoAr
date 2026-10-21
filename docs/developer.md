@@ -30,18 +30,18 @@ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 ### Optional SRT logging integration
 
 The engine's build script uses `pkg-config` to check whether libsrt is linkable
-for the target build. If `pkg-config --modversion srt` succeeds, ffplayout links
-libsrt directly and routes its native messages through the ffplayout logger,
+for the target build. If `pkg-config --modversion srt` succeeds, NoAr links
+libsrt directly and routes its native messages through its own logger,
 including rate limiting for repeated receive-buffer warnings. Use the
 development files for the same libsrt installation as your FFmpeg build.
 
-If libsrt or its `srt.pc` file is unavailable, ffplayout still builds and SRT
+If libsrt or its `srt.pc` file is unavailable, NoAr still builds and SRT
 ingest can still work through an FFmpeg build that supports it. In that case,
 libsrt's native messages may appear directly on stderr instead of in the
 NoAr logs.
 
 `libavfilter` and `libavdevice` are optional and disabled by default to reduce
-the runtime and static-build footprint. ffplayout currently uses its own media
+the runtime and static-build footprint. NoAr uses its own media
 processing pipeline, so FFmpeg filters such as `drawtext` and FFmpeg devices
 such as DeckLink are unavailable in the normal build.
 
@@ -60,13 +60,13 @@ subtitle, encoded-output, and desktop presentation stages. It is intended for lo
 profiling and is disabled in normal builds.
 
 ```bash
-cargo run -p ffplayout --features processing-bench -- \
+cargo run -p noar --features processing-bench -- \
     --processing-bench-interval 5 \
     -l 127.0.0.1:8787 --log-to-console -o hls
 ```
 
 `--processing-bench-interval` is measured in seconds and defaults to `1`.
-The `FFPLAYOUT_PROCESSING_BENCH_INTERVAL` environment variable provides the
+The `NOAR_PROCESSING_BENCH_INTERVAL` environment variable provides the
 same setting. The reported times measure the instrumented caller thread; use
 `perf` for CPU time inside FFmpeg worker threads.
 
@@ -85,6 +85,14 @@ driver.
 The frontend uses TypeScript, to generate types for the rust structs run: `cargo test`.
 
 The generated types are written next to the frontend sources that import them.
+
+## Crates
+
+The workspace has two crates: `noar` (`backend/app`: the server, the API and
+the embedded web interface; the binary is `noar`) and `noar-engine`
+(`backend/engine`: decoding, compositing, encoding and the outputs).
+
+Versions and releases are described in [releasing.md](releasing.md).
 
 ## Database migrations on `main`
 

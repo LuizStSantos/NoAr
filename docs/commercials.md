@@ -21,8 +21,8 @@ Scheduled events made only of commercials never show in the guide; their
 ## A break inside a video
 
 When a programme file has a commercial break edited into it, mark the
-stretches where the logo goes off instead: in **Armazenamento**, open the
-video's **Logo neste vídeo** (or the same button in the Player's clip editor)
+stretches where the logo goes off instead: in **Storage**, open the
+video's **Logo in this video** (or the same button in the Player's clip editor)
 and mark, while it plays, where the logo goes off and where it comes back, or
 type the times. Up to 16 stretches, in seconds of the video itself, so they
 hold whatever part of the video a playlist plays. The logo fades out and back
@@ -35,14 +35,14 @@ The stretches are kept next to the video in `<name>.logo.json`, like its
 { "hide": [{ "from": 750.0, "to": 990.5 }] }
 ```
 
-Videos with stretches show a "logo marcada" tag in Storage. A live with a
+Videos with stretches show a "logo marked" tag in Storage. A live with a
 break of its own uses the [logo API](api.md#logo-on-air) instead.
 
 ## Marking a folder
 
-In **Armazenamento**, open the folder and choose **Marcar como pasta de
-comerciais** (offered on folders without a program sheet). The folder gets a
-"comercial" tag in the folder tree and in the Player library, and the switch on
+In **Storage**, open the folder and choose **Mark as a commercials
+folder** (offered on folders without a program sheet). The folder gets a
+"commercial" tag in the folder tree and in the Player library, and the switch on
 its card removes the mark.
 
 The mark is the hidden file `.comercial` inside the folder, so it stays when the

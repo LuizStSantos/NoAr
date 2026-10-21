@@ -5,7 +5,7 @@ The scheduler plays events over whatever is on air: a commercial break, a
 clip, or a live source with a start and an end. Events run once or on chosen
 weekdays, and the output never stops while they take over.
 
-Open **Agendador** in the web interface, drag a file or a live onto the
+Open **Scheduler** in the web interface, drag a file or a live onto the
 timeline and choose how it goes on air.
 
 ## How an event enters
@@ -31,7 +31,7 @@ event waits until the ingest ends.
 ## Lives
 
 A live is a folder in the storage, normally created from the web interface:
-**Nova live** in Storage (where the folder of a live also shows its address,
+**New live** in Storage (where the folder of a live also shows its address,
 a signal test and its next time in the Scheduler) or in the Scheduler. Both use
 the same form: name, signal, poster, wide image, guide title, description,
 genre and rating; the Scheduler adds the time fields.

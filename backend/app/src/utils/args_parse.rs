@@ -145,7 +145,7 @@ pub struct Args {
     #[cfg(feature = "processing-bench")]
     #[clap(
         long,
-        env = "FFPLAYOUT_PROCESSING_BENCH_INTERVAL",
+        env = "NOAR_PROCESSING_BENCH_INTERVAL",
         help_heading = Some("Diagnostics"),
         help = "CPU pipeline benchmark report interval in seconds (default: 1 with --log-to-console, otherwise 10)",
         value_name = "SECONDS",

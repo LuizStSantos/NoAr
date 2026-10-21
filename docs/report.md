@@ -8,9 +8,9 @@ from the playlist and the Scheduler for what is still to come.
 A report covers whole playlist days: from the playlist's day start (for
 example 06:00) to the same time the next day.
 
-## The Relatório tab
+## The Report tab
 
-**Relatório** in the menu lists a day, or a period of up to 62 days, item by
+**Report** in the menu lists a day, or a period of up to 62 days, item by
 item: start, end, length, title, kind (program, commercial, live, waiting
 screen, live ingest), where it came from (playlist or Scheduler event) and how
 it went. A line marks now: above it the actual times, below it the plan.

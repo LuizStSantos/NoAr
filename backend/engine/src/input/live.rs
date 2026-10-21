@@ -63,11 +63,15 @@ pub(super) fn trim_audio_start(input: &frame::Audio, skip: usize) -> Result<fram
     Ok(result)
 }
 const DEFAULT_LIVE_IDLE_TIMEOUT: Duration = Duration::from_secs(2);
-const LIVE_IDLE_TIMEOUT_ENV: &str = "FFPLAYOUT_LIVE_IDLE_TIMEOUT_MS";
+const LIVE_IDLE_TIMEOUT_ENV: &str = "NOAR_LIVE_IDLE_TIMEOUT_MS";
+/// The name from before the rename, still read when the new one is not set.
+const LEGACY_LIVE_IDLE_TIMEOUT_ENV: &str = "FFPLAYOUT_LIVE_IDLE_TIMEOUT_MS";
 
 pub(super) fn live_idle_timeout() -> Duration {
     static TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
-        let configured = match env::var(LIVE_IDLE_TIMEOUT_ENV) {
+        let configured = match env::var(LIVE_IDLE_TIMEOUT_ENV)
+            .or_else(|_| env::var(LEGACY_LIVE_IDLE_TIMEOUT_ENV))
+        {
             Ok(value) => parse_live_idle_timeout(Some(&value)),
             Err(env::VarError::NotPresent) => parse_live_idle_timeout(None),
             Err(error) => Err(error.into()),

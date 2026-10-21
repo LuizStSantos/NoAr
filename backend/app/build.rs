@@ -80,8 +80,13 @@ fn main() {
     // The commit the image is built from, for the update check.
     println!("cargo:rerun-if-env-changed=NOAR_COMMIT");
 
+    // FFPLAYOUT_VAAPI_SHARED is the name from before the rename.
+    println!("cargo:rerun-if-env-changed=NOAR_VAAPI_SHARED");
     println!("cargo:rerun-if-env-changed=FFPLAYOUT_VAAPI_SHARED");
-    if matches!(std::env::var("FFPLAYOUT_VAAPI_SHARED").as_deref(), Ok("1")) {
+    if ["NOAR_VAAPI_SHARED", "FFPLAYOUT_VAAPI_SHARED"]
+        .iter()
+        .any(|name| matches!(std::env::var(name).as_deref(), Ok("1")))
+    {
         println!("cargo:rustc-link-lib=dylib=va-drm");
         println!("cargo:rustc-link-lib=dylib=va");
         println!("cargo:rustc-link-lib=dylib=drm");

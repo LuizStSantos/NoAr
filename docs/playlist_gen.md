@@ -1,6 +1,11 @@
-## Playlist Generation Template
+**Playlist generation**
+================
 
-It is possible to generate playlists based on templates. A template could look like:
+**Player › Generate** fills one or more days from the folders you pick, or
+block by block at set times, as a draft you review before saving.
+
+The same can be done from a template, through the API or the command line. A
+template could look like this:
 
 ```JSON
 {
@@ -52,16 +57,16 @@ It is possible to generate playlists based on templates. A template could look l
 }
 ```
 
-This can be used as file and run through CLI:
+Saved as a file in `./data`, it can be run in the container:
 
 ```BASH
-ffplayout -g 2023-09-04 - 2023-09-10 --template 'path/to/playlist_template.json'
+docker exec noar noar -g 2026-09-04 - 2026-09-10 --template /data/playlist_template.json
 ```
 
 Or through API:
 
 ```BASH
-curl -X POST http://127.0.0.1:8787/api/playlist/1/generate/2023-09-05
+curl -X POST http://127.0.0.1:8787/api/playlist/1/generate/2026-09-05
     -H 'Content-Type: application/json' -H 'Authorization: Bearer <TOKEN>'
     --data '{"template": {"sources": [\
                 {"start": "00:00:00", "duration": "10:00:00", "shuffle": true, "paths": ["path/1", "path/2"]}, \
