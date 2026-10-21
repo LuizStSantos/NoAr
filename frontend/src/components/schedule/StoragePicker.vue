@@ -3,9 +3,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 
+import FolderBadge from '@/components/storage/FolderBadge.vue'
 import { authFetch } from '@/composables/authFetch'
 import { stringFormatter } from '@/composables/helper'
 import { formatLength } from '@/composables/schedule'
+import { guideEntries, type GuideEntry } from '@/composables/storage'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 
@@ -26,12 +28,26 @@ interface BrowseResult {
     source: string
     parent: string
     folders: string[]
+    sheet_folders?: string[]
+    movie_folders?: string[]
+    live_folders?: string[]
+    commercial_folders?: string[]
+    /** The commercials folder the browsed folder lies in, if any. */
+    commercial?: string | null
     files: { name: string; duration: number }[]
 }
 
 const source = ref('')
 const folders = ref<string[]>([])
+const sheetFolders = ref<string[]>([])
+const movieFolders = ref<string[]>([])
+const liveFolders = ref<string[]>([])
+const commercialFolders = ref<string[]>([])
+/** The open folder is, or lies in, a commercials folder. */
+const inCommercials = ref(false)
 const files = ref<{ name: string; duration: number }[]>([])
+/** How each clip of the open folder shows up in the guide, as in Storage. */
+const guide = ref<Record<string, GuideEntry>>({})
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -71,12 +87,45 @@ async function open(path: string) {
 
         source.value = joinPath(data.source ?? path)
         folders.value = data.folders ?? []
+        sheetFolders.value = data.sheet_folders ?? []
+        movieFolders.value = data.movie_folders ?? []
+        liveFolders.value = data.live_folders ?? []
+        commercialFolders.value = data.commercial_folders ?? []
+        inCommercials.value = !!data.commercial
         files.value = data.files ?? []
         search.value = ''
+        loadGuide(id)
     } catch (err) {
         error.value = err instanceof Error ? err.message : String(err)
     } finally {
         loading.value = false
+    }
+}
+
+async function loadGuide(id: number) {
+    const storage = configStore.channels[configStore.i]?.storage ?? ''
+    const clips = files.value.filter((file) => mediaType(file.name) === 'video').slice(0, 300)
+    const folder = source.value
+
+    guide.value = {}
+
+    if (!clips.length || !storage || inCommercials.value) {
+        return
+    }
+
+    try {
+        const found = await guideEntries(
+            id,
+            storage,
+            clips.map((file) => joinPath(folder, file.name)),
+        )
+
+        // Another folder may have opened meanwhile.
+        if (source.value === folder) {
+            guide.value = Object.fromEntries(clips.map((file, index) => [file.name, found[index]]))
+        }
+    } catch {
+        guide.value = {}
     }
 }
 
@@ -144,6 +193,12 @@ watch(i, () => open(''))
                 >
                     <i class="bi bi-folder2 text-muted" aria-hidden="true" />
                     <span class="flex-1 min-w-0 truncate">{{ folder }}</span>
+                    <FolderBadge
+                        :has-sheet="sheetFolders.includes(folder)"
+                        :movie="movieFolders.includes(folder)"
+                        :live="liveFolders.includes(folder)"
+                        :commercial="commercialFolders.includes(folder)"
+                    />
                     <i class="bi bi-chevron-right text-[11px] text-subtle" aria-hidden="true" />
                 </button>
             </li>
@@ -157,7 +212,20 @@ watch(i, () => open(''))
             >
                 <i v-if="props.draggable" class="bi bi-grip-vertical text-subtle" aria-hidden="true" />
                 <i v-else class="bi bi-film text-muted" aria-hidden="true" />
-                <span class="flex-1 min-w-0 truncate" :title="file.name">{{ file.name }}</span>
+                <span class="flex-1 min-w-0 flex flex-col">
+                    <span class="truncate" :title="file.name">{{ file.name }}</span>
+                    <span v-if="guide[file.name]?.title" class="truncate text-xs text-muted">
+                        {{ t('storage.guideColumn') }}: {{ guide[file.name]?.title }}
+                        <template v-if="guide[file.name]?.sub_title"> · {{ guide[file.name]?.sub_title }}</template>
+                    </span>
+                </span>
+                <span
+                    v-if="inCommercials"
+                    class="text-[11px] text-after-clip border border-after-clip/50 rounded px-1.5 flex-none"
+                    :title="t('onair.commercialHint')"
+                >
+                    {{ t('onair.commercialTag') }}
+                </span>
                 <span class="font-mono text-xs text-muted">{{ formatLength(file.duration) }}</span>
                 <button
                     v-if="!props.draggable"

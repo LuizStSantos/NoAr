@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
+import SheetEditor from '@/components/storage/SheetEditor.vue'
 import {
     EVERY_DAY,
     MONDAY_TO_FRIDAY,
@@ -17,7 +18,7 @@ import {
     timeToSeconds,
     useScheduleText,
 } from '@/composables/schedule'
-import { commercialPaths } from '@/composables/storage'
+import { commercialPaths, guideEntries, guidePoster, imageUrl, type GuideEntry } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
@@ -41,6 +42,8 @@ const entryMode = ref<EntryMode>('after_clip')
 const afterMode = ref<AfterMode>('continue')
 const showInGuide = ref(false)
 const showPicker = ref(false)
+/** Storage path whose sheet is open in the editor. */
+const editing = ref<string | null>(null)
 const saving = ref(false)
 const error = ref('')
 
@@ -62,6 +65,7 @@ watch(
         afterMode.value = event?.after_mode ?? 'continue'
         showInGuide.value = event?.show_in_guide ?? false
         showPicker.value = !draft.sources.length
+        editing.value = null
         error.value = ''
     },
     { immediate: true },
@@ -93,6 +97,50 @@ watch(
     },
     { immediate: true },
 )
+
+/** How each chosen clip shows up in the guide, from its sheets, by path. */
+const guide = ref<Record<string, GuideEntry>>({})
+/** The guide names the event after the first clip's sheet, not its own name. */
+const sheetTitle = computed(() => (sources.value[0] ? guide.value[sources.value[0].path]?.title : '') || '')
+
+/** Picture of each chosen clip, as in the guide: its own or its program's, by path. */
+const posters = ref<Record<string, string>>({})
+const channelId = computed(() => configStore.channels[configStore.i]?.id ?? 0)
+
+async function loadGuide() {
+    const paths = [...new Set(sources.value.map((source) => source.path))]
+    const channel = configStore.channels[configStore.i]
+
+    if (!channel?.id || !channel.storage || !paths.length) {
+        guide.value = {}
+        posters.value = {}
+        return
+    }
+
+    try {
+        const found = await guideEntries(channel.id, channel.storage, paths)
+
+        guide.value = Object.fromEntries(paths.map((path, index) => [path, found[index]]))
+    } catch {
+        guide.value = {}
+    }
+
+    const pictures = await Promise.all(
+        paths.map(async (path) => {
+            try {
+                const poster = await guidePoster(channel.id, path)
+
+                return poster ? await imageUrl(channel.id, poster) : ''
+            } catch {
+                return ''
+            }
+        }),
+    )
+
+    posters.value = Object.fromEntries(paths.map((path, index) => [path, pictures[index]]))
+}
+
+watch(() => sources.value.map((source) => source.path).join('\n'), loadGuide, { immediate: true })
 
 // Commercials never show in the guide.
 watch(allCommercial, (all) => {
@@ -350,9 +398,33 @@ async function save() {
                             class="flex items-center gap-2 bg-base-200 rounded-md px-3 py-2"
                         >
                             <span class="text-base-content/60 w-4">{{ index + 1 }}</span>
-                            <span class="flex-1 min-w-0 truncate" :title="source.path">{{
-                                source.name || fileName(source.path)
-                            }}</span>
+                            <img
+                                v-if="posters[source.path]"
+                                :src="posters[source.path]"
+                                alt=""
+                                class="w-7 h-10 object-cover rounded flex-none"
+                            />
+                            <span
+                                v-else
+                                class="w-7 h-10 rounded bg-base-300 flex-none flex items-center justify-center text-subtle"
+                                aria-hidden="true"
+                            >
+                                <i class="bi bi-image text-xs" />
+                            </span>
+                            <span class="flex-1 min-w-0 flex flex-col">
+                                <span class="truncate" :title="source.path">{{
+                                    source.name || fileName(source.path)
+                                }}</span>
+                                <span
+                                    v-if="!commercials.has(source.path) && guide[source.path]?.title"
+                                    class="truncate text-xs text-muted"
+                                >
+                                    {{ t('storage.guideColumn') }}: {{ guide[source.path]?.title }}
+                                    <template v-if="guide[source.path]?.sub_title">
+                                        · {{ guide[source.path]?.sub_title }}
+                                    </template>
+                                </span>
+                            </span>
                             <span
                                 v-if="commercials.has(source.path)"
                                 class="text-[11px] text-after-clip border border-after-clip/50 rounded px-1.5 flex-none"
@@ -363,6 +435,15 @@ async function save() {
                             <span class="text-base-content/60 tabular-nums">
                                 {{ source.duration ? formatLength(source.duration) : '' }}
                             </span>
+                            <button
+                                v-if="!commercials.has(source.path)"
+                                class="btn-icon min-w-8 min-h-8"
+                                :aria-label="t('storage.card.edit')"
+                                :title="t('storage.card.edit')"
+                                @click="editing = source.path"
+                            >
+                                <i class="bi bi-card-text" />
+                            </button>
                             <button
                                 class="btn-icon min-w-8 min-h-8"
                                 :aria-label="t('schedule.moveUp')"
@@ -411,8 +492,13 @@ async function save() {
                     <input
                         v-model="title"
                         class="field-input"
-                        :placeholder="sources[0] ? fileStem(sources[0].path) : t('schedule.namePlaceholder')"
+                        :placeholder="
+                            sheetTitle || (sources[0] ? fileStem(sources[0].path) : t('schedule.namePlaceholder'))
+                        "
                     />
+                    <span v-if="sheetTitle && !allCommercial" class="field-hint">
+                        {{ t('schedule.nameFromSheet', { title: sheetTitle }) }}
+                    </span>
                 </label>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -608,5 +694,15 @@ async function save() {
                 </button>
             </div>
         </div>
+
+        <SheetEditor
+            v-if="editing !== null"
+            :key="editing"
+            :channel-id="channelId"
+            :path="editing"
+            @close="editing = null"
+            @saved="loadGuide"
+            @open="editing = $event"
+        />
     </div>
 </template>

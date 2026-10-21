@@ -24,7 +24,16 @@ import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 import { authFetch } from '@/composables/authFetch'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
-import { baseName, imageUrl, markCommercial, readSheet, storageJoin, uploadArtwork } from '@/composables/storage'
+import {
+    baseName,
+    guideEntries,
+    imageUrl,
+    markCommercial,
+    readSheet,
+    storageJoin,
+    type GuideEntry,
+    uploadArtwork,
+} from '@/composables/storage'
 
 const { t, locale } = useI18n()
 const configStore = useConfig()
@@ -292,7 +301,7 @@ async function useAsArtwork(kind: ArtworkKind, name: string) {
     }
 }
 /** How each video of the open folder shows up in the guide: title and episode. */
-const guide = ref<Record<string, { title: string; sub_title: string | null }>>({})
+const guide = ref<Record<string, GuideEntry>>({})
 /** The open folder's videos use a series or film sheet (its own or a parent's). */
 const folderSheet = computed(() => {
     if (!sheet.value || (!sheet.value.file && !sheet.value.inherited_from)) {
@@ -312,20 +321,13 @@ async function loadGuide() {
     }
 
     try {
-        const found = await authFetch<{ title: string; sub_title: string | null }[]>(
-            `/api/playlist/${channelId.value}/programs`,
-            {
-                method: 'POST',
-                headers: configStore.contentType,
-                body: JSON.stringify(
-                    files.map((file) => ({ source: `${storage}/${storageJoin(current.value, file.name)}` })),
-                ),
-            },
+        const found = await guideEntries(
+            channelId.value,
+            storage,
+            files.map((file) => storageJoin(current.value, file.name)),
         )
 
-        guide.value = Object.fromEntries(
-            files.map((file, index) => [file.name, found[index] ?? { title: '', sub_title: null }]),
-        )
+        guide.value = Object.fromEntries(files.map((file, index) => [file.name, found[index]]))
     } catch {
         guide.value = {}
     }

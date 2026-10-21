@@ -842,6 +842,7 @@ export default {
         total: 'Total',
         name: 'Name',
         namePlaceholder: '1 pm break',
+        nameFromSheet: 'The guide shows it as "{title}", from its sheet in Storage.',
         day: 'Day',
         time: 'Time',
         repeat: 'Repeat',
