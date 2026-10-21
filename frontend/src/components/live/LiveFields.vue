@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { emptyFields, imageUrl, saveSheet, storageJoin, uploadArtwork } from '@/composables/storage'
+import { LIVES_FOLDER, emptyFields, imageUrl, saveSheet, storageJoin, uploadArtwork } from '@/composables/storage'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
 
@@ -350,7 +350,8 @@ defineExpose({ check, submit })
 
     <div v-if="!editing && safeName" class="bg-base-200 rounded-md px-3 py-2.5 flex flex-col gap-1">
         <div class="text-xs text-subtle">{{ t('storage.live.savedAs') }}</div>
-        <pre class="m-0 font-mono text-xs leading-relaxed whitespace-pre-wrap">{{ storageJoin('Lives', safeName) }}/
+        <pre
+            class="m-0 font-mono text-xs leading-relaxed whitespace-pre-wrap">{{ storageJoin(LIVES_FOLDER, safeName) }}/
    signal.live   <span class="text-base-content/50">← {{ t('schedule.fileAddress') }}</span>
    tvshow.nfo    <span class="text-base-content/50">← {{ t('schedule.fileGuide') }}</span>
    poster.jpg    <span class="text-base-content/50">← {{ t('schedule.filePoster') }}</span>

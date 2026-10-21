@@ -8,9 +8,11 @@ withDefaults(
         /** The sheet is a film's, not a series'. */
         movie?: boolean
         live?: boolean
+        /** The folder that holds the lives, one subfolder each. */
+        lives?: boolean
         commercial?: boolean
     }>(),
-    { hasSheet: false, movie: false, live: false, commercial: false },
+    { hasSheet: false, movie: false, live: false, lives: false, commercial: false },
 )
 
 const { t } = useI18n()
@@ -25,9 +27,9 @@ const { t } = useI18n()
         {{ t('storage.commercial.badge') }}
     </span>
     <span
-        v-else-if="live"
+        v-else-if="live || lives"
         class="text-[11px] text-live border border-live/50 rounded-md px-1.5 leading-4"
-        :title="t('storage.live.badgeHint')"
+        :title="lives ? t('storage.live.livesHint') : t('storage.live.badgeHint')"
     >
         {{ t('storage.live.badge') }}
     </span>

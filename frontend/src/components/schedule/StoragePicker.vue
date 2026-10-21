@@ -7,16 +7,22 @@ import FolderBadge from '@/components/storage/FolderBadge.vue'
 import { authFetch } from '@/composables/authFetch'
 import { stringFormatter } from '@/composables/helper'
 import { formatLength } from '@/composables/schedule'
-import { guideEntries, type GuideEntry } from '@/composables/storage'
+import { LIVES_FOLDER, guideEntries, type GuideEntry } from '@/composables/storage'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 
 const props = defineProps({
     /** Items can be dragged onto the scheduler timeline. */
     draggable: { type: Boolean, default: false },
+    /** Leave the lives out: they have a list of their own. */
+    hideLives: { type: Boolean, default: false },
 })
 
-const emit = defineEmits<{ pick: [item: { path: string; name: string; duration: number }] }>()
+const emit = defineEmits<{
+    pick: [item: { path: string; name: string; duration: number }]
+    /** A live's folder was chosen, to schedule the live. */
+    live: [folder: string]
+}>()
 
 const { t } = useI18n()
 const { mediaType } = stringFormatter()
@@ -61,8 +67,29 @@ const shownFiles = computed(() =>
     ),
 )
 const shownFolders = computed(() =>
-    folders.value.filter((folder) => folder.toLowerCase().includes(search.value.trim().toLowerCase())),
+    folders.value.filter(
+        (folder) =>
+            !(props.hideLives && (isLive(folder) || isLives(folder))) &&
+            folder.toLowerCase().includes(search.value.trim().toLowerCase()),
+    ),
 )
+
+function isLive(folder: string): boolean {
+    return liveFolders.value.includes(folder)
+}
+
+/** The folder that holds the lives, at the storage root. */
+function isLives(folder: string): boolean {
+    return !source.value && folder === LIVES_FOLDER
+}
+
+function openFolder(folder: string) {
+    if (isLive(folder)) {
+        emit('live', joinPath(source.value, folder))
+    } else {
+        open(joinPath(source.value, folder))
+    }
+}
 
 function joinPath(...parts: string[]): string {
     return parts.join('/').split('/').filter(Boolean).join('/')
@@ -189,17 +216,27 @@ watch(i, () => open(''))
             <li v-for="folder in shownFolders" :key="`d-${folder}`">
                 <button
                     class="w-full flex items-center gap-2.5 px-2.5 min-h-10 rounded-lg bg-transparent border-0 text-inherit hover:bg-raised text-left cursor-pointer"
-                    @click="open(joinPath(source, folder))"
+                    :aria-label="isLive(folder) ? t('schedule.scheduleLiveNamed', { name: folder }) : undefined"
+                    @click="openFolder(folder)"
                 >
-                    <i class="bi bi-folder2 text-muted" aria-hidden="true" />
+                    <i
+                        class="bi"
+                        :class="isLive(folder) ? 'bi-broadcast text-live' : 'bi-folder2 text-muted'"
+                        aria-hidden="true"
+                    />
                     <span class="flex-1 min-w-0 truncate">{{ folder }}</span>
                     <FolderBadge
                         :has-sheet="sheetFolders.includes(folder)"
                         :movie="movieFolders.includes(folder)"
-                        :live="liveFolders.includes(folder)"
+                        :live="isLive(folder)"
+                        :lives="isLives(folder)"
                         :commercial="commercialFolders.includes(folder)"
                     />
-                    <i class="bi bi-chevron-right text-[11px] text-subtle" aria-hidden="true" />
+                    <i
+                        class="bi text-[11px] text-subtle"
+                        :class="isLive(folder) ? 'bi-plus-lg' : 'bi-chevron-right'"
+                        aria-hidden="true"
+                    />
                 </button>
             </li>
             <li
