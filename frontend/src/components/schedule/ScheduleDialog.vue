@@ -17,7 +17,7 @@ import {
     timeToSeconds,
     useScheduleText,
 } from '@/composables/schedule'
-import { commercialPaths } from '@/composables/storage'
+import { commercialPaths, guideEntries, type GuideEntry } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
@@ -89,6 +89,33 @@ watch(
             commercials.value = new Set(paths.filter((_, index) => flags[index]))
         } catch {
             commercials.value = new Set()
+        }
+    },
+    { immediate: true },
+)
+
+/** How each chosen clip shows up in the guide, from its sheets, by path. */
+const guide = ref<Record<string, GuideEntry>>({})
+/** The guide names the event after the first clip's sheet, not its own name. */
+const sheetTitle = computed(() => (sources.value[0] ? guide.value[sources.value[0].path]?.title : '') || '')
+
+watch(
+    () => sources.value.map((source) => source.path).join('\n'),
+    async () => {
+        const paths = [...new Set(sources.value.map((source) => source.path))]
+        const channel = configStore.channels[configStore.i]
+
+        if (!channel?.id || !channel.storage || !paths.length) {
+            guide.value = {}
+            return
+        }
+
+        try {
+            const found = await guideEntries(channel.id, channel.storage, paths)
+
+            guide.value = Object.fromEntries(paths.map((path, index) => [path, found[index]]))
+        } catch {
+            guide.value = {}
         }
     },
     { immediate: true },
@@ -350,9 +377,20 @@ async function save() {
                             class="flex items-center gap-2 bg-base-200 rounded-md px-3 py-2"
                         >
                             <span class="text-base-content/60 w-4">{{ index + 1 }}</span>
-                            <span class="flex-1 min-w-0 truncate" :title="source.path">{{
-                                source.name || fileName(source.path)
-                            }}</span>
+                            <span class="flex-1 min-w-0 flex flex-col">
+                                <span class="truncate" :title="source.path">{{
+                                    source.name || fileName(source.path)
+                                }}</span>
+                                <span
+                                    v-if="!commercials.has(source.path) && guide[source.path]?.title"
+                                    class="truncate text-xs text-muted"
+                                >
+                                    {{ t('storage.guideColumn') }}: {{ guide[source.path]?.title }}
+                                    <template v-if="guide[source.path]?.sub_title">
+                                        · {{ guide[source.path]?.sub_title }}
+                                    </template>
+                                </span>
+                            </span>
                             <span
                                 v-if="commercials.has(source.path)"
                                 class="text-[11px] text-after-clip border border-after-clip/50 rounded px-1.5 flex-none"
@@ -411,8 +449,13 @@ async function save() {
                     <input
                         v-model="title"
                         class="field-input"
-                        :placeholder="sources[0] ? fileStem(sources[0].path) : t('schedule.namePlaceholder')"
+                        :placeholder="
+                            sheetTitle || (sources[0] ? fileStem(sources[0].path) : t('schedule.namePlaceholder'))
+                        "
                     />
+                    <span v-if="sheetTitle && !allCommercial" class="field-hint">
+                        {{ t('schedule.nameFromSheet', { title: sheetTitle }) }}
+                    </span>
                 </label>
 
                 <div class="grid grid-cols-2 gap-3">

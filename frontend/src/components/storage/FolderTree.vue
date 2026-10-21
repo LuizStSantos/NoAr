@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import FolderBadge from '@/components/storage/FolderBadge.vue'
 import { listFolders, storageJoin } from '@/composables/storage'
 
 /**
@@ -154,27 +155,7 @@ function onDrop(event: DragEvent) {
             >
                 <i class="bi" :class="open ? 'bi-folder2-open' : 'bi-folder'" aria-hidden="true" />
                 <span class="truncate flex-1">{{ label }}</span>
-                <span
-                    v-if="commercial"
-                    class="text-[11px] text-after-clip border border-after-clip/50 rounded-md px-1.5 leading-4"
-                    :title="t('storage.commercial.badgeHint')"
-                >
-                    {{ t('storage.commercial.badge') }}
-                </span>
-                <span
-                    v-else-if="live"
-                    class="text-[11px] text-live border border-live/50 rounded-md px-1.5 leading-4"
-                    :title="t('storage.live.badgeHint')"
-                >
-                    {{ t('storage.live.badge') }}
-                </span>
-                <span
-                    v-else-if="hasSheet"
-                    class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
-                    :title="t('storage.hasSheet')"
-                >
-                    {{ movie ? t('storage.movieBadge') : t('storage.seriesBadge') }}
-                </span>
+                <FolderBadge :has-sheet="hasSheet" :movie="movie" :live="live" :commercial="commercial" />
             </button>
         </div>
         <ul v-if="open && folders.length" class="m-0 p-0">

@@ -843,6 +843,7 @@ export default {
         total: 'Total',
         name: 'Nome',
         namePlaceholder: 'Break das 13h',
+        nameFromSheet: 'No guia aparece como "{title}", pela ficha no Armazenamento.',
         day: 'Dia',
         time: 'Horário',
         repeat: 'Repetir',

@@ -52,6 +52,24 @@ export async function listFolders(channelId: number, path: string): Promise<Fold
     }
 }
 
+/** How a clip shows up in the guide, from its sheets. */
+export interface GuideEntry {
+    title: string
+    sub_title: string | null
+}
+
+/** The guide title and episode of each clip at `paths`, relative to `storage`. */
+export async function guideEntries(channelId: number, storage: string, paths: string[]): Promise<GuideEntry[]> {
+    const root = storage.replace(/\/+$/, '')
+    const found = await authFetch<GuideEntry[]>(`/api/playlist/${channelId}/programs`, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify(paths.map((path) => ({ source: `${root}/${path}` }))),
+    })
+
+    return paths.map((_, index) => found[index] ?? { title: '', sub_title: null })
+}
+
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {
     return authFetch<MediaSheet>(`/api/file/${channelId}/sheet`, {
         method: 'POST',
