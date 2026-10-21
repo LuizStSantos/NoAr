@@ -104,6 +104,8 @@ impl LocalStorage {
         let mut files = vec![];
         let mut folders = vec![];
         let mut sheet_stems = HashSet::new();
+        // Videos with stretches that keep the logo off (`<name>.logo.json`).
+        let mut logo_stems = HashSet::new();
         let extensions = self.extensions.read().await.clone();
 
         while let Some(child) = paths_obj.next_entry().await? {
@@ -130,6 +132,10 @@ impl LocalStorage {
 
             if extension == "nfo" {
                 sheet_stems.insert(name[..name.len() - 4].to_lowercase());
+            }
+
+            if let Some(stem) = name.to_lowercase().strip_suffix(".logo.json") {
+                logo_stems.insert(stem.to_string());
             }
 
             let media = extensions.contains(&extension);
@@ -170,6 +176,7 @@ impl LocalStorage {
 
             media_files.push(VideoFile {
                 sheet: media && sheet_stems.contains(&stem),
+                logo_marks: media && logo_stems.contains(&stem),
                 name,
                 duration,
                 size: metadata.len(),

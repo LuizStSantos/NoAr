@@ -18,6 +18,26 @@ A commercial:
 Scheduled events made only of commercials never show in the guide; their
 "show in the guide" switch is off and locked in the Scheduler.
 
+## A break inside a video
+
+When a programme file has a commercial break edited into it, mark the
+stretches where the logo goes off instead: in **Armazenamento**, open the
+video's **Logo neste vídeo** (or the same button in the Player's clip editor)
+and mark, while it plays, where the logo goes off and where it comes back, or
+type the times. Up to 16 stretches, in seconds of the video itself, so they
+hold whatever part of the video a playlist plays. The logo fades out and back
+in with its usual fade, wherever the video plays, from the next time it starts.
+
+The stretches are kept next to the video in `<name>.logo.json`, like its
+`.nfo` sheet:
+
+```json
+{ "hide": [{ "from": 750.0, "to": 990.5 }] }
+```
+
+Videos with stretches show a "logo marcada" tag in Storage. A live with a
+break of its own uses the [logo API](api.md#logo-on-air) instead.
+
 ## Marking a folder
 
 In **Armazenamento**, open the folder and choose **Marcar como pasta de

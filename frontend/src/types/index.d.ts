@@ -177,6 +177,8 @@ declare global {
         media?: boolean
         /** Whether it has a sheet of its own (`<name>.nfo`). */
         sheet?: boolean
+        /** Whether it keeps the logo off somewhere (`<name>.logo.json`). */
+        logo_marks?: boolean
     }
 
     interface Folder {

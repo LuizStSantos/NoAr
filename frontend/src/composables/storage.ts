@@ -89,6 +89,33 @@ export async function guidePoster(channelId: number, path: string): Promise<stri
     return program ? (await readSheet(channelId, program)).poster : null
 }
 
+/** A stretch of a video without logo, in seconds of the video. */
+export interface LogoSpan {
+    from: number
+    to: number
+}
+
+/** Where the video at `path` keeps the logo off. */
+export async function readLogoMarks(channelId: number, path: string): Promise<LogoSpan[]> {
+    const marks = await authFetch<{ hide?: LogoSpan[] }>(`/api/file/${channelId}/logo-marks`, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ path }),
+    })
+
+    return marks.hide ?? []
+}
+
+export async function saveLogoMarks(channelId: number, path: string, hide: LogoSpan[]): Promise<LogoSpan[]> {
+    const marks = await authFetch<{ hide?: LogoSpan[] }>(`/api/file/${channelId}/logo-marks`, {
+        method: 'PUT',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ path, hide }),
+    })
+
+    return marks.hide ?? []
+}
+
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {
     return authFetch<MediaSheet>(`/api/file/${channelId}/sheet`, {
         method: 'POST',

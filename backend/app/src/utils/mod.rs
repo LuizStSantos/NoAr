@@ -24,6 +24,7 @@ pub mod episodes;
 pub mod errors;
 pub mod generator;
 pub mod logging;
+pub mod logo_marks;
 pub mod mail;
 pub mod notification;
 pub mod paths;

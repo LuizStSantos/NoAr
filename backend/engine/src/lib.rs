@@ -99,6 +99,63 @@ pub struct LogoFade {
     /// Keep the logo off for the whole clip (a commercial). The next clip that
     /// shows the logo fades it back in.
     pub hidden: bool,
+    /// Stretches of the clip that keep the logo off, such as a commercial
+    /// break edited into a programme.
+    pub gaps: LogoGaps,
+}
+
+/// The most stretches without logo a clip can have.
+pub const MAX_LOGO_GAPS: usize = 16;
+
+/// Stretches of a clip without logo, in milliseconds of the source, sorted.
+/// A fixed array keeps it `Copy`, like the rest of [`LogoFade`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LogoGaps {
+    spans: [(i64, i64); MAX_LOGO_GAPS],
+    len: usize,
+}
+
+impl LogoGaps {
+    /// From `(from, to)` seconds of the source. Empty, reversed and
+    /// non-finite stretches are left out, overlapping ones merged, and only
+    /// the first [`MAX_LOGO_GAPS`] kept.
+    pub fn new(spans: impl IntoIterator<Item = (f64, f64)>) -> Self {
+        let mut valid: Vec<(i64, i64)> = spans
+            .into_iter()
+            .filter(|(from, to)| from.is_finite() && to.is_finite() && to > from && *to > 0.0)
+            .map(|(from, to)| {
+                (
+                    (from.max(0.0) * 1000.0).round() as i64,
+                    (to * 1000.0).round() as i64,
+                )
+            })
+            .collect();
+        let mut gaps = Self::default();
+
+        valid.sort_unstable();
+
+        for (from, to) in valid {
+            match gaps.len.checked_sub(1).map(|last| &mut gaps.spans[last]) {
+                Some(last) if from <= last.1 => last.1 = last.1.max(to),
+                _ if gaps.len < MAX_LOGO_GAPS => {
+                    gaps.spans[gaps.len] = (from, to);
+                    gaps.len += 1;
+                }
+                _ => break,
+            }
+        }
+
+        gaps
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    /// The stretches as `(from, to)` milliseconds of the source.
+    pub fn iter(&self) -> impl Iterator<Item = (i64, i64)> + '_ {
+        self.spans[..self.len].iter().copied()
+    }
 }
 
 pub struct Playout {
@@ -285,7 +342,7 @@ impl AsyncPlayout {
                 duration_seconds: None,
                 external_audio_path: None,
                 subtitles_media_path: None,
-                logo_fade: LogoFade::default(),
+                logo_fade: Box::default(),
                 playout_rate: 1.0,
                 response,
             })
@@ -354,7 +411,7 @@ impl AsyncPlayout {
                 duration_seconds,
                 external_audio_path,
                 subtitles_media_path,
-                logo_fade,
+                logo_fade: Box::new(logo_fade),
                 playout_rate,
                 response,
             })
@@ -432,7 +489,8 @@ enum AsyncCommand {
         duration_seconds: Option<f64>,
         external_audio_path: Option<String>,
         subtitles_media_path: Option<String>,
-        logo_fade: LogoFade,
+        /// Boxed: its stretches without logo would make every command large.
+        logo_fade: Box<LogoFade>,
         playout_rate: f64,
         response: oneshot::Sender<Result<ClipResult>>,
     },
@@ -474,7 +532,7 @@ fn run_async_playout_worker(mut playout: Playout, commands: mpsc::Receiver<Async
                     duration_seconds,
                     external_audio_path.as_deref(),
                     subtitles_media_path.as_deref(),
-                    logo_fade,
+                    *logo_fade,
                     playout_rate,
                     &mut live,
                 );
@@ -1062,7 +1120,7 @@ mod tests {
                     duration_seconds: Some(3600.0),
                     external_audio_path: None,
                     subtitles_media_path: None,
-                    logo_fade: LogoFade::default(),
+                    logo_fade: Box::default(),
                     playout_rate: 1.0,
                     response,
                 })

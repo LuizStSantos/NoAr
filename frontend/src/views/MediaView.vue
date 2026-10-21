@@ -16,6 +16,7 @@ import FolderTree from '@/components/storage/FolderTree.vue'
 import FolderBadge from '@/components/storage/FolderBadge.vue'
 import ImageViewer, { type ViewerImage } from '@/components/storage/ImageViewer.vue'
 import LiveCard from '@/components/storage/LiveCard.vue'
+import LogoMarksEditor from '@/components/storage/LogoMarksEditor.vue'
 import LiveEditor from '@/components/storage/LiveEditor.vue'
 import SheetCard from '@/components/storage/SheetCard.vue'
 import SheetEditor from '@/components/storage/SheetEditor.vue'
@@ -76,6 +77,9 @@ const filter = ref('')
 const selected = ref<string[]>([])
 const sheet = ref<MediaSheet | null>(null)
 const editorPath = ref<string | null>(null)
+/** Storage path of the video whose stretches without logo are being edited. */
+const logoMarksPath = ref<string | null>(null)
+const logoMarksLength = ref(0)
 const treeVersion = ref(0)
 const disk = ref<{ total: number; free: number } | null>(null)
 const dropActive = ref(false)
@@ -919,6 +923,11 @@ async function finishMove(confirmed: boolean) {
     }
 }
 
+function openLogoMarks(row: Row) {
+    logoMarksLength.value = row.file?.duration ?? 0
+    logoMarksPath.value = storageJoin(current.value, row.name)
+}
+
 async function openPreview(row: Row) {
     const path = `/${storageJoin(current.value, row.name)}`
 
@@ -1346,6 +1355,15 @@ const uploadAccept = computed(() =>
                                             >
                                                 {{ row.name }}
                                             </button>
+                                            <button
+                                                v-if="row.file?.logo_marks && isVideo(row.file)"
+                                                type="button"
+                                                class="shrink-0 text-[11px] text-after-clip border border-after-clip/50 rounded-md px-1.5 leading-4 bg-transparent cursor-pointer"
+                                                :title="t('storage.logoMarks.badgeHint')"
+                                                @click="openLogoMarks(row)"
+                                            >
+                                                {{ t('storage.logoMarks.badge') }}
+                                            </button>
                                             <span
                                                 v-else
                                                 class="truncate"
@@ -1454,6 +1472,16 @@ const uploadAccept = computed(() =>
                                                     :class="isImage(row.name) ? 'bi-eye' : 'bi-play-fill'"
                                                     aria-hidden="true"
                                                 />
+                                            </button>
+                                            <button
+                                                v-if="row.file && isVideo(row.file)"
+                                                type="button"
+                                                class="btn-icon text-muted"
+                                                :aria-label="t('storage.logoMarks.open', { name: row.name })"
+                                                :title="t('storage.logoMarks.title')"
+                                                @click="openLogoMarks(row)"
+                                            >
+                                                <i class="bi bi-badge-tm" aria-hidden="true" />
                                             </button>
                                             <button
                                                 type="button"
@@ -1598,6 +1626,16 @@ const uploadAccept = computed(() =>
                 </p>
             </div>
         </GenericModal>
+
+        <LogoMarksEditor
+            v-if="logoMarksPath !== null"
+            :key="logoMarksPath"
+            :channel-id="channelId"
+            :path="logoMarksPath"
+            :length="logoMarksLength"
+            @close="logoMarksPath = null"
+            @saved="refresh"
+        />
 
         <LiveEditor
             v-if="liveEditor"

@@ -15,7 +15,7 @@ use ffmpeg_next::{
 use log::{debug, trace, warn};
 
 use crate::{
-    LogoFade, PlaybackControl,
+    LogoFade, MAX_LOGO_GAPS, PlaybackControl,
     benchmark::{self, Stage},
     compositor::{logo::*, text::TextOverlay},
     input::diagnostics::LiveInputStage,
@@ -192,7 +192,13 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
     // stable timeline to seek in, so always begin at their current edge.
     let source_seek_seconds = (!source_is_live).then_some(seek_seconds).flatten();
     let logo_fade = timeline.resume_logo(logo_fade);
-    let logo_fade_plan = LogoFadePlan::new(timeline.video_pts, duration_seconds, cfg, logo_fade);
+    let logo_fade_plan = LogoFadePlan::new(
+        timeline.video_pts,
+        duration_seconds,
+        source_seek_seconds,
+        cfg,
+        logo_fade,
+    );
     let mut external_audio = external_audio_path
         .map(|audio_path| {
             ExternalAudioInput::open(audio_path, cfg, timeline, seek_seconds, duration_seconds)
@@ -462,22 +468,40 @@ pub(crate) struct LogoFadePlan {
     start_pts: i64,
     end_pts: Option<i64>,
     frames: i64,
+    /// Stretches without logo, in output video PTS.
+    gaps: [(i64, i64); MAX_LOGO_GAPS],
+    gap_count: usize,
 }
 
 impl LogoFadePlan {
     pub(crate) fn none(start_pts: i64, cfg: &OutputConfig) -> Self {
-        Self::new(start_pts, None, cfg, LogoFade::default())
+        Self::new(start_pts, None, None, cfg, LogoFade::default())
     }
 
+    /// `seek_seconds` is where in the source the clip starts, so stretches
+    /// without logo, given in source time, land on the right frames.
     fn new(
         start_pts: i64,
         duration_seconds: Option<f64>,
+        seek_seconds: Option<f64>,
         cfg: &OutputConfig,
         fade: LogoFade,
     ) -> Self {
+        let fps = f64::from(cfg.fps);
         let end_pts = duration_seconds
             .filter(|duration| duration.is_finite() && *duration > 0.0)
-            .map(|duration| start_pts + (duration * f64::from(cfg.fps)).ceil() as i64);
+            .map(|duration| start_pts + (duration * fps).ceil() as i64);
+        let seek_ms = seek_seconds
+            .filter(|seek| seek.is_finite() && *seek > 0.0)
+            .map_or(0, |seek| (seek * 1000.0).round() as i64);
+        let to_pts = |ms: i64| start_pts + ((ms - seek_ms) as f64 * fps / 1000.0).round() as i64;
+        let mut gaps = [(0, 0); MAX_LOGO_GAPS];
+        let mut gap_count = 0;
+
+        for (from, to) in fade.gaps.iter().filter(|(_, to)| *to > seek_ms) {
+            gaps[gap_count] = (to_pts(from), to_pts(to));
+            gap_count += 1;
+        }
 
         Self {
             fade_in: fade.fade_in,
@@ -485,8 +509,28 @@ impl LogoFadePlan {
             hidden: fade.hidden,
             start_pts,
             end_pts,
-            frames: (LOGO_FADE_SECONDS * f64::from(cfg.fps)).round().max(1.0) as i64,
+            frames: (LOGO_FADE_SECONDS * fps).round().max(1.0) as i64,
+            gaps,
+            gap_count,
         }
+    }
+
+    /// How much of the logo a stretch without logo lets through at `pts`:
+    /// 0 inside one, fading over the logo fade length on both sides. Kept
+    /// apart from the clip's own fade, which the next clip carries on from.
+    fn gap_factor(self, pts: i64) -> f64 {
+        self.gaps[..self.gap_count]
+            .iter()
+            .map(|&(from, to)| {
+                if pts < from {
+                    ((from - pts) as f64 / self.frames as f64).min(1.0)
+                } else if pts <= to {
+                    0.0
+                } else {
+                    ((pts - to) as f64 / self.frames as f64).min(1.0)
+                }
+            })
+            .fold(1.0, f64::min)
     }
 
     fn with_end_pts(mut self, end_pts: Option<i64>) -> Self {
@@ -523,6 +567,7 @@ impl LogoFadePlan {
             fade_in: self.fade_in,
             fade_out: self.fade_out,
             hidden: self.hidden,
+            ..LogoFade::default()
         });
     }
 }
@@ -1462,7 +1507,7 @@ fn apply_overlays(
     // Hidden or swapped from outside: the clip's own fade still applies, so
     // a commercial keeps any logo off.
     let (visibility, replacement) = video.logo_control.frame();
-    let opacity = opacity * visibility;
+    let opacity = opacity * visibility * logo_fade_plan.gap_factor(timeline.video_pts);
 
     if let Some(logo) = replacement.as_deref().or(video.logo.as_ref()) {
         if output.benchmarks_logo_overlay() {
@@ -3334,6 +3379,48 @@ mod tests {
     }
 
     #[test]
+    fn stretches_without_logo_follow_the_source_time_and_fade() {
+        let cfg = OutputConfig::new(320, 240, 25, 48_000);
+        let fade = LogoFade {
+            // A break from 1:50 to 2:00 of the source; the clip starts at 1:40.
+            gaps: crate::LogoGaps::new([(110.0, 120.0), (5.0, 8.0)]),
+            ..LogoFade::default()
+        };
+        let plan = LogoFadePlan::new(1000, Some(60.0), Some(100.0), &cfg, fade);
+
+        // 10 s into the clip = 250 frames; the fade takes one second (25 frames).
+        assert_eq!(plan.gap_factor(1000), 1.0);
+        assert_eq!(plan.gap_factor(1225), 1.0);
+        assert!((plan.gap_factor(1238) - 0.48).abs() < 0.01);
+        assert_eq!(plan.gap_factor(1250), 0.0);
+        assert_eq!(plan.gap_factor(1499), 0.0);
+        assert!((plan.gap_factor(1512) - 0.48).abs() < 0.01);
+        assert_eq!(plan.gap_factor(1525), 1.0);
+        // The clip's own fade, which the next clip carries on from, is untouched.
+        assert_eq!(plan.opacity_at(1300, 1.0), 1.0);
+    }
+
+    #[test]
+    fn logo_gaps_are_sorted_merged_and_bounded() {
+        let gaps = crate::LogoGaps::new([
+            (30.0, 40.0),
+            (10.0, 20.0),
+            (15.0, 25.0),
+            (50.0, 50.0),
+            (f64::NAN, 3.0),
+        ]);
+
+        assert_eq!(
+            gaps.iter().collect::<Vec<_>>(),
+            [(10_000, 25_000), (30_000, 40_000)]
+        );
+        assert!(crate::LogoGaps::new([]).is_empty());
+        let many =
+            crate::LogoGaps::new((0..40).map(|n| (f64::from(n) * 10.0, f64::from(n) * 10.0 + 1.0)));
+        assert_eq!(many.iter().count(), crate::MAX_LOGO_GAPS);
+    }
+
+    #[test]
     fn a_commercial_keeps_the_logo_off_and_the_next_clip_brings_it_back() {
         let cfg = OutputConfig::new(320, 240, 25, 48_000);
         let mut timeline = Timeline::new();
@@ -3341,7 +3428,7 @@ mod tests {
             hidden: true,
             ..LogoFade::default()
         };
-        let plan = LogoFadePlan::new(0, Some(10.0), &cfg, timeline.resume_logo(commercial));
+        let plan = LogoFadePlan::new(0, Some(10.0), None, &cfg, timeline.resume_logo(commercial));
 
         assert_eq!(plan.opacity_at(0, timeline.logo_opacity), 0.0);
         assert_eq!(plan.opacity_at(100, timeline.logo_opacity), 0.0);
@@ -3351,7 +3438,7 @@ mod tests {
         // The programme after it says nothing about the logo, and still gets it
         // back with a fade.
         let program = timeline.resume_logo(LogoFade::default());
-        let plan = LogoFadePlan::new(250, Some(60.0), &cfg, program);
+        let plan = LogoFadePlan::new(250, Some(60.0), None, &cfg, program);
 
         assert!(program.fade_in);
         assert_eq!(plan.opacity_at(250, timeline.logo_opacity), 0.0);

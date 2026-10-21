@@ -28,6 +28,7 @@ use crate::{
     utils::{
         commercial::set_commercial,
         errors::ServiceError,
+        logo_marks::{LogoMarks, read_marks, write_marks},
         xmltv::sheet::{
             ArtworkKind, MediaSheet, SheetUpdate, read_sheet, remove_artwork, save_artwork,
             save_photo, save_sheet,
@@ -478,6 +479,77 @@ pub async fn update_sheet(
     let (storage, target) = storage_target(&state, id, &user, &details, &request.path).await?;
 
     Ok(Json(save_sheet(&storage, &target, request.update).await?))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LogoMarksRequest {
+    /// The video, relative to the storage.
+    path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LogoMarksSaveRequest {
+    path: String,
+    #[serde(flatten)]
+    marks: LogoMarks,
+}
+
+/// **Read where a video keeps the logo off**
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/file/1/logo-marks -H 'Content-Type: application/json'
+/// -d '{"path": "Programa/Programa 01.mp4"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_logo_marks(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<LogoMarksRequest>,
+) -> Result<Json<LogoMarks>, ServiceError> {
+    let (_, video) = storage_target(&state, id, &user, &details, &request.path).await?;
+
+    if !video.is_file() {
+        return Err(ServiceError::NotFound(format!(
+            "{} not found",
+            request.path
+        )));
+    }
+
+    Ok(Json(read_marks(&video).await))
+}
+
+/// **Save where a video keeps the logo off**
+///
+/// Stretches in seconds of the video. They apply wherever it plays, from
+/// the next time it starts; none removes them.
+///
+/// ```BASH
+/// curl -X PUT http://127.0.0.1:8787/api/file/1/logo-marks -H 'Content-Type: application/json'
+/// -d '{"path": "Programa/Programa 01.mp4", "hide": [{"from": 750, "to": 990.5}]}' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn update_logo_marks(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<LogoMarksSaveRequest>,
+) -> Result<Json<LogoMarks>, ServiceError> {
+    let (_, video) = storage_target(&state, id, &user, &details, &request.path).await?;
+
+    if !video.is_file() {
+        return Err(ServiceError::NotFound(format!(
+            "{} not found",
+            request.path
+        )));
+    }
+
+    let marks = request.marks.validated()?;
+
+    write_marks(&video, &marks).await?;
+
+    Ok(Json(marks))
 }
 
 #[derive(Debug, Deserialize)]
