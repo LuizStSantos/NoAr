@@ -114,6 +114,8 @@ pub struct ChannelManager {
     pub audio_effects: AudioEffectsControl,
     pub live_loudness: ff_engine::LiveLoudnessControl,
     pub loudness_meter: ff_engine::LoudnessMeterControl,
+    /// Hides or swaps the logo on air; kept across playout restarts.
+    pub logo_control: ff_engine::LogoControl,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
     /// Opens the next clip, live or event ahead of its turn.
@@ -202,6 +204,7 @@ impl ChannelManager {
             audio_effects,
             live_loudness,
             loudness_meter: ff_engine::LoudnessMeterControl::default(),
+            logo_control: ff_engine::LogoControl::default(),
             audio_level: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
             preloader: Arc::new(Mutex::new(Preloader::default())),

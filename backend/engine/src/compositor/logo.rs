@@ -1,3 +1,9 @@
+use std::{
+    fmt,
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
+    time::{Duration, Instant},
+};
+
 use anyhow::{Context, Result, anyhow};
 use ffmpeg_next::{codec, frame, media, software::scaling, util::format::pixel::Pixel};
 
@@ -255,9 +261,201 @@ pub fn blend_logo(target: &mut frame::Video, logo: &LogoOverlay, opacity_factor:
     blend_overlay(target, logo.as_overlay(), opacity_factor);
 }
 
+/// How long the logo takes to fade out or back in when it is hidden or shown
+/// from outside.
+const LOGO_SWITCH: Duration = Duration::from_millis(400);
+
+/// The logo on air as changed from outside the playout, for example by an
+/// encoder whose live has a commercial break: hidden, or another image in
+/// place of the configured one. Clones share the same state; it applies to
+/// clips, lives and ingest alike, and outlasts a playout restart.
+#[derive(Clone, Default)]
+pub struct LogoControl(Arc<Mutex<LogoOverride>>);
+
+#[derive(Default)]
+struct LogoOverride {
+    hidden: bool,
+    /// Visibility when the last switch began, and when that was.
+    from: f64,
+    switched_at: Option<Instant>,
+    replacement: Option<(String, Arc<LogoOverlay>)>,
+}
+
+impl LogoOverride {
+    /// Visibility now, between 0 (hidden) and 1, fading after a switch.
+    fn level(&self, now: Instant) -> f64 {
+        let target = if self.hidden { 0.0 } else { 1.0 };
+
+        match self.switched_at {
+            Some(at) => {
+                let progress =
+                    now.saturating_duration_since(at).as_secs_f64() / LOGO_SWITCH.as_secs_f64();
+
+                self.from + (target - self.from) * progress.min(1.0)
+            }
+            None => target,
+        }
+    }
+
+    fn set_hidden(&mut self, hidden: bool) {
+        if hidden != self.hidden {
+            let now = Instant::now();
+
+            self.from = self.level(now);
+            self.hidden = hidden;
+            self.switched_at = Some(now);
+        }
+    }
+}
+
+/// What the logo on air is doing, as set from outside.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LogoState {
+    pub hidden: bool,
+    /// The image shown in place of the configured logo.
+    pub replacement: Option<String>,
+}
+
+impl fmt::Debug for LogoControl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("LogoControl").field(&self.state()).finish()
+    }
+}
+
+impl LogoControl {
+    fn lock(&self) -> MutexGuard<'_, LogoOverride> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Fade the logo out, whichever image it is.
+    pub fn hide(&self) {
+        self.lock().set_hidden(true);
+    }
+
+    /// Fade the configured logo back in, dropping any replacement.
+    pub fn show(&self) {
+        let mut state = self.lock();
+
+        state.replacement = None;
+        state.set_hidden(false);
+    }
+
+    /// Show the image of `config` in place of the configured logo, sized and
+    /// placed for an output of `width` x `height`. `label` names it in
+    /// [`LogoState`].
+    pub fn replace(&self, label: &str, config: &LogoConfig, width: u32, height: u32) -> Result<()> {
+        let overlay = LogoOverlay::load(config, width, height)?;
+        let mut state = self.lock();
+
+        state.replacement = Some((label.to_string(), Arc::new(overlay)));
+        state.set_hidden(false);
+
+        Ok(())
+    }
+
+    pub fn state(&self) -> LogoState {
+        let state = self.lock();
+
+        LogoState {
+            hidden: state.hidden,
+            replacement: state.replacement.as_ref().map(|(label, _)| label.clone()),
+        }
+    }
+
+    pub(crate) fn has_replacement(&self) -> bool {
+        self.lock().replacement.is_some()
+    }
+
+    /// For the frame being drawn: how visible the logo is, and the image
+    /// replacing the configured one.
+    pub(crate) fn frame(&self) -> (f64, Option<Arc<LogoOverlay>>) {
+        let state = self.lock();
+
+        (
+            state.level(Instant::now()),
+            state
+                .replacement
+                .as_ref()
+                .map(|(_, overlay)| overlay.clone()),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{logo_dimensions, logo_position};
+    use std::time::{Duration, Instant};
+
+    use super::{LogoConfig, LogoControl, LogoOverride, logo_dimensions, logo_position};
+
+    fn logo_asset() -> LogoConfig {
+        LogoConfig {
+            path: concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../tests_assets/storage/logo.png"
+            )
+            .to_string(),
+            scale: Some("10%:-1".to_string()),
+            opacity: 1.0,
+            position: "W-w-12:12".to_string(),
+        }
+    }
+
+    #[test]
+    fn hiding_the_logo_fades_it_out_and_showing_fades_it_back() {
+        let mut state = LogoOverride::default();
+        let start = Instant::now();
+
+        assert_eq!(state.level(start), 1.0);
+
+        state.set_hidden(true);
+        let at = state.switched_at.unwrap();
+        assert!((state.level(at + Duration::from_millis(200)) - 0.5).abs() < 0.01);
+        assert_eq!(state.level(at + Duration::from_secs(1)), 0.0);
+
+        // Shown again halfway: it fades back in from where it was.
+        state.from = 0.0;
+        state.switched_at = Some(at - Duration::from_secs(1));
+        state.set_hidden(false);
+        let back = state.switched_at.unwrap();
+        assert!(state.level(back) < 0.01);
+        assert_eq!(state.level(back + Duration::from_secs(1)), 1.0);
+    }
+
+    #[test]
+    fn a_replacement_shows_until_the_logo_is_shown_again() {
+        let control = LogoControl::default();
+
+        control
+            .replace("Break/logo.png", &logo_asset(), 1920, 1080)
+            .unwrap();
+        assert!(control.has_replacement());
+        assert_eq!(
+            control.state().replacement.as_deref(),
+            Some("Break/logo.png")
+        );
+
+        control.hide();
+        assert!(control.state().hidden);
+        // Hiding keeps the replacement for when the logo comes back.
+        assert!(control.has_replacement());
+
+        control.show();
+        assert!(!control.state().hidden);
+        assert!(!control.has_replacement());
+        assert!(
+            control
+                .replace(
+                    "x",
+                    &LogoConfig {
+                        path: "/missing.png".into(),
+                        ..logo_asset()
+                    },
+                    1920,
+                    1080
+                )
+                .is_err()
+        );
+    }
 
     #[test]
     fn logo_position_accepts_corners_and_centers() {

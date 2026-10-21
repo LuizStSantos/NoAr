@@ -58,7 +58,8 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         manager.audio_level.clone(),
         desktop_control_callback(manager.clone()),
     )?
-    .with_preview_url(Some(manager.preview.url().to_string()));
+    .with_preview_url(Some(manager.preview.url().to_string()))
+    .with_logo_control(manager.logo_control.clone());
     let playout = open_playout(&config, output_config.clone()).await?;
     *manager.playback_control.lock().await = playout.playback_control();
     *manager.preloader.lock().await = playout.preloader();

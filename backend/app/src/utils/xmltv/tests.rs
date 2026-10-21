@@ -295,6 +295,25 @@ async fn clip_programmes_group_like_the_guide() {
 }
 
 #[tokio::test]
+async fn the_guide_uses_its_own_logo_when_one_is_set() {
+    let storage = TempDir::new();
+    let on_air = storage.file("00-assets/logo-negativa.png", "");
+    let guide = storage.file("00-assets/logo-guia.png", "");
+    let mut config = PlayoutConfig::default();
+    config.channel.storage = storage.0.clone();
+    config.processing.logo_path = on_air.to_string_lossy().to_string();
+
+    assert!(matches!(channel_icon(&config).await, Some(Image::Local(path)) if path == on_air));
+
+    config.processing.guide_logo = "00-assets/logo-guia.png".to_string();
+    assert!(matches!(channel_icon(&config).await, Some(Image::Local(path)) if path == guide));
+
+    // A guide logo that went missing gives way to the logo on air.
+    config.processing.guide_logo = "00-assets/sumiu.png".to_string();
+    assert!(matches!(channel_icon(&config).await, Some(Image::Local(path)) if path == on_air));
+}
+
+#[tokio::test]
 async fn guide_requires_an_initialized_playlist_start() {
     let config = PlayoutConfig::default();
     let channel = XmltvChannel {

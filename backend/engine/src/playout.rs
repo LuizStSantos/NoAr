@@ -1412,7 +1412,7 @@ fn encode_composited_frame<O: FrameOutput>(
     let video_opacity = media_fade_plan.video_opacity_at(timeline.video_pts);
     let changes_pixels = video_frame_needs_write(
         video_opacity,
-        video.logo.is_some(),
+        video.logo.is_some() || video.logo_control.has_replacement(),
         video.text.is_some(),
         video.runtime_text.overlay.is_some(),
     );
@@ -1459,7 +1459,12 @@ fn apply_overlays(
     let opacity = logo_fade_plan.opacity_at(timeline.video_pts, timeline.logo_opacity);
     timeline.logo_opacity = opacity;
 
-    if let Some(logo) = &video.logo {
+    // Hidden or swapped from outside: the clip's own fade still applies, so
+    // a commercial keeps any logo off.
+    let (visibility, replacement) = video.logo_control.frame();
+    let opacity = opacity * visibility;
+
+    if let Some(logo) = replacement.as_deref().or(video.logo.as_ref()) {
         if output.benchmarks_logo_overlay() {
             benchmark::measure_overlay(Stage::LogoOverlay, logo.width, logo.height, || {
                 output.apply_logo_overlay(frame, logo, opacity);
@@ -1828,6 +1833,7 @@ struct VideoDecoder {
     x_offset: u32,
     y_offset: u32,
     logo: Option<LogoOverlay>,
+    logo_control: LogoControl,
     text: Option<TextOverlay>,
     runtime_text: RuntimeTextOverlay,
     frame_rate_converter: FrameRateConverter,
@@ -1893,6 +1899,7 @@ impl VideoDecoder {
                 .as_ref()
                 .map(|logo| LogoOverlay::load(logo, cfg.width, cfg.height))
                 .transpose()?,
+            logo_control: cfg.logo_control.clone(),
             text: cfg
                 .text
                 .as_ref()

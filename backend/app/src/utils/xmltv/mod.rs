@@ -21,6 +21,7 @@ pub mod sheet;
 
 use crate::{
     db::models::{AfterMode, EntryMode, ScheduleEvent, ScheduleKind},
+    file::norm_abs_path,
     utils::{
         commercial::CommercialFolders,
         config::PlayoutConfig,
@@ -762,14 +763,29 @@ fn delay(
     delayed
 }
 
-/// The channel logo, when it is an image inside the storage.
+/// The guide's own logo when one is set and found, else the logo on air:
+/// an image inside the storage.
 async fn channel_icon(config: &PlayoutConfig) -> Option<Image> {
-    let logo = PathBuf::from(&config.processing.logo_path);
-    let is_file = fs::metadata(&logo)
-        .await
-        .is_ok_and(|metadata| metadata.is_file());
+    let guide_logo = config.processing.guide_logo.trim();
+    let guide_logo = (!guide_logo.is_empty())
+        .then(|| norm_abs_path(&config.channel.storage, guide_logo).ok())
+        .flatten()
+        .map(|(path, _, _)| path);
 
-    (is_file && has_image_extension(&logo)).then_some(Image::Local(logo))
+    for logo in guide_logo
+        .into_iter()
+        .chain([PathBuf::from(&config.processing.logo_path)])
+    {
+        let is_file = fs::metadata(&logo)
+            .await
+            .is_ok_and(|metadata| metadata.is_file());
+
+        if is_file && has_image_extension(&logo) {
+            return Some(Image::Local(logo));
+        }
+    }
+
+    None
 }
 
 fn write_programme(

@@ -170,6 +170,34 @@ curl -X POST http://127.0.0.1:8787/api/control/1/process \
   --data '{"command":"restart"}'
 ```
 
+### Logo on air
+
+The logo can be hidden or swapped for another image while the channel plays,
+for example during the commercial break of a live. It fades in about 0.4 s,
+applies to clips, lives and live ingest alike, and lasts until the next
+command or a server restart. A commercial in the playlist still keeps any logo
+off.
+
+| Method | Endpoint | Access | Request body |
+| --- | --- | --- | --- |
+| `GET` | `/api/control/{id}/logo` | `GA, CA, U` | Read the state: `{ "hidden": false, "replacement": null }`. |
+| `POST` | `/api/control/{id}/logo` | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace", "logo": "<storage path>" }`; `logo` only for `replace`. |
+| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace}` | Logo key | Query `key` (or header `X-Logo-Key`), and `logo` for `replace`. |
+
+`show` brings back the configured logo and drops a replacement. A replacement
+takes the size, position and opacity of the configured logo.
+
+The `/logo/...` route is for encoders and scripts that cannot log in (vMix,
+OBS, Bitfocus Companion). It needs the channel's logo key, created in
+Settings › Logo, where a tutorial lists the addresses ready to copy. Without
+a key, or with a wrong one, it answers 403.
+
+```bash
+curl -X POST 'http://127.0.0.1:8787/logo/1/hide?key=<KEY>'
+curl -X POST 'http://127.0.0.1:8787/logo/1/replace?key=<KEY>&logo=00-assets/logo-ao-vivo.png'
+curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
+```
+
 ## Live preview
 
 | Method | Endpoint | Access | Description |
