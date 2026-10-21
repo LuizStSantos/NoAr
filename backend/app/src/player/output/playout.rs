@@ -27,6 +27,7 @@ use crate::{
         config::{ENGINE_AUDIO_SAMPLE_RATE, OutputMode, PlayoutConfig, RecordingSource},
         control::{PlayerCtl, control_state},
         errors::ServiceError,
+        logo_marks::logo_gaps,
     },
 };
 
@@ -319,6 +320,7 @@ async fn play_loop(
             1.0
         };
         let is_ad = node.ad;
+        let logo_gaps = logo_gaps(&config.channel.storage, &node.source).await;
         let aired = as_run::record_start(&manager, as_run::programme_entry(config, &node)).await;
         let clip_started = std::time::Instant::now();
         let result = playout
@@ -334,6 +336,7 @@ async fn play_loop(
                     // Commercials keep the logo off even without a programme
                     // fading it out before them (a playlist that opens on one).
                     hidden: is_ad,
+                    gaps: logo_gaps,
                 },
                 playout_rate,
             )
@@ -839,6 +842,7 @@ pub(crate) async fn play_plain_from(
             subtitle_media_path(config, source),
             LogoFade {
                 hidden: commercial,
+                gaps: logo_gaps(&config.channel.storage, source).await,
                 ..LogoFade::default()
             },
             1.0,

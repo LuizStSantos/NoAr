@@ -87,6 +87,9 @@ pub struct VideoFile {
     /// Whether it has a sheet of its own (`<name>.nfo` next to it).
     #[serde(default)]
     sheet: bool,
+    /// Whether it keeps the logo off somewhere (`<name>.logo.json`).
+    #[serde(default)]
+    logo_marks: bool,
 }
 
 fn default_true() -> bool {

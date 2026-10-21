@@ -253,12 +253,15 @@ rejected.
 | `POST` | `/api/file/{id}/access-token` | `{ "filename": "folder/file.mp4" }` |
 | `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
 | `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
+| `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: where the video keeps the logo off, `{ "hide": [{ "from": 750, "to": 990.5 }] }` |
+| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...] }`: seconds of the video, at most 16 stretches, not overlapping; an empty list removes them. See [commercials](commercials.md#a-break-inside-a-video). |
 | `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
 | `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
 | `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |
 
 The browse response lists `folders`, `files` (with `duration`, `size`,
-`modified` and whether a video has its own `sheet`), `sheet_folders` (the
+`modified`, whether a video has its own `sheet`, and `logo_marks` when it keeps
+the logo off somewhere), `sheet_folders` (the
 subfolders with a program sheet) and `movie_folders` (the films among them).
 
 A sheet holds the form `fields` (`title`, `plot`, `genres`, `rating`, `year`,

@@ -3,7 +3,9 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 
+import LogoMarksEditor from '@/components/storage/LogoMarksEditor.vue'
 import { isRemoteSource, parseLength, preciseLength, storageLabel } from '@/composables/player'
+import { useConfig } from '@/stores/config'
 
 const props = defineProps<{
     item: PlaylistItem
@@ -28,6 +30,9 @@ const outText = ref(preciseLength(props.item.out))
 const durationText = ref(preciseLength(props.item.duration))
 const showAdvanced = ref(Boolean(props.item.custom_filter))
 const parts = ref(1)
+const configStore = useConfig()
+/** The stretches without logo of the video are open in their editor. */
+const editingLogo = ref(false)
 
 /** The parent swaps the file or the audio after a pick. */
 watch(
@@ -48,6 +53,12 @@ watch(
 )
 
 const isRemote = computed(() => props.remote || isRemoteSource(draft.value.source))
+/** The video's path in the storage, for its stretches without logo. */
+const storagePath = computed(() => {
+    const root = props.storage.replace(/\/+$/, '')
+
+    return root && draft.value.source.startsWith(`${root}/`) ? draft.value.source.slice(root.length + 1) : ''
+})
 const parsedIn = computed(() => parseLength(inText.value))
 const parsedOut = computed(() => parseLength(outText.value))
 const parsedDuration = computed(() => (isRemote.value ? parseLength(durationText.value) : draft.value.duration))
@@ -206,6 +217,14 @@ function apply() {
                 </button>
             </div>
             <button
+                v-if="storagePath && !isRemote && !commercial && !draft.ad"
+                class="btn-quiet min-h-9"
+                :title="t('storage.logoMarks.intro')"
+                @click="editingLogo = true"
+            >
+                <i class="bi bi-badge-tm" aria-hidden="true" />{{ t('storage.logoMarks.title') }}
+            </button>
+            <button
                 class="flex items-center gap-1.5 min-h-10 text-muted bg-transparent border-0 cursor-pointer"
                 :aria-expanded="showAdvanced"
                 @click="showAdvanced = !showAdvanced"
@@ -241,5 +260,13 @@ function apply() {
                 <span class="field-hint">{{ t('onair.splitHint') }}</span>
             </label>
         </div>
+
+        <LogoMarksEditor
+            v-if="editingLogo && configStore.channels[configStore.i]?.id"
+            :channel-id="configStore.channels[configStore.i]!.id"
+            :path="storagePath"
+            :length="draft.duration"
+            @close="editingLogo = false"
+        />
     </div>
 </template>
