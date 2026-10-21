@@ -217,6 +217,12 @@ pub async fn update_schedule_event(
         handles::reset_schedule_runs_from(&state.pool, event_id, &today).await?;
     }
 
+    // An occurrence already waiting for the clip on air (or for its signal)
+    // airs as the event is now, or not at all when the change took it away.
+    for dropped in manager.schedule.revise(event_id, Some(&event)) {
+        handles::finish_schedule_run(&state.pool, event_id, &dropped.date_key(), "skipped").await?;
+    }
+
     manager.schedule.invalidate();
 
     Ok(Json(event))
@@ -237,6 +243,9 @@ pub async fn delete_schedule_event(
         )));
     }
 
+    // It must not air from the queue either, where it may wait for the clip
+    // on air to end.
+    manager.schedule.revise(event_id, None);
     manager.schedule.invalidate();
 
     Ok("Event removed")
