@@ -898,7 +898,20 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
         synchronize_after_skip(cfg, timeline, output, last_video_frame)?;
     }
 
+    if is_network_url(label) {
+        close_aside(ictx);
+    }
+
     result
+}
+
+/// Hangs up a network source on a helper thread: the next clip goes on air
+/// while the old connection closes.
+fn close_aside(input: format::context::Input) {
+    // Should the thread not start, the input closes here as before.
+    let _ = thread::Builder::new()
+        .name("ff-close-input".to_string())
+        .spawn(move || drop(input));
 }
 
 /// Opens `path`, or takes its preload. A network source connects and probes
