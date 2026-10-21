@@ -122,12 +122,12 @@ pub fn run_on_main_thread<R: Send + 'static>(
 
     let (done_tx, done_rx) = mpsc::sync_channel(1);
     let runtime = thread::Builder::new()
-        .name("ffplayout-runtime".to_string())
+        .name("noar-runtime".to_string())
         .spawn(move || {
             let _completion = RuntimeCompletion(host);
             let _ = done_tx.send(background());
         })
-        .context("failed to start ffplayout runtime thread");
+        .context("failed to start NoAr runtime thread");
 
     let result = runtime.and_then(|_| run_host(jobs_rx, host));
     host.running.store(false, Ordering::Release);
@@ -140,7 +140,7 @@ pub fn run_on_main_thread<R: Send + 'static>(
 
     done_rx
         .recv()
-        .context("ffplayout runtime stopped without a result")
+        .context("NoAr runtime stopped without a result")
 }
 
 #[cfg(feature = "tokio")]

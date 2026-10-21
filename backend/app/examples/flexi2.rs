@@ -11,7 +11,7 @@ pub fn file_logger() -> Box<dyn LogWriter> {
                 .suppress_timestamp()
                 .directory("./logs")
                 .discriminant("1")
-                .basename("ffplayout"),
+                .basename("noar"),
         )
         .append()
         .format(file_formatter)

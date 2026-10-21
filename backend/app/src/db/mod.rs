@@ -29,11 +29,8 @@ const SQLITE_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 const SQLITE_IDLE_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub static DB_PATH: LazyLock<Result<Cow<'static, Path>, io::Error>> = LazyLock::new(|| {
-    const DEFAULT_DIR: &str = "/usr/share/ffplayout/db/";
-    const DEFAULT_PATH: &str = "/usr/share/ffplayout/db/ffplayout.db";
+    const DEFAULT_DIR: &str = "/usr/share/noar/db/";
     const ASSET_DIR: &str = "./assets";
-    const ASSET_PATH: &str = "./assets/ffplayout.db";
-    const DB_NAME: &str = "ffplayout.db";
 
     let path = if let Some(path) = ARGS.db.as_deref() {
         let mut path = Cow::Borrowed(path);
@@ -41,23 +38,22 @@ pub static DB_PATH: LazyLock<Result<Cow<'static, Path>, io::Error>> = LazyLock::
             path = std::env::current_dir()?.join(path).into();
         }
         if path.is_dir() {
-            path = path.join(DB_NAME).into();
+            path = database_in(&path).into();
         }
         path
     } else {
         let sys_path = Path::new(DEFAULT_DIR);
+        let legacy_path = Path::new(LEGACY_DIR);
         let asset_path = Path::new(ASSET_DIR);
 
-        if !sys_path.writable() {
-            error!("Path {} not writable!", sys_path.display());
-        }
-
-        if sys_path.is_dir() && sys_path.writable() {
-            Path::new(DEFAULT_PATH).into()
+        if legacy_path.join(LEGACY_DB_NAME).is_file() && !sys_path.join(DB_NAME).is_file() {
+            database_in(legacy_path).into()
+        } else if sys_path.is_dir() && sys_path.writable() {
+            database_in(sys_path).into()
         } else if asset_path.is_dir() {
-            Path::new(ASSET_PATH).into()
+            database_in(asset_path).into()
         } else {
-            Path::new(DB_NAME).into()
+            database_in(Path::new("")).into()
         }
     };
 
@@ -72,9 +68,28 @@ pub static DB_PATH: LazyLock<Result<Cow<'static, Path>, io::Error>> = LazyLock::
     Ok(path)
 });
 
+const DB_NAME: &str = "noar.db";
+/// Where installs from before the rename keep their database, still opened
+/// when it is there and no `noar.db` is.
+const LEGACY_DIR: &str = "/usr/share/ffplayout/db/";
+const LEGACY_DB_NAME: &str = "ffplayout.db";
+
+/// The database in `dir`: `noar.db`, or the `ffplayout.db` of an install from
+/// before the rename when only that one exists.
+fn database_in(dir: &Path) -> std::path::PathBuf {
+    let current = dir.join(DB_NAME);
+    let legacy = dir.join(LEGACY_DB_NAME);
+
+    if !current.is_file() && legacy.is_file() {
+        legacy
+    } else {
+        current
+    }
+}
+
 fn ensure_database_parent(path: &Path) -> io::Result<()> {
     // `Path::parent()` is an empty path for a plain file name such as
-    // `ffplayout.db`. That means the current working directory is the parent,
+    // `noar.db`. That means the current working directory is the parent,
     // not that the database has no valid location. Create explicitly supplied
     // parent directories on first run as well.
     let parent = path
@@ -140,7 +155,7 @@ pub async fn init_globales(conn: &Pool<Sqlite>) -> Result<(), ProcessError> {
 mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use super::ensure_database_parent;
+    use super::{database_in, ensure_database_parent};
 
     #[test]
     fn creates_a_missing_database_parent_directory() {
@@ -149,10 +164,10 @@ mod tests {
             .unwrap()
             .as_nanos();
         let root = std::env::temp_dir().join(format!(
-            "ffplayout-db-parent-test-{}-{suffix}",
+            "noar-db-parent-test-{}-{suffix}",
             std::process::id()
         ));
-        let database = root.join("nested").join("ffplayout.db");
+        let database = root.join("nested").join("noar.db");
 
         ensure_database_parent(&database).unwrap();
 
@@ -161,7 +176,23 @@ mod tests {
     }
 
     #[test]
+    fn an_install_from_before_the_rename_keeps_its_database() {
+        let root = std::env::temp_dir().join(format!("noar-db-legacy-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+
+        assert_eq!(database_in(&root), root.join("noar.db"));
+
+        std::fs::write(root.join("ffplayout.db"), "").unwrap();
+        assert_eq!(database_in(&root), root.join("ffplayout.db"));
+
+        std::fs::write(root.join("noar.db"), "").unwrap();
+        assert_eq!(database_in(&root), root.join("noar.db"));
+
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn treats_a_plain_database_file_name_as_the_current_directory() {
-        ensure_database_parent(std::path::Path::new("ffplayout.db")).unwrap();
+        ensure_database_parent(std::path::Path::new("noar.db")).unwrap();
     }
 }

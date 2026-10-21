@@ -168,8 +168,7 @@ mod tests {
 
     #[tokio::test]
     async fn concurrent_rotation_has_one_winner_and_revokes_its_successor_on_reuse() {
-        let path =
-            std::env::temp_dir().join(format!("ffplayout-refresh-{}.db", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("noar-refresh-{}.db", uuid::Uuid::new_v4()));
         let pool = SqlitePoolOptions::new()
             .max_connections(2)
             .connect_with(

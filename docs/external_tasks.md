@@ -1,9 +1,10 @@
-# External Tasks
+**External tasks**
+================
 
-An external task runs a script or binary when a non-skipped clip starts. Enable
-it and set the executable path in the channel playout settings.
+An external task runs a script or binary when a clip starts (not when it is
+skipped). Turn it on and set the program's path in **Settings › Advanced**.
 
-ffplayout passes the current playout data as a JSON object in the first
+NoAr passes the current playout data as a JSON object in the first
 command-line argument. It includes the current media, playout mode, elapsed
 time, time shift, live-ingest state, and available audio-level data.
 
@@ -12,12 +13,14 @@ For example, a shell script can read the JSON argument as its first parameter:
 ```sh
 #!/bin/sh
 data="$1"
-printf '%s\n' "$data" >> /var/log/ffplayout-task.log
+printf '%s\n' "$data" >> /data/logs/task.log
 ```
 
-The configured file must be executable by the user running ffplayout.
+The file must be executable, and it runs inside the NoAr container: keep it
+under `./data` (seen as `/data` in the container), and use only programs the
+image has (`/bin/sh` is there).
 
-## Lifecycle Limits
+## Limits
 
 Only one external task can run per channel. Starting the next clip task first
 terminates a still-running task from the previous clip. Stopping the channel

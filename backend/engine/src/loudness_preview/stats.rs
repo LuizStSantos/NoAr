@@ -38,7 +38,7 @@ impl OverlayRenderer {
         let (sender, requests) = mpsc::sync_channel(1);
         let (results, receiver) = mpsc::sync_channel(1);
         let worker = thread::Builder::new()
-            .name("ffplayout-audio-stats".to_owned())
+            .name("noar-audio-stats".to_owned())
             .spawn(move || {
                 while let Ok(request) = requests.recv() {
                     let overlay = render_overlay(request);

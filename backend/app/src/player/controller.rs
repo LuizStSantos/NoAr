@@ -7,8 +7,10 @@ use std::{
     },
 };
 
-use ff_engine::{AudioEffectsControl, AudioLevel, LiveLoudnessConfig, PlaybackControl, Preloader};
 use log::*;
+use noar_engine::{
+    AudioEffectsControl, AudioLevel, LiveLoudnessConfig, PlaybackControl, Preloader,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use tokio::{
@@ -112,10 +114,10 @@ pub struct ChannelManager {
     pub task_runner_token: Arc<Mutex<Option<CancellationToken>>>,
     pub task_generation: Arc<AtomicUsize>,
     pub audio_effects: AudioEffectsControl,
-    pub live_loudness: ff_engine::LiveLoudnessControl,
-    pub loudness_meter: ff_engine::LoudnessMeterControl,
+    pub live_loudness: noar_engine::LiveLoudnessControl,
+    pub loudness_meter: noar_engine::LoudnessMeterControl,
     /// Hides or swaps the logo on air; kept across playout restarts.
-    pub logo_control: ff_engine::LogoControl,
+    pub logo_control: noar_engine::LogoControl,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
     /// Opens the next clip, live or event ahead of its turn.
@@ -164,7 +166,7 @@ impl ChannelManager {
 
         let storage = init_storage(config.channel.storage.clone(), extensions).await?;
         let audio_effects = AudioEffectsControl::new(config.audio.volume).unwrap_or_default();
-        let live_loudness = ff_engine::LiveLoudnessControl::new(
+        let live_loudness = noar_engine::LiveLoudnessControl::new(
             config.audio.loudness_scope != "off",
             loudness_config(&config.audio),
         );
@@ -203,8 +205,8 @@ impl ChannelManager {
             task_generation: Arc::new(AtomicUsize::new(0)),
             audio_effects,
             live_loudness,
-            loudness_meter: ff_engine::LoudnessMeterControl::default(),
-            logo_control: ff_engine::LogoControl::default(),
+            loudness_meter: noar_engine::LoudnessMeterControl::default(),
+            logo_control: noar_engine::LogoControl::default(),
             audio_level: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
             preloader: Arc::new(Mutex::new(Preloader::default())),

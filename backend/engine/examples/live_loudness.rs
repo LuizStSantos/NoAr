@@ -1,7 +1,7 @@
 //! Offline reference runner for the engine's live loudness processor.
 //!
 //! ```text
-//! cargo run -p ff-engine --example live_loudness -- INPUT_FILE --target-lufs -17 --max-gain-db 16
+//! cargo run -p noar-engine --example live_loudness -- INPUT_FILE --target-lufs -17 --max-gain-db 16
 //! ```
 //!
 //! When present, the video stream is copied into an MP4. The first audio stream
@@ -18,10 +18,6 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, ValueEnum};
-use ff_engine::{
-    BufferedLoudnessAnalysis, LiveDynamicsProcessor, LiveLoudnessConfig, LiveLoudnessMeasurement,
-    LiveLoudnessMetrics, LiveLoudnessProcessor,
-};
 use ffmpeg::Rescale;
 use ffmpeg::{
     Stream, codec, encoder, format, frame, media,
@@ -33,6 +29,10 @@ use ffmpeg::{
     },
 };
 use ffmpeg_next as ffmpeg;
+use noar_engine::{
+    BufferedLoudnessAnalysis, LiveDynamicsProcessor, LiveLoudnessConfig, LiveLoudnessMeasurement,
+    LiveLoudnessMetrics, LiveLoudnessProcessor,
+};
 
 const SAMPLE_RATE: u32 = 48_000;
 const CHANNELS: usize = 2;
@@ -354,7 +354,7 @@ fn main() -> Result<()> {
 fn play_desktop(arguments: &Arguments, loudness: LiveLoudnessConfig) -> Result<()> {
     use std::time::Duration;
 
-    use ff_engine::{ClipResult, OutputConfig, Playout};
+    use noar_engine::{ClipResult, OutputConfig, Playout};
 
     let (measurement, lookahead) = match arguments.analysis_mode {
         AnalysisMode::ImmediateShortTerm => (LiveLoudnessMeasurement::ShortTerm, Duration::ZERO),

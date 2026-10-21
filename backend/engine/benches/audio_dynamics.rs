@@ -1,11 +1,11 @@
 use std::{hint::black_box, time::Instant};
 
-use ff_engine::{LiveDynamicsProcessor, LiveLoudnessConfig};
 use ffmpeg_next::{
     ChannelLayout,
     format::{Sample, sample::Type},
     frame,
 };
+use noar_engine::{LiveDynamicsProcessor, LiveLoudnessConfig};
 
 const RATE: u32 = 48_000;
 const FRAME_SAMPLES: usize = 1024;

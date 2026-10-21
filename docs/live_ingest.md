@@ -1,8 +1,12 @@
-### Live Ingest
+**Live ingest**
+================
 
-With live ingest, you can switch from playlist or folder mode to an incoming live stream.
+With live ingest, an encoder publishing to NoAr takes over the channel from
+the playlist or folder, and gives it back when it stops. For a live that NoAr
+calls itself at a set time, see the [Scheduler](scheduler.md).
 
-Configure one or more RTMP or SRT listeners in the channel's playout settings.
+Configure one or more RTMP or SRT listeners in **Settings › Live ingest**, and
+publish their ports in `docker-compose.yml`.
 For example, an RTMP listen address is:
 
 ```
@@ -13,7 +17,7 @@ An SRT listener can use `srt://0.0.0.0:9000`. A sender may publish an MPEG-TS
 stream to `srt://YOUR_SERVER:9000?mode=caller`. Configure FFmpeg input options
 as key/value pairs on the listener, not in the URL. For encrypted SRT, set
 `passphrase` (10–64 bytes) and `pbkeylen` (16, 24, or 32) on both sender and
-listener. Listener mode and timeouts remain managed by ffplayout. Passphrases
+listener. Listener mode and timeouts remain managed by NoAr. Passphrases
 are stored and returned unchanged through the authenticated configuration API;
 restrict configuration access accordingly. Do not expose an unauthenticated SRT
 listener directly to an untrusted network; bind it to a trusted interface or
@@ -35,7 +39,7 @@ higher priority wins, followed by the stable listener ID. An active takeover is
 not pre-empted by another listener. Changing listener settings requires restarting
 the channel playout.
 
-When an incoming stream produces video, ffplayout pauses the currently playing
+When an incoming stream produces video, NoAr pauses the currently playing
 content and switches to the live source. The output remains continuous.
 
 In rare cases, it may happen that, for a short moment after switching, the image freezes, but then it will continue. Also, a brief frame flicker might occur.
@@ -43,21 +47,17 @@ In rare cases, it may happen that, for a short moment after switching, the image
 #### Live idle timeout
 
 After live frames have started arriving, the idle timeout defaults to **2000 ms**.
-Set `FFPLAYOUT_LIVE_IDLE_TIMEOUT_MS` to a positive integer in milliseconds to
-override it for all RTMP/SRT listeners in the process:
+Set `NOAR_LIVE_IDLE_TIMEOUT_MS` to a positive integer in milliseconds to
+override it for all RTMP/SRT listeners, in the `environment` of the `noar`
+service in `docker-compose.yml`:
 
-```sh
-FFPLAYOUT_LIVE_IDLE_TIMEOUT_MS=5000 ffplayout -l 0.0.0.0:8787
+```yaml
+    environment:
+      NOAR_LIVE_IDLE_TIMEOUT_MS: "5000"
 ```
 
-For a systemd installation, add a drop-in with `sudo systemctl edit ffplayout`:
-
-```ini
-[Service]
-Environment="FFPLAYOUT_LIVE_IDLE_TIMEOUT_MS=5000"
-```
-
-Restart ffplayout after changing the variable. It is read once and controls both
+Apply it with `docker compose up -d`. (The name from before the rename,
+`FFPLAYOUT_LIVE_IDLE_TIMEOUT_MS`, is still read.) It is read once and controls both
 the listener watchdog and the idle fallback to playlist/folder playback. Invalid
 values, including zero, produce a warning and use the 2000 ms default. The initial
 wait for decodable frames remains ten seconds. Longer idle timeouts tolerate longer
@@ -89,5 +89,5 @@ readers that have not yet responded to cancellation. If both remain blocked, new
 connections wait while playlist playback remains available. While blocked, this
 condition is logged as an error at most once every five minutes per input,
 including across listener restarts. Recovery is logged when a slot becomes
-available. A permanently stuck reader may require restarting the ffplayout
-process; restarting only the channel cannot forcibly terminate its thread.
+available. A permanently stuck reader may require restarting the whole of NoAr
+(Settings › Server and e-mail); restarting only the channel cannot forcibly terminate its thread.

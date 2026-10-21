@@ -1191,7 +1191,7 @@ fn merged_hls_flags(default_flags: &str, configured_flags: Option<&String>) -> S
         .filter(|flag| !flag.is_empty())
     {
         // ffmpeg supports `-flag` to remove a flag. Never let a configured
-        // value turn off a flag that ffplayout needs for its HLS lifecycle.
+        // value turn off a flag that NoAr needs for its HLS lifecycle.
         if required.contains(flag)
             || flag
                 .strip_prefix('-')
@@ -1850,7 +1850,7 @@ mod open_tests {
     #[test]
     fn mpegts_writes_dvb_service_metadata() {
         ffmpeg::init().ok();
-        let path = env::temp_dir().join(format!("ffplayout_metadata_{}.ts", process::id()));
+        let path = env::temp_dir().join(format!("noar_metadata_{}.ts", process::id()));
         let cfg = OutputConfig::new(320, 240, 25, 44_100).with_metadata_options(BTreeMap::from([
             ("service_name".to_string(), "Example Channel".to_string()),
             (
@@ -1908,8 +1908,7 @@ mod open_tests {
     #[test]
     fn matroska_writes_generic_container_metadata() {
         ffmpeg::init().ok();
-        let path =
-            env::temp_dir().join(format!("ffplayout_generic_metadata_{}.mkv", process::id()));
+        let path = env::temp_dir().join(format!("noar_generic_metadata_{}.mkv", process::id()));
         let cfg = OutputConfig::new(320, 240, 25, 44_100).with_metadata_options(BTreeMap::from([
             ("title".to_string(), "Example Program".to_string()),
             ("copyright".to_string(), "Example Copyright".to_string()),

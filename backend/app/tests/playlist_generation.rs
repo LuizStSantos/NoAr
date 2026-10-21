@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use chrono::NaiveTime;
 use sqlx::sqlite::SqlitePoolOptions;
 
-use ffplayout::{
+use noar::{
     db::handles,
     player::{controller::ChannelManager, utils::*},
     utils::{

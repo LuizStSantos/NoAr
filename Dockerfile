@@ -50,7 +50,7 @@ ENV NOAR_FRONTEND_PREBUILT=1
 ARG NOAR_COMMIT=""
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
-    cargo build --release --locked --package ffplayout --no-default-features --features embed_frontend && \
+    cargo build --release --locked --package noar --no-default-features --features embed_frontend && \
     install -m 755 target/release/noar /usr/local/bin/noar
 
 # Record which Debian packages provide the shared libraries the binary needs,
@@ -95,7 +95,7 @@ SCRIPT
 RUN chmod 755 /usr/local/bin/noar-entrypoint
 
 # Default overlay logo and WebVTT placeholder copied into new storages.
-COPY assets/dummy.vtt assets/logo.png /usr/share/ffplayout/
+COPY assets/dummy.vtt assets/logo.png /usr/share/noar/
 
 # Everything NoAr keeps lives under /data: mount it as a volume. The
 # NOAR_SETUP_* paths only fill the setup page; each channel keeps the paths

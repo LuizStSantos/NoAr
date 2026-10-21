@@ -1,6 +1,6 @@
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 
-use ffplayout::db::{
+use noar::db::{
     handles::{self, CutBy},
     models::{AsRunEntry, Channel, NewAsRunEntry},
 };

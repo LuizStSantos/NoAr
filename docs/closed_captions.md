@@ -1,11 +1,16 @@
-## Closed Captions
+**Closed captions (WebVTT)**
+================
 
-#### Note:
-**FFmpeg 7.0+ development libraries are required. Builds with `libavformat` before v61.9.100 can write WebVTT HLS subtitles, but may not support custom subtitle display names in the generated master playlist. ffplayout detects this capability and omits unsupported HLS options when needed.**
+NoAr carries closed captions in WebVTT format in its **HLS** output.
 
-### Usage
-**ffplayout** can handle closed captions in WebVTT format for HLS streaming.
+The captions of a video are read from a `.vtt` file next to it with the same
+name (`Programme 01.mp4` → `Programme 01.vtt`). Clips without one use the
+*empty file* set in **Settings › Logo and subtitles**, where subtitles are
+turned on, and where the track name, its language and whether players show it
+by default are set.
 
-The captions are read from a separate `*.vtt` sidecar file that shares the same filename as the video file. If no sidecar file is present, ffplayout can use the configured **vtt_dummy** file as a fallback. The processing option **vtt_enable** must be enabled.
+The output must be in **HLS** mode; other outputs carry no subtitles.
 
-To output WebVTT subtitles, the **HLS** output mode must be enabled.
+The track name in the master playlist needs FFmpeg's `libavformat` 61.9.100 or
+newer. With an older one, NoAr still writes the subtitles and only leaves the
+name out.

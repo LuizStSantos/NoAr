@@ -1,62 +1,61 @@
-**NoAr Documentation**
+**NoAr documentation**
 ================
 
-### **[Docker](/docs/docker.md)**
+The [README](../README.md) and [Docker](docker.md) are all the install needs.
+The pages below describe each part of NoAr. The interface is in Brazilian
+Portuguese and English; menus are named here in English.
 
-Install, data folders, ports and updates. Docker is the only supported install.
+## Install and run
 
-### **[Scheduler](/docs/scheduler.md)**
+- **[Docker](docker.md)**: install, data folders, ports and updates. Docker
+  is the only supported install.
+- **[Versions and releases](releasing.md)**: what a version number means and
+  which image tag to pin.
 
-Breaks, clips and lives at a set time over the running programme.
+## Programming
 
-### **[Report](/docs/report.md)**
+- **[Scheduler](scheduler.md)**: breaks, clips and lives at a set time over
+  the running programme.
+- **[Playlist generation](playlist_gen.md)**: fill days from folders or a
+  template.
+- **[Folder mode](folder_mode.md)**: play the videos of a folder instead of
+  daily playlists.
+- **[Videos from a URL](remote_source.md)**: playlist entries that point to a
+  remote file or stream.
+- **[Commercials folders](commercials.md)**: clips that play as commercials
+  everywhere, out of the guide and without the logo, and breaks inside a
+  video.
 
-What actually aired, recorded item by item, for the daily report.
+## Picture and output
 
-### **[XMLTV / EPG](/docs/xmltv.md)**
+- **[Output modes](output.md)**: HLS, and RTMP, SRT or UDP streams.
+- **[Logo](logo.md)**: placing the logo, where it goes off by itself, and
+  hiding or swapping it on air by API.
+- **[Closed captions](closed_captions.md)**: WebVTT files as HLS subtitles.
 
-Program guide built from the playlists and the `.nfo` files in each program folder, with artwork.
+## Lives
 
-### **[Commercials folders](/docs/commercials.md)**
+- **[Live ingest](live_ingest.md)**: encoders that publish to NoAr and take
+  over the channel.
+- **[Live ingest on an unstable network](ingest_error.md)**: what happens
+  when a publisher drops, and how to test it.
 
-Folders whose clips play as commercials everywhere: out of the guide and without the logo.
+## Guide and report
 
-### **[Folder Mode](/docs/folder_mode.md)**
+- **[XMLTV guide](xmltv.md)**: the programme guide built from the playlists
+  and the `.nfo` sheets, with artwork.
+- **[Report](report.md)**: what actually aired and what is still to come.
 
-Play the content of a folder instead of daily playlists.
+## Integration
 
-### **[Live Ingest](/docs/live_ingest.md)**
+- **[API](api.md)**: everything the web interface does, for scripts and
+  other systems.
+- **[HTTP push notifications](notifications.md)**: log alerts to ntfy and
+  similar services.
+- **[External tasks](external_tasks.md)**: run a script when a clip starts.
 
-Receivers that put a live stream on air without dropping the output.
+## Development
 
-### **[Output Modes](/docs/output.md)**
-
-Stream and HLS outputs.
-
-### **[Closed Captions](/docs/closed_captions.md)**
-
-Use WebVTT sidecar files as HLS subtitles.
-
-### **[Playlist Generation](/docs/playlist_gen.md)**
-
-Generate playlists based on a template.
-
-### **[Remote Sources](/docs/remote_source.md)**
-
-Use of remote sources, like https://example.org/video.mp4
-
-### **[External Tasks](/docs/external_tasks.md)**
-
-Run a script or binary when a clip starts.
-
-### **[HTTP Push Notifications](/docs/notifications.md)**
-
-Configure rate-limited log alerts for topic-based HTTP push services.
-
-### **[API](/docs/api.md)**
-
-Control the engine, playlist and config with the API.
-
-### **[Development](/docs/developer.md)**
-
-Build and run NoAr from source while working on it.
+- **[Development](developer.md)**: build and run NoAr from source.
+- **[SCTE-35 study](scte35.md)**: what SCTE-35 is, and how NoAr could signal
+  and read ad breaks with it.

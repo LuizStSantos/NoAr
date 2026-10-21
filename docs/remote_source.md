@@ -1,4 +1,5 @@
-### Video from URL
+**Videos from a URL**
+================
 
 Videos from a URL are videos that you can watch directly in your browser or download. For example:
 

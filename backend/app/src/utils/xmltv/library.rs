@@ -519,8 +519,7 @@ mod tests {
 
     impl TempStorage {
         fn new() -> Self {
-            let root =
-                std::env::temp_dir().join(format!("ffplayout-xmltv-{}", uuid::Uuid::new_v4()));
+            let root = std::env::temp_dir().join(format!("noar-xmltv-{}", uuid::Uuid::new_v4()));
             std::fs::create_dir_all(&root).unwrap();
 
             Self(root)

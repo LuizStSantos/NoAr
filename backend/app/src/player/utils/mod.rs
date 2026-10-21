@@ -36,8 +36,8 @@ use crate::{
 };
 pub use json_serializer::{JsonPlaylist, read_json};
 
-pub type MediaProbe = ff_engine::EngineMediaProbe;
-pub type SilenceDetection = ff_engine::SilenceDetection;
+pub type MediaProbe = noar_engine::EngineMediaProbe;
+pub type SilenceDetection = noar_engine::SilenceDetection;
 
 /// Still images have no inherent media duration. Keep this aligned with the
 /// duration assigned by the playlist editor when an image is dropped into it.
@@ -48,7 +48,7 @@ pub const DEFAULT_IMAGE_DURATION: f64 = 10.0;
 pub const DEFAULT_LIVE_SOURCE_DURATION: f64 = 60.0;
 
 pub(crate) fn is_live_source(source: &str) -> bool {
-    ff_engine::is_live_input(source)
+    noar_engine::is_live_input(source)
 }
 
 /// Live transports have no stable source timeline. Playlist `in` is therefore
@@ -95,7 +95,7 @@ pub(crate) fn is_image_source(source: &str) -> bool {
 
 pub async fn probe_media(input: impl AsRef<std::path::Path>) -> Result<MediaProbe, ProcessError> {
     let path = input.as_ref().to_string_lossy().to_string();
-    ff_engine::probe_media(&path).map_err(|error| ProcessError::Ffprobe(error.to_string()))
+    noar_engine::probe_media(&path).map_err(|error| ProcessError::Ffprobe(error.to_string()))
 }
 
 pub async fn detect_audio_silence(
@@ -115,7 +115,7 @@ pub async fn detect_audio_silence(
     let analysis_seconds = window_seconds;
     let analysis_seek_seconds = seek_seconds.max(0.0) + (duration_seconds - analysis_seconds) / 2.0;
     tokio::task::spawn_blocking(move || {
-        ff_engine::detect_audio_silence(
+        noar_engine::detect_audio_silence(
             &path,
             analysis_seek_seconds,
             analysis_seconds,

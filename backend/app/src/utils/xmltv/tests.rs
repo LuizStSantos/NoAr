@@ -10,7 +10,7 @@ struct TempDir(PathBuf);
 
 impl TempDir {
     fn new() -> Self {
-        let root = std::env::temp_dir().join(format!("ffplayout-guide-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("noar-guide-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&root).unwrap();
 
         Self(root)

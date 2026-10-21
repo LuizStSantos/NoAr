@@ -12,8 +12,8 @@
 
 use std::path::{Path, PathBuf};
 
-use ff_engine::{LogoGaps, MAX_LOGO_GAPS};
 use log::warn;
+use noar_engine::{LogoGaps, MAX_LOGO_GAPS};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 

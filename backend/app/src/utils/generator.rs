@@ -1,6 +1,6 @@
 /// Simple Playlist Generator
 ///
-/// You can call ffplayout[.exe] -g YYYY-mm-dd - YYYY-mm-dd to generate JSON playlists.
+/// You can call noar -g YYYY-mm-dd - YYYY-mm-dd to generate JSON playlists.
 ///
 /// The generator takes the files from storage, which are set in config.
 /// It also respect the shuffle/sort mode.

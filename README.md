@@ -7,8 +7,9 @@ NoAr is a 24/7 TV playout system: it plays daily playlists or folders without
 interruption, lets you schedule breaks and live shows over the running
 programme, and publishes an XMLTV guide with artwork for IPTV players.
 
-It is based on [ffplayout](https://github.com/ffplayout/ffplayout) by Jonathan
-Baecker and keeps its engine and API, adding:
+It started from [ffplayout](https://github.com/ffplayout/ffplayout) by Jonathan
+Baecker, whose engine, playlist format and API it keeps and extends. On top of
+them it adds:
 
 - **Player**: live preview straight from the output (about a second behind
   the air, for HLS, RTMP or SRT), a clock with what is on air and what comes
@@ -25,12 +26,17 @@ Baecker and keeps its engine and API, adding:
 - **Commercials folders**: mark a folder once and everything in it plays as a
   commercial in playlists and scheduled breaks: out of the guide and without
   the logo ([docs](docs/commercials.md)).
+- **Logo control**: stretches without logo inside a video, for breaks edited
+  into a programme. The logo can also be hidden or swapped on air by API, for
+  example from the encoder of a live, with a tutorial in the settings
+  ([docs](docs/logo.md)).
 - **Report**: what aired, with the actual times and how each item ended, and
   what is still to come, for a day or a period; narrowed to one commercial,
   program, live or event when needed, and downloaded as a PDF or a
   spreadsheet ([docs](docs/report.md)).
 - **XMLTV guide** built from the playlists and a Kodi-style `.nfo` file in each
-  program folder, with posters and episode images ([docs](docs/xmltv.md)).
+  program folder, with posters, episode images, credits with photos and a
+  channel logo of its own ([docs](docs/xmltv.md)).
 - **Playlist generator**: fill a day from the folders you pick, or block by
   block at set times, as a draft you review before saving
   ([docs](docs/playlist_gen.md)).
@@ -105,9 +111,14 @@ Update from **Settings › Updates** (with the `noar-updater` service on, see
 docker compose pull && docker compose up -d
 ```
 
-## Features
+## Versions
 
-Inherited from ffplayout:
+NoAr follows [Semantic Versioning](https://semver.org); every release is
+listed in [CHANGELOG.md](CHANGELOG.md). The `latest` image follows `main`; to
+stay on a release, pin its tag in `docker-compose.yml`, for example
+`ghcr.io/luizstsantos/noar:1.0`. See [docs/releasing.md](docs/releasing.md).
+
+## Features from ffplayout
 
 - dynamic daily playlists with a custom day start, editable while playing
 - folder mode, fillers for missing clips, playlist generator with templates
@@ -123,12 +134,14 @@ need this README and [docs/docker.md](docs/docker.md).
 
 ## Development
 
-See [docs/developer.md](docs/developer.md). The Rust crates keep their
-original names (`ffplayout`, `ff-engine`); the binary is `noar`.
+See [docs/developer.md](docs/developer.md). The workspace has two crates:
+`noar`, the server and web interface (the binary is `noar`), and
+`noar-engine`, which decodes, composites and encodes.
 
 ## License and credits
 
-NoAr is free software under the [GNU GPL v3](LICENSE), like ffplayout, from
-which it is derived. The original copyright and history are kept in this
-repository. If you distribute NoAr, or a modified version, you must make its
-source code available under the same license.
+NoAr is free software under the [GNU GPL v3](LICENSE). It is derived from
+ffplayout, by Jonathan Baecker and its contributors, also under the GPL v3;
+the original copyright and history are kept in this repository. If you
+distribute NoAr, or a modified version, you must make its source code
+available under the same license.

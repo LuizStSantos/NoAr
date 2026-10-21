@@ -1,11 +1,11 @@
 # API
 
-The API is served by the main ffplayout process. With no command-line
-arguments, ffplayout starts the API and frontend on
-`http://127.0.0.1:8787`. Set a different address with `--listen` / `-l`:
+The API is served by the NoAr process, on the same address as the web
+interface: `http://<server>:8787` with the Docker install. Outside Docker,
+set the address with `--listen` / `-l`:
 
 ```bash
-ffplayout --listen 127.0.0.1:8787
+noar --listen 127.0.0.1:8787
 ```
 
 All JSON endpoints return an error object with a `detail` field on failure.
@@ -49,9 +49,9 @@ curl -X POST http://127.0.0.1:8787/api/setup \
   -H 'Content-Type: application/json' \
   --data '{
     "username":"admin", "mail":"admin@example.invalid", "password":"<PASSWORD>",
-    "two_factor":false, "logs":"/var/log/ffplayout",
-    "playlists":"/var/lib/ffplayout/playlists",
-    "public":"/var/lib/ffplayout/public", "storage":"/var/lib/ffplayout/media",
+    "two_factor":false, "logs":"/data/logs",
+    "playlists":"/data/playlists",
+    "public":"/data/public", "storage":"/data/media",
     "shared":false, "smtp_server":"", "smtp_user":"", "smtp_password":"",
     "smtp_starttls":false, "smtp_port":465
   }'
@@ -59,7 +59,7 @@ curl -X POST http://127.0.0.1:8787/api/setup \
 
 The JWT `secret` is neither exposed nor accepted by the API.
 Directory paths are accepted only by this first-time setup endpoint. Change
-them later locally with `ffplayout -i`.
+them later in Settings › General, or with `noar -i` on the server.
 
 ## Roles
 
@@ -104,14 +104,14 @@ provided with the selected video codec by `GET /api/playout/codecs/{id}`.
 Audio encoder settings use `output.audio_options` and, for dedicated recording
 encoding, `recording.audio_options`. Both are string maps and remain empty by
 default so FFmpeg retains its codec defaults. FFmpeg audio-encoding AVOptions
-can be submitted through the advanced editor. Options managed by ffplayout,
+can be submitted through the advanced editor. Options managed by NoAr,
 including bitrate, sample rate, channel layout and time base, cannot be
 overridden. FFmpeg validates every remaining name and value
 before the configuration is stored, so unsupported options cannot cause a
 delayed failure during the next output restart.
 
 Network stream transports use the separate `output.protocol_options` string
-map. ffplayout validates its names and values for the RTMP, SRT, UDP, or custom
+map. NoAr validates its names and values for the RTMP, SRT, UDP, or custom
 URL transport and merges accepted values with its enforced I/O timeout when the
 output is opened. The map is rejected for HLS, desktop, and local-file outputs.
 Values such as SRT passphrases are stored and returned unchanged by these
@@ -127,7 +127,7 @@ the selected output format. Desktop output does not accept container metadata.
 For `output.mode: "stream"`, `output.stream_type` also accepts `"custom"`.
 Set `output.stream_format` to an FFmpeg output format such as `"decklink"` and
 `output.stream_url` to its target, for example a DeckLink device name. The
-format must be available in the FFmpeg libraries linked by ffplayout; FFmpeg
+format must be available in the FFmpeg libraries linked by NoAr; FFmpeg
 performs the final device and codec compatibility check when the playout opens.
 Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 `pcm_s16le` do not use bitrate settings.

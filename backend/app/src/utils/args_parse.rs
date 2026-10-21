@@ -34,8 +34,8 @@ const DEFAULT_LISTEN_ADDRESS: &str = "127.0.0.1:8787";
 Stream dynamic playlists or folder contents with the power of ffmpeg.
 The target can be an HLS playlist, rtmp/srt/udp server, desktop player
 or any other output supported by ffmpeg.\n
-NoAr also provides a web frontend and API to control streaming,
-manage config, files, text overlay, etc."),
+NoAr also provides a web interface and an API to control the playout,
+schedule breaks and lives, manage files and settings, and publish an XMLTV guide."),
 next_line_help = false,
 )]
 pub struct Args {
@@ -107,7 +107,7 @@ pub struct Args {
     )]
     pub drop_db: bool,
 
-    #[clap(long, help_heading = Some("General"), help = "Dump channel configuration to ffplayout_{channel}.toml")]
+    #[clap(long, help_heading = Some("General"), help = "Dump channel configuration to noar_{channel}.toml")]
     pub dump_config: bool,
 
     #[clap(long, help_heading = Some("General"), help = "Import channel configuration from file")]
@@ -145,7 +145,7 @@ pub struct Args {
     #[cfg(feature = "processing-bench")]
     #[clap(
         long,
-        env = "FFPLAYOUT_PROCESSING_BENCH_INTERVAL",
+        env = "NOAR_PROCESSING_BENCH_INTERVAL",
         help_heading = Some("Diagnostics"),
         help = "CPU pipeline benchmark report interval in seconds (default: 1 with --log-to-console, otherwise 10)",
         value_name = "SECONDS",
@@ -476,7 +476,7 @@ pub async fn init_args(pool: &Pool<Sqlite>) -> Result<bool, ProcessError> {
         if let Some(channel) = &ARGS.channel {
             for id in channel {
                 match PlayoutConfig::dump(pool, *id).await {
-                    Ok(_) => println!("Dump config to: ffplayout_{id}.toml"),
+                    Ok(_) => println!("Dump config to: noar_{id}.toml"),
                     Err(e) => return Err(ProcessError::Custom(format!("Dump config: {e}"))),
                 };
             }
@@ -548,14 +548,14 @@ mod tests {
 
     #[test]
     fn no_arguments_default_to_local_api_listener() {
-        let args = try_parse_args_from(["ffplayout"]).expect("arguments should parse");
+        let args = try_parse_args_from(["noar"]).expect("arguments should parse");
 
         assert_eq!(args.listen.as_deref(), Some(DEFAULT_LISTEN_ADDRESS));
     }
 
     #[test]
     fn explicit_arguments_do_not_enable_default_listener() {
-        let args = try_parse_args_from(["ffplayout", "--channel", "1", "--foreground"])
+        let args = try_parse_args_from(["noar", "--channel", "1", "--foreground"])
             .expect("arguments should parse");
 
         assert_eq!(args.listen, None);
@@ -565,7 +565,7 @@ mod tests {
 
     #[test]
     fn explicit_listener_is_preserved() {
-        let args = try_parse_args_from(["ffplayout", "--listen", "0.0.0.0:9000"])
+        let args = try_parse_args_from(["noar", "--listen", "0.0.0.0:9000"])
             .expect("arguments should parse");
 
         assert_eq!(args.listen.as_deref(), Some("0.0.0.0:9000"));

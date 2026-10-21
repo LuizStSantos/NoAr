@@ -19,23 +19,20 @@ impl MultiFileLogger {
     fn get_writer(&self, channel: &str) -> io::Result<Arc<Mutex<FileLogWriter>>> {
         let mut writers = self.writers.lock().unwrap();
         if !writers.contains_key(channel) {
-            let writer = FileLogWriter::builder(
-                FileSpec::default()
-                    .suppress_timestamp()
-                    .basename("ffplayout"),
-            )
-            .append()
-            .rotate(
-                Criterion::Age(Age::Day),
-                Naming::TimestampsCustomFormat {
-                    current_infix: Some(""),
-                    format: "%Y-%m-%d",
-                },
-                Cleanup::KeepLogFiles(7),
-            )
-            .print_message()
-            .try_build()
-            .map_err(|e| io::Error::other(e.to_string()))?;
+            let writer =
+                FileLogWriter::builder(FileSpec::default().suppress_timestamp().basename("noar"))
+                    .append()
+                    .rotate(
+                        Criterion::Age(Age::Day),
+                        Naming::TimestampsCustomFormat {
+                            current_infix: Some(""),
+                            format: "%Y-%m-%d",
+                        },
+                        Cleanup::KeepLogFiles(7),
+                    )
+                    .print_message()
+                    .try_build()
+                    .map_err(|e| io::Error::other(e.to_string()))?;
             writers.insert(channel.to_string(), Arc::new(Mutex::new(writer)));
         }
         Ok(writers.get(channel).unwrap().clone())

@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-/// #### ffplayout Playlist Operations
+/// #### NoAr Playlist Operations
 ///
 /// **Get playlist**
 ///

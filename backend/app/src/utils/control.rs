@@ -102,13 +102,13 @@ pub async fn control_state(
     let playback_control = manager.playback_control.lock().await;
     let navigation = match playback_control.begin_navigation() {
         Ok(navigation) => navigation,
-        Err(ff_engine::NavigationBlocked::Live) => {
+        Err(noar_engine::NavigationBlocked::Live) => {
             return Ok(Map::from_iter([
                 ("operation".to_string(), json!("ignored")),
                 ("reason".to_string(), json!("live_ingest_active")),
             ]));
         }
-        Err(ff_engine::NavigationBlocked::Busy) => {
+        Err(noar_engine::NavigationBlocked::Busy) => {
             return Err(ServiceError::Conflict(
                 "A navigation command is already being processed".to_string(),
             ));
@@ -264,7 +264,7 @@ mod tests {
         );
         let mut current = replacement.await;
         assert_eq!(manager.channel.lock().await.time_shift, 0.0);
-        *current = ff_engine::PlaybackControl::default();
+        *current = noar_engine::PlaybackControl::default();
         let live = current.try_activate_live().unwrap();
         drop(current);
         let response = control_state(&manager.db_pool, &manager, &PlayerCtl::Back)

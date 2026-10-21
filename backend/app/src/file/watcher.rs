@@ -152,7 +152,7 @@ mod tests {
     async fn missing_watch_directory_returns_error() {
         let mut config = PlayoutConfig::default();
         config.channel.storage = std::env::temp_dir().join(format!(
-            "ffplayout-missing-watch-directory-{}",
+            "noar-missing-watch-directory-{}",
             std::process::id()
         ));
 

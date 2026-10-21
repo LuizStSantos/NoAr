@@ -1,5 +1,5 @@
 [package]
-name = "ff-engine"
+name = "noar-engine"
 description = "FFmpeg-based real-time playout library"
 version.workspace = true
 license.workspace = true

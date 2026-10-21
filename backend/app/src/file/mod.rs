@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn normalized_paths_preserve_virtual_roots_and_use_component_boundaries() {
-        let root = std::env::temp_dir().join(format!("ffplayout-paths-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("noar-paths-{}", uuid::Uuid::new_v4()));
 
         for input in ["", "/", "video.mp4", "/video.mp4", "folder/video.mp4"] {
             let (path, _, _) = norm_abs_path(&root, input).unwrap();
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn normalized_paths_reject_parent_traversal() {
-        let root = std::env::temp_dir().join("ffplayout-storage");
+        let root = std::env::temp_dir().join("noar-storage");
 
         for input in [
             "..",
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn containment_checks_symlinks_for_existing_files_and_new_targets() {
         let directory =
-            std::env::temp_dir().join(format!("ffplayout-symlinks-{}", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("noar-symlinks-{}", uuid::Uuid::new_v4()));
         let root = directory.join("storage");
         let outside = directory.join("outside");
         std::fs::create_dir_all(root.join("inside")).unwrap();

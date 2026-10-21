@@ -3,12 +3,16 @@ members = ["backend/app", "backend/engine"]
 resolver = "2"
 
 [workspace.package]
-description = "24/7 playout based on rust and ffmpeg"
+description = "24/7 TV playout with a scheduler, an XMLTV guide and a web interface"
 readme = "README.md"
-version = "2.6.1-rc.1"
+version = "1.0.0"
 license = "GPL-3.0"
 repository = "https://github.com/LuizStSantos/NoAr"
-authors = ["Jonathan Baecker <jonbae77@gmail.com>"]
+authors = [
+    "Luiz Santos <luiz.st.santos@gmail.com>",
+    # NoAr is a fork of ffplayout, by:
+    "Jonathan Baecker <jonbae77@gmail.com>",
+]
 edition = "2024"
 
 [profile.release]

@@ -61,7 +61,7 @@ pub fn validate_output_protocol_options(
 
         if matches!(name, "rw_timeout" | "timeout" | "listen_timeout") {
             return Err(format!(
-                "protocol option {name:?} is managed by ffplayout and cannot be overridden"
+                "protocol option {name:?} is managed by NoAr and cannot be overridden"
             ));
         }
         validate_protocol_option(protocol, &scheme, name, value)?;
@@ -73,7 +73,7 @@ pub fn validate_output_protocol_options(
 }
 
 /// Validate options for a listening network input without opening a socket.
-/// FFmpeg owns value types and bounds; ffplayout reserves lifecycle and RTMP
+/// FFmpeg owns value types and bounds; NoAr reserves lifecycle and RTMP
 /// stream-key settings so the configured listener cannot be silently changed.
 pub fn validate_input_protocol_options(
     scheme: &str,
@@ -102,9 +102,7 @@ pub fn validate_input_protocol_options(
             "rw_timeout" | "timeout" | "listen_timeout" | "listen" | "rtmp_listen" | "mode"
         ) || (scheme == "rtmp" && matches!(name.as_str(), "rtmp_app" | "rtmp_playpath"))
         {
-            return Err(format!(
-                "live input option {name:?} is managed by ffplayout"
-            ));
+            return Err(format!("live input option {name:?} is managed by NoAr"));
         }
 
         let number =
@@ -130,7 +128,7 @@ pub fn validate_input_protocol_options(
 }
 
 /// Validate live demuxer settings against the linked FFmpeg build without
-/// opening a network connection. `format` is an ffplayout routing key, not an
+/// opening a network connection. `format` is a NoAr routing key, not an
 /// AVOption: it selects the input format passed to avformat_open_input.
 pub fn validate_live_demuxer_options(
     backend: &str,
@@ -527,7 +525,7 @@ mod tests {
     fn native_output_options_do_not_need_an_allowlist() {
         assert!(validate("http", "auth_type", "basic").is_ok());
         // Decode-only options are not output options, even without an allowlist.
-        assert!(validate("http", "user_agent", "ffplayout").is_err());
+        assert!(validate("http", "user_agent", "noar").is_err());
         assert!(validate("udp", "not_an_option", "1").is_err());
         assert!(validate("srt", "pbkeylen", "0").is_ok());
     }

@@ -300,7 +300,7 @@ pub struct SignalTest {
 /// Open the source once and report its streams.
 pub async fn test_signal(url: &str) -> Result<SignalTest, ServiceError> {
     let url = validate_live_url(url).map_err(ServiceError::BadRequest)?;
-    let probe = task::spawn_blocking(move || ff_engine::probe_media(&url));
+    let probe = task::spawn_blocking(move || noar_engine::probe_media(&url));
     let failed = |error: String| SignalTest {
         error: Some(error),
         ..SignalTest::default()

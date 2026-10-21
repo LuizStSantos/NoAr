@@ -1,4 +1,7 @@
-ffplayout supports different output modes:
+**Output modes**
+================
+
+NoAr sends the channel out in one of these modes, set in **Settings › Output**:
 
 ## Stream
 
@@ -7,9 +10,9 @@ The streaming output can be used for classic FFmpeg output URLs such as **RTMP**
 **Remember that you need a streaming server as a destination if you want to use this mode.**
 
 Custom FFmpeg output formats and codec combinations, including hardware devices
-such as DeckLink, are not all tested by ffplayout. An unsupported format, codec,
+such as DeckLink, are not all tested by NoAr. An unsupported format, codec,
 pixel format, or device combination can fail when the playout starts. Verify the
-combination with the FFmpeg libraries linked by your ffplayout build before
+combination with the FFmpeg libraries linked by your NoAr build before
 using it in production.
 
 For example, you can use:
@@ -47,14 +50,14 @@ Custom TLS URLs do not currently support the additional protocol-options field;
 existing URLs without these options remain usable.
 
 Unknown options, values outside FFmpeg's supported ranges, protocol mismatches,
-and ffplayout-managed timeout options are rejected before the output is
+and timeout options NoAr manages itself are rejected before the output is
 restarted. Protocol options cannot be used for HLS or local-file
 outputs. SRT passphrases and other values are stored and returned unchanged by
-the authenticated configuration API; protect access to ffplayout and its
+the authenticated configuration API; protect access to NoAr and its
 database accordingly.
 
 Option types, numeric ranges, and symbolic values are validated using the
-linked FFmpeg libraries without connecting to the destination. ffplayout also
+linked FFmpeg libraries without connecting to the destination. NoAr also
 protects the output lifecycle: listener mode is not allowed in protocol options,
 timeouts remain managed, and SRT connection and close waits are limited to ten
 seconds. Transport-specific constraints not represented in FFmpeg's metadata
@@ -71,7 +74,7 @@ Existing URLs without additional protocol options remain unchanged.
 
 ## HLS
 
-In this mode, ffplayout writes an HLS playlist and media segments into the configured public directory. HLS is commonly used for browser playback and works well with web servers or CDNs.
+In this mode, NoAr writes an HLS playlist and media segments into the configured public directory. HLS is commonly used for browser playback and works well with web servers or CDNs.
 
 HLS output is currently the default, mostly because it works out of the box and
 doesn't need a streaming target. By default, it writes playlists and segments
@@ -82,7 +85,7 @@ URL is `/public/{channel-id}/live/{playlist}`; for example,
 The base stream is configured directly in the output settings. Additional HLS variants can be configured as adaptive renditions; they extend the base stream instead of replacing it. A master playlist is generated only when WebVTT subtitles are enabled or when additional variants are configured.
 
 **It is recommended to serve the HLS stream with nginx or another web server,
-and not with ffplayout (which is more meant for previewing).**
+and not with NoAr itself, which serves it for previewing.**
 
 ## Player preview
 

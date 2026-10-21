@@ -1,13 +1,13 @@
-# ffplayout Frontend
+# NoAr Frontend
 
-The ffplayout web interface is built with Vue, Vite, Tailwind CSS, and
+The NoAr web interface is built with Vue, Vite, Tailwind CSS, and
 TypeScript. Its source is in this directory, while the Node.js project files
 and npm scripts are kept in the repository root.
 
 ## Requirements
 
 - A current Node.js LTS release with npm.
-- A running ffplayout backend for local development. By default, the Vite
+- A running NoAr backend for local development. By default, the Vite
   development server proxies API requests to `http://127.0.0.1:8787`.
 
 ## Install Dependencies

@@ -41,7 +41,7 @@ pub async fn update_audio_effects(
     }
     .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
 
-    ff_engine::AudioEffectsControl::new(update.volume)
+    noar_engine::AudioEffectsControl::new(update.volume)
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
 
     let config_id = manager.config.read().await.general.id;
@@ -154,9 +154,9 @@ pub async fn media_current(
     Ok(Json(media_map))
 }
 
-/// #### ffplayout Process Control
+/// #### NoAr Process Control
 ///
-/// Control ffplayout process, like:
+/// Control the NoAr process, like:
 /// - start
 /// - stop
 /// - restart

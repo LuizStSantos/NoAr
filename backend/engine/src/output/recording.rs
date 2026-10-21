@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn retention_does_not_delete_unmanaged_mkv_files() {
         let directory = env::temp_dir().join(format!(
-            "ffplayout-recording-retention-{}-{}",
+            "noar-recording-retention-{}-{}",
             process::id(),
             SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -460,7 +460,7 @@ mod tests {
     #[test]
     fn retention_uses_the_filename_timestamp_even_if_mtime_is_recent() {
         let directory = env::temp_dir().join(format!(
-            "ffplayout-recording-filename-age-{}-{}",
+            "noar-recording-filename-age-{}-{}",
             process::id(),
             SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -483,7 +483,7 @@ mod tests {
     #[test]
     fn retention_falls_back_to_mtime_for_legacy_segments() {
         let directory = env::temp_dir().join(format!(
-            "ffplayout-recording-legacy-age-{}-{}",
+            "noar-recording-legacy-age-{}-{}",
             process::id(),
             SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -507,7 +507,7 @@ mod tests {
     #[test]
     fn periodic_check_removes_expired_segments_without_disabling_recording() {
         let directory = env::temp_dir().join(format!(
-            "ffplayout-recording-periodic-{}-{}",
+            "noar-recording-periodic-{}-{}",
             process::id(),
             SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -536,7 +536,7 @@ mod tests {
     #[test]
     fn retention_is_scoped_to_the_channel_at_startup_and_periodically() {
         let directory = env::temp_dir().join(format!(
-            "ffplayout-recording-channel-retention-{}-{}",
+            "noar-recording-channel-retention-{}-{}",
             process::id(),
             SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -592,8 +592,7 @@ mod tests {
 
     #[test]
     fn recording_patterns_are_unique_and_include_the_channel() {
-        let directory =
-            env::temp_dir().join(format!("ffplayout-recording-pattern-{}", process::id()));
+        let directory = env::temp_dir().join(format!("noar-recording-pattern-{}", process::id()));
         let config =
             RecordingConfig::new(directory.to_string_lossy(), 300).with_channel_id(Some(7));
 
