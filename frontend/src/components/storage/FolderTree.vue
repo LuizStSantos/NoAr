@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import FolderBadge from '@/components/storage/FolderBadge.vue'
-import { listFolders, storageJoin } from '@/composables/storage'
+import { LIVES_FOLDER, listFolders, storageJoin } from '@/composables/storage'
 
 /**
  * One folder of the storage tree and, when open, its subfolders. Folders load
@@ -155,7 +155,13 @@ function onDrop(event: DragEvent) {
             >
                 <i class="bi" :class="open ? 'bi-folder2-open' : 'bi-folder'" aria-hidden="true" />
                 <span class="truncate flex-1">{{ label }}</span>
-                <FolderBadge :has-sheet="hasSheet" :movie="movie" :live="live" :commercial="commercial" />
+                <FolderBadge
+                    :has-sheet="hasSheet"
+                    :movie="movie"
+                    :live="live"
+                    :lives="path === LIVES_FOLDER"
+                    :commercial="commercial"
+                />
             </button>
         </div>
         <ul v-if="open && folders.length" class="m-0 p-0">

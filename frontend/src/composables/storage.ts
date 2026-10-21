@@ -4,6 +4,9 @@ import { useAuth } from '@/stores/auth'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json;charset=UTF-8' }
 
+/** Where Storage keeps the lives, one folder each, at the storage root. */
+export const LIVES_FOLDER = 'Lives'
+
 /** Join storage path parts with single slashes, without a leading slash. */
 export function storageJoin(...parts: (string | undefined | null)[]): string {
     return parts

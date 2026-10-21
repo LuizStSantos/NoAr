@@ -24,7 +24,12 @@ import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
 
 const props = defineProps<{ draft: MediaDraft | null; program: ProgramItem[]; grade: GuideBlock[] }>()
-const emit = defineEmits<{ close: []; saved: [] }>()
+const emit = defineEmits<{
+    close: []
+    saved: []
+    /** Schedule a live instead, at the chosen time: the one in `folder`, or a new one. */
+    live: [folder: string | null, date: string, time: string]
+}>()
 
 const { t } = useI18n()
 const { weekdayLetters } = useScheduleText()
@@ -477,13 +482,24 @@ async function save() {
                             <i class="bi" :class="showPicker ? 'bi-chevron-up' : 'bi-plus-lg'" />
                             {{ t('schedule.addAnother') }}
                         </button>
+                        <button
+                            v-if="!draft.event && !sources.length"
+                            class="text-sm text-muted hover:text-base-content hover:underline cursor-pointer min-h-9 me-auto ms-3"
+                            @click="emit('live', null, date, time)"
+                        >
+                            <i class="bi bi-broadcast" aria-hidden="true" />
+                            {{ t('schedule.orScheduleLive') }}
+                        </button>
                         <span v-if="total" class="text-sm text-base-content/70">
                             {{ t('schedule.total') }}
                             <strong class="tabular-nums text-base-content">{{ formatLength(total) }}</strong>
                         </span>
                     </div>
                     <div v-if="showPicker" class="border border-base-300 rounded-md p-2 max-h-64 flex flex-col">
-                        <StoragePicker @pick="addSource" />
+                        <StoragePicker
+                            @pick="addSource"
+                            @live="(folder) => !draft?.event && emit('live', folder, date, time)"
+                        />
                     </div>
                 </div>
 

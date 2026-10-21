@@ -28,6 +28,7 @@ import {
     secondsFromDay,
     secondsToTime,
     splitDateTime,
+    timeToSeconds,
     useScheduleText,
 } from '@/composables/schedule'
 import { useConfig } from '@/stores/config'
@@ -458,6 +459,21 @@ function newLive() {
     liveDraft.value = { date: date.value, start: secondsToTime(start), end: secondsToTime(start + 3600) }
 }
 
+/** The material dialog hands over to a live: the one in `folder`, or a new one. */
+function liveFromMaterial(folder: string | null, day: string, time: string) {
+    const start = timeToSeconds(time || '12:00:00')
+
+    mediaDraft.value = null
+    liveDraft.value = {
+        live: folder
+            ? scheduleStore.lives.find((live) => live.path.split('/').slice(0, -1).join('/') === folder)
+            : undefined,
+        date: day,
+        start: secondsToTime(start),
+        end: secondsToTime(start + 3600),
+    }
+}
+
 async function saved() {
     mediaDraft.value = null
     liveDraft.value = null
@@ -610,7 +626,7 @@ watch(zoom, scrollToFocus)
                     </button>
                 </div>
                 <div class="p-3.5 flex flex-col gap-2.5 min-h-0 overflow-auto">
-                    <StoragePicker v-if="tab === 'storage'" draggable />
+                    <StoragePicker v-if="tab === 'storage'" draggable hide-lives />
                     <template v-else>
                         <ul class="m-0 p-0 list-none flex flex-col gap-0.5">
                             <li
@@ -938,6 +954,7 @@ watch(zoom, scrollToFocus)
             :grade="scheduleStore.grade"
             @close="mediaDraft = null"
             @saved="saved"
+            @live="liveFromMaterial"
         />
         <LiveDialog :draft="liveDraft" @close="liveDraft = null" @saved="saved" />
         <GenericModal

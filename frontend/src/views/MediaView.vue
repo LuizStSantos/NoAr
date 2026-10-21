@@ -13,6 +13,7 @@ import { useUploads } from '@/stores/uploads'
 
 import CommercialCard from '@/components/storage/CommercialCard.vue'
 import FolderTree from '@/components/storage/FolderTree.vue'
+import FolderBadge from '@/components/storage/FolderBadge.vue'
 import ImageViewer, { type ViewerImage } from '@/components/storage/ImageViewer.vue'
 import LiveCard from '@/components/storage/LiveCard.vue'
 import LiveEditor from '@/components/storage/LiveEditor.vue'
@@ -25,6 +26,7 @@ import { authFetch } from '@/composables/authFetch'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
 import {
+    LIVES_FOLDER,
     baseName,
     guideEntries,
     imageUrl,
@@ -1298,28 +1300,13 @@ const uploadAccept = computed(() =>
                                         >
                                             <i class="bi text-muted" :class="fileIcon(row)" aria-hidden="true" />
                                             <span class="truncate font-medium">{{ row.name }}</span>
-                                            <span
-                                                v-if="commercialFolders.includes(row.name)"
-                                                class="text-[11px] text-after-clip border border-after-clip/50 rounded-md px-1.5 leading-4"
-                                            >
-                                                {{ t('storage.commercial.badge') }}
-                                            </span>
-                                            <span
-                                                v-else-if="liveFolders.includes(row.name)"
-                                                class="text-[11px] text-live border border-live/50 rounded-md px-1.5 leading-4"
-                                            >
-                                                {{ t('storage.live.badge') }}
-                                            </span>
-                                            <span
-                                                v-else-if="sheetFolders.includes(row.name)"
-                                                class="text-[11px] text-accent-text border border-accent/40 rounded-md px-1.5 leading-4"
-                                            >
-                                                {{
-                                                    movieFolders.includes(row.name)
-                                                        ? t('storage.movieBadge')
-                                                        : t('storage.seriesBadge')
-                                                }}
-                                            </span>
+                                            <FolderBadge
+                                                :has-sheet="sheetFolders.includes(row.name)"
+                                                :movie="movieFolders.includes(row.name)"
+                                                :live="liveFolders.includes(row.name)"
+                                                :lives="!current && row.name === LIVES_FOLDER"
+                                                :commercial="commercialFolders.includes(row.name)"
+                                            />
                                         </button>
                                         <span v-else class="flex items-center gap-2.5 min-h-7 min-w-0">
                                             <img
