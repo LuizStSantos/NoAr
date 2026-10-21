@@ -17,7 +17,7 @@ use ffmpeg_next::{
 
 use crate::{
     AudioEffectsControl, AudioFrameCallback, AudioLevelCallback, LiveLoudnessConfig,
-    LiveLoudnessControl, LoudnessMeterControl,
+    LiveLoudnessControl, LogoControl, LoudnessMeterControl,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -263,6 +263,8 @@ pub struct OutputConfig {
     pub audio_frame_callback: Option<AudioFrameCallback>,
     pub loudness_meter_control: LoudnessMeterControl,
     pub logo: Option<LogoConfig>,
+    /// Hides or swaps the logo on air from outside the playout.
+    pub logo_control: LogoControl,
     pub text: Option<TextConfig>,
     pub text_overlay_state: TextOverlayState,
     pub stream_type: StreamType,
@@ -1376,6 +1378,7 @@ impl OutputConfig {
             audio_frame_callback: None,
             loudness_meter_control: LoudnessMeterControl::default(),
             logo: None,
+            logo_control: LogoControl::default(),
             text: None,
             text_overlay_state: TextOverlayState::default(),
             stream_type: StreamType::Rtmp,
@@ -1452,6 +1455,11 @@ impl OutputConfig {
 
     pub fn with_logo(mut self, logo: Option<LogoConfig>) -> Self {
         self.logo = logo;
+        self
+    }
+
+    pub fn with_logo_control(mut self, logo_control: LogoControl) -> Self {
+        self.logo_control = logo_control;
         self
     }
 

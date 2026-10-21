@@ -80,9 +80,10 @@ pub struct PlayoutConfigUpdate {
     pub requires_restart: bool,
 }
 
-/// Only volume and mail are consumed by long-lived runtime controls. The
-/// engine creates input, compositor and output contexts when playout starts,
-/// therefore every other configuration change requires a fresh instance.
+/// Only volume and mail are consumed by long-lived runtime controls, and the
+/// guide logo and logo key are read when used. The engine creates input,
+/// compositor and output contexts when playout starts, therefore every other
+/// configuration change requires a fresh instance.
 fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) -> bool {
     let Ok(mut current) = serde_json::to_value(current) else {
         return true;
@@ -98,6 +99,13 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
 
         config.remove("mail");
         config.remove("notification");
+        if let Some(processing) = config
+            .get_mut("processing")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            processing.remove("guide_logo");
+            processing.remove("logo_key");
+        }
         if let Some(audio) = config
             .get_mut("audio")
             .and_then(serde_json::Value::as_object_mut)
@@ -796,6 +804,19 @@ mod tests {
         updated.audio.volume = 0.75;
 
         assert!(!requires_playout_restart(&current, &updated));
+    }
+
+    #[test]
+    fn guide_logo_and_logo_key_do_not_require_restart() {
+        let current = PlayoutConfig::default();
+        let mut updated = current.clone();
+        updated.processing.guide_logo = "00-assets/logo-guia.png".to_string();
+        updated.processing.logo_key = "c0ffee".to_string();
+
+        assert!(!requires_playout_restart(&current, &updated));
+
+        updated.processing.logo = "00-assets/outra.png".to_string();
+        assert!(requires_playout_restart(&current, &updated));
     }
 
     #[test]

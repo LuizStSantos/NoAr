@@ -287,6 +287,10 @@ pub struct Configuration {
     pub processing_vtt_language: String,
     #[serde(default)]
     pub processing_vtt_default: bool,
+    #[serde(default)]
+    pub processing_guide_logo: String,
+    #[serde(default)]
+    pub processing_logo_key: String,
 
     pub playlist_day_start: String,
     pub playlist_length: String,
@@ -365,6 +369,8 @@ impl Configuration {
             processing_vtt_name: config.processing.vtt_name,
             processing_vtt_language: config.processing.vtt_language,
             processing_vtt_default: config.processing.vtt_default,
+            processing_guide_logo: config.processing.guide_logo,
+            processing_logo_key: config.processing.logo_key,
             playlist_day_start: config.playlist.day_start,
             playlist_length: config.playlist.length,
             playlist_infinit: config.playlist.infinit,

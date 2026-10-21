@@ -36,6 +36,7 @@ pub fn routes() -> Router<AppState> {
                 .route("/control/{id}/audio", put(update_audio_effects))
                 .route("/control/{id}/media/current", get(media_current))
                 .route("/control/{id}/process", post(process_control))
+                .route("/control/{id}/logo", get(get_logo_state).post(control_logo))
                 .route("/preview/{id}", get(get_preview))
                 .route("/file/{id}/browse", post(file_browser))
                 .route("/file/{id}/create-folder", post(add_dir))
@@ -121,5 +122,9 @@ pub fn routes() -> Router<AppState> {
         .route("/file/{id}/{*filename}", get(get_file))
         .route("/public/{id}/{public}/{*file_stem}", get(get_public))
         .route("/xmltv/{id}/guide.xml", get(get_xmltv))
+        .route(
+            "/logo/{id}/{action}",
+            get(control_logo_with_key).post(control_logo_with_key),
+        )
         .route("/xmltv/{id}/images/{*image}", get(get_xmltv_image))
 }

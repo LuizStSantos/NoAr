@@ -606,6 +606,14 @@ pub struct Processing {
     pub vtt_language: String,
     #[serde(default)]
     pub vtt_default: bool,
+    /// Channel icon of the XMLTV guide, relative to the storage; empty uses
+    /// the logo.
+    #[serde(default)]
+    pub guide_logo: String,
+    /// Key that lets an encoder hide, show or swap the logo on air; empty
+    /// turns that off.
+    #[serde(default)]
+    pub logo_key: String,
 }
 
 fn default_vtt_name() -> String {
@@ -631,6 +639,8 @@ impl Processing {
             vtt_name: config.processing_vtt_name.clone(),
             vtt_language: config.processing_vtt_language.clone(),
             vtt_default: config.processing_vtt_default,
+            guide_logo: config.processing_guide_logo.clone(),
+            logo_key: config.processing_logo_key.clone(),
         }
     }
 

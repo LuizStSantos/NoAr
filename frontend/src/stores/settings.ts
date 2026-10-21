@@ -44,6 +44,8 @@ const PROCESSING_LOGO = [
     'vtt_name',
     'vtt_language',
     'vtt_default',
+    'guide_logo',
+    'logo_key',
 ].map((key) => `processing.${key}`)
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [

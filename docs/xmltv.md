@@ -168,8 +168,9 @@ the wide image. All of them are also written as
 `<image type="poster|backdrop|still">`. A `<thumb>` with an `http(s)://` address
 is used as it is.
 
-The channel logo (from the output logo setting) becomes the channel icon in the
-guide.
+The channel icon in the guide is the *Logo in the guide (XMLTV)* image from
+Settings › Logo when one is set, otherwise the logo on the video. A guide logo
+that goes missing falls back to the video logo.
 
 ## How the guide is built
 
