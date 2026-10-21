@@ -31,6 +31,8 @@ Portuguese and English; menus are named here in English.
 - **[Output modes](output.md)**: HLS, and RTMP, SRT or UDP streams.
 - **[Logo](logo.md)**: placing the logo, where it goes off by itself, and
   hiding or swapping it on air by API.
+- **[Ad breaks (SCTE-35)](ad_breaks.md)**: breaks marked in the SRT or UDP
+  output for FAST platforms and ad servers, and how to check them.
 - **[Closed captions](closed_captions.md)**: WebVTT files as HLS subtitles.
 
 ## Lives
@@ -57,5 +59,5 @@ Portuguese and English; menus are named here in English.
 ## Development
 
 - **[Development](developer.md)**: build and run NoAr from source.
-- **[SCTE-35 study](scte35.md)**: what SCTE-35 is, and how NoAr could signal
-  and read ad breaks with it.
+- **[SCTE-35 study](scte35.md)**: what SCTE-35 is, the signal NoAr settled
+  on, what Pluto TV and Samsung TV Plus ask, and the plan for MediaMTX.

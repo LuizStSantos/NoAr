@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import BreakStrip from '@/components/player/BreakStrip.vue'
 import { useOnAir } from '@/composables/onAir'
 import { clockShort, lengthLabel, meterPercent } from '@/composables/player'
 import { fileStem, formatLength, splitDateTime } from '@/composables/schedule'
@@ -191,6 +192,8 @@ async function backToProgramme() {
                 </span>
             </div>
         </div>
+
+        <BreakStrip />
 
         <div class="grid grid-cols-1 xs:grid-cols-3 gap-2.5">
             <div class="bg-raised rounded-[10px] px-3 py-2.5 min-w-0">

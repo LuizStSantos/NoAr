@@ -186,6 +186,8 @@ pub struct PlayoutConfig {
     pub storage: Storage,
     pub task: Task,
     pub recording: Recording,
+    #[serde(default)]
+    pub scte35: Scte35,
     #[serde(alias = "out")]
     pub output: Output,
 }
@@ -898,6 +900,80 @@ impl Task {
     }
 }
 
+/// SCTE-35 ad break signalling. NoAr marks every break the same way and
+/// leaves adapting it to each platform to what receives the stream.
+#[derive(Debug, Clone, Deserialize, Serialize, TS, PartialEq)]
+#[ts(export, export_to = "playout_config.d.ts")]
+#[serde(default)]
+pub struct Scte35 {
+    pub enable: bool,
+    /// PID the splice messages are carried on.
+    pub pid: u16,
+    /// Seconds between the first message of a break and its start.
+    pub preroll: f64,
+    /// Runs of commercials outside these lengths, in seconds, are not
+    /// signalled.
+    pub min_break: f64,
+    pub max_break: f64,
+}
+
+impl Default for Scte35 {
+    fn default() -> Self {
+        Self {
+            enable: false,
+            pid: noar_engine::DEFAULT_SCTE35_PID,
+            preroll: noar_engine::DEFAULT_SCTE35_PREROLL_SECONDS,
+            min_break: 30.0,
+            max_break: 300.0,
+        }
+    }
+}
+
+impl Scte35 {
+    fn new(scte35: &models::Scte35) -> Self {
+        Self {
+            enable: scte35.enabled,
+            pid: u16::try_from(scte35.pid).unwrap_or(noar_engine::DEFAULT_SCTE35_PID),
+            preroll: scte35.preroll,
+            min_break: scte35.min_break,
+            max_break: scte35.max_break,
+        }
+    }
+
+    pub fn engine_config(&self) -> Option<noar_engine::Scte35Config> {
+        self.enable.then_some(noar_engine::Scte35Config {
+            pid: self.pid,
+            preroll_seconds: self.preroll,
+        })
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        noar_engine::Scte35Config {
+            pid: self.pid,
+            preroll_seconds: self.preroll,
+        }
+        .validate()?;
+
+        if !self.min_break.is_finite()
+            || !self.max_break.is_finite()
+            || self.min_break <= 0.0
+            || self.max_break < self.min_break
+        {
+            return Err(
+                "SCTE-35 break lengths must be positive, the shortest no longer than the longest"
+                    .to_string(),
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Whether a run of commercials this long is signalled.
+    pub fn signals(&self, seconds: f64) -> bool {
+        (self.min_break..=self.max_break).contains(&seconds)
+    }
+}
+
 #[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
 #[ts(export, export_to = "playout_config.d.ts")]
 pub struct Output {
@@ -1257,6 +1333,7 @@ impl PlayoutConfig {
         let channel = handles::select_channel(pool, &channel_id).await?;
         let mut config = handles::select_configuration(pool, channel_id).await?;
         let recording_config = handles::select_recording(pool, channel_id).await?;
+        let scte35 = Scte35::new(&handles::select_scte35(pool, channel_id).await?);
         let outputs = handles::select_outputs(pool, channel_id).await?;
 
         if let Some(id) = output_id {
@@ -1321,6 +1398,7 @@ impl PlayoutConfig {
             storage,
             task,
             recording,
+            scte35,
             output,
         })
     }

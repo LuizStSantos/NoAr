@@ -288,6 +288,10 @@ pub struct OutputConfig {
     /// rendition, for a low-latency preview (for example
     /// `udp://127.0.0.1:41000?pkt_size=1316`).
     pub preview_url: Option<String>,
+    /// SCTE-35 ad break signalling, on MPEG-TS stream outputs.
+    pub scte35: Option<crate::Scte35Config>,
+    /// The breaks the channel signals; outlasts a playout restart.
+    pub splice_control: crate::SpliceControl,
 }
 
 /// Settings for a segmented Matroska recording derived from an encoded output.
@@ -1398,6 +1402,8 @@ impl OutputConfig {
             desktop_control_callback: None,
             recording: None,
             preview_url: None,
+            scte35: None,
+            splice_control: crate::SpliceControl::default(),
         }
     }
 
@@ -1521,6 +1527,16 @@ impl OutputConfig {
 
     pub fn with_preview_url(mut self, preview_url: Option<String>) -> Self {
         self.preview_url = preview_url;
+        self
+    }
+
+    pub fn with_scte35(mut self, scte35: Option<crate::Scte35Config>) -> Self {
+        self.scte35 = scte35;
+        self
+    }
+
+    pub fn with_splice_control(mut self, splice_control: crate::SpliceControl) -> Self {
+        self.splice_control = splice_control;
         self
     }
 

@@ -198,6 +198,16 @@ curl -X POST 'http://127.0.0.1:8787/logo/1/replace?key=<KEY>&logo=00-assets/logo
 curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
 ```
 
+### Ad breaks (SCTE-35)
+
+Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md).
+
+| Method | Endpoint | Access | Request body |
+| --- | --- | --- | --- |
+| `GET` | `/api/control/{id}/scte35` | `GA, CA, U` | Read the state, the breaks to come and on air, and the last 20. |
+| `POST` | `/api/control/{id}/scte35/break` | `GA, CA, U` | `{ "duration": 120 }`: mark a break of that many seconds, from now plus the pre-roll. |
+| `DELETE` | `/api/control/{id}/scte35/break/{event_id}` | `GA, CA, U` | Call off a break that has not started. |
+
 ## Live preview
 
 | Method | Endpoint | Access | Description |

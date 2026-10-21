@@ -15,6 +15,10 @@ A commercial:
   next clip that is not a commercial, also after a scheduled break that
   interrupted a programme.
 
+With [SCTE-35](ad_breaks.md) on, each run of commercials is also marked as
+an ad break in the SRT or UDP output, for a FAST platform or an ad server to
+replace.
+
 Scheduled events made only of commercials never show in the guide; their
 "show in the guide" switch is off and locked in the Scheduler.
 

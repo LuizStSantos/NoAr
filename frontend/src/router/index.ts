@@ -130,6 +130,12 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {
+                    path: 'breaks',
+                    name: 'settings-breaks',
+                    component: () => import('@/components/settings/SettingsBreaks.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
                     path: 'alerts',
                     name: 'settings-alerts',
                     component: () => import('@/components/settings/SettingsAlerts.vue'),

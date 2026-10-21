@@ -373,6 +373,7 @@ pub async fn update_playout_config(
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
     validate_loudness(&data.audio)?;
     data.output.validate().map_err(ServiceError::BadRequest)?;
+    data.scte35.validate().map_err(ServiceError::BadRequest)?;
     data.recording
         .validate()
         .map_err(ServiceError::BadRequest)?;
@@ -506,6 +507,7 @@ pub async fn update_playout_config(
     )
     .await?;
     handles::update_recording_on(&mut transaction, id, &data.recording).await?;
+    handles::update_scte35_on(&mut transaction, id, &data.scte35).await?;
     handles::update_configuration_on(&mut transaction, config_id, data).await?;
     transaction.commit().await?;
     let new_config = get_config(&state.pool, id).await?;

@@ -37,6 +37,12 @@ pub fn routes() -> Router<AppState> {
                 .route("/control/{id}/media/current", get(media_current))
                 .route("/control/{id}/process", post(process_control))
                 .route("/control/{id}/logo", get(get_logo_state).post(control_logo))
+                .route("/control/{id}/scte35", get(get_scte35_state))
+                .route("/control/{id}/scte35/break", post(insert_scte35_break))
+                .route(
+                    "/control/{id}/scte35/break/{event_id}",
+                    delete(cancel_scte35_break),
+                )
                 .route("/preview/{id}", get(get_preview))
                 .route("/file/{id}/browse", post(file_browser))
                 .route("/file/{id}/create-folder", post(add_dir))

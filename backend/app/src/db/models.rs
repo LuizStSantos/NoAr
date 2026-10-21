@@ -406,6 +406,16 @@ pub struct Recording {
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, sqlx::FromRow)]
+pub struct Scte35 {
+    pub config_id: i32,
+    pub enabled: bool,
+    pub pid: i64,
+    pub preroll: f64,
+    pub min_break: f64,
+    pub max_break: f64,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Output {
     pub id: i32,
     pub channel_id: i32,

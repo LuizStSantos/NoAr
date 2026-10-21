@@ -15,7 +15,7 @@ use std::{
 
 use chrono::{NaiveDateTime, TimeDelta};
 use log::*;
-use noar_engine::{AsyncPlayout, ClipResult, NavigationBlocked, PreloadSignal};
+use noar_engine::{AsyncPlayout, ClipBreaks, ClipResult, NavigationBlocked, PreloadSignal};
 use serde::Serialize;
 use tokio::{task::JoinHandle, time::sleep};
 use tokio_util::sync::CancellationToken;
@@ -825,6 +825,8 @@ async fn play_clips(
     let id = config.general.channel_id;
     let mut completed = true;
     let mut commercials = CommercialFolders::new(&config.channel.storage);
+    // The run of commercials on air or next has had its SCTE-35 break.
+    let mut break_announced = false;
 
     for (index, source) in event.sources.iter().enumerate() {
         if manager.schedule.take_abort() || stopping(manager) {
@@ -868,6 +870,16 @@ async fn play_clips(
             }
             None => None,
         };
+        let breaks = event_breaks(
+            config,
+            event,
+            index,
+            (commercial, length),
+            &mut commercials,
+            &mut break_announced,
+        )
+        .await;
+        manager.splice_control.plan_next_clip(breaks);
         let result = play_plain_from(
             playout,
             config,
@@ -880,6 +892,10 @@ async fn play_clips(
 
         if let Some(task) = next_preload {
             task.abort();
+        }
+
+        if breaks.after.is_some() && !matches!(result, Ok(ClipResult::Played)) {
+            break_announced = false;
         }
 
         let end = match &result {
@@ -901,6 +917,73 @@ async fn play_clips(
         completed,
         stopped: false,
     })
+}
+
+/// The SCTE-35 break around clip `index` of a scheduled event, like the
+/// playlist's: one after it when commercials follow, one with it when it
+/// opens a run of commercials no earlier clip announced.
+async fn event_breaks(
+    config: &PlayoutConfig,
+    event: &ScheduleEvent,
+    index: usize,
+    (commercial, length): (bool, f64),
+    commercials: &mut CommercialFolders,
+    announced: &mut bool,
+) -> ClipBreaks {
+    if !config.scte35.enable || (commercial && *announced) {
+        return ClipBreaks::default();
+    }
+
+    let mut commercials_next = 0.0;
+
+    for source in event.sources.iter().skip(index + 1) {
+        if !commercials.contains(source) {
+            break;
+        }
+
+        match clip_duration(&config.channel.storage.join(source)).await {
+            Some(duration) => commercials_next += duration,
+            None => break,
+        }
+    }
+
+    let (run, breaks) = if commercial {
+        (
+            length + commercials_next,
+            ClipBreaks {
+                at_start: Some(length + commercials_next),
+                after: None,
+            },
+        )
+    } else {
+        *announced = false;
+
+        if commercials_next <= 0.0 {
+            return ClipBreaks::default();
+        }
+
+        (
+            commercials_next,
+            ClipBreaks {
+                at_start: None,
+                after: Some(commercials_next),
+            },
+        )
+    };
+
+    *announced = true;
+
+    if config.scte35.signals(run) {
+        breaks
+    } else {
+        warn!(channel = config.general.channel_id;
+            "SCTE-35: commercials of <span class=\"log-number\">{run:.1}</span> s in <span class=\"log-addr\">{}</span> not signalled; breaks run from {} to {} s",
+            event.title,
+            config.scte35.min_break,
+            config.scte35.max_break
+        );
+        ClipBreaks::default()
+    }
 }
 
 async fn play_live(

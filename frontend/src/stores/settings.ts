@@ -15,6 +15,7 @@ export type SettingsSectionName =
     | 'logo'
     | 'audio'
     | 'recording'
+    | 'breaks'
     | 'alerts'
     | 'advanced'
     | 'users'
@@ -62,6 +63,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     { name: 'logo', group: 'channel', roles: ADMINS, keys: PROCESSING_LOGO },
     { name: 'audio', group: 'channel', roles: ADMINS, keys: ['audio'] },
     { name: 'recording', group: 'channel', roles: ADMINS, keys: ['recording'] },
+    { name: 'breaks', group: 'channel', roles: ADMINS, keys: ['scte35'], restarts: true },
     { name: 'alerts', group: 'channel', roles: ADMINS, keys: ['mail', 'notification'] },
     { name: 'advanced', group: 'channel', roles: ADMINS, keys: ['general', 'logging', 'task'] },
     { name: 'users', group: 'system', roles: ALL, keys: [] },

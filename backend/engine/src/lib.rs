@@ -45,6 +45,10 @@ pub use input::preload::{PreloadSignal, Preloader};
 #[cfg(all(feature = "desktop-base", feature = "tokio"))]
 pub use output::desktop::thread::run_on_main_thread as run_desktop_on_main_thread;
 pub use output::resolved_variant_playlist_path;
+pub use output::scte35::{
+    BreakInfo, BreakSource, BreakState, ClipBreaks, DEFAULT_SCTE35_PID,
+    DEFAULT_SCTE35_PREROLL_SECONDS, Scte35Config, SpliceControl, SpliceError, SpliceStatus,
+};
 use output::{FrameOutput, Output, PlaybackStopped};
 pub use playback_control::{LiveSession, NavigationBlocked, PlaybackControl, PlaylistNavigation};
 use playout::{PlaybackRestart, PlaybackSkipped, Timeline, write_fallback};
@@ -882,6 +886,10 @@ impl Playout {
             };
         }
 
+        let following_break = self
+            .config
+            .splice_control
+            .clip_started(self.timeline.video_pts(), duration_seconds);
         let result = play_program_clip(
             &mut self.output,
             &mut self.program_audio,
@@ -900,6 +908,9 @@ impl Playout {
             },
             preloaded,
         );
+        self.config
+            .splice_control
+            .clip_finished(following_break, matches!(&result, Ok(ClipResult::Played)));
 
         if matches!(&result, Ok(ClipResult::LiveEnded))
             && let Some(live) = live.as_ref()
@@ -1049,6 +1060,43 @@ mod tests {
     use super::{
         ClipResult, PlaybackControl, PlaybackRestart, PlaybackSkipped, classify_fallback_error,
     };
+
+    #[test]
+    fn clips_take_exactly_their_duration_on_the_output() {
+        let dir = std::env::temp_dir().join(format!("noar_clip_length_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let clip = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/media_mix/av_sync.mp4")
+            .to_string_lossy()
+            .into_owned();
+        let cfg =
+            super::OutputConfig::new(320, 240, 25, 48_000).with_stream_type(super::StreamType::Udp);
+        let mut playout =
+            super::Playout::open_stream(dir.join("out.ts").to_str().unwrap(), cfg, 1.0).unwrap();
+        let mut live = None;
+
+        // The last audio frame of a clip used to run past its end, and the
+        // video padded a frame to cover it: a break announced ahead then
+        // started a frame early.
+        for end in [25, 50] {
+            playout
+                .play_timed_with_live(
+                    &clip,
+                    None,
+                    Some(1.0),
+                    None,
+                    None,
+                    super::LogoFade::default(),
+                    1.0,
+                    &mut live,
+                )
+                .unwrap();
+            assert_eq!(playout.timeline.video_pts(), end);
+        }
+
+        playout.finish().unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+    }
 
     #[test]
     fn restart_during_fallback_remains_a_playout_restart() {

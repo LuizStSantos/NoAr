@@ -11,6 +11,22 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- **Ad breaks (SCTE-35)** on SRT and UDP outputs. Runs of commercials in the
+  playlists and scheduled events, and breaks marked by hand, go out as a
+  `splice_insert` announced ahead (6 s by default, three copies), on key
+  frames at both splice points, with a cancel when a break is called off.
+  Settings › Ad breaks turns it on and shows how it works and every break;
+  the Player shows the next break and the one on air, and marks one by hand;
+  an API does the same ([docs](docs/ad_breaks.md)).
+
+### Fixed
+
+- A clip usually lasted one frame longer than its duration: its last audio
+  frame ran past the end, and the video padded a frame to cover it. Clips now
+  last exactly their duration.
+
 ## [1.0.0] - 2026-10-21
 
 The first release under the NoAr name. NoAr started from
