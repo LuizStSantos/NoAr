@@ -113,6 +113,8 @@ struct Queued {
     /// When the live source last answered a signal check.
     signal_checked: Option<Instant>,
     resume: Option<Resume>,
+    /// Started by hand or put back after a stop, not by the event's time.
+    forced: bool,
 }
 
 #[derive(Debug, Default)]
@@ -160,14 +162,14 @@ impl ScheduleState {
     }
 
     fn queue(&self, occurrence: Occurrence, signal_checked: Option<Instant>) {
-        self.push(occurrence, signal_checked, None);
+        self.push(occurrence, signal_checked, None, false);
     }
 
     /// Queue an occurrence that was on air when the playout stopped; it goes
     /// back on air right away.
     fn queue_resumed(&self, mut occurrence: Occurrence, resume: Resume) {
         occurrence.event.entry_mode = EntryMode::Interrupt;
-        self.push(occurrence, None, Some(resume));
+        self.push(occurrence, None, Some(resume), true);
     }
 
     fn push(
@@ -175,6 +177,7 @@ impl ScheduleState {
         occurrence: Occurrence,
         signal_checked: Option<Instant>,
         resume: Option<Resume>,
+        forced: bool,
     ) {
         let mut inner = self.lock();
 
@@ -186,13 +189,46 @@ impl ScheduleState {
             occurrence,
             signal_checked,
             resume,
+            forced,
         });
     }
 
     /// Queue an event to start right away, cutting what is on air.
     pub fn trigger(&self, mut occurrence: Occurrence) {
         occurrence.event.entry_mode = EntryMode::Interrupt;
-        self.queue(occurrence, None);
+        self.push(occurrence, None, None, true);
+    }
+
+    /// Bring what waits in the queue in line with an event that was changed,
+    /// or removed (`None`): what it no longer schedules leaves the queue, the
+    /// rest airs as it is now. Returns the occurrences that left.
+    pub fn revise(&self, event_id: i32, event: Option<&ScheduleEvent>) -> Vec<Occurrence> {
+        let mut inner = self.lock();
+        let mut dropped = vec![];
+
+        for mut queued in std::mem::take(&mut inner.queue) {
+            if queued.occurrence.event.id != event_id {
+                inner.queue.push_back(queued);
+                continue;
+            }
+
+            match event.and_then(|event| revised(&queued.occurrence, event, queued.forced)) {
+                Some(occurrence) => {
+                    queued.occurrence = occurrence;
+                    inner.queue.push_back(queued);
+                }
+                None => dropped.push(queued.occurrence),
+            }
+        }
+
+        let interrupts = inner
+            .queue
+            .iter()
+            .any(|queued| queued.occurrence.event.entry_mode == EntryMode::Interrupt);
+
+        inner.interrupt_wanted &= interrupts;
+
+        dropped
     }
 
     pub fn has_queued(&self) -> bool {
@@ -466,6 +502,42 @@ async fn close_run(manager: &ChannelManager, event_id: i32, occurrence: &str, st
     }
 }
 
+/// `occurrence` as `event` schedules it now, or `None` when it no longer
+/// does: disabled, or moved to another day or time. One started by hand or
+/// put back after a stop keeps its time and how it enters.
+fn revised(occurrence: &Occurrence, event: &ScheduleEvent, forced: bool) -> Option<Occurrence> {
+    if !event.enabled {
+        return None;
+    }
+
+    if forced {
+        let mut occurrence = occurrence.clone();
+        let entry_mode = occurrence.event.entry_mode;
+
+        occurrence.event = event.clone();
+        occurrence.event.entry_mode = entry_mode;
+
+        return Some(occurrence);
+    }
+
+    event
+        .occurrence_on(occurrence.date)
+        .filter(|current| current.start == occurrence.start)
+}
+
+/// The occurrence as its event schedules it now, read from the database;
+/// `None` once the event was removed, disabled or moved.
+async fn still_scheduled(manager: &ChannelManager, occurrence: &Occurrence) -> Option<Occurrence> {
+    match handles::select_schedule_event(&manager.db_pool, manager.id, occurrence.event.id).await {
+        Ok(event) => event.and_then(|event| revised(occurrence, &event, false)),
+        // The database not answering is no reason to drop it.
+        Err(error) => {
+            error!(channel = manager.id; "Unable to read the scheduled event: {error}");
+            Some(occurrence.clone())
+        }
+    }
+}
+
 fn seconds_between(from: NaiveDateTime, to: NaiveDateTime) -> f64 {
     (to - from).num_milliseconds() as f64 / 1000.0
 }
@@ -499,6 +571,16 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
             return;
         }
 
+        // Removed, disabled or moved while it waited for its signal.
+        let Some(current) = still_scheduled(&manager, &occurrence).await else {
+            info!(channel = id;
+                "Live <span class=\"log-addr\">{}</span> was removed or changed; it no longer waits for its signal",
+                event.title
+            );
+            manager.preloader.lock().await.clone().forget(&url);
+            return;
+        };
+
         let timezone = manager.config.read().await.channel.timezone;
         let now = time_now(&timezone).naive_local();
 
@@ -508,7 +590,7 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
 
         if live_answers(&manager, &url).await {
             if manager.schedule.generation() == generation {
-                manager.schedule.queue(occurrence, Some(Instant::now()));
+                manager.schedule.queue(current, Some(Instant::now()));
             }
 
             return;
@@ -1254,6 +1336,60 @@ mod tests {
             on_air_at: on_air_at.map(str::to_string),
             shift_before: on_air_at.map(|_| -12.5),
         }
+    }
+
+    #[test]
+    fn a_removed_event_leaves_the_queue() {
+        let state = ScheduleState::default();
+
+        state.queue(occurrence(1, EntryMode::AfterClip), None);
+        state.queue(occurrence(2, EntryMode::Interrupt), None);
+
+        assert_eq!(state.revise(2, None).len(), 1);
+        assert_eq!(state.queued().len(), 1);
+        assert_eq!(state.queued()[0].event.id, 1);
+        // Nothing left in the queue cuts the clip on air.
+        assert!(!state.wants_interrupt());
+    }
+
+    #[test]
+    fn a_changed_event_airs_as_it_is_now_or_leaves_the_queue() {
+        let state = ScheduleState::default();
+        let waiting = occurrence(1, EntryMode::AfterClip);
+        let mut renamed = waiting.event.clone();
+        renamed.title = "Renamed".to_string();
+        renamed.sources = vec!["Breaks/new.mp4".to_string()];
+
+        state.queue(waiting.clone(), None);
+        assert!(state.revise(1, Some(&renamed)).is_empty());
+        assert_eq!(state.queued()[0].event.title, "Renamed");
+        assert_eq!(state.queued()[0].event.sources, renamed.sources);
+
+        let mut moved = renamed.clone();
+        moved.start_time = "15:00:00".to_string();
+        assert_eq!(state.revise(1, Some(&moved)).len(), 1);
+        assert!(!state.has_queued());
+
+        let mut disabled = renamed;
+        disabled.enabled = false;
+        state.queue(waiting, None);
+        assert_eq!(state.revise(1, Some(&disabled)).len(), 1);
+        assert!(!state.has_queued());
+    }
+
+    #[test]
+    fn an_event_started_by_hand_keeps_its_time_when_changed() {
+        let state = ScheduleState::default();
+        let mut now = occurrence(1, EntryMode::AfterClip);
+        now.start = at("2026-10-14 09:12:00");
+        let mut moved = now.event.clone();
+        moved.start_time = "15:00:00".to_string();
+
+        state.trigger(now);
+        assert!(state.revise(1, Some(&moved)).is_empty());
+        assert_eq!(state.queued()[0].start, at("2026-10-14 09:12:00"));
+        assert_eq!(state.queued()[0].event.entry_mode, EntryMode::Interrupt);
+        assert_eq!(state.revise(1, None).len(), 1);
     }
 
     #[test]
