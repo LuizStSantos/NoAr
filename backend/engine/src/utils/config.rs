@@ -964,7 +964,7 @@ pub(crate) fn apply_audio_encoder_options(
 
         if MANAGED_AUDIO_OPTIONS.contains(&key.as_str()) {
             return Err(format!(
-                "audio option {key:?} is managed by ffplayout and cannot be overridden"
+                "audio option {key:?} is managed by NoAr and cannot be overridden"
             ));
         }
 
@@ -1806,7 +1806,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_audio_options_managed_by_ffplayout() {
+    fn rejects_audio_options_managed_by_noar() {
         ffmpeg_next::init().ok();
         let options = [("ar".to_string(), "44100".to_string())]
             .into_iter()
@@ -1815,7 +1815,7 @@ mod tests {
         assert!(
             validate_audio_options("aac", &options, 48_000, 128_000)
                 .unwrap_err()
-                .contains("managed by ffplayout")
+                .contains("managed by NoAr")
         );
     }
 

@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "description": "Web UI for ffplayout",
+  "description": "Web UI for NoAr",
   "private": true,
   "type": "module",
   "scripts": {

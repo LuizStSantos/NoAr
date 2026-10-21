@@ -166,7 +166,7 @@ impl WgpuRenderer {
             self.state
                 .device
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("ffplayout_desktop_encoder"),
+                    label: Some("noar_desktop_encoder"),
                 });
         self.state
             .yuv
@@ -206,7 +206,7 @@ impl WgpuState {
         }))
         .map_err(|error| anyhow!("requesting WGPU adapter: {error}"))?;
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("ffplayout_desktop_device"),
+            label: Some("noar_desktop_device"),
             ..Default::default()
         }))
         .map_err(|error| anyhow!("requesting WGPU device: {error}"))?;
@@ -331,7 +331,7 @@ impl GpuYuvRenderer {
         let device = device.clone();
         let queue = queue.clone();
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("ffplayout_yuv_bind_group_layout"),
+            label: Some("noar_yuv_bind_group_layout"),
             entries: &[
                 texture_binding(0),
                 texture_binding(1),
@@ -355,22 +355,22 @@ impl GpuYuvRenderer {
             ],
         });
         let parameters = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("ffplayout_yuv_parameters"),
+            label: Some("noar_yuv_parameters"),
             size: YUV_PARAMETER_BYTES,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("ffplayout_yuv_shader"),
+            label: Some("noar_yuv_shader"),
             source: wgpu::ShaderSource::Wgsl(YUV_SHADER.into()),
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("ffplayout_yuv_pipeline_layout"),
+            label: Some("noar_yuv_pipeline_layout"),
             bind_group_layouts: &[Some(&layout)],
             immediate_size: 0,
         });
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("ffplayout_yuv_pipeline"),
+            label: Some("noar_yuv_pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -500,7 +500,7 @@ impl GpuYuvRenderer {
         }
 
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("ffplayout_yuv_render_pass"),
+            label: Some("noar_yuv_render_pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: target,
                 resolve_target: None,
@@ -531,13 +531,13 @@ impl GpuYuvRenderer {
         let u_view = u.create_view(&wgpu::TextureViewDescriptor::default());
         let v_view = v.create_view(&wgpu::TextureViewDescriptor::default());
         let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("ffplayout_yuv_sampler"),
+            label: Some("noar_yuv_sampler"),
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("ffplayout_yuv_bind_group"),
+            label: Some("noar_yuv_bind_group"),
             layout: &self.layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -599,7 +599,7 @@ fn create_plane_texture(
     plane: &str,
 ) -> wgpu::Texture {
     device.create_texture(&wgpu::TextureDescriptor {
-        label: Some(&format!("ffplayout_yuv_{plane}_texture")),
+        label: Some(&format!("noar_yuv_{plane}_texture")),
         size: wgpu::Extent3d {
             width,
             height,
@@ -897,7 +897,7 @@ impl GpuSpriteRenderer {
         let device = device.clone();
         let queue = queue.clone();
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("ffplayout_sprite_bind_group_layout"),
+            label: Some("noar_sprite_bind_group_layout"),
             entries: &[
                 texture_binding(0),
                 wgpu::BindGroupLayoutEntry {
@@ -919,22 +919,22 @@ impl GpuSpriteRenderer {
             ],
         });
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("ffplayout_sprite_sampler"),
+            label: Some("noar_sprite_sampler"),
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("ffplayout_sprite_shader"),
+            label: Some("noar_sprite_shader"),
             source: wgpu::ShaderSource::Wgsl(SPRITE_SHADER.into()),
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("ffplayout_sprite_pipeline_layout"),
+            label: Some("noar_sprite_pipeline_layout"),
             bind_group_layouts: &[Some(&layout)],
             immediate_size: 0,
         });
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("ffplayout_sprite_pipeline"),
+            label: Some("noar_sprite_pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -995,7 +995,7 @@ impl GpuSpriteRenderer {
             output_is_srgb: self.output_is_srgb,
         };
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("ffplayout_sprite_render_pass"),
+            label: Some("noar_sprite_render_pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: target,
                 resolve_target: None,
@@ -1161,7 +1161,7 @@ impl CachedSprite {
         bitmap: &RgbaBitmap,
     ) -> Self {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("ffplayout_sprite_texture"),
+            label: Some("noar_sprite_texture"),
             size: wgpu::Extent3d {
                 width: bitmap.width,
                 height: bitmap.height,
@@ -1177,13 +1177,13 @@ impl CachedSprite {
         write_rgba_texture(queue, &texture, bitmap);
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let uniform = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("ffplayout_sprite_parameters"),
+            label: Some("noar_sprite_parameters"),
             size: 32,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("ffplayout_sprite_bind_group"),
+            label: Some("noar_sprite_bind_group"),
             layout,
             entries: &[
                 wgpu::BindGroupEntry {

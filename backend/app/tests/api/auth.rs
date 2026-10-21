@@ -217,7 +217,7 @@ async fn verification_rejects_wrong_expired_and_replayed_codes() {
 
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
     assert!(
-        ffplayout::api::auth::VERIFICATION_CODES
+        noar::api::auth::VERIFICATION_CODES
             .lock()
             .await
             .contains_key(&username)
@@ -266,7 +266,7 @@ async fn verification_rejects_wrong_expired_and_replayed_codes() {
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert!(
-        !ffplayout::api::auth::VERIFICATION_CODES
+        !noar::api::auth::VERIFICATION_CODES
             .lock()
             .await
             .contains_key(&username)
@@ -320,7 +320,7 @@ async fn verification_uses_current_rights_and_rejects_deleted_users() {
 
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
     assert!(
-        !ffplayout::api::auth::VERIFICATION_CODES
+        !noar::api::auth::VERIFICATION_CODES
             .lock()
             .await
             .contains_key(&username)
@@ -333,18 +333,15 @@ async fn store_verification(state: &AppState, id: i32, age_seconds: i64) -> Stri
     let role = handles::select_role(&state.pool, &user.role_id.unwrap())
         .await
         .unwrap();
-    ffplayout::api::auth::VERIFICATION_CODES
-        .lock()
-        .await
-        .insert(
-            username.clone(),
-            ffplayout::api::auth::VerificationCode {
-                code: "123456".to_string(),
-                user,
-                role,
-                created_at: chrono::Utc::now() - chrono::TimeDelta::seconds(age_seconds),
-            },
-        );
+    noar::api::auth::VERIFICATION_CODES.lock().await.insert(
+        username.clone(),
+        noar::api::auth::VerificationCode {
+            code: "123456".to_string(),
+            user,
+            role,
+            created_at: chrono::Utc::now() - chrono::TimeDelta::seconds(age_seconds),
+        },
+    );
 
     username
 }

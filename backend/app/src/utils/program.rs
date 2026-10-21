@@ -141,7 +141,7 @@ mod tests {
 
     #[tokio::test]
     async fn program_uses_playlist_timing_channel_timezone_and_date_filter() {
-        let root = std::env::temp_dir().join(format!("ffplayout-program-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("noar-program-{}", uuid::Uuid::new_v4()));
         let directory = root.join("2026/07");
         tokio::fs::create_dir_all(&directory).await.unwrap();
         let playlist = serde_json::json!({

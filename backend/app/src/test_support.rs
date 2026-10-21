@@ -14,7 +14,7 @@ pub(crate) async fn channel_manager() -> (ChannelManager, SqlitePool) {
         .await
         .unwrap();
     handles::db_migrate(&pool).await.unwrap();
-    let storage = std::env::temp_dir().join(format!("ffplayout-manager-{}", uuid::Uuid::new_v4()));
+    let storage = std::env::temp_dir().join(format!("noar-manager-{}", uuid::Uuid::new_v4()));
     let playlists = storage.join("playlists");
     let logs = storage.join("logs");
     let public = storage.join("public");

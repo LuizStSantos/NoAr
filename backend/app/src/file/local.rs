@@ -506,15 +506,17 @@ impl LocalStorage {
         let root = self.root.read().await.clone();
         if root.is_dir() {
             let target = root.join("00-assets");
-            let mut dummy_source = Path::new("/usr/share/ffplayout/dummy.vtt");
-            let mut logo_source = Path::new("/usr/share/ffplayout/logo.png");
-
-            if !dummy_source.is_file() {
-                dummy_source = Path::new("./assets/dummy.vtt");
-            }
-            if !logo_source.is_file() {
-                logo_source = Path::new("./assets/logo.png");
-            }
+            // Installed with the image, from before the rename, or beside
+            // the binary when run from the source tree.
+            let asset = |name: &str| {
+                ["/usr/share/noar", "/usr/share/ffplayout", "./assets"]
+                    .iter()
+                    .map(|dir| Path::new(dir).join(name))
+                    .find(|path| path.is_file())
+                    .unwrap_or_else(|| Path::new("./assets").join(name))
+            };
+            let dummy_source = asset("dummy.vtt");
+            let logo_source = asset("logo.png");
 
             if !target.is_dir() {
                 let dummy_target = target.join("dummy.vtt");
@@ -654,7 +656,7 @@ mod tests {
     #[tokio::test]
     async fn renames_directory_within_storage() {
         let base = std::env::temp_dir().join(format!(
-            "ffplayout-storage-rename-{}-{}",
+            "noar-storage-rename-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -677,7 +679,7 @@ mod tests {
     #[tokio::test]
     async fn browse_marks_the_folders_of_lives() {
         let base = std::env::temp_dir().join(format!(
-            "ffplayout-storage-lives-{}-{}",
+            "noar-storage-lives-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -709,7 +711,7 @@ mod tests {
     #[tokio::test]
     async fn storage_creation_returns_error_instead_of_panicking() {
         let base = std::env::temp_dir().join(format!(
-            "ffplayout-storage-error-{}-{}",
+            "noar-storage-error-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));

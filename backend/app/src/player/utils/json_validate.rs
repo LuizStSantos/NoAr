@@ -326,7 +326,7 @@ pub async fn validate_playlist(
 
 #[cfg(test)]
 mod tests {
-    use ff_engine::{EngineAudioStream, EngineMediaProbe, EngineVideoStream, ProbeFormat};
+    use noar_engine::{EngineAudioStream, EngineMediaProbe, EngineVideoStream, ProbeFormat};
 
     use super::{Media, av_duration_error};
 

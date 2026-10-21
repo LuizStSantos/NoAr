@@ -934,7 +934,7 @@ mod tests {
             .args(format_args!("routed"))
             .build();
         let module = Record::builder()
-            .target("ffplayout::console")
+            .target("noar::console")
             .level(Level::Info)
             .args(format_args!("module"))
             .build();
@@ -953,7 +953,7 @@ mod tests {
         assert_eq!(cpu_bench_line_count("regular log line"), None);
     }
 
-    /// Run with `cargo test -p ffplayout displays_console_log_levels -- --ignored --nocapture`.
+    /// Run with `cargo test -p noar displays_console_log_levels -- --ignored --nocapture`.
     #[test]
     #[ignore = "prints every log level using the console formatter"]
     fn displays_console_log_levels() {

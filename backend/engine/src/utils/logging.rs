@@ -7,7 +7,7 @@ use std::{
         atomic::{AtomicI32, Ordering},
     },
 };
-#[cfg(any(ffplayout_srt_linked, test))]
+#[cfg(any(noar_srt_linked, test))]
 use std::{
     mem,
     time::{Duration, Instant},
@@ -20,9 +20,9 @@ use regex::Regex;
 use super::config::LogLevel;
 
 const FFMPEG_LOG_TARGET: &str = "ffmpeg";
-#[cfg(ffplayout_srt_linked)]
+#[cfg(noar_srt_linked)]
 const SRT_LOG_TARGET: &str = "srt";
-#[cfg(any(ffplayout_srt_linked, test))]
+#[cfg(any(noar_srt_linked, test))]
 const SRT_LOG_REPEAT_INTERVAL: Duration = Duration::from_secs(10);
 const SKIPPED_FFMPEG_LOG_MESSAGES: &[&str] = &[
     r"Opening '.*' for reading",
@@ -62,7 +62,7 @@ static CHANNEL_ID: AtomicI32 = AtomicI32::new(0);
 static LOG_DEDUP: Mutex<LogDedup> = Mutex::new(LogDedup::new());
 static SKIPPED_FFMPEG_LOG_PATTERNS: OnceLock<Vec<Regex>> = OnceLock::new();
 static USER_SKIPPED_FFMPEG_LOG_LINES: Mutex<Vec<String>> = Mutex::new(Vec::new());
-#[cfg(ffplayout_srt_linked)]
+#[cfg(noar_srt_linked)]
 static SRT_LOG_DEDUP: Mutex<SrtLogDedup> = Mutex::new(SrtLogDedup::new());
 static SRT_LOG_INSTALLED: OnceLock<bool> = OnceLock::new();
 
@@ -101,17 +101,17 @@ pub(crate) fn init(
     SRT_LOG_INSTALLED.get_or_init(install_srt_log_callback);
 }
 
-#[cfg(ffplayout_srt_linked)]
+#[cfg(noar_srt_linked)]
 type SrtLogHandler =
     unsafe extern "C" fn(*mut c_void, c_int, *const c_char, c_int, *const c_char, *const c_char);
 
-#[cfg(ffplayout_srt_linked)]
+#[cfg(noar_srt_linked)]
 unsafe extern "C" {
     fn srt_setlogflags(flags: c_int);
     fn srt_setloghandler(opaque: *mut c_void, handler: Option<SrtLogHandler>);
 }
 
-#[cfg(ffplayout_srt_linked)]
+#[cfg(noar_srt_linked)]
 fn install_srt_log_callback() -> bool {
     unsafe {
         // The callback uses our own timestamp and severity. These flag values
@@ -123,7 +123,7 @@ fn install_srt_log_callback() -> bool {
     true
 }
 
-#[cfg(not(ffplayout_srt_linked))]
+#[cfg(not(noar_srt_linked))]
 fn install_srt_log_callback() -> bool {
     false
 }
@@ -132,7 +132,7 @@ pub(crate) fn srt_log_callback_installed() -> bool {
     *SRT_LOG_INSTALLED.get_or_init(install_srt_log_callback)
 }
 
-#[cfg(ffplayout_srt_linked)]
+#[cfg(noar_srt_linked)]
 unsafe extern "C" fn srt_log_callback(
     _opaque: *mut c_void,
     level: c_int,
@@ -156,7 +156,7 @@ unsafe extern "C" fn srt_log_callback(
     });
 }
 
-#[cfg(ffplayout_srt_linked)]
+#[cfg(noar_srt_linked)]
 fn log_srt_line(level: c_int, message: &str) {
     let line = SRT_LOG_DEDUP
         .lock()
@@ -179,19 +179,19 @@ fn log_srt_line(level: c_int, message: &str) {
     }
 }
 
-#[cfg(any(ffplayout_srt_linked, test))]
+#[cfg(any(noar_srt_linked, test))]
 struct SrtLogDedup {
     receive_buffer_warnings: Vec<SrtRepeat>,
 }
 
-#[cfg(any(ffplayout_srt_linked, test))]
+#[cfg(any(noar_srt_linked, test))]
 struct SrtRepeat {
     socket_id: Option<String>,
     last_emit: Instant,
     suppressed: u64,
 }
 
-#[cfg(any(ffplayout_srt_linked, test))]
+#[cfg(any(noar_srt_linked, test))]
 impl SrtLogDedup {
     const fn new() -> Self {
         Self {

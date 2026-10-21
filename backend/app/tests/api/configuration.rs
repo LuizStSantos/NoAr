@@ -87,8 +87,7 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
     let outputs_body = to_bytes(outputs_response.into_body(), usize::MAX)
         .await
         .unwrap();
-    let outputs: Vec<ffplayout::db::models::Output> =
-        serde_json::from_slice(&outputs_body).unwrap();
+    let outputs: Vec<noar::db::models::Output> = serde_json::from_slice(&outputs_body).unwrap();
     assert_eq!(outputs.len(), 3);
     assert!(outputs.iter().all(|output| output.channel_id == 1));
 
@@ -189,7 +188,7 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
     config.audio.compressor_threshold_dbfs = -30.0;
     config.audio.pause_threshold_dbfs = -65.0;
     config.mail.subject = "Updated through API".to_string();
-    config.notification.topic = "ffplayout-alerts".to_string();
+    config.notification.topic = "noar-alerts".to_string();
     config.notification.tags = "warning,broadcast".to_string();
     let update_config_response = app
         .clone()
@@ -225,7 +224,7 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
     assert_eq!(stored.processing_compressor_threshold_dbfs, -30.0);
     assert_eq!(stored.processing_pause_threshold_dbfs, -65.0);
     assert_eq!(stored.mail_subject, "Updated through API");
-    assert_eq!(stored.notification_topic, "ffplayout-alerts");
+    assert_eq!(stored.notification_topic, "noar-alerts");
     assert_eq!(stored.notification_tags, "warning,broadcast");
 
     let mut invalid = config.clone();
@@ -254,8 +253,8 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
     ] {
         let mut invalid = config.clone();
         invalid.mail.subject = "Must not be saved".to_string();
-        invalid.output.mode = ffplayout::utils::config::OutputMode::Stream;
-        invalid.output.stream_type = ffplayout::utils::config::StreamType::Rtmp;
+        invalid.output.mode = noar::utils::config::OutputMode::Stream;
+        invalid.output.stream_type = noar::utils::config::StreamType::Rtmp;
         invalid.output.stream_url = "rtmp://127.0.0.1/live/test".to_string();
         invalid.output.protocol_options =
             [(key.to_string(), value.to_string())].into_iter().collect();

@@ -22,7 +22,7 @@ use tokio_util::sync::CancellationToken;
 #[cfg(feature = "dev-metrics")]
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use ffplayout::{
+use noar::{
     ARGS,
     api::file_access::FileAccessState,
     api::{self, state::AppState},
@@ -50,7 +50,7 @@ use ffplayout::{
 };
 
 #[cfg(not(debug_assertions))]
-use ffplayout::serve::routes::admin_ui_routes;
+use noar::serve::routes::admin_ui_routes;
 
 fn env_parse_or<T>(key: &str, default: T) -> T
 where
@@ -78,7 +78,7 @@ fn main() -> Result<(), ProcessError> {
         .init();
 
     #[cfg(any(feature = "desktop", feature = "desktop-cpu"))]
-    ff_engine::run_desktop_on_main_thread(run_async_main)
+    noar_engine::run_desktop_on_main_thread(run_async_main)
         .map_err(|error| ProcessError::Custom(format!("Desktop runtime failed: {error:#}")))??;
 
     #[cfg(not(any(feature = "desktop", feature = "desktop-cpu")))]
@@ -106,7 +106,7 @@ fn run_async_main() -> Result<(), ProcessError> {
 
 async fn async_main() -> Result<(), ProcessError> {
     #[cfg(feature = "processing-bench")]
-    ff_engine::set_processing_bench_interval(Duration::from_secs(
+    noar_engine::set_processing_bench_interval(Duration::from_secs(
         ARGS.processing_bench_report_interval(),
     ));
 

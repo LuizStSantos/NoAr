@@ -49,7 +49,7 @@ export type Playlist = { day_start: string, length: string, infinit: boolean, };
 /**
  * Channel Config
  *
- * This we init ones, when ffplayout is starting and use them globally in the hole program.
+ * This we init ones, when NoAr is starting and use them globally in the hole program.
  */
 export type PlayoutConfig = { general: General, mail: Mail, notification: Notification, logging: Logging, processing: Processing, audio: Audio, ingest: Ingest, playlist: Playlist, storage: Storage, task: Task, recording: Recording, output: Output, };
 

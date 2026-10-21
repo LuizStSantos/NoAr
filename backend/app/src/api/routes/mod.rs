@@ -354,7 +354,7 @@ mod tests {
 
     #[tokio::test]
     async fn streams_exact_range_bytes_headers_and_empty_responses() {
-        let path = std::env::temp_dir().join(format!("ffplayout-range-{}", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("noar-range-{}", uuid::Uuid::new_v4()));
         tokio::fs::write(&path, b"0123456789").await.unwrap();
 
         for (range, status, expected, content_range) in [

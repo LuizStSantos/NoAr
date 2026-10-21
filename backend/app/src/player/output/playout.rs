@@ -5,12 +5,12 @@ use std::{
     time::Duration,
 };
 
-use ff_engine::{
+use log::*;
+use noar_engine::{
     AsyncPlayout, AudioLevelCallback, ClipResult, HlsHealth, LiveInputBackend, LiveListenerConfig,
     LogLevel, LogoConfig, LogoFade, OutputConfig, Preloader, RecordingConfig,
     RecordingEncodeConfig,
 };
-use log::*;
 use tokio::{task::JoinHandle, time::sleep};
 use tokio_util::sync::CancellationToken;
 
@@ -178,7 +178,7 @@ async fn hls_watchdog(
     channel_id: i32,
     hls_health: HlsHealth,
     hls_time: Duration,
-    playback_control: ff_engine::PlaybackControl,
+    playback_control: noar_engine::PlaybackControl,
     cancel_token: CancellationToken,
 ) -> Result<(), ServiceError> {
     let mut init = true;
@@ -265,7 +265,7 @@ async fn play_loop(
         }
 
         // An empty source is intentional when playlist and configured filler
-        // are both unavailable: ff-engine then generates black video/silence.
+        // are both unavailable: noar-engine then generates black video/silence.
         // Keep that implementation detail out of the player input, but make
         // it explicit in the operator-facing log.
         let display_source = if node.source.is_empty() {
@@ -398,7 +398,7 @@ async fn play_loop(
                 // lets `player()` finish the engine before `main` stops all
                 // remaining channels.
                 info!(channel = id;
-                    "Desktop player window closed; shutting down ffplayout"
+                    "Desktop player window closed; shutting down NoAr"
                 );
                 manager.channel.lock().await.active = false;
                 request_shutdown(&manager.shutdown);
@@ -548,18 +548,18 @@ async fn open_desktop_playout(
     _fallback_duration: f64,
 ) -> Result<AsyncPlayout, ServiceError> {
     Err(ServiceError::Conflict(
-        "desktop output is not available because ffplayout was built without the desktop feature"
+        "desktop output is not available because noar was built without the desktop feature"
             .to_string(),
     ))
 }
 
 fn engine_output_config(
     config: &PlayoutConfig,
-    audio_effects: ff_engine::AudioEffectsControl,
-    live_loudness: ff_engine::LiveLoudnessControl,
-    loudness_meter: ff_engine::LoudnessMeterControl,
-    audio_level: std::sync::Arc<std::sync::Mutex<Option<ff_engine::AudioLevel>>>,
-    desktop_control_callback: ff_engine::DesktopControlCallback,
+    audio_effects: noar_engine::AudioEffectsControl,
+    live_loudness: noar_engine::LiveLoudnessControl,
+    loudness_meter: noar_engine::LoudnessMeterControl,
+    audio_level: std::sync::Arc<std::sync::Mutex<Option<noar_engine::AudioLevel>>>,
+    desktop_control_callback: noar_engine::DesktopControlCallback,
 ) -> Result<OutputConfig, ServiceError> {
     let width = config.output.width;
     let height = config.output.height;
@@ -604,9 +604,9 @@ fn engine_output_config(
         OutputConfig::new(width, height, fps, ENGINE_AUDIO_SAMPLE_RATE)
             .with_audio_effects(audio_effects)
             .with_loudness_scope(match config.audio.loudness_scope.as_str() {
-                "all" => ff_engine::LoudnessScope::All,
-                "live" => ff_engine::LoudnessScope::Live,
-                _ => ff_engine::LoudnessScope::Off,
+                "all" => noar_engine::LoudnessScope::All,
+                "live" => noar_engine::LoudnessScope::Live,
+                _ => noar_engine::LoudnessScope::Off,
             })
             .with_live_loudness_control(live_loudness)
             .with_loudness_meter_control(loudness_meter)
@@ -731,17 +731,17 @@ fn disable_incompatible_recording(
     Ok(None)
 }
 
-fn desktop_control_callback(manager: ChannelManager) -> ff_engine::DesktopControlCallback {
+fn desktop_control_callback(manager: ChannelManager) -> noar_engine::DesktopControlCallback {
     let runtime = tokio::runtime::Handle::current();
     let pool = manager.db_pool.clone();
 
-    ff_engine::DesktopControlCallback::new(move |command| {
+    noar_engine::DesktopControlCallback::new(move |command| {
         let manager = manager.clone();
         let pool = pool.clone();
         let control = match command {
-            ff_engine::DesktopControlCommand::Back => PlayerCtl::Back,
-            ff_engine::DesktopControlCommand::Next => PlayerCtl::Next,
-            ff_engine::DesktopControlCommand::Reset => PlayerCtl::Reset,
+            noar_engine::DesktopControlCommand::Back => PlayerCtl::Back,
+            noar_engine::DesktopControlCommand::Next => PlayerCtl::Next,
+            noar_engine::DesktopControlCommand::Reset => PlayerCtl::Reset,
         };
 
         if manager.is_processing.swap(true, Ordering::SeqCst) {

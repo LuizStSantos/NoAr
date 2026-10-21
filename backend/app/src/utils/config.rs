@@ -78,21 +78,21 @@ pub enum StreamType {
 }
 
 impl StreamType {
-    fn ffmpeg_target(self) -> Option<ff_engine::FfmpegOutputTarget> {
+    fn ffmpeg_target(self) -> Option<noar_engine::FfmpegOutputTarget> {
         match self {
-            Self::Rtmp => Some(ff_engine::FfmpegOutputTarget::Rtmp),
-            Self::Srt => Some(ff_engine::FfmpegOutputTarget::Srt),
-            Self::Udp => Some(ff_engine::FfmpegOutputTarget::Udp),
+            Self::Rtmp => Some(noar_engine::FfmpegOutputTarget::Rtmp),
+            Self::Srt => Some(noar_engine::FfmpegOutputTarget::Srt),
+            Self::Udp => Some(noar_engine::FfmpegOutputTarget::Udp),
             Self::Custom => None,
         }
     }
 
-    pub fn engine_stream_type(self) -> ff_engine::StreamType {
+    pub fn engine_stream_type(self) -> noar_engine::StreamType {
         match self {
-            Self::Rtmp => ff_engine::StreamType::Rtmp,
-            Self::Srt => ff_engine::StreamType::Srt,
-            Self::Udp => ff_engine::StreamType::Udp,
-            Self::Custom => ff_engine::StreamType::Custom,
+            Self::Rtmp => noar_engine::StreamType::Rtmp,
+            Self::Srt => noar_engine::StreamType::Srt,
+            Self::Udp => noar_engine::StreamType::Udp,
+            Self::Custom => noar_engine::StreamType::Custom,
         }
     }
 }
@@ -167,7 +167,7 @@ pub struct Source {
 
 /// Channel Config
 ///
-/// This we init ones, when ffplayout is starting and use them globally in the hole program.
+/// This we init ones, when NoAr is starting and use them globally in the hole program.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
 #[ts(export, export_to = "playout_config.d.ts")]
 pub struct PlayoutConfig {
@@ -241,7 +241,7 @@ impl Recording {
             height: u32::try_from(recording.height).unwrap_or_default(),
             video_codec: recording.video_codec.clone(),
             video_options: serde_json::from_str(&recording.video_options)
-                .unwrap_or_else(|_| ff_engine::video_option_defaults(&recording.video_codec)),
+                .unwrap_or_else(|_| noar_engine::video_option_defaults(&recording.video_codec)),
             audio_codec: recording.audio_codec.clone(),
             audio_options: serde_json::from_str(&recording.audio_options).unwrap_or_default(),
             audio_bitrate: u32::try_from(recording.audio_bitrate).unwrap_or(128),
@@ -270,29 +270,29 @@ impl Recording {
                     "recording width and height must both be set or both be zero".to_string(),
                 );
             }
-            let capabilities = ff_engine::ffmpeg_capabilities();
+            let capabilities = noar_engine::ffmpeg_capabilities();
             if !capabilities
-                .video_codecs_for(ff_engine::FfmpegOutputTarget::Matroska)
+                .video_codecs_for(noar_engine::FfmpegOutputTarget::Matroska)
                 .iter()
                 .any(|codec| codec.name == self.video_codec)
             {
                 return Err("unsupported recording video codec".to_string());
             }
             if !capabilities
-                .audio_codecs_for(ff_engine::FfmpegOutputTarget::Matroska)
+                .audio_codecs_for(noar_engine::FfmpegOutputTarget::Matroska)
                 .iter()
                 .any(|codec| codec.name == self.audio_codec && !codec.hardware)
             {
                 return Err("unsupported recording audio codec".to_string());
             }
-            ff_engine::validate_video_options(&self.video_codec, &self.video_options)?;
-            ff_engine::validate_audio_options(
+            noar_engine::validate_video_options(&self.video_codec, &self.video_options)?;
+            noar_engine::validate_audio_options(
                 &self.audio_codec,
                 &self.audio_options,
                 ENGINE_AUDIO_SAMPLE_RATE,
                 u64::from(self.audio_bitrate) * 1_000,
             )?;
-            if ff_engine::audio_codec_uses_bitrate(&self.audio_codec) && self.audio_bitrate == 0 {
+            if noar_engine::audio_codec_uses_bitrate(&self.audio_codec) && self.audio_bitrate == 0 {
                 return Err("recording audio bitrate must be greater than zero".to_string());
             }
         }
@@ -644,12 +644,12 @@ impl Processing {
         }
     }
 
-    pub fn hls_subtitle(&self) -> Result<Option<ff_engine::HlsSubtitle>, String> {
+    pub fn hls_subtitle(&self) -> Result<Option<noar_engine::HlsSubtitle>, String> {
         if !self.vtt_enable {
             return Ok(None);
         }
 
-        let subtitle = ff_engine::HlsSubtitle {
+        let subtitle = noar_engine::HlsSubtitle {
             name: self.vtt_name.trim().to_string(),
             language: self.vtt_language.trim().to_string(),
             default: self.vtt_default,
@@ -982,7 +982,7 @@ impl Output {
             .unwrap_or_default();
         let video_codec = output.video_codec.unwrap_or_else(default_video_codec);
         let video_options = serde_json::from_str(&output.video_options)
-            .unwrap_or_else(|_| ff_engine::video_option_defaults(&video_codec));
+            .unwrap_or_else(|_| noar_engine::video_option_defaults(&video_codec));
         let protocol_options = serde_json::from_str(&output.protocol_options).unwrap_or_default();
         let muxer_options = serde_json::from_str(&output.muxer_options).unwrap_or_default();
         let metadata_options = serde_json::from_str(&output.metadata_options).unwrap_or_default();
@@ -1035,13 +1035,13 @@ impl Output {
         }
     }
 
-    /// Parses `hls_variants` into engine-ready [`ff_engine::HlsVariant`]s,
+    /// Parses `hls_variants` into engine-ready [`noar_engine::HlsVariant`]s,
     /// returning a descriptive error for the offending entry on failure.
-    pub fn parsed_hls_variants(&self) -> Result<Vec<ff_engine::HlsVariant>, String> {
+    pub fn parsed_hls_variants(&self) -> Result<Vec<noar_engine::HlsVariant>, String> {
         self.hls_variants
             .iter()
             .map(|spec| {
-                spec.parse::<ff_engine::HlsVariant>()
+                spec.parse::<noar_engine::HlsVariant>()
                     .map_err(|e| format!("invalid HLS variant \"{spec}\": {e}"))
             })
             .collect()
@@ -1049,8 +1049,8 @@ impl Output {
 
     /// Returns all HLS renditions, with the configured base output first and
     /// additional variants appended.
-    pub fn hls_streams(&self) -> Result<Vec<ff_engine::HlsVariant>, String> {
-        let base = ff_engine::HlsVariant {
+    pub fn hls_streams(&self) -> Result<Vec<noar_engine::HlsVariant>, String> {
+        let base = noar_engine::HlsVariant {
             name: self.hls_playlist_name.trim().to_string(),
             width: self.width,
             height: self.height,
@@ -1078,7 +1078,7 @@ impl Output {
 
     fn validate_hls_audio_options(&self) -> Result<(), String> {
         for variant in self.hls_streams()?.iter().skip(1) {
-            ff_engine::validate_audio_options(
+            noar_engine::validate_audio_options(
                 &self.audio_codec,
                 &self.audio_options,
                 ENGINE_AUDIO_SAMPLE_RATE,
@@ -1108,21 +1108,21 @@ impl Output {
                 "protocol options can only be used with network stream outputs".to_string(),
             );
         }
-        ff_engine::validate_output_metadata(&self.metadata_options)?;
+        noar_engine::validate_output_metadata(&self.metadata_options)?;
         if self.mode == OutputMode::Desktop && !self.metadata_options.is_empty() {
             return Err("container metadata is unavailable for desktop output".to_string());
         }
 
         if matches!(self.mode, OutputMode::HLS | OutputMode::Stream) {
             let target = match self.mode {
-                OutputMode::HLS => ff_engine::FfmpegOutputTarget::Hls,
+                OutputMode::HLS => noar_engine::FfmpegOutputTarget::Hls,
                 OutputMode::Stream => self
                     .stream_type
                     .ffmpeg_target()
-                    .unwrap_or(ff_engine::FfmpegOutputTarget::Rtmp),
+                    .unwrap_or(noar_engine::FfmpegOutputTarget::Rtmp),
                 OutputMode::Desktop => unreachable!("desktop output is not encoded"),
             };
-            let capabilities = ff_engine::ffmpeg_capabilities();
+            let capabilities = noar_engine::ffmpeg_capabilities();
             let custom_format = self.stream_format.trim();
             if self.mode == OutputMode::Stream && self.stream_type == StreamType::Custom {
                 if custom_format.is_empty() {
@@ -1143,9 +1143,9 @@ impl Output {
                 },
                 OutputMode::Desktop => unreachable!("desktop output is not encoded"),
             };
-            ff_engine::validate_muxer_options(muxer_name, &self.muxer_options)?;
+            noar_engine::validate_muxer_options(muxer_name, &self.muxer_options)?;
             if self.mode == OutputMode::Stream {
-                ff_engine::validate_output_protocol_options(
+                noar_engine::validate_output_protocol_options(
                     self.stream_type.engine_stream_type(),
                     &self.stream_url,
                     &self.protocol_options,
@@ -1153,7 +1153,7 @@ impl Output {
             }
             let video_codecs =
                 if self.mode == OutputMode::Stream && self.stream_type == StreamType::Custom {
-                    capabilities.usable_codecs(ff_engine::FfmpegMediaType::Video)
+                    capabilities.usable_codecs(noar_engine::FfmpegMediaType::Video)
                 } else {
                     capabilities.video_codecs_for(target)
                 };
@@ -1168,7 +1168,7 @@ impl Output {
             }
             let audio_codecs =
                 if self.mode == OutputMode::Stream && self.stream_type == StreamType::Custom {
-                    capabilities.usable_codecs(ff_engine::FfmpegMediaType::Audio)
+                    capabilities.usable_codecs(noar_engine::FfmpegMediaType::Audio)
                 } else {
                     capabilities.audio_codecs_for(target)
                 };
@@ -1182,14 +1182,14 @@ impl Output {
                     self.audio_codec, self.mode
                 ));
             }
-            ff_engine::validate_video_options(&self.video_codec, &self.video_options)?;
-            ff_engine::validate_audio_options(
+            noar_engine::validate_video_options(&self.video_codec, &self.video_options)?;
+            noar_engine::validate_audio_options(
                 &self.audio_codec,
                 &self.audio_options,
                 ENGINE_AUDIO_SAMPLE_RATE,
                 u64::from(self.audio_bitrate) * 1_000,
             )?;
-            if ff_engine::audio_codec_uses_bitrate(&self.audio_codec) && self.audio_bitrate == 0 {
+            if noar_engine::audio_codec_uses_bitrate(&self.audio_codec) && self.audio_bitrate == 0 {
                 return Err("audio bitrate must be greater than zero".to_string());
             }
         }
@@ -1329,7 +1329,7 @@ impl PlayoutConfig {
         let config = Self::new(pool, id, None).await?;
 
         let toml_string = toml_edit::ser::to_string_pretty(&config)?;
-        tokio::fs::write(&format!("ffplayout_{id}.toml"), toml_string).await?;
+        tokio::fs::write(&format!("noar_{id}.toml"), toml_string).await?;
 
         Ok(())
     }
@@ -1472,7 +1472,7 @@ mod output_tests {
             height: 720,
             fps: 25.0,
             video_codec: "libx264".to_string(),
-            video_options: ff_engine::video_option_defaults("libx264"),
+            video_options: noar_engine::video_option_defaults("libx264"),
             protocol_options: BTreeMap::new(),
             muxer_options: BTreeMap::new(),
             metadata_options: BTreeMap::new(),
@@ -1517,12 +1517,7 @@ mod output_tests {
         output
             .protocol_options
             .insert("rw_timeout".to_string(), "0".to_string());
-        assert!(
-            output
-                .validate()
-                .unwrap_err()
-                .contains("managed by ffplayout")
-        );
+        assert!(output.validate().unwrap_err().contains("managed by NoAr"));
         output.protocol_options.remove("rw_timeout");
         output.stream_url = "srt://localhost:9000?latency=20000".to_string();
         assert!(
@@ -1841,7 +1836,7 @@ mod recording_tests {
         };
         assert!(recording.validate().is_err());
 
-        recording.path = "/var/lib/ffplayout/recordings/1".to_string();
+        recording.path = "/var/lib/noar/recordings/1".to_string();
         recording.segment_duration = 29;
         assert!(recording.validate().is_err());
 
@@ -1871,7 +1866,7 @@ mod recording_tests {
             enable: true,
             source: RecordingSource::HlsVariant,
             source_output_id: Some(1),
-            path: "/var/lib/ffplayout/recordings/1".to_string(),
+            path: "/var/lib/noar/recordings/1".to_string(),
             segment_duration: 300,
             ..Recording::default()
         };
@@ -1883,10 +1878,10 @@ mod recording_tests {
         let mut recording = Recording {
             enable: true,
             source: RecordingSource::Encode,
-            path: "/var/lib/ffplayout/recordings/1".to_string(),
+            path: "/var/lib/noar/recordings/1".to_string(),
             segment_duration: 300,
             video_codec: "libx264".to_string(),
-            video_options: ff_engine::video_option_defaults("libx264"),
+            video_options: noar_engine::video_option_defaults("libx264"),
             audio_codec: "mp2".to_string(),
             audio_bitrate: 128,
             audio_options: BTreeMap::from([("cutoff".to_string(), "0".to_string())]),
@@ -1909,14 +1904,14 @@ mod recording_tests {
             source: RecordingSource::Encode,
             source_output_id: None,
             variant: String::new(),
-            path: "/var/lib/ffplayout/recordings/1".to_string(),
+            path: "/var/lib/noar/recordings/1".to_string(),
             segment_duration: 300,
             retention_days: 0,
             minimum_free_space_gb: 0,
             width: 0,
             height: 0,
             video_codec: "libx264".to_string(),
-            video_options: ff_engine::video_option_defaults("libx264"),
+            video_options: noar_engine::video_option_defaults("libx264"),
             audio_codec: "aac".to_string(),
             audio_options: BTreeMap::from([("aac_codre".to_string(), "fast".to_string())]),
             audio_bitrate: 128,

@@ -1,9 +1,9 @@
 //! Minimal WAV-to-CPAL playback diagnostic.
 //!
 //! Usage:
-//!   cargo run -p ff-engine --example wav_cpal -- /path/to/input.wav
+//!   cargo run -p noar-engine --example wav_cpal -- /path/to/input.wav
 //!
-//! The example deliberately has no ffplayout mixer, resampler or renderer in
+//! The example deliberately has no NoAr mixer, resampler or renderer in
 //! its path. It accepts PCM signed 16/24/32-bit and IEEE-float 32-bit WAVs.
 
 use std::{

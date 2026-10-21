@@ -35,7 +35,7 @@ mod users;
 #[path = "api/xmltv.rs"]
 mod xmltv;
 
-use ffplayout::{
+use noar::{
     api::{
         auth::{decode_jwt, decode_refresh_jwt, login, logout, refresh},
         file_access::FileAccessState,
@@ -112,7 +112,7 @@ impl Drop for SecurityFixture {
 }
 
 async fn security_fixture() -> SecurityFixture {
-    let root = std::env::temp_dir().join(format!("ffplayout-security-{}", uuid_for_test()));
+    let root = std::env::temp_dir().join(format!("noar-security-{}", uuid_for_test()));
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
         .connect("sqlite::memory:")
@@ -121,7 +121,7 @@ async fn security_fixture() -> SecurityFixture {
     handles::db_migrate(&pool).await.unwrap();
     handles::create_channel_records(
         &pool,
-        ffplayout::db::models::Channel {
+        noar::db::models::Channel {
             name: "other-channel".to_string(),
             ..Default::default()
         },
@@ -221,7 +221,7 @@ async fn access_token(state: &AppState, id: i32) -> String {
     }))
     .unwrap();
 
-    ffplayout::api::auth::encode_jwt(claims).await.unwrap()
+    noar::api::auth::encode_jwt(claims).await.unwrap()
 }
 
 fn json_request(

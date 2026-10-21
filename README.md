@@ -124,7 +124,7 @@ need this README and [docs/docker.md](docs/docker.md).
 ## Development
 
 See [docs/developer.md](docs/developer.md). The Rust crates keep their
-original names (`ffplayout`, `ff-engine`); the binary is `noar`.
+original names (`ffplayout`, `noar-engine`); the binary is `noar`.
 
 ## License and credits
 

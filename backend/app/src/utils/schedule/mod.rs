@@ -385,7 +385,7 @@ pub async fn prepare_event(
 /// Length of a clip in seconds, or `None` when it cannot be read.
 pub async fn clip_duration(path: &Path) -> Option<f64> {
     let path = path.to_string_lossy().to_string();
-    let probe = task::spawn_blocking(move || ff_engine::probe_media(&path))
+    let probe = task::spawn_blocking(move || noar_engine::probe_media(&path))
         .await
         .ok()?
         .ok()?;

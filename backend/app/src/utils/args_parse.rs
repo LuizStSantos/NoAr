@@ -107,7 +107,7 @@ pub struct Args {
     )]
     pub drop_db: bool,
 
-    #[clap(long, help_heading = Some("General"), help = "Dump channel configuration to ffplayout_{channel}.toml")]
+    #[clap(long, help_heading = Some("General"), help = "Dump channel configuration to noar_{channel}.toml")]
     pub dump_config: bool,
 
     #[clap(long, help_heading = Some("General"), help = "Import channel configuration from file")]
@@ -476,7 +476,7 @@ pub async fn init_args(pool: &Pool<Sqlite>) -> Result<bool, ProcessError> {
         if let Some(channel) = &ARGS.channel {
             for id in channel {
                 match PlayoutConfig::dump(pool, *id).await {
-                    Ok(_) => println!("Dump config to: ffplayout_{id}.toml"),
+                    Ok(_) => println!("Dump config to: noar_{id}.toml"),
                     Err(e) => return Err(ProcessError::Custom(format!("Dump config: {e}"))),
                 };
             }
@@ -548,14 +548,14 @@ mod tests {
 
     #[test]
     fn no_arguments_default_to_local_api_listener() {
-        let args = try_parse_args_from(["ffplayout"]).expect("arguments should parse");
+        let args = try_parse_args_from(["noar"]).expect("arguments should parse");
 
         assert_eq!(args.listen.as_deref(), Some(DEFAULT_LISTEN_ADDRESS));
     }
 
     #[test]
     fn explicit_arguments_do_not_enable_default_listener() {
-        let args = try_parse_args_from(["ffplayout", "--channel", "1", "--foreground"])
+        let args = try_parse_args_from(["noar", "--channel", "1", "--foreground"])
             .expect("arguments should parse");
 
         assert_eq!(args.listen, None);
@@ -565,7 +565,7 @@ mod tests {
 
     #[test]
     fn explicit_listener_is_preserved() {
-        let args = try_parse_args_from(["ffplayout", "--listen", "0.0.0.0:9000"])
+        let args = try_parse_args_from(["noar", "--listen", "0.0.0.0:9000"])
             .expect("arguments should parse");
 
         assert_eq!(args.listen.as_deref(), Some("0.0.0.0:9000"));

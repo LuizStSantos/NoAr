@@ -218,8 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn interrupted_runtime_initialization_leaves_complete_setup_on_disk() {
-        let path =
-            std::env::temp_dir().join(format!("ffplayout-setup-{}.db", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("noar-setup-{}.db", uuid::Uuid::new_v4()));
         let options = SqliteConnectOptions::new()
             .filename(&path)
             .create_if_missing(true);

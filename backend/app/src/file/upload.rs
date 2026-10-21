@@ -517,7 +517,7 @@ mod tests {
 
     fn test_directory() -> PathBuf {
         std::env::temp_dir().join(format!(
-            "ffplayout-upload-test-{}-{}",
+            "noar-upload-test-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ))

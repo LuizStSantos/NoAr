@@ -1,7 +1,7 @@
 use chrono::{TimeDelta, Timelike};
 use serde_json::Value;
 
-use ffplayout::{
+use noar::{
     db::{handles::CutBy, models::NewAsRunEntry},
     utils::time_machine::time_now,
 };

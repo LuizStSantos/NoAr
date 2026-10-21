@@ -411,9 +411,9 @@ mod tests {
 
     fn settings(storage: &str) -> SetupSettings {
         SetupSettings {
-            logs: "/var/log/ffplayout".to_string(),
-            playlists: "/var/lib/ffplayout/playlists".to_string(),
-            public: "/usr/share/ffplayout/public".to_string(),
+            logs: "/var/log/noar".to_string(),
+            playlists: "/var/lib/noar/playlists".to_string(),
+            public: "/usr/share/noar/public".to_string(),
             storage: storage.to_string(),
             shared: false,
             smtp_server: String::new(),
@@ -427,10 +427,10 @@ mod tests {
     #[test]
     fn setup_defaults_prefer_path_arguments_over_stored_settings() {
         let stored = GlobalSettings {
-            logs: "/var/log/ffplayout".to_string(),
-            playlists: "/var/lib/ffplayout/playlists".to_string(),
-            public: "/var/lib/ffplayout/public".to_string(),
-            storage: "/var/lib/ffplayout/media".to_string(),
+            logs: "/var/log/noar".to_string(),
+            playlists: "/var/lib/noar/playlists".to_string(),
+            public: "/var/lib/noar/public".to_string(),
+            storage: "/var/lib/noar/media".to_string(),
             smtp_password: "secret".to_string(),
             ..GlobalSettings::default()
         };
@@ -445,8 +445,8 @@ mod tests {
 
         assert_eq!(defaults.storage, "/data/media");
         assert_eq!(defaults.playlists, "/data/playlists");
-        assert_eq!(defaults.public, "/var/lib/ffplayout/public");
-        assert_eq!(defaults.logs, "/var/log/ffplayout");
+        assert_eq!(defaults.public, "/var/lib/noar/public");
+        assert_eq!(defaults.logs, "/var/log/noar");
         assert!(defaults.smtp_password.is_empty());
     }
 
@@ -458,7 +458,7 @@ mod tests {
 
     #[test]
     fn setup_paths_reject_protected_system_directories() {
-        assert!(validate_setup_paths(&settings("/etc/ffplayout")).is_err());
+        assert!(validate_setup_paths(&settings("/etc/noar")).is_err());
         assert!(validate_setup_paths(&settings("/var/lib")).is_err());
     }
 

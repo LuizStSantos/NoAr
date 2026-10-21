@@ -3,15 +3,19 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
-/// Directories that must never be used directly as ffplayout data directories.
+/// Directories that must never be used directly as NoAr data directories.
 const PROTECTED_SYSTEM_PATHS: &[&str] = &[
     "/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/proc", "/root", "/run", "/sbin", "/sys",
     "/tmp", "/usr", "/var",
 ];
 
-/// ffplayout's own directories, which are allowed even though they live under
+/// NoAr's own directories, which are allowed even though they live under
 /// a protected system path (e.g. `/var`).
 const APPLICATION_SYSTEM_PATHS: &[&str] = &[
+    "/usr/share/noar",
+    "/var/lib/noar",
+    "/var/log/noar",
+    // Installs from before the rename keep their directories.
     "/usr/share/ffplayout",
     "/var/lib/ffplayout",
     "/var/log/ffplayout",
@@ -29,7 +33,7 @@ pub fn storage_relative(storage: &Path, source: &str) -> String {
 
 /// Validates that `value` is a safe, absolute directory path: non-empty, absolute,
 /// free of `.`/`..` components, and (when it falls under a protected system
-/// directory) only allowed when it also lives under one of ffplayout's own
+/// directory) only allowed when it also lives under one of NoAr's own
 /// application directories.
 pub fn validate_directory_path(name: &str, value: &str) -> Result<(), String> {
     let path = Path::new(value.trim());
@@ -107,7 +111,7 @@ mod tests {
     fn rejects_empty_and_relative_paths() {
         assert!(validate_directory_path("Recording", "").is_err());
         assert!(validate_directory_path("Recording", "recordings").is_err());
-        assert!(validate_directory_path("Recording", "/var/lib/ffplayout/../etc").is_err());
+        assert!(validate_directory_path("Recording", "/var/lib/noar/../etc").is_err());
     }
 
     #[test]
@@ -118,6 +122,7 @@ mod tests {
 
     #[test]
     fn accepts_application_paths() {
+        assert!(validate_directory_path("Recording", "/var/lib/noar/recordings/1").is_ok());
         assert!(validate_directory_path("Recording", "/var/lib/ffplayout/recordings/1").is_ok());
         assert!(validate_directory_path("Recording", "/srv/recordings").is_ok());
     }
@@ -128,7 +133,7 @@ mod tests {
         let root = std::env::current_dir()
             .unwrap()
             .join("target")
-            .join(format!("ffplayout-path-test-{}", std::process::id()));
+            .join(format!("noar-path-test-{}", std::process::id()));
         fs::create_dir_all(&root).unwrap();
         let link = root.join("recordings");
         let _ = fs::remove_file(&link);

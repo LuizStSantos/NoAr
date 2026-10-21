@@ -146,7 +146,7 @@ pub async fn update_global(
 
     // The playout API serves the configuration cached by each channel manager.
     // Keep its global mail and notification fields in sync so newly enabled
-    // services are visible immediately without restarting ffplayout.
+    // services are visible immediately without restarting NoAr.
     let managers = state.controller.read().await.managers.clone();
     for manager in managers {
         let mut config = manager.config.write().await;
@@ -230,9 +230,9 @@ mod tests {
     #[test]
     fn global_settings_update_rejects_path_fields() {
         let request = json!({
-            "logs": "/tmp/ffplayout",
+            "logs": "/tmp/noar",
             "smtp_server": "mail.example.org",
-            "smtp_user": "ffplayout@example.org",
+            "smtp_user": "noar@example.org",
             "smtp_starttls": false,
             "smtp_port": 465,
             "notification_server": "",

@@ -35,7 +35,7 @@ pub static VERIFICATION_CODES: LazyLock<Arc<Mutex<HashMap<String, VerificationCo
 /// not exist, so a failed lookup costs about as much as a real verification.
 static DUMMY_PASSWORD_HASH: LazyLock<String> = LazyLock::new(|| {
     Argon2::default()
-        .hash_password(b"ffplayout-dummy-password")
+        .hash_password(b"noar-dummy-password")
         .expect("dummy password hash must be valid")
         .to_string()
 });

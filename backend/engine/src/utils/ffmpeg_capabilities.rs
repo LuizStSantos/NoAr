@@ -296,7 +296,7 @@ const HLS_COMPATIBLE_FLAGS: &[&str] = &[
 ];
 
 /// Validates custom muxer options against the linked FFmpeg build without
-/// opening an output. HLS is restricted further because ffplayout owns its
+/// opening an output. HLS is restricted further because noar owns its
 /// segment layout, numbering, playlist lifecycle, and cleanup.
 pub fn validate_muxer_options(
     muxer_name: &str,
@@ -363,7 +363,7 @@ fn validate_hls_compatibility(options: &BTreeMap<String, String>) -> Result<(), 
     for (key, value) in options {
         if !HLS_COMPATIBLE_OPTIONS.contains(&key.as_str()) {
             return Err(format!(
-                "HLS muxer option {key:?} is not compatible with ffplayout's segment management"
+                "HLS muxer option {key:?} is not compatible with NoAr's segment management"
             ));
         }
 
@@ -371,7 +371,7 @@ fn validate_hls_compatibility(options: &BTreeMap<String, String>) -> Result<(), 
             for flag in value.split('+').filter(|flag| !flag.is_empty()) {
                 if !HLS_COMPATIBLE_FLAGS.contains(&flag) {
                     return Err(format!(
-                        "HLS flag {flag:?} is not compatible with ffplayout's segment management"
+                        "HLS flag {flag:?} is not compatible with NoAr's segment management"
                     ));
                 }
             }

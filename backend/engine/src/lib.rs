@@ -1080,7 +1080,7 @@ mod tests {
     #[test]
     fn dropping_async_playout_discards_queued_work_and_finishes_worker() {
         use super::*;
-        let directory = env::temp_dir().join(format!("ffplayout-drop-worker-{}", process::id()));
+        let directory = env::temp_dir().join(format!("noar-drop-worker-{}", process::id()));
         std::fs::create_dir_all(&directory).unwrap();
         let path = directory.join("output.mkv");
         let playback_control = PlaybackControl::default();

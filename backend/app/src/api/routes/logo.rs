@@ -7,7 +7,7 @@ use axum::{
     extract::{Path, Query, State},
     http::HeaderMap,
 };
-use ff_engine::LogoConfig;
+use noar_engine::LogoConfig;
 use protect_axum::authorities::AuthDetails;
 use serde::{Deserialize, Serialize};
 

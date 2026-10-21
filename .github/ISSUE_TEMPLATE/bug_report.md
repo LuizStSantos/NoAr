@@ -32,9 +32,9 @@ A clear and concise description of what you expected to happen.
 ### Desktop/Server/Software (please complete the following information):
 
 - OS: [e.g. debian 12]
-- ffplayout version
+- NoAr version (Settings › Updates)
 - ffmpeg version
-- are you using the current main of ffplayout?
+- are you using the latest image (ghcr.io/luizstsantos/noar:latest)?
 
 ### Config Settings:
 
@@ -43,4 +43,4 @@ A clear and concise description of what you expected to happen.
 
 ### Logging:
 
-- content of: ffplayout.log
+- the log lines from Registro (or `docker logs noar`)

@@ -3,7 +3,7 @@ use std::{path::PathBuf, sync::atomic::Ordering};
 use serial_test::serial;
 use sqlx::sqlite::SqlitePoolOptions;
 
-use ffplayout::{
+use noar::{
     db::handles,
     player::{
         controller::ChannelManager,

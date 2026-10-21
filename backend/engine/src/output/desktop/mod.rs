@@ -85,10 +85,10 @@ const RECORDING_CHANNEL_CAPACITY: usize = 64;
 const RECORDING_OVERLOAD_LOG_INTERVAL: Duration = Duration::from_secs(30);
 const DESKTOP_DOUBLE_CLICK_INTERVAL: Duration = Duration::from_millis(500);
 
-const DESKTOP_WINDOW_TITLE: &str = "ffplayout";
+const DESKTOP_WINDOW_TITLE: &str = "NoAr";
 
 #[cfg(target_os = "linux")]
-const DESKTOP_APPLICATION_ID: &str = "ffplayout";
+const DESKTOP_APPLICATION_ID: &str = "noar";
 
 fn desktop_window_icon() -> Result<Icon> {
     Icon::from_rgba(
@@ -241,7 +241,7 @@ impl DesktopRecording {
         let queue_depth = Arc::new(AtomicUsize::new(0));
         let worker_queue_depth = Arc::clone(&queue_depth);
         let worker = std_thread::Builder::new()
-            .name("ffplayout-desktop-recording".to_string())
+            .name("noar-desktop-recording".to_string())
             .spawn(move || {
                 let mut output = match EncodedOutput::open_recording(&cfg, &recording_config) {
                     Ok(output) => {
@@ -483,7 +483,7 @@ impl DesktopOutput {
             .map(|recording| Arc::clone(&recording.queue_depth));
         let channel_id = self.channel_id.unwrap_or_default();
         let worker = std_thread::Builder::new()
-            .name("ffplayout-decode".to_string())
+            .name("noar-decode".to_string())
             .spawn(move || {
                 benchmark::activate(worker_benchmark);
                 let mut output = DesktopFrameSender {
@@ -1811,7 +1811,7 @@ fn create_desktop_window_app(
         .with_visible(false)
         .with_fullscreen(fullscreen.then_some(Fullscreen::Borderless(None)));
     // Wayland uses this as the application ID; X11 uses it as the window class.
-    // Both let desktop shells associate this window with ffplayout instead of "Unknown".
+    // Both let desktop shells associate this window with NoAr instead of "Unknown".
     #[cfg(target_os = "linux")]
     let attributes = WindowAttributesExtWayland::with_name(
         attributes,

@@ -1582,34 +1582,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ff-engine"
-version = "2.6.1-rc.1"
-dependencies = [
- "anyhow",
- "bytemuck",
- "chrono",
- "clap",
- "cosmic-text",
- "cpal",
- "ebur128-stream",
- "env_logger 0.11.11",
- "ffmpeg-next",
- "glob",
- "log",
- "naga",
- "pkg-config",
- "pollster",
- "regex",
- "rten-simd",
- "softbuffer",
- "sysinfo",
- "tokio",
- "transcribe-rs",
- "wgpu",
- "winit",
-]
-
-[[package]]
 name = "ffmpeg-next"
 version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1632,60 +1604,6 @@ dependencies = [
  "num_cpus",
  "pkg-config",
  "vcpkg",
-]
-
-[[package]]
-name = "ffplayout"
-version = "2.6.1-rc.1"
-dependencies = [
- "argon2",
- "async-walkdir",
- "axum",
- "build-print",
- "chrono",
- "chrono-tz",
- "clap",
- "console-subscriber",
- "derive_more",
- "faccess",
- "ff-engine",
- "flexi_logger",
- "iana-time-zone",
- "include_dir",
- "inquire",
- "jsonwebtoken",
- "lazy-limit",
- "lettre",
- "lexical-sort",
- "local-ip-address",
- "log",
- "mime_guess",
- "nix",
- "notify",
- "notify-debouncer-full",
- "path-clean",
- "protect-axum",
- "quick-xml",
- "rand 0.10.3",
- "real",
- "regex",
- "relative-path",
- "reqwest",
- "rustls",
- "sanitize-filename",
- "serde",
- "serde_json",
- "serial_test",
- "sqlx",
- "sysinfo",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "toml_edit",
- "tower",
- "tracing-subscriber",
- "ts-rs",
- "uuid",
 ]
 
 [[package]]
@@ -3234,6 +3152,88 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "libc",
+]
+
+[[package]]
+name = "noar"
+version = "2.6.1-rc.1"
+dependencies = [
+ "argon2",
+ "async-walkdir",
+ "axum",
+ "build-print",
+ "chrono",
+ "chrono-tz",
+ "clap",
+ "console-subscriber",
+ "derive_more",
+ "faccess",
+ "flexi_logger",
+ "iana-time-zone",
+ "include_dir",
+ "inquire",
+ "jsonwebtoken",
+ "lazy-limit",
+ "lettre",
+ "lexical-sort",
+ "local-ip-address",
+ "log",
+ "mime_guess",
+ "nix",
+ "noar-engine",
+ "notify",
+ "notify-debouncer-full",
+ "path-clean",
+ "protect-axum",
+ "quick-xml",
+ "rand 0.10.3",
+ "real",
+ "regex",
+ "relative-path",
+ "reqwest",
+ "rustls",
+ "sanitize-filename",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sqlx",
+ "sysinfo",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "toml_edit",
+ "tower",
+ "tracing-subscriber",
+ "ts-rs",
+ "uuid",
+]
+
+[[package]]
+name = "noar-engine"
+version = "2.6.1-rc.1"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "chrono",
+ "clap",
+ "cosmic-text",
+ "cpal",
+ "ebur128-stream",
+ "env_logger 0.11.11",
+ "ffmpeg-next",
+ "glob",
+ "log",
+ "naga",
+ "pkg-config",
+ "pollster",
+ "regex",
+ "rten-simd",
+ "softbuffer",
+ "sysinfo",
+ "tokio",
+ "transcribe-rs",
+ "wgpu",
+ "winit",
 ]
 
 [[package]]

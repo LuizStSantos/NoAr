@@ -137,29 +137,33 @@ fn running_listener_port_in_use(
     })
 }
 
-fn codec_option(codec: &ff_engine::FfmpegCodec) -> CodecOption {
+fn codec_option(codec: &noar_engine::FfmpegCodec) -> CodecOption {
     CodecOption {
         name: codec.name.clone(),
         display_name: codec.display_name.clone(),
         codec_id: codec.codec_id.clone(),
         hardware: codec.hardware,
         uses_bitrate: match codec.media_type {
-            ff_engine::FfmpegMediaType::Video => ff_engine::video_codec_uses_bitrate(&codec.name),
-            ff_engine::FfmpegMediaType::Audio => ff_engine::audio_codec_uses_bitrate(&codec.name),
-            ff_engine::FfmpegMediaType::Subtitle => false,
+            noar_engine::FfmpegMediaType::Video => {
+                noar_engine::video_codec_uses_bitrate(&codec.name)
+            }
+            noar_engine::FfmpegMediaType::Audio => {
+                noar_engine::audio_codec_uses_bitrate(&codec.name)
+            }
+            noar_engine::FfmpegMediaType::Subtitle => false,
         },
         settings: match codec.media_type {
-            ff_engine::FfmpegMediaType::Video => ff_engine::video_option_specs(&codec.name),
-            ff_engine::FfmpegMediaType::Audio => &[],
-            ff_engine::FfmpegMediaType::Subtitle => &[],
+            noar_engine::FfmpegMediaType::Video => noar_engine::video_option_specs(&codec.name),
+            noar_engine::FfmpegMediaType::Audio => &[],
+            noar_engine::FfmpegMediaType::Subtitle => &[],
         }
         .iter()
         .map(|setting| EncoderSetting {
             key: setting.key.to_string(),
             label: setting.label.to_string(),
             kind: match setting.kind {
-                ff_engine::VideoOptionKind::Select => "select",
-                ff_engine::VideoOptionKind::Number => "number",
+                noar_engine::VideoOptionKind::Select => "select",
+                noar_engine::VideoOptionKind::Number => "number",
             },
             default: setting.default.to_string(),
             choices: setting
@@ -183,8 +187,8 @@ fn codec_option(codec: &ff_engine::FfmpegCodec) -> CodecOption {
     }
 }
 
-fn output_codec_options(target: ff_engine::FfmpegOutputTarget) -> OutputCodecOptions {
-    let capabilities = ff_engine::ffmpeg_capabilities();
+fn output_codec_options(target: noar_engine::FfmpegOutputTarget) -> OutputCodecOptions {
+    let capabilities = noar_engine::ffmpeg_capabilities();
 
     OutputCodecOptions {
         video: capabilities
@@ -202,16 +206,16 @@ fn output_codec_options(target: ff_engine::FfmpegOutputTarget) -> OutputCodecOpt
 }
 
 fn custom_output_codec_options() -> OutputCodecOptions {
-    let capabilities = ff_engine::ffmpeg_capabilities();
+    let capabilities = noar_engine::ffmpeg_capabilities();
 
     OutputCodecOptions {
         video: capabilities
-            .usable_codecs(ff_engine::FfmpegMediaType::Video)
+            .usable_codecs(noar_engine::FfmpegMediaType::Video)
             .iter()
             .map(codec_option)
             .collect(),
         audio: capabilities
-            .usable_codecs(ff_engine::FfmpegMediaType::Audio)
+            .usable_codecs(noar_engine::FfmpegMediaType::Audio)
             .iter()
             .filter(|codec| !codec.hardware)
             .map(codec_option)
@@ -322,10 +326,13 @@ pub async fn update_playout_config(
                     "live listener name or URL is too long".to_string(),
                 ));
             }
-            ff_engine::validate_input_protocol_options(&listener.backend, &listener.options)
+            noar_engine::validate_input_protocol_options(&listener.backend, &listener.options)
                 .map_err(ServiceError::BadRequest)?;
-            ff_engine::validate_live_demuxer_options(&listener.backend, &listener.demuxer_options)
-                .map_err(ServiceError::BadRequest)?;
+            noar_engine::validate_live_demuxer_options(
+                &listener.backend,
+                &listener.demuxer_options,
+            )
+            .map_err(ServiceError::BadRequest)?;
             if let Some(name) = listener
                 .demuxer_options
                 .keys()
@@ -341,12 +348,12 @@ pub async fn update_playout_config(
             }
 
             let backend = if listener.backend == "srt" {
-                ff_engine::LiveInputBackend::Srt
+                noar_engine::LiveInputBackend::Srt
             } else {
-                ff_engine::LiveInputBackend::Rtmp
+                noar_engine::LiveInputBackend::Rtmp
             };
 
-            if !ff_engine::live_protocol_available(backend) {
+            if !noar_engine::live_protocol_available(backend) {
                 return Err(ServiceError::BadRequest(format!(
                     "FFmpeg input protocol {:?} is unavailable in this build",
                     backend
@@ -362,7 +369,7 @@ pub async fn update_playout_config(
             }
         }
     }
-    ff_engine::AudioEffectsControl::new(data.audio.volume)
+    noar_engine::AudioEffectsControl::new(data.audio.volume)
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
     validate_loudness(&data.audio)?;
     data.output.validate().map_err(ServiceError::BadRequest)?;
@@ -494,7 +501,7 @@ pub async fn update_playout_config(
         } else {
             "{}"
         },
-        (is_encoded && ff_engine::audio_codec_uses_bitrate(&data.output.audio_codec))
+        (is_encoded && noar_engine::audio_codec_uses_bitrate(&data.output.audio_codec))
             .then_some(i64::from(data.output.audio_bitrate)),
     )
     .await?;
@@ -715,12 +722,12 @@ pub async fn get_playout_codecs(
     user.ensure_channel_or_admin(id)?;
 
     Ok(Json(PlayoutCodecOptions {
-        hls: output_codec_options(ff_engine::FfmpegOutputTarget::Hls),
-        rtmp: output_codec_options(ff_engine::FfmpegOutputTarget::Rtmp),
-        srt: output_codec_options(ff_engine::FfmpegOutputTarget::Srt),
-        udp: output_codec_options(ff_engine::FfmpegOutputTarget::Udp),
+        hls: output_codec_options(noar_engine::FfmpegOutputTarget::Hls),
+        rtmp: output_codec_options(noar_engine::FfmpegOutputTarget::Rtmp),
+        srt: output_codec_options(noar_engine::FfmpegOutputTarget::Srt),
+        udp: output_codec_options(noar_engine::FfmpegOutputTarget::Udp),
         custom: custom_output_codec_options(),
-        recording: output_codec_options(ff_engine::FfmpegOutputTarget::Matroska),
+        recording: output_codec_options(noar_engine::FfmpegOutputTarget::Matroska),
     }))
 }
 
@@ -800,7 +807,7 @@ mod tests {
         let current = PlayoutConfig::default();
         let mut updated = current.clone();
         updated.mail.recipient = "ops@example.org".to_string();
-        updated.notification.topic = "ffplayout-alerts".to_string();
+        updated.notification.topic = "noar-alerts".to_string();
         updated.audio.volume = 0.75;
 
         assert!(!requires_playout_restart(&current, &updated));

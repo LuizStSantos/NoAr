@@ -7,10 +7,10 @@
 //! utterance or the eight-second chunk limit is reached.
 //!
 //! ```text
-//! cargo run -p ff-engine --example live_transcription \
+//! cargo run -p noar-engine --example live_transcription \
 //!   --features transcription-example -- video.mp4 models/ggml-base.bin --language en
 //!
-//! cargo run -p ff-engine --example live_transcription \
+//! cargo run -p noar-engine --example live_transcription \
 //!   --features transcription-example -- video.mp4 models/moonshine-base \
 //!   --engine moonshine
 //! ```
@@ -27,11 +27,11 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use clap::{Parser, ValueEnum};
-use ff_engine::{
+use ffmpeg_next::frame;
+use noar_engine::{
     AudioFrameCallback, ClipResult, OutputConfig, Playout, RgbaColor, TextBackgroundConfig,
     TextConfig, TextOverlayState, TextPosition,
 };
-use ffmpeg_next::frame;
 use transcribe_rs::{
     SpeechModel, TranscribeOptions,
     onnx::{

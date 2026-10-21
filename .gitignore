@@ -19,13 +19,14 @@
 *tar.gz
 *.deb
 *.rpm
-ffplayout.1.gz
+noar.1.gz
 /assets/*.db*
 /dist/
 data/
 tmp/
 models/
 assets/playlist_template.json
+noar*.toml
 ffplayout*.toml
 template.json
 *.out.*
