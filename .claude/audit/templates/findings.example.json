@@ -1,0 +1,19 @@
+{
+  "repository": "LuizStSantos/NoAr",
+  "ref": "REPLACE_WITH_A_COMMIT_SHA",
+  "scope": "changed",
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "Example only: replace with an actual verified observation",
+      "severity": "HIGH",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/example.rs:42"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Describe user impact",
+      "is_blocker": true
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "repository": "LuizStSantos/NoAr",
+  "commit": "REPLACE_WITH_TESTED_SHA",
+  "environment": "isolated-staging-NOT_PRODUCTION",
+  "gates": {
+    "public_api": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    },
+    "browser_navigation": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    },
+    "authentication": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    },
+    "api_database": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    },
+    "scheduler": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    },
+    "media_output": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    },
+    "recovery": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    },
+    "security": {
+      "status": "NOT_RUN",
+      "reason": "Example placeholder; test has not been performed",
+      "evidence": []
+    }
+  }
+}

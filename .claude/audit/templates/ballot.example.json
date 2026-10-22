@@ -1,0 +1,13 @@
+{
+  "agent": "noar-backend-reviewer",
+  "readiness": {
+    "vote": "deny",
+    "reason": "Example only: an actual evidence-based reason is required"
+  },
+  "findings": {
+    "F-001": {
+      "vote": "confirm",
+      "reason": "Example only: cite evidence, not another agent vote"
+    }
+  }
+}

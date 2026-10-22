@@ -1,24 +1,15 @@
-# NoAr Architecture Overview
+# NoAr Architecture — Navigation Guide
 
-This is a navigation aid based on the repository structure reviewed on October 21, 2026, not a substitute for reading changed source code.
+**This file is a human-written navigation aid, not a substitute for verifying current source code.**
 
-| Area | Primary paths | Responsibility |
-| --- | --- | --- |
-| HTTP API and auth | `backend/app/src/api/` | REST routing, access control and HTTP handlers |
-| Database | `backend/app/src/db/` | SQLite models, migrations integration and handles |
-| Playout controller | `backend/app/src/player/` | Playlist orchestration, scheduler and output coordination |
-| Program guide | `backend/app/src/utils/xmltv/` | Program metadata and XMLTV generation |
-| Media input | `backend/engine/src/input/` | File/live decoding, preloading and input timestamps |
-| Media output | `backend/engine/src/output/` | Encoding, HLS, streaming, SCTE-35 and recording |
-| Frontend | `frontend/src/` | Vue UI, components, router, state and composables |
-| Schema changes | `migrations/` | Ordered SQLite migrations |
-| Release and CI | `.github/workflows/` | Validation, container builds and GitHub releases |
-| Runtime | `Dockerfile`, `docker-compose.yml` | Image construction, setup and optional updater |
+- Rust workspace: `Cargo.toml` with `backend/app` (`noar`, HTTP API + coordination) and `backend/engine` (`noar-engine`, media pipeline).
+- API handlers/auth: `backend/app/src/api/`, grouped routes under `api/routes/`.
+- Persistent data: `backend/app/src/db/handles/` and SQL migrations under `migrations/`.
+- Playout and scheduler: `backend/app/src/player/`; playback loop and command orchestration.
+- FFmpeg/media inputs/outputs: `backend/engine/src/input/`, `backend/engine/src/output/`.
+- SCTE-35: `backend/engine/src/output/scte35.rs`, scheduled break integration and frontend configuration.
+- XMLTV and programs: `backend/app/src/utils/xmltv/`.
+- Frontend Vue/TypeScript: `frontend/src/components`, `frontend/src/views`, `frontend/src/stores`, `frontend/src/composables`, `frontend/src/router`.
+- Build/test/release: `.github/workflows/{validate,docker,release}.yml`, `Dockerfile`, `docker-compose.yml`, `docs/releasing.md`.
 
-## Project-specific guardrails
-
-- Rust workspace: `backend/app` (`noar`) and `backend/engine` (`noar-engine`).
-- Follow `backend/AGENTS.md` for Rust contributions; keep engine independent of the app crate.
-- Protect broadcast continuity: verify FFmpeg behavior and scheduler timing where affected.
-- Treat generated symbols as approximate; source code is authoritative.
-- Do not change release or updater behavior during documentation-only work.
+Read `docs/ai/repository-map.md` for the updated machine-generated file map and query symbols with the index script before opening whole files. Revalidate module descriptions after refactors.

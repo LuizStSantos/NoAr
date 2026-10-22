@@ -1,5 +1,5 @@
 ---
-name: Explore
+name: noar-explorer
 description: Find the relevant NoAr source files and symbols quickly, avoiding broad code dumps and returning short evidence-backed findings.
 model: haiku
 tools: Read, Grep, Glob, Bash

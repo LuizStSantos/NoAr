@@ -1,0 +1,14 @@
+{
+  "name": "noar-isolated-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Opt-in browser smoke tests for an isolated NoAr staging instance",
+  "scripts": {
+    "test": "playwright test",
+    "test:chromium": "playwright test --project=chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "typescript": "^5.9.0"
+  }
+}
