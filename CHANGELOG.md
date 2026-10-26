@@ -41,6 +41,16 @@ one is tagged.
 - A crash inside a channel's playout no longer leaves the channel silently
   off air while still shown as running: the playout restarts like after any
   other failure.
+- A damaged spot in a clip or a live feed no longer ends it: damaged data is
+  skipped, as the FFmpeg command line does. Only a long run of it ends the
+  clip, which then falls back.
+- A clip failing partway now falls back only for the rest of its slot.
+  Before, the fallback ran for the whole clip length again, and everything
+  after it aired late by the part already played.
+- Start, stop and restart can no longer run twice at once, and a restart
+  finishes even if the browser disconnects halfway. Before, that could leave
+  the channel off air and refusing every further command until NoAr was
+  restarted.
 - Dialogs now take keyboard focus when they open, keep Tab inside, close
   with Escape (the scheduling and live dialogs did not), and hand focus back
   when they close. Escape in a dialog opened from another closes only the

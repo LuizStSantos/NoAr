@@ -360,6 +360,17 @@ impl ChannelManager {
         Ok(())
     }
 
+    /// Claims the channel for one start, stop or restart command at a time.
+    ///
+    /// Returns `None` while another command runs. The claim ends when the
+    /// returned guard is dropped, also if the command fails or panics.
+    pub fn begin_processing(&self) -> Option<ProcessingGuard> {
+        self.is_processing
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .ok()
+            .map(|_| ProcessingGuard(self.is_processing.clone()))
+    }
+
     fn mark_started(&self) {
         self.running_since
             .store(chrono::Utc::now().timestamp(), Ordering::SeqCst);
@@ -671,6 +682,15 @@ impl ChannelController {
     }
 }
 
+/// A claim on a channel's command slot; see [`ChannelManager::begin_processing`].
+pub struct ProcessingGuard(Arc<AtomicBool>);
+
+impl Drop for ProcessingGuard {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
 /// Aborts a task when dropped, so it ends with whatever awaits it.
 struct AbortOnDrop(AbortHandle);
 
@@ -875,6 +895,38 @@ mod tests {
         assert!(manager.start().await.is_err());
         assert!(!manager.is_alive.load(Ordering::SeqCst));
         assert!(manager.supervisor_handle.lock().await.is_none());
+        tokio::fs::remove_dir_all(manager.storage.root.read().await.clone())
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn only_one_channel_command_runs_at_a_time() {
+        let (manager, _pool) = channel_manager().await;
+
+        let first = manager.begin_processing();
+        assert!(first.is_some());
+        assert!(manager.begin_processing().is_none());
+
+        drop(first);
+        assert!(manager.begin_processing().is_some());
+        tokio::fs::remove_dir_all(manager.storage.root.read().await.clone())
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_failed_channel_command_releases_its_claim() {
+        let (manager, _pool) = channel_manager().await;
+        let guard = manager.begin_processing().unwrap();
+
+        let task = tokio::spawn(async move {
+            let _guard = guard;
+            panic!("command failed");
+        });
+
+        assert!(task.await.unwrap_err().is_panic());
+        assert!(manager.begin_processing().is_some());
         tokio::fs::remove_dir_all(manager.storage.root.read().await.clone())
             .await
             .unwrap();

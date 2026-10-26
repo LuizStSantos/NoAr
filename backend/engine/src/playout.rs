@@ -102,6 +102,19 @@ impl Timeline {
         self.video_pts
     }
 
+    pub(crate) fn audio_pts(&self) -> i64 {
+        self.audio_pts
+    }
+
+    #[cfg(test)]
+    pub(crate) fn at(video_pts: i64, audio_pts: i64) -> Self {
+        Self {
+            video_pts,
+            audio_pts,
+            ..Self::new()
+        }
+    }
+
     /// Move the persistent playout timeline to an externally produced media
     /// position. Live ingest advances outside the suspended playlist decoder;
     /// the next playlist clip must start from that actual output position.
@@ -572,6 +585,48 @@ impl LogoFadePlan {
     }
 }
 
+/// Packets a decoder may reject in a row before its input counts as broken:
+/// a few seconds of video or audio, well past a damaged spot or a short loss.
+const MAX_REJECTED_PACKETS: u32 = 100;
+
+/// Tracks packets a decoder rejected as damaged.
+///
+/// Damaged or lost data is skipped, as the FFmpeg command line does, so one
+/// bad packet no longer ends a clip or a live input; only a long run of them
+/// does, and the clip then falls back.
+struct RejectedPackets<'a> {
+    label: &'a str,
+    track: &'static str,
+    in_a_row: u32,
+}
+
+impl<'a> RejectedPackets<'a> {
+    fn new(label: &'a str, track: &'static str) -> Self {
+        Self {
+            label,
+            track,
+            in_a_row: 0,
+        }
+    }
+
+    fn check(&mut self, sent: Result<(), ffmpeg_next::Error>) -> Result<()> {
+        match sent {
+            Ok(()) => {
+                self.in_a_row = 0;
+                Ok(())
+            }
+            Err(ffmpeg_next::Error::InvalidData) if self.in_a_row < MAX_REJECTED_PACKETS => {
+                if self.in_a_row == 0 {
+                    warn!("Skipping damaged {} data in {}", self.track, self.label);
+                }
+                self.in_a_row += 1;
+                Ok(())
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+}
+
 pub(crate) fn play_opened_input<O: FrameOutput>(
     label: &str,
     opened: impl Into<OpenedInput>,
@@ -725,6 +780,8 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
     let video_finished_notified = video_finished;
     let mut decoded_video_frames = 0_i64;
     let mut decoded_audio_samples = 0_i64;
+    let mut rejected_video = RejectedPackets::new(label, "video");
+    let mut rejected_audio = RejectedPackets::new(label, "audio");
     output.set_video_end(video_end_pts)?;
     output.clear_vtt_subtitles()?;
 
@@ -768,7 +825,9 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
                         diagnostics.set_stage(LiveInputStage::ProcessingVideo);
                     }
 
-                    benchmark::measure(Stage::VideoDecode, || video.decoder.send_packet(&packet))?;
+                    rejected_video.check(benchmark::measure(Stage::VideoDecode, || {
+                        video.decoder.send_packet(&packet)
+                    }))?;
                     receive_video_frames(
                         cfg,
                         audio_padding_end_pts,
@@ -807,7 +866,9 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
                     diagnostics.set_stage(LiveInputStage::ProcessingAudio);
                 }
 
-                benchmark::measure(Stage::AudioDecode, || audio.decoder.send_packet(&packet))?;
+                rejected_audio.check(benchmark::measure(Stage::AudioDecode, || {
+                    audio.decoder.send_packet(&packet)
+                }))?;
                 receive_audio_frames(
                     audio,
                     timeline,
@@ -3973,5 +4034,31 @@ mod tests {
         assert_eq!(parse_duration_us("00:00:12.000000000"), Some(12_000_000));
         assert_eq!(parse_duration_us("01:02:03.500"), Some(3_723_500_000));
         assert_eq!(parse_duration_us("invalid"), None);
+    }
+
+    #[test]
+    fn damaged_packets_are_skipped_until_too_many_come_in_a_row() {
+        let mut rejected = super::RejectedPackets::new("clip.mp4", "video");
+
+        for _ in 0..super::MAX_REJECTED_PACKETS {
+            assert!(rejected.check(Err(ffmpeg_next::Error::InvalidData)).is_ok());
+        }
+        assert!(
+            rejected
+                .check(Err(ffmpeg_next::Error::InvalidData))
+                .is_err()
+        );
+
+        // A packet the decoder takes starts the count again.
+        assert!(rejected.check(Ok(())).is_ok());
+        assert!(rejected.check(Err(ffmpeg_next::Error::InvalidData)).is_ok());
+    }
+
+    #[test]
+    fn other_decoder_errors_still_end_the_input() {
+        let mut rejected = super::RejectedPackets::new("clip.mp4", "audio");
+
+        assert!(rejected.check(Err(ffmpeg_next::Error::Exit)).is_err());
+        assert!(rejected.check(Err(ffmpeg_next::Error::Eof)).is_err());
     }
 }

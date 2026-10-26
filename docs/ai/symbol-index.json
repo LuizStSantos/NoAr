@@ -461,9 +461,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "4eca4307db1fe29fe5ba4fdf11aa827e92b8868705608ae51a09ffab7a15cadc",
+      "sha256": "e8d5240286bfccbdf51d281fa17cc10854d79fa6688234833bf7dcbf9d5d1cd1",
       "language": "Markdown",
-      "bytes": 6744,
+      "bytes": 7358,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -876,29 +876,29 @@
       ]
     },
     "backend/app/src/api/routes/control.rs": {
-      "sha256": "c569fcbeaee0827bca98c6375952f8de5071c3f2105f70a2cc0edf1e8e8d6c4d",
+      "sha256": "a385f83636621715b47c3cadcea4cd93eeefd5ac7e4cfbc575184cbee044fb2f",
       "language": "Rust",
-      "bytes": 7070,
+      "bytes": 7085,
       "symbols": [
         {
           "name": "AudioEffectsUpdate",
-          "line": 24
+          "line": 25
         },
         {
           "name": "update_audio_effects",
-          "line": 28
+          "line": 29
         },
         {
           "name": "control_playout",
-          "line": 70
+          "line": 71
         },
         {
           "name": "media_current",
-          "line": 134
+          "line": 135
         },
         {
           "name": "process_control",
-          "line": 170
+          "line": 171
         },
         {
           "name": "run_process_command",
@@ -3362,9 +3362,9 @@
       ]
     },
     "backend/app/src/player/controller.rs": {
-      "sha256": "d15561b0f099dc18256d80bb3d3129b4913d8db41df5c07a07f3f4336e9a6dd8",
+      "sha256": "3c15ca0b500718c15b8514b129c979f10c82fd4b0d3a53e78d63830619107872",
       "language": "Rust",
-      "bytes": 32750,
+      "bytes": 34514,
       "symbols": [
         {
           "name": "loudness_config",
@@ -3435,152 +3435,176 @@
           "line": 317
         },
         {
+          "name": "begin_processing",
+          "line": 367
+        },
+        {
           "name": "mark_started",
-          "line": 363
+          "line": 374
         },
         {
           "name": "uptime",
-          "line": 369
-        },
-        {
-          "name": "next_task_generation",
-          "line": 376
-        },
-        {
-          "name": "log_dev_task",
           "line": 380
         },
         {
-          "name": "replace_token",
-          "line": 386
+          "name": "next_task_generation",
+          "line": 387
         },
         {
-          "name": "spawn_dev_metrics_snapshot",
+          "name": "log_dev_task",
+          "line": 391
+        },
+        {
+          "name": "replace_token",
           "line": 397
         },
         {
+          "name": "spawn_dev_metrics_snapshot",
+          "line": 408
+        },
+        {
           "name": "stop_task",
-          "line": 417
+          "line": 428
         },
         {
           "name": "abort_supervisor",
-          "line": 448
+          "line": 459
         },
         {
           "name": "stop_supervisor",
-          "line": 462
+          "line": 473
         },
         {
           "name": "stop_validation",
-          "line": 486
+          "line": 497
         },
         {
           "name": "stop_dev_metrics_snapshot",
-          "line": 491
+          "line": 502
         },
         {
           "name": "spawn_task_runner",
-          "line": 496
+          "line": 507
         },
         {
           "name": "spawn_validation",
-          "line": 512
+          "line": 523
         },
         {
           "name": "stop",
-          "line": 546
+          "line": 557
         },
         {
           "name": "wait",
-          "line": 567
+          "line": 578
         },
         {
           "name": "stop_all",
-          "line": 604
+          "line": 615
         },
         {
           "name": "ChannelController",
-          "line": 639
+          "line": 650
         },
         {
           "name": "ChannelController",
-          "line": 643
+          "line": 654
         },
         {
           "name": "new",
-          "line": 644
+          "line": 655
         },
         {
           "name": "add",
-          "line": 648
+          "line": 659
         },
         {
           "name": "get",
-          "line": 652
+          "line": 663
         },
         {
           "name": "remove",
-          "line": 656
+          "line": 667
         },
         {
-          "name": "AbortOnDrop",
-          "line": 675
-        },
-        {
-          "name": "Drop",
-          "line": 677
-        },
-        {
-          "name": "drop",
-          "line": 678
-        },
-        {
-          "name": "run_supervised",
+          "name": "ProcessingGuard",
           "line": 686
         },
         {
-          "name": "supervisor_loop",
-          "line": 713
-        },
-        {
-          "name": "metrics_snapshot_loop",
-          "line": 791
-        },
-        {
-          "name": "run_channel",
-          "line": 834
-        },
-        {
-          "name": "tests",
-          "line": 865
-        },
-        {
-          "name": "failed_start_restores_not_running_state",
-          "line": 871
-        },
-        {
-          "name": "a_panicking_playout_comes_back_as_an_error",
-          "line": 884
-        },
-        {
-          "name": "a_finished_playout_keeps_its_result",
-          "line": 894
-        },
-        {
-          "name": "dropping_the_supervisor_stops_the_playout_task",
-          "line": 903
-        },
-        {
-          "name": "Flag",
-          "line": 904
-        },
-        {
           "name": "Drop",
-          "line": 906
+          "line": 688
         },
         {
           "name": "drop",
-          "line": 907
+          "line": 689
+        },
+        {
+          "name": "AbortOnDrop",
+          "line": 695
+        },
+        {
+          "name": "Drop",
+          "line": 697
+        },
+        {
+          "name": "drop",
+          "line": 698
+        },
+        {
+          "name": "run_supervised",
+          "line": 706
+        },
+        {
+          "name": "supervisor_loop",
+          "line": 733
+        },
+        {
+          "name": "metrics_snapshot_loop",
+          "line": 811
+        },
+        {
+          "name": "run_channel",
+          "line": 854
+        },
+        {
+          "name": "tests",
+          "line": 885
+        },
+        {
+          "name": "failed_start_restores_not_running_state",
+          "line": 891
+        },
+        {
+          "name": "only_one_channel_command_runs_at_a_time",
+          "line": 904
+        },
+        {
+          "name": "a_failed_channel_command_releases_its_claim",
+          "line": 919
+        },
+        {
+          "name": "a_panicking_playout_comes_back_as_an_error",
+          "line": 936
+        },
+        {
+          "name": "a_finished_playout_keeps_its_result",
+          "line": 946
+        },
+        {
+          "name": "dropping_the_supervisor_stops_the_playout_task",
+          "line": 955
+        },
+        {
+          "name": "Flag",
+          "line": 956
+        },
+        {
+          "name": "Drop",
+          "line": 958
+        },
+        {
+          "name": "drop",
+          "line": 959
         }
       ]
     },
@@ -12096,9 +12120,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "fe5e18a80cfa073ebe06b2770d2b7f24aef8d6d2914cb4b8b07b2c6139ad1044",
+      "sha256": "e8371d350561bddeb30ecfba16e374be9488cdb3b3d727cebe3ef4dfbfe5c8f9",
       "language": "Rust",
-      "bytes": 38863,
+      "bytes": 42207,
       "symbols": [
         {
           "name": "analysis",
@@ -15064,9 +15088,9 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "64e0f27b3c825cff90333903b6707e04924e5729a01d30b1149f71fa611807c6",
+      "sha256": "769b7b04dfdf15a600ef37d83704ce41b85a01d30c24e7ac482ca537a66d4321",
       "language": "Rust",
-      "bytes": 131839,
+      "bytes": 134586,
       "symbols": [
         {
           "name": "PlaybackSkipped",
@@ -15121,192 +15145,192 @@
           "line": 101
         },
         {
+          "name": "audio_pts",
+          "line": 105
+        },
+        {
+          "name": "at",
+          "line": 110
+        },
+        {
           "name": "reanchor",
-          "line": 108
+          "line": 121
         },
         {
           "name": "resume_logo",
-          "line": 119
+          "line": 132
         },
         {
           "name": "finish_logo_fade",
-          "line": 130
+          "line": 143
         },
         {
           "name": "play_clip",
-          "line": 147
+          "line": 160
         },
         {
           "name": "play_clip_with_external_audio",
-          "line": 177
+          "line": 190
         },
         {
           "name": "should_loop_input",
-          "line": 251
+          "line": 264
         },
         {
           "name": "play_looped_clip",
-          "line": 256
+          "line": 269
         },
         {
           "name": "should_play_loop_iteration",
-          "line": 331
+          "line": 344
         },
         {
           "name": "elapsed_timeline_seconds",
-          "line": 343
-        },
-        {
-          "name": "InputPlaybackOptions",
           "line": 356
         },
         {
-          "name": "MediaFadePlan",
-          "line": 366
+          "name": "InputPlaybackOptions",
+          "line": 369
         },
         {
           "name": "MediaFadePlan",
-          "line": 373
+          "line": 379
+        },
+        {
+          "name": "MediaFadePlan",
+          "line": 386
         },
         {
           "name": "for_trimmed_clip",
-          "line": 374
+          "line": 387
         },
         {
           "name": "video_opacity_at",
-          "line": 416
+          "line": 429
         },
         {
           "name": "audio_gain_at",
-          "line": 422
+          "line": 435
         },
         {
           "name": "for_external_audio_trim",
-          "line": 428
+          "line": 441
         },
         {
           "name": "LogoFadePlan",
-          "line": 464
-        },
-        {
-          "name": "LogoFadePlan",
-          "line": 476
-        },
-        {
-          "name": "none",
           "line": 477
         },
         {
+          "name": "LogoFadePlan",
+          "line": 489
+        },
+        {
+          "name": "none",
+          "line": 490
+        },
+        {
           "name": "new",
-          "line": 483
+          "line": 496
         },
         {
           "name": "gap_factor",
-          "line": 521
+          "line": 534
         },
         {
           "name": "with_end_pts",
-          "line": 536
+          "line": 549
         },
         {
           "name": "opacity_at",
-          "line": 543
+          "line": 556
         },
         {
           "name": "finish",
-          "line": 565
+          "line": 578
+        },
+        {
+          "name": "RejectedPackets",
+          "line": 597
+        },
+        {
+          "name": "RejectedPackets",
+          "line": 603
+        },
+        {
+          "name": "new",
+          "line": 604
+        },
+        {
+          "name": "check",
+          "line": 612
         },
         {
           "name": "play_opened_input",
-          "line": 575
+          "line": 630
         },
         {
           "name": "close_aside",
-          "line": 955
+          "line": 1016
         },
         {
           "name": "open_input",
-          "line": 967
+          "line": 1028
         },
         {
           "name": "open_in_background",
-          "line": 1002
+          "line": 1063
         },
         {
           "name": "hold_until_open",
-          "line": 1023
+          "line": 1084
         },
         {
           "name": "seek_input",
-          "line": 1072
+          "line": 1133
         },
         {
           "name": "seconds_to_microseconds",
-          "line": 1083
+          "line": 1144
         },
         {
           "name": "finish_video",
-          "line": 1088
+          "line": 1149
         },
         {
           "name": "repeat_single_video_frame_to_limit",
-          "line": 1157
+          "line": 1218
         },
         {
           "name": "single_frame_repeat_frames",
-          "line": 1234
+          "line": 1295
         },
         {
           "name": "audio_pts_for_video_position",
-          "line": 1245
+          "line": 1306
         },
         {
           "name": "stream_duration_us",
-          "line": 1257
+          "line": 1318
         },
         {
           "name": "parse_duration_us",
-          "line": 1273
+          "line": 1334
         },
         {
           "name": "receive_video_frames",
-          "line": 1288
+          "line": 1349
         },
         {
           "name": "encode_composited_frame",
-          "line": 1444
+          "line": 1505
         },
         {
           "name": "video_frame_needs_write",
-          "line": 1488
+          "line": 1549
         },
         {
           "name": "apply_overlays",
-          "line": 1497
-        },
-        {
-          "name": "apply_video_fade",
-          "line": 1541
-        },
-        {
-          "name": "apply_audio_fade",
-          "line": 1569
-        },
-        {
-          "name": "receive_audio_frames",
-          "line": 1581
-        },
-        {
-          "name": "trim_audio_to_limit",
-          "line": 1679
-        },
-        {
-          "name": "resample_audio_frame",
-          "line": 1693
-        },
-        {
-          "name": "flush_audio_resampler",
-          "line": 1722
+          "line": 1558
         }
       ]
     },
