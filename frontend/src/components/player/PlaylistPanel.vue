@@ -36,6 +36,15 @@ import { usePlaylist } from '@/stores/playlist'
 import { useProgrammes, type ProgrammeGroup } from '@/stores/programmes'
 import { useSchedule } from '@/stores/schedule'
 
+const props = withDefaults(
+    defineProps<{
+        /** Shown and in use; its keys stay off while the Player shows the air. */
+        active?: boolean
+        /** Fill the height given: the header stays, the list scrolls inside. */
+        fill?: boolean
+    }>(),
+    { active: true, fill: false },
+)
 const emit = defineEmits<{ preview: [path: string]; generate: []; addProgram: [folder: string, index: number] }>()
 
 const { t, locale } = useI18n()
@@ -227,6 +236,16 @@ watch(
             }
 
             load(playlistStore.firstLoad ? onAirDate.value : playlistStore.listDate)
+        }
+    },
+)
+
+// Shown again: bring the clip on air into view, as on opening the page.
+watch(
+    () => props.active,
+    (active) => {
+        if (active) {
+            scrollToOnAir()
         }
     },
 )
@@ -708,8 +727,13 @@ useEventListener(window, 'keydown', (event: KeyboardEvent) => {
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement
 
-    // Nothing while typing or while a dialog is open.
-    if (typing || editing.value || document.querySelector('[role="dialog"][aria-modal="true"], dialog[open]')) {
+    // Nothing while hidden, typing or while a dialog is open.
+    if (
+        !props.active ||
+        typing ||
+        editing.value ||
+        document.querySelector('[role="dialog"][aria-modal="true"], dialog[open]')
+    ) {
         return
     }
 
@@ -1224,9 +1248,14 @@ onBeforeUnmount(() => {
 defineExpose({ addFile, addFiles })
 </script>
 <template>
-    <section :aria-label="t('onair.playlist')" class="card-box min-w-0">
+    <section
+        :aria-label="t('onair.playlist')"
+        class="card-box min-w-0"
+        :class="fill ? 'lg:h-full lg:flex lg:flex-col lg:min-h-0' : ''"
+    >
         <div
-            class="flex flex-wrap items-center gap-x-3.5 gap-y-2.5 px-4 py-3.5 border-b border-line bg-base-100 rounded-t-box lg:sticky lg:top-[57px] z-10"
+            class="flex flex-wrap items-center gap-x-3.5 gap-y-2.5 px-4 py-3.5 border-b border-line bg-base-100 rounded-t-box z-10"
+            :class="fill ? '' : 'lg:sticky lg:top-[57px]'"
         >
             <h2 class="m-0 text-[15px] font-semibold">{{ t('onair.playlist') }}</h2>
             <div v-if="!infinite" class="flex items-center bg-raised border border-line-strong rounded-field">
@@ -1529,9 +1558,9 @@ defineExpose({ addFile, addFiles })
             <p class="m-0 max-w-md text-xs">{{ t('onair.buildByHandHint') }}</p>
         </div>
 
-        <div v-else class="relative overflow-x-auto">
+        <div v-else class="relative overflow-x-auto" :class="fill ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto' : ''">
             <table class="w-full min-w-[760px] border-collapse text-[13px]" @dragend="dragEnd">
-                <thead>
+                <thead :class="fill ? 'lg:sticky lg:top-0 lg:z-[5] lg:bg-base-100' : ''">
                     <tr class="text-muted text-left text-xs">
                         <th class="ps-4 pe-1 py-2.5 w-[36px]">
                             <span class="sr-only">{{ t('onair.select') }}</span>

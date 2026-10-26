@@ -168,7 +168,10 @@ async function openPreview(source: string) {
 }
 </script>
 <template>
-    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 pt-5 pb-8 flex flex-col gap-4">
+    <div
+        class="max-w-[1440px] mx-auto px-4 sm:px-6 pt-5 flex flex-col gap-4"
+        :class="building && playlistMode ? 'pb-4 lg:h-[calc(100dvh-57px)]' : 'pb-8'"
+    >
         <div class="flex flex-wrap items-center gap-3">
             <div
                 v-if="playlistMode"
@@ -207,9 +210,23 @@ async function openPreview(source: string) {
             <TransportBar />
         </template>
 
-        <div class="flex flex-wrap gap-4 items-start">
+        <!--
+            Live: the air only. Building: the library and the playlist fill
+            the screen; only the list scrolls. The editor stays mounted while
+            hidden, since the clock and "up next" read the list it loads.
+        -->
+        <div
+            v-show="building || !playlistMode"
+            class="flex flex-wrap gap-4 items-start"
+            :class="building && playlistMode ? 'lg:flex-1 lg:min-h-0 lg:flex-nowrap lg:items-stretch' : ''"
+        >
             <LibraryPanel
-                class="flex-[1_1_280px] w-full lg:max-w-[340px] lg:sticky lg:top-[72px] max-h-[70vh] lg:max-h-[calc(100vh-96px)]"
+                class="flex-[1_1_280px] w-full lg:max-w-[340px] max-h-[70vh]"
+                :class="
+                    building && playlistMode
+                        ? 'lg:max-h-none lg:h-full'
+                        : 'lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-96px)]'
+                "
                 :allow-add="playlistMode"
                 @preview="openPreview"
                 @add="addFile"
@@ -219,6 +236,8 @@ async function openPreview(source: string) {
                 v-if="playlistMode"
                 ref="playlistPanel"
                 class="flex-[999_1_640px]"
+                :active="building"
+                fill
                 @preview="openPreview"
                 @generate="openGenerator"
                 @add-program="(folder, index) => (program = { folder, dropIndex: index })"
