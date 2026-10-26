@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-26
+
 ### Fixed
 
 - On a phone, **Add program** in the Player went past the edge of the
@@ -330,7 +332,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...v1.2.0
