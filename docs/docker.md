@@ -136,7 +136,11 @@ into the updater (the line is in the compose file, commented out).
 ## Behind a reverse proxy
 
 Forward `X-Forwarded-Proto` and `X-Forwarded-Host` so XMLTV image links use
-the public address. A minimal nginx location:
+the public address, and `X-Forwarded-For` so NoAr sees each client's address
+for login rate limits and file links. NoAr believes `X-Forwarded-For` only
+from a proxy on the same host or on a private network (loopback, 10/8,
+172.16/12, 192.168/16, link-local, fc00::/7); a client connecting directly is identified
+by its own address. A minimal nginx location:
 
 ```nginx
 location / {
@@ -144,6 +148,7 @@ location / {
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_http_version 1.1;
     proxy_set_header Connection "";
     proxy_buffering off;

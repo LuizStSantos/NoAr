@@ -401,21 +401,21 @@
       "symbols": []
     },
     ".github/workflows/docker.yml": {
-      "sha256": "32c3c21ed6cb3f68600ececf5ae69420eeb97c9527dd8c6d585a47d9efa71721",
+      "sha256": "428d683990bc497616e023f17b5b0f4e673b6f1a7001c7ca0a4d4d40b0a4e63f",
       "language": "YAML",
-      "bytes": 1692,
+      "bytes": 1864,
       "symbols": []
     },
     ".github/workflows/release.yml": {
-      "sha256": "8fac25a0b6e648bb29b88a2b28eb075e553630b10f62577ac291b420848ae186",
+      "sha256": "2cf06d95c4c333dff72f9b2fabbe14286afc25f0a95c7b85ada57a01f283b888",
       "language": "YAML",
-      "bytes": 1366,
+      "bytes": 1538,
       "symbols": []
     },
     ".github/workflows/validate.yml": {
-      "sha256": "283a3f6707b342d2c70baac1aba95e7998f205c5539cb0ee0a5feec12efacb1e",
+      "sha256": "f779e647d7aba97a3b355417f18aedadef4662d678e1b2edb8b8b340a249781a",
       "language": "YAML",
-      "bytes": 2487,
+      "bytes": 2612,
       "symbols": []
     },
     ".gitignore": {
@@ -461,9 +461,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "8ff92eed5e7758374426504e6b39b640b7bfd54282b15eefcfe106a49f98de18",
+      "sha256": "4eca4307db1fe29fe5ba4fdf11aa827e92b8868705608ae51a09ffab7a15cadc",
       "language": "Markdown",
-      "bytes": 5888,
+      "bytes": 6744,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -3143,9 +3143,9 @@
       ]
     },
     "backend/app/src/main.rs": {
-      "sha256": "331fa2ef9a3e5c77fd12583e7bd7294ec5fdd2d272e17def426096cb24bd7126",
+      "sha256": "86168eae672b050e7c9c0ccb966f9d28f2b3fc4878a8005f07f6e5c7dce75f12",
       "language": "Rust",
-      "bytes": 10236,
+      "bytes": 10578,
       "symbols": [
         {
           "name": "env_parse_or",
@@ -3165,7 +3165,46 @@
         },
         {
           "name": "shutdown_signal",
-          "line": 286
+          "line": 289
+        }
+      ]
+    },
+    "backend/app/src/middleware/client_ip.rs": {
+      "sha256": "3383045306fc4e0ce5413056e740a004d2c4e0068f849d8a368d3bcc58bfd2ba",
+      "language": "Rust",
+      "bytes": 3089,
+      "symbols": [
+        {
+          "name": "is_trusted_proxy",
+          "line": 13
+        },
+        {
+          "name": "client_ip",
+          "line": 30
+        },
+        {
+          "name": "client_ip_layer",
+          "line": 57
+        },
+        {
+          "name": "tests",
+          "line": 70
+        },
+        {
+          "name": "forwarded",
+          "line": 75
+        },
+        {
+          "name": "a_public_client_cannot_choose_its_address",
+          "line": 83
+        },
+        {
+          "name": "a_local_proxy_passes_the_client_address",
+          "line": 90
+        },
+        {
+          "name": "a_proxy_without_headers_is_the_client",
+          "line": 103
         }
       ]
     },
@@ -3185,13 +3224,17 @@
       ]
     },
     "backend/app/src/middleware/mod.rs": {
-      "sha256": "8d17360f44b827b1d1903287d1301ba7a6d4164fabda5a87c9c467775a006ff8",
+      "sha256": "bfb956d5c36e05768851075e6850868cba56bde518373ad3e2df7d753a0d1c0d",
       "language": "Rust",
-      "bytes": 18,
+      "bytes": 37,
       "symbols": [
         {
-          "name": "governor",
+          "name": "client_ip",
           "line": 1
+        },
+        {
+          "name": "governor",
+          "line": 2
         }
       ]
     },
@@ -3319,9 +3362,9 @@
       ]
     },
     "backend/app/src/player/controller.rs": {
-      "sha256": "69b6e62e45a96b5310a8026717dc4596e02b280efde4b8c169524b988a016d21",
+      "sha256": "d15561b0f099dc18256d80bb3d3129b4913d8db41df5c07a07f3f4336e9a6dd8",
       "language": "Rust",
-      "bytes": 29856,
+      "bytes": 32750,
       "symbols": [
         {
           "name": "loudness_config",
@@ -3480,24 +3523,64 @@
           "line": 656
         },
         {
+          "name": "AbortOnDrop",
+          "line": 675
+        },
+        {
+          "name": "Drop",
+          "line": 677
+        },
+        {
+          "name": "drop",
+          "line": 678
+        },
+        {
+          "name": "run_supervised",
+          "line": 686
+        },
+        {
           "name": "supervisor_loop",
-          "line": 674
+          "line": 713
         },
         {
           "name": "metrics_snapshot_loop",
-          "line": 752
+          "line": 791
         },
         {
           "name": "run_channel",
-          "line": 795
+          "line": 834
         },
         {
           "name": "tests",
-          "line": 826
+          "line": 865
         },
         {
           "name": "failed_start_restores_not_running_state",
-          "line": 832
+          "line": 871
+        },
+        {
+          "name": "a_panicking_playout_comes_back_as_an_error",
+          "line": 884
+        },
+        {
+          "name": "a_finished_playout_keeps_its_result",
+          "line": 894
+        },
+        {
+          "name": "dropping_the_supervisor_stops_the_playout_task",
+          "line": 903
+        },
+        {
+          "name": "Flag",
+          "line": 904
+        },
+        {
+          "name": "Drop",
+          "line": 906
+        },
+        {
+          "name": "drop",
+          "line": 907
         }
       ]
     },
@@ -4234,13 +4317,13 @@
       ]
     },
     "backend/app/src/player/utils/import.rs": {
-      "sha256": "a2bdd04779ed9d000b52f4b5f65e5538c6fd9f53e1fc4f1048031e0af94b651e",
+      "sha256": "87dd7ab1926684bc873755d7510aa321314e31a13179ca278a2785870cd0d680",
       "language": "Rust",
-      "bytes": 2092,
+      "bytes": 2198,
       "symbols": [
         {
           "name": "import_file",
-          "line": 11
+          "line": 16
         }
       ]
     },
@@ -4339,9 +4422,9 @@
       ]
     },
     "backend/app/src/player/utils/mod.rs": {
-      "sha256": "2a460a4074e7ed3cc42111c37fb9b4bd2322c66e26136206824a78b04a8cd7ab",
+      "sha256": "98cf037552847758f87c5a094af33ee1739567192f23c3347782a15090823e6f",
       "language": "Rust",
-      "bytes": 28886,
+      "bytes": 30172,
       "symbols": [
         {
           "name": "import",
@@ -4444,132 +4527,144 @@
           "line": 457
         },
         {
+          "name": "playlist_file_path",
+          "line": 466
+        },
+        {
           "name": "json_reader",
-          "line": 461
+          "line": 476
         },
         {
           "name": "json_writer",
-          "line": 470
+          "line": 485
         },
         {
           "name": "time_in_seconds",
-          "line": 484
+          "line": 499
         },
         {
           "name": "get_date",
-          "line": 495
+          "line": 510
         },
         {
           "name": "time_from_header",
-          "line": 513
+          "line": 528
         },
         {
           "name": "modified_time",
-          "line": 526
+          "line": 541
         },
         {
           "name": "time_to_sec",
-          "line": 552
+          "line": 567
         },
         {
           "name": "sec_to_time",
-          "line": 563
+          "line": 578
         },
         {
           "name": "file_extension",
-          "line": 575
+          "line": 590
         },
         {
           "name": "is_close",
-          "line": 581
+          "line": 596
         },
         {
           "name": "sum_durations",
-          "line": 586
+          "line": 601
         },
         {
           "name": "get_delta",
-          "line": 594
+          "line": 609
         },
         {
           "name": "is_remote",
-          "line": 629
+          "line": 644
         },
         {
           "name": "include_file_extension",
-          "line": 638
+          "line": 653
         },
         {
           "name": "get_date_range",
-          "line": 665
+          "line": 680
         },
         {
           "name": "custom_format",
-          "line": 698
+          "line": 713
         },
         {
           "name": "tests",
-          "line": 771
+          "line": 786
         },
         {
           "name": "get_date_yesterday_before_the_playlist_start",
-          "line": 785
+          "line": 801
         },
         {
           "name": "get_date_tomorrow_near_midnight",
-          "line": 795
+          "line": 811
         },
         {
           "name": "delta_tracks_a_clip_across_midnight",
-          "line": 805
+          "line": 821
         },
         {
           "name": "images_receive_a_default_playout_duration",
-          "line": 818
+          "line": 834
         },
         {
           "name": "live_sources_receive_a_bounded_default_without_probing",
-          "line": 826
+          "line": 842
         },
         {
           "name": "live_sources_ignore_playlist_seek_and_keep_explicit_out",
-          "line": 835
-        },
-        {
-          "name": "rist_sources_are_treated_as_remote_urls",
           "line": 851
         },
         {
+          "name": "rist_sources_are_treated_as_remote_urls",
+          "line": 867
+        },
+        {
           "name": "add_probe_checks_external_audio_when_main_probe_is_cached",
-          "line": 856
+          "line": 872
         },
         {
           "name": "legacy_advertisement_category_is_serialized_as_ad",
-          "line": 870
+          "line": 886
         },
         {
           "name": "non_advertisement_legacy_category_is_not_an_ad",
-          "line": 888
+          "line": 904
         },
         {
           "name": "custom_format_keeps_escaped_braces_without_args",
-          "line": 906
+          "line": 922
         },
         {
           "name": "custom_format_replaces_automatic_placeholders",
-          "line": 911
+          "line": 927
         },
         {
           "name": "custom_format_replaces_indexed_placeholders",
-          "line": 916
+          "line": 932
         },
         {
           "name": "custom_format_keeps_out_of_range_placeholders",
-          "line": 925
+          "line": 941
+        },
+        {
+          "name": "playlist_file_path_builds_year_month_and_date",
+          "line": 947
+        },
+        {
+          "name": "playlist_file_path_rejects_anything_but_a_date",
+          "line": 955
         },
         {
           "name": "custom_format_keeps_invalid_or_unclosed_placeholders",
-          "line": 931
+          "line": 973
         }
       ]
     },
@@ -5669,9 +5764,9 @@
       ]
     },
     "backend/app/src/utils/generator.rs": {
-      "sha256": "905c9e84b372818eeda8208dd14b24ddd20ab66fc70f6015611ad346a221b30e",
+      "sha256": "afe58c5c3b7b9c5d874be58e1306e2a531062fceb572407dc5496c5dfdc66239",
       "language": "Rust",
-      "bytes": 11405,
+      "bytes": 11478,
       "symbols": [
         {
           "name": "random_list",
@@ -5695,19 +5790,19 @@
         },
         {
           "name": "tests",
-          "line": 334
+          "line": 335
         },
         {
           "name": "clips",
-          "line": 337
+          "line": 338
         },
         {
           "name": "random_list_stays_within_the_requested_duration",
-          "line": 355
+          "line": 356
         },
         {
           "name": "ordered_list_fills_the_duration_in_source_order",
-          "line": 367
+          "line": 368
         }
       ]
     },
@@ -6410,25 +6505,69 @@
       ]
     },
     "backend/app/src/utils/playlist.rs": {
-      "sha256": "e1a278fd3e9831bd42725a65d1d4542099f8f2ee4570bb6135dd56fcaba4e0b6",
+      "sha256": "a37ba3314db616117e547110f9803b916f13dc426f5305123c6578052cdab960",
       "language": "Rust",
-      "bytes": 4845,
+      "bytes": 7635,
       "symbols": [
         {
           "name": "read_playlist",
-          "line": 16
+          "line": 14
         },
         {
           "name": "write_playlist",
-          "line": 43
+          "line": 41
         },
         {
           "name": "generate_playlist",
-          "line": 100
+          "line": 94
         },
         {
           "name": "delete_playlist",
-          "line": 148
+          "line": 142
+        },
+        {
+          "name": "tests",
+          "line": 160
+        },
+        {
+          "name": "Scratch",
+          "line": 166
+        },
+        {
+          "name": "Scratch",
+          "line": 168
+        },
+        {
+          "name": "new",
+          "line": 169
+        },
+        {
+          "name": "config",
+          "line": 177
+        },
+        {
+          "name": "sentinel",
+          "line": 184
+        },
+        {
+          "name": "Drop",
+          "line": 189
+        },
+        {
+          "name": "drop",
+          "line": 190
+        },
+        {
+          "name": "write_playlist_rejects_dates_that_are_not_dates",
+          "line": 205
+        },
+        {
+          "name": "delete_playlist_rejects_dates_that_are_not_dates",
+          "line": 227
+        },
+        {
+          "name": "write_playlist_stores_a_dated_playlist_under_year_and_month",
+          "line": 244
         }
       ]
     },
@@ -16273,9 +16412,9 @@
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "808b25d6f270a05067f9eb4f39428344d1e5855e586f7ff95cf329b4dc084239",
+      "sha256": "b55692a4e63552b2179dbb74d593c08f7591395176cc58d7e436f29067d75008",
       "language": "Markdown",
-      "bytes": 5735,
+      "bytes": 6112,
       "symbols": []
     },
     "docs/external_tasks.md": {

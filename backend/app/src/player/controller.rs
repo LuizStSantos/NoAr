@@ -16,7 +16,7 @@ use sqlx::{Pool, Sqlite};
 use tokio::{
     process::{Child, ChildStdout},
     sync::{Mutex, RwLock},
-    task::JoinHandle,
+    task::{AbortHandle, JoinHandle},
     time::{Duration, Instant, sleep},
 };
 use tokio_util::sync::CancellationToken;
@@ -671,6 +671,45 @@ impl ChannelController {
     }
 }
 
+/// Aborts a task when dropped, so it ends with whatever awaits it.
+struct AbortOnDrop(AbortHandle);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+/// Runs a channel's playout in its own task, so that a panic in it comes back
+/// as an error the supervisor restarts from, instead of ending the supervisor
+/// and leaving the channel silently off air.
+async fn run_supervised<F>(run: F) -> Result<(), ServiceError>
+where
+    F: Future<Output = Result<(), ServiceError>> + Send + 'static,
+{
+    let task = tokio::spawn(run);
+    let _abort = AbortOnDrop(task.abort_handle());
+
+    match task.await {
+        Ok(result) => result,
+        Err(error) if error.is_panic() => {
+            let panic = error.into_panic();
+            let message = panic
+                .downcast_ref::<&str>()
+                .map(|message| (*message).to_string())
+                .or_else(|| panic.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "unknown cause".to_string());
+
+            Err(ServiceError::Conflict(format!(
+                "playout panicked: {message}"
+            )))
+        }
+        Err(_) => Err(ServiceError::Conflict(
+            "playout task was cancelled".to_string(),
+        )),
+    }
+}
+
 async fn supervisor_loop(
     manager: ChannelManager,
     token: CancellationToken,
@@ -699,7 +738,7 @@ async fn supervisor_loop(
 
         let timer = Instant::now();
 
-        if let Err(e) = run_channel(manager.clone()).await {
+        if let Err(e) = run_supervised(run_channel(manager.clone())).await {
             manager.stop_all(false).await;
 
             let active = {
@@ -839,5 +878,54 @@ mod tests {
         tokio::fs::remove_dir_all(manager.storage.root.read().await.clone())
             .await
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_panicking_playout_comes_back_as_an_error() {
+        let result = run_supervised(async { panic!("decoder exploded") }).await;
+
+        match result {
+            Err(ServiceError::Conflict(message)) => assert!(message.contains("decoder exploded")),
+            other => panic!("expected a playout error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_finished_playout_keeps_its_result() {
+        assert!(run_supervised(async { Ok(()) }).await.is_ok());
+        assert!(matches!(
+            run_supervised(async { Err(ServiceError::BadRequest("no media".into())) }).await,
+            Err(ServiceError::BadRequest(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn dropping_the_supervisor_stops_the_playout_task() {
+        struct Flag(Arc<AtomicBool>);
+
+        impl Drop for Flag {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::SeqCst);
+            }
+        }
+
+        let dropped = Arc::new(AtomicBool::new(false));
+        let flag = Flag(dropped.clone());
+        let supervised = run_supervised(async move {
+            let _flag = flag;
+            sleep(Duration::from_secs(3600)).await;
+            Ok(())
+        });
+
+        // Poll it once so the playout task is spawned, then drop it.
+        let _ = tokio::time::timeout(Duration::from_millis(20), supervised).await;
+
+        for _ in 0..50 {
+            if dropped.load(Ordering::SeqCst) {
+                break;
+            }
+            sleep(Duration::from_millis(10)).await;
+        }
+        assert!(dropped.load(Ordering::SeqCst));
     }
 }

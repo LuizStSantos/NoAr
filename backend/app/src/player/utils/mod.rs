@@ -458,6 +458,21 @@ fn is_empty_string(st: &String) -> bool {
     *st == String::new()
 }
 
+/// Path of the playlist for `date`: `<root>/YYYY/MM/YYYY-MM-DD.json`.
+///
+/// Returns `None` when `date` is not a `YYYY-MM-DD` date. The path is built
+/// from the parsed date, never from the given text, so a crafted date cannot
+/// point outside `root`.
+pub fn playlist_file_path(root: &Path, date: &str) -> Option<PathBuf> {
+    let date = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+
+    Some(
+        root.join(date.format("%Y").to_string())
+            .join(date.format("%m").to_string())
+            .join(format!("{}.json", date.format("%Y-%m-%d"))),
+    )
+}
+
 pub async fn json_reader(path: &PathBuf) -> Result<JsonPlaylist, Error> {
     let mut f = File::options().read(true).write(false).open(path).await?;
     let mut contents = String::new();
@@ -769,7 +784,7 @@ pub fn custom_format<T: fmt::Display>(template: &str, args: &[T]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     use chrono_tz::Tz;
     use serde_json::json;
@@ -778,7 +793,8 @@ mod tests {
 
     use super::{
         DEFAULT_IMAGE_DURATION, DEFAULT_LIVE_SOURCE_DURATION, Media, PlayoutConfig, custom_format,
-        get_date, get_delta, is_remote, normalize_live_source_timing, probe_media,
+        get_date, get_delta, is_remote, normalize_live_source_timing, playlist_file_path,
+        probe_media,
     };
 
     #[test]
@@ -925,6 +941,32 @@ mod tests {
     fn custom_format_keeps_out_of_range_placeholders() {
         assert_eq!(custom_format("{9}", &["foo"]), "{9}");
         assert_eq!(custom_format("{}", &[] as &[&str]), "{}");
+    }
+
+    #[test]
+    fn playlist_file_path_builds_year_month_and_date() {
+        assert_eq!(
+            playlist_file_path(Path::new("/srv/playlists"), "2024-03-07"),
+            Some(PathBuf::from("/srv/playlists/2024/03/2024-03-07.json"))
+        );
+    }
+
+    #[test]
+    fn playlist_file_path_rejects_anything_but_a_date() {
+        for date in [
+            "../../etc/x-y",
+            "/tmp/a-b",
+            "2024",
+            "",
+            "2024-13-01",
+            "2024-01-01/x",
+        ] {
+            assert_eq!(
+                playlist_file_path(Path::new("/srv"), date),
+                None,
+                "date {date:?}"
+            );
+        }
     }
 
     #[test]

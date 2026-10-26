@@ -38,10 +38,26 @@ one is tagged.
 - Switching dates or channels quickly in the Player could show, and then
   save, the playlist of the day you had left; only the last one asked for
   is shown now.
+- A crash inside a channel's playout no longer leaves the channel silently
+  off air while still shown as running: the playout restarts like after any
+  other failure.
 - Dialogs now take keyboard focus when they open, keep Tab inside, close
   with Escape (the scheduling and live dialogs did not), and hand focus back
   when they close. Escape in a dialog opened from another closes only the
   inner one.
+
+### Security
+
+- A playlist date that was not a date could make saving, deleting, importing
+  or generating a playlist write or delete `.json` files outside the playlist
+  folder. Playlist paths are now built only from a valid `YYYY-MM-DD` date;
+  anything else is refused.
+- Login rate limits could be dodged by sending a made-up `X-Forwarded-For`
+  header, and without a proxy every client shared one limit. NoAr now
+  identifies clients by their connection and trusts `X-Forwarded-For` only
+  from a proxy on the same host or a private network
+  ([docs](docs/docker.md#behind-a-reverse-proxy)). Signed-in users are now
+  exempt from the general request limit, as it was meant to work.
 
 ## [1.0.0] - 2026-10-21
 

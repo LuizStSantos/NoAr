@@ -1,5 +1,6 @@
 use std::{
     env,
+    net::SocketAddr,
     sync::{Arc, LazyLock, atomic::AtomicBool},
 };
 
@@ -10,7 +11,6 @@ use axum::{Router, middleware};
 use lazy_limit::{Duration as LDuration, RuleConfig, init_rate_limiter};
 use log::*;
 use protect_axum::GrantsLayer;
-use real::RealIpLayer;
 use tokio::{
     fs::File,
     io::AsyncReadExt,
@@ -28,7 +28,7 @@ use noar::{
     api::{self, state::AppState},
     db::{db_drop, db_pool, handles, init_globales},
     extract,
-    middleware::governor::rate_limit,
+    middleware::{client_ip::client_ip_layer, governor::rate_limit},
     player::{
         controller::{ChannelController, ChannelManager},
         utils::{JsonPlaylist, get_date, is_remote, json_validate::validate_playlist},
@@ -168,10 +168,13 @@ async fn async_main() -> Result<(), ProcessError> {
         let app = Router::new()
             .merge(api::path::routes())
             .with_state(app_state.clone())
-            .layer(RealIpLayer::default())
+            // Layers run bottom-up: the client address is known first, then the
+            // request is logged, the user identified, and only then rate limited,
+            // so signed-in users are exempt and clients cannot pick their address.
+            .layer(middleware::from_fn(rate_limit))
             .layer(GrantsLayer::with_extractor(extract))
             .layer(middleware::from_fn(log_middleware))
-            .layer(middleware::from_fn(rate_limit));
+            .layer(middleware::from_fn(client_ip_layer));
 
         #[cfg(not(debug_assertions))]
         let app = app.merge(admin_ui_routes());
@@ -182,7 +185,7 @@ async fn async_main() -> Result<(), ProcessError> {
         info!(target: Target::Console.as_str(), "Running NoAr, listen on http://{conn}");
 
         tokio::select! {
-            result = axum::serve(listener, app) => {
+            result = axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()) => {
                 result.map_err(|e| ProcessError::Custom(e.to_string()))?;
             }
             _ = shutdown_signal() => {}
