@@ -27,9 +27,10 @@ them it adds:
   commercial in playlists and scheduled breaks: out of the guide and without
   the logo ([docs](docs/commercials.md)).
 - **Logo control**: stretches without logo inside a video, for breaks edited
-  into a programme. The logo can also be hidden or swapped on air by API, for
-  example from the encoder of a live, with a tutorial in the settings
-  ([docs](docs/logo.md)).
+  into a programme. The logo comes up and goes off with a fade or a cut, of a
+  length you choose, and cross-fades when swapped for another image. It can
+  also be hidden or swapped on air by API, for example from the encoder of a
+  live, with a tutorial in the settings ([docs](docs/logo.md)).
 - **Ad breaks (SCTE-35)**: runs of commercials, and breaks marked by hand,
   are marked in the SRT or UDP output for FAST platforms and ad servers to
   replace, frame-accurately and announced ahead, with the next break and the
@@ -56,8 +57,8 @@ Portuguese one.
 
 ## Screens
 
-**Scheduler**: a break that waits for the clip on air and a live show at
-19:30; the programme moves to make room for them.
+**Scheduler**: a break that cuts in at 12:30, one that waits for the clip on
+air, and a live show at 16:30; the programme moves to make room for them.
 
 ![Scheduler](docs/images/scheduler.png)
 
@@ -71,12 +72,13 @@ the videos you pick.
 
 ![Adding a program folder](docs/images/program-folder.png)
 
-**Report**: one commercial on one day, each time it aired, after which
-programme, and the times still planned.
+**Report**: the day so far with the actual times, and what is still to come
+from the playlist and the Scheduler, with totals for commercials and lives.
 
 ![Report](docs/images/report.png)
 
-**Settings**: live ingest receivers and the playout restart.
+**Settings**: the logo, where and how large it goes on air, and how it
+comes up and goes off.
 
 ![Settings](docs/images/settings.png)
 
@@ -115,12 +117,32 @@ Update from **Settings › Updates** (with the `noar-updater` service on, see
 docker compose pull && docker compose up -d
 ```
 
+Forgot the admin password? Set a new one from the server with
+`docker exec -it noar noar --user-set`; see
+[docs/docker.md](docs/docker.md#forgotten-admin-password).
+
+If the Player preview stays black with an SRT output in listener mode
+(`?mode=listener`), that output sends nothing, to the receiver or to the
+preview, until a receiver connects; the Player says so. See
+[docs/output.md](docs/output.md#player-preview).
+
 ## Versions
 
 NoAr follows [Semantic Versioning](https://semver.org); every release is
-listed in [CHANGELOG.md](CHANGELOG.md). The `latest` image follows `main`; to
-stay on a release, pin its tag in `docker-compose.yml`, for example
-`ghcr.io/luizstsantos/noar:1.0`. See [docs/releasing.md](docs/releasing.md).
+listed in [CHANGELOG.md](CHANGELOG.md). The images on
+`ghcr.io/luizstsantos/noar` are tagged:
+
+| Tag | What it is |
+| --- | --- |
+| `latest` | The newest stable release |
+| `1.1`, `1.1.1` | A release line (gets its fixes) or one exact release |
+| `main` | The development build, not for air |
+| `sha-…` | One commit, for tests |
+
+To stay on a release line, pin it in `docker-compose.yml`, for example
+`ghcr.io/luizstsantos/noar:1.1`. Releases are prepared and published by the
+**Prepare release** and **Tag release** workflows; see
+[docs/releasing.md](docs/releasing.md).
 
 ## Features from ffplayout
 

@@ -235,7 +235,7 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                 <span class="max-w-[46ch]">{{ previewNotice }}</span>
             </div>
             <div
-                v-else
+                v-if="!previewUrl"
                 class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#8e8c88] text-sm p-6 text-center"
             >
                 <i class="bi bi-camera-video-off text-2xl" aria-hidden="true" />
