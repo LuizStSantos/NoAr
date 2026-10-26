@@ -609,9 +609,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "b0049776d134cdc6e2f1a756db3ea3b6be54e7385c08c086cb58f8babb867221",
+      "sha256": "c5928814e3c25f63a24ee21b1a65ede41f7a68e13ffabe3cd261e87597c620a4",
       "language": "Markdown",
-      "bytes": 12789,
+      "bytes": 14571,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -621,7 +621,7 @@
       "symbols": []
     },
     "Cargo.toml": {
-      "sha256": "c6355207109331506a30fb09e595fbf566321235682b4a376ce4e97e382cfe4e",
+      "sha256": "437e7f9e7546023ac1d0159f2c32cb3a6699e1cf32a655de3eaff745b48ced20",
       "language": "TOML",
       "bytes": 1084,
       "symbols": []
@@ -645,9 +645,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "5e09c2d624037ba81849df1377577e122063e8513d3b88541b0c7075e88736e4",
+      "sha256": "cc50bb8c05405fcb8c03485fc14d277d0299407148c1f8aaa64e1a70070ad4c0",
       "language": "Markdown",
-      "bytes": 8480,
+      "bytes": 8819,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -982,9 +982,9 @@
       ]
     },
     "backend/app/src/api/path.rs": {
-      "sha256": "6d8c883de935a769beb28665725b268b3cb4966ccb10ea9a15315e3b612dcc55",
+      "sha256": "a4f3e4c2f8144018c1d2c0cffa65aa26bc7c38d626754cda7400d5e16db6000e",
       "language": "Rust",
-      "bytes": 6624,
+      "bytes": 6830,
       "symbols": [
         {
           "name": "auth_routes",
@@ -1055,9 +1055,9 @@
       ]
     },
     "backend/app/src/api/routes/file.rs": {
-      "sha256": "06ea717feb9104da5349158b0687d06233730b75c85ed556fa76a5f8dc0f068b",
+      "sha256": "4b203dc2570285635d8091d7bd8be646bb6d643a7581ae3ca454314b4117d3c7",
       "language": "Rust",
-      "bytes": 20234,
+      "bytes": 21146,
       "symbols": [
         {
           "name": "FileQuery",
@@ -1092,84 +1092,88 @@
           "line": 207
         },
         {
+          "name": "get_conversions",
+          "line": 240
+        },
+        {
           "name": "create_file_access_token",
-          "line": 232
+          "line": 261
         },
         {
           "name": "get_file",
-          "line": 284
+          "line": 313
         },
         {
           "name": "import_playlist",
-          "line": 350
+          "line": 379
         },
         {
           "name": "SheetRequest",
-          "line": 391
+          "line": 420
         },
         {
           "name": "SheetSaveRequest",
-          "line": 397
+          "line": 426
         },
         {
           "name": "ArtworkRequest",
-          "line": 404
+          "line": 433
         },
         {
           "name": "PhotoRequest",
-          "line": 410
+          "line": 439
         },
         {
           "name": "storage_target",
-          "line": 418
+          "line": 447
         },
         {
           "name": "get_sheet",
-          "line": 450
+          "line": 479
         },
         {
           "name": "update_sheet",
-          "line": 472
+          "line": 501
         },
         {
           "name": "LogoMarksRequest",
-          "line": 485
+          "line": 514
         },
         {
           "name": "LogoMarksSaveRequest",
-          "line": 491
+          "line": 520
         },
         {
           "name": "get_logo_marks",
-          "line": 503
-        },
-        {
-          "name": "update_logo_marks",
           "line": 532
         },
         {
+          "name": "update_logo_marks",
+          "line": 561
+        },
+        {
           "name": "CommercialRequest",
-          "line": 556
+          "line": 585
         },
         {
           "name": "mark_commercial",
-          "line": 571
+          "line": 600
         },
         {
           "name": "upload_artwork",
-          "line": 594
+          "line": 623
         },
         {
           "name": "upload_photo",
-          "line": 620
+          "line": 649
         },
         {
           "name": "image_field",
-          "line": 637
+          "line": 666
         },
         {
           "name": "delete_artwork",
-          "line": 660
+          "line": 689
         }
       ]
     },
@@ -1236,9 +1240,9 @@
       ]
     },
     "backend/app/src/api/routes/logo.rs": {
-      "sha256": "cadf3e1b3ca68ed7466674391eb4704439b468ae7bbce9f2fc4618a546e9a044",
+      "sha256": "a3173a175c6deb51743abfb678b5d7d75fd61785b15cceea405781705ddb3645",
       "language": "Rust",
-      "bytes": 6953,
+      "bytes": 6964,
       "symbols": [
         {
           "name": "LogoAction",
@@ -1755,57 +1759,77 @@
       ]
     },
     "backend/app/src/api/routes/scte35.rs": {
-      "sha256": "fd2d3b4e156e0b86ace603078d0ace63ef618218649e9bb654c33ea7c82630cf",
+      "sha256": "5700efa307002c0874d2fd4d734f625f7a936ed52d7621ea0e00612451f172fd",
       "language": "Rust",
-      "bytes": 6420,
+      "bytes": 9748,
       "symbols": [
         {
           "name": "BreakRequest",
-          "line": 27
+          "line": 28
         },
         {
           "name": "Scte35Status",
-          "line": 33
+          "line": 34
         },
         {
           "name": "BreakStatus",
-          "line": 49
+          "line": 50
         },
         {
           "name": "From",
-          "line": 63
-        },
-        {
-          "name": "from",
           "line": 64
         },
         {
+          "name": "from",
+          "line": 65
+        },
+        {
           "name": "unix_millis",
-          "line": 90
+          "line": 91
         },
         {
           "name": "get_scte35_state",
-          "line": 96
+          "line": 97
         },
         {
           "name": "insert_scte35_break",
-          "line": 117
+          "line": 118
+        },
+        {
+          "name": "insert_break",
+          "line": 131
+        },
+        {
+          "name": "KeyedAction",
+          "line": 164
+        },
+        {
+          "name": "KeyedQuery",
+          "line": 172
+        },
+        {
+          "name": "control_scte35_with_key",
+          "line": 192
+        },
+        {
+          "name": "next_break_to_cancel",
+          "line": 243
         },
         {
           "name": "cancel_scte35_break",
-          "line": 153
+          "line": 259
         },
         {
           "name": "splice_error",
-          "line": 171
+          "line": 277
         },
         {
           "name": "authorized",
-          "line": 181
+          "line": 287
         },
         {
           "name": "status",
-          "line": 200
+          "line": 306
         }
       ]
     },
@@ -2075,9 +2099,9 @@
       ]
     },
     "backend/app/src/db/handles/configuration.rs": {
-      "sha256": "eb7d09d4ff1f083ccba6a4169dc5fb989354f31899f94752be7dda09c66a9c7e",
+      "sha256": "907f1f12f58f5d6ae983b5848f8ff79cb573ea06e14679bea2a7b08044153a2a",
       "language": "Rust",
-      "bytes": 41731,
+      "bytes": 41855,
       "symbols": [
         {
           "name": "select_rtmp_ingest_urls",
@@ -2093,87 +2117,87 @@
         },
         {
           "name": "insert_configuration",
-          "line": 139
+          "line": 140
         },
         {
           "name": "ingest_port_in_use",
-          "line": 180
+          "line": 181
         },
         {
           "name": "live_listener_port_in_use",
-          "line": 188
+          "line": 189
         },
         {
           "name": "live_listener_port_in_use_on",
-          "line": 208
+          "line": 209
         },
         {
           "name": "live_listener_urls_contain_port",
-          "line": 223
+          "line": 224
         },
         {
           "name": "update_configuration",
-          "line": 235
+          "line": 236
         },
         {
           "name": "update_configuration_on",
-          "line": 246
+          "line": 247
         },
         {
           "name": "activate_output",
-          "line": 401
+          "line": 403
         },
         {
           "name": "update_configuration_volume",
-          "line": 428
+          "line": 430
         },
         {
           "name": "tests",
-          "line": 443
+          "line": 445
         },
         {
           "name": "pool",
-          "line": 449
+          "line": 451
         },
         {
           "name": "loudness_migration_preserves_existing_scope_and_defaults_new_rows_to_all",
-          "line": 460
+          "line": 462
         },
         {
           "name": "migration_preserves_non_default_configuration_data",
-          "line": 513
+          "line": 515
         },
         {
           "name": "migration_preserves_one_active_output_and_enforces_uniqueness",
-          "line": 614
+          "line": 616
         },
         {
           "name": "future_pipeline_configuration_has_safe_defaults_and_audio_tracks_are_ordered",
-          "line": 632
+          "line": 634
         },
         {
           "name": "output_selection_is_switched_atomically",
-          "line": 808
+          "line": 810
         },
         {
           "name": "complete_configuration_update_rolls_back_all_topics_on_error",
-          "line": 826
+          "line": 828
         },
         {
           "name": "logo_transitions_are_saved_and_default_to_fades",
-          "line": 857
+          "line": 859
         },
         {
           "name": "live_listener_configuration_recreates_a_missing_listener_row",
-          "line": 892
+          "line": 894
         },
         {
           "name": "multiple_live_listeners_roundtrip_without_changing_the_rtmp_id",
-          "line": 928
+          "line": 930
         },
         {
           "name": "listener_port_check_uses_the_saving_transaction",
-          "line": 998
+          "line": 1000
         }
       ]
     },
@@ -2201,9 +2225,9 @@
       ]
     },
     "backend/app/src/db/handles/init.rs": {
-      "sha256": "1d0edf5231f48d8aba944a4015f595734460404769e83abecc41053d3e69aebc",
+      "sha256": "050d1b8266fbd77305353192de302d6e1f3871ad7e24b89ac9166fa3f9a69d30",
       "language": "Rust",
-      "bytes": 11202,
+      "bytes": 11340,
       "symbols": [
         {
           "name": "db_migrate",
@@ -2239,7 +2263,7 @@
         },
         {
           "name": "only_the_newest_copies_are_kept",
-          "line": 303
+          "line": 305
         }
       ]
     },
@@ -2495,9 +2519,9 @@
       ]
     },
     "backend/app/src/db/handles/scte35.rs": {
-      "sha256": "2665e3ef413d92ab122b1a376263de80d0f811aa13dc30fed2bef00f88721a70",
+      "sha256": "6fe694b6370c9add81eaf0b74c49bd64d568c1d98b8b20af4cff5531d7c97259",
       "language": "Rust",
-      "bytes": 2536,
+      "bytes": 2675,
       "symbols": [
         {
           "name": "select_scte35",
@@ -2741,9 +2765,9 @@
       ]
     },
     "backend/app/src/db/models.rs": {
-      "sha256": "f1ca423f636d423a244787d5ce5aa8f917f9b841b7ca510653adb37fb0707004",
+      "sha256": "98531195e6c52b3ddad1e5fee2bcebc52769777443a73d25b519aa932e2c0d18",
       "language": "Rust",
-      "bytes": 26458,
+      "bytes": 26591,
       "symbols": [
         {
           "name": "GlobalSettings",
@@ -2847,134 +2871,134 @@
         },
         {
           "name": "Configuration",
-          "line": 315
-        },
-        {
-          "name": "from",
           "line": 316
         },
         {
+          "name": "from",
+          "line": 317
+        },
+        {
           "name": "Recording",
-          "line": 397
+          "line": 399
         },
         {
           "name": "Scte35",
-          "line": 418
+          "line": 420
         },
         {
           "name": "Output",
-          "line": 428
+          "line": 431
         },
         {
           "name": "Output",
-          "line": 455
+          "line": 458
         },
         {
           "name": "new",
-          "line": 456
+          "line": 459
         },
         {
           "name": "default_vtt_name",
-          "line": 498
+          "line": 501
         },
         {
           "name": "default_vtt_language",
-          "line": 502
+          "line": 505
         },
         {
           "name": "LiveInputRecord",
-          "line": 507
+          "line": 510
         },
         {
           "name": "SetupSettings",
-          "line": 519
+          "line": 522
         },
         {
           "name": "From",
-          "line": 532
+          "line": 535
         },
         {
           "name": "from",
-          "line": 533
+          "line": 536
         },
         {
           "name": "InitialSetup",
-          "line": 550
+          "line": 553
         },
         {
           "name": "SetupRollback",
-          "line": 562
+          "line": 565
         },
         {
           "name": "ScheduleKind",
-          "line": 572
+          "line": 575
         },
         {
           "name": "EntryMode",
-          "line": 583
+          "line": 586
         },
         {
           "name": "AfterMode",
-          "line": 594
+          "line": 597
         },
         {
           "name": "as_str",
-          "line": 605
+          "line": 608
         },
         {
           "name": "FromStr",
-          "line": 612
-        },
-        {
-          "name": "Err",
-          "line": 613
-        },
-        {
-          "name": "from_str",
           "line": 615
         },
         {
+          "name": "Err",
+          "line": 616
+        },
+        {
+          "name": "from_str",
+          "line": 618
+        },
+        {
           "name": "ScheduleEvent",
-          "line": 631
+          "line": 634
         },
         {
           "name": "FromRow",
-          "line": 655
+          "line": 658
         },
         {
           "name": "from_row",
-          "line": 656
+          "line": 659
         },
         {
           "name": "ScheduleRun",
-          "line": 693
+          "line": 696
         },
         {
           "name": "UnfinishedRun",
-          "line": 706
+          "line": 709
         },
         {
           "name": "UpdateSettings",
-          "line": 719
+          "line": 722
         },
         {
           "name": "AsRunEntry",
-          "line": 732
+          "line": 735
         },
         {
           "name": "NewAsRunEntry",
-          "line": 757
+          "line": 760
         },
         {
           "name": "default_logo_transition",
-          "line": 770
+          "line": 773
         }
       ]
     },
     "backend/app/src/file/local.rs": {
-      "sha256": "e9298e6bf60526e8cbc3e8c2368e4c2896083d5ae9da516e59b5ee34d85b15b2",
+      "sha256": "3aea420812f5610175159a6e2b1834cd1dfd8a076574eefb513da34c47961b8e",
       "language": "Rust",
-      "bytes": 24707,
+      "bytes": 24765,
       "symbols": [
         {
           "name": "LocalStorage",
@@ -3022,47 +3046,47 @@
         },
         {
           "name": "watchman",
-          "line": 415
+          "line": 417
         },
         {
           "name": "stop_watch",
-          "line": 435
+          "line": 437
         },
         {
           "name": "fill_filler_list",
-          "line": 441
+          "line": 443
         },
         {
           "name": "copy_assets",
-          "line": 505
+          "line": 507
         },
         {
           "name": "holds_live",
-          "line": 577
+          "line": 579
         },
         {
           "name": "rename_only",
-          "line": 597
+          "line": 599
         },
         {
           "name": "copy_and_delete",
-          "line": 622
+          "line": 624
         },
         {
           "name": "tests",
-          "line": 653
+          "line": 655
         },
         {
           "name": "renames_directory_within_storage",
-          "line": 657
+          "line": 659
         },
         {
           "name": "browse_marks_the_folders_of_lives",
-          "line": 680
+          "line": 682
         },
         {
           "name": "storage_creation_returns_error_instead_of_panicking",
-          "line": 712
+          "line": 714
         }
       ]
     },
@@ -3562,9 +3586,9 @@
       ]
     },
     "backend/app/src/player/controller.rs": {
-      "sha256": "f16cbe5c3b3f63d2b70e8ad0ba44cc4aad471bd97861e78b080ad873c9d75ac2",
+      "sha256": "6e526a230a772796b41594aeca650203d3b498dd64b72c4c6cfaeb4457136a85",
       "language": "Rust",
-      "bytes": 34696,
+      "bytes": 34919,
       "symbols": [
         {
           "name": "loudness_config",
@@ -3588,223 +3612,223 @@
         },
         {
           "name": "RunningConfigGuard",
-          "line": 136
+          "line": 138
         },
         {
           "name": "Drop",
-          "line": 141
+          "line": 143
         },
         {
           "name": "drop",
-          "line": 142
+          "line": 144
         },
         {
           "name": "ChannelManager",
-          "line": 154
+          "line": 156
         },
         {
           "name": "new",
-          "line": 155
+          "line": 157
         },
         {
           "name": "update_channel",
-          "line": 226
+          "line": 230
         },
         {
           "name": "update_config",
-          "line": 254
+          "line": 258
         },
         {
           "name": "track_running_config",
-          "line": 259
+          "line": 263
         },
         {
           "name": "running_config",
-          "line": 272
+          "line": 276
         },
         {
           "name": "running_listener_label",
-          "line": 279
+          "line": 283
         },
         {
           "name": "start",
-          "line": 290
+          "line": 294
         },
         {
           "name": "foreground_start",
-          "line": 320
+          "line": 324
         },
         {
           "name": "begin_processing",
-          "line": 370
+          "line": 374
         },
         {
           "name": "mark_started",
-          "line": 377
+          "line": 381
         },
         {
           "name": "uptime",
-          "line": 383
+          "line": 387
         },
         {
           "name": "next_task_generation",
-          "line": 390
-        },
-        {
-          "name": "log_dev_task",
           "line": 394
         },
         {
+          "name": "log_dev_task",
+          "line": 398
+        },
+        {
           "name": "replace_token",
-          "line": 400
+          "line": 404
         },
         {
           "name": "spawn_dev_metrics_snapshot",
-          "line": 411
+          "line": 415
         },
         {
           "name": "stop_task",
-          "line": 431
+          "line": 435
         },
         {
           "name": "abort_supervisor",
-          "line": 462
+          "line": 466
         },
         {
           "name": "stop_supervisor",
-          "line": 476
+          "line": 480
         },
         {
           "name": "stop_validation",
-          "line": 500
+          "line": 504
         },
         {
           "name": "stop_dev_metrics_snapshot",
-          "line": 505
+          "line": 509
         },
         {
           "name": "spawn_task_runner",
-          "line": 510
+          "line": 514
         },
         {
           "name": "spawn_validation",
-          "line": 526
+          "line": 530
         },
         {
           "name": "stop",
-          "line": 560
+          "line": 564
         },
         {
           "name": "wait",
-          "line": 581
+          "line": 585
         },
         {
           "name": "stop_all",
-          "line": 618
-        },
-        {
-          "name": "ChannelController",
-          "line": 653
+          "line": 622
         },
         {
           "name": "ChannelController",
           "line": 657
         },
         {
-          "name": "new",
-          "line": 658
+          "name": "ChannelController",
+          "line": 661
         },
         {
-          "name": "add",
+          "name": "new",
           "line": 662
         },
         {
-          "name": "get",
+          "name": "add",
           "line": 666
         },
         {
-          "name": "remove",
+          "name": "get",
           "line": 670
         },
         {
+          "name": "remove",
+          "line": 674
+        },
+        {
           "name": "ProcessingGuard",
-          "line": 689
+          "line": 693
         },
         {
           "name": "Drop",
-          "line": 691
+          "line": 695
         },
         {
           "name": "drop",
-          "line": 692
+          "line": 696
         },
         {
           "name": "AbortOnDrop",
-          "line": 698
+          "line": 702
         },
         {
           "name": "Drop",
-          "line": 700
+          "line": 704
         },
         {
           "name": "drop",
-          "line": 701
+          "line": 705
         },
         {
           "name": "run_supervised",
-          "line": 709
+          "line": 713
         },
         {
           "name": "supervisor_loop",
-          "line": 736
+          "line": 740
         },
         {
           "name": "metrics_snapshot_loop",
-          "line": 814
+          "line": 818
         },
         {
           "name": "run_channel",
-          "line": 857
+          "line": 861
         },
         {
           "name": "tests",
-          "line": 888
+          "line": 892
         },
         {
           "name": "failed_start_restores_not_running_state",
-          "line": 894
+          "line": 898
         },
         {
           "name": "only_one_channel_command_runs_at_a_time",
-          "line": 907
+          "line": 911
         },
         {
           "name": "a_failed_channel_command_releases_its_claim",
-          "line": 922
+          "line": 926
         },
         {
           "name": "a_panicking_playout_comes_back_as_an_error",
-          "line": 939
+          "line": 943
         },
         {
           "name": "a_finished_playout_keeps_its_result",
-          "line": 949
+          "line": 953
         },
         {
           "name": "dropping_the_supervisor_stops_the_playout_task",
-          "line": 958
+          "line": 962
         },
         {
           "name": "Flag",
-          "line": 959
+          "line": 963
         },
         {
           "name": "Drop",
-          "line": 961
+          "line": 965
         },
         {
           "name": "drop",
-          "line": 962
+          "line": 966
         }
       ]
     },
@@ -4247,9 +4271,9 @@
       ]
     },
     "backend/app/src/player/preview.rs": {
-      "sha256": "baff4789b0a3ded0104ff8fd595dc21e7445801283340aefc996ad441b8207b3",
+      "sha256": "8d1a34689945a687d1333b6b9a39834f2531045a3d3702ff6e774b38f2ea0c33",
       "language": "Rust",
-      "bytes": 8200,
+      "bytes": 8871,
       "symbols": [
         {
           "name": "PreviewFeed",
@@ -4281,23 +4305,23 @@
         },
         {
           "name": "Drop",
-          "line": 179
-        },
-        {
-          "name": "drop",
-          "line": 180
-        },
-        {
-          "name": "tests",
-          "line": 186
-        },
-        {
-          "name": "forwards_datagrams_to_every_viewer",
           "line": 192
         },
         {
+          "name": "drop",
+          "line": 193
+        },
+        {
+          "name": "tests",
+          "line": 199
+        },
+        {
+          "name": "forwards_datagrams_to_every_viewer",
+          "line": 205
+        },
+        {
           "name": "the_engine_address_is_a_local_udp_port",
-          "line": 226
+          "line": 239
         }
       ]
     },
@@ -5372,9 +5396,9 @@
       ]
     },
     "backend/app/src/utils/config.rs": {
-      "sha256": "be453cb3123700079132be2721639f1cba445036a6c707690f77b8a6c5b9bd27",
+      "sha256": "941ba60b1f8ef0e80a2a68b446b4293350f95bc090a3e2e21b76a0546db13661",
       "language": "Rust",
-      "bytes": 68976,
+      "bytes": 69418,
       "symbols": [
         {
           "name": "OutputMode",
@@ -5714,6 +5738,97 @@
         {
           "name": "navigation_without_live_still_persists_and_requests_a_clip_change",
           "line": 400
+        }
+      ]
+    },
+    "backend/app/src/utils/convert.rs": {
+      "sha256": "57b233edfd95b3a5aa71f1633f7757f868cf72ab0c3ea5f73ee4f9d01fd820b9",
+      "language": "Rust",
+      "bytes": 11178,
+      "symbols": [
+        {
+          "name": "ConversionState",
+          "line": 37
+        },
+        {
+          "name": "Conversion",
+          "line": 48
+        },
+        {
+          "name": "Job",
+          "line": 61
+        },
+        {
+          "name": "Conversions",
+          "line": 72
+        },
+        {
+          "name": "std",
+          "line": 78
+        },
+        {
+          "name": "fmt",
+          "line": 79
+        },
+        {
+          "name": "Conversions",
+          "line": 84
+        },
+        {
+          "name": "new",
+          "line": 85
+        },
+        {
+          "name": "enqueue",
+          "line": 115
+        },
+        {
+          "name": "list",
+          "line": 153
+        },
+        {
+          "name": "Drop",
+          "line": 170
+        },
+        {
+          "name": "drop",
+          "line": 171
+        },
+        {
+          "name": "target",
+          "line": 180
+        },
+        {
+          "name": "is_video",
+          "line": 193
+        },
+        {
+          "name": "now",
+          "line": 225
+        },
+        {
+          "name": "update",
+          "line": 231
+        },
+        {
+          "name": "result_path",
+          "line": 248
+        },
+        {
+          "name": "temporary_path",
+          "line": 264
+        },
+        {
+          "name": "run",
+          "line": 274
+        },
+        {
+          "name": "tests",
+          "line": 349
+        },
+        {
+          "name": "results_keep_the_name_when_the_container_takes_h264",
+          "line": 353
         }
       ]
     },
@@ -6452,9 +6567,9 @@
       ]
     },
     "backend/app/src/utils/mod.rs": {
-      "sha256": "ad289464d952d819521bb06765311dcf7ad723ec48cde9fdb586e74951b6a0d3",
+      "sha256": "4633e7895274605656305bbba1df2bfdc6a4265f4641fe23dfeabc4e785015a2",
       "language": "Rust",
-      "bytes": 7537,
+      "bytes": 7554,
       "symbols": [
         {
           "name": "args_parse",
@@ -6477,128 +6592,132 @@
           "line": 22
         },
         {
-          "name": "episodes",
+          "name": "convert",
           "line": 23
         },
         {
-          "name": "errors",
+          "name": "episodes",
           "line": 24
         },
         {
-          "name": "generator",
+          "name": "errors",
           "line": 25
         },
         {
-          "name": "logging",
+          "name": "generator",
           "line": 26
         },
         {
-          "name": "logo_marks",
+          "name": "logging",
           "line": 27
         },
         {
-          "name": "mail",
+          "name": "logo_marks",
           "line": 28
         },
         {
-          "name": "notification",
+          "name": "mail",
           "line": 29
         },
         {
-          "name": "paths",
+          "name": "notification",
           "line": 30
         },
         {
-          "name": "playlist",
+          "name": "paths",
           "line": 31
         },
         {
-          "name": "program",
+          "name": "playlist",
           "line": 32
         },
         {
-          "name": "report",
+          "name": "program",
           "line": 33
         },
         {
-          "name": "schedule",
+          "name": "report",
           "line": 34
         },
         {
-          "name": "server",
+          "name": "schedule",
           "line": 35
         },
         {
-          "name": "setup",
+          "name": "server",
           "line": 36
         },
         {
-          "name": "system",
+          "name": "setup",
           "line": 37
         },
         {
-          "name": "task_runner",
+          "name": "system",
           "line": 38
         },
         {
-          "name": "time_machine",
+          "name": "task_runner",
           "line": 39
         },
         {
-          "name": "update",
+          "name": "time_machine",
           "line": 40
         },
         {
-          "name": "updater",
+          "name": "update",
           "line": 41
         },
         {
-          "name": "xmltv",
+          "name": "updater",
           "line": 42
         },
         {
+          "name": "xmltv",
+          "line": 43
+        },
+        {
           "name": "public_path",
-          "line": 54
+          "line": 55
         },
         {
           "name": "LogChunk",
-          "line": 84
+          "line": 85
         },
         {
           "name": "read_log_file",
-          "line": 95
+          "line": 96
         },
         {
           "name": "sizeof_fmt",
-          "line": 168
+          "line": 169
         },
         {
           "name": "naive_date_time_from_str",
-          "line": 181
+          "line": 182
         },
         {
           "name": "optional_naive_date_time_from_str",
-          "line": 190
+          "line": 191
         },
         {
           "name": "parse_naive_date_time",
-          "line": 203
+          "line": 204
         },
         {
           "name": "round_to_nearest_ten",
-          "line": 216
+          "line": 217
         },
         {
           "name": "is_running_in_container",
-          "line": 226
+          "line": 227
         },
         {
           "name": "tests",
-          "line": 236
+          "line": 237
         },
         {
           "name": "log_reads_continue_after_the_last_complete_line",
-          "line": 242
+          "line": 243
         }
       ]
     },
@@ -11255,6 +11374,109 @@
         }
       ]
     },
+    "backend/engine/src/convert.rs": {
+      "sha256": "c8ccb11ce067e0c6abbfcf29324bb127137b06ea91631d30c3983674d99c4eca",
+      "language": "Rust",
+      "bytes": 25166,
+      "symbols": [
+        {
+          "name": "ConvertTarget",
+          "line": 31
+        },
+        {
+          "name": "MediaShape",
+          "line": 40
+        },
+        {
+          "name": "MediaShape",
+          "line": 51
+        },
+        {
+          "name": "matches",
+          "line": 53
+        },
+        {
+          "name": "probe_shape",
+          "line": 72
+        },
+        {
+          "name": "convert_to_output",
+          "line": 125
+        },
+        {
+          "name": "Sink",
+          "line": 399
+        },
+        {
+          "name": "Sink",
+          "line": 405
+        },
+        {
+          "name": "write_video",
+          "line": 406
+        },
+        {
+          "name": "write",
+          "line": 416
+        },
+        {
+          "name": "AudioPath",
+          "line": 431
+        },
+        {
+          "name": "AudioPath",
+          "line": 441
+        },
+        {
+          "name": "drain_decoder",
+          "line": 442
+        },
+        {
+          "name": "take",
+          "line": 466
+        },
+        {
+          "name": "encode_ready",
+          "line": 478
+        },
+        {
+          "name": "finish",
+          "line": 505
+        },
+        {
+          "name": "write",
+          "line": 516
+        },
+        {
+          "name": "tests",
+          "line": 529
+        },
+        {
+          "name": "write_test_clip",
+          "line": 535
+        },
+        {
+          "name": "video_stream_index",
+          "line": 626
+        },
+        {
+          "name": "drain",
+          "line": 633
+        },
+        {
+          "name": "drain_audio",
+          "line": 648
+        },
+        {
+          "name": "a_file_in_another_format_comes_out_in_the_target_one",
+          "line": 664
+        },
+        {
+          "name": "a_stopped_conversion_fails",
+          "line": 711
+        }
+      ]
+    },
     "backend/engine/src/input/delay.rs": {
       "sha256": "88100cef86da03af3906d995c7bc64662c727a88ddee50f1044ce6581c539f60",
       "language": "Rust",
@@ -12448,9 +12670,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "00d57956b7b1806cb8a03739f951a31c82b42620f5fcf9eaf6bd81d781c83a6c",
+      "sha256": "08d2be4f369bb4ba6b9d4dd82cf6a75a634cfbe699e09b35d421f78517d82417",
       "language": "Rust",
-      "bytes": 42422,
+      "bytes": 42513,
       "symbols": [
         {
           "name": "analysis",
@@ -12469,228 +12691,228 @@
           "line": 20
         },
         {
-          "name": "input",
+          "name": "convert",
           "line": 21
         },
         {
-          "name": "loudness_preview",
-          "line": 23
+          "name": "input",
+          "line": 22
         },
         {
-          "name": "output",
+          "name": "loudness_preview",
           "line": 24
         },
         {
-          "name": "playback_control",
+          "name": "output",
           "line": 25
         },
         {
-          "name": "playout",
+          "name": "playback_control",
           "line": 26
         },
         {
-          "name": "preview_quality",
+          "name": "playout",
           "line": 27
         },
         {
-          "name": "utils",
+          "name": "preview_quality",
           "line": 28
         },
         {
+          "name": "utils",
+          "line": 29
+        },
+        {
           "name": "available_font_families",
-          "line": 85
+          "line": 87
         },
         {
           "name": "set_processing_bench_interval",
-          "line": 91
+          "line": 93
         },
         {
           "name": "ClipResult",
-          "line": 96
+          "line": 98
         },
         {
           "name": "LogoFade",
-          "line": 105
+          "line": 107
         },
         {
           "name": "LogoGaps",
-          "line": 122
+          "line": 124
         },
         {
           "name": "LogoGaps",
-          "line": 127
+          "line": 129
         },
         {
           "name": "new",
-          "line": 131
+          "line": 133
         },
         {
           "name": "is_empty",
-          "line": 160
+          "line": 162
         },
         {
           "name": "iter",
-          "line": 165
+          "line": 167
         },
         {
           "name": "Playout",
-          "line": 170
+          "line": 172
         },
         {
           "name": "HlsHealth",
-          "line": 181
+          "line": 183
         },
         {
           "name": "HlsHealth",
-          "line": 185
+          "line": 187
         },
         {
           "name": "new",
-          "line": 186
+          "line": 188
         },
         {
           "name": "last_muxed_age",
-          "line": 192
+          "line": 194
         },
         {
           "name": "mark_muxed",
-          "line": 199
+          "line": 201
         },
         {
           "name": "PlayOptions",
-          "line": 208
+          "line": 210
         },
         {
           "name": "AsyncPlayout",
-          "line": 217
+          "line": 219
         },
         {
           "name": "WorkerCompletion",
-          "line": 227
+          "line": 229
         },
         {
           "name": "AsyncPlayout",
-          "line": 232
+          "line": 234
         },
         {
           "name": "open",
-          "line": 233
+          "line": 235
         },
         {
           "name": "open_stream",
-          "line": 242
+          "line": 244
         },
         {
           "name": "open_hls",
-          "line": 251
+          "line": 253
         },
         {
           "name": "open_desktop",
-          "line": 282
+          "line": 284
         },
         {
           "name": "open_with",
-          "line": 286
+          "line": 288
         },
         {
           "name": "playback_control",
-          "line": 323
+          "line": 325
         },
         {
           "name": "hls_health",
-          "line": 327
+          "line": 329
         },
         {
           "name": "preloader",
-          "line": 332
+          "line": 334
         },
         {
           "name": "play",
-          "line": 336
+          "line": 338
         },
         {
           "name": "play_with_seek",
-          "line": 340
+          "line": 342
         },
         {
           "name": "play_with_timing_and_logo_fade",
-          "line": 363
+          "line": 365
         },
         {
           "name": "play_with_timing_logo_fade_and_rate",
-          "line": 382
+          "line": 384
         },
         {
           "name": "play_with_timing_logo_fade_rate_and_audio",
-          "line": 404
+          "line": 406
         },
         {
           "name": "start_live_listeners",
-          "line": 432
+          "line": 434
         },
         {
           "name": "finish",
-          "line": 460
+          "line": 462
         },
         {
           "name": "Drop",
-          "line": 483
+          "line": 485
         },
         {
           "name": "drop",
-          "line": 484
+          "line": 486
         },
         {
           "name": "AsyncCommand",
-          "line": 494
+          "line": 496
         },
         {
           "name": "run_async_playout_worker",
-          "line": 517
+          "line": 519
         },
         {
           "name": "Playout",
-          "line": 584
+          "line": 586
         },
         {
           "name": "open",
-          "line": 585
+          "line": 587
         },
         {
           "name": "open_stream",
-          "line": 593
+          "line": 595
         },
         {
           "name": "open_desktop",
-          "line": 606
+          "line": 608
         },
         {
           "name": "open_hls",
-          "line": 614
+          "line": 616
         },
         {
           "name": "open_hls_with_health",
-          "line": 636
+          "line": 638
         },
         {
           "name": "validate_fallback_duration",
-          "line": 661
+          "line": 663
         },
         {
           "name": "with_output",
-          "line": 669
+          "line": 671
         },
         {
           "name": "play",
-          "line": 688
+          "line": 690
         },
         {
           "name": "play_with_loudness_preview",
-          "line": 697
-        },
-        {
-          "name": "play_with_seek",
-          "line": 770
+          "line": 699
         }
       ]
     },
@@ -15667,9 +15889,9 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "e0713a59cb914ed9581bae3458a79ee66c7cfef969c515b157633117acaadeb8",
+      "sha256": "478196bebbb88ed0a0fe992f44a4f6f9b695be291d5f9f0edddf1e542a17b87d",
       "language": "Rust",
-      "bytes": 137936,
+      "bytes": 139764,
       "symbols": [
         {
           "name": "PlaybackSkipped",
@@ -15832,91 +16054,91 @@
           "line": 605
         },
         {
-          "name": "RejectedPackets",
+          "name": "KeyFrameGate",
           "line": 622
         },
         {
-          "name": "RejectedPackets",
-          "line": 628
+          "name": "KeyFrameGate",
+          "line": 627
         },
         {
           "name": "new",
-          "line": 629
+          "line": 628
+        },
+        {
+          "name": "skip",
+          "line": 636
+        },
+        {
+          "name": "RejectedPackets",
+          "line": 660
+        },
+        {
+          "name": "RejectedPackets",
+          "line": 666
+        },
+        {
+          "name": "new",
+          "line": 667
         },
         {
           "name": "check",
-          "line": 637
+          "line": 675
         },
         {
           "name": "play_opened_input",
-          "line": 655
+          "line": 693
         },
         {
           "name": "close_aside",
-          "line": 1041
+          "line": 1086
         },
         {
           "name": "open_input",
-          "line": 1053
+          "line": 1098
         },
         {
           "name": "open_in_background",
-          "line": 1088
+          "line": 1133
         },
         {
           "name": "hold_until_open",
-          "line": 1109
+          "line": 1154
         },
         {
           "name": "seek_input",
-          "line": 1158
+          "line": 1203
         },
         {
           "name": "seconds_to_microseconds",
-          "line": 1169
+          "line": 1214
         },
         {
           "name": "finish_video",
-          "line": 1174
+          "line": 1219
         },
         {
           "name": "repeat_single_video_frame_to_limit",
-          "line": 1243
+          "line": 1288
         },
         {
           "name": "single_frame_repeat_frames",
-          "line": 1320
+          "line": 1365
         },
         {
           "name": "audio_pts_for_video_position",
-          "line": 1331
+          "line": 1376
         },
         {
           "name": "stream_duration_us",
-          "line": 1343
-        },
-        {
-          "name": "parse_duration_us",
-          "line": 1359
-        },
-        {
-          "name": "receive_video_frames",
-          "line": 1374
-        },
-        {
-          "name": "encode_composited_frame",
-          "line": 1530
-        },
-        {
-          "name": "video_frame_needs_write",
-          "line": 1574
+          "line": 1388
         }
       ]
     },
     "backend/engine/src/preview_quality.rs": {
-      "sha256": "d071ebaa1fa4001dd2de3f3a2987d21a7dc4e2a5123e23748ef0caa148d2a4ee",
+      "sha256": "3450b1059f39ce4536a6814924ede06acabe68dd23cd38121e3b560f3d3be2b5",
       "language": "Rust",
-      "bytes": 9443,
+      "bytes": 10312,
       "symbols": [
         {
           "name": "LightPreview",
@@ -15957,6 +16179,10 @@
         {
           "name": "transcode_light_preview",
           "line": 104
+        },
+        {
+          "name": "transcode",
+          "line": 118
         }
       ]
     },
@@ -16556,249 +16782,249 @@
       ]
     },
     "backend/engine/src/utils/logging.rs": {
-      "sha256": "88be0f8e208c0b13a158908419ba7f3f2b8c9ce7840e2e3f44a45ba345650c93",
+      "sha256": "1d008815c284670083f987581e0a30b9c945bec5d2193c4186b3b087c4314d0e",
       "language": "Rust",
-      "bytes": 26659,
+      "bytes": 27302,
       "symbols": [
         {
+          "name": "quiet_ffmpeg_logs",
+          "line": 58
+        },
+        {
           "name": "IngestLogContext",
-          "line": 54
+          "line": 67
         },
         {
           "name": "FfmpegVaList",
-          "line": 70
+          "line": 83
         },
         {
           "name": "FfmpegVaList",
-          "line": 72
+          "line": 85
         },
         {
           "name": "FfmpegVaList",
-          "line": 74
+          "line": 87
         },
         {
           "name": "FfmpegVaList",
-          "line": 76
+          "line": 89
         },
         {
           "name": "FfmpegVaList",
-          "line": 78
+          "line": 91
         },
         {
           "name": "init",
-          "line": 80
+          "line": 93
         },
         {
           "name": "SrtLogHandler",
-          "line": 105
+          "line": 118
         },
         {
           "name": "srt_setlogflags",
-          "line": 110
+          "line": 123
         },
         {
           "name": "srt_setloghandler",
-          "line": 111
+          "line": 124
         },
         {
           "name": "install_srt_log_callback",
-          "line": 115
+          "line": 128
         },
         {
           "name": "install_srt_log_callback",
-          "line": 127
+          "line": 140
         },
         {
           "name": "srt_log_callback_installed",
-          "line": 131
+          "line": 144
         },
         {
           "name": "srt_log_callback",
-          "line": 136
+          "line": 149
         },
         {
           "name": "log_srt_line",
-          "line": 160
+          "line": 173
         },
         {
           "name": "SrtLogDedup",
-          "line": 183
-        },
-        {
-          "name": "SrtRepeat",
-          "line": 188
-        },
-        {
-          "name": "SrtLogDedup",
-          "line": 195
-        },
-        {
-          "name": "new",
           "line": 196
         },
         {
-          "name": "record",
-          "line": 202
+          "name": "SrtRepeat",
+          "line": 201
         },
         {
-          "name": "set_log_callback",
-          "line": 249
-        },
-        {
-          "name": "with_ingest_logs",
-          "line": 255
-        },
-        {
-          "name": "mark_ingest_interrupted",
-          "line": 277
-        },
-        {
-          "name": "clear_unexpected_rtmp_stream",
-          "line": 281
-        },
-        {
-          "name": "take_unexpected_rtmp_stream",
-          "line": 287
-        },
-        {
-          "name": "configured_level",
-          "line": 291
-        },
-        {
-          "name": "max_level",
-          "line": 299
-        },
-        {
-          "name": "level_value",
-          "line": 307
-        },
-        {
-          "name": "log_callback",
-          "line": 311
-        },
-        {
-          "name": "should_skip_ffmpeg_log",
-          "line": 359
-        },
-        {
-          "name": "skipped_ffmpeg_log_patterns",
-          "line": 371
-        },
-        {
-          "name": "log_line",
-          "line": 384
-        },
-        {
-          "name": "write_log_line",
-          "line": 399
-        },
-        {
-          "name": "ffmpeg_ingest_tag",
-          "line": 415
-        },
-        {
-          "name": "DedupLine",
-          "line": 422
-        },
-        {
-          "name": "LogDedup",
-          "line": 430
-        },
-        {
-          "name": "DedupEntry",
-          "line": 436
-        },
-        {
-          "name": "DedupKey",
-          "line": 444
-        },
-        {
-          "name": "LogDedup",
-          "line": 451
+          "name": "SrtLogDedup",
+          "line": 208
         },
         {
           "name": "new",
-          "line": 452
+          "line": 209
         },
         {
-          "name": "push",
-          "line": 460
+          "name": "record",
+          "line": 215
         },
         {
-          "name": "push_with_context",
-          "line": 464
+          "name": "set_log_callback",
+          "line": 262
         },
         {
-          "name": "drain_expired",
-          "line": 514
+          "name": "with_ingest_logs",
+          "line": 268
+        },
+        {
+          "name": "mark_ingest_interrupted",
+          "line": 290
+        },
+        {
+          "name": "clear_unexpected_rtmp_stream",
+          "line": 294
+        },
+        {
+          "name": "take_unexpected_rtmp_stream",
+          "line": 300
+        },
+        {
+          "name": "configured_level",
+          "line": 304
+        },
+        {
+          "name": "max_level",
+          "line": 312
+        },
+        {
+          "name": "level_value",
+          "line": 320
+        },
+        {
+          "name": "log_callback",
+          "line": 324
+        },
+        {
+          "name": "should_skip_ffmpeg_log",
+          "line": 376
+        },
+        {
+          "name": "skipped_ffmpeg_log_patterns",
+          "line": 388
+        },
+        {
+          "name": "log_line",
+          "line": 401
+        },
+        {
+          "name": "write_log_line",
+          "line": 416
+        },
+        {
+          "name": "ffmpeg_ingest_tag",
+          "line": 432
+        },
+        {
+          "name": "DedupLine",
+          "line": 439
+        },
+        {
+          "name": "LogDedup",
+          "line": 447
         },
         {
           "name": "DedupEntry",
-          "line": 530
+          "line": 453
         },
         {
-          "name": "repeated_line",
+          "name": "DedupKey",
+          "line": 461
+        },
+        {
+          "name": "LogDedup",
+          "line": 468
+        },
+        {
+          "name": "new",
+          "line": 469
+        },
+        {
+          "name": "push",
+          "line": 477
+        },
+        {
+          "name": "push_with_context",
+          "line": 481
+        },
+        {
+          "name": "drain_expired",
           "line": 531
         },
         {
+          "name": "DedupEntry",
+          "line": 547
+        },
+        {
+          "name": "repeated_line",
+          "line": 548
+        },
+        {
           "name": "ffmpeg_log_fingerprint",
-          "line": 550
+          "line": 567
         },
         {
           "name": "remember_unexpected_rtmp_stream",
-          "line": 589
+          "line": 606
         },
         {
           "name": "tests",
-          "line": 609
+          "line": 626
         },
         {
           "name": "ingest_log_context_stays_on_the_listener_thread",
-          "line": 627
+          "line": 644
         },
         {
           "name": "ffmpeg_dedup_keeps_live_listeners_separate",
-          "line": 649
+          "line": 666
         },
         {
           "name": "srt_receive_buffer_spam_is_rate_limited_per_socket",
-          "line": 685
+          "line": 702
         },
         {
           "name": "deduplicates_consecutive_identical_lines",
-          "line": 713
+          "line": 730
         },
         {
           "name": "deduplicates_identical_lines_interleaved_within_six_lines",
-          "line": 739
+          "line": 756
         },
         {
           "name": "emits_a_line_again_after_it_leaves_the_six_line_window",
-          "line": 765
+          "line": 782
         },
         {
           "name": "fingerprints_matroska_timestamp_spam",
-          "line": 777
+          "line": 794
         },
         {
           "name": "level_is_part_of_the_dedup_key",
-          "line": 806
+          "line": 823
         },
         {
           "name": "maps_ffmpeg_levels_to_av_log_constants",
-          "line": 822
+          "line": 839
         },
         {
           "name": "skips_ffmpeg_logs_with_regex_patterns",
-          "line": 829
+          "line": 846
         },
         {
           "name": "skips_ingest_errors_after_an_intentional_interrupt",
-          "line": 843
-        },
-        {
-          "name": "windows_callback_receives_and_formats_ffmpeg_logs",
-          "line": 858
+          "line": 860
         }
       ]
     },
@@ -17050,21 +17276,21 @@
       "symbols": []
     },
     "docs/README.md": {
-      "sha256": "b48012d1c5c0ca73c6442a38c92262e6da6a58742de83e25b28a28803e9fd518",
+      "sha256": "abdc1e3355c2f3f84943c4b01d4e79716c27bbd00b6ccbea836068ff8a29937a",
       "language": "Markdown",
-      "bytes": 2411,
+      "bytes": 2707,
       "symbols": []
     },
     "docs/ad_breaks.md": {
-      "sha256": "e6b5d0b010ef849ca8570c5ab23477f0f820050a3ec93a5f7d807b355a147cb6",
+      "sha256": "439d96831ebcb8585cd7774e253b9258f10b21adf56e6a04d810749e98bc70ba",
       "language": "Markdown",
-      "bytes": 7734,
+      "bytes": 8765,
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "4392b2f3f1cb6773b7d8b6a8d5db262cffbf67dc2fc9393e83b91ee68c3ffc2d",
+      "sha256": "8953b7f53b0b5d3f782b88e5b3b611108bfc8c0e73fc605d94fb2064ef3b728a",
       "language": "Markdown",
-      "bytes": 21962,
+      "bytes": 22756,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -17128,9 +17354,9 @@
       "symbols": []
     },
     "docs/output.md": {
-      "sha256": "b9147a96bb219be903abc048c43fd5fb6770b4434409d3820b438d45b2ed037c",
+      "sha256": "7007eecdd1a5bf2b548ffaff4774d6e8313a18d7a76380901f7dc2df42da3f95",
       "language": "Markdown",
-      "bytes": 7956,
+      "bytes": 8017,
       "symbols": []
     },
     "docs/playlist_gen.md": {
@@ -17164,9 +17390,15 @@
       "symbols": []
     },
     "docs/scte35.md": {
-      "sha256": "8b91070143426f59e9bc250cc26b509c3695804c3ea318261a7d8790e881a54a",
+      "sha256": "c1ba7475fec42be828204068f382b1b31546f8a0c39d34ff91b27539dd8e7eb5",
       "language": "Markdown",
-      "bytes": 17832,
+      "bytes": 17881,
+      "symbols": []
+    },
+    "docs/uploads.md": {
+      "sha256": "6d8de7609ab27dbc219652d732ebaeb5e0e80758bd873d729a8b7d539ac57b1d",
+      "language": "Markdown",
+      "bytes": 2049,
       "symbols": []
     },
     "docs/xmltv.md": {
@@ -18734,249 +18966,249 @@
       ]
     },
     "frontend/src/components/player/PlaylistPanel.vue": {
-      "sha256": "3817199ba4a68b7b3ea7f2284ede4e0f65a944898e626d7322adcccad2ed0ded",
+      "sha256": "ca95918c051332ee37ced7955fc47e739f8f6867c8c1d2eec246532e01becb86",
       "language": "Vue",
-      "bytes": 75486,
+      "bytes": 76303,
       "symbols": [
         {
-          "name": "emit",
+          "name": "props",
           "line": 39
         },
         {
-          "name": "authStore",
-          "line": 43
-        },
-        {
-          "name": "configStore",
-          "line": 44
-        },
-        {
-          "name": "indexStore",
-          "line": 45
-        },
-        {
-          "name": "playlistStore",
-          "line": 46
-        },
-        {
-          "name": "programmes",
-          "line": 47
-        },
-        {
-          "name": "scheduleStore",
+          "name": "emit",
           "line": 48
         },
         {
-          "name": "PAGE",
-          "line": 51
-        },
-        {
-          "name": "MORE",
+          "name": "authStore",
           "line": 52
         },
         {
-          "name": "WHOLE_GROUP",
+          "name": "configStore",
+          "line": 53
+        },
+        {
+          "name": "indexStore",
           "line": 54
         },
         {
-          "name": "toggled",
+          "name": "playlistStore",
+          "line": 55
+        },
+        {
+          "name": "programmes",
+          "line": 56
+        },
+        {
+          "name": "scheduleStore",
           "line": 57
         },
         {
-          "name": "reveal",
-          "line": 59
+          "name": "PAGE",
+          "line": 60
         },
         {
-          "name": "editing",
+          "name": "MORE",
           "line": 61
         },
         {
-          "name": "recent",
+          "name": "WHOLE_GROUP",
           "line": 63
         },
         {
-          "name": "newRemote",
-          "line": 64
-        },
-        {
-          "name": "picker",
-          "line": 65
-        },
-        {
-          "name": "dropAt",
+          "name": "toggled",
           "line": 66
         },
         {
-          "name": "dragRow",
-          "line": 67
-        },
-        {
-          "name": "menuOpen",
+          "name": "reveal",
           "line": 68
         },
         {
-          "name": "menu",
-          "line": 69
-        },
-        {
-          "name": "dateInput",
+          "name": "editing",
           "line": 70
         },
         {
-          "name": "saving",
-          "line": 71
+          "name": "recent",
+          "line": 72
         },
         {
-          "name": "showCopy",
+          "name": "newRemote",
           "line": 73
         },
         {
-          "name": "copyDate",
+          "name": "picker",
           "line": 74
         },
         {
-          "name": "showImport",
+          "name": "dropAt",
           "line": 75
         },
         {
-          "name": "importFile",
+          "name": "dragRow",
           "line": 76
         },
         {
-          "name": "showDelete",
+          "name": "menuOpen",
           "line": 77
         },
         {
-          "name": "pendingDate",
+          "name": "menu",
           "line": 78
         },
         {
-          "name": "view",
-          "line": 81
+          "name": "dateInput",
+          "line": 79
         },
         {
-          "name": "selected",
+          "name": "saving",
+          "line": 80
+        },
+        {
+          "name": "showCopy",
+          "line": 82
+        },
+        {
+          "name": "copyDate",
           "line": 83
         },
         {
-          "name": "anchorUid",
+          "name": "showImport",
+          "line": 84
+        },
+        {
+          "name": "importFile",
           "line": 85
         },
         {
-          "name": "moveTime",
+          "name": "showDelete",
           "line": 86
         },
         {
+          "name": "pendingDate",
+          "line": 87
+        },
+        {
+          "name": "view",
+          "line": 90
+        },
+        {
+          "name": "selected",
+          "line": 92
+        },
+        {
+          "name": "anchorUid",
+          "line": 94
+        },
+        {
+          "name": "moveTime",
+          "line": 95
+        },
+        {
           "name": "readSetting",
-          "line": 88
+          "line": 97
         },
         {
           "name": "channel",
-          "line": 108
+          "line": 117
         },
         {
           "name": "storage",
-          "line": 109
+          "line": 118
         },
         {
           "name": "infinite",
-          "line": 110
-        },
-        {
-          "name": "dayStart",
-          "line": 111
-        },
-        {
-          "name": "dateLabel",
-          "line": 113
-        },
-        {
-          "name": "shortDateLabel",
-          "line": 116
-        },
-        {
-          "name": "totalSeconds",
           "line": 119
         },
         {
-          "name": "unsaved",
+          "name": "dayStart",
           "line": 120
         },
         {
-          "name": "dayLength",
+          "name": "dateLabel",
           "line": 122
         },
         {
+          "name": "shortDateLabel",
+          "line": 125
+        },
+        {
+          "name": "totalSeconds",
+          "line": 128
+        },
+        {
+          "name": "unsaved",
+          "line": 129
+        },
+        {
+          "name": "dayLength",
+          "line": 131
+        },
+        {
           "name": "dayGap",
-          "line": 124
+          "line": 133
         },
         {
           "name": "listEnd",
-          "line": 126
-        },
-        {
-          "name": "last",
-          "line": 127
-        },
-        {
-          "name": "listKey",
           "line": 135
         },
         {
+          "name": "last",
+          "line": 136
+        },
+        {
+          "name": "listKey",
+          "line": 144
+        },
+        {
           "name": "load",
-          "line": 139
+          "line": 148
         },
         {
           "name": "changeDate",
-          "line": 152
+          "line": 161
         },
         {
           "name": "confirmDateChange",
-          "line": 166
+          "line": 175
         },
         {
           "name": "date",
-          "line": 167
-        },
-        {
-          "name": "openDatePicker",
           "line": 176
         },
         {
+          "name": "openDatePicker",
+          "line": 185
+        },
+        {
           "name": "input",
-          "line": 177
+          "line": 186
         },
         {
           "name": "scrollToOnAir",
-          "line": 191
+          "line": 200
         },
         {
           "name": "index",
-          "line": 197
+          "line": 206
         },
         {
           "name": "uid",
-          "line": 203
+          "line": 212
         },
         {
           "name": "date",
-          "line": 211
+          "line": 220
         },
         {
           "name": "dayEvents",
-          "line": 271
+          "line": 290
         },
         {
           "name": "date",
-          "line": 272
+          "line": 291
         },
         {
           "name": "lives",
-          "line": 287
-        },
-        {
-          "name": "protocolOf",
-          "line": 300
+          "line": 306
         }
       ]
     },
@@ -20133,6 +20365,81 @@
         }
       ]
     },
+    "frontend/src/components/settings/Scte35Remote.vue": {
+      "sha256": "1e50ade042f6ddaf6ba7870965c6d7239bee2c6f3912471083f949cbe8e89247",
+      "language": "Vue",
+      "bytes": 8221,
+      "symbols": [
+        {
+          "name": "configStore",
+          "line": 15
+        },
+        {
+          "name": "indexStore",
+          "line": 16
+        },
+        {
+          "name": "showGuide",
+          "line": 18
+        },
+        {
+          "name": "example",
+          "line": 19
+        },
+        {
+          "name": "duration",
+          "line": 21
+        },
+        {
+          "name": "scte35",
+          "line": 23
+        },
+        {
+          "name": "channelId",
+          "line": 24
+        },
+        {
+          "name": "key",
+          "line": 25
+        },
+        {
+          "name": "keyPlaceholder",
+          "line": 26
+        },
+        {
+          "name": "actionUrl",
+          "line": 28
+        },
+        {
+          "name": "params",
+          "line": 29
+        },
+        {
+          "name": "urls",
+          "line": 38
+        },
+        {
+          "name": "snippet",
+          "line": 43
+        },
+        {
+          "name": "mark",
+          "line": 44
+        },
+        {
+          "name": "cancel",
+          "line": 45
+        },
+        {
+          "name": "newKey",
+          "line": 70
+        },
+        {
+          "name": "copy",
+          "line": 74
+        }
+      ]
+    },
     "frontend/src/components/settings/SectionCard.vue": {
       "sha256": "c2bfef3740bea5f26ea19601975a3576a8a8e1f33931eee970cf0d9ef6ab8a4f",
       "language": "Vue",
@@ -20306,61 +20613,61 @@
       ]
     },
     "frontend/src/components/settings/SettingsBreaks.vue": {
-      "sha256": "5c11fd617193204c62d26755115ae99b3f9e744cf8346f2e1831aa291d227a09",
+      "sha256": "12c9e0b171bb31797c040567745035879dd4cc45e392f9c24d4295de4afabc9d",
       "language": "Vue",
-      "bytes": 13008,
+      "bytes": 13100,
       "symbols": [
         {
           "name": "indexStore",
-          "line": 17
+          "line": 18
         },
         {
           "name": "scte35",
-          "line": 20
-        },
-        {
-          "name": "output",
           "line": 21
         },
         {
-          "name": "channelId",
+          "name": "output",
           "line": 22
         },
         {
+          "name": "channelId",
+          "line": 23
+        },
+        {
           "name": "manualDuration",
-          "line": 25
+          "line": 26
         },
         {
           "name": "outputCarries",
-          "line": 28
+          "line": 29
         },
         {
           "name": "state",
-          "line": 32
+          "line": 33
         },
         {
           "name": "clock",
-          "line": 48
+          "line": 49
         },
         {
           "name": "rows",
-          "line": 58
+          "line": 59
         },
         {
           "name": "keyFrame",
-          "line": 60
+          "line": 61
         },
         {
           "name": "cancellable",
-          "line": 68
+          "line": 69
         },
         {
           "name": "signal",
-          "line": 72
+          "line": 73
         },
         {
           "name": "cancel",
-          "line": 81
+          "line": 82
         }
       ]
     },
@@ -20953,9 +21260,9 @@
       ]
     },
     "frontend/src/components/settings/SettingsPlaylist.vue": {
-      "sha256": "ae7920fb944e956d9bb08819d8534cd7e40ff0b04761206a70ccaa02f0405abc",
+      "sha256": "9a3ab560fe356cb012bc5b124aa7fda15b4cf163240841016bcc1904341079ee",
       "language": "Vue",
-      "bytes": 8298,
+      "bytes": 8794,
       "symbols": [
         {
           "name": "TIME",
@@ -22749,6 +23056,33 @@
         }
       ]
     },
+    "frontend/src/composables/conversions.ts": {
+      "sha256": "8e5d18d7cdbdd99f25ba695b7312e95b92f612495e42a7cb755ed70cd21478c4",
+      "language": "TypeScript",
+      "bytes": 2497,
+      "symbols": [
+        {
+          "name": "Conversion",
+          "line": 7
+        },
+        {
+          "name": "useConversions",
+          "line": 22
+        },
+        {
+          "name": "byPath",
+          "line": 29
+        },
+        {
+          "name": "running",
+          "line": 43
+        },
+        {
+          "name": "poll",
+          "line": 47
+        }
+      ]
+    },
     "frontend/src/composables/dialogFocus.ts": {
       "sha256": "c7dc8b80ffe2ea99bd1e73f5e352b01cc8778250c3c2371fa9599ce893580e8b",
       "language": "TypeScript",
@@ -23633,15 +23967,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "3fedc955ad0c0ba3714e886163e01c9629db5e2aff10c55c6f7c7ecf16e146a8",
+      "sha256": "17d8548411184b461790b0e860f76d0f2b31a2ea8093ccc870ad29467d807078",
       "language": "TypeScript",
-      "bytes": 101688,
+      "bytes": 105245,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "500a410142b987c04142a7266a137d75210aa86a592155d596c82bba535d024c",
+      "sha256": "ba28cab9f60a356e42129f4aa20540bf501245b78a6d57a1d5ebf16a1a600475",
       "language": "TypeScript",
-      "bytes": 106585,
+      "bytes": 110253,
       "symbols": []
     },
     "frontend/src/locales/ru-RU.ts": {
@@ -24192,9 +24526,9 @@
       ]
     },
     "frontend/src/types/playout_config.d.ts": {
-      "sha256": "6df7db337f81c1adf1b2e7e10ffa29eb7b956be7e5f76a8ff7f5037b8e116754",
+      "sha256": "94d55e9e42d6fbb163fda66c3d7f9ec484ca57e1cd8a5db1caa980a2fce7227b",
       "language": "TypeScript",
-      "bytes": 5557,
+      "bytes": 5828,
       "symbols": [
         {
           "name": "Audio",
@@ -24270,15 +24604,15 @@
         },
         {
           "name": "Storage",
-          "line": 112
+          "line": 117
         },
         {
           "name": "StreamType",
-          "line": 114
+          "line": 124
         },
         {
           "name": "Task",
-          "line": 116
+          "line": 126
         }
       ]
     },
@@ -24930,256 +25264,256 @@
       ]
     },
     "frontend/src/views/MediaView.vue": {
-      "sha256": "77e1da2a1808cf882bb808b5d47d223fc218fbce83aa81c402162cd7745dc5b0",
+      "sha256": "de5d49467b511e694448d3f16c41e247fdd9798d99b83df998ecaa8f4b6bb886",
       "language": "Vue",
-      "bytes": 68736,
+      "bytes": 70544,
       "symbols": [
         {
           "name": "configStore",
-          "line": 42
-        },
-        {
-          "name": "indexStore",
           "line": 43
         },
         {
-          "name": "mediaStore",
+          "name": "indexStore",
           "line": 44
         },
         {
-          "name": "route",
+          "name": "mediaStore",
           "line": 45
         },
         {
-          "name": "router",
+          "name": "route",
           "line": 46
         },
         {
-          "name": "scheduleStore",
+          "name": "router",
           "line": 47
         },
         {
+          "name": "scheduleStore",
+          "line": 48
+        },
+        {
           "name": "uploads",
-          "line": 49
+          "line": 50
         },
         {
           "name": "DRAG_TYPE",
-          "line": 51
-        },
-        {
-          "name": "IMAGE_TYPES",
           "line": 52
         },
         {
-          "name": "channelId",
-          "line": 60
+          "name": "IMAGE_TYPES",
+          "line": 53
         },
         {
-          "name": "current",
+          "name": "channelId",
           "line": 61
         },
         {
-          "name": "crumbs",
+          "name": "current",
           "line": 62
         },
         {
-          "name": "parts",
+          "name": "crumbs",
           "line": 63
         },
         {
+          "name": "parts",
+          "line": 64
+        },
+        {
           "name": "FILE_VIEWS",
-          "line": 73
+          "line": 74
         },
         {
           "name": "view",
-          "line": 75
-        },
-        {
-          "name": "filter",
           "line": 76
         },
         {
-          "name": "selected",
+          "name": "filter",
           "line": 77
         },
         {
-          "name": "sheet",
+          "name": "selected",
           "line": 78
         },
         {
-          "name": "editorPath",
+          "name": "sheet",
           "line": 79
         },
         {
-          "name": "logoMarksPath",
-          "line": 81
+          "name": "editorPath",
+          "line": 80
         },
         {
-          "name": "logoMarksLength",
+          "name": "logoMarksPath",
           "line": 82
         },
         {
-          "name": "treeVersion",
+          "name": "logoMarksLength",
           "line": 83
         },
         {
-          "name": "disk",
+          "name": "treeVersion",
           "line": 84
         },
         {
-          "name": "dropActive",
+          "name": "disk",
           "line": 85
         },
         {
-          "name": "uploadInput",
+          "name": "dropActive",
           "line": 86
         },
         {
-          "name": "renameTarget",
-          "line": 88
+          "name": "uploadInput",
+          "line": 87
         },
         {
-          "name": "renameValue",
+          "name": "renameTarget",
           "line": 89
         },
         {
-          "name": "showCreate",
+          "name": "renameValue",
           "line": 90
         },
         {
-          "name": "newFolderName",
+          "name": "showCreate",
           "line": 91
         },
         {
-          "name": "deleteNames",
+          "name": "newFolderName",
           "line": 92
         },
         {
-          "name": "deleteRecursive",
+          "name": "deleteNames",
           "line": 93
         },
         {
-          "name": "moveNames",
+          "name": "deleteRecursive",
           "line": 94
         },
         {
-          "name": "moveTarget",
+          "name": "moveNames",
           "line": 95
         },
         {
-          "name": "preview",
+          "name": "moveTarget",
           "line": 96
         },
         {
+          "name": "preview",
+          "line": 97
+        },
+        {
           "name": "readSetting",
-          "line": 100
+          "line": 101
         },
         {
           "name": "writeSetting",
-          "line": 108
+          "line": 109
         },
         {
           "name": "initialView",
-          "line": 116
-        },
-        {
-          "name": "saved",
           "line": 117
         },
         {
-          "name": "rows",
-          "line": 127
+          "name": "saved",
+          "line": 118
         },
         {
-          "name": "needle",
+          "name": "rows",
           "line": 128
         },
         {
-          "name": "folders",
+          "name": "needle",
           "line": 129
         },
         {
-          "name": "files",
+          "name": "folders",
           "line": 130
         },
         {
+          "name": "files",
+          "line": 131
+        },
+        {
           "name": "isVideo",
-          "line": 138
+          "line": 139
         },
         {
           "name": "isImage",
-          "line": 142
+          "line": 143
         },
         {
           "name": "videos",
-          "line": 146
-        },
-        {
-          "name": "images",
           "line": 147
         },
         {
-          "name": "shownImages",
+          "name": "images",
           "line": 148
         },
         {
-          "name": "needle",
+          "name": "shownImages",
           "line": 149
         },
         {
-          "name": "imageUrls",
-          "line": 155
+          "name": "needle",
+          "line": 150
         },
         {
-          "name": "imageDims",
+          "name": "imageUrls",
           "line": 156
         },
         {
-          "name": "retried",
+          "name": "imageDims",
           "line": 157
         },
         {
-          "name": "imagesFolder",
+          "name": "retried",
           "line": 158
         },
         {
+          "name": "imagesFolder",
+          "line": 159
+        },
+        {
           "name": "imageKey",
-          "line": 161
+          "line": 162
         },
         {
           "name": "loadImageUrls",
-          "line": 165
-        },
-        {
-          "name": "folder",
           "line": 166
         },
         {
+          "name": "folder",
+          "line": 167
+        },
+        {
           "name": "queue",
-          "line": 179
+          "line": 180
         },
         {
           "name": "worker",
-          "line": 181
+          "line": 182
         },
         {
           "name": "url",
-          "line": 184
+          "line": 185
         },
         {
           "name": "imageFailed",
-          "line": 199
+          "line": 200
         },
         {
           "name": "key",
-          "line": 200
+          "line": 201
         }
       ]
     },
     "frontend/src/views/PlayerView.vue": {
-      "sha256": "b60d003f840b2d6f50b83fa429a7e6408e69528b9ee2fbc7fb2750bdad5eccff",
+      "sha256": "20db5a9c077779dd8a90f0ee92b608e247b95168fecccaa2a1d5348cbe8d60c9",
       "language": "Vue",
-      "bytes": 9698,
+      "bytes": 10444,
       "symbols": [
         {
           "name": "configStore",
@@ -26018,14 +26352,26 @@
       "bytes": 882,
       "symbols": []
     },
+    "migrations/00018_scte35_key.sql": {
+      "sha256": "16aa8de1011a42ba97f6e5d69f77b1b31d367cf3d013f3970551695f0aaa9ad7",
+      "language": "SQL",
+      "bytes": 206,
+      "symbols": []
+    },
+    "migrations/00019_convert_uploads.sql": {
+      "sha256": "eea6cbaaf3fa244f856fd381682504e5830bbc059e1dbad69990642e6cdeed6a",
+      "language": "SQL",
+      "bytes": 228,
+      "symbols": []
+    },
     "package-lock.json": {
-      "sha256": "82f8ce73c4ebfe49cd25f96919a00783d46fac7d76b6b7fd638cb174ae6b4b9a",
+      "sha256": "b209cf0f713a650c2305324cf1471cd3b6140aa7493b98c8047de186b48ab63e",
       "language": "JSON",
       "bytes": 215132,
       "symbols": []
     },
     "package.json": {
-      "sha256": "81fca26bde3c67c4244a7b694ea49fb4c14f97f4e488989b7ac69c3db354a088",
+      "sha256": "11d94f50e882429826c767ea87839743d9c203eff9f9876cbc44d6f71ad52268",
       "language": "JSON",
       "bytes": 1526,
       "symbols": []

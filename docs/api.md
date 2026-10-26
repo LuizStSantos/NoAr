@@ -232,6 +232,7 @@ of a login, for encoders and automation
 | `GET` | `/api/control/{id}/scte35` | `GA, CA, U` | Read the state, the breaks to come and on air, and the last 20. |
 | `POST` | `/api/control/{id}/scte35/break` | `GA, CA, U` | `{ "duration": 120 }`: mark a break of that many seconds, from now plus the pre-roll. |
 | `DELETE` | `/api/control/{id}/scte35/break/{event_id}` | `GA, CA, U` | Call off a break that has not started. |
+| `GET`, `POST` | `/scte35/{id}/{break\|cancel}` | SCTE-35 key | Query `key` (or header `X-Scte35-Key`), `duration` for `break`, `event` for `cancel` (else the next break). |
 
 ## Live preview
 

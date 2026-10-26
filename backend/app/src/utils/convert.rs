@@ -127,17 +127,20 @@ impl Conversions {
             .to_string_lossy()
             .to_string();
 
-        self.list.lock().unwrap_or_else(|e| e.into_inner()).insert(
-            path.clone(),
-            Conversion {
-                path: path.clone(),
-                converted: None,
-                state: ConversionState::Queued,
-                progress: 0.0,
-                error: None,
-                updated: now(),
-            },
-        );
+        self.list
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert(
+                path.clone(),
+                Conversion {
+                    path: path.clone(),
+                    converted: None,
+                    state: ConversionState::Queued,
+                    progress: 0.0,
+                    error: None,
+                    updated: now(),
+                },
+            );
         let _ = self.sender.send(Job {
             file: file.to_path_buf(),
             path,
@@ -148,7 +151,10 @@ impl Conversions {
 
     /// The queued, running and recent conversions.
     pub fn list(&self) -> Vec<Conversion> {
-        let mut list = self.list.lock().unwrap_or_else(|e| e.into_inner());
+        let mut list = self
+            .list
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let now = now();
 
         list.retain(|_, entry| {
@@ -176,8 +182,8 @@ pub fn target(config: &PlayoutConfig) -> Option<ConvertTarget> {
 
     (fps.is_finite() && fps > 0.0 && config.output.width >= 2 && config.output.height >= 2).then(
         || ConvertTarget {
-            width: config.output.width as u32,
-            height: config.output.height as u32,
+            width: config.output.width,
+            height: config.output.height,
             fps: fps.round() as u32,
             sample_rate: ENGINE_AUDIO_SAMPLE_RATE,
         },
@@ -227,7 +233,11 @@ fn update(
     path: &str,
     change: impl FnOnce(&mut Conversion),
 ) {
-    if let Some(entry) = list.lock().unwrap_or_else(|e| e.into_inner()).get_mut(path) {
+    if let Some(entry) = list
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get_mut(path)
+    {
         change(entry);
         entry.updated = now();
     }
@@ -292,7 +302,7 @@ fn run(job: Job, list: &Mutex<BTreeMap<String, Conversion>>, stop: &AtomicBool, 
         target.width, target.height, target.fps
     );
     update(list, &path, |entry| {
-        entry.state = ConversionState::Converting
+        entry.state = ConversionState::Converting;
     });
 
     let converted = convert_to_output(&job.file, &temporary, target, stop, |share| {

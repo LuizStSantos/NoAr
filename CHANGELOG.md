@@ -38,8 +38,9 @@ one is tagged.
   ("non-existing PPS 0 referenced", "Missing reference picture", "no
   frame!"). Joining the stream mid-way, its analysis often ended before the
   first key frame of a 1080p stream, so it failed and started again every
-  second. It now waits for a key frame, retries less often when it fails,
-  and keeps its own messages out of the channel log.
+  second. It now waits for a key frame, keeps FFmpeg's messages out of the
+  channel log, and when it fails, waits longer each time and logs one
+  warning with the reason.
 - After a seek, or when joining a live source, the playout waits for a key
   frame instead of decoding pictures whose references never came.
 

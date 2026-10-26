@@ -116,7 +116,7 @@ The other details: `splice_insert` for the whole programme, no
 
 ## Following it
 
-- **Player**: under the clip on air, an SCTE-35 strip shows the next break
+- **Player** (Live view): under the clip on air, an SCTE-35 strip shows the next break
   and how far it is, whether its message is already out ("announced 2/3"), or
   the break on air and when the programme returns. It can call off the next
   break, or mark one by hand with a length from the list.
@@ -183,4 +183,3 @@ To record a UDP output for a while: `ffmpeg -i udp://127.0.0.1:41234 -c copy
 
 - HLS and RTMP outputs (see the [study](scte35.md)).
 - Reading SCTE-35 from the lives NoAr receives.
-- A key for encoders to mark breaks without logging in, like the logo key.

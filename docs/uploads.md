@@ -11,7 +11,7 @@ its upload ends, to what the channel sends:
 - H.264 at a high quality (CRF 18), since NoAr encodes it again on air;
 - AAC stereo sound at 48 kHz, the playout's sample rate.
 
-On air, NoAr then neither scales the picture nor converts its frame rate, so
+On air, NoAr then has no picture to resize and no frame rate to convert, so
 the playout uses less CPU. A file with damaged spots is rewritten from what
 decodes, so the damage stays out of the air and the log.
 

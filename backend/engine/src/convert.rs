@@ -368,10 +368,9 @@ pub fn convert_to_output(
         } else if let (Some(decoder), Some(path), Some((audio_index, _))) =
             (audio_decoder.as_mut(), audio.as_mut(), audio_in.as_ref())
             && index == *audio_index
+            && decoder.send_packet(&packet).is_ok()
         {
-            if decoder.send_packet(&packet).is_ok() {
-                path.drain_decoder(decoder, &mut sink)?;
-            }
+            path.drain_decoder(decoder, &mut sink)?;
         }
     }
 
