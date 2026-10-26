@@ -25,6 +25,10 @@ one is tagged.
   the logo for another image now cross-fades instead of switching at once.
   Changes take effect without restarting the playout
   ([docs](docs/logo.md#how-the-logo-comes-up-and-goes-off)).
+- **Release automation**: Actions › Prepare release works out the next
+  version from these notes, dates them, sets the version everywhere and opens
+  the release pull request; merging it tags the version and publishes the
+  release and images ([docs](docs/releasing.md#making-a-release)).
 
 ### Fixed
 

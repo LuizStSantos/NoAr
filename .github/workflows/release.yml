@@ -1,9 +1,11 @@
 name: Release
 
 # A tag vX.Y.Z becomes a GitHub release with that version's changelog section.
+# Tag release starts it for the tags it creates (run on the tag's ref).
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write

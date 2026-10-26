@@ -7,6 +7,9 @@ on:
   pull_request:
   # Docker image and Release run this first and publish only when it passes.
   workflow_call:
+  # Prepare release starts it on the release branch: a push made with
+  # GITHUB_TOKEN starts no workflow by itself.
+  workflow_dispatch:
 
 permissions:
   contents: read
