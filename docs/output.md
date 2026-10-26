@@ -96,6 +96,14 @@ a local UDP port, and the browser receives it from
 Nothing is encoded twice. Browsers without live Media Source playback (older
 iPhones) fall back to the HLS output, when the channel has one.
 
+The preview is a copy of what the output sends, so it only moves while the
+output does. An SRT output in **listener** mode (`srt://0.0.0.0:9000?mode=listener`)
+sends nothing, to its receiver or to the preview, until a receiver connects;
+the Player then says it waits for one. An SRT output in caller mode whose
+receiver does not answer cannot open, and the playout keeps retrying. When the
+browser cannot play the preview, the Player shows the reason instead of a
+black picture.
+
 The outside preview address in Settings › General is optional. Set it only to
 check the output another way, such as the public HLS of a CDN; the Player then
 shows a *Direct / Address* switch.

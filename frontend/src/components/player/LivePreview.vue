@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import mpegts from 'mpegts.js'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import LiveVideo from '@/components/player/LiveVideo.vue'
@@ -77,6 +77,61 @@ const placeholder = computed(() => {
 
     return t('onair.previewUnsupported')
 })
+
+/** No picture yet after this long: say what the preview waits for. */
+const WAIT_NOTICE_MS = 5000
+
+const previewHasPicture = ref(false)
+const previewWaiting = ref(false)
+const previewError = ref('')
+let waitTimer: ReturnType<typeof setTimeout> | undefined
+
+/** An SRT output in listener mode only starts once a receiver connects. */
+const srtListener = computed(() => {
+    const output = configStore.playout.output
+
+    return (
+        output?.mode === 'stream' && output.stream_type === 'srt' && /[?&]mode=listener\b/.test(output.stream_url ?? '')
+    )
+})
+
+const previewNotice = computed(() => {
+    if (previewHasPicture.value) {
+        return ''
+    }
+
+    if (previewError.value) {
+        return t('onair.previewFailed', { reason: previewError.value })
+    }
+
+    if (previewWaiting.value) {
+        return srtListener.value ? t('onair.previewWaitingSrtListener') : t('onair.previewWaiting')
+    }
+
+    return ''
+})
+
+function resetPreviewState() {
+    clearTimeout(waitTimer)
+    previewHasPicture.value = false
+    previewWaiting.value = false
+    previewError.value = ''
+    waitTimer = setTimeout(() => (previewWaiting.value = true), WAIT_NOTICE_MS)
+}
+
+function previewPlaying() {
+    clearTimeout(waitTimer)
+    previewHasPicture.value = true
+    previewError.value = ''
+}
+
+function previewFailed(reason: string) {
+    previewHasPicture.value = false
+    previewError.value = reason || t('onair.previewNoReason')
+}
+
+watch(() => `${source.value}:${previewUrl.value}`, resetPreviewState, { immediate: true })
+onBeforeUnmount(() => clearTimeout(waitTimer))
 
 function chooseSource(value: PreviewSource) {
     source.value = value
@@ -168,7 +223,17 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                 :direct="direct"
                 :token="authStore.jwtToken"
                 :muted="muted"
+                @playing="previewPlaying"
+                @failed="previewFailed"
             />
+            <div
+                v-if="previewUrl && previewNotice"
+                role="status"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#c9c7c3] text-sm p-6 text-center pointer-events-none"
+            >
+                <i class="bi bi-hourglass-split text-2xl" aria-hidden="true" />
+                <span class="max-w-[46ch]">{{ previewNotice }}</span>
+            </div>
             <div
                 v-else
                 class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#8e8c88] text-sm p-6 text-center"

@@ -1272,6 +1272,11 @@ export default {
         runningFor: 'No ar há {time}',
         noPreview: 'Sem prévia na saída Desktop.',
         previewWhenRunning: 'A prévia aparece quando o playout estiver no ar.',
+        previewWaiting: 'Aguardando imagem da saída…',
+        previewWaitingSrtListener:
+            'Aguardando um receptor: uma saída SRT em modo listener só começa a enviar, para o receptor e para esta prévia, quando um receptor se conecta a ela.',
+        previewFailed: 'A prévia não consegue tocar: {reason}',
+        previewNoReason: 'motivo não informado',
         previewSource: 'De onde vem a prévia',
         previewDirect: 'Direto',
         previewDirectHint: 'A saída direto do NoAr, cerca de 1 s atrás do ar',

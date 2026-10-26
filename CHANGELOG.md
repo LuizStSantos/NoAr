@@ -16,6 +16,14 @@ one is tagged.
 - When the update check cannot reach GitHub, Settings › Updates now says why
   (a DNS failure, a refused connection, a time-out or a certificate problem)
   instead of only "error sending request".
+- The Player preview no longer stays black without a word: it says when it
+  is waiting for the first pictures (for an SRT output in listener mode, until
+  a receiver connects) and, when it cannot play, why.
+
+### Documentation
+
+- How to get back into NoAr after forgetting the admin password
+  ([docs](docs/docker.md#forgotten-admin-password)).
 
 ## [1.1.0] - 2026-10-26
 

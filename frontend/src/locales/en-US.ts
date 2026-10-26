@@ -1268,6 +1268,11 @@ export default {
         runningFor: 'On air for {time}',
         noPreview: 'No preview with the Desktop output.',
         previewWhenRunning: 'The preview shows up when the playout is on air.',
+        previewWaiting: 'Waiting for pictures from the output…',
+        previewWaitingSrtListener:
+            'Waiting for a receiver: an SRT output in listener mode only sends, to the receiver and to this preview, once a receiver connects to it.',
+        previewFailed: 'The preview cannot play: {reason}',
+        previewNoReason: 'no reason given',
         previewSource: 'Where the preview comes from',
         previewDirect: 'Direct',
         previewDirectHint: 'The output straight from NoAr, about 1 s behind the air',
