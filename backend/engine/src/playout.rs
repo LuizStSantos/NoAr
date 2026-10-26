@@ -102,6 +102,19 @@ impl Timeline {
         self.video_pts
     }
 
+    pub(crate) fn audio_pts(&self) -> i64 {
+        self.audio_pts
+    }
+
+    #[cfg(test)]
+    pub(crate) fn at(video_pts: i64, audio_pts: i64) -> Self {
+        Self {
+            video_pts,
+            audio_pts,
+            ..Self::new()
+        }
+    }
+
     /// Move the persistent playout timeline to an externally produced media
     /// position. Live ingest advances outside the suspended playlist decoder;
     /// the next playlist clip must start from that actual output position.
@@ -467,7 +480,9 @@ pub(crate) struct LogoFadePlan {
     hidden: bool,
     start_pts: i64,
     end_pts: Option<i64>,
-    frames: i64,
+    /// Frames the logo takes to come up and to go off; 0 is a cut.
+    frames_in: i64,
+    frames_out: i64,
     /// Stretches without logo, in output video PTS.
     gaps: [(i64, i64); MAX_LOGO_GAPS],
     gap_count: usize,
@@ -503,13 +518,23 @@ impl LogoFadePlan {
             gap_count += 1;
         }
 
+        let transitions = cfg.logo_control.transitions();
+        let frames = (transitions.fade_seconds(LOGO_FADE_SECONDS) * fps)
+            .round()
+            .max(1.0) as i64;
+        let frames_for = |transition| match transition {
+            LogoTransition::Fade => frames,
+            LogoTransition::Cut => 0,
+        };
+
         Self {
             fade_in: fade.fade_in,
             fade_out: fade.fade_out,
             hidden: fade.hidden,
             start_pts,
             end_pts,
-            frames: (LOGO_FADE_SECONDS * fps).round().max(1.0) as i64,
+            frames_in: frames_for(transitions.show),
+            frames_out: frames_for(transitions.hide),
             gaps,
             gap_count,
         }
@@ -523,11 +548,11 @@ impl LogoFadePlan {
             .iter()
             .map(|&(from, to)| {
                 if pts < from {
-                    ((from - pts) as f64 / self.frames as f64).min(1.0)
+                    ramp(from - pts, self.frames_out)
                 } else if pts <= to {
                     0.0
                 } else {
-                    ((pts - to) as f64 / self.frames as f64).min(1.0)
+                    ramp(pts - to, self.frames_in)
                 }
             })
             .fold(1.0, f64::min)
@@ -548,15 +573,18 @@ impl LogoFadePlan {
         let mut opacity = current_opacity;
 
         if self.fade_in {
-            let elapsed = (pts - self.start_pts).max(0);
-            opacity = (elapsed as f64 / self.frames as f64).clamp(0.0, 1.0);
+            // A cut shows the logo from the first frame.
+            opacity = if self.frames_in == 0 {
+                1.0
+            } else {
+                ramp(pts - self.start_pts, self.frames_in)
+            };
         }
 
         if self.fade_out
             && let Some(end_pts) = self.end_pts
         {
-            let remaining = (end_pts - pts).max(0);
-            opacity = opacity.min((remaining as f64 / self.frames as f64).clamp(0.0, 1.0));
+            opacity = opacity.min(ramp(end_pts - pts, self.frames_out));
         }
 
         opacity
@@ -569,6 +597,58 @@ impl LogoFadePlan {
             hidden: self.hidden,
             ..LogoFade::default()
         });
+    }
+}
+
+/// How far a fade over `frames` frames got after `distance` frames, between
+/// 0 and 1. Over 0 frames (a cut) it is 1 as soon as `distance` is positive.
+fn ramp(distance: i64, frames: i64) -> f64 {
+    if frames <= 0 {
+        if distance > 0 { 1.0 } else { 0.0 }
+    } else {
+        (distance.max(0) as f64 / frames as f64).clamp(0.0, 1.0)
+    }
+}
+
+/// Packets a decoder may reject in a row before its input counts as broken:
+/// a few seconds of video or audio, well past a damaged spot or a short loss.
+const MAX_REJECTED_PACKETS: u32 = 100;
+
+/// Tracks packets a decoder rejected as damaged.
+///
+/// Damaged or lost data is skipped, as the FFmpeg command line does, so one
+/// bad packet no longer ends a clip or a live input; only a long run of them
+/// does, and the clip then falls back.
+struct RejectedPackets<'a> {
+    label: &'a str,
+    track: &'static str,
+    in_a_row: u32,
+}
+
+impl<'a> RejectedPackets<'a> {
+    fn new(label: &'a str, track: &'static str) -> Self {
+        Self {
+            label,
+            track,
+            in_a_row: 0,
+        }
+    }
+
+    fn check(&mut self, sent: Result<(), ffmpeg_next::Error>) -> Result<()> {
+        match sent {
+            Ok(()) => {
+                self.in_a_row = 0;
+                Ok(())
+            }
+            Err(ffmpeg_next::Error::InvalidData) if self.in_a_row < MAX_REJECTED_PACKETS => {
+                if self.in_a_row == 0 {
+                    warn!("Skipping damaged {} data in {}", self.track, self.label);
+                }
+                self.in_a_row += 1;
+                Ok(())
+            }
+            Err(error) => Err(error.into()),
+        }
     }
 }
 
@@ -725,6 +805,8 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
     let video_finished_notified = video_finished;
     let mut decoded_video_frames = 0_i64;
     let mut decoded_audio_samples = 0_i64;
+    let mut rejected_video = RejectedPackets::new(label, "video");
+    let mut rejected_audio = RejectedPackets::new(label, "audio");
     output.set_video_end(video_end_pts)?;
     output.clear_vtt_subtitles()?;
 
@@ -768,7 +850,9 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
                         diagnostics.set_stage(LiveInputStage::ProcessingVideo);
                     }
 
-                    benchmark::measure(Stage::VideoDecode, || video.decoder.send_packet(&packet))?;
+                    rejected_video.check(benchmark::measure(Stage::VideoDecode, || {
+                        video.decoder.send_packet(&packet)
+                    }))?;
                     receive_video_frames(
                         cfg,
                         audio_padding_end_pts,
@@ -807,7 +891,9 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
                     diagnostics.set_stage(LiveInputStage::ProcessingAudio);
                 }
 
-                benchmark::measure(Stage::AudioDecode, || audio.decoder.send_packet(&packet))?;
+                rejected_audio.check(benchmark::measure(Stage::AudioDecode, || {
+                    audio.decoder.send_packet(&packet)
+                }))?;
                 receive_audio_frames(
                     audio,
                     timeline,
@@ -1506,17 +1592,21 @@ fn apply_overlays(
 
     // Hidden or swapped from outside: the clip's own fade still applies, so
     // a commercial keeps any logo off.
-    let (visibility, replacement) = video.logo_control.frame();
-    let opacity = opacity * visibility * logo_fade_plan.gap_factor(timeline.video_pts);
+    let logo = video.logo_control.frame();
+    let opacity = opacity * logo.visibility * logo_fade_plan.gap_factor(timeline.video_pts);
+    let mut incoming = 1.0;
 
-    if let Some(logo) = replacement.as_deref().or(video.logo.as_ref()) {
-        if output.benchmarks_logo_overlay() {
-            benchmark::measure_overlay(Stage::LogoOverlay, logo.width, logo.height, || {
-                output.apply_logo_overlay(frame, logo, opacity);
-            });
-        } else {
-            output.apply_logo_overlay(frame, logo, opacity);
+    // Another image took the logo's place: the old one fades as the new one
+    // comes up.
+    if let Some((image, left)) = &logo.outgoing {
+        if let Some(old) = image.as_deref().or(video.logo.as_ref()) {
+            draw_logo(frame, old, opacity * left, output);
         }
+        incoming = 1.0 - left;
+    }
+
+    if let Some(current) = logo.replacement.as_deref().or(video.logo.as_ref()) {
+        draw_logo(frame, current, opacity * incoming, output);
     }
 
     if let Some(text) = &mut video.text {
@@ -1534,6 +1624,21 @@ fn apply_overlays(
     }
 
     timeline.text_pts += 1;
+}
+
+fn draw_logo(
+    frame: &mut frame::Video,
+    logo: &LogoOverlay,
+    opacity: f64,
+    output: &mut impl FrameOutput,
+) {
+    if output.benchmarks_logo_overlay() {
+        benchmark::measure_overlay(Stage::LogoOverlay, logo.width, logo.height, || {
+            output.apply_logo_overlay(frame, logo, opacity);
+        });
+    } else {
+        output.apply_logo_overlay(frame, logo, opacity);
+    }
 }
 
 /// Fades the decoded video toward limited-range YUV black before overlays are
@@ -3439,6 +3544,65 @@ mod tests {
         assert_eq!(many.iter().count(), crate::MAX_LOGO_GAPS);
     }
 
+    fn with_transitions(transitions: crate::LogoTransitions) -> OutputConfig {
+        let control = crate::LogoControl::default();
+        control.set_transitions(transitions);
+
+        OutputConfig::new(320, 240, 25, 48_000).with_logo_control(control)
+    }
+
+    #[test]
+    fn a_cut_shows_and_hides_the_logo_at_once() {
+        let cfg = with_transitions(crate::LogoTransitions {
+            show: crate::LogoTransition::Cut,
+            hide: crate::LogoTransition::Cut,
+            seconds: None,
+        });
+        let fade = LogoFade {
+            fade_in: true,
+            fade_out: true,
+            gaps: crate::LogoGaps::new([(4.0, 6.0)]),
+            ..LogoFade::default()
+        };
+        // A 10 s clip at 25 fps from pts 0, without logo from 4 s to 6 s.
+        let plan = LogoFadePlan::new(0, Some(10.0), None, &cfg, fade);
+
+        assert_eq!(plan.opacity_at(0, 0.0), 1.0);
+        assert_eq!(plan.opacity_at(249, 0.0), 1.0);
+        assert_eq!(plan.opacity_at(250, 0.0), 0.0);
+        assert_eq!(plan.gap_factor(99), 1.0);
+        assert_eq!(plan.gap_factor(100), 0.0);
+        assert_eq!(plan.gap_factor(150), 0.0);
+        assert_eq!(plan.gap_factor(151), 1.0);
+    }
+
+    #[test]
+    fn the_channel_sets_how_long_the_logo_fades() {
+        let cfg = with_transitions(crate::LogoTransitions {
+            seconds: Some(2.0),
+            ..crate::LogoTransitions::default()
+        });
+        let fade = LogoFade {
+            fade_in: true,
+            ..LogoFade::default()
+        };
+        let plan = LogoFadePlan::new(0, Some(10.0), None, &cfg, fade);
+
+        // 2 s at 25 fps: halfway after 25 frames, fully up after 50.
+        assert_eq!(plan.opacity_at(25, 0.0), 0.5);
+        assert_eq!(plan.opacity_at(50, 0.0), 1.0);
+
+        // The built-in second when the channel sets nothing.
+        let plan = LogoFadePlan::new(
+            0,
+            Some(10.0),
+            None,
+            &OutputConfig::new(320, 240, 25, 48_000),
+            fade,
+        );
+        assert_eq!(plan.opacity_at(25, 0.0), 1.0);
+    }
+
     #[test]
     fn a_commercial_keeps_the_logo_off_and_the_next_clip_brings_it_back() {
         let cfg = OutputConfig::new(320, 240, 25, 48_000);
@@ -3973,5 +4137,31 @@ mod tests {
         assert_eq!(parse_duration_us("00:00:12.000000000"), Some(12_000_000));
         assert_eq!(parse_duration_us("01:02:03.500"), Some(3_723_500_000));
         assert_eq!(parse_duration_us("invalid"), None);
+    }
+
+    #[test]
+    fn damaged_packets_are_skipped_until_too_many_come_in_a_row() {
+        let mut rejected = super::RejectedPackets::new("clip.mp4", "video");
+
+        for _ in 0..super::MAX_REJECTED_PACKETS {
+            assert!(rejected.check(Err(ffmpeg_next::Error::InvalidData)).is_ok());
+        }
+        assert!(
+            rejected
+                .check(Err(ffmpeg_next::Error::InvalidData))
+                .is_err()
+        );
+
+        // A packet the decoder takes starts the count again.
+        assert!(rejected.check(Ok(())).is_ok());
+        assert!(rejected.check(Err(ffmpeg_next::Error::InvalidData)).is_ok());
+    }
+
+    #[test]
+    fn other_decoder_errors_still_end_the_input() {
+        let mut rejected = super::RejectedPackets::new("clip.mp4", "audio");
+
+        assert!(rejected.check(Err(ffmpeg_next::Error::Exit)).is_err());
+        assert!(rejected.check(Err(ffmpeg_next::Error::Eof)).is_err());
     }
 }

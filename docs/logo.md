@@ -20,6 +20,22 @@ The preview frame has the shape of the output (16:9 for 1920×1080, and so on)
 and can show reference lines: thirds and center, the action safe (93 %) and
 title safe (90 %) areas, and the margin.
 
+## How the logo comes up and goes off
+
+**Logo animations**, in the same settings page, sets how the logo appears and
+disappears, each on its own:
+
+- **Fade**: gradually (the default).
+- **Cut**: at once.
+
+It applies everywhere the logo comes and goes: at the start and end of clips,
+around commercials and marked stretches, and when it is hidden or shown live.
+**Length** sets how long a fade takes, up to 10 s; empty keeps the built-in
+lengths, 1 s on clips and 0.4 s when the logo is hidden, shown or swapped live.
+Swapping the logo for another image always cross-fades, the old image fading
+out as the new one fades in, over that length. Changes take effect at once,
+without restarting the playout.
+
 ## Where the logo goes off by itself
 
 - **Commercials**: clips marked as commercials in the playlist, and everything
@@ -42,7 +58,7 @@ a live whose encoder runs its own commercial break.
   logo** and **Swap for…**.
 - From an encoder or a script: create the channel's **logo key** in the same
   card and save. Calling these addresses (GET or POST) then changes the logo,
-  with a short fade:
+  with the channel's logo animation:
 
   ```text
   http://<server>:8787/logo/<channel>/hide?key=<KEY>
@@ -53,7 +69,8 @@ a live whose encoder runs its own commercial break.
   The card has a tutorial with these addresses ready to copy, and examples for
   curl, vMix, OBS (Advanced Scene Switcher) and Bitfocus Companion.
 
-A swapped logo takes the size, position and opacity of the configured one. A
+A swapped logo takes the size, position and opacity of the configured one, and
+cross-fades with the image it replaces. A
 commercial still keeps any logo off. The API is described in
 [api.md](api.md#logo-on-air).
 

@@ -1414,6 +1414,8 @@ export default {
         },
         saved: 'Playlist of {date} saved.',
         alreadySaved: 'Nothing new to save.',
+        loadFailedNoSave:
+            'The playlist could not be loaded. Reload it before saving, so the saved list is not overwritten.',
         imported: 'List imported.',
         deleted: 'Playlist deleted.',
         unsavedDropped: 'Unsaved playlist changes were dropped when the channel changed.',
@@ -1791,6 +1793,19 @@ export default {
             guideLogo: 'Logo in the guide (XMLTV)',
             guideLogoHint:
                 'The channel icon in the programme guide. It can differ from the logo on the video, for example in colour instead of white.',
+            transitions: {
+                title: 'Logo animations',
+                intro: 'How the logo comes up and goes off: at the start and end of clips, around commercials and marked stretches, and when it is hidden or shown live.',
+                in: 'Coming up',
+                out: 'Going off',
+                fade: 'Fade',
+                fadeHint: 'It fades in or out gradually.',
+                cut: 'Cut',
+                cutHint: 'It appears or disappears at once.',
+                length: 'Length',
+                auto: 'auto',
+                hint: 'Empty uses the built-in lengths: 1 s on clips, 0.4 s when the logo is hidden, shown or swapped live. Swapping the logo for another image always cross-fades over this length. Changes take effect at once, without restarting the playout.',
+            },
             guideLogoSame: 'Empty: the guide uses the video logo.',
             guideLogoOwn: 'The guide uses this image; if it goes missing, it falls back to the video logo.',
             remote: {

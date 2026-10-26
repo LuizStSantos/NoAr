@@ -34,7 +34,9 @@ pub use audio_mixer::{
     LiveLoudnessControl, LiveLoudnessMeasurement, LiveLoudnessMetrics, LiveLoudnessProcessor,
     LoudnessScope,
 };
-pub use compositor::logo::{LogoControl, LogoState};
+pub use compositor::logo::{
+    LogoControl, LogoState, LogoTransition, LogoTransitions, MAX_LOGO_TRANSITION_SECONDS,
+};
 use input::live::{LiveEnded, LiveOverrideOutput};
 pub use input::live::{
     LiveInputBackend, LiveListenerConfig, LiveReceiver, live_protocol_available,
@@ -1002,6 +1004,8 @@ fn play_to_output<O: FrameOutput>(
     options: PlayOptions<'_>,
     preloaded: Option<Preloaded>,
 ) -> Result<ClipResult> {
+    let start = (timeline.video_pts(), timeline.audio_pts());
+
     match playout::play_clip_with_external_audio(
         path,
         options.external_audio_path,
@@ -1022,10 +1026,12 @@ fn play_to_output<O: FrameOutput>(
         Err(error) if error.downcast_ref::<PlaybackStopped>().is_some() => Ok(ClipResult::Stopped),
         Err(error) => {
             let reason = format!("{error:#}");
-            let duration = options
+            let slot = options
                 .duration_seconds
                 .filter(|duration| duration.is_finite() && *duration > 0.0)
                 .unwrap_or(fallback_duration);
+            let played = played_seconds(config, start, timeline);
+            let duration = (slot - played).max(0.0);
             match write_fallback(path, config, timeline, output, duration, playback_control) {
                 Ok(()) => {
                     timeline.finish_logo_fade(options.logo_fade);
@@ -1036,6 +1042,17 @@ fn play_to_output<O: FrameOutput>(
             }
         }
     }
+}
+
+/// How far a clip got since its `start` (video and audio positions), in
+/// seconds: the track that went furthest counts, so the fallback after a clip
+/// failing midway only fills what is left of its slot.
+fn played_seconds(config: &OutputConfig, start: (i64, i64), timeline: &Timeline) -> f64 {
+    let video = (timeline.video_pts() - start.0).max(0) as f64 / f64::from(config.fps.max(1));
+    let audio =
+        (timeline.audio_pts() - start.1).max(0) as f64 / f64::from(config.sample_rate.max(1));
+
+    video.max(audio)
 }
 
 fn classify_fallback_error(error: anyhow::Error, path: &str) -> Result<ClipResult> {
@@ -1058,7 +1075,8 @@ mod tests {
     use std::{env, process};
 
     use super::{
-        ClipResult, PlaybackControl, PlaybackRestart, PlaybackSkipped, classify_fallback_error,
+        ClipResult, PlaybackControl, PlaybackRestart, PlaybackSkipped, Timeline,
+        classify_fallback_error, played_seconds,
     };
 
     #[test]
@@ -1096,6 +1114,77 @@ mod tests {
 
         playout.finish().unwrap();
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// A copy of a test clip with its middle overwritten by garbage.
+    fn damaged_clip(dir: &std::path::Path) -> String {
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/media_mix/av_sync.mp4");
+        let mut bytes = std::fs::read(source).unwrap();
+        let (start, end) = (bytes.len() * 2 / 5, bytes.len() * 3 / 5);
+
+        for offset in (start..end).step_by(997) {
+            for byte in &mut bytes[offset..(offset + 61).min(end)] {
+                *byte ^= 0xA5;
+            }
+        }
+
+        let path = dir.join("damaged.mp4");
+        std::fs::write(&path, bytes).unwrap();
+
+        path.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn damaged_data_in_a_clip_keeps_its_slot_length() {
+        let dir = std::env::temp_dir().join(format!("noar_damaged_clip_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let clip = damaged_clip(&dir);
+        let cfg =
+            super::OutputConfig::new(320, 240, 25, 48_000).with_stream_type(super::StreamType::Udp);
+        let mut playout =
+            super::Playout::open_stream(dir.join("out.ts").to_str().unwrap(), cfg, 1.0).unwrap();
+        let mut live = None;
+
+        let result = playout
+            .play_timed_with_live(
+                &clip,
+                None,
+                Some(20.0),
+                None,
+                None,
+                super::LogoFade::default(),
+                1.0,
+                &mut live,
+            )
+            .unwrap();
+
+        // Damaged packets are skipped like the FFmpeg command line does, and
+        // whatever happens the clip's slot keeps its length: 20 s at 25 fps.
+        assert_eq!(playout.timeline.video_pts(), 500);
+        assert_eq!(result, ClipResult::Played, "{result:?}");
+
+        playout.finish().unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn a_clip_failing_midway_counts_what_already_went_out() {
+        let cfg = super::OutputConfig::new(320, 240, 25, 48_000);
+
+        // 8 s of video and 8.5 s of audio out since the clip started at 100 / 4800.
+        let timeline = Timeline::at(100 + 200, 4_800 + 408_000);
+        assert_eq!(played_seconds(&cfg, (100, 4_800), &timeline), 8.5);
+
+        // Nothing out yet, or a timeline behind the start, counts as nothing.
+        assert_eq!(
+            played_seconds(&cfg, (300, 9_600), &Timeline::at(300, 9_600)),
+            0.0
+        );
+        assert_eq!(
+            played_seconds(&cfg, (300, 9_600), &Timeline::at(200, 4_800)),
+            0.0
+        );
     }
 
     #[test]

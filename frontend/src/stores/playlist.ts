@@ -15,6 +15,9 @@ dayjs.extend(timezone)
 
 const { processPlaylist } = playlistOperations()
 
+/** Counts playlist loads, so a slow answer for an earlier date or channel is ignored. */
+let loadRequest = 0
+
 /** What is saved of a playlist entry, to tell edited lists from saved ones. */
 function snapshot(list: PlaylistItem[]): string {
     return JSON.stringify(
@@ -38,6 +41,8 @@ export const usePlaylist = defineStore('playlist', {
         listDate: dayjs().format('YYYY-MM-DD'),
         /** `channel:date` of the list in `playlist`. */
         loadedKey: '',
+        /** The last load failed: `playlist` does not reflect the saved list, so it must not be saved over it. */
+        loadFailed: false,
         savedSnapshot: '[]',
         /** Edits since the list was loaded or saved. */
         editCount: 0,
@@ -69,24 +74,35 @@ export const usePlaylist = defineStore('playlist', {
             const configStore = useConfig()
             const indexStore = useIndex()
             const channel = configStore.channels[configStore.i]?.id
+            const request = ++loadRequest
 
             this.isLoading = true
 
-            await authFetch<Playlist>(`/api/playlist/${channel}?date=${date}`, {
-                method: 'GET',
-                headers: authStore.authHeader,
-            })
-                .then((data: Playlist) => {
-                    this.playlist = data.program ? processPlaylist(date, data.program, false) : []
-                })
-                .catch((e) => {
-                    if (e.status >= 400) {
-                        indexStore.msgAlert('error', e.data, 5)
-                    }
+            let program: PlaylistItem[] = []
+            let failed = false
 
-                    this.playlist = []
+            try {
+                const data = await authFetch<Playlist | undefined>(`/api/playlist/${channel}?date=${date}`, {
+                    method: 'GET',
+                    headers: authStore.authHeader,
                 })
+                // 204 No Content: no playlist exists for this date yet.
+                program = data?.program ? processPlaylist(date, data.program, false) : []
+            } catch (e) {
+                failed = true
 
+                if (request === loadRequest) {
+                    indexStore.msgAlert('error', e instanceof Error ? e.message : String(e), 5)
+                }
+            }
+
+            // A later load has started meanwhile; its answer decides the list.
+            if (request !== loadRequest) {
+                return
+            }
+
+            this.playlist = program
+            this.loadFailed = failed
             this.loadedKey = `${channel}:${date}`
             this.markSaved()
             this.isLoading = false

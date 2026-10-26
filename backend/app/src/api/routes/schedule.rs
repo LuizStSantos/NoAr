@@ -205,6 +205,10 @@ pub async fn update_schedule_event(
         return Err(not_found());
     }
 
+    // The event is saved: whatever happens below, the ticker and the queue
+    // must work from the new version, so no step returns before they do.
+    let mut outcome = Ok(());
+
     // An event moved to a later time today must play again, even when its
     // earlier time already ran or failed (for example a live without signal).
     if timing_changed(&previous, &event) {
@@ -214,16 +218,24 @@ pub async fn update_schedule_event(
             .format("%Y-%m-%d")
             .to_string();
 
-        handles::reset_schedule_runs_from(&state.pool, event_id, &today).await?;
+        if let Err(error) = handles::reset_schedule_runs_from(&state.pool, event_id, &today).await {
+            outcome = Err(error);
+        }
     }
 
     // An occurrence already waiting for the clip on air (or for its signal)
     // airs as the event is now, or not at all when the change took it away.
     for dropped in manager.schedule.revise(event_id, Some(&event)) {
-        handles::finish_schedule_run(&state.pool, event_id, &dropped.date_key(), "skipped").await?;
+        if let Err(error) =
+            handles::finish_schedule_run(&state.pool, event_id, &dropped.date_key(), "skipped")
+                .await
+        {
+            outcome = outcome.and(Err(error));
+        }
     }
 
     manager.schedule.invalidate();
+    outcome?;
 
     Ok(Json(event))
 }

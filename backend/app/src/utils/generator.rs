@@ -20,7 +20,7 @@ use crate::{
         input::folder::FolderSource,
         utils::{
             Media, get_date_range, include_file_extension, json_serializer::JsonPlaylist,
-            sum_durations,
+            playlist_file_path, sum_durations,
         },
     },
     utils::{
@@ -253,15 +253,16 @@ pub async fn playlist_generator(
     let list_length = manager.current_list.lock().await.len();
 
     for date in date_range {
-        let d: Vec<&str> = date.split('-').collect();
-        let year = d[0];
-        let month = d[1];
-        let playlist_path = playlist_root.join(year).join(month);
-        let playlist_file = &playlist_path.join(format!("{date}.json"));
+        let playlist_file = &playlist_file_path(playlist_root, &date).ok_or_else(|| {
+            Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Invalid playlist date: {date}"),
+            )
+        })?;
         let mut length = 0.0;
         let mut round = 0;
 
-        if write {
+        if write && let Some(playlist_path) = playlist_file.parent() {
             fs::create_dir_all(playlist_path).await?;
         }
 

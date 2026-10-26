@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+
+import { useDialogFocus } from '@/composables/dialogFocus'
 
 const { t } = useI18n()
 
@@ -46,38 +48,31 @@ const props = defineProps({
     },
 })
 
-function onKey(event: KeyboardEvent) {
-    if (event.key === 'Escape' && props.show) {
-        props.modalAction(false)
-    }
-}
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog, { open: () => props.show, onEscape: () => props.modalAction(false) })
 
 watch(
     () => props.show,
     (show) => {
         document.body.style.overflow = show ? 'hidden' : ''
-
-        if (show) {
-            window.addEventListener('keydown', onKey)
-        } else {
-            window.removeEventListener('keydown', onKey)
-        }
     },
     { immediate: true },
 )
 
 onBeforeUnmount(() => {
     document.body.style.overflow = ''
-    window.removeEventListener('keydown', onKey)
 })
 </script>
 <template>
     <div v-if="show" class="z-50 fixed inset-0 flex justify-center bg-black/50 overflow-auto py-5 px-4">
         <div
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             :aria-label="title"
-            class="flex flex-col bg-base-100 border border-line-strong min-w-[min(330px,100%)] w-auto max-w-full sm:max-w-[90%] rounded-box p-5 shadow-2xl my-auto"
+            tabindex="-1"
+            class="outline-none flex flex-col bg-base-100 border border-line-strong min-w-[min(330px,100%)] w-auto max-w-full sm:max-w-[90%] rounded-box p-5 shadow-2xl my-auto"
         >
             <div class="flex items-center gap-2">
                 <h2 class="m-0 font-semibold text-[16px] truncate flex-1 w-0">{{ title }}</h2>

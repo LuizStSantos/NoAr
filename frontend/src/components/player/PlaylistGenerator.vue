@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 
 import FolderTree from '@/components/storage/FolderTree.vue'
 import { authFetch } from '@/composables/authFetch'
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { playlistOperations } from '@/composables/helper'
 import { clockShort, totalLength } from '@/composables/player'
 import { baseName, listFolders, storageJoin } from '@/composables/storage'
@@ -271,15 +272,17 @@ async function generate() {
     }
 }
 
-function onKey(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog, {
+    onEscape: () => {
         if (pickerFor.value !== null) {
             pickerFor.value = null
         } else {
             props.close()
         }
-    }
-}
+    },
+})
 
 watch(missing, (value) => {
     if (value <= 0 && fill.value === 'complete') {
@@ -289,22 +292,22 @@ watch(missing, (value) => {
 
 onMounted(() => {
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', onKey)
     browse('')
 })
 
 onBeforeUnmount(() => {
     document.body.style.overflow = ''
-    window.removeEventListener('keydown', onKey)
 })
 </script>
 <template>
     <div class="z-50 fixed inset-0 flex justify-center bg-black/55 overflow-auto py-6 px-4" @click.self="close()">
         <section
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="generator-title"
-            class="my-auto w-full max-w-[720px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl flex flex-col"
+            tabindex="-1"
+            class="outline-none my-auto w-full max-w-[720px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl flex flex-col"
         >
             <header class="flex items-start gap-3 px-5 pt-5 pb-3">
                 <div class="flex-1 min-w-0">

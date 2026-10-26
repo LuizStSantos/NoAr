@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { jwtDecode } from 'jwt-decode'
-import { authFetch } from '@/composables/authFetch'
+import { authFetch, AuthFetchError } from '@/composables/authFetch'
 import { useIndex } from '@/stores/index'
 
 type LoginResult = {
@@ -233,7 +233,11 @@ export const useAuth = defineStore('auth', {
                         body: JSON.stringify({ refresh: this.jwtRefresh }),
                     })
                     if (!response.ok) {
-                        this.removeToken()
+                        // Only a rejected token ends the session; a server error or
+                        // restart keeps it, so the next request can retry the refresh.
+                        if (response.status < 500) {
+                            this.removeToken()
+                        }
                         return false
                     }
 
@@ -246,7 +250,7 @@ export const useAuth = defineStore('auth', {
                     this.updateToken(data.access, data.refresh)
                     return true
                 } catch {
-                    this.removeToken()
+                    // Network failure: keep the session and let a later request retry.
                     return false
                 }
             })()
@@ -321,10 +325,11 @@ export const useAuth = defineStore('auth', {
                     this.uuid = response.uuid
                 })
                 .catch((e) => {
-                    if (e.status === 401) {
+                    if (e instanceof AuthFetchError && e.status === 401) {
                         this.removeToken()
                     }
-                    this.uuid = null
+                    // Otherwise keep the last uuid, so the status stream keeps
+                    // retrying and asks for a new one after repeated errors.
                 })
         },
     },

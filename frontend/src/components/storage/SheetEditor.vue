@@ -7,6 +7,7 @@ import { isEqual } from 'es-toolkit/predicate'
 import ArtworkSlot from '@/components/storage/ArtworkSlot.vue'
 import CreditsEditor from '@/components/storage/CreditsEditor.vue'
 import { authFetch } from '@/composables/authFetch'
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { baseName, emptyFields, readSheet, removeArtwork, saveSheet, uploadArtwork } from '@/composables/storage'
 import { useIndex } from '@/stores/index'
 
@@ -255,30 +256,28 @@ function onPhotos(photos: Record<string, string>) {
     }
 }
 
-function onKey(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-        requestClose()
-    }
-}
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog, { onEscape: requestClose })
 
 onMounted(() => {
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', onKey)
     load()
 })
 
 onBeforeUnmount(() => {
     document.body.style.overflow = ''
-    window.removeEventListener('keydown', onKey)
 })
 </script>
 <template>
     <div class="z-50 fixed inset-0 flex justify-end bg-black/50" @click.self="requestClose">
         <section
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="sheet-title"
-            class="w-full max-w-[800px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
+            tabindex="-1"
+            class="outline-none w-full max-w-[800px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
         >
             <header class="flex items-start gap-3 px-5 pt-5 pb-3">
                 <div class="flex-1 min-w-0">

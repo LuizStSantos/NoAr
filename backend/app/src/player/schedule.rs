@@ -13,7 +13,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chrono::{NaiveDateTime, TimeDelta};
+use chrono::{NaiveDateTime, TimeDelta, TimeZone};
+use chrono_tz::Tz;
 use log::*;
 use noar_engine::{AsyncPlayout, ClipBreaks, ClipResult, NavigationBlocked, PreloadSignal};
 use serde::Serialize;
@@ -50,6 +51,10 @@ const TICK: Duration = Duration::from_millis(500);
 /// A clip event whose start passed longer ago than this does not start any
 /// more, for example after a restart.
 const MEDIA_START_GRACE_SECONDS: i64 = 60;
+
+/// The longest stretch of local time a clock change skips (summer time
+/// starts): events placed in it are looked for this far back.
+const MAX_CLOCK_GAP: Duration = Duration::from_secs(3 * 3600);
 
 /// Pause between attempts while a live source does not answer.
 const LIVE_RETRY_SECONDS: f64 = 5.0;
@@ -336,9 +341,15 @@ async fn tick(
         }
     };
     let timezone = manager.config.read().await.channel.timezone;
-    let now = time_now(&timezone).naive_local();
+    let now_at = time_now(&timezone);
+    let zone = now_at.timezone();
+    let now = now_at.naive_local();
     let grace = TimeDelta::try_seconds(MEDIA_START_GRACE_SECONDS).unwrap_or_default();
-    let due = occurrences_between(&events, now - grace, now + seconds(1.0));
+    let due = occurrences_between(
+        &events,
+        now - grace - seconds(MAX_CLOCK_GAP.as_secs_f64()),
+        now + seconds(1.0),
+    );
     let upcoming = occurrences_between(&events, now, now + seconds(PRELOAD_LEAD_SECONDS));
 
     for occurrence in upcoming.into_iter().filter(|o| o.start > now) {
@@ -347,25 +358,33 @@ async fn tick(
         }
     }
 
-    for occurrence in due.into_iter().filter(|o| o.start <= now) {
+    for occurrence in due.into_iter().filter(|o| is_due(o, now, zone, grace)) {
         let key = (occurrence.event.id, occurrence.start);
 
-        if !seen.insert(key) {
+        if !seen.insert(key) || !starts_now(&occurrence, now, zone, grace) {
             continue;
         }
 
-        let still_on_time = match occurrence.event.kind {
-            ScheduleKind::Media => now - occurrence.start <= grace,
-            ScheduleKind::Live => occurrence.end - now > seconds(5.0),
+        let claimed = match handles::claim_schedule_run(
+            &manager.db_pool,
+            occurrence.event.id,
+            &occurrence.date_key(),
+            "running",
+        )
+        .await
+        {
+            Ok(claimed) => claimed,
+            Err(error) => {
+                // Look at it again on the next tick: a passing database error
+                // must not lose the occurrence, and the others still go ahead.
+                seen.remove(&key);
+                warn!(channel = manager.id;
+                    "Scheduler could not claim <span class=\"log-addr\">{}</span>: {error}",
+                    occurrence.event.title
+                );
+                continue;
+            }
         };
-        let claimed = still_on_time
-            && handles::claim_schedule_run(
-                &manager.db_pool,
-                occurrence.event.id,
-                &occurrence.date_key(),
-                "running",
-            )
-            .await?;
 
         if !claimed {
             continue;
@@ -394,6 +413,43 @@ async fn tick(
     }
 
     Ok(())
+}
+
+/// When a local time comes on the wall clock. A time the clock skips, in the
+/// gap when summer time starts, comes when the gap ends; any other time is
+/// itself.
+fn wall_clock_time(time: NaiveDateTime, zone: Tz) -> NaiveDateTime {
+    let mut candidate = time;
+    let step = TimeDelta::try_minutes(1).unwrap_or_default();
+
+    for _ in 0..=MAX_CLOCK_GAP.as_secs() / 60 {
+        if zone.from_local_datetime(&candidate).earliest().is_some() {
+            return candidate;
+        }
+        candidate += step;
+    }
+
+    time
+}
+
+/// Whether an occurrence's start has come and is recent enough to look at.
+fn is_due(occurrence: &Occurrence, now: NaiveDateTime, zone: Tz, grace: TimeDelta) -> bool {
+    let start = wall_clock_time(occurrence.start, zone);
+
+    match occurrence.event.kind {
+        ScheduleKind::Media => start <= now && now - start <= grace,
+        // A live still running is due however long ago it started.
+        ScheduleKind::Live => start <= now && occurrence.end > now - grace,
+    }
+}
+
+/// Whether a due occurrence still starts: a clip within its grace after its
+/// start, a live while it has more than a few seconds left.
+fn starts_now(occurrence: &Occurrence, now: NaiveDateTime, zone: Tz, grace: TimeDelta) -> bool {
+    match occurrence.event.kind {
+        ScheduleKind::Media => now - wall_clock_time(occurrence.start, zone) <= grace,
+        ScheduleKind::Live => occurrence.end - now > seconds(5.0),
+    }
 }
 
 /// What a new start of the playout does with an occurrence the stop cut.
@@ -774,9 +830,10 @@ pub(crate) async fn play_queued_event(
     manager.list_init.store(true, Ordering::SeqCst);
     manager.schedule.lock().active = None;
 
-    // The playout stopping cut the event: it stays open, and the next start
-    // puts it back on air if its time is not over.
-    if stopping(manager) {
+    // The playout stopping, or the output failing and the playout restarting,
+    // cut the event: it stays open, and the next start puts it back on air if
+    // its time is not over.
+    if stays_open(stopping(manager), &result) {
         info!(channel = channel_id;
             "Scheduled event <span class=\"log-addr\">{}</span> stopped with the playout",
             event.title
@@ -803,6 +860,16 @@ pub(crate) async fn play_queued_event(
     );
 
     result.map(|end| Some(end.stopped))
+}
+
+/// Whether an event cut short stays open for the next start to resume.
+///
+/// Only an output failure or a requested playout restart comes back as an
+/// error here (a clip that cannot play falls back instead), and the playout
+/// restarts after it: the event must not be closed as failed by a short
+/// output loss.
+fn stays_open<T>(stopping: bool, result: &Result<T, ServiceError>) -> bool {
+    stopping || result.is_err()
 }
 
 struct EventEnd {
@@ -1583,5 +1650,110 @@ mod tests {
         config.storage.filler_path = std::env::temp_dir().join("noar-missing-filler.mp4");
 
         assert_eq!(waiting_source(&config), "");
+    }
+
+    fn media_event_at(start_date: &str, start_time: &str) -> ScheduleEvent {
+        ScheduleEvent {
+            channel_id: 1,
+            kind: ScheduleKind::Media,
+            title: "Spring news".to_string(),
+            sources: vec!["news.mp4".to_string()],
+            start_date: start_date.to_string(),
+            start_time: start_time.to_string(),
+            duration: 600.0,
+            enabled: true,
+            ..ScheduleEvent::default()
+        }
+    }
+
+    #[test]
+    fn an_event_cut_by_the_output_stays_open_to_resume() {
+        let failed: Result<(), ServiceError> = Err(ServiceError::Conflict("output lost".into()));
+
+        assert!(stays_open(false, &failed));
+        assert!(stays_open(true, &Ok(())));
+        assert!(!stays_open(false, &Ok(())));
+    }
+
+    #[test]
+    fn a_time_the_clock_skips_comes_when_the_gap_ends() {
+        let berlin = Tz::Europe__Berlin;
+
+        // 29 March 2026: Berlin goes from 02:00 straight to 03:00.
+        assert_eq!(
+            wall_clock_time(at("2026-03-29 02:30:00"), berlin),
+            at("2026-03-29 03:00:00")
+        );
+        assert_eq!(
+            wall_clock_time(at("2026-03-29 01:30:00"), berlin),
+            at("2026-03-29 01:30:00")
+        );
+        // 25 October 2026: 02:30 comes twice; it is not moved.
+        assert_eq!(
+            wall_clock_time(at("2026-10-25 02:30:00"), berlin),
+            at("2026-10-25 02:30:00")
+        );
+        assert_eq!(
+            wall_clock_time(at("2026-03-29 02:30:00"), Tz::UTC),
+            at("2026-03-29 02:30:00")
+        );
+    }
+
+    #[test]
+    fn a_clip_in_the_summer_time_gap_starts_when_the_gap_ends() {
+        let berlin = Tz::Europe__Berlin;
+        let grace = TimeDelta::try_seconds(MEDIA_START_GRACE_SECONDS).unwrap();
+        let event = media_event_at("2026-03-29", "02:30:00");
+        let occurrence = event
+            .occurrence_on(parse_date("2026-03-29").unwrap())
+            .unwrap();
+
+        let now = at("2026-03-29 03:00:20");
+        assert!(is_due(&occurrence, now, berlin, grace));
+        assert!(starts_now(&occurrence, now, berlin, grace));
+
+        // Past the grace after the gap it no longer starts, like any clip.
+        assert!(!is_due(
+            &occurrence,
+            at("2026-03-29 03:05:00"),
+            berlin,
+            grace
+        ));
+        // In a zone without the gap nothing changes: 30 minutes late.
+        assert!(!is_due(&occurrence, now, Tz::UTC, grace));
+    }
+
+    #[tokio::test]
+    async fn a_database_error_while_claiming_is_retried_on_the_next_tick() {
+        let (manager, pool) = crate::test_support::channel_manager().await;
+        manager.config.write().await.channel.timezone = Some(Tz::Europe__Berlin);
+        handles::insert_schedule_event(&pool, &media_event_at("2026-06-10", "12:00:00"))
+            .await
+            .unwrap();
+        crate::utils::time_machine::set_mock_time(&Some("2026-06-10T12:00:05+02:00".to_string()))
+            .unwrap();
+        let mut seen = HashSet::new();
+        let mut preloaded = HashSet::new();
+
+        // The claim fails: nothing is queued, and the occurrence is not marked seen.
+        sqlx::query("ALTER TABLE schedule_runs RENAME TO schedule_runs_away")
+            .execute(&pool)
+            .await
+            .unwrap();
+        tick(&manager, &mut seen, &mut preloaded).await.unwrap();
+        assert!(manager.schedule.queued().is_empty());
+        assert!(seen.is_empty());
+
+        // Once the database answers again, the next tick queues it.
+        sqlx::query("ALTER TABLE schedule_runs_away RENAME TO schedule_runs")
+            .execute(&pool)
+            .await
+            .unwrap();
+        tick(&manager, &mut seen, &mut preloaded).await.unwrap();
+        assert_eq!(manager.schedule.queued().len(), 1);
+
+        tokio::fs::remove_dir_all(manager.storage.root.read().await.clone())
+            .await
+            .unwrap();
     }
 }

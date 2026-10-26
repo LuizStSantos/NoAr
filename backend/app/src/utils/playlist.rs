@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use chrono::NaiveDate;
 use log::*;
 use tokio::fs;
@@ -8,7 +6,7 @@ use crate::{
     file::norm_abs_path,
     player::{
         controller::ChannelManager,
-        utils::{JsonPlaylist, json_reader, json_writer},
+        utils::{JsonPlaylist, json_reader, json_writer, playlist_file_path},
     },
     utils::{config::PlayoutConfig, errors::ServiceError, generator::playlist_generator},
 };
@@ -45,7 +43,6 @@ pub async fn write_playlist(
     json_data: JsonPlaylist,
 ) -> Result<String, ServiceError> {
     let date = json_data.date.clone();
-    let d: Vec<&str> = date.split('-').collect();
     let mut playlist_path = config.channel.playlists.clone();
 
     if !playlist_path
@@ -54,11 +51,8 @@ pub async fn write_playlist(
         .map(|ext| ext.eq_ignore_ascii_case("json"))
         .unwrap_or(false)
     {
-        playlist_path = playlist_path
-            .join(d[0])
-            .join(d[1])
-            .join(date.clone())
-            .with_extension("json");
+        playlist_path = playlist_file_path(&playlist_path, &date)
+            .ok_or_else(|| ServiceError::BadRequest(format!("Invalid playlist date: {date}")))?;
     }
 
     let mut file_exists = false;
@@ -146,14 +140,8 @@ pub async fn generate_playlist(
 }
 
 pub async fn delete_playlist(config: &PlayoutConfig, date: &str) -> Result<String, ServiceError> {
-    let d: Vec<&str> = date.split('-').collect();
-    let mut playlist_path = PathBuf::from(&config.channel.playlists);
-
-    playlist_path = playlist_path
-        .join(d[0])
-        .join(d[1])
-        .join(date)
-        .with_extension("json");
+    let playlist_path = playlist_file_path(&config.channel.playlists, date)
+        .ok_or_else(|| ServiceError::BadRequest(format!("Invalid playlist date: {date}")))?;
 
     if playlist_path.is_file() {
         match fs::remove_file(playlist_path).await {
@@ -165,5 +153,114 @@ pub async fn delete_playlist(config: &PlayoutConfig, date: &str) -> Result<Strin
         }
     } else {
         Ok(format!("No playlist to delete on: {date}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+
+    /// A playlist folder inside a scratch root, with a sentinel file next to it.
+    struct Scratch(PathBuf);
+
+    impl Scratch {
+        fn new() -> Self {
+            let root = std::env::temp_dir().join(format!("noar-playlist-{}", uuid::Uuid::new_v4()));
+            std::fs::create_dir_all(root.join("playlists")).unwrap();
+            std::fs::write(root.join("sentinel-x.json"), "{}").unwrap();
+
+            Self(root)
+        }
+
+        fn config(&self) -> PlayoutConfig {
+            let mut config = PlayoutConfig::default();
+            config.channel.playlists = self.0.join("playlists");
+
+            config
+        }
+
+        fn sentinel(&self) -> PathBuf {
+            self.0.join("sentinel-x.json")
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    const BAD_DATES: [&str; 6] = [
+        "../sentinel-x",
+        "../../sentinel-x",
+        "/tmp/abs-x",
+        "2024",
+        "",
+        "2024-01-01/../../x",
+    ];
+
+    #[tokio::test]
+    async fn write_playlist_rejects_dates_that_are_not_dates() {
+        let scratch = Scratch::new();
+        let config = scratch.config();
+
+        for date in BAD_DATES {
+            let playlist = JsonPlaylist {
+                date: date.to_string(),
+                ..JsonPlaylist::default()
+            };
+            let result = write_playlist(&config, playlist).await;
+
+            assert!(
+                matches!(result, Err(ServiceError::BadRequest(_))),
+                "date {date:?}"
+            );
+        }
+
+        assert_eq!(std::fs::read_to_string(scratch.sentinel()).unwrap(), "{}");
+        assert!(!scratch.0.join("tmp").exists());
+    }
+
+    #[tokio::test]
+    async fn delete_playlist_rejects_dates_that_are_not_dates() {
+        let scratch = Scratch::new();
+        let config = scratch.config();
+
+        for date in BAD_DATES {
+            let result = delete_playlist(&config, date).await;
+
+            assert!(
+                matches!(result, Err(ServiceError::BadRequest(_))),
+                "date {date:?}"
+            );
+        }
+
+        assert!(scratch.sentinel().is_file());
+    }
+
+    #[tokio::test]
+    async fn write_playlist_stores_a_dated_playlist_under_year_and_month() {
+        let scratch = Scratch::new();
+        let config = scratch.config();
+        let playlist = JsonPlaylist {
+            date: "2024-03-07".to_string(),
+            ..JsonPlaylist::default()
+        };
+
+        write_playlist(&config, playlist).await.unwrap();
+
+        assert!(
+            scratch
+                .0
+                .join("playlists/2024/03/2024-03-07.json")
+                .is_file()
+        );
+        assert!(
+            read_playlist(&config, "2024-03-07".to_string())
+                .await
+                .is_ok()
+        );
     }
 }

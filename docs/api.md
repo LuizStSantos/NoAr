@@ -173,8 +173,10 @@ curl -X POST http://127.0.0.1:8787/api/control/1/process \
 ### Logo on air
 
 The logo can be hidden or swapped for another image while the channel plays,
-for example during the commercial break of a live. It fades in about 0.4 s,
-applies to clips, lives and live ingest alike, and lasts until the next
+for example during the commercial break of a live. It changes with the
+channel's [logo animation](logo.md#how-the-logo-comes-up-and-goes-off) (a
+0.4 s fade unless set; a swap cross-fades), applies to clips, lives and live
+ingest alike, and lasts until the next
 command or a server restart. A commercial in the playlist still keeps any logo
 off.
 

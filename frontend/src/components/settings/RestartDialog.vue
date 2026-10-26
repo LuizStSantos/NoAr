@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+
+import { useDialogFocus } from '@/composables/dialogFocus'
 
 /** Asks before something that stops the output for a moment. */
 const props = defineProps<{ show: boolean; title: string; text: string; hint?: string; busy?: boolean }>()
@@ -8,25 +10,16 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
 
 const { t } = useI18n()
 
-function onKey(event: KeyboardEvent) {
-    if (event.key === 'Escape' && !props.busy) {
-        emit('close')
-    }
-}
+const dialog = ref<HTMLElement>()
 
-watch(
-    () => props.show,
-    (show) => {
-        if (show) {
-            window.addEventListener('keydown', onKey)
-        } else {
-            window.removeEventListener('keydown', onKey)
+useDialogFocus(dialog, {
+    open: () => props.show,
+    onEscape: () => {
+        if (!props.busy) {
+            emit('close')
         }
     },
-    { immediate: true },
-)
-
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+})
 </script>
 <template>
     <div
@@ -35,11 +28,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
         @click.self="!busy && emit('close')"
     >
         <section
+            ref="dialog"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="restart-title"
             aria-describedby="restart-text"
-            class="w-full max-w-[480px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl"
+            tabindex="-1"
+            class="outline-none w-full max-w-[480px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl"
         >
             <div class="flex gap-3.5 items-start px-5.5 pt-5 pb-1.5">
                 <span

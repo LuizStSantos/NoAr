@@ -616,6 +616,52 @@ pub struct Processing {
     /// turns that off.
     #[serde(default)]
     pub logo_key: String,
+    /// How the logo comes up.
+    #[serde(default)]
+    pub logo_transition_in: LogoTransition,
+    /// How the logo goes off.
+    #[serde(default)]
+    pub logo_transition_out: LogoTransition,
+    /// Length of the logo's fades, and of the cross-fade when another image
+    /// takes its place, in seconds; empty keeps the built-in lengths (1 s on
+    /// clips, 0.4 s when switched from outside).
+    #[serde(default)]
+    pub logo_transition_seconds: Option<f64>,
+}
+
+/// How the logo comes up or goes off.
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, Eq, PartialEq, TS)]
+#[ts(export, export_to = "playout_config.d.ts")]
+#[serde(rename_all = "lowercase")]
+pub enum LogoTransition {
+    #[default]
+    Fade,
+    Cut,
+}
+
+impl LogoTransition {
+    fn new(s: &str) -> Self {
+        match s {
+            "cut" => Self::Cut,
+            _ => Self::Fade,
+        }
+    }
+
+    fn engine(self) -> noar_engine::LogoTransition {
+        match self {
+            Self::Fade => noar_engine::LogoTransition::Fade,
+            Self::Cut => noar_engine::LogoTransition::Cut,
+        }
+    }
+}
+
+impl fmt::Display for LogoTransition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Fade => write!(f, "fade"),
+            Self::Cut => write!(f, "cut"),
+        }
+    }
 }
 
 fn default_vtt_name() -> String {
@@ -643,7 +689,31 @@ impl Processing {
             vtt_default: config.processing_vtt_default,
             guide_logo: config.processing_guide_logo.clone(),
             logo_key: config.processing_logo_key.clone(),
+            logo_transition_in: LogoTransition::new(&config.processing_logo_transition_in),
+            logo_transition_out: LogoTransition::new(&config.processing_logo_transition_out),
+            logo_transition_seconds: config.processing_logo_transition_seconds,
         }
+    }
+
+    /// How the logo comes up, goes off and gives way to another image, or
+    /// why the length is not accepted.
+    pub fn logo_transitions(&self) -> Result<noar_engine::LogoTransitions, String> {
+        if let Some(seconds) = self.logo_transition_seconds
+            && !(seconds.is_finite()
+                && seconds > 0.0
+                && seconds <= noar_engine::MAX_LOGO_TRANSITION_SECONDS)
+        {
+            return Err(format!(
+                "logo transition length must be more than 0 and at most {} seconds",
+                noar_engine::MAX_LOGO_TRANSITION_SECONDS
+            ));
+        }
+
+        Ok(noar_engine::LogoTransitions {
+            show: self.logo_transition_in.engine(),
+            hide: self.logo_transition_out.engine(),
+            seconds: self.logo_transition_seconds,
+        })
     }
 
     pub fn hls_subtitle(&self) -> Result<Option<noar_engine::HlsSubtitle>, String> {

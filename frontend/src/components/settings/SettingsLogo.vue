@@ -5,11 +5,12 @@ import { useI18n } from 'vue-i18n'
 import LogoRemote from '@/components/settings/LogoRemote.vue'
 import SaveBar from '@/components/settings/SaveBar.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
+import RadioCards from '@/components/settings/RadioCards.vue'
 import ToggleRow from '@/components/settings/ToggleRow.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
-import { createFilePreviewUrl } from '@/composables/fileAccess'
+import { type Size, logoBox, logoBoxStyle, storageImageUrl as sharedStorageImageUrl } from '@/composables/logo'
 import { usePlayoutPage } from '@/composables/settingsPage'
 
 const { t } = useI18n()
@@ -26,6 +27,8 @@ const picking = ref<'logo' | 'guide' | null>(null)
 const showAdvanced = ref(false)
 const logoUrl = ref('')
 const logoFailed = ref(false)
+/** The logo image's own size, once it loaded. */
+const logoImage = ref<Size | null>(null)
 
 const processing = computed(() => configStore.playout.processing)
 const output = computed(() => configStore.playout.output)
@@ -96,6 +99,21 @@ const opacity = computed({
     set: (value: number) => (processing.value.logo_opacity = Math.round(value) / 100),
 })
 
+const transitionOptions = computed(() => [
+    { value: 'fade', label: t('settings.logo.transitions.fade'), description: t('settings.logo.transitions.fadeHint') },
+    { value: 'cut', label: t('settings.logo.transitions.cut'), description: t('settings.logo.transitions.cutHint') },
+])
+
+/** The transition length, empty for the built-in lengths. */
+const transitionSeconds = computed({
+    get: () => processing.value.logo_transition_seconds ?? '',
+    set: (value: string | number | null) => {
+        const seconds = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(',', '.'))
+
+        processing.value.logo_transition_seconds = Number.isFinite(seconds) && seconds > 0 ? seconds : null
+    },
+})
+
 const sizeChoice = computed({
     get: () => (SIZES.includes(processing.value.logo_scale.trim()) ? processing.value.logo_scale.trim() : 'custom'),
     set: (value: string) => {
@@ -138,8 +156,16 @@ watch(showGuides, (on) => {
     }
 })
 
-/** Where the logo sits in the preview frame, in percent. */
+/** Where the logo sits in the preview frame, in percent: as on air once the image loaded. */
 const previewStyle = computed(() => {
+    const box =
+        logoImage.value &&
+        logoBox(processing.value.logo_scale, processing.value.logo_position, logoImage.value, frameSize.value)
+
+    if (box) {
+        return { ...logoBoxStyle(box), opacity: String(processing.value.logo_opacity ?? 1) }
+    }
+
     const { width, height } = frameSize.value
     const spot = placement.value ?? { column: 'right', row: 'top', margin: 12 }
     const size = /^(\d+(?:\.\d+)?)%/.exec(processing.value.logo_scale.trim())
@@ -168,27 +194,14 @@ const previewStyle = computed(() => {
 })
 
 /** A URL that shows the storage image at `path`, or '' when there is none. */
-async function storageImageUrl(path: string | undefined): Promise<string> {
-    const storage = configStore.channels[configStore.i]?.storage ?? ''
-    const logo = path?.trim()
-
-    if (!logo || !storage) {
-        return ''
-    }
-
-    const absolute = logo.startsWith('/') ? logo : `${storage.replace(/\/+$/, '')}/${logo}`
-    const parent = storage.slice(0, storage.lastIndexOf('/'))
-
-    if (!absolute.startsWith(storage)) {
-        throw new Error('outside the storage')
-    }
-
-    return createFilePreviewUrl(configStore.channels[configStore.i]?.id, absolute.slice(parent.length))
+function storageImageUrl(path: string | undefined): Promise<string> {
+    return sharedStorageImageUrl(configStore.channels[configStore.i], path)
 }
 
 async function loadLogo() {
     logoFailed.value = false
     logoUrl.value = ''
+    logoImage.value = null
 
     try {
         logoUrl.value = await storageImageUrl(processing.value?.logo)
@@ -198,6 +211,12 @@ async function loadLogo() {
 }
 
 watch(() => processing.value?.logo, loadLogo, { immediate: true })
+
+function logoLoaded(event: Event) {
+    const image = event.target as HTMLImageElement
+
+    logoImage.value = image.naturalWidth ? { width: image.naturalWidth, height: image.naturalHeight } : null
+}
 
 const guideLogoUrl = ref('')
 const guideLogoFailed = ref(false)
@@ -332,6 +351,7 @@ function pick(file: { path: string }) {
                             alt=""
                             class="absolute h-auto"
                             :style="previewStyle"
+                            @load="logoLoaded"
                             @error="logoFailed = true"
                         />
                         <span
@@ -484,6 +504,40 @@ function pick(file: { path: string }) {
                         </label>
                     </div>
                 </div>
+            </div>
+        </SectionCard>
+
+        <SectionCard :title="t('settings.logo.transitions.title')" :description="t('settings.logo.transitions.intro')">
+            <div class="flex flex-col gap-4">
+                <div class="field-label">
+                    {{ t('settings.logo.transitions.in') }}
+                    <RadioCards
+                        v-model="processing.logo_transition_in"
+                        :options="transitionOptions"
+                        :label="t('settings.logo.transitions.in')"
+                    />
+                </div>
+                <div class="field-label">
+                    {{ t('settings.logo.transitions.out') }}
+                    <RadioCards
+                        v-model="processing.logo_transition_out"
+                        :options="transitionOptions"
+                        :label="t('settings.logo.transitions.out')"
+                    />
+                </div>
+                <label class="field-label max-w-[240px]">
+                    {{ t('settings.logo.transitions.length') }}
+                    <UnitInput
+                        v-model="transitionSeconds"
+                        unit="s"
+                        type="number"
+                        min="0.1"
+                        max="10"
+                        step="0.1"
+                        :placeholder="t('settings.logo.transitions.auto')"
+                    />
+                </label>
+                <p class="m-0 field-hint">{{ t('settings.logo.transitions.hint') }}</p>
             </div>
         </SectionCard>
 

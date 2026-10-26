@@ -1,0 +1,522 @@
+{
+  "repository": "LuizStSantos/NoAr",
+  "ref": "29e69a2 (backend identical to adc2061)",
+  "scope": "full backend",
+  "council": "backend",
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "Playlist date unvalidated: User can write/delete arbitrary *.json via path traversal; short date panics",
+      "severity": "HIGH",
+      "category": "security/path-traversal",
+      "evidence": [
+        "backend/app/src/utils/playlist.rs:43",
+        "backend/app/src/utils/playlist.rs:148",
+        "backend/app/src/api/routes/playlist.rs:100",
+        "backend/app/src/api/routes/playlist.rs:204",
+        "backend/app/src/player/utils/import.rs:35",
+        "backend/app/src/utils/generator.rs:258"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Any channel User writes JSON-shaped files or deletes any .json the process can reach (other channels, logo marks); date without two '-' panics the request task",
+      "is_blocker": true,
+      "proposed_by": "security; lead re-read write_playlist/delete_playlist/save_playlist"
+    },
+    {
+      "id": "F-002",
+      "title": "Rate limiter runs before RealIpLayer/GrantsLayer: spoofable or shared IP key, authenticated bypass never applies",
+      "severity": "HIGH",
+      "category": "security/rate-limit",
+      "evidence": [
+        "backend/app/src/main.rs:168",
+        "backend/app/src/main.rs:174",
+        "backend/app/src/middleware/governor.rs:30",
+        "backend/app/src/api/file_access.rs:78"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Behind no proxy all clients share one bucket (3/min on /auth/ can lock everyone out); X-Forwarded-For rotation bypasses login/verify limits",
+      "is_blocker": true,
+      "proposed_by": "security; lead re-read layer order"
+    },
+    {
+      "id": "F-003",
+      "title": "Panic in run_channel kills supervisor silently; is_alive stays true, no restart or alarm",
+      "severity": "HIGH",
+      "category": "reliability/continuity",
+      "evidence": [
+        "backend/app/src/player/controller.rs:697",
+        "backend/app/src/player/controller.rs:702",
+        "backend/app/src/player/controller.rs:312"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Channel goes off air with no restart until an operator notices",
+      "is_blocker": true,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-004",
+      "title": "process_control busy flag racy (load then store) and not cancellation-safe; client disconnect can wedge channel",
+      "severity": "HIGH",
+      "category": "api/concurrency",
+      "evidence": [
+        "backend/app/src/api/routes/control.rs:191",
+        "backend/app/src/api/routes/control.rs:197",
+        "backend/app/src/api/routes/control.rs:203",
+        "backend/app/src/api/routes/control.rs:235"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Dropped Restart after stop leaves channel off air and every later command returns 409 until process restart (handler-drop behaviour NOT_VERIFIED)",
+      "is_blocker": false,
+      "proposed_by": "backend; lead re-read load/store race"
+    },
+    {
+      "id": "F-005",
+      "title": "Mid-clip failure writes filler for the whole clip duration, not the remainder",
+      "severity": "HIGH",
+      "category": "engine/timing",
+      "evidence": [
+        "backend/engine/src/lib.rs:1023",
+        "backend/engine/src/playout.rs:2337"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Schedule slips by the elapsed part; a clip failing at 29/30 min airs ~30 extra min of black",
+      "is_blocker": false,
+      "proposed_by": "media-engine"
+    },
+    {
+      "id": "F-006",
+      "title": "Single bad packet (send_packet ?) aborts clip or live session; receive_frame errors not distinguished",
+      "severity": "HIGH",
+      "category": "engine/decoder",
+      "evidence": [
+        "backend/engine/src/playout.rs:771",
+        "backend/engine/src/playout.rs:810",
+        "backend/engine/src/playout.rs:1292",
+        "backend/engine/src/input/live.rs:837"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Corrupt packet ends a file clip (into filler) or forces a full live reconnect gap",
+      "is_blocker": false,
+      "proposed_by": "media-engine"
+    },
+    {
+      "id": "F-007",
+      "title": "Docker/release workflows publish without depending on validate; published feature set never tested",
+      "severity": "HIGH",
+      "category": "ci/release",
+      "evidence": [
+        ".github/workflows/docker.yml:3",
+        ".github/workflows/release.yml:3",
+        ".github/workflows/validate.yml:83",
+        "Dockerfile:53"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "A tag or main push can publish images/releases with failing tests",
+      "is_blocker": true,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-008",
+      "title": "Scheduled auto-update restarts container with no on-air guard (opt-in)",
+      "severity": "HIGH",
+      "category": "updater/continuity",
+      "evidence": [
+        "backend/app/src/utils/updater.rs:189",
+        "migrations/00013_updater.sql:2",
+        "docker-compose.yml:1"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "When enabled, daily restart interrupts live output",
+      "is_blocker": false,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-009",
+      "title": "Failed schedule update returns early before invalidate(); ticker keeps stale events",
+      "severity": "MEDIUM",
+      "category": "scheduler",
+      "evidence": [
+        "backend/app/src/api/routes/schedule.rs:204",
+        "backend/app/src/api/routes/schedule.rs:222",
+        "backend/app/src/api/routes/schedule.rs:226",
+        "backend/app/src/player/schedule.rs:330"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Old time/content keeps airing although API changed the event",
+      "is_blocker": false,
+      "proposed_by": "backend"
+    },
+    {
+      "id": "F-010",
+      "title": "Occurrence marked seen before claim; transient DB error drops it permanently",
+      "severity": "MEDIUM",
+      "category": "scheduler",
+      "evidence": [
+        "backend/app/src/player/schedule.rs:353",
+        "backend/app/src/player/schedule.rs:361"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Scheduled break/live silently never airs, no run row",
+      "is_blocker": false,
+      "proposed_by": "backend"
+    },
+    {
+      "id": "F-011",
+      "title": "DST spring-forward silently skips Media events in the gap",
+      "severity": "MEDIUM",
+      "category": "scheduler/dst",
+      "evidence": [
+        "backend/app/src/player/schedule.rs:339",
+        "backend/app/src/player/schedule.rs:358",
+        "backend/app/src/player/schedule.rs:52"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Media event at 02:30 on spring-forward day never airs, no status",
+      "is_blocker": false,
+      "proposed_by": "backend"
+    },
+    {
+      "id": "F-012",
+      "title": "Error from a scheduled event tears down and restarts the whole playout",
+      "severity": "MEDIUM",
+      "category": "playout",
+      "evidence": [
+        "backend/app/src/player/output/playout.rs:239",
+        "backend/app/src/player/schedule.rs:908",
+        "backend/app/src/player/schedule.rs:1082"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Output restart instead of fallback to programme (which errors are Err NOT_VERIFIED)",
+      "is_blocker": false,
+      "proposed_by": "backend"
+    },
+    {
+      "id": "F-013",
+      "title": "Pacing clock never re-anchors after a stall: unthrottled burst catch-up",
+      "severity": "MEDIUM",
+      "category": "engine/pacing",
+      "evidence": [
+        "backend/engine/src/utils/clock.rs:44",
+        "backend/engine/src/output/encoded.rs:1013"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Receivers get faster-than-real-time bursts after any stall",
+      "is_blocker": false,
+      "proposed_by": "media-engine"
+    },
+    {
+      "id": "F-014",
+      "title": "No hardware-encoder fallback; VAAPI device hard-wired",
+      "severity": "MEDIUM",
+      "category": "engine/encoder",
+      "evidence": [
+        "backend/engine/src/output/encoded.rs:1330",
+        "backend/engine/src/output/encoded.rs:1391",
+        "backend/engine/src/output/encoded.rs:117"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Missing/busy GPU means the channel does not start",
+      "is_blocker": false,
+      "proposed_by": "media-engine"
+    },
+    {
+      "id": "F-015",
+      "title": "Live reader permits can wedge (2 per input) until process restart; fixed 1s retry",
+      "severity": "MEDIUM",
+      "category": "engine/live-ingest",
+      "evidence": [
+        "backend/engine/src/input/live.rs:135",
+        "backend/engine/src/input/live.rs:905",
+        "backend/engine/src/input/live.rs:1121",
+        "backend/engine/src/input/live.rs:943"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Stalled clients can permanently disable a live input (interrupt behaviour NOT_VERIFIED)",
+      "is_blocker": false,
+      "proposed_by": "media-engine"
+    },
+    {
+      "id": "F-016",
+      "title": "SCTE-35 injector fails open: one bad sync byte stops all signalling, no return/cancel",
+      "severity": "MEDIUM",
+      "category": "engine/scte35",
+      "evidence": [
+        "backend/engine/src/output/scte35.rs:847",
+        "backend/engine/src/output/scte35.rs:864",
+        "backend/engine/src/output/scte35.rs:423"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Downstream can stay out-of-network if it relies on explicit return",
+      "is_blocker": false,
+      "proposed_by": "media-engine"
+    },
+    {
+      "id": "F-017",
+      "title": "2FA /auth/verify has no attempt limit or lockout",
+      "severity": "MEDIUM",
+      "category": "security/auth",
+      "evidence": [
+        "backend/app/src/api/auth.rs:435",
+        "backend/app/src/api/auth.rs:334",
+        "backend/app/src/api/auth.rs:55"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "With the password, 6-digit code brute-forceable in 5 min given F-002",
+      "is_blocker": false,
+      "proposed_by": "security"
+    },
+    {
+      "id": "F-018",
+      "title": "ChannelAdmin can set custom output URL to a local file path",
+      "severity": "MEDIUM",
+      "category": "security/privilege",
+      "evidence": [
+        "backend/app/src/api/routes/playout_config.rs:263",
+        "backend/app/src/api/routes/playout_config.rs:461",
+        "backend/engine/src/utils/protocol.rs:19",
+        "backend/engine/src/output/encoded.rs:445"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "FFmpeg writes media bytes to arbitrary writable path, e.g. the DB",
+      "is_blocker": false,
+      "proposed_by": "security"
+    },
+    {
+      "id": "F-019",
+      "title": "Console request log records full URIs incl. access/key/uuid secrets",
+      "severity": "MEDIUM",
+      "category": "security/logging",
+      "evidence": [
+        "backend/app/src/utils/logging.rs:759",
+        "backend/app/src/utils/logging.rs:796"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "File tokens, logo control key and SSE uuid leak into logs",
+      "is_blocker": false,
+      "proposed_by": "security"
+    },
+    {
+      "id": "F-020",
+      "title": "Playlist import writes user-named file in shared temp dir; no cleanup on error",
+      "severity": "MEDIUM",
+      "category": "security/files",
+      "evidence": [
+        "backend/app/src/api/routes/file.rs:372"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "User can overwrite/delete temp-dir files; concurrent imports race",
+      "is_blocker": false,
+      "proposed_by": "security"
+    },
+    {
+      "id": "F-021",
+      "title": "config_global init trigger+insert not atomic, CREATE TRIGGER without IF NOT EXISTS",
+      "severity": "MEDIUM",
+      "category": "db/init",
+      "evidence": [
+        "backend/app/src/db/handles/init.rs:28"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Interrupted first start can fail every later start",
+      "is_blocker": false,
+      "proposed_by": "database"
+    },
+    {
+      "id": "F-022",
+      "title": "create_channel_records deferred transaction reads before writing (SQLITE_BUSY_SNAPSHOT)",
+      "severity": "MEDIUM",
+      "category": "db/concurrency",
+      "evidence": [
+        "backend/app/src/db/handles/channel.rs:145",
+        "backend/app/src/db/mod.rs:23"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Concurrent channel creation or creation during writes returns 500",
+      "is_blocker": false,
+      "proposed_by": "database"
+    },
+    {
+      "id": "F-023",
+      "title": "Deleting a channel cascades away its as-run history",
+      "severity": "MEDIUM",
+      "category": "db/retention",
+      "evidence": [
+        "migrations/00011_as_run.sql:1",
+        "backend/app/src/db/handles/channel.rs:92"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Broadcast evidence log destroyed with the channel (design decision to confirm)",
+      "is_blocker": false,
+      "proposed_by": "database"
+    },
+    {
+      "id": "F-024",
+      "title": "No backup/snapshot before migrations or self-update; forward-only migrations",
+      "severity": "MEDIUM",
+      "category": "db/backup",
+      "evidence": [
+        "backend/app/src/db/mod.rs:112",
+        "docs/developer.md:100"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Failed upgrade has no rollback path",
+      "is_blocker": false,
+      "proposed_by": "database"
+    },
+    {
+      "id": "F-025",
+      "title": "Critical-path test gaps: SCTE-35 integration, DST fall-back, restart, migration upgrade fixtures, 401/403 matrix",
+      "severity": "MEDIUM",
+      "category": "testing",
+      "evidence": [
+        "backend/app/src/player/controller.rs:831",
+        "backend/app/src/db/handles/init.rs:68",
+        "backend/app/src/utils/program.rs:204"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Regressions in on-air paths not caught by CI",
+      "is_blocker": false,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-026",
+      "title": "Container runs as root with no healthcheck or health route",
+      "severity": "MEDIUM",
+      "category": "container",
+      "evidence": [
+        "Dockerfile:67",
+        "docker-compose.yml:16"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Hung process never restarted",
+      "is_blocker": false,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-027",
+      "title": "Unpinned base images, mixed action majors, untagged watchtower with docker socket",
+      "severity": "MEDIUM",
+      "category": "supply-chain",
+      "evidence": [
+        "Dockerfile:8",
+        "docker-compose.yml:1",
+        ".github/workflows/docker.yml:1"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Non-reproducible builds; supply-chain exposure",
+      "is_blocker": false,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-028",
+      "title": "Released-migration immutability not provable (no tags/checksum gate)",
+      "severity": "LOW",
+      "category": "db/migrations",
+      "evidence": [
+        "migrations/00001_create_tables.sql:1",
+        "docs/developer.md:100"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Checksum mismatch possible for intermediate-build users",
+      "is_blocker": false,
+      "proposed_by": "database"
+    },
+    {
+      "id": "F-029",
+      "title": "Migration 00003 INNER JOIN copies can drop orphan legacy rows",
+      "severity": "LOW",
+      "category": "db/migrations",
+      "evidence": [
+        "migrations/00003_split_config.sql:210",
+        "migrations/00003_split_config.sql:242"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Legacy pre-00003 data only",
+      "is_blocker": false,
+      "proposed_by": "database"
+    },
+    {
+      "id": "F-030",
+      "title": "Graceful shutdown does not drain HTTP/SSE",
+      "severity": "LOW",
+      "category": "shutdown",
+      "evidence": [
+        "backend/app/src/main.rs:185"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "In-flight requests cut on restart",
+      "is_blocker": false,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-031",
+      "title": "Logs rotate daily without a size cap",
+      "severity": "LOW",
+      "category": "observability",
+      "evidence": [
+        "backend/app/src/utils/logging.rs:249"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Disk exhaustion from verbose faults",
+      "is_blocker": false,
+      "proposed_by": "reliability"
+    },
+    {
+      "id": "F-032",
+      "title": "Manual trigger unbounded/duplicable; plain User may trigger and stop events",
+      "severity": "LOW",
+      "category": "scheduler/policy",
+      "evidence": [
+        "backend/app/src/api/routes/schedule.rs:257",
+        "backend/app/src/player/schedule.rs:197",
+        "backend/app/src/api/routes/schedule.rs:79"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Duplicate interrupting events; policy question",
+      "is_blocker": false,
+      "proposed_by": "backend"
+    },
+    {
+      "id": "F-033",
+      "title": "SSE broadcaster does serial per-client work, no client cap",
+      "severity": "LOW",
+      "category": "sse/performance",
+      "evidence": [
+        "backend/app/src/sse/broadcast.rs:127"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Many clients delay status for all",
+      "is_blocker": false,
+      "proposed_by": "backend"
+    },
+    {
+      "id": "F-034",
+      "title": "Role/channel/password changes not applied to live sessions (JWT claims trusted; refresh not revoked)",
+      "severity": "LOW",
+      "category": "security/session",
+      "evidence": [
+        "backend/app/src/api/routes/mod.rs:275",
+        "backend/app/src/api/routes/user.rs:97",
+        "backend/app/src/api/auth.rs:87"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Demoted/removed user keeps access up to token expiry; refresh survives password change",
+      "is_blocker": false,
+      "proposed_by": "backend + security"
+    },
+    {
+      "id": "F-035",
+      "title": "Setup endpoint unauthenticated until first-run completes; port published on all interfaces",
+      "severity": "LOW",
+      "category": "security/setup",
+      "evidence": [
+        "backend/app/src/api/routes/setup.rs:33",
+        "docker-compose.yml:29"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "First-run takeover if exposed before setup",
+      "is_blocker": false,
+      "proposed_by": "security"
+    }
+  ]
+}

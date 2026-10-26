@@ -10,6 +10,11 @@ export type LiveInput = { id: number, priority: number, enabled: boolean, name: 
 
 export type Logging = { ffmpeg_level: string, ingest_level: string, detect_silence: boolean, ignore_lines: Array<string>, };
 
+/**
+ * How the logo comes up or goes off.
+ */
+export type LogoTransition = "fade" | "cut";
+
 export type Mail = { show: boolean, subject: string, recipient: string, mail_level: string, interval: bigint, };
 
 export type Notification = { show: boolean, topic: string, level: NotificationLevel, tags: string, };
@@ -65,7 +70,21 @@ guide_logo: string,
  * Key that lets an encoder hide, show or swap the logo on air; empty
  * turns that off.
  */
-logo_key: string, };
+logo_key: string, 
+/**
+ * How the logo comes up.
+ */
+logo_transition_in: LogoTransition, 
+/**
+ * How the logo goes off.
+ */
+logo_transition_out: LogoTransition, 
+/**
+ * Length of the logo's fades, and of the cross-fade when another image
+ * takes its place, in seconds; empty keeps the built-in lengths (1 s on
+ * clips, 0.4 s when switched from outside).
+ */
+logo_transition_seconds: number | null, };
 
 export type Recording = { enable: boolean, source: RecordingSource, source_output_id: number | null, variant: string, path: string, segment_duration: number, retention_days: number, minimum_free_space_gb: number, width: number, height: number, video_codec: string, video_options: { [key in string]: string }, audio_codec: string, audio_options: { [key in string]: string }, audio_bitrate: number, };
 

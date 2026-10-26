@@ -4,6 +4,7 @@ use axum::{
     Json,
     extract::{Path, State},
 };
+use log::*;
 use protect_axum::authorities::AuthDetails;
 use serde::Deserialize;
 
@@ -188,23 +189,22 @@ pub async fn process_control(
 
     manager.list_init.store(true, Ordering::SeqCst);
 
-    if manager.is_processing.load(Ordering::SeqCst) {
-        return Err(ServiceError::Conflict(
-            "A command is already being processed, please wait".to_string(),
-        ));
-    }
+    let guard = manager.begin_processing().ok_or_else(|| {
+        ServiceError::Conflict("A command is already being processed, please wait".to_string())
+    })?;
 
-    manager.is_processing.store(true, Ordering::SeqCst);
+    // The command runs in its own task and holds the claim until it is done:
+    // if the client disconnects halfway through a restart, the channel is
+    // still started again, and the claim is released whatever happens.
+    let task = tokio::spawn(async move {
+        let _guard = guard;
+        run_process_command(&manager, proc.command).await
+    });
 
-    // Run the actual command in a helper so the `is_processing` flag is always
-    // cleared, even when a step returns early with an error. Otherwise a failed
-    // start/restart would leave the channel permanently stuck reporting
-    // "A command is already being processed".
-    let result = run_process_command(&manager, proc.command).await;
-
-    manager.is_processing.store(false, Ordering::SeqCst);
-
-    result
+    task.await.map_err(|error| {
+        error!(channel = id; "Channel command failed: {error}");
+        ServiceError::InternalServerError
+    })?
 }
 
 async fn run_process_command(

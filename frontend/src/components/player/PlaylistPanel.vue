@@ -966,6 +966,10 @@ async function save(date = playlistStore.listDate) {
     if (!playlistStore.playlist.length) {
         return
     }
+    if (playlistStore.loadFailed && date === playlistStore.listDate) {
+        indexStore.msgAlert('error', t('onair.loadFailedNoSave'), 5)
+        return
+    }
 
     saving.value = true
 
@@ -1187,7 +1191,11 @@ defineExpose({ addFile, addFiles })
             <button class="btn-quiet min-h-9.5" :disabled="!playlistStore.dirty" @click="discard">
                 {{ t('onair.discard') }}
             </button>
-            <button class="btn-main min-h-9.5" :disabled="!playlistStore.dirty || saving" @click="save()">
+            <button
+                class="btn-main min-h-9.5"
+                :disabled="!playlistStore.dirty || saving || playlistStore.loadFailed"
+                @click="save()"
+            >
                 {{ t('onair.save') }}
             </button>
             <button class="btn-quiet min-h-9.5" @click="emit('generate')">

@@ -61,6 +61,10 @@ Entries are kept in the database (`as_run` table) with times in Unix
 milliseconds. Only what airs from this version on is recorded; earlier days
 have no record of what actually aired.
 
+Deleting a channel keeps its entries: they move to the `as_run_archive`
+table, with the channel's name and when it was deleted, since a channel
+created later can get the same id.
+
 ## What is still to come
 
 From now on, the report lists the plan: the playlist clips, moved by the

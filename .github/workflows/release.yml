@@ -9,7 +9,14 @@ permissions:
   contents: write
 
 jobs:
+  # Release nothing that fails the tests, lints or build.
+  validate:
+    uses: ./.github/workflows/validate.yml
+    permissions:
+      contents: read
+
   release:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

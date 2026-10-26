@@ -11,7 +11,14 @@ permissions:
   packages: write
 
 jobs:
+  # Publish nothing that fails the tests, lints or build.
+  validate:
+    uses: ./.github/workflows/validate.yml
+    permissions:
+      contents: read
+
   image:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

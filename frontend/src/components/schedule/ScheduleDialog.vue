@@ -19,6 +19,7 @@ import {
     useScheduleText,
 } from '@/composables/schedule'
 import { commercialPaths, guideEntries, guidePoster, imageUrl, type GuideEntry } from '@/composables/storage'
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
@@ -374,15 +375,21 @@ async function save() {
         saving.value = false
     }
 }
+
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog, { open: () => props.draft !== null, onEscape: () => emit('close') })
 </script>
 
 <template>
     <div v-if="draft" class="z-50 fixed inset-0 bg-black/50 overflow-auto flex justify-center items-start py-8 px-3">
         <div
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="schedule-dialog-title"
-            class="w-full max-w-170 bg-base-100 border border-base-content/20 rounded-lg shadow-xl flex flex-col"
+            tabindex="-1"
+            class="outline-none w-full max-w-170 bg-base-100 border border-base-content/20 rounded-lg shadow-xl flex flex-col"
         >
             <div class="flex items-center justify-between px-5 py-3 border-b border-base-300">
                 <h2 id="schedule-dialog-title" class="text-lg font-semibold">

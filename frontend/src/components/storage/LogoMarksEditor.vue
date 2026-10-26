@@ -4,7 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
+import { type Size, logoBox, logoBoxStyle, storageImageUrl } from '@/composables/logo'
 import { type LogoSpan, baseName, readLogoMarks, saveLogoMarks } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -35,6 +37,8 @@ const loading = ref(true)
 const saving = ref(false)
 const videoUrl = ref('')
 const logoUrl = ref('')
+/** The logo image's own size, once it loaded. */
+const logoImage = ref<Size | null>(null)
 const videoFailed = ref(false)
 const video = ref<HTMLVideoElement>()
 const position = ref(0)
@@ -151,11 +155,42 @@ async function load() {
         loading.value = false
     }
 
-    const logo = configStore.playout?.processing?.logo?.trim()
+    const channel = configStore.channels.find((entry) => entry.id === props.channelId)
 
-    if (logo && !logo.startsWith('/')) {
-        logoUrl.value = await previewUrl(logo).catch(() => '')
-    }
+    logoUrl.value = await storageImageUrl(channel, configStore.playout?.processing?.logo).catch(() => '')
+}
+
+/** The output picture, which the preview takes the shape of. */
+const frameSize = computed<Size>(() => ({
+    width: Math.max(1, configStore.playout?.output?.width || 1920),
+    height: Math.max(1, configStore.playout?.output?.height || 1080),
+}))
+
+/** The logo where and as large as the channel puts it on air. */
+const logoStyle = computed(() => {
+    const processing = configStore.playout?.processing
+    const box =
+        logoImage.value &&
+        processing &&
+        logoBox(processing.logo_scale, processing.logo_position, logoImage.value, frameSize.value)
+
+    return box ? logoBoxStyle(box) : { top: '3%', right: '2%', height: '6%' }
+})
+
+const logoOpacity = computed(() => (hiddenNow.value ? 0 : (configStore.playout?.processing?.logo_opacity ?? 1)))
+
+/** The channel's animation as the logo goes off or comes back (a fade lasts 1 s unless set). */
+const logoTransition = computed(() => {
+    const processing = configStore.playout?.processing
+    const kind = hiddenNow.value ? processing?.logo_transition_out : processing?.logo_transition_in
+
+    return kind === 'cut' ? 'none' : `opacity ${processing?.logo_transition_seconds ?? 1}s linear`
+})
+
+function logoLoaded(event: Event) {
+    const image = event.target as HTMLImageElement
+
+    logoImage.value = image.naturalWidth ? { width: image.naturalWidth, height: image.naturalHeight } : null
 }
 
 async function save() {
@@ -184,30 +219,28 @@ function requestClose() {
     }
 }
 
-function onKey(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-        requestClose()
-    }
-}
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog, { onEscape: requestClose })
 
 onMounted(() => {
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', onKey)
     load()
 })
 
 onBeforeUnmount(() => {
     document.body.style.overflow = ''
-    window.removeEventListener('keydown', onKey)
 })
 </script>
 <template>
     <div class="z-50 fixed inset-0 flex justify-end bg-black/50" @click.self="requestClose">
         <section
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="logo-marks-title"
-            class="w-full max-w-[800px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
+            tabindex="-1"
+            class="outline-none w-full max-w-[800px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
         >
             <header class="flex items-start gap-3 px-5 pt-5 pb-3">
                 <div class="flex-1 min-w-0">
@@ -226,7 +259,10 @@ onBeforeUnmount(() => {
             <div v-else class="px-5 pb-5 flex flex-col gap-4">
                 <p class="m-0 text-[13px] text-muted">{{ t('storage.logoMarks.intro') }}</p>
 
-                <div class="relative w-full aspect-video bg-black rounded-field overflow-hidden">
+                <div
+                    class="relative w-full bg-black rounded-field overflow-hidden"
+                    :style="{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }"
+                >
                     <video
                         v-if="videoUrl && !videoFailed"
                         ref="video"
@@ -234,7 +270,7 @@ onBeforeUnmount(() => {
                         controls
                         preload="auto"
                         playsinline
-                        class="w-full h-full"
+                        class="w-full h-full object-contain"
                         @timeupdate="position = ($event.target as HTMLVideoElement).currentTime"
                         @seeked="position = ($event.target as HTMLVideoElement).currentTime"
                         @loadedmetadata="duration = ($event.target as HTMLVideoElement).duration || duration"
@@ -243,18 +279,23 @@ onBeforeUnmount(() => {
                     <p v-else class="absolute inset-0 m-0 flex items-center justify-center p-6 text-center text-muted">
                         {{ t('storage.logoMarks.noVideo') }}
                     </p>
-                    <span
-                        class="absolute top-3 right-3 transition-opacity duration-300 pointer-events-none"
-                        :class="hiddenNow ? 'opacity-0' : 'opacity-90'"
+                    <img
+                        v-if="logoUrl"
+                        :src="logoUrl"
+                        alt=""
+                        class="absolute max-w-none pointer-events-none"
+                        :style="{ ...logoStyle, opacity: logoOpacity, transition: logoTransition }"
                         aria-hidden="true"
+                        @load="logoLoaded"
+                        @error="logoUrl = ''"
+                    />
+                    <span
+                        v-else
+                        class="absolute flex items-center text-[11px] font-semibold text-white border border-white/70 rounded px-1.5 pointer-events-none"
+                        :style="{ ...logoStyle, opacity: logoOpacity, transition: logoTransition }"
+                        aria-hidden="true"
+                        >LOGO</span
                     >
-                        <img v-if="logoUrl" :src="logoUrl" alt="" class="h-8 w-auto" />
-                        <span
-                            v-else
-                            class="text-[11px] font-semibold text-white border border-white/70 rounded px-1.5 py-0.5"
-                            >LOGO</span
-                        >
-                    </span>
                 </div>
 
                 <div class="flex flex-col gap-1.5">

@@ -20,12 +20,86 @@ one is tagged.
   Settings › Ad breaks turns it on and shows how it works and every break;
   the Player shows the next break and the one on air, and marks one by hand;
   an API does the same ([docs](docs/ad_breaks.md)).
+- **Logo animations** in Settings › Logo: the logo can come up and go off
+  with a fade or a cut, each set on its own, over a chosen length. Swapping
+  the logo for another image now cross-fades instead of switching at once.
+  Changes take effect without restarting the playout
+  ([docs](docs/logo.md#how-the-logo-comes-up-and-goes-off)).
 
 ### Fixed
 
 - A clip usually lasted one frame longer than its duration: its last audio
   frame ran past the end, and the video padded a frame to cover it. Clips now
   last exactly their duration.
+- When a playlist failed to load, the Player showed an empty day with no
+  error, and saving it could overwrite the real playlist. The error is now
+  shown and saving that day is blocked until it loads.
+- A server error or lost connection while renewing the login no longer logs
+  out every open tab; only a rejected login does.
+- The live status could stop updating for good after a failed reconnect; it
+  now keeps retrying.
+- Saving a playlist that had not changed now says there is nothing new to
+  save instead of showing an error.
+- Switching dates or channels quickly in the Player could show, and then
+  save, the playlist of the day you had left; only the last one asked for
+  is shown now.
+- A crash inside a channel's playout no longer leaves the channel silently
+  off air while still shown as running: the playout restarts like after any
+  other failure.
+- A damaged spot in a clip or a live feed no longer ends it: damaged data is
+  skipped, as the FFmpeg command line does. Only a long run of it ends the
+  clip, which then falls back.
+- A clip failing partway now falls back only for the rest of its slot.
+  Before, the fallback ran for the whole clip length again, and everything
+  after it aired late by the part already played.
+- When marking where a video keeps the logo off, the preview now shows the
+  channel's logo where, as large and as transparent as it goes on air, in
+  the shape of the output picture; logos set by full path showed only a
+  placeholder. Settings › Logo also sizes its preview exactly, including
+  custom scale and position expressions.
+- A scheduled clip placed in the hour the clock skips when summer time
+  starts (for example 02:30) was silently never aired; it now starts when the
+  gap ends.
+- A database hiccup at the moment a scheduled event was due made it never
+  air; the scheduler now tries again on its next check.
+- Changing a scheduled event when part of its bookkeeping failed could leave
+  the old version on air; the change now always takes effect.
+- A scheduled event cut by a short output failure (for example the RTMP
+  server dropping the connection) was closed as failed; it now goes back on
+  air where it was when the playout restarts, like after a stop.
+- After a stall (a slow file open, a long fallback), the output sent all the
+  time it had fallen behind at once, flooding RTMP, SRT and UDP receivers.
+  It now catches up only on delays under a second and otherwise carries on
+  from the late packet.
+- A first start interrupted while setting up the database could make every
+  later start fail; setting up is now done in one step.
+- Creating channels at the same time as other database writes could fail with
+  "database is locked".
+- Before an update changes the database, NoAr now keeps a copy of it to go
+  back to ([docs](docs/docker.md#if-an-update-goes-wrong)).
+- Deleting a channel no longer deletes the record of what it aired: the
+  entries move to an archive table ([docs](docs/report.md)).
+- Start, stop and restart can no longer run twice at once, and a restart
+  finishes even if the browser disconnects halfway. Before, that could leave
+  the channel off air and refusing every further command until NoAr was
+  restarted.
+- Dialogs now take keyboard focus when they open, keep Tab inside, close
+  with Escape (the scheduling and live dialogs did not), and hand focus back
+  when they close. Escape in a dialog opened from another closes only the
+  inner one.
+
+### Security
+
+- A playlist date that was not a date could make saving, deleting, importing
+  or generating a playlist write or delete `.json` files outside the playlist
+  folder. Playlist paths are now built only from a valid `YYYY-MM-DD` date;
+  anything else is refused.
+- Login rate limits could be dodged by sending a made-up `X-Forwarded-For`
+  header, and without a proxy every client shared one limit. NoAr now
+  identifies clients by their connection and trusts `X-Forwarded-For` only
+  from a proxy on the same host or a private network
+  ([docs](docs/docker.md#behind-a-reverse-proxy)). Signed-in users are now
+  exempt from the general request limit, as it was meant to work.
 
 ## [1.0.0] - 2026-10-21
 

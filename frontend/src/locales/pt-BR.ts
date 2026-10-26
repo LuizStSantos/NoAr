@@ -1419,6 +1419,8 @@ export default {
         },
         saved: 'Playlist de {date} salva.',
         alreadySaved: 'Nada novo para salvar.',
+        loadFailedNoSave:
+            'Não foi possível carregar a playlist. Recarregue-a antes de salvar, para não sobrescrever a lista salva.',
         imported: 'Lista importada.',
         deleted: 'Playlist excluída.',
         unsavedDropped: 'Alterações não salvas da playlist foram descartadas ao trocar de canal.',
@@ -1798,6 +1800,19 @@ export default {
             guideLogo: 'Logo no guia (XMLTV)',
             guideLogoHint:
                 'O ícone do canal no guia de programação. Pode ser diferente da logo do vídeo, por exemplo colorida em vez de negativa.',
+            transitions: {
+                title: 'Animações da logo',
+                intro: 'Como a logo entra e sai: no começo e no fim dos clipes, nos comerciais e trechos marcados, e quando é escondida ou mostrada ao vivo.',
+                in: 'Entrada',
+                out: 'Saída',
+                fade: 'Fade',
+                fadeHint: 'Aparece ou some aos poucos.',
+                cut: 'Corte seco',
+                cutHint: 'Aparece ou some de uma vez.',
+                length: 'Duração',
+                auto: 'auto',
+                hint: 'Vazio usa as durações padrão: 1 s nos clipes e 0,4 s quando a logo é escondida, mostrada ou trocada ao vivo. A troca da logo por outra imagem sempre faz dissolução cruzada com esta duração. As mudanças valem na hora, sem reiniciar o playout.',
+            },
             guideLogoSame: 'Vazio: o guia usa a logo do vídeo.',
             guideLogoOwn: 'O guia usa esta imagem; se ela sumir, volta para a logo do vídeo.',
             remote: {
