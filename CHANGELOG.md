@@ -27,7 +27,8 @@ one is tagged.
   the output's size and frame rate, high-quality H.264 and 48 kHz AAC, so
   the playout no longer scales it or changes its frame rate on air, and
   damaged files are rewritten from what decodes. Storage shows the progress
-  of each one ([docs](docs/uploads.md)).
+  of each one ([docs](docs/uploads.md)). A video whose picture already
+  matches only has its sound converted, in seconds.
 - **SCTE-35 breaks from encoders and automation**: a key, like the logo
   key, lets vMix, OBS, Companion or a script mark and cancel breaks at
   `/scte35/{id}/break` and `/scte35/{id}/cancel` without logging in.

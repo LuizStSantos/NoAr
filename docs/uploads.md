@@ -18,8 +18,17 @@ decodes, so the damage stays out of the air and the log.
 ## How it works
 
 - One video at a time per channel, in the background, on at most half the
-  CPU cores, so the playout keeps its share. A one-hour HD video takes a
-  while; it can be used meanwhile, as uploaded.
+  CPU cores, so the playout keeps its share. It can be used meanwhile, as
+  uploaded.
+- A video whose picture is already the output's (H.264 4:2:0, progressive,
+  of that size and at that constant frame rate) but whose sound is not, is
+  not encoded again: its picture is copied and only the sound is converted,
+  which takes seconds. Should that fail, the video is encoded after all.
+- Otherwise the picture is encoded with x264's `veryfast` preset at CRF 18.
+  As a rough guide, on 2 cores of a recent CPU a test pattern of an hour of
+  1080p at 30 fps took about 11 minutes to 720p at 25 fps and about 17
+  minutes to 1080p at 25 fps; busy real footage takes longer, and more cores
+  make it faster.
 - The converted file is written next to the original under a hidden name
   (`.Name.converting.mp4`) and takes its place in one rename. It keeps the
   original's name, and so its `.nfo` sheet, logo marks and place in

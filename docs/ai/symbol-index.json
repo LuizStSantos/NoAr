@@ -609,9 +609,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "63530e22cb9cf5b74c99d63023c7b1512f3c4d2ccb06d7fdda6094e055fbd111",
+      "sha256": "749f901974a299cbebc6dd3490b6c18ba03e061a828d3f126350597da167c57c",
       "language": "Markdown",
-      "bytes": 15138,
+      "bytes": 15220,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -5742,9 +5742,9 @@
       ]
     },
     "backend/app/src/utils/convert.rs": {
-      "sha256": "57b233edfd95b3a5aa71f1633f7757f868cf72ab0c3ea5f73ee4f9d01fd820b9",
+      "sha256": "09e2c85c6dc67f7ed3fded8db9049e12537123b98dbe1c693b32df97cf2f0510",
       "language": "Rust",
-      "bytes": 11178,
+      "bytes": 11423,
       "symbols": [
         {
           "name": "ConversionState",
@@ -5824,11 +5824,11 @@
         },
         {
           "name": "tests",
-          "line": 349
+          "line": 355
         },
         {
           "name": "results_keep_the_name_when_the_container_takes_h264",
-          "line": 353
+          "line": 359
         }
       ]
     },
@@ -11391,105 +11391,125 @@
       ]
     },
     "backend/engine/src/convert.rs": {
-      "sha256": "c8ccb11ce067e0c6abbfcf29324bb127137b06ea91631d30c3983674d99c4eca",
+      "sha256": "45bc81b2901fc76eb5074d3a675f543231b5b18a2b8ce1e0b57e5da5755a6795",
       "language": "Rust",
-      "bytes": 25166,
+      "bytes": 32390,
       "symbols": [
         {
           "name": "ConvertTarget",
-          "line": 31
+          "line": 39
         },
         {
           "name": "MediaShape",
-          "line": 40
+          "line": 48
         },
         {
           "name": "MediaShape",
-          "line": 51
+          "line": 59
         },
         {
           "name": "matches",
-          "line": 53
+          "line": 61
         },
         {
           "name": "probe_shape",
-          "line": 72
+          "line": 80
+        },
+        {
+          "name": "video_matches",
+          "line": 133
         },
         {
           "name": "convert_to_output",
-          "line": 125
+          "line": 164
+        },
+        {
+          "name": "convert",
+          "line": 193
         },
         {
           "name": "Sink",
-          "line": 399
+          "line": 493
         },
         {
           "name": "Sink",
-          "line": 405
+          "line": 499
         },
         {
           "name": "write_video",
-          "line": 406
+          "line": 500
         },
         {
           "name": "write",
-          "line": 416
+          "line": 510
         },
         {
           "name": "AudioPath",
-          "line": 431
+          "line": 525
         },
         {
           "name": "AudioPath",
-          "line": 441
-        },
-        {
-          "name": "drain_decoder",
-          "line": 442
-        },
-        {
-          "name": "take",
-          "line": 466
-        },
-        {
-          "name": "encode_ready",
-          "line": 478
-        },
-        {
-          "name": "finish",
-          "line": 505
-        },
-        {
-          "name": "write",
-          "line": 516
-        },
-        {
-          "name": "tests",
-          "line": 529
-        },
-        {
-          "name": "write_test_clip",
           "line": 535
         },
         {
-          "name": "video_stream_index",
-          "line": 626
+          "name": "drain_decoder",
+          "line": 536
         },
         {
-          "name": "drain",
+          "name": "take",
+          "line": 561
+        },
+        {
+          "name": "encode_ready",
+          "line": 573
+        },
+        {
+          "name": "finish",
+          "line": 600
+        },
+        {
+          "name": "write",
+          "line": 620
+        },
+        {
+          "name": "tests",
           "line": 633
         },
         {
+          "name": "write_test_clip",
+          "line": 639
+        },
+        {
+          "name": "video_stream_index",
+          "line": 730
+        },
+        {
+          "name": "drain",
+          "line": 737
+        },
+        {
           "name": "drain_audio",
-          "line": 648
+          "line": 752
+        },
+        {
+          "name": "audio_seconds",
+          "line": 767
+        },
+        {
+          "name": "video_packets",
+          "line": 790
         },
         {
           "name": "a_file_in_another_format_comes_out_in_the_target_one",
-          "line": 664
+          "line": 799
+        },
+        {
+          "name": "a_picture_already_in_the_output_format_is_copied",
+          "line": 849
         },
         {
           "name": "a_stopped_conversion_fails",
-          "line": 711
+          "line": 887
         }
       ]
     },
@@ -12686,9 +12706,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "08d2be4f369bb4ba6b9d4dd82cf6a75a634cfbe699e09b35d421f78517d82417",
+      "sha256": "7fe9bf5909e101b3e96c87cd7033e8b6a60f4e6aac8b759ab4b18861e4a3c680",
       "language": "Rust",
-      "bytes": 42513,
+      "bytes": 42528,
       "symbols": [
         {
           "name": "analysis",
@@ -15905,9 +15925,9 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "478196bebbb88ed0a0fe992f44a4f6f9b695be291d5f9f0edddf1e542a17b87d",
+      "sha256": "dbf24af3c123d8e650605b22edd484ccfe097d4b1161fe20244319d336702aa7",
       "language": "Rust",
-      "bytes": 139764,
+      "bytes": 139775,
       "symbols": [
         {
           "name": "PlaybackSkipped",
@@ -17418,9 +17438,9 @@
       "symbols": []
     },
     "docs/uploads.md": {
-      "sha256": "6d8de7609ab27dbc219652d732ebaeb5e0e80758bd873d729a8b7d539ac57b1d",
+      "sha256": "c155a7aadf2e4870dbc91e3350fb0cd32d70e2b0f58d2bb5b02795266bb93c86",
       "language": "Markdown",
-      "bytes": 2049,
+      "bytes": 2631,
       "symbols": []
     },
     "docs/xmltv.md": {
