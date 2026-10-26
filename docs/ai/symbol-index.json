@@ -79,6 +79,12 @@
       "bytes": 4045,
       "symbols": []
     },
+    ".claude/agents/noar-release-manager.md": {
+      "sha256": "3128b4984114dabc50d0dac501da97c2a52e8ff876cc374f3c81c4f037754382",
+      "language": "Markdown",
+      "bytes": 4396,
+      "symbols": []
+    },
     ".claude/agents/noar-release-review.md": {
       "sha256": "b59dd6cd621fabfe77c90d3aa197a19b079d8206c1257dd680255944a793dcac",
       "language": "Markdown",
@@ -183,6 +189,81 @@
         }
       ]
     },
+    ".claude/scripts/prepare_release.py": {
+      "sha256": "11befbc2a360372838dc834d2c4a1ae3d5b4f6d34c97a06d2ac30feaabb61bad",
+      "language": "Python",
+      "bytes": 9655,
+      "symbols": [
+        {
+          "name": "ReleaseError",
+          "line": 32
+        },
+        {
+          "name": "parse_version",
+          "line": 36
+        },
+        {
+          "name": "current_version",
+          "line": 44
+        },
+        {
+          "name": "unreleased_notes",
+          "line": 55
+        },
+        {
+          "name": "has_entries",
+          "line": 66
+        },
+        {
+          "name": "bump_kind",
+          "line": 70
+        },
+        {
+          "name": "next_version",
+          "line": 87
+        },
+        {
+          "name": "count_new_migrations",
+          "line": 103
+        },
+        {
+          "name": "date_changelog",
+          "line": 115
+        },
+        {
+          "name": "set_cargo_version",
+          "line": 133
+        },
+        {
+          "name": "set_lock_versions",
+          "line": 143
+        },
+        {
+          "name": "set_package_json",
+          "line": 152
+        },
+        {
+          "name": "set_package_lock",
+          "line": 158
+        },
+        {
+          "name": "repo_url",
+          "line": 166
+        },
+        {
+          "name": "plan",
+          "line": 171
+        },
+        {
+          "name": "apply",
+          "line": 193
+        },
+        {
+          "name": "main",
+          "line": 211
+        }
+      ]
+    },
     ".claude/scripts/tally_audit_votes.py": {
       "sha256": "a264f82d93230d5aa83769afd1744f58b1fed5c11bec02274931868d70fa8208",
       "language": "Python",
@@ -281,6 +362,61 @@
         {
           "name": "test_migrations_are_documentation_sensitive",
           "line": 31
+        }
+      ]
+    },
+    ".claude/scripts/test_prepare_release.py": {
+      "sha256": "6966ca3114b80e888c9006de27783808ea560d8dc324d3e7f0565c266b6be855",
+      "language": "Python",
+      "bytes": 4819,
+      "symbols": [
+        {
+          "name": "ReleasePlanTests",
+          "line": 54
+        },
+        {
+          "name": "setUp",
+          "line": 55
+        },
+        {
+          "name": "tearDown",
+          "line": 60
+        },
+        {
+          "name": "write",
+          "line": 63
+        },
+        {
+          "name": "test_fixes_only_make_a_patch",
+          "line": 71
+        },
+        {
+          "name": "test_added_or_a_new_migration_make_a_minor",
+          "line": 75
+        },
+        {
+          "name": "test_a_breaking_change_makes_a_major",
+          "line": 80
+        },
+        {
+          "name": "test_a_chosen_bump_and_a_release_candidate",
+          "line": 86
+        },
+        {
+          "name": "test_nothing_unreleased_is_refused",
+          "line": 91
+        },
+        {
+          "name": "test_apply_dates_the_notes_and_sets_every_version",
+          "line": 96
+        },
+        {
+          "name": "test_a_version_cannot_be_released_twice",
+          "line": 115
+        },
+        {
+          "name": "test_check_writes_nothing",
+          "line": 120
         }
       ]
     },
@@ -383,9 +519,9 @@
       ]
     },
     ".claude/skills/noar-intelligent-development/SKILL.md": {
-      "sha256": "7b5ca293a2ab151834fb57b9ebc55bed2e572f8db43d73c226af34b0862b8fee",
+      "sha256": "8eb03e72fd2fa215cf21b9c75037fdc1dc196e11588c14cc3d8b8018fc048f1b",
       "language": "Markdown",
-      "bytes": 13747,
+      "bytes": 14215,
       "symbols": []
     },
     ".dockerignore": {
@@ -406,16 +542,28 @@
       "bytes": 1864,
       "symbols": []
     },
-    ".github/workflows/release.yml": {
-      "sha256": "2cf06d95c4c333dff72f9b2fabbe14286afc25f0a95c7b85ada57a01f283b888",
+    ".github/workflows/prepare-release.yml": {
+      "sha256": "4fa956b74ebfede388fe0cebe016a0bf07497514d7c0fd222e2da740259a5661",
       "language": "YAML",
-      "bytes": 1538,
+      "bytes": 3303,
+      "symbols": []
+    },
+    ".github/workflows/release.yml": {
+      "sha256": "a468e74ebd9cce7d0e825c21571b7f72e8a57cfb73463c266e766a409640ce8a",
+      "language": "YAML",
+      "bytes": 1631,
+      "symbols": []
+    },
+    ".github/workflows/tag-release.yml": {
+      "sha256": "35ee83bb78c4d3dbccc08c53f913d3593f754a2738cd9023f43c0e54cc6c5d82",
+      "language": "YAML",
+      "bytes": 1600,
       "symbols": []
     },
     ".github/workflows/validate.yml": {
-      "sha256": "f779e647d7aba97a3b355417f18aedadef4662d678e1b2edb8b8b340a249781a",
+      "sha256": "88b80612e36dfc8d2b29f75114ab9c9ba2387614916c0ca795c0596e7bec098c",
       "language": "YAML",
-      "bytes": 2612,
+      "bytes": 2750,
       "symbols": []
     },
     ".gitignore": {
@@ -461,9 +609,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "970ca2be08a35b51c222aa310359c9657b8a10538380fb45f4da50b46cdc182c",
+      "sha256": "ba1ca210d300290efdc629b98014a7cf0828fb7ccdd3741dcf77ff5bf9f661e5",
       "language": "Markdown",
-      "bytes": 9431,
+      "bytes": 9723,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -16622,9 +16770,9 @@
       "symbols": []
     },
     "docs/releasing.md": {
-      "sha256": "96a99cdf6c212e49e3391cbe6377f1bc486425ceba00553a042d186a60b6094c",
+      "sha256": "f8132174647e5624c77c9195de24938d74a0f487b4e22df72656eeaa86ac84ae",
       "language": "Markdown",
-      "bytes": 2772,
+      "bytes": 3735,
       "symbols": []
     },
     "docs/remote_source.md": {

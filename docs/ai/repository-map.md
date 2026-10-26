@@ -6,8 +6,8 @@ Machine-generated navigation index; verify behavior against current source code.
 
 - `(root)/`: 18 indexed files
 - `.cargo/`: 1 indexed files
-- `.claude/`: 31 indexed files
-- `.github/`: 4 indexed files
+- `.claude/`: 34 indexed files
+- `.github/`: 6 indexed files
 - `.vscode/`: 2 indexed files
 - `assets/`: 1 indexed files
 - `backend/`: 187 indexed files
@@ -21,14 +21,14 @@ Machine-generated navigation index; verify behavior against current source code.
 
 - Rust: 183
 - Vue: 74
-- Markdown: 51
+- Markdown: 52
 - TypeScript: 48
 - JSON: 24
 - SQL: 17
 - Other: 11
-- Python: 7
+- Python: 9
+- YAML: 6
 - TOML: 4
-- YAML: 4
 - Build: 1
 - HTML: 1
 - CSS: 1

@@ -16,6 +16,7 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 - `find <topic>`: refresh the map only if stale, query paths/symbols and confirm in current source.
 - `docs <topic>`: update only relevant documentation, using `noar-documentation` (Haiku) for substantial writing; prefer a direct small edit for trivial changes.
 - `release-review`: inspect SemVer, changelog, migrations, release tags, GitHub Actions and Docker publication with `noar-release-review` (Haiku); **read-only**.
+- `release [patch|minor|major|rc.N]`: prepare the next release with `noar-release-manager` (Sonnet): notes against commits, proposed SemVer, gates, and — when asked — the `Release X.Y.Z` pull request. Never tags, merges or publishes; merging that pull request does (see `docs/releasing.md`).
 - `test integration`: verify frontend ↔ Rust API ↔ disposable SQLite in a **user-approved isolated staging environment** with actual evidence; no five-voter council by default.
 - `test e2e`: run focused Playwright browser checks against verified staging only; inspect `qa/e2e/README.md` and never run against production.
 - `test full-system`: coordinate staged browser/API/DB/scheduler/media output testing with synthetic fixtures and explicit user approval; report independently verified and missing checks.
@@ -63,6 +64,7 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 - `noar-map-maintainer` (Haiku) — refresh navigation index, check note freshness.
 - `noar-documentation` (Haiku) — user/developer docs, README, API comments.
 - `noar-release-review` (Haiku) — READ-ONLY changelog/CI/migration/version review.
+- `noar-release-manager` (Sonnet) — prepares releases with `.claude/scripts/prepare_release.py`; opens the release pull request only when asked; never tags or publishes.
 - FRONTEND council for frontend audits only: backend/API integration, frontend, visual design, accessibility and functional reviewers.
 - BACKEND council for backend audits only: backend Rust/API, media engine, security/authorization, persistence/migrations and reliability/testing reviewers.
 - Each council has five independent ballots; do not pool, reuse or fabricate votes across councils. Full audits are expensive and intentional.

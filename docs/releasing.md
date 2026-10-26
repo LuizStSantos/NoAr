@@ -22,22 +22,37 @@ built from it are never published as `latest`.
 
 ## Making a release
 
-1. On a branch, move everything under **Unreleased** in `CHANGELOG.md` into a
-   new section `## [X.Y.Z] - YYYY-MM-DD`, and update the links at the bottom.
-2. Set the version in `Cargo.toml` (`[workspace.package] version`), in
-   `package.json`, and in the root entries of `package-lock.json`. Then run
-   `cargo build` so `Cargo.lock` follows.
-3. Open a pull request named `Release X.Y.Z`, and merge it when CI is green.
-4. Tag the merge commit and push the tag:
+Releases are prepared by a workflow, and published when a person merges its
+pull request:
 
-   ```bash
-   git checkout main && git pull
-   git tag -a vX.Y.Z -m "NoAr X.Y.Z"
-   git push origin vX.Y.Z
-   ```
+1. **Actions › Prepare release › Run workflow**. Leave **bump** on `auto`, or
+   pick `patch`, `minor` or `major`; **pre** makes a release candidate
+   (`rc.1`). It works out the next version from the **Unreleased** notes —
+   `### Removed`, `### Breaking` or a `**Breaking**` entry make a MAJOR,
+   `### Added` or a new migration since the last tag a MINOR, anything else a
+   PATCH — then dates the notes as `## [X.Y.Z] - YYYY-MM-DD`, updates the
+   links at the bottom, sets the version in `Cargo.toml`, `Cargo.lock`,
+   `package.json` and `package-lock.json`, and opens the pull request
+   `Release X.Y.Z` with Validate running on it.
+2. Review the notes and the number in that pull request, and merge it when
+   CI is green.
+3. **Tag release** then tags the merge commit `vX.Y.Z` and starts the release
+   and image workflows for it.
+
+The same steps run locally with `python3 .claude/scripts/prepare_release.py`
+(`--check` only prints the plan), and the `noar-release-manager` agent
+(`/noar-intelligent-development release`) checks the notes against the
+commits, runs the gates and prepares the pull request. A tag pushed by hand
+(`git tag -a vX.Y.Z -m "NoAr X.Y.Z" && git push origin vX.Y.Z`) still
+releases as before.
+
+Prepare release needs *Allow GitHub Actions to create and approve pull
+requests* checked under **Settings › Actions › General › Workflow
+permissions**.
 
 For a tag, the workflows then:
 
+- run Validate (tests, lints, build) and stop if it fails;
 - check that the tag matches the version in `Cargo.toml`, and stop if it does
   not;
 - publish the image as `ghcr.io/luizstsantos/noar:X.Y.Z` and `:X.Y`;
