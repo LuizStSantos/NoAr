@@ -461,9 +461,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "645f003abdd8f49d96e6e992268d2da78b70bb43e7dda4bf6e64927c2c9219a7",
+      "sha256": "7612be735bed4ab3ea689d39d3986b4b23cd2e9d5b75667a798d3492d7d9fbac",
       "language": "Markdown",
-      "bytes": 4951,
+      "bytes": 5488,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -17801,9 +17801,9 @@
       ]
     },
     "frontend/src/components/player/PlaylistPanel.vue": {
-      "sha256": "12c9ef5a2fee46fc8c94613721e70b2e6fc029f56037d79590a75d0bf4e84d98",
+      "sha256": "ab6d50989bb66d01e2703023948d0b393f0e86ae8f1dcb5ed456338edc9f39ea",
       "language": "Vue",
-      "bytes": 67577,
+      "bytes": 67827,
       "symbols": [
         {
           "name": "emit",
@@ -21653,9 +21653,9 @@
       ]
     },
     "frontend/src/composables/authFetch.ts": {
-      "sha256": "8ab801f97a8e289fa0f8781a1f277d2ea7ab78c499c248c3206c9b96485ae3ca",
+      "sha256": "9ee01a525d55f2183222734e51b5f0ee21dd1177d84f8f0d5390eba67c2d8dd9",
       "language": "TypeScript",
-      "bytes": 3374,
+      "bytes": 3491,
       "symbols": [
         {
           "name": "AuthResponseType",
@@ -21671,27 +21671,27 @@
         },
         {
           "name": "fetchErrorMessage",
-          "line": 18
+          "line": 23
         },
         {
           "name": "authFetch",
-          "line": 37
+          "line": 42
         },
         {
           "name": "authFetchRaw",
-          "line": 59
+          "line": 64
         },
         {
           "name": "send",
-          "line": 68
+          "line": 73
         },
         {
           "name": "defaultResponseType",
-          "line": 91
+          "line": 96
         },
         {
           "name": "readResponse",
-          "line": 95
+          "line": 100
         }
       ]
     },
@@ -22554,15 +22554,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "8932f778b6af311156924a849f46f8f175197298edaedf9299f6a1301c742afe",
+      "sha256": "69160de3804bf474594ea6beb3c3a0365c1cec3f7dad50a3c69b524f4a621cbd",
       "language": "TypeScript",
-      "bytes": 96666,
+      "bytes": 96804,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "563e7b139aab5ff7a0f4b7f7bcae4bd608ba5ad2488157e2024e6c7bc84c9d7a",
+      "sha256": "3132afe3d1724e8126a5bb250294937ca2e93a42b3b72352fd4064d4693de521",
       "language": "TypeScript",
-      "bytes": 101445,
+      "bytes": 101594,
       "symbols": []
     },
     "frontend/src/locales/ru-RU.ts": {
@@ -22584,9 +22584,9 @@
       "symbols": []
     },
     "frontend/src/stores/auth.ts": {
-      "sha256": "1bf8fcc203e207bebd50d9d13cda2f7a4377fdc9ad305d32fef54b9f301da6a7",
+      "sha256": "161820e4fdbfbf4cf25450fe535b609bc492fea2e22ea73b3a53f2c2aa034fd0",
       "language": "TypeScript",
-      "bytes": 10681,
+      "bytes": 11154,
       "symbols": [
         {
           "name": "LoginResult",
@@ -22648,9 +22648,9 @@
       ]
     },
     "frontend/src/stores/playlist.ts": {
-      "sha256": "db33ce959984e5d34381e16a5516cc0f8352f9f753741dc3fa0a28caf75dbd5e",
+      "sha256": "c77c3d3e407de04d537000228cdb906eb3e719ed9d6ed2cbc2eb73d83bd2d966",
       "language": "TypeScript",
-      "bytes": 4611,
+      "bytes": 4896,
       "symbols": [
         {
           "name": "snapshot",
