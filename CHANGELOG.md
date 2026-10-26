@@ -11,6 +11,38 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- **Convert uploaded videos to the output format**: with the new switch in
+  Settings › Playlist and storage, each uploaded video is converted once to
+  the output's size and frame rate, high-quality H.264 and 48 kHz AAC, so
+  the playout no longer scales it or changes its frame rate on air, and
+  damaged files are rewritten from what decodes. Storage shows the progress
+  of each one ([docs](docs/uploads.md)).
+- **SCTE-35 breaks from encoders and automation**: a key, like the logo
+  key, lets vMix, OBS, Companion or a script mark and cancel breaks at
+  `/scte35/{id}/break` and `/scte35/{id}/cancel` without logging in.
+  Settings › Ad breaks has a tutorial with the addresses ready to copy
+  ([docs](docs/ad_breaks.md#from-an-encoder-or-an-automation-with-the-scte-35-key)).
+
+### Changed
+
+- The Player's **Live** view shows only the air: preview, clock and
+  controls. The library and the playlist are in **Build the playlist**,
+  where they fill the screen: the library and the playlist header (date,
+  undo, Save) stay put and only the list scrolls.
+
+### Fixed
+
+- The light Player preview flooded the channel log with h264 errors
+  ("non-existing PPS 0 referenced", "Missing reference picture", "no
+  frame!"). Joining the stream mid-way, its analysis often ended before the
+  first key frame of a 1080p stream, so it failed and started again every
+  second. It now waits for a key frame, retries less often when it fails,
+  and keeps its own messages out of the channel log.
+- After a seek, or when joining a live source, the playout waits for a key
+  frame instead of decoding pictures whose references never came.
+
 ## [1.2.0] - 2026-10-26
 
 ### Added
