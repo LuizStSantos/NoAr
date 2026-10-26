@@ -11,6 +11,17 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-10-26
+
+### Fixed
+
+- A playlist saved from the Player, the API or an import could be read back
+  empty or half-written for a moment, because the write was not finished
+  when saving reported success. Playlists are now written in full under a
+  hidden name and then put in place in one rename, so the playout and the
+  API always read a whole playlist. This also made the release of 1.4.1
+  fail its tests.
+
 ## [1.4.1] - 2026-10-26
 
 ### Fixed
@@ -332,7 +343,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...v1.3.0
