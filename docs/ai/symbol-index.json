@@ -609,9 +609,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "63530e22cb9cf5b74c99d63023c7b1512f3c4d2ccb06d7fdda6094e055fbd111",
+      "sha256": "2385f6147a2933ff6305ed82a359a09220ddcf53a2ef5463e3ac4e309f1cb359",
       "language": "Markdown",
-      "bytes": 15138,
+      "bytes": 16552,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -621,7 +621,7 @@
       "symbols": []
     },
     "Cargo.toml": {
-      "sha256": "d1d2922d65f32897723f41a0e6f65e7884aafcecaf28f506a454c612988f278e",
+      "sha256": "d8f9a92ee72f6b1e9381fbbdb2b81b157b9ca535f9559e6967e7d5b34f5e3f05",
       "language": "TOML",
       "bytes": 1084,
       "symbols": []
@@ -5742,9 +5742,9 @@
       ]
     },
     "backend/app/src/utils/convert.rs": {
-      "sha256": "57b233edfd95b3a5aa71f1633f7757f868cf72ab0c3ea5f73ee4f9d01fd820b9",
+      "sha256": "09e2c85c6dc67f7ed3fded8db9049e12537123b98dbe1c693b32df97cf2f0510",
       "language": "Rust",
-      "bytes": 11178,
+      "bytes": 11423,
       "symbols": [
         {
           "name": "ConversionState",
@@ -5824,11 +5824,11 @@
         },
         {
           "name": "tests",
-          "line": 349
+          "line": 355
         },
         {
           "name": "results_keep_the_name_when_the_container_takes_h264",
-          "line": 353
+          "line": 359
         }
       ]
     },
@@ -11391,105 +11391,125 @@
       ]
     },
     "backend/engine/src/convert.rs": {
-      "sha256": "c8ccb11ce067e0c6abbfcf29324bb127137b06ea91631d30c3983674d99c4eca",
+      "sha256": "45bc81b2901fc76eb5074d3a675f543231b5b18a2b8ce1e0b57e5da5755a6795",
       "language": "Rust",
-      "bytes": 25166,
+      "bytes": 32390,
       "symbols": [
         {
           "name": "ConvertTarget",
-          "line": 31
+          "line": 39
         },
         {
           "name": "MediaShape",
-          "line": 40
+          "line": 48
         },
         {
           "name": "MediaShape",
-          "line": 51
+          "line": 59
         },
         {
           "name": "matches",
-          "line": 53
+          "line": 61
         },
         {
           "name": "probe_shape",
-          "line": 72
+          "line": 80
+        },
+        {
+          "name": "video_matches",
+          "line": 133
         },
         {
           "name": "convert_to_output",
-          "line": 125
+          "line": 164
+        },
+        {
+          "name": "convert",
+          "line": 193
         },
         {
           "name": "Sink",
-          "line": 399
+          "line": 493
         },
         {
           "name": "Sink",
-          "line": 405
+          "line": 499
         },
         {
           "name": "write_video",
-          "line": 406
+          "line": 500
         },
         {
           "name": "write",
-          "line": 416
+          "line": 510
         },
         {
           "name": "AudioPath",
-          "line": 431
+          "line": 525
         },
         {
           "name": "AudioPath",
-          "line": 441
-        },
-        {
-          "name": "drain_decoder",
-          "line": 442
-        },
-        {
-          "name": "take",
-          "line": 466
-        },
-        {
-          "name": "encode_ready",
-          "line": 478
-        },
-        {
-          "name": "finish",
-          "line": 505
-        },
-        {
-          "name": "write",
-          "line": 516
-        },
-        {
-          "name": "tests",
-          "line": 529
-        },
-        {
-          "name": "write_test_clip",
           "line": 535
         },
         {
-          "name": "video_stream_index",
-          "line": 626
+          "name": "drain_decoder",
+          "line": 536
         },
         {
-          "name": "drain",
+          "name": "take",
+          "line": 561
+        },
+        {
+          "name": "encode_ready",
+          "line": 573
+        },
+        {
+          "name": "finish",
+          "line": 600
+        },
+        {
+          "name": "write",
+          "line": 620
+        },
+        {
+          "name": "tests",
           "line": 633
         },
         {
+          "name": "write_test_clip",
+          "line": 639
+        },
+        {
+          "name": "video_stream_index",
+          "line": 730
+        },
+        {
+          "name": "drain",
+          "line": 737
+        },
+        {
           "name": "drain_audio",
-          "line": 648
+          "line": 752
+        },
+        {
+          "name": "audio_seconds",
+          "line": 767
+        },
+        {
+          "name": "video_packets",
+          "line": 790
         },
         {
           "name": "a_file_in_another_format_comes_out_in_the_target_one",
-          "line": 664
+          "line": 799
+        },
+        {
+          "name": "a_picture_already_in_the_output_format_is_copied",
+          "line": 849
         },
         {
           "name": "a_stopped_conversion_fails",
-          "line": 711
+          "line": 887
         }
       ]
     },
@@ -12686,9 +12706,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "08d2be4f369bb4ba6b9d4dd82cf6a75a634cfbe699e09b35d421f78517d82417",
+      "sha256": "7fe9bf5909e101b3e96c87cd7033e8b6a60f4e6aac8b759ab4b18861e4a3c680",
       "language": "Rust",
-      "bytes": 42513,
+      "bytes": 42528,
       "symbols": [
         {
           "name": "analysis",
@@ -15905,9 +15925,9 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "478196bebbb88ed0a0fe992f44a4f6f9b695be291d5f9f0edddf1e542a17b87d",
+      "sha256": "dbf24af3c123d8e650605b22edd484ccfe097d4b1161fe20244319d336702aa7",
       "language": "Rust",
-      "bytes": 139764,
+      "bytes": 139775,
       "symbols": [
         {
           "name": "PlaybackSkipped",
@@ -17298,9 +17318,9 @@
       "symbols": []
     },
     "docs/ad_breaks.md": {
-      "sha256": "439d96831ebcb8585cd7774e253b9258f10b21adf56e6a04d810749e98bc70ba",
+      "sha256": "aff8f413ef6a094c2b82a4ca73c90eb161028d76ee94d1bee26a4a4d2cb07a9c",
       "language": "Markdown",
-      "bytes": 8765,
+      "bytes": 8950,
       "symbols": []
     },
     "docs/api.md": {
@@ -17316,9 +17336,9 @@
       "symbols": []
     },
     "docs/commercials.md": {
-      "sha256": "07bc84208c5dc61aa95016e460bef2d878d2291362994fd50046c1085df26c44",
+      "sha256": "417ac7988391d7b6c4664afe5ee013e3686957050d9a233e568908a637575f9d",
       "language": "Markdown",
-      "bytes": 2868,
+      "bytes": 3034,
       "symbols": []
     },
     "docs/developer.md": {
@@ -17358,9 +17378,9 @@
       "symbols": []
     },
     "docs/logo.md": {
-      "sha256": "7840b6b96ce02938f9de6b61625cc3acbe0fba8f79f1b937a5029b5daacada2a",
+      "sha256": "a16cd71b06cdaf5f426f4512faaaf55748ab50ca720be895d0a4aeaf56d4a3b3",
       "language": "Markdown",
-      "bytes": 3609,
+      "bytes": 3673,
       "symbols": []
     },
     "docs/notifications.md": {
@@ -17418,9 +17438,9 @@
       "symbols": []
     },
     "docs/uploads.md": {
-      "sha256": "6d8de7609ab27dbc219652d732ebaeb5e0e80758bd873d729a8b7d539ac57b1d",
+      "sha256": "c155a7aadf2e4870dbc91e3350fb0cd32d70e2b0f58d2bb5b02795266bb93c86",
       "language": "Markdown",
-      "bytes": 2049,
+      "bytes": 2631,
       "symbols": []
     },
     "docs/xmltv.md": {
@@ -18110,9 +18130,9 @@
       ]
     },
     "frontend/src/components/player/ClipEditor.vue": {
-      "sha256": "9c2875ff79e156ef0e708fc0aab036e3704c10a8c8310744fb314d9c1160a375",
+      "sha256": "0df8d0793f91d7ed9ffa33d8aa72652fdfcd6a460bc95dc29d5d1316cb8ba6a9",
       "language": "Vue",
-      "bytes": 15910,
+      "bytes": 16556,
       "symbols": [
         {
           "name": "props",
@@ -19064,9 +19084,9 @@
       ]
     },
     "frontend/src/components/player/PlaylistPanel.vue": {
-      "sha256": "7101f24a16edede6a47ad88b6bdaf0c891a3ea013e5710b22d843ef8b97abbdd",
+      "sha256": "81887f4fcd715500ceee819cbfad559b9243686035a4e91d5a5e68cb735afa5b",
       "language": "Vue",
-      "bytes": 76520,
+      "bytes": 76806,
       "symbols": [
         {
           "name": "props",
@@ -19575,9 +19595,9 @@
       ]
     },
     "frontend/src/components/report/ReportSummary.vue": {
-      "sha256": "afb99a1c9dab138065784d9b440c1bc1937678f5963a84cd67a6632cdbc10351",
+      "sha256": "7457e3685c03740a55d05bab7fe9d8728a40b8e421e1684d975c0f953022320e",
       "language": "Vue",
-      "bytes": 6764,
+      "bytes": 7069,
       "symbols": [
         {
           "name": "props",
@@ -22452,249 +22472,249 @@
       ]
     },
     "frontend/src/components/storage/LogoMarksEditor.vue": {
-      "sha256": "3fe1c9fe6fe07d58efceea2086bca179157f4306ecb993548976e46a60cc1f1f",
+      "sha256": "e607fb02481b3cc0843f7c48a7e90e6dd761e7c99285c3d84aa10980ce7ffa68",
       "language": "Vue",
-      "bytes": 33238,
+      "bytes": 36048,
       "symbols": [
         {
           "name": "props",
-          "line": 21
+          "line": 22
         },
         {
           "name": "emit",
-          "line": 31
+          "line": 32
         },
         {
           "name": "configStore",
-          "line": 34
-        },
-        {
-          "name": "indexStore",
           "line": 35
         },
         {
+          "name": "indexStore",
+          "line": 36
+        },
+        {
           "name": "MAX_SPANS",
-          "line": 37
+          "line": 38
         },
         {
           "name": "marks",
-          "line": 42
-        },
-        {
-          "name": "baseline",
           "line": 43
         },
         {
+          "name": "baseline",
+          "line": 44
+        },
+        {
           "name": "kind",
-          "line": 45
+          "line": 46
         },
         {
           "name": "spans",
-          "line": 47
-        },
-        {
-          "name": "loading",
           "line": 48
         },
         {
-          "name": "saving",
+          "name": "loading",
           "line": 49
         },
         {
-          "name": "videoUrl",
+          "name": "saving",
           "line": 50
         },
         {
-          "name": "logoUrl",
+          "name": "videoUrl",
           "line": 51
         },
         {
-          "name": "logoImage",
-          "line": 53
+          "name": "logoUrl",
+          "line": 52
         },
         {
-          "name": "videoFailed",
+          "name": "logoImage",
           "line": 54
         },
         {
-          "name": "video",
+          "name": "videoFailed",
           "line": 55
         },
         {
-          "name": "position",
+          "name": "video",
           "line": 56
         },
         {
-          "name": "duration",
+          "name": "position",
           "line": 57
         },
         {
+          "name": "duration",
+          "line": 58
+        },
+        {
           "name": "pendingFrom",
-          "line": 59
+          "line": 60
         },
         {
           "name": "drafts",
-          "line": 61
-        },
-        {
-          "name": "confirmClose",
           "line": 62
         },
         {
-          "name": "dirty",
-          "line": 64
+          "name": "confirmClose",
+          "line": 63
         },
         {
-          "name": "sorted",
+          "name": "dirty",
           "line": 65
         },
         {
+          "name": "sorted",
+          "line": 66
+        },
+        {
           "name": "sortedOf",
-          "line": 67
+          "line": 68
         },
         {
           "name": "trimFrom",
-          "line": 72
+          "line": 73
         },
         {
           "name": "trimTo",
-          "line": 76
+          "line": 77
         },
         {
           "name": "trimInvalid",
-          "line": 80
-        },
-        {
-          "name": "trim",
           "line": 81
         },
         {
-          "name": "normalized",
-          "line": 86
+          "name": "trim",
+          "line": 82
         },
         {
-          "name": "trim",
+          "name": "normalized",
           "line": 87
         },
         {
-          "name": "whole",
+          "name": "trim",
           "line": 88
         },
         {
+          "name": "whole",
+          "line": 89
+        },
+        {
           "name": "previewingTrim",
-          "line": 94
+          "line": 95
         },
         {
           "name": "playTrim",
-          "line": 96
+          "line": 97
         },
         {
           "name": "playOut",
-          "line": 103
+          "line": 104
         },
         {
           "name": "timeUpdate",
-          "line": 109
+          "line": 110
         },
         {
           "name": "trimText",
-          "line": 118
+          "line": 119
         },
         {
           "name": "setTrimText",
-          "line": 122
+          "line": 123
         },
         {
           "name": "seconds",
-          "line": 125
+          "line": 126
+        },
+        {
+          "name": "selectedSpan",
+          "line": 138
+        },
+        {
+          "name": "changeSpan",
+          "line": 141
+        },
+        {
+          "name": "trimCutNow",
+          "line": 148
         },
         {
           "name": "selectKind",
-          "line": 136
+          "line": 150
         },
         {
           "name": "trimHere",
-          "line": 143
+          "line": 158
         },
         {
           "name": "seconds",
-          "line": 144
-        },
-        {
-          "name": "settleTrim",
-          "line": 155
-        },
-        {
-          "name": "clearTrim",
           "line": 159
         },
         {
+          "name": "settleTrim",
+          "line": 170
+        },
+        {
+          "name": "clearTrim",
+          "line": 174
+        },
+        {
           "name": "inside",
-          "line": 164
+          "line": 179
         },
         {
           "name": "hiddenNow",
-          "line": 169
+          "line": 184
         },
         {
           "name": "breakNow",
-          "line": 171
-        },
-        {
-          "name": "insideNow",
-          "line": 173
-        },
-        {
-          "name": "label",
-          "line": 176
-        },
-        {
-          "name": "scope",
-          "line": 177
-        },
-        {
-          "name": "prerollLabel",
-          "line": 183
-        },
-        {
-          "name": "copyFromLogo",
           "line": 186
         },
         {
+          "name": "insideNow",
+          "line": 188
+        },
+        {
+          "name": "label",
+          "line": 191
+        },
+        {
+          "name": "scope",
+          "line": 192
+        },
+        {
+          "name": "prerollLabel",
+          "line": 198
+        },
+        {
+          "name": "copyFromLogo",
+          "line": 201
+        },
+        {
           "name": "overlaps",
-          "line": 190
+          "line": 205
         },
         {
           "name": "invalid",
-          "line": 193
-        },
-        {
-          "name": "list",
-          "line": 197
-        },
-        {
-          "name": "formatTime",
-          "line": 207
-        },
-        {
-          "name": "total",
           "line": 208
         },
         {
+          "name": "list",
+          "line": 212
+        },
+        {
+          "name": "formatTime",
+          "line": 222
+        },
+        {
+          "name": "total",
+          "line": 223
+        },
+        {
           "name": "h",
-          "line": 209
-        },
-        {
-          "name": "m",
-          "line": 210
-        },
-        {
-          "name": "s",
-          "line": 211
-        },
-        {
-          "name": "parseTime",
-          "line": 217
+          "line": 224
         }
       ]
     },
@@ -22929,6 +22949,157 @@
         {
           "name": "dialog",
           "line": 259
+        }
+      ]
+    },
+    "frontend/src/components/storage/SpanBar.vue": {
+      "sha256": "c8fadf953d32a57abe42236f4f6ee8dd40c9e06f85745db568b2c12805ca38d6",
+      "language": "Vue",
+      "bytes": 8171,
+      "symbols": [
+        {
+          "name": "props",
+          "line": 13
+        },
+        {
+          "name": "emit",
+          "line": 29
+        },
+        {
+          "name": "MIN_LENGTH",
+          "line": 37
+        },
+        {
+          "name": "track",
+          "line": 41
+        },
+        {
+          "name": "dragging",
+          "line": 42
+        },
+        {
+          "name": "fill",
+          "line": 44
+        },
+        {
+          "name": "handle",
+          "line": 45
+        },
+        {
+          "name": "percent",
+          "line": 47
+        },
+        {
+          "name": "round",
+          "line": 51
+        },
+        {
+          "name": "neighbours",
+          "line": 56
+        },
+        {
+          "name": "span",
+          "line": 57
+        },
+        {
+          "name": "before",
+          "line": 58
+        },
+        {
+          "name": "after",
+          "line": 59
+        },
+        {
+          "name": "set",
+          "line": 76
+        },
+        {
+          "name": "span",
+          "line": 77
+        },
+        {
+          "name": "value",
+          "line": 84
+        },
+        {
+          "name": "secondsAt",
+          "line": 92
+        },
+        {
+          "name": "box",
+          "line": 93
+        },
+        {
+          "name": "grab",
+          "line": 98
+        },
+        {
+          "name": "drag",
+          "line": 105
+        },
+        {
+          "name": "current",
+          "line": 106
+        },
+        {
+          "name": "release",
+          "line": 114
+        },
+        {
+          "name": "key",
+          "line": 119
+        },
+        {
+          "name": "span",
+          "line": 120
+        },
+        {
+          "name": "step",
+          "line": 121
+        },
+        {
+          "name": "current",
+          "line": 122
+        },
+        {
+          "name": "moves",
+          "line": 123
+        },
+        {
+          "name": "click",
+          "line": 138
+        },
+        {
+          "name": "pick",
+          "line": 144
+        },
+        {
+          "name": "label",
+          "line": 150
+        },
+        {
+          "name": "total",
+          "line": 151
+        },
+        {
+          "name": "h",
+          "line": 152
+        },
+        {
+          "name": "m",
+          "line": 153
+        },
+        {
+          "name": "s",
+          "line": 154
+        },
+        {
+          "name": "handleLabel",
+          "line": 159
+        },
+        {
+          "name": "key",
+          "line": 160
         }
       ]
     },
@@ -24184,15 +24355,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "5152d1c98166c3ffdcfcb1c58e494dd9b390112e5f579fe5fc7f25a5751511f8",
+      "sha256": "88088666593cf6b61c0745b7651929c62486ec83553b391c3dc8c006262a8710",
       "language": "TypeScript",
-      "bytes": 107047,
+      "bytes": 107340,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "2adaf8947512cad565908221401d880eaee20fa0d5ac6ca1659db1db656a6608",
+      "sha256": "4e81df27f8a7e1e785145371f5dca06c494bce467d2db33b31262b27dc8c6a9c",
       "language": "TypeScript",
-      "bytes": 112099,
+      "bytes": 112412,
       "symbols": []
     },
     "frontend/src/locales/ru-RU.ts": {
@@ -25481,9 +25652,9 @@
       ]
     },
     "frontend/src/views/MediaView.vue": {
-      "sha256": "c8fe7d3e38883c16e4e2f6c9f2a16fa47e1cd630f730b828a17cfa980c5c9629",
+      "sha256": "57a2e119671f2adf3eaae08fd9fc3cd004c35c99dfc1684624501e83576facd6",
       "language": "Vue",
-      "bytes": 72640,
+      "bytes": 72856,
       "symbols": [
         {
           "name": "configStore",
@@ -26582,13 +26753,13 @@
       "symbols": []
     },
     "package-lock.json": {
-      "sha256": "f2f1115825671f1912524a43f03ffecc8504477ac132ac192f3c65367fb90dd4",
+      "sha256": "fb9d04e3069651cbcb1bd870f4110d7aa466d64a6295a6c23a3e909ef04c646c",
       "language": "JSON",
       "bytes": 215132,
       "symbols": []
     },
     "package.json": {
-      "sha256": "2a482112a8c9ee0a979063383bfbdcb12e9bda291a3162fef37fd405079042fa",
+      "sha256": "4d7cab76e934a06fe70b39cfd5cf1d26357cd5a4d48e79a82c038a834448f0f5",
       "language": "JSON",
       "bytes": 1526,
       "symbols": []

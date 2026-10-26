@@ -7,6 +7,11 @@
 //! The picture is fitted the way the playout fits it: the aspect ratio kept,
 //! with black bars. The video is H.264 at a high quality (it is the master
 //! the channel re-encodes), the sound AAC stereo.
+//!
+//! A video that already has the output's picture (H.264, 4:2:0, its size and
+//! frame rate) is copied as it is, and only its sound is converted: that
+//! takes seconds instead of a full encode. Should the copy fail, the file is
+//! encoded after all.
 
 use std::{
     path::Path,
@@ -20,10 +25,13 @@ use ffmpeg_next::{
     frame, media,
     software::{resampling, scaling},
 };
+use log::warn;
 
 use crate::{
     OutputConfig,
-    playout::{FrameRateConverter, VideoScale, black_video_frame, copy_video_frame},
+    playout::{
+        FrameRateConverter, VideoScale, black_video_frame, copy_video_frame, resample_audio_frame,
+    },
 };
 
 /// What a file is converted to.
@@ -119,6 +127,37 @@ pub fn probe_shape(path: &Path) -> Result<MediaShape> {
     })
 }
 
+/// Whether the file's picture is already the output's: H.264 in 4:2:0,
+/// progressive, of the target size, at a constant target frame rate. Its
+/// video can then be copied instead of encoded.
+pub fn video_matches(path: &Path, target: &ConvertTarget) -> Result<bool> {
+    let ictx = format::input(path).with_context(|| format!("cannot open {}", path.display()))?;
+    let Some(stream) = ictx.streams().best(media::Type::Video) else {
+        return Ok(false);
+    };
+    let parameters = stream.parameters();
+    // Unknown or progressive: interlaced video is encoded.
+    let progressive = unsafe { (*parameters.as_ptr()).field_order as i32 } <= 1;
+    let decoder = codec::context::Context::from_parameters(parameters)?
+        .decoder()
+        .video()?;
+    let at_target = |rate: Rational| {
+        rate.1 != 0
+            && rate.0 > 0
+            && (f64::from(rate.0) / f64::from(rate.1) - f64::from(target.fps)).abs() < 0.01
+    };
+    let average = stream.avg_frame_rate();
+
+    Ok(decoder.id() == codec::Id::H264
+        && decoder.format() == Pixel::YUV420P
+        && progressive
+        && decoder.width() == target.width
+        && decoder.height() == target.height
+        && at_target(stream.rate())
+        // A variable frame rate averages something else.
+        && (average.0 == 0 || at_target(average)))
+}
+
 /// Converts `input` to `output` (whose extension picks the container), in
 /// the target format. `progress` gets the share done, from 0 to 1; `cancel`
 /// stops it. Blocks: run it on a thread of its own.
@@ -133,6 +172,32 @@ pub fn convert_to_output(
         bail!("the output size, frame rate and sample rate must be set");
     }
 
+    if video_matches(input, &target).unwrap_or(false) {
+        match convert(input, output, target, cancel, &mut progress, true) {
+            Ok(()) => return Ok(()),
+            Err(error) if cancel.load(Ordering::Acquire) => return Err(error),
+            Err(error) => {
+                warn!(
+                    "Copying the video of {} failed, encoding it instead: {error:#}",
+                    input.display()
+                );
+                let _ = std::fs::remove_file(output);
+            }
+        }
+    }
+
+    convert(input, output, target, cancel, &mut progress, false)
+}
+
+/// With `copy_video`, the video packets go to the output as they are.
+fn convert(
+    input: &Path,
+    output: &Path,
+    target: ConvertTarget,
+    cancel: &AtomicBool,
+    progress: &mut impl FnMut(f64),
+    copy_video: bool,
+) -> Result<()> {
     let mut ictx =
         format::input(input).with_context(|| format!("cannot open {}", input.display()))?;
     let duration = (ictx.duration() > 0).then(|| ictx.duration() as f64 / 1_000_000.0);
@@ -142,6 +207,7 @@ pub fn convert_to_output(
         .context("the file has no video")?;
     let video_index = video_in.index();
     let video_time_base = video_in.time_base();
+    let video_parameters = video_in.parameters();
     let audio_in = ictx
         .streams()
         .best(media::Type::Audio)
@@ -175,34 +241,46 @@ pub fn convert_to_output(
         .flags()
         .contains(format::flag::Flags::GLOBAL_HEADER);
 
-    // Video: H.264, the output's size and frame rate.
-    let video_codec = codec::encoder::find_by_name("libx264")
-        .or_else(|| codec::encoder::find(codec::Id::H264))
-        .context("no H.264 encoder")?;
+    // Video: H.264, the output's size and frame rate; or the file's own,
+    // copied, when it already is that.
     let frame_time_base = Rational(1, target.fps as i32);
-    let mut video_stream = octx.add_stream(video_codec)?;
-    let mut video_context = codec::context::Context::new_with_codec(video_codec)
-        .encoder()
-        .video()?;
-    video_context.set_width(target.width);
-    video_context.set_height(target.height);
-    video_context.set_format(Pixel::YUV420P);
-    video_context.set_time_base(frame_time_base);
-    video_context.set_frame_rate(Some(Rational(target.fps as i32, 1)));
-    video_context.set_gop(target.fps * 2);
-    if global_header {
-        video_context.set_flags(codec::flag::Flags::GLOBAL_HEADER);
-    }
-    let mut video_options = Dictionary::new();
-    if video_codec.name() == "libx264" {
-        // A master to re-encode from: high quality, at a moderate CPU cost.
-        video_options.set("preset", "faster");
-        video_options.set("crf", "18");
-        video_options.set("threads", &threads.to_string());
-    }
-    let mut video_encoder = video_context.open_as_with(video_codec, video_options)?;
-    video_stream.set_parameters(&video_encoder);
-    let video_out = video_stream.index();
+    let (video_out, mut video_encoder) = if copy_video {
+        let mut stream = octx.add_stream(codec::encoder::find(codec::Id::None))?;
+        stream.set_parameters(video_parameters);
+        unsafe { (*(*stream.as_mut_ptr()).codecpar).codec_tag = 0 };
+
+        (stream.index(), None)
+    } else {
+        let video_codec = codec::encoder::find_by_name("libx264")
+            .or_else(|| codec::encoder::find(codec::Id::H264))
+            .context("no H.264 encoder")?;
+        let mut video_stream = octx.add_stream(video_codec)?;
+        let mut video_context = codec::context::Context::new_with_codec(video_codec)
+            .encoder()
+            .video()?;
+        video_context.set_width(target.width);
+        video_context.set_height(target.height);
+        video_context.set_format(Pixel::YUV420P);
+        video_context.set_time_base(frame_time_base);
+        video_context.set_frame_rate(Some(Rational(target.fps as i32, 1)));
+        video_context.set_gop(target.fps * 2);
+        if global_header {
+            video_context.set_flags(codec::flag::Flags::GLOBAL_HEADER);
+        }
+        let mut video_options = Dictionary::new();
+        if video_codec.name() == "libx264" {
+            // A master to re-encode from: CRF 18 keeps it visually the same.
+            // `veryfast` encodes about twice as fast as `faster` at this
+            // quality, in files no larger.
+            video_options.set("preset", "veryfast");
+            video_options.set("crf", "18");
+            video_options.set("threads", &threads.to_string());
+        }
+        let video_encoder = video_context.open_as_with(video_codec, video_options)?;
+        video_stream.set_parameters(&video_encoder);
+
+        (video_stream.index(), Some(video_encoder))
+    };
 
     // Sound: AAC stereo at the output's sample rate.
     let mut audio = match audio_decoder.as_ref() {
@@ -268,6 +346,8 @@ pub fn convert_to_output(
     let mut next_frame = 0_i64;
     let mut decoded = frame::Video::empty();
     let mut last_reported = 0.0;
+    // Copied video starts at 0, like the converted sound.
+    let mut copy_offset: Option<i64> = None;
 
     let mut sink = Sink {
         octx: &mut octx,
@@ -346,17 +426,34 @@ pub fn convert_to_output(
         let index = stream.index();
 
         if index == video_index {
-            // Damaged data is skipped, as the playout does.
-            if video_decoder.send_packet(&packet).is_err() {
-                continue;
-            }
+            let reached = match video_encoder.as_mut() {
+                Some(encoder) => {
+                    // Damaged data is skipped, as the playout does.
+                    if video_decoder.send_packet(&packet).is_err() {
+                        continue;
+                    }
 
-            if let Some(seconds) = handle_video(
-                &mut video_decoder,
-                &mut sink,
-                &mut video_encoder,
-                &mut next_frame,
-            )? && let Some(duration) = duration
+                    handle_video(&mut video_decoder, &mut sink, encoder, &mut next_frame)?
+                }
+                None => {
+                    let mut packet = packet;
+                    let Some(start) = packet.dts().or(packet.pts()) else {
+                        continue;
+                    };
+                    let offset = *copy_offset.get_or_insert(start);
+                    packet.set_pts(packet.pts().map(|pts| pts - offset));
+                    packet.set_dts(packet.dts().map(|dts| dts - offset));
+                    let reached = packet
+                        .pts()
+                        .map(|pts| pts as f64 * f64::from(video_time_base));
+                    sink.write(&mut packet, video_out, video_time_base)?;
+
+                    reached
+                }
+            };
+
+            if let Some(seconds) = reached
+                && let Some(duration) = duration
             {
                 let share = (seconds / duration).clamp(0.0, 1.0);
 
@@ -374,15 +471,12 @@ pub fn convert_to_output(
         }
     }
 
-    video_decoder.send_eof()?;
-    handle_video(
-        &mut video_decoder,
-        &mut sink,
-        &mut video_encoder,
-        &mut next_frame,
-    )?;
-    video_encoder.send_eof()?;
-    sink.write_video(&mut video_encoder)?;
+    if let Some(encoder) = video_encoder.as_mut() {
+        video_decoder.send_eof()?;
+        handle_video(&mut video_decoder, &mut sink, encoder, &mut next_frame)?;
+        encoder.send_eof()?;
+        sink.write_video(encoder)?;
+    }
 
     if let (Some(decoder), Some(path)) = (audio_decoder.as_mut(), audio.as_mut()) {
         decoder.send_eof()?;
@@ -451,11 +545,12 @@ impl AudioPath {
                 decoded.set_channel_layout(ChannelLayout::default(i32::from(decoded.channels())));
             }
 
-            let mut converted = frame::Audio::empty();
+            // Room for every sample the input makes at the new rate: an
+            // output the size of the input loses the difference each time.
             // A stream that changes its format midway is left as is.
-            if self.resampler.run(&decoded, &mut converted).is_err() {
+            let Ok(converted) = resample_audio_frame(&mut self.resampler, &decoded) else {
                 continue;
-            }
+            };
             self.take(&converted);
             self.encode_ready(sink, false)?;
         }
@@ -503,9 +598,18 @@ impl AudioPath {
     }
 
     fn finish(&mut self, sink: &mut Sink<'_>) -> Result<()> {
-        let mut converted = frame::Audio::empty();
+        // What the resampler still holds.
+        loop {
+            let mut converted = frame::Audio::new(
+                Sample::F32(format::sample::Type::Planar),
+                self.frame_size.max(1024),
+                ChannelLayout::STEREO,
+            );
+            converted.set_rate(self.encoder.rate());
 
-        if self.resampler.flush(&mut converted).is_ok() {
+            if self.resampler.flush(&mut converted).is_err() || converted.samples() == 0 {
+                break;
+            }
             self.take(&converted);
         }
         self.encode_ready(sink, true)?;
@@ -660,6 +764,37 @@ mod tests {
         Ok(())
     }
 
+    fn audio_seconds(path: &Path) -> f64 {
+        let mut ictx = format::input(path).unwrap();
+        let stream = ictx.streams().best(media::Type::Audio).unwrap();
+        let index = stream.index();
+        let mut decoder = codec::context::Context::from_parameters(stream.parameters())
+            .unwrap()
+            .decoder()
+            .audio()
+            .unwrap();
+        let mut samples = 0;
+        let mut decoded = frame::Audio::empty();
+        let mut rate = 0;
+        for (stream, packet) in ictx.packets() {
+            if stream.index() == index && decoder.send_packet(&packet).is_ok() {
+                while decoder.receive_frame(&mut decoded).is_ok() {
+                    samples += decoded.samples();
+                    rate = decoded.rate();
+                }
+            }
+        }
+        samples as f64 / f64::from(rate)
+    }
+
+    fn video_packets(path: &Path) -> usize {
+        format::input(path)
+            .unwrap()
+            .packets()
+            .filter(|(stream, _)| stream.parameters().medium() == media::Type::Video)
+            .count()
+    }
+
     #[test]
     fn a_file_in_another_format_comes_out_in_the_target_one() {
         ffmpeg_next::init().ok();
@@ -703,6 +838,47 @@ mod tests {
             (98..=102).contains(&frames),
             "{frames} frames for 4 s at 25 fps"
         );
+        // 44.1 kHz to 48 kHz: all the sound, not as many samples as came in.
+        let seconds = audio_seconds(&target_path);
+        assert!((3.9..=4.15).contains(&seconds), "{seconds} s of sound");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_picture_already_in_the_output_format_is_copied() {
+        ffmpeg_next::init().ok();
+        let dir = env::temp_dir().join(format!("noar_convert_copy_{}", process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("source.mkv");
+        let target_path = dir.join("converted.mkv");
+        // The output's picture; mono 44.1 kHz sound.
+        write_test_clip(&source, 320, 240, 25, 44_100, 1, 3.0).unwrap();
+        let target = ConvertTarget {
+            width: 320,
+            height: 240,
+            fps: 25,
+            sample_rate: 48_000,
+        };
+        assert!(video_matches(&source, &target).unwrap());
+        assert!(!video_matches(&source, &ConvertTarget { fps: 30, ..target }).unwrap());
+        assert!(!probe_shape(&source).unwrap().matches(&target));
+
+        convert_to_output(
+            &source,
+            &target_path,
+            target,
+            &AtomicBool::new(false),
+            |_| {},
+        )
+        .unwrap();
+
+        let shape = probe_shape(&target_path).unwrap();
+        assert!(shape.matches(&target), "{shape:?}");
+        // The same packets: copied, not encoded again.
+        assert_eq!(video_packets(&target_path), video_packets(&source));
+        let seconds = audio_seconds(&target_path);
+        assert!((2.9..=3.15).contains(&seconds), "{seconds} s of sound");
 
         let _ = std::fs::remove_dir_all(&dir);
     }

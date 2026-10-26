@@ -271,12 +271,22 @@ function apply() {
                     :style="{ left: `${bar.left}%`, width: `${bar.width}%` }"
                 />
             </div>
-            <div class="flex justify-between gap-2 font-mono text-[11px] text-muted">
-                <span>{{ preciseLength(0) }}</span>
-                <span class="text-accent-text">
-                    {{ t('onair.goesOnAir', { onAir: preciseLength(bar.onAir), length: preciseLength(bar.length) }) }}
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs">
+                <span class="flex flex-col leading-tight">
+                    <span class="text-muted">{{ t('onair.in') }}</span>
+                    <span class="font-mono tabular-nums">{{ preciseLength(parsedIn ?? 0) }}</span>
                 </span>
-                <span>{{ preciseLength(bar.length) }}</span>
+                <span
+                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-accent-soft text-accent-text font-medium whitespace-nowrap"
+                >
+                    <i class="bi bi-broadcast" aria-hidden="true" />{{
+                        t('onair.goesOnAir', { onAir: preciseLength(bar.onAir), length: preciseLength(bar.length) })
+                    }}
+                </span>
+                <span class="flex flex-col leading-tight text-right">
+                    <span class="text-muted">{{ t('onair.out') }}</span>
+                    <span class="font-mono tabular-nums">{{ preciseLength(parsedOut ?? bar.length) }}</span>
+                </span>
             </div>
             <div v-if="storagePath && !isRemote" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
                 <span v-if="savedInOut" class="text-muted">

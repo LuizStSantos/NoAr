@@ -1324,11 +1324,11 @@ const uploadAccept = computed(() =>
                                             @change="toggle(row.name)"
                                         />
                                     </td>
-                                    <td class="px-2 py-2 max-w-0 w-full">
+                                    <td class="px-2 py-2 sm:max-w-0 w-full">
                                         <button
                                             v-if="row.folder"
                                             type="button"
-                                            class="flex items-center gap-2.5 bg-transparent border-0 p-0 text-inherit cursor-pointer min-h-7 max-w-full"
+                                            class="flex items-center gap-2.5 bg-transparent border-0 p-0 text-inherit cursor-pointer min-h-7 max-w-full min-w-48"
                                             :aria-label="t('storage.open', { name: row.name })"
                                             @click="load(storageJoin(current, row.name))"
                                         >
@@ -1342,7 +1342,10 @@ const uploadAccept = computed(() =>
                                                 :commercial="commercialFolders.includes(row.name)"
                                             />
                                         </button>
-                                        <span v-else class="flex items-center gap-2.5 min-h-7 min-w-0">
+                                        <span
+                                            v-else
+                                            class="flex flex-wrap items-center gap-x-2.5 gap-y-1 min-h-7 min-w-48"
+                                        >
                                             <img
                                                 v-if="
                                                     row.file && isImage(row.name) && imageUrls.get(imageKey(row.file))
@@ -1366,7 +1369,7 @@ const uploadAccept = computed(() =>
                                             <button
                                                 v-if="isImage(row.name)"
                                                 type="button"
-                                                class="truncate bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
+                                                class="truncate max-w-[calc(100%-1.75rem)] bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
                                                 @click="openViewer(row.name)"
                                             >
                                                 {{ row.name }}
@@ -1374,7 +1377,7 @@ const uploadAccept = computed(() =>
                                             <button
                                                 v-else-if="isVideo(row.file)"
                                                 type="button"
-                                                class="truncate bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
+                                                class="truncate max-w-[calc(100%-1.75rem)] bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
                                                 :aria-label="t('storage.preview', { name: row.name })"
                                                 @click="openPreview(row)"
                                             >

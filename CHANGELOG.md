@@ -11,6 +11,38 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-26
+
+### Added
+
+- **Drag the stretches without logo and the SCTE-35 breaks**, like the
+  trim: each stretch has two handles on the bar of the video's panel in
+  Storage, moved with the mouse, a finger or the arrow keys, and stops at
+  the next stretch. The bar shows the trimmed parts, and the other kind of
+  marks below it ([docs](docs/commercials.md#a-break-inside-a-video)).
+
+### Changed
+
+- Under each bar of the video's panel and the Player's clip editor, the
+  play position, what happens at that point (on air or cut, logo shown or
+  off, programme or ad break) and the video's length are labelled, and the
+  trim tells how much airs and how much it cuts at each end.
+- On a phone: Storage shows each file's whole name with its tags beneath
+  (conversion, trimmed, marks); the Report's figures no longer overflow
+  their cards; Player playlist tags wrap and the in and out column is left
+  for wider screens.
+
+- **Converting uploaded videos is faster**: a video whose picture already
+  matches the output only has its sound converted, in seconds, and the
+  others are encoded about twice as fast at the same quality
+  ([docs](docs/uploads.md)).
+
+### Fixed
+
+- Converted uploads with sound at another sample rate (such as 44.1 kHz)
+  lost part of it: the sound fell behind the picture and its last seconds
+  were cut.
+
 ## [1.3.0] - 2026-10-26
 
 ### Added
@@ -289,7 +321,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/LuizStSantos/NoAr/compare/v1.0.0...v1.1.0

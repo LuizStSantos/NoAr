@@ -1559,7 +1559,7 @@ defineExpose({ addFile, addFiles })
         </div>
 
         <div v-else class="relative overflow-x-auto" :class="fill ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto' : ''">
-            <table class="w-full min-w-[760px] border-collapse text-[13px]" @dragend="dragEnd">
+            <table class="w-full min-w-[640px] md:min-w-[760px] border-collapse text-[13px]" @dragend="dragEnd">
                 <thead :class="fill ? 'lg:sticky lg:top-0 lg:z-[5] lg:bg-base-100' : ''">
                     <tr class="text-muted text-left text-xs">
                         <th class="ps-4 pe-1 py-2.5 w-[36px]">
@@ -1568,7 +1568,7 @@ defineExpose({ addFile, addFiles })
                         <th class="px-2 py-2.5 font-medium w-[96px]">{{ t('onair.time') }}</th>
                         <th class="px-2 py-2.5 font-medium">{{ t('onair.programFile') }}</th>
                         <th class="px-2 py-2.5 font-medium w-[72px]">{{ t('onair.length') }}</th>
-                        <th class="px-2 py-2.5 font-medium w-[120px]">{{ t('onair.inOut') }}</th>
+                        <th class="hidden md:table-cell px-2 py-2.5 font-medium w-[120px]">{{ t('onair.inOut') }}</th>
                         <th class="px-4 py-2.5 w-[128px]">
                             <span class="sr-only">{{ t('onair.actions') }}</span>
                         </th>
@@ -1676,7 +1676,7 @@ defineExpose({ addFile, addFiles })
                                 {{ clockTime(row.item.begin) }}
                             </td>
                             <td class="px-2 py-1.5 min-w-0">
-                                <span class="flex items-center gap-2 min-w-0">
+                                <span class="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
                                     <span
                                         class="cursor-grab text-subtle flex-none"
                                         draggable="true"
@@ -1704,7 +1704,7 @@ defineExpose({ addFile, addFiles })
                                     >
                                         {{ t('nav.onAir') }}
                                     </span>
-                                    <span class="truncate" :title="row.item.source">
+                                    <span class="truncate max-w-full" :title="row.item.source">
                                         <template v-if="row.item.title">
                                             {{ row.item.title }}
                                             <span class="text-muted">· {{ fileName(row.item.source) }}</span>
@@ -1722,7 +1722,9 @@ defineExpose({ addFile, addFiles })
                                         >
                                             {{ t('onair.commercialTag') }}
                                         </span>
-                                        <span class="text-xs text-subtle flex-none">{{ t('onair.noLogo') }}</span>
+                                        <span class="hidden sm:inline text-xs text-subtle flex-none">{{
+                                            t('onair.noLogo')
+                                        }}</span>
                                     </template>
                                     <span
                                         v-else-if="row.item.ad || programmes.roleOf(row.index) === 'break'"
@@ -1754,7 +1756,10 @@ defineExpose({ addFile, addFiles })
                                 </span>
                             </td>
                             <td class="px-2 py-1.5 font-mono">{{ lengthLabel(row.item.out - row.item.in) }}</td>
-                            <td class="px-2 py-1.5 font-mono" :class="row.past ? '' : 'text-muted'">
+                            <td
+                                class="hidden md:table-cell px-2 py-1.5 font-mono"
+                                :class="row.past ? '' : 'text-muted'"
+                            >
                                 {{ lengthLabel(row.item.in) }} · {{ lengthLabel(row.item.out) }}
                             </td>
                             <td class="px-4 py-1.5 text-right whitespace-nowrap">

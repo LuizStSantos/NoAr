@@ -1840,7 +1840,7 @@ fn trim_audio_to_limit(frame: &mut frame::Audio, timeline: &Timeline, limit_pts:
     }
 }
 
-fn resample_audio_frame(
+pub(crate) fn resample_audio_frame(
     resampler: &mut resampling::Context,
     input: &frame::Audio,
 ) -> Result<frame::Audio> {

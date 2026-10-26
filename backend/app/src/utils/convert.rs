@@ -19,7 +19,7 @@ use std::{
 };
 
 use log::*;
-use noar_engine::{ConvertTarget, convert_to_output, probe_shape};
+use noar_engine::{ConvertTarget, convert_to_output, probe_shape, video_matches};
 use serde::Serialize;
 use tokio::sync::mpsc;
 
@@ -297,10 +297,16 @@ fn run(job: Job, list: &Mutex<BTreeMap<String, Conversion>>, stop: &AtomicBool, 
     let result = result_path(&job.file);
     let temporary = temporary_path(&result);
     let target = job.target;
-    info!(channel = channel_id;
-        "Converting {path} to {}x{} at {} fps for the playout",
-        target.width, target.height, target.fps
-    );
+    if video_matches(&job.file, &target).unwrap_or(false) {
+        info!(channel = channel_id;
+            "{path} has the output's picture: copying it and converting only its sound"
+        );
+    } else {
+        info!(channel = channel_id;
+            "Converting {path} to {}x{} at {} fps for the playout",
+            target.width, target.height, target.fps
+        );
+    }
     update(list, &path, |entry| {
         entry.state = ConversionState::Converting;
     });

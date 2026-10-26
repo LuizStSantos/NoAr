@@ -56,11 +56,13 @@ stretch becomes a break only when it is marked as one.
 
 When a programme file has its commercial break edited in, mark where the
 programme leaves and where it comes back, the same way as the logo: in
-**Storage**, open the video's **Logo and breaks in this video** (or the same
-button in the Player's clip editor), choose **SCTE-35 breaks**, and while it
-plays press **Break starts here** and **Back from the break here**, or type
-the times. When the logo is already marked off there, **Use the stretches
-without logo** copies them.
+**Storage**, open the video's **Trim, logo and breaks in this video** (or the
+same button in the Player's clip editor), choose **SCTE-35 breaks**, and while
+it plays press **Break starts here** and **Back from the break here**, or
+type the times. Each break then has two handles on the bar, as the
+[trim](trim.md) does: drag them, or select one and use the arrow keys (Shift
+moves a second); a break cannot run into the next. When the logo is already
+marked off there, **Use the stretches without logo** copies them.
 
 - Up to 16 breaks per video, in seconds of the video itself. They are kept
   with the logo stretches in `<name>.logo.json`, as `"breaks"`, and count

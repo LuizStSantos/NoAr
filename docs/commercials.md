@@ -28,7 +28,9 @@ When a programme file has a commercial break edited into it, mark the
 stretches where the logo goes off instead: in **Storage**, open the
 video's **Trim, logo and breaks in this video** (or the same button in the Player's clip editor), choose the **Logo** tab
 and mark, while it plays, where the logo goes off and where it comes back, or
-type the times. Up to 16 stretches, in seconds of the video itself, so they
+type the times. Each stretch then has two handles on the bar, as the
+[trim](trim.md) does: drag them to the exact frame, or select one and use the
+arrow keys (Shift moves a second). Up to 16 stretches, in seconds of the video itself, so they
 hold whatever part of the video a playlist plays. The logo fades out and back
 in with its usual fade, wherever the video plays, from the next time it starts.
 
