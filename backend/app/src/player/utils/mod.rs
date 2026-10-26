@@ -544,17 +544,33 @@ pub async fn json_reader(path: &PathBuf) -> Result<JsonPlaylist, Error> {
     Ok(p)
 }
 
+/// Writes the playlist next to its place under a hidden name and then puts
+/// it there in one rename, so a reader (the playout, the API) sees the old
+/// playlist or the new one, never a half-written file. A tokio `File` also
+/// returns from `write_all` before the data is written, so a read right after
+/// could find it empty.
 pub async fn json_writer(path: &PathBuf, data: JsonPlaylist) -> Result<(), Error> {
-    let mut f = File::options()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(path)
-        .await?;
     let contents = serde_json::to_string_pretty(&data)?;
-    f.write_all(contents.as_bytes()).await?;
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let temporary = path.with_file_name(format!(".{name}.{}.tmp", uuid::Uuid::new_v4()));
 
-    Ok(())
+    let mut f = File::create(&temporary).await?;
+    let written = async {
+        f.write_all(contents.as_bytes()).await?;
+        f.sync_all().await?;
+        drop(f);
+        tokio::fs::rename(&temporary, path).await
+    }
+    .await;
+
+    if written.is_err() {
+        let _ = tokio::fs::remove_file(&temporary).await;
+    }
+
+    written
 }
 
 /// Get current time in seconds.
