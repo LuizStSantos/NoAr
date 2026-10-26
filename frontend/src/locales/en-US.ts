@@ -1414,6 +1414,8 @@ export default {
         },
         saved: 'Playlist of {date} saved.',
         alreadySaved: 'Nothing new to save.',
+        loadFailedNoSave:
+            'The playlist could not be loaded. Reload it before saving, so the saved list is not overwritten.',
         imported: 'List imported.',
         deleted: 'Playlist deleted.',
         unsavedDropped: 'Unsaved playlist changes were dropped when the channel changed.',

@@ -26,6 +26,15 @@ one is tagged.
 - A clip usually lasted one frame longer than its duration: its last audio
   frame ran past the end, and the video padded a frame to cover it. Clips now
   last exactly their duration.
+- When a playlist failed to load, the Player showed an empty day with no
+  error, and saving it could overwrite the real playlist. The error is now
+  shown and saving that day is blocked until it loads.
+- A server error or lost connection while renewing the login no longer logs
+  out every open tab; only a rejected login does.
+- The live status could stop updating for good after a failed reconnect; it
+  now keeps retrying.
+- Saving a playlist that had not changed now says there is nothing new to
+  save instead of showing an error.
 
 ## [1.0.0] - 2026-10-21
 

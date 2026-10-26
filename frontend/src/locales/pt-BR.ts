@@ -1419,6 +1419,8 @@ export default {
         },
         saved: 'Playlist de {date} salva.',
         alreadySaved: 'Nada novo para salvar.',
+        loadFailedNoSave:
+            'Não foi possível carregar a playlist. Recarregue-a antes de salvar, para não sobrescrever a lista salva.',
         imported: 'Lista importada.',
         deleted: 'Playlist excluída.',
         unsavedDropped: 'Alterações não salvas da playlist foram descartadas ao trocar de canal.',

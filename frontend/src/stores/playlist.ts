@@ -38,6 +38,8 @@ export const usePlaylist = defineStore('playlist', {
         listDate: dayjs().format('YYYY-MM-DD'),
         /** `channel:date` of the list in `playlist`. */
         loadedKey: '',
+        /** The last load failed: `playlist` does not reflect the saved list, so it must not be saved over it. */
+        loadFailed: false,
         savedSnapshot: '[]',
         /** Edits since the list was loaded or saved. */
         editCount: 0,
@@ -76,15 +78,16 @@ export const usePlaylist = defineStore('playlist', {
                 method: 'GET',
                 headers: authStore.authHeader,
             })
-                .then((data: Playlist) => {
-                    this.playlist = data.program ? processPlaylist(date, data.program, false) : []
+                .then((data: Playlist | undefined) => {
+                    // 204 No Content: no playlist exists for this date yet.
+                    this.playlist = data?.program ? processPlaylist(date, data.program, false) : []
+                    this.loadFailed = false
                 })
                 .catch((e) => {
-                    if (e.status >= 400) {
-                        indexStore.msgAlert('error', e.data, 5)
-                    }
+                    indexStore.msgAlert('error', e instanceof Error ? e.message : String(e), 5)
 
                     this.playlist = []
+                    this.loadFailed = true
                 })
 
             this.loadedKey = `${channel}:${date}`
