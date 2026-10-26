@@ -19,6 +19,7 @@ import { stringFormatter } from '@/composables/helper'
 import { fileName, isRemoteSource, type AddPlace, type LibraryFile } from '@/composables/player'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
+import { useOnAir } from '@/composables/onAir'
 import { usePlaylist } from '@/stores/playlist'
 import { useProgrammes } from '@/stores/programmes'
 import { useSchedule } from '@/stores/schedule'
@@ -45,6 +46,30 @@ useHead({
 })
 
 const playlistMode = computed(() => configStore.playout.processing?.mode !== 'folder')
+const { currentTitle } = useOnAir()
+
+/**
+ * Building a playlist: the video, clock and transport make way for the
+ * library and the list, with a line saying what is on air. The preview
+ * stops meanwhile, which also spares the network.
+ */
+const building = ref(readBuilding())
+
+function readBuilding(): boolean {
+    try {
+        return localStorage.getItem('noar.player.build') === '1'
+    } catch {
+        return false
+    }
+}
+
+watch(building, (value) => {
+    try {
+        localStorage.setItem('noar.player.build', value ? '1' : '0')
+    } catch {
+        // Only remembered for this visit.
+    }
+})
 
 // The guide lookup runs a moment after the last change, not on every keystroke.
 const refreshProgrammes = useDebounceFn(() => programmes.refresh(), 400)
@@ -144,12 +169,43 @@ async function openPreview(source: string) {
 </script>
 <template>
     <div class="max-w-[1440px] mx-auto px-4 sm:px-6 pt-5 pb-8 flex flex-col gap-4">
-        <div class="flex flex-wrap gap-4">
-            <LivePreview class="flex-[999_1_640px] min-w-0" />
-            <NowPanel class="flex-[1_1_380px] min-w-0" />
+        <div class="flex flex-wrap items-center gap-3">
+            <div
+                v-if="playlistMode"
+                role="radiogroup"
+                :aria-label="t('onair.layout')"
+                class="inline-flex bg-base-200 border border-line-strong rounded-field p-[3px]"
+            >
+                <button
+                    v-for="option in [false, true]"
+                    :key="String(option)"
+                    type="button"
+                    role="radio"
+                    :aria-checked="building === option"
+                    class="border-0 rounded-md px-3 min-h-8 text-[13px] cursor-pointer inline-flex items-center gap-1.5"
+                    :class="building === option ? 'bg-base-300 text-base-content' : 'bg-transparent text-muted'"
+                    @click="building = option"
+                >
+                    <i class="bi" :class="option ? 'bi-list-check' : 'bi-broadcast'" aria-hidden="true" />
+                    {{ option ? t('onair.layoutBuild') : t('onair.layoutLive') }}
+                </button>
+            </div>
+            <p v-if="building && playlistMode" class="m-0 text-[13px] text-muted truncate" role="status">
+                <span v-if="playlistStore.playoutIsRunning" class="text-on-air-text font-semibold"
+                    >● {{ t('nav.onAir') }}:</span
+                >
+                {{ playlistStore.playoutIsRunning ? currentTitle : t('onair.notRunning') }}
+            </p>
         </div>
 
-        <TransportBar />
+        <template v-if="!building || !playlistMode">
+            <div class="flex flex-wrap gap-4">
+                <LivePreview class="flex-[999_1_640px] min-w-0" />
+                <NowPanel class="flex-[1_1_380px] min-w-0" />
+            </div>
+
+            <TransportBar />
+        </template>
 
         <div class="flex flex-wrap gap-4 items-start">
             <LibraryPanel

@@ -193,6 +193,7 @@ watch(i, () => open(''))
         >
             <i class="bi bi-search text-xs" aria-hidden="true" />
             <input
+                id="library-search"
                 v-model="search"
                 type="search"
                 :placeholder="t('onair.searchLibrary')"
@@ -321,15 +322,17 @@ watch(i, () => open(''))
                         >
                             <i class="bi bi-play-fill" aria-hidden="true" />
                         </button>
-                        <button
-                            v-if="props.allowAdd"
-                            class="btn-icon min-w-8 min-h-8"
-                            :aria-label="t('onair.addFile', { name: item.name })"
-                            @click="emit('add', file(item.name, item.duration))"
-                        >
-                            <i class="bi bi-plus-lg" aria-hidden="true" />
-                        </button>
                     </span>
+                    <!-- Always shown, like the + of folders: it is the main way to add. -->
+                    <button
+                        v-if="props.allowAdd"
+                        class="btn-icon min-w-8 min-h-8"
+                        :aria-label="t('onair.addFile', { name: item.name })"
+                        :title="t('onair.addFileHint')"
+                        @click="emit('add', file(item.name, item.duration))"
+                    >
+                        <i class="bi bi-plus-lg" aria-hidden="true" />
+                    </button>
                 </template>
             </li>
             <li v-if="!shownFolders.length && !shownFiles.length" class="text-sm text-muted px-2 py-3">

@@ -148,6 +148,29 @@ pub fn get_media_map(media: Media) -> Value {
 }
 
 /// prepare json object for response
+/// How the network output reaches its destination, for the Player.
+fn output_link_map(status: &noar_engine::LinkStatus) -> Value {
+    let state = match status.state {
+        noar_engine::LinkState::Idle => "idle",
+        noar_engine::LinkState::Connecting => "connecting",
+        noar_engine::LinkState::Listening => "listening",
+        noar_engine::LinkState::Connected => "connected",
+        noar_engine::LinkState::Retrying => "retrying",
+    };
+    let since = status
+        .since
+        .and_then(|since| since.elapsed().ok())
+        .map(|elapsed| elapsed.as_secs());
+
+    json!({
+        "state": state,
+        "destination": status.destination,
+        "error": status.error,
+        "seconds": since,
+        "connections": status.connections,
+    })
+}
+
 pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
     let media = manager
         .current_media
@@ -188,6 +211,10 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
     );
     data_map.insert("media".to_string(), get_media_map(media));
     data_map.insert("uptime".to_string(), json!(manager.uptime()));
+    data_map.insert(
+        "output_link".to_string(),
+        output_link_map(&manager.output_link.status()),
+    );
     if let Ok(audio_level) = manager.audio_level.lock()
         && let Some(audio_level) = *audio_level
     {

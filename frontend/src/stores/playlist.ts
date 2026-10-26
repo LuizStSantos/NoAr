@@ -18,6 +18,17 @@ const { processPlaylist } = playlistOperations()
 /** Counts playlist loads, so a slow answer for an earlier date or channel is ignored. */
 let loadRequest = 0
 
+/** Undo history of the list being edited: earlier states, newest last. */
+const MAX_UNDO = 50
+let undoStack: PlaylistItem[][] = []
+let redoStack: PlaylistItem[][] = []
+/** The list as it was after the last change, the state an undo goes back to. */
+let lastState: PlaylistItem[] = []
+
+function copyList(list: PlaylistItem[]): PlaylistItem[] {
+    return list.map((item) => ({ ...item }))
+}
+
 /** What is saved of a playlist entry, to tell edited lists from saved ones. */
 function snapshot(list: PlaylistItem[]): string {
     return JSON.stringify(
@@ -48,6 +59,11 @@ export const usePlaylist = defineStore('playlist', {
         editCount: 0,
         /** Entries added since the list was loaded or saved. */
         addedUids: [] as string[],
+        /** Clips selected in the playlist editor. */
+        selectedUids: [] as string[],
+        /** Steps that undo and redo can take. */
+        undoCount: 0,
+        redoCount: 0,
         progressValue: 0,
         current: {} as PlaylistItem,
         currentIndex: 0,
@@ -58,6 +74,7 @@ export const usePlaylist = defineStore('playlist', {
         audioLevel: null as AudioLevel | null,
         loudness: null as LiveLoudnessMetrics | null,
         uptime: null as number | null,
+        outputLink: null as OutputLinkStatus | null,
         elapsedSec: 0,
         shift: 0,
         playoutIsRunning: false,
@@ -105,13 +122,61 @@ export const usePlaylist = defineStore('playlist', {
             this.loadFailed = failed
             this.loadedKey = `${channel}:${date}`
             this.markSaved()
+            this.resetHistory()
             this.isLoading = false
         },
 
-        /** Recalculate start times after the list changed. */
+        /** Recalculate start times after the list changed, and remember the step for undo. */
         touch() {
+            undoStack.push(lastState)
+            if (undoStack.length > MAX_UNDO) {
+                undoStack.shift()
+            }
+            redoStack = []
             this.editCount += 1
             this.playlist = processPlaylist(this.listDate, this.playlist, false)
+            lastState = copyList(this.playlist)
+            this.undoCount = undoStack.length
+            this.redoCount = 0
+        },
+
+        /** Forget the undo history: a new list was loaded. */
+        resetHistory() {
+            undoStack = []
+            redoStack = []
+            lastState = copyList(this.playlist)
+            this.undoCount = 0
+            this.redoCount = 0
+        },
+
+        undo() {
+            const previous = undoStack.pop()
+
+            if (!previous) {
+                return
+            }
+
+            redoStack.push(copyList(this.playlist))
+            this.playlist = processPlaylist(this.listDate, copyList(previous), false)
+            lastState = copyList(this.playlist)
+            this.editCount = Math.max(0, this.editCount - 1)
+            this.undoCount = undoStack.length
+            this.redoCount = redoStack.length
+        },
+
+        redo() {
+            const next = redoStack.pop()
+
+            if (!next) {
+                return
+            }
+
+            undoStack.push(copyList(this.playlist))
+            this.playlist = processPlaylist(this.listDate, copyList(next), false)
+            lastState = copyList(this.playlist)
+            this.editCount += 1
+            this.undoCount = undoStack.length
+            this.redoCount = redoStack.length
         },
 
         markSaved() {
@@ -132,6 +197,7 @@ export const usePlaylist = defineStore('playlist', {
             this.audioLevel = item.audio ?? null
             this.loudness = item.loudness ?? null
             this.uptime = item.uptime ?? null
+            this.outputLink = item.output_link ?? null
             this.shift = item.shift
 
             this.progressValue = (this.elapsedSec * 100) / this.current.out
@@ -147,6 +213,7 @@ export const usePlaylist = defineStore('playlist', {
             this.audioLevel = null
             this.loudness = null
             this.uptime = null
+            this.outputLink = null
             this.current = {} as PlaylistItem
             this.currentIndex = 0
         },

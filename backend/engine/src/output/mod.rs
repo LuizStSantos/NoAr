@@ -9,6 +9,7 @@ use ffmpeg_next::frame;
 pub(crate) mod desktop;
 mod encoded;
 mod hls;
+pub(crate) mod link;
 mod preview;
 mod recording;
 pub(crate) mod scte35;

@@ -23,7 +23,38 @@ const muted = ref(true)
 const channel = computed(() => configStore.channels[configStore.i])
 /** Optional outside address (public HLS, CDN) set in the channel settings. */
 const addressUrl = computed(() => channel.value?.preview_url?.trim() ?? '')
-const directUrl = computed(() => (channel.value ? `/api/preview/${channel.value.id}` : ''))
+type PreviewQuality = 'light' | 'high'
+
+/** Light by default: on a slow connection the full preview would stutter. */
+function savedQuality(): PreviewQuality {
+    try {
+        return localStorage.getItem('noar.preview.quality') === 'high' ? 'high' : 'light'
+    } catch {
+        return 'light'
+    }
+}
+
+const quality = ref<PreviewQuality>(savedQuality())
+
+function chooseQuality(value: PreviewQuality) {
+    quality.value = value
+
+    try {
+        localStorage.setItem('noar.preview.quality', value)
+    } catch {
+        // Only remembered for this visit.
+    }
+}
+
+const directUrl = computed(() => {
+    if (!channel.value) {
+        return ''
+    }
+
+    const url = `/api/preview/${channel.value.id}`
+
+    return quality.value === 'light' ? `${url}?quality=light` : url
+})
 
 type PreviewSource = 'direct' | 'address'
 
@@ -86,15 +117,6 @@ const previewWaiting = ref(false)
 const previewError = ref('')
 let waitTimer: ReturnType<typeof setTimeout> | undefined
 
-/** An SRT output in listener mode only starts once a receiver connects. */
-const srtListener = computed(() => {
-    const output = configStore.playout.output
-
-    return (
-        output?.mode === 'stream' && output.stream_type === 'srt' && /[?&]mode=listener\b/.test(output.stream_url ?? '')
-    )
-})
-
 const previewNotice = computed(() => {
     if (previewHasPicture.value) {
         return ''
@@ -105,7 +127,7 @@ const previewNotice = computed(() => {
     }
 
     if (previewWaiting.value) {
-        return srtListener.value ? t('onair.previewWaitingSrtListener') : t('onair.previewWaiting')
+        return t('onair.previewWaiting')
     }
 
     return ''
@@ -210,6 +232,28 @@ const title = computed(() => {
     return playlistStore.playoutIsRunning ? currentTitle.value : t('onair.notRunning')
 })
 
+/** Whether a network output reaches its receiver; empty for HLS and desktop. */
+const outputLinkLabel = computed(() => {
+    const link = playlistStore.outputLink
+
+    if (!playlistStore.playoutIsRunning || !link || link.state === 'idle') {
+        return ''
+    }
+
+    const destination = link.destination ?? ''
+
+    switch (link.state) {
+        case 'connecting':
+            return t('onair.outputConnecting', { destination })
+        case 'listening':
+            return t('onair.outputListening', { destination })
+        case 'connected':
+            return t('onair.outputConnected', { destination })
+        default:
+            return t('onair.outputRetrying', { destination, error: link.error ?? '' })
+    }
+})
+
 const listeners = computed(() => configStore.playout.ingest?.listeners?.filter((input) => input.enabled) ?? [])
 const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/guide.xml` : ''))
 </script>
@@ -266,6 +310,26 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                 >
                     {{ outputLabel }}
                 </span>
+                <div
+                    v-if="direct && previewUrl"
+                    role="radiogroup"
+                    :aria-label="t('onair.previewQuality')"
+                    class="flex bg-[rgba(23,24,26,0.86)] rounded-md p-0.5 text-xs"
+                >
+                    <button
+                        v-for="option in ['light', 'high'] as const"
+                        :key="option"
+                        type="button"
+                        role="radio"
+                        :aria-checked="quality === option"
+                        :title="option === 'light' ? t('onair.previewLightHint') : t('onair.previewHighHint')"
+                        class="px-2 py-0.5 rounded cursor-pointer"
+                        :class="quality === option ? 'bg-[#3c3e44] text-[#e8e6e3]' : 'text-[#a9a7a3]'"
+                        @click="chooseQuality(option)"
+                    >
+                        {{ option === 'light' ? t('onair.previewLight') : t('onair.previewHigh') }}
+                    </button>
+                </div>
                 <div
                     v-if="addressUrl"
                     role="radiogroup"
@@ -328,6 +392,25 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
             </span>
             <span v-else-if="listeners.length">{{ t('onair.ingestWaiting', listeners.length) }}</span>
             <span v-else>{{ t('onair.ingestNone') }}</span>
+            <span
+                v-if="outputLinkLabel"
+                class="inline-flex items-center gap-1.5"
+                :class="playlistStore.outputLink?.state === 'retrying' ? 'text-on-air-text' : ''"
+                role="status"
+            >
+                <span
+                    class="dot"
+                    :class="
+                        playlistStore.outputLink?.state === 'connected'
+                            ? 'bg-ok'
+                            : playlistStore.outputLink?.state === 'retrying'
+                              ? 'bg-on-air'
+                              : 'bg-subtle'
+                    "
+                    aria-hidden="true"
+                />
+                {{ outputLinkLabel }}
+            </span>
             <a v-if="xmltvUrl" :href="xmltvUrl" target="_blank" rel="noopener" class="link-accent">
                 {{ t('onair.xmltvLink') }}
             </a>

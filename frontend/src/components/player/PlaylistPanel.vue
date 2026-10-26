@@ -50,6 +50,8 @@ const { onAirDate, onAirIndex, playlistNow, viewingOnAir } = useOnAir()
 
 const PAGE = 10
 const MORE = 20
+/** Programs with fewer clips than this are always shown whole. */
+const WHOLE_GROUP = 40
 
 /** Groups the user opened or closed; others follow `defaultExpanded`. */
 const toggled = reactive(new Map<string, boolean>())
@@ -91,6 +93,8 @@ function readSetting(key: string): string | null {
     }
 }
 
+watch(selected, (uids) => (playlistStore.selectedUids = uids))
+
 watch(view, (value) => {
     try {
         localStorage.setItem('player-view', value)
@@ -114,6 +118,16 @@ const shortDateLabel = computed(() =>
 )
 const totalSeconds = computed(() => playlistStore.playlist.reduce((sum, item) => sum + (item.out - item.in), 0))
 const unsaved = computed(() => (playlistStore.dirty ? Math.max(1, playlistStore.editCount) : 0))
+/** How long a day is; the list should fill it. */
+const dayLength = computed(() => configStore.playout.playlist?.lengthInSec || 86400)
+/** Seconds the list misses (positive) or runs over (negative) the day. */
+const dayGap = computed(() => (infinite.value ? 0 : Math.round(dayLength.value - totalSeconds.value)))
+/** When the last clip ends. */
+const listEnd = computed(() => {
+    const last = playlistStore.playlist[playlistStore.playlist.length - 1]
+
+    return last ? (last.begin ?? 0) + (last.out - last.in) : dayStart.value
+})
 
 // ---------------------------------------------------------------------------
 // Loading
@@ -479,8 +493,11 @@ const rows = computed<Row[]>(() => {
 
         const extra = reveal.get(id) ?? { before: 0, after: 0 }
         const anchor = anchorOf(group)
-        const from = Math.max(group.first, anchor - 1 - extra.before)
-        const to = Math.min(group.last, Math.max(anchor, from) + PAGE - 1 + extra.after)
+        // A program of a few clips shows them all: hiding some looked like
+        // they were missing.
+        const whole = group.last - group.first < WHOLE_GROUP
+        const from = whole ? group.first : Math.max(group.first, anchor - 1 - extra.before)
+        const to = whole ? group.last : Math.min(group.last, Math.max(anchor, from) + PAGE - 1 + extra.after)
 
         if (from > group.first) {
             list.push({ type: 'more', id, direction: 'before', count: Math.min(MORE, from - group.first) })
@@ -645,10 +662,76 @@ function toggleBreakSelection() {
 }
 
 function removeSelection() {
-    takeSelected()
+    const count = takeSelected().length
+
     selected.value = []
     playlistStore.touch()
+
+    if (count) {
+        indexStore.msgAlert('success', t('onair.removedClips', { count }, count), 3)
+    }
 }
+
+/** Move the selected clips to the start or the end of the list. */
+function moveSelectionTo(where: 'start' | 'end') {
+    const taken = takeSelected()
+
+    if (!taken.length) {
+        return
+    }
+
+    if (where === 'start') {
+        playlistStore.playlist.unshift(...taken)
+    } else {
+        playlistStore.playlist.push(...taken)
+    }
+
+    taken.forEach((item) => markAdded(item.uid))
+    playlistStore.touch()
+}
+
+function undo() {
+    playlistStore.undo()
+    selected.value = selected.value.filter((uid) => playlistStore.playlist.some((item) => item.uid === uid))
+}
+
+function redo() {
+    playlistStore.redo()
+}
+
+/** Keys for the playlist: undo, redo, and acting on the selection. */
+useEventListener(window, 'keydown', (event: KeyboardEvent) => {
+    const target = event.target as HTMLElement | null
+    const typing =
+        target?.isContentEditable ||
+        (target instanceof HTMLInputElement && !['checkbox', 'radio', 'button'].includes(target.type)) ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+
+    // Nothing while typing or while a dialog is open.
+    if (typing || editing.value || document.querySelector('[role="dialog"][aria-modal="true"], dialog[open]')) {
+        return
+    }
+
+    const key = event.key.toLowerCase()
+    const command = event.ctrlKey || event.metaKey
+
+    if (command && key === 'z' && !event.shiftKey) {
+        event.preventDefault()
+        undo()
+    } else if (command && (key === 'y' || (key === 'z' && event.shiftKey))) {
+        event.preventDefault()
+        redo()
+    } else if (selected.value.length && (event.key === 'Delete' || event.key === 'Backspace')) {
+        event.preventDefault()
+        removeSelection()
+    } else if (selected.value.length && event.key === 'Escape') {
+        selected.value = []
+    } else if (selected.value.length && event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        event.preventDefault()
+        shiftSelection(event.key === 'ArrowUp' ? -1 : 1)
+    }
+})
 
 function openMoveTime() {
     const first = playlistStore.playlist[selectedIndices.value[0] ?? -1]
@@ -743,6 +826,10 @@ function placeIndex(place: AddPlace): number {
         return onAirIndex.value + 1
     }
 
+    if (place === 'selection' && selectedIndices.value.length) {
+        return (selectedIndices.value[selectedIndices.value.length - 1] as number) + 1
+    }
+
     return playlistStore.playlist.length
 }
 
@@ -767,15 +854,30 @@ function addFiles(files: LibraryFile[], place: AddPlace, label: string) {
     )
 }
 
-/** Add a file from the library, after the clip on air or at the end. */
+/**
+ * Add a file from the library: after the selected clips when some are
+ * selected, else after the clip on air, else at the end. The message says
+ * which.
+ */
 function addFile(file: LibraryFile) {
-    const index = onAirIndex.value >= 0 ? onAirIndex.value + 1 : playlistStore.playlist.length
+    const place: AddPlace = selectedIndices.value.length ? 'selection' : onAirIndex.value >= 0 ? 'onair' : 'end'
+    const index = placeIndex(place)
+    const item = itemFromFile(file)
 
-    insertAt(index, [itemFromFile(file)])
+    insertAt(index, [item])
+    // Several files added one after the other stay in that order.
+    if (place === 'selection') {
+        selected.value = [item.uid]
+    }
+
     indexStore.msgAlert(
         'success',
-        t('onair.added', { name: file.name, time: clockTime(playlistStore.playlist[index]?.begin ?? 0) }),
-        2,
+        t('onair.addedWhere', {
+            name: file.name,
+            time: clockTime(playlistStore.playlist[index]?.begin ?? 0),
+            where: t(`onair.addedPlace.${place}`),
+        }),
+        3,
     )
 }
 
@@ -1011,8 +1113,22 @@ async function save(date = playlistStore.listDate) {
     }
 }
 
-function discard() {
-    load(playlistStore.listDate)
+const showDiscard = ref(false)
+
+function discard(confirm = true) {
+    showDiscard.value = false
+
+    if (confirm) {
+        load(playlistStore.listDate)
+    }
+}
+
+/** Start a list by hand: take the user to the library search. */
+function focusLibrary() {
+    const search = document.getElementById('library-search') as HTMLInputElement | null
+
+    search?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    search?.focus()
 }
 
 function openCopy() {
@@ -1109,7 +1225,9 @@ defineExpose({ addFile, addFiles })
 </script>
 <template>
     <section :aria-label="t('onair.playlist')" class="card-box min-w-0">
-        <div class="flex flex-wrap items-center gap-x-3.5 gap-y-2.5 px-4 py-3.5 border-b border-line">
+        <div
+            class="flex flex-wrap items-center gap-x-3.5 gap-y-2.5 px-4 py-3.5 border-b border-line bg-base-100 rounded-t-box lg:sticky lg:top-[57px] z-10"
+        >
             <h2 class="m-0 text-[15px] font-semibold">{{ t('onair.playlist') }}</h2>
             <div v-if="!infinite" class="flex items-center bg-raised border border-line-strong rounded-field">
                 <button
@@ -1159,6 +1277,18 @@ defineExpose({ addFile, addFiles })
                     )
                 }}
             </span>
+            <span
+                v-if="playlistStore.playlist.length && Math.abs(dayGap) >= 1"
+                class="font-mono text-xs rounded-md px-2 py-1"
+                :class="dayGap > 0 ? 'bg-accent-soft text-accent-text' : 'bg-error/15 text-error'"
+                :title="t('onair.dayLengthHint', { length: totalLength(dayLength) })"
+            >
+                {{
+                    dayGap > 0
+                        ? t('onair.dayMissing', { time: totalLength(dayGap) })
+                        : t('onair.dayOver', { time: totalLength(-dayGap) })
+                }}
+            </span>
             <div
                 role="group"
                 :aria-label="t('onair.viewMode')"
@@ -1185,19 +1315,45 @@ defineExpose({ addFile, addFiles })
                 </button>
             </template>
             <div class="flex-auto" />
+            <div class="flex flex-wrap items-center gap-2">
             <span v-if="unsaved" class="inline-flex items-center gap-1.5 text-accent-text text-[13px]">
                 <span class="dot w-1.75 h-1.75 bg-accent" aria-hidden="true" />{{ t('onair.unsaved', unsaved) }}
             </span>
-            <button class="btn-quiet min-h-9.5" :disabled="!playlistStore.dirty" @click="discard">
+            <button
+                class="btn-icon border border-line-strong min-w-9.5 min-h-9.5"
+                :disabled="!playlistStore.undoCount"
+                :aria-label="t('onair.undo')"
+                :title="t('onair.undoHint')"
+                @click="undo"
+            >
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />
+            </button>
+            <button
+                class="btn-icon border border-line-strong min-w-9.5 min-h-9.5"
+                :disabled="!playlistStore.redoCount"
+                :aria-label="t('onair.redo')"
+                :title="t('onair.redoHint')"
+                @click="redo"
+            >
+                <i class="bi bi-arrow-clockwise" aria-hidden="true" />
+            </button>
+            <button
+                class="btn-quiet min-h-9.5"
+                :disabled="!playlistStore.dirty"
+                :title="playlistStore.dirty ? '' : t('onair.noChanges')"
+                @click="showDiscard = true"
+            >
                 {{ t('onair.discard') }}
             </button>
             <button
                 class="btn-main min-h-9.5"
                 :disabled="!playlistStore.dirty || saving || playlistStore.loadFailed"
+                :title="playlistStore.dirty ? '' : t('onair.noChanges')"
                 @click="save()"
             >
                 {{ t('onair.save') }}
             </button>
+            </div>
             <button class="btn-quiet min-h-9.5" @click="emit('generate')">
                 <i class="bi bi-stars" aria-hidden="true" />{{ t('onair.generate') }}
             </button>
@@ -1324,6 +1480,12 @@ defineExpose({ addFile, addFiles })
             <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="shiftSelection(1)">
                 <i class="bi bi-arrow-down" aria-hidden="true" />{{ t('onair.moveDown') }}
             </button>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="moveSelectionTo('start')">
+                <i class="bi bi-chevron-bar-up" aria-hidden="true" />{{ t('onair.moveToStart') }}
+            </button>
+            <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="moveSelectionTo('end')">
+                <i class="bi bi-chevron-bar-down" aria-hidden="true" />{{ t('onair.moveToEnd') }}
+            </button>
             <button type="button" class="btn-quiet min-h-8.5 text-[13px]" @click="openMoveTime">
                 {{ t('onair.moveToTime') }}
             </button>
@@ -1337,6 +1499,7 @@ defineExpose({ addFile, addFiles })
                 {{ t('onair.removeSelected') }}
             </button>
             <div class="flex-auto" />
+            <span class="text-xs text-muted hidden xl:inline">{{ t('onair.selectionKeys') }}</span>
             <button type="button" class="link-accent text-base-content/80" @click="selected = []">
                 {{ t('onair.clearSelection') }}
             </button>
@@ -1356,10 +1519,14 @@ defineExpose({ addFile, addFiles })
         >
             <i class="bi bi-collection-play text-3xl" aria-hidden="true" />
             <p class="m-0 max-w-md">{{ t('onair.emptyList') }}</p>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap justify-center gap-2">
+                <button class="btn-quiet" @click="focusLibrary">
+                    <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('onair.buildByHand') }}
+                </button>
                 <button class="btn-main" @click="emit('generate')">{{ t('onair.generate') }}</button>
                 <button class="btn-quiet" @click="showImport = true">{{ t('onair.importList') }}</button>
             </div>
+            <p class="m-0 max-w-md text-xs">{{ t('onair.buildByHandHint') }}</p>
         </div>
 
         <div v-else class="relative overflow-x-auto">
@@ -1653,6 +1820,19 @@ defineExpose({ addFile, addFiles })
                         @dragover="dragOverEnd"
                     >
                         <td colspan="6" class="px-4 py-3 text-xs text-subtle text-center">
+                            <span v-if="!infinite" class="font-mono me-1">
+                                {{ t('onair.listEndsAt', { time: clockTime(listEnd) }) }}
+                                <template v-if="dayGap >= 1"> · {{ t('onair.dayMissing', { time: totalLength(dayGap) }) }}</template>
+                                ·
+                            </span>
+                            <button
+                                v-if="!infinite && dayGap >= 1"
+                                type="button"
+                                class="link-accent text-xs me-1"
+                                @click="fillDay"
+                            >
+                                {{ t('onair.fillDay') }}
+                            </button>
                             {{ t('onair.dropAtEnd') }} · {{ t('onair.selectHint') }}
                         </td>
                     </tr>
@@ -1734,6 +1914,16 @@ defineExpose({ addFile, addFiles })
             :modal-action="deleteList"
         >
             <p class="m-0 max-w-sm">{{ t('onair.deleteQuestion', { date: dateLabel }) }}</p>
+        </GenericModal>
+
+        <GenericModal
+            :show="showDiscard"
+            :title="t('onair.discardTitle')"
+            :ok-label="t('onair.discard')"
+            danger
+            :modal-action="discard"
+        >
+            <p class="m-0 max-w-sm">{{ t('onair.discardQuestion', unsaved) }}</p>
         </GenericModal>
 
         <GenericModal

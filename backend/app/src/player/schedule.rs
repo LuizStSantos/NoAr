@@ -937,7 +937,7 @@ async fn play_clips(
             }
             None => None,
         };
-        let breaks = event_breaks(
+        let mut breaks = event_breaks(
             config,
             event,
             index,
@@ -946,7 +946,13 @@ async fn play_clips(
             &mut break_announced,
         )
         .await;
-        manager.splice_control.plan_next_clip(breaks);
+        // Breaks marked inside the video itself, when it is not a commercial.
+        if !commercial {
+            breaks.within = crate::utils::logo_marks::read_marks(&path)
+                .await
+                .breaks_in_clip(seek, Some(length));
+        }
+        manager.splice_control.plan_next_clip(breaks.clone());
         let result = play_plain_from(
             playout,
             config,
@@ -1020,6 +1026,7 @@ async fn event_breaks(
             ClipBreaks {
                 at_start: Some(length + commercials_next),
                 after: None,
+                within: Vec::new(),
             },
         )
     } else {
@@ -1034,6 +1041,7 @@ async fn event_breaks(
             ClipBreaks {
                 at_start: None,
                 after: Some(commercials_next),
+                within: Vec::new(),
             },
         )
     };

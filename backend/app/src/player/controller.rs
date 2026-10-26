@@ -120,6 +120,8 @@ pub struct ChannelManager {
     pub logo_control: noar_engine::LogoControl,
     /// The SCTE-35 ad breaks the channel signals.
     pub splice_control: noar_engine::SpliceControl,
+    /// How the network output reaches its destination; outlasts restarts.
+    pub output_link: noar_engine::OutputLink,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
     /// Opens the next clip, live or event ahead of its turn.
@@ -210,6 +212,7 @@ impl ChannelManager {
             loudness_meter: noar_engine::LoudnessMeterControl::default(),
             logo_control: noar_engine::LogoControl::default(),
             splice_control: noar_engine::SpliceControl::default(),
+            output_link: noar_engine::OutputLink::default(),
             audio_level: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
             preloader: Arc::new(Mutex::new(Preloader::default())),

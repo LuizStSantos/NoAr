@@ -1,10 +1,11 @@
-//! Stretches of a video that keep the logo off, such as a commercial break
-//! edited into a programme. They live next to the video, in
-//! `<name>.logo.json`, like its `.nfo` sheet and `.vtt` subtitles, so they
-//! apply wherever the video plays: the playlist, the scheduler or a preview.
+//! Marks inside a video: stretches that keep the logo off, and ad breaks
+//! signalled with SCTE-35, such as a commercial break edited into a
+//! programme. They live next to the video, in `<name>.logo.json`, like its
+//! `.nfo` sheet and `.vtt` subtitles, so they apply wherever the video plays:
+//! the playlist, the scheduler or a preview.
 //!
 //! ```json
-//! { "hide": [{ "from": 750.0, "to": 990.5 }] }
+//! { "hide": [{ "from": 750.0, "to": 990.5 }], "breaks": [{ "from": 750.0, "to": 990.5 }] }
 //! ```
 //!
 //! Times are seconds of the video itself, whatever part of it a playlist
@@ -30,46 +31,78 @@ pub struct LogoSpan {
 pub struct LogoMarks {
     #[serde(default)]
     pub hide: Vec<LogoSpan>,
+    /// Ad breaks inside the video, signalled with SCTE-35 when the output
+    /// carries it: the break leaves at `from` and returns at `to`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub breaks: Vec<LogoSpan>,
 }
 
 impl LogoMarks {
     /// Sorted, and refused when a stretch is empty, reversed or overlaps the
     /// next, or when there are more than the engine takes.
     pub fn validated(mut self) -> Result<Self, ServiceError> {
-        self.hide.sort_by(|a, b| a.from.total_cmp(&b.from));
-
-        if self.hide.len() > MAX_LOGO_GAPS {
-            return Err(ServiceError::BadRequest(format!(
-                "At most {MAX_LOGO_GAPS} stretches without logo"
-            )));
-        }
-
-        for span in &self.hide {
-            if !span.from.is_finite() || !span.to.is_finite() || span.from < 0.0 {
-                return Err(ServiceError::BadRequest(
-                    "Times must be seconds from the start of the video".to_string(),
-                ));
-            }
-
-            if span.to <= span.from {
-                return Err(ServiceError::BadRequest(
-                    "Each stretch must end after it starts".to_string(),
-                ));
-            }
-        }
-
-        if self.hide.windows(2).any(|pair| pair[1].from < pair[0].to) {
-            return Err(ServiceError::BadRequest(
-                "Stretches without logo must not overlap".to_string(),
-            ));
-        }
+        self.hide = validated_spans(self.hide, "stretches without logo")?;
+        self.breaks = validated_spans(self.breaks, "ad breaks")?;
 
         Ok(self)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.hide.is_empty() && self.breaks.is_empty()
     }
 
     pub fn gaps(&self) -> LogoGaps {
         LogoGaps::new(self.hide.iter().map(|span| (span.from, span.to)))
     }
+
+    /// The ad breaks of a clip that plays from `seek` for `duration`
+    /// seconds: when each starts from the start of the clip as it plays,
+    /// and how long it lasts there.
+    pub fn breaks_in_clip(&self, seek: f64, duration: Option<f64>) -> Vec<(f64, f64)> {
+        let end = duration.map_or(f64::INFINITY, |duration| duration.max(0.0));
+
+        self.breaks
+            .iter()
+            .filter_map(|span| {
+                let start = (span.from - seek).max(0.0);
+                let stop = (span.to - seek).min(end);
+
+                (stop > start && span.from - seek < end).then_some((start, stop - start))
+            })
+            .collect()
+    }
+}
+
+fn validated_spans(mut spans: Vec<LogoSpan>, what: &str) -> Result<Vec<LogoSpan>, ServiceError> {
+    spans.sort_by(|a, b| a.from.total_cmp(&b.from));
+
+    if spans.len() > MAX_LOGO_GAPS {
+        return Err(ServiceError::BadRequest(format!(
+            "At most {MAX_LOGO_GAPS} {what}"
+        )));
+    }
+
+    for span in &spans {
+        if !span.from.is_finite() || !span.to.is_finite() || span.from < 0.0 {
+            return Err(ServiceError::BadRequest(
+                "Times must be seconds from the start of the video".to_string(),
+            ));
+        }
+
+        if span.to <= span.from {
+            return Err(ServiceError::BadRequest(
+                "Each stretch must end after it starts".to_string(),
+            ));
+        }
+    }
+
+    if spans.windows(2).any(|pair| pair[1].from < pair[0].to) {
+        return Err(ServiceError::BadRequest(format!(
+            "The {what} must not overlap"
+        )));
+    }
+
+    Ok(spans)
 }
 
 /// `Programa.mp4` -> `Programa.logo.json`, next to it.
@@ -95,7 +128,7 @@ pub async fn read_marks(video: &Path) -> LogoMarks {
 pub async fn write_marks(video: &Path, marks: &LogoMarks) -> Result<(), ServiceError> {
     let path = marks_path(video);
 
-    if marks.hide.is_empty() {
+    if marks.is_empty() {
         return match fs::remove_file(&path).await {
             Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(error.into()),
             _ => Ok(()),
@@ -110,11 +143,11 @@ pub async fn write_marks(video: &Path, marks: &LogoMarks) -> Result<(), ServiceE
     Ok(())
 }
 
-/// The stretches without logo for the clip at `source`, an absolute path or
-/// one relative to `storage`. Remote sources have none.
-pub async fn logo_gaps(storage: &Path, source: &str) -> LogoGaps {
+/// The marks of the clip at `source`, an absolute path or one relative to
+/// `storage`. Remote sources have none.
+pub async fn clip_marks(storage: &Path, source: &str) -> LogoMarks {
     if source.is_empty() || source.contains("://") {
-        return LogoGaps::default();
+        return LogoMarks::default();
     }
 
     let path = Path::new(source);
@@ -124,7 +157,12 @@ pub async fn logo_gaps(storage: &Path, source: &str) -> LogoGaps {
         storage.join(path)
     };
 
-    read_marks(&path).await.gaps()
+    read_marks(&path).await
+}
+
+/// The stretches without logo for the clip at `source`.
+pub async fn logo_gaps(storage: &Path, source: &str) -> LogoGaps {
+    clip_marks(storage, source).await.gaps()
 }
 
 #[cfg(test)]
@@ -139,6 +177,7 @@ mod tests {
     fn marks_are_sorted_and_must_make_sense() {
         let marks = LogoMarks {
             hide: vec![span(300.0, 360.0), span(60.0, 90.0)],
+            breaks: Vec::new(),
         }
         .validated()
         .unwrap();
@@ -146,25 +185,47 @@ mod tests {
         assert_eq!(marks.hide, [span(60.0, 90.0), span(300.0, 360.0)]);
         assert!(
             LogoMarks {
-                hide: vec![span(10.0, 5.0)]
+                hide: vec![span(10.0, 5.0)],
+                breaks: Vec::new(),
             }
             .validated()
             .is_err()
         );
         assert!(
             LogoMarks {
-                hide: vec![span(10.0, 30.0), span(20.0, 40.0)]
+                hide: vec![span(10.0, 30.0), span(20.0, 40.0)],
+                breaks: Vec::new(),
             }
             .validated()
             .is_err()
         );
         assert!(
             LogoMarks {
-                hide: vec![span(-1.0, 5.0)]
+                hide: vec![span(-1.0, 5.0)],
+                breaks: Vec::new(),
             }
             .validated()
             .is_err()
         );
+    }
+
+    #[test]
+    fn breaks_are_placed_in_the_part_of_the_video_that_plays() {
+        let marks = LogoMarks {
+            hide: Vec::new(),
+            breaks: vec![span(60.0, 90.0), span(290.0, 320.0), span(900.0, 960.0)],
+        };
+
+        // The whole video.
+        assert_eq!(
+            marks.breaks_in_clip(0.0, None),
+            [(60.0, 30.0), (290.0, 30.0), (900.0, 60.0)]
+        );
+        // From 300 s for 10 minutes: the second break is under way, the
+        // third falls after the end.
+        assert_eq!(marks.breaks_in_clip(300.0, Some(600.0)), [(0.0, 20.0)]);
+        // The clip ends inside a break: only the part that plays.
+        assert_eq!(marks.breaks_in_clip(0.0, Some(75.0)), [(60.0, 15.0)]);
     }
 
     #[tokio::test]
@@ -174,6 +235,7 @@ mod tests {
         let video = dir.join("Programa 01.mp4");
         let marks = LogoMarks {
             hide: vec![span(750.0, 990.5)],
+            breaks: Vec::new(),
         };
 
         assert_eq!(marks_path(&video), dir.join("Programa 01.logo.json"));
