@@ -291,6 +291,12 @@ pub struct Configuration {
     pub processing_guide_logo: String,
     #[serde(default)]
     pub processing_logo_key: String,
+    #[serde(default = "default_logo_transition")]
+    pub processing_logo_transition_in: String,
+    #[serde(default = "default_logo_transition")]
+    pub processing_logo_transition_out: String,
+    #[serde(default)]
+    pub processing_logo_transition_seconds: Option<f64>,
 
     pub playlist_day_start: String,
     pub playlist_length: String,
@@ -371,6 +377,9 @@ impl Configuration {
             processing_vtt_default: config.processing.vtt_default,
             processing_guide_logo: config.processing.guide_logo,
             processing_logo_key: config.processing.logo_key,
+            processing_logo_transition_in: config.processing.logo_transition_in.to_string(),
+            processing_logo_transition_out: config.processing.logo_transition_out.to_string(),
+            processing_logo_transition_seconds: config.processing.logo_transition_seconds,
             playlist_day_start: config.playlist.day_start,
             playlist_length: config.playlist.length,
             playlist_infinit: config.playlist.infinit,
@@ -756,4 +765,8 @@ pub struct NewAsRunEntry {
     pub seek: f64,
     pub planned_seconds: f64,
     pub replaces: Option<String>,
+}
+
+fn default_logo_transition() -> String {
+    "fade".to_string()
 }

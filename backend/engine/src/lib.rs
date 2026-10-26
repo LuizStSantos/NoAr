@@ -34,7 +34,9 @@ pub use audio_mixer::{
     LiveLoudnessControl, LiveLoudnessMeasurement, LiveLoudnessMetrics, LiveLoudnessProcessor,
     LoudnessScope,
 };
-pub use compositor::logo::{LogoControl, LogoState};
+pub use compositor::logo::{
+    LogoControl, LogoState, LogoTransition, LogoTransitions, MAX_LOGO_TRANSITION_SECONDS,
+};
 use input::live::{LiveEnded, LiveOverrideOutput};
 pub use input::live::{
     LiveInputBackend, LiveListenerConfig, LiveReceiver, live_protocol_available,

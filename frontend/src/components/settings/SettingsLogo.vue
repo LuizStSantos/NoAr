@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import LogoRemote from '@/components/settings/LogoRemote.vue'
 import SaveBar from '@/components/settings/SaveBar.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
+import RadioCards from '@/components/settings/RadioCards.vue'
 import ToggleRow from '@/components/settings/ToggleRow.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
@@ -96,6 +97,21 @@ function place(column: Column, row: Row) {
 const opacity = computed({
     get: () => Math.round((processing.value.logo_opacity ?? 1) * 100),
     set: (value: number) => (processing.value.logo_opacity = Math.round(value) / 100),
+})
+
+const transitionOptions = computed(() => [
+    { value: 'fade', label: t('settings.logo.transitions.fade'), description: t('settings.logo.transitions.fadeHint') },
+    { value: 'cut', label: t('settings.logo.transitions.cut'), description: t('settings.logo.transitions.cutHint') },
+])
+
+/** The transition length, empty for the built-in lengths. */
+const transitionSeconds = computed({
+    get: () => processing.value.logo_transition_seconds ?? '',
+    set: (value: string | number | null) => {
+        const seconds = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(',', '.'))
+
+        processing.value.logo_transition_seconds = Number.isFinite(seconds) && seconds > 0 ? seconds : null
+    },
 })
 
 const sizeChoice = computed({
@@ -488,6 +504,40 @@ function pick(file: { path: string }) {
                         </label>
                     </div>
                 </div>
+            </div>
+        </SectionCard>
+
+        <SectionCard :title="t('settings.logo.transitions.title')" :description="t('settings.logo.transitions.intro')">
+            <div class="flex flex-col gap-4">
+                <div class="field-label">
+                    {{ t('settings.logo.transitions.in') }}
+                    <RadioCards
+                        v-model="processing.logo_transition_in"
+                        :options="transitionOptions"
+                        :label="t('settings.logo.transitions.in')"
+                    />
+                </div>
+                <div class="field-label">
+                    {{ t('settings.logo.transitions.out') }}
+                    <RadioCards
+                        v-model="processing.logo_transition_out"
+                        :options="transitionOptions"
+                        :label="t('settings.logo.transitions.out')"
+                    />
+                </div>
+                <label class="field-label max-w-[240px]">
+                    {{ t('settings.logo.transitions.length') }}
+                    <UnitInput
+                        v-model="transitionSeconds"
+                        unit="s"
+                        type="number"
+                        min="0.1"
+                        max="10"
+                        step="0.1"
+                        :placeholder="t('settings.logo.transitions.auto')"
+                    />
+                </label>
+                <p class="m-0 field-hint">{{ t('settings.logo.transitions.hint') }}</p>
             </div>
         </SectionCard>
 

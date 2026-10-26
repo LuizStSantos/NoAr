@@ -47,6 +47,9 @@ const PROCESSING_LOGO = [
     'vtt_default',
     'guide_logo',
     'logo_key',
+    'logo_transition_in',
+    'logo_transition_out',
+    'logo_transition_seconds',
 ].map((key) => `processing.${key}`)
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [

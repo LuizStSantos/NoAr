@@ -105,6 +105,10 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
         {
             processing.remove("guide_logo");
             processing.remove("logo_key");
+            // The logo control takes these on air right away.
+            processing.remove("logo_transition_in");
+            processing.remove("logo_transition_out");
+            processing.remove("logo_transition_seconds");
         }
         if let Some(audio) = config
             .get_mut("audio")
@@ -287,6 +291,10 @@ pub async fn update_playout_config(
     data.storage.filler = filler;
     data.processing
         .hls_subtitle()
+        .map_err(ServiceError::BadRequest)?;
+    let logo_transitions = data
+        .processing
+        .logo_transitions()
         .map_err(ServiceError::BadRequest)?;
     let mut listener_ports = HashSet::new();
     {
@@ -543,6 +551,7 @@ pub async fn update_playout_config(
             != "off",
         crate::player::controller::loudness_config(&new_config.audio),
     );
+    manager.logo_control.set_transitions(logo_transitions);
     manager.update_config(new_config).await;
 
     Ok(Json(PlayoutConfigUpdate { requires_restart }))
@@ -826,6 +835,39 @@ mod tests {
 
         updated.processing.logo = "00-assets/outra.png".to_string();
         assert!(requires_playout_restart(&current, &updated));
+    }
+
+    #[test]
+    fn logo_transitions_apply_without_restart() {
+        let current = PlayoutConfig::default();
+        let mut updated = current.clone();
+        updated.processing.logo_transition_in = crate::utils::config::LogoTransition::Cut;
+        updated.processing.logo_transition_out = crate::utils::config::LogoTransition::Cut;
+        updated.processing.logo_transition_seconds = Some(2.5);
+
+        assert!(!requires_playout_restart(&current, &updated));
+    }
+
+    #[test]
+    fn logo_transition_length_must_be_a_sensible_number() {
+        let mut config = PlayoutConfig::default();
+
+        for seconds in [None, Some(0.2), Some(10.0)] {
+            config.processing.logo_transition_seconds = seconds;
+            assert!(config.processing.logo_transitions().is_ok(), "{seconds:?}");
+        }
+
+        for seconds in [Some(0.0), Some(-1.0), Some(10.5), Some(f64::NAN)] {
+            config.processing.logo_transition_seconds = seconds;
+            assert!(config.processing.logo_transitions().is_err(), "{seconds:?}");
+        }
+
+        config.processing.logo_transition_seconds = Some(1.5);
+        config.processing.logo_transition_out = crate::utils::config::LogoTransition::Cut;
+        let transitions = config.processing.logo_transitions().unwrap();
+        assert_eq!(transitions.show, noar_engine::LogoTransition::Fade);
+        assert_eq!(transitions.hide, noar_engine::LogoTransition::Cut);
+        assert_eq!(transitions.seconds, Some(1.5));
     }
 
     #[test]

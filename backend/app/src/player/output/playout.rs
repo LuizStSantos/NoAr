@@ -51,6 +51,12 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     if let Ok(mut audio_level) = manager.audio_level.lock() {
         *audio_level = None;
     }
+    manager.logo_control.set_transitions(
+        config
+            .processing
+            .logo_transitions()
+            .map_err(ServiceError::Conflict)?,
+    );
     let output_config = engine_output_config(
         &config,
         manager.audio_effects.clone(),

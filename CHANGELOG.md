@@ -20,6 +20,11 @@ one is tagged.
   Settings › Ad breaks turns it on and shows how it works and every break;
   the Player shows the next break and the one on air, and marks one by hand;
   an API does the same ([docs](docs/ad_breaks.md)).
+- **Logo animations** in Settings › Logo: the logo can come up and go off
+  with a fade or a cut, each set on its own, over a chosen length. Swapping
+  the logo for another image now cross-fades instead of switching at once.
+  Changes take effect without restarting the playout
+  ([docs](docs/logo.md#how-the-logo-comes-up-and-goes-off)).
 
 ### Fixed
 

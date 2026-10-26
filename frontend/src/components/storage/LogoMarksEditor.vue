@@ -179,6 +179,14 @@ const logoStyle = computed(() => {
 
 const logoOpacity = computed(() => (hiddenNow.value ? 0 : (configStore.playout?.processing?.logo_opacity ?? 1)))
 
+/** The channel's animation as the logo goes off or comes back (a fade lasts 1 s unless set). */
+const logoTransition = computed(() => {
+    const processing = configStore.playout?.processing
+    const kind = hiddenNow.value ? processing?.logo_transition_out : processing?.logo_transition_in
+
+    return kind === 'cut' ? 'none' : `opacity ${processing?.logo_transition_seconds ?? 1}s linear`
+})
+
 function logoLoaded(event: Event) {
     const image = event.target as HTMLImageElement
 
@@ -275,16 +283,16 @@ onBeforeUnmount(() => {
                         v-if="logoUrl"
                         :src="logoUrl"
                         alt=""
-                        class="absolute max-w-none transition-opacity duration-300 pointer-events-none"
-                        :style="{ ...logoStyle, opacity: logoOpacity }"
+                        class="absolute max-w-none pointer-events-none"
+                        :style="{ ...logoStyle, opacity: logoOpacity, transition: logoTransition }"
                         aria-hidden="true"
                         @load="logoLoaded"
                         @error="logoUrl = ''"
                     />
                     <span
                         v-else
-                        class="absolute flex items-center text-[11px] font-semibold text-white border border-white/70 rounded px-1.5 transition-opacity duration-300 pointer-events-none"
-                        :style="{ ...logoStyle, opacity: logoOpacity }"
+                        class="absolute flex items-center text-[11px] font-semibold text-white border border-white/70 rounded px-1.5 pointer-events-none"
+                        :style="{ ...logoStyle, opacity: logoOpacity, transition: logoTransition }"
                         aria-hidden="true"
                         >LOGO</span
                     >

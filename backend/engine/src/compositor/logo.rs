@@ -262,8 +262,50 @@ pub fn blend_logo(target: &mut frame::Video, logo: &LogoOverlay, opacity_factor:
 }
 
 /// How long the logo takes to fade out or back in when it is hidden or shown
-/// from outside.
+/// from outside, unless the channel sets its own length.
 const LOGO_SWITCH: Duration = Duration::from_millis(400);
+
+/// The longest transition a channel can set, in seconds.
+pub const MAX_LOGO_TRANSITION_SECONDS: f64 = 10.0;
+
+/// How the logo appears or disappears.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum LogoTransition {
+    /// It fades in or out.
+    #[default]
+    Fade,
+    /// It appears or disappears at once.
+    Cut,
+}
+
+/// How the logo appears, disappears and gives way to another image.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct LogoTransitions {
+    pub show: LogoTransition,
+    pub hide: LogoTransition,
+    /// Length of a fade, and of the cross-fade when another image takes the
+    /// logo's place, in seconds. `None` keeps the built-in lengths: 1 s on
+    /// clips, 0.4 s when the logo is switched from outside.
+    pub seconds: Option<f64>,
+}
+
+impl LogoTransitions {
+    fn length(&self) -> Option<f64> {
+        self.seconds
+            .filter(|seconds| seconds.is_finite() && *seconds > 0.0)
+            .map(|seconds| seconds.min(MAX_LOGO_TRANSITION_SECONDS))
+    }
+
+    /// Length of a fade on clips, in seconds: the channel's, or `default`.
+    pub(crate) fn fade_seconds(&self, default: f64) -> f64 {
+        self.length().unwrap_or(default)
+    }
+
+    /// Length of a switch from outside and of a cross-fade.
+    fn switch(&self) -> Duration {
+        self.length().map_or(LOGO_SWITCH, Duration::from_secs_f64)
+    }
+}
 
 /// The logo on air as changed from outside the playout, for example by an
 /// encoder whose live has a commercial break: hidden, or another image in
@@ -279,21 +321,60 @@ struct LogoOverride {
     from: f64,
     switched_at: Option<Instant>,
     replacement: Option<(String, Arc<LogoOverlay>)>,
+    /// The image giving way to the one now shown, while they cross-fade.
+    outgoing: Option<Outgoing>,
+    transitions: LogoTransitions,
+}
+
+struct Outgoing {
+    /// `None` is the configured logo.
+    image: Option<Arc<LogoOverlay>>,
+    since: Instant,
+}
+
+/// What the logo looks like in the frame being drawn.
+#[derive(Default)]
+pub(crate) struct LogoFrame {
+    /// How visible the logo is, between 0 (hidden) and 1.
+    pub visibility: f64,
+    /// The image replacing the configured logo.
+    pub replacement: Option<Arc<LogoOverlay>>,
+    /// The image giving way to it (`None` inside: the configured logo), and
+    /// how much of it is still drawn, between 0 and 1.
+    pub outgoing: Option<(Option<Arc<LogoOverlay>>, f64)>,
 }
 
 impl LogoOverride {
     /// Visibility now, between 0 (hidden) and 1, fading after a switch.
     fn level(&self, now: Instant) -> f64 {
         let target = if self.hidden { 0.0 } else { 1.0 };
+        let transition = if self.hidden {
+            self.transitions.hide
+        } else {
+            self.transitions.show
+        };
 
         match self.switched_at {
-            Some(at) => {
-                let progress =
-                    now.saturating_duration_since(at).as_secs_f64() / LOGO_SWITCH.as_secs_f64();
+            Some(at) if transition == LogoTransition::Fade => {
+                let progress = now.saturating_duration_since(at).as_secs_f64()
+                    / self.transitions.switch().as_secs_f64();
 
                 self.from + (target - self.from) * progress.min(1.0)
             }
-            None => target,
+            _ => target,
+        }
+    }
+
+    /// Let the image on air cross-fade to the next one, when it is visible.
+    fn hand_over(&mut self, now: Instant) {
+        if !self.hidden && self.level(now) > 0.0 {
+            self.outgoing = Some(Outgoing {
+                image: self
+                    .replacement
+                    .as_ref()
+                    .map(|(_, overlay)| overlay.clone()),
+                since: now,
+            });
         }
     }
 
@@ -332,12 +413,26 @@ impl LogoControl {
         self.lock().set_hidden(true);
     }
 
-    /// Fade the configured logo back in, dropping any replacement.
+    /// Fade the configured logo back in, dropping any replacement, which
+    /// cross-fades to it when it is on air.
     pub fn show(&self) {
         let mut state = self.lock();
 
+        if state.replacement.is_some() {
+            state.hand_over(Instant::now());
+        }
         state.replacement = None;
         state.set_hidden(false);
+    }
+
+    /// How the logo appears, disappears and gives way to another image from
+    /// now on, on clips and when switched from outside.
+    pub fn set_transitions(&self, transitions: LogoTransitions) {
+        self.lock().transitions = transitions;
+    }
+
+    pub fn transitions(&self) -> LogoTransitions {
+        self.lock().transitions
     }
 
     /// Show the image of `config` in place of the configured logo, sized and
@@ -347,6 +442,7 @@ impl LogoControl {
         let overlay = LogoOverlay::load(config, width, height)?;
         let mut state = self.lock();
 
+        state.hand_over(Instant::now());
         state.replacement = Some((label.to_string(), Arc::new(overlay)));
         state.set_hidden(false);
 
@@ -366,18 +462,33 @@ impl LogoControl {
         self.lock().replacement.is_some()
     }
 
-    /// For the frame being drawn: how visible the logo is, and the image
-    /// replacing the configured one.
-    pub(crate) fn frame(&self) -> (f64, Option<Arc<LogoOverlay>>) {
-        let state = self.lock();
+    /// For the frame being drawn: how visible the logo is, the image
+    /// replacing the configured one, and the one cross-fading away.
+    pub(crate) fn frame(&self) -> LogoFrame {
+        self.frame_at(Instant::now())
+    }
 
-        (
-            state.level(Instant::now()),
-            state
+    fn frame_at(&self, now: Instant) -> LogoFrame {
+        let mut state = self.lock();
+        let switch = state.transitions.switch().as_secs_f64();
+        let outgoing = state.outgoing.as_ref().and_then(|outgoing| {
+            let left = 1.0 - now.saturating_duration_since(outgoing.since).as_secs_f64() / switch;
+
+            (left > 0.0).then(|| (outgoing.image.clone(), left))
+        });
+
+        if outgoing.is_none() {
+            state.outgoing = None;
+        }
+
+        LogoFrame {
+            visibility: state.level(now),
+            replacement: state
                 .replacement
                 .as_ref()
                 .map(|(_, overlay)| overlay.clone()),
-        )
+            outgoing,
+        }
     }
 }
 
@@ -385,7 +496,10 @@ impl LogoControl {
 mod tests {
     use std::time::{Duration, Instant};
 
-    use super::{LogoConfig, LogoControl, LogoOverride, logo_dimensions, logo_position};
+    use super::{
+        LogoConfig, LogoControl, LogoOverride, LogoTransition, LogoTransitions, logo_dimensions,
+        logo_position,
+    };
 
     fn logo_asset() -> LogoConfig {
         LogoConfig {
@@ -419,6 +533,77 @@ mod tests {
         let back = state.switched_at.unwrap();
         assert!(state.level(back) < 0.01);
         assert_eq!(state.level(back + Duration::from_secs(1)), 1.0);
+    }
+
+    #[test]
+    fn a_cut_hides_and_shows_the_logo_at_once() {
+        let mut state = LogoOverride {
+            transitions: LogoTransitions {
+                show: LogoTransition::Cut,
+                hide: LogoTransition::Cut,
+                seconds: None,
+            },
+            ..LogoOverride::default()
+        };
+
+        state.set_hidden(true);
+        assert_eq!(state.level(state.switched_at.unwrap()), 0.0);
+        state.set_hidden(false);
+        assert_eq!(state.level(state.switched_at.unwrap()), 1.0);
+    }
+
+    #[test]
+    fn the_channel_sets_how_long_a_switch_takes() {
+        let mut state = LogoOverride {
+            transitions: LogoTransitions {
+                seconds: Some(2.0),
+                ..LogoTransitions::default()
+            },
+            ..LogoOverride::default()
+        };
+
+        state.set_hidden(true);
+        let at = state.switched_at.unwrap();
+        assert!((state.level(at + Duration::from_secs(1)) - 0.5).abs() < 0.01);
+        assert_eq!(state.level(at + Duration::from_secs(2)), 0.0);
+    }
+
+    #[test]
+    fn a_new_image_cross_fades_with_the_one_on_air() {
+        let control = LogoControl::default();
+        control.set_transitions(LogoTransitions {
+            seconds: Some(1.0),
+            ..LogoTransitions::default()
+        });
+
+        control.replace("a.png", &logo_asset(), 1920, 1080).unwrap();
+        let since = control.lock().outgoing.as_ref().unwrap().since;
+
+        // The configured logo gives way to the new image over the second.
+        let frame = control.frame_at(since + Duration::from_millis(250));
+        let (image, left) = frame.outgoing.unwrap();
+        assert!(image.is_none());
+        assert!((left - 0.75).abs() < 0.01);
+        assert!(frame.replacement.is_some());
+        assert!(
+            control
+                .frame_at(since + Duration::from_secs(1))
+                .outgoing
+                .is_none()
+        );
+
+        // Back to the configured logo: the replacement fades away under it.
+        control.show();
+        let since = control.lock().outgoing.as_ref().unwrap().since;
+        let (image, _) = control.frame_at(since).outgoing.unwrap();
+        assert!(image.is_some());
+
+        // A hidden logo has nothing on air to cross-fade from.
+        let hidden = LogoControl::default();
+        hidden.hide();
+        hidden.lock().switched_at = None;
+        hidden.replace("b.png", &logo_asset(), 1920, 1080).unwrap();
+        assert!(hidden.lock().outgoing.is_none());
     }
 
     #[test]
