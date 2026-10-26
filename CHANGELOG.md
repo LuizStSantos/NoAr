@@ -47,6 +47,13 @@ one is tagged.
 - A clip failing partway now falls back only for the rest of its slot.
   Before, the fallback ran for the whole clip length again, and everything
   after it aired late by the part already played.
+- A scheduled clip placed in the hour the clock skips when summer time
+  starts (for example 02:30) was silently never aired; it now starts when the
+  gap ends.
+- A database hiccup at the moment a scheduled event was due made it never
+  air; the scheduler now tries again on its next check.
+- Changing a scheduled event when part of its bookkeeping failed could leave
+  the old version on air; the change now always takes effect.
 - Start, stop and restart can no longer run twice at once, and a restart
   finishes even if the browser disconnects halfway. Before, that could leave
   the channel off air and refusing every further command until NoAr was

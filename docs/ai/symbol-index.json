@@ -461,9 +461,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "e8d5240286bfccbdf51d281fa17cc10854d79fa6688234833bf7dcbf9d5d1cd1",
+      "sha256": "bf564c36300b924727e7832cf7b426a7baa4d0650109d288659db1999d74ab59",
       "language": "Markdown",
-      "bytes": 7358,
+      "bytes": 7788,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1512,9 +1512,9 @@
       ]
     },
     "backend/app/src/api/routes/schedule.rs": {
-      "sha256": "36374862194689ff6aeb52180fcd4ad54c226c515f8324fe76ffd2b2cb9c875a",
+      "sha256": "f620020d53f79d60376a4419df114e4a89b1b82c3ba3c452fa1a7ab88b72c486",
       "language": "Rust",
-      "bytes": 13494,
+      "bytes": 13867,
       "symbols": [
         {
           "name": "ScheduleQuery",
@@ -1562,35 +1562,35 @@
         },
         {
           "name": "delete_schedule_event",
-          "line": 232
+          "line": 244
         },
         {
           "name": "trigger_schedule_event",
-          "line": 257
+          "line": 269
         },
         {
           "name": "stop_schedule_event",
-          "line": 287
+          "line": 299
         },
         {
           "name": "get_schedule_status",
-          "line": 302
+          "line": 314
         },
         {
           "name": "get_lives",
-          "line": 348
+          "line": 360
         },
         {
           "name": "add_live",
-          "line": 364
+          "line": 376
         },
         {
           "name": "update_live",
-          "line": 386
+          "line": 398
         },
         {
           "name": "test_live_signal",
-          "line": 402
+          "line": 414
         }
       ]
     },
@@ -4094,249 +4094,249 @@
       ]
     },
     "backend/app/src/player/schedule.rs": {
-      "sha256": "0b6169e2c5893b6b37a11a04ab15dc2e9ab2c612333646f6ae18716135ef1c5a",
+      "sha256": "57c7a2bfdf9d7d6a104116c1f4fe11d472cae7b6568db41501349482086f7f65",
       "language": "Rust",
-      "bytes": 52320,
+      "bytes": 58044,
       "symbols": [
         {
           "name": "InterruptedClip",
-          "line": 73
+          "line": 78
         },
         {
           "name": "ActiveEvent",
-          "line": 85
+          "line": 90
         },
         {
           "name": "Resume",
-          "line": 103
+          "line": 108
         },
         {
           "name": "Queued",
-          "line": 111
+          "line": 116
         },
         {
           "name": "Inner",
-          "line": 121
+          "line": 126
         },
         {
           "name": "ScheduleState",
-          "line": 135
-        },
-        {
-          "name": "ScheduleState",
-          "line": 139
-        },
-        {
-          "name": "lock",
           "line": 140
         },
         {
-          "name": "invalidate",
+          "name": "ScheduleState",
+          "line": 144
+        },
+        {
+          "name": "lock",
           "line": 145
         },
         {
-          "name": "reset",
+          "name": "invalidate",
           "line": 150
         },
         {
+          "name": "reset",
+          "line": 155
+        },
+        {
           "name": "generation",
-          "line": 160
+          "line": 165
         },
         {
           "name": "queue",
-          "line": 164
+          "line": 169
         },
         {
           "name": "queue_resumed",
-          "line": 170
-        },
-        {
-          "name": "push",
           "line": 175
         },
         {
+          "name": "push",
+          "line": 180
+        },
+        {
           "name": "trigger",
-          "line": 197
+          "line": 202
         },
         {
           "name": "revise",
-          "line": 205
+          "line": 210
         },
         {
           "name": "has_queued",
-          "line": 234
+          "line": 239
         },
         {
           "name": "queued",
-          "line": 238
+          "line": 243
         },
         {
           "name": "take_queued",
-          "line": 246
+          "line": 251
         },
         {
           "name": "active",
-          "line": 257
+          "line": 262
         },
         {
           "name": "is_active",
-          "line": 264
-        },
-        {
-          "name": "request_abort",
           "line": 269
         },
         {
+          "name": "request_abort",
+          "line": 274
+        },
+        {
           "name": "take_abort",
-          "line": 276
+          "line": 281
         },
         {
           "name": "set_item",
-          "line": 280
+          "line": 285
         },
         {
           "name": "cached_events",
-          "line": 286
+          "line": 291
         },
         {
           "name": "store_events",
-          "line": 290
+          "line": 295
         },
         {
           "name": "wants_interrupt",
-          "line": 294
+          "line": 299
         },
         {
           "name": "interrupt_sent",
-          "line": 300
+          "line": 305
         },
         {
           "name": "run_ticker",
-          "line": 306
+          "line": 311
         },
         {
           "name": "tick",
-          "line": 325
+          "line": 330
+        },
+        {
+          "name": "wall_clock_time",
+          "line": 421
+        },
+        {
+          "name": "is_due",
+          "line": 436
+        },
+        {
+          "name": "starts_now",
+          "line": 448
         },
         {
           "name": "ResumePlan",
-          "line": 401
+          "line": 457
         },
         {
           "name": "resume_plan",
-          "line": 410
+          "line": 466
         },
         {
           "name": "resume_unfinished",
-          "line": 439
+          "line": 495
         },
         {
           "name": "try_resume_unfinished",
-          "line": 445
+          "line": 501
         },
         {
           "name": "close_run",
-          "line": 497
+          "line": 553
         },
         {
           "name": "revised",
-          "line": 508
+          "line": 564
         },
         {
           "name": "still_scheduled",
-          "line": 530
+          "line": 586
         },
         {
           "name": "seconds_between",
-          "line": 541
+          "line": 597
         },
         {
           "name": "queue_when_signal_answers",
-          "line": 547
+          "line": 603
         },
         {
           "name": "request_interrupt",
-          "line": 621
+          "line": 677
         },
         {
           "name": "return_to_programme",
-          "line": 634
+          "line": 690
         },
         {
           "name": "play_queued_event",
-          "line": 647
+          "line": 703
         },
         {
           "name": "EventEnd",
-          "line": 808
+          "line": 864
         },
         {
           "name": "play_clips",
-          "line": 817
+          "line": 873
         },
         {
           "name": "event_breaks",
-          "line": 925
+          "line": 981
         },
         {
           "name": "play_live",
-          "line": 989
+          "line": 1045
         },
         {
           "name": "SignalCheck",
-          "line": 1167
+          "line": 1223
         },
         {
           "name": "SignalCheck",
-          "line": 1169
+          "line": 1225
         },
         {
           "name": "start",
-          "line": 1170
+          "line": 1226
         },
         {
           "name": "live_answers",
-          "line": 1183
+          "line": 1239
         },
         {
           "name": "preload_event",
-          "line": 1203
+          "line": 1259
         },
         {
           "name": "preload_return",
-          "line": 1222
+          "line": 1278
         },
         {
           "name": "forget_live",
-          "line": 1271
+          "line": 1327
         },
         {
           "name": "Drop",
-          "line": 1282
+          "line": 1338
         },
         {
           "name": "drop",
-          "line": 1283
+          "line": 1339
         },
         {
           "name": "wait_on_air",
-          "line": 1291
+          "line": 1347
         },
         {
           "name": "end_waiting",
-          "line": 1335
-        },
-        {
-          "name": "show_on_air",
-          "line": 1349
-        },
-        {
-          "name": "waiting_source",
-          "line": 1369
-        },
-        {
-          "name": "stopping",
-          "line": 1381
+          "line": 1391
         }
       ]
     },
