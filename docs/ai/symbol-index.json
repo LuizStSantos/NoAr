@@ -461,9 +461,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "bf564c36300b924727e7832cf7b426a7baa4d0650109d288659db1999d74ab59",
+      "sha256": "b23f15831827fae1a96bf508599b6467956fe0d1456f9c528339c343f5c99664",
       "language": "Markdown",
-      "bytes": 7788,
+      "bytes": 8125,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -19825,9 +19825,9 @@
       ]
     },
     "frontend/src/components/settings/SettingsLogo.vue": {
-      "sha256": "759d8dd77fd1c955f65ad00b795b4f7eda287343530f69a4154ff5e57dfd931a",
+      "sha256": "5b2300755a5cd975efcbfa1887b22e3095711508cb91f4eed58b463cb37b1be5",
       "language": "Vue",
-      "bytes": 25457,
+      "bytes": 25733,
       "symbols": [
         {
           "name": "COLUMNS",
@@ -19858,156 +19858,156 @@
           "line": 28
         },
         {
-          "name": "processing",
+          "name": "logoImage",
           "line": 30
         },
         {
+          "name": "processing",
+          "line": 32
+        },
+        {
           "name": "output",
-          "line": 31
+          "line": 33
         },
         {
           "name": "parsePosition",
-          "line": 40
-        },
-        {
-          "name": "axis",
           "line": 42
         },
         {
+          "name": "axis",
+          "line": 44
+        },
+        {
           "name": "end",
-          "line": 51
+          "line": 53
         },
         {
           "name": "horizontal",
-          "line": 55
+          "line": 57
         },
         {
           "name": "vertical",
-          "line": 56
+          "line": 58
         },
         {
           "name": "margins",
-          "line": 62
+          "line": 64
         },
         {
           "name": "writePosition",
-          "line": 71
-        },
-        {
-          "name": "m",
-          "line": 72
-        },
-        {
-          "name": "x",
           "line": 73
         },
         {
-          "name": "y",
+          "name": "m",
           "line": 74
         },
         {
-          "name": "placement",
-          "line": 79
+          "name": "x",
+          "line": 75
         },
         {
-          "name": "margin",
+          "name": "y",
+          "line": 76
+        },
+        {
+          "name": "placement",
           "line": 81
         },
         {
+          "name": "margin",
+          "line": 83
+        },
+        {
           "name": "place",
-          "line": 90
+          "line": 92
         },
         {
           "name": "opacity",
-          "line": 94
+          "line": 96
         },
         {
           "name": "sizeChoice",
-          "line": 99
+          "line": 101
         },
         {
           "name": "frameSize",
-          "line": 111
+          "line": 113
         },
         {
           "name": "safeAreas",
-          "line": 117
+          "line": 119
         },
         {
           "name": "GUIDES_KEY",
-          "line": 122
+          "line": 124
         },
         {
           "name": "showGuides",
-          "line": 123
-        },
-        {
-          "name": "readGuides",
           "line": 125
         },
         {
-          "name": "previewStyle",
-          "line": 142
+          "name": "readGuides",
+          "line": 127
         },
         {
-          "name": "spot",
+          "name": "previewStyle",
           "line": 144
         },
         {
-          "name": "size",
+          "name": "box",
           "line": 145
         },
         {
+          "name": "spot",
+          "line": 154
+        },
+        {
+          "name": "size",
+          "line": 155
+        },
+        {
           "name": "style",
-          "line": 146
+          "line": 156
         },
         {
           "name": "mx",
-          "line": 150
+          "line": 160
         },
         {
           "name": "my",
-          "line": 151
+          "line": 161
         },
         {
           "name": "storageImageUrl",
-          "line": 171
-        },
-        {
-          "name": "storage",
-          "line": 172
-        },
-        {
-          "name": "logo",
-          "line": 173
-        },
-        {
-          "name": "absolute",
-          "line": 179
-        },
-        {
-          "name": "parent",
-          "line": 180
+          "line": 181
         },
         {
           "name": "loadLogo",
-          "line": 189
+          "line": 185
+        },
+        {
+          "name": "logoLoaded",
+          "line": 199
+        },
+        {
+          "name": "image",
+          "line": 200
         },
         {
           "name": "guideLogoUrl",
-          "line": 202
-        },
-        {
-          "name": "guideLogoFailed",
-          "line": 203
-        },
-        {
-          "name": "loadGuideLogo",
           "line": 205
         },
         {
+          "name": "guideLogoFailed",
+          "line": 206
+        },
+        {
+          "name": "loadGuideLogo",
+          "line": 208
+        },
+        {
           "name": "pick",
-          "line": 218
+          "line": 221
         }
       ]
     },
@@ -21265,209 +21265,241 @@
       ]
     },
     "frontend/src/components/storage/LogoMarksEditor.vue": {
-      "sha256": "3d46b8b521a368c61c133c0a1f294e6af2ad9a7ecfa35d98c96f2a5737241886",
+      "sha256": "f69eef87e1fe14e5718f65751a241195dc51e63689726e3d241e6c88a3ed9de0",
       "language": "Vue",
-      "bytes": 17425,
+      "bytes": 18964,
       "symbols": [
         {
           "name": "props",
-          "line": 17
+          "line": 18
         },
         {
           "name": "emit",
-          "line": 25
+          "line": 26
         },
         {
           "name": "configStore",
-          "line": 28
-        },
-        {
-          "name": "indexStore",
           "line": 29
         },
         {
+          "name": "indexStore",
+          "line": 30
+        },
+        {
           "name": "MAX_SPANS",
-          "line": 31
+          "line": 32
         },
         {
           "name": "spans",
-          "line": 33
-        },
-        {
-          "name": "baseline",
           "line": 34
         },
         {
-          "name": "loading",
+          "name": "baseline",
           "line": 35
         },
         {
-          "name": "saving",
+          "name": "loading",
           "line": 36
         },
         {
-          "name": "videoUrl",
+          "name": "saving",
           "line": 37
         },
         {
-          "name": "logoUrl",
+          "name": "videoUrl",
           "line": 38
         },
         {
-          "name": "videoFailed",
+          "name": "logoUrl",
           "line": 39
         },
         {
-          "name": "video",
-          "line": 40
-        },
-        {
-          "name": "position",
+          "name": "logoImage",
           "line": 41
         },
         {
-          "name": "duration",
+          "name": "videoFailed",
           "line": 42
         },
         {
-          "name": "pendingFrom",
+          "name": "video",
+          "line": 43
+        },
+        {
+          "name": "position",
           "line": 44
         },
         {
-          "name": "drafts",
-          "line": 46
+          "name": "duration",
+          "line": 45
         },
         {
-          "name": "confirmClose",
+          "name": "pendingFrom",
           "line": 47
         },
         {
-          "name": "dirty",
+          "name": "drafts",
           "line": 49
         },
         {
-          "name": "sorted",
+          "name": "confirmClose",
           "line": 50
         },
         {
-          "name": "hiddenNow",
-          "line": 51
-        },
-        {
-          "name": "overlaps",
+          "name": "dirty",
           "line": 52
         },
         {
-          "name": "invalid",
+          "name": "sorted",
+          "line": 53
+        },
+        {
+          "name": "hiddenNow",
+          "line": 54
+        },
+        {
+          "name": "overlaps",
           "line": 55
         },
         {
-          "name": "formatTime",
+          "name": "invalid",
           "line": 58
         },
         {
-          "name": "total",
-          "line": 59
-        },
-        {
-          "name": "h",
-          "line": 60
-        },
-        {
-          "name": "m",
+          "name": "formatTime",
           "line": 61
         },
         {
-          "name": "s",
+          "name": "total",
           "line": 62
         },
         {
+          "name": "h",
+          "line": 63
+        },
+        {
+          "name": "m",
+          "line": 64
+        },
+        {
+          "name": "s",
+          "line": 65
+        },
+        {
           "name": "parseTime",
-          "line": 68
+          "line": 71
         },
         {
           "name": "parts",
-          "line": 69
+          "line": 72
         },
         {
           "name": "fieldText",
-          "line": 78
+          "line": 81
         },
         {
           "name": "setField",
-          "line": 82
-        },
-        {
-          "name": "seconds",
           "line": 85
         },
         {
+          "name": "seconds",
+          "line": 88
+        },
+        {
           "name": "settleField",
-          "line": 92
+          "line": 95
         },
         {
           "name": "seek",
-          "line": 96
+          "line": 99
         },
         {
           "name": "seekBar",
-          "line": 104
+          "line": 107
         },
         {
           "name": "bar",
-          "line": 105
+          "line": 108
         },
         {
           "name": "share",
-          "line": 106
+          "line": 109
         },
         {
           "name": "markOff",
-          "line": 113
+          "line": 116
         },
         {
           "name": "markOn",
-          "line": 117
+          "line": 120
         },
         {
           "name": "remove",
-          "line": 127
+          "line": 130
         },
         {
           "name": "percent",
-          "line": 132
+          "line": 135
         },
         {
           "name": "previewUrl",
-          "line": 136
+          "line": 139
         },
         {
           "name": "load",
-          "line": 140
+          "line": 143
         },
         {
           "name": "hide",
-          "line": 144
+          "line": 147
         },
         {
-          "name": "logo",
-          "line": 155
+          "name": "channel",
+          "line": 158
         },
         {
-          "name": "save",
-          "line": 162
+          "name": "frameSize",
+          "line": 164
         },
         {
-          "name": "hide",
-          "line": 166
+          "name": "logoStyle",
+          "line": 170
         },
         {
-          "name": "requestClose",
+          "name": "processing",
+          "line": 171
+        },
+        {
+          "name": "box",
+          "line": 172
+        },
+        {
+          "name": "logoOpacity",
           "line": 180
         },
         {
-          "name": "dialog",
+          "name": "logoLoaded",
+          "line": 182
+        },
+        {
+          "name": "image",
+          "line": 183
+        },
+        {
+          "name": "save",
           "line": 188
+        },
+        {
+          "name": "hide",
+          "line": 192
+        },
+        {
+          "name": "requestClose",
+          "line": 206
+        },
+        {
+          "name": "dialog",
+          "line": 214
         }
       ]
     },
@@ -22111,6 +22143,53 @@
         {
           "name": "foldRepeats",
           "line": 138
+        }
+      ]
+    },
+    "frontend/src/composables/logo.ts": {
+      "sha256": "dacc73919776d9560a0b95bfd1000fb1e5d35d3d1e7c064141e40af96a0714d8",
+      "language": "TypeScript",
+      "bytes": 5338,
+      "symbols": [
+        {
+          "name": "Size",
+          "line": 3
+        },
+        {
+          "name": "LogoBox",
+          "line": 9
+        },
+        {
+          "name": "even",
+          "line": 17
+        },
+        {
+          "name": "dimension",
+          "line": 22
+        },
+        {
+          "name": "logoSize",
+          "line": 43
+        },
+        {
+          "name": "axis",
+          "line": 68
+        },
+        {
+          "name": "logoBox",
+          "line": 109
+        },
+        {
+          "name": "clamp",
+          "line": 116
+        },
+        {
+          "name": "logoBoxStyle",
+          "line": 132
+        },
+        {
+          "name": "storageImageUrl",
+          "line": 145
         }
       ]
     },

@@ -9,7 +9,7 @@ import ToggleRow from '@/components/settings/ToggleRow.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
-import { createFilePreviewUrl } from '@/composables/fileAccess'
+import { type Size, logoBox, logoBoxStyle, storageImageUrl as sharedStorageImageUrl } from '@/composables/logo'
 import { usePlayoutPage } from '@/composables/settingsPage'
 
 const { t } = useI18n()
@@ -26,6 +26,8 @@ const picking = ref<'logo' | 'guide' | null>(null)
 const showAdvanced = ref(false)
 const logoUrl = ref('')
 const logoFailed = ref(false)
+/** The logo image's own size, once it loaded. */
+const logoImage = ref<Size | null>(null)
 
 const processing = computed(() => configStore.playout.processing)
 const output = computed(() => configStore.playout.output)
@@ -138,8 +140,16 @@ watch(showGuides, (on) => {
     }
 })
 
-/** Where the logo sits in the preview frame, in percent. */
+/** Where the logo sits in the preview frame, in percent: as on air once the image loaded. */
 const previewStyle = computed(() => {
+    const box =
+        logoImage.value &&
+        logoBox(processing.value.logo_scale, processing.value.logo_position, logoImage.value, frameSize.value)
+
+    if (box) {
+        return { ...logoBoxStyle(box), opacity: String(processing.value.logo_opacity ?? 1) }
+    }
+
     const { width, height } = frameSize.value
     const spot = placement.value ?? { column: 'right', row: 'top', margin: 12 }
     const size = /^(\d+(?:\.\d+)?)%/.exec(processing.value.logo_scale.trim())
@@ -168,27 +178,14 @@ const previewStyle = computed(() => {
 })
 
 /** A URL that shows the storage image at `path`, or '' when there is none. */
-async function storageImageUrl(path: string | undefined): Promise<string> {
-    const storage = configStore.channels[configStore.i]?.storage ?? ''
-    const logo = path?.trim()
-
-    if (!logo || !storage) {
-        return ''
-    }
-
-    const absolute = logo.startsWith('/') ? logo : `${storage.replace(/\/+$/, '')}/${logo}`
-    const parent = storage.slice(0, storage.lastIndexOf('/'))
-
-    if (!absolute.startsWith(storage)) {
-        throw new Error('outside the storage')
-    }
-
-    return createFilePreviewUrl(configStore.channels[configStore.i]?.id, absolute.slice(parent.length))
+function storageImageUrl(path: string | undefined): Promise<string> {
+    return sharedStorageImageUrl(configStore.channels[configStore.i], path)
 }
 
 async function loadLogo() {
     logoFailed.value = false
     logoUrl.value = ''
+    logoImage.value = null
 
     try {
         logoUrl.value = await storageImageUrl(processing.value?.logo)
@@ -198,6 +195,12 @@ async function loadLogo() {
 }
 
 watch(() => processing.value?.logo, loadLogo, { immediate: true })
+
+function logoLoaded(event: Event) {
+    const image = event.target as HTMLImageElement
+
+    logoImage.value = image.naturalWidth ? { width: image.naturalWidth, height: image.naturalHeight } : null
+}
 
 const guideLogoUrl = ref('')
 const guideLogoFailed = ref(false)
@@ -332,6 +335,7 @@ function pick(file: { path: string }) {
                             alt=""
                             class="absolute h-auto"
                             :style="previewStyle"
+                            @load="logoLoaded"
                             @error="logoFailed = true"
                         />
                         <span

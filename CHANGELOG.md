@@ -47,6 +47,11 @@ one is tagged.
 - A clip failing partway now falls back only for the rest of its slot.
   Before, the fallback ran for the whole clip length again, and everything
   after it aired late by the part already played.
+- When marking where a video keeps the logo off, the preview now shows the
+  channel's logo where, as large and as transparent as it goes on air, in
+  the shape of the output picture; logos set by full path showed only a
+  placeholder. Settings › Logo also sizes its preview exactly, including
+  custom scale and position expressions.
 - A scheduled clip placed in the hour the clock skips when summer time
   starts (for example 02:30) was silently never aired; it now starts when the
   gap ends.
