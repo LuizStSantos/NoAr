@@ -537,9 +537,9 @@
       "symbols": []
     },
     ".github/workflows/docker.yml": {
-      "sha256": "428d683990bc497616e023f17b5b0f4e673b6f1a7001c7ca0a4d4d40b0a4e63f",
+      "sha256": "55086770e8e7a2053fceb1a27b829ebdffc144e9ce6ca5381d5cf2aa70d90b4d",
       "language": "YAML",
-      "bytes": 1864,
+      "bytes": 2104,
       "symbols": []
     },
     ".github/workflows/prepare-release.yml": {
@@ -609,9 +609,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "ba1ca210d300290efdc629b98014a7cf0828fb7ccdd3741dcf77ff5bf9f661e5",
+      "sha256": "82c477d7c909b721aebcffb21fb35cfdb047360e1c33b06e9df4ca3b30e8d2f3",
       "language": "Markdown",
-      "bytes": 9723,
+      "bytes": 10136,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -621,7 +621,7 @@
       "symbols": []
     },
     "Cargo.toml": {
-      "sha256": "d61849245e4936bda2b4b86b7c080acf3121f23395087708ad21304b1516d460",
+      "sha256": "c6355207109331506a30fb09e595fbf566321235682b4a376ce4e97e382cfe4e",
       "language": "TOML",
       "bytes": 1084,
       "symbols": []
@@ -7499,137 +7499,149 @@
       ]
     },
     "backend/app/src/utils/update.rs": {
-      "sha256": "760f35626196b7fdcceace6cdf4ad643bf7dc543804c3ef9e631fef6b6bac2c7",
+      "sha256": "fbc9c9ce9adc2589e2ea0ac2ccaadffad1d040b0098d149b3205d71c42fcc9d6",
       "language": "Rust",
-      "bytes": 16070,
+      "bytes": 17077,
       "symbols": [
         {
           "name": "installed_commit",
-          "line": 42
+          "line": 41
         },
         {
           "name": "repository",
-          "line": 48
+          "line": 47
         },
         {
           "name": "UpdateStatus",
-          "line": 58
+          "line": 57
         },
         {
           "name": "Release",
-          "line": 84
+          "line": 83
         },
         {
           "name": "Change",
-          "line": 97
+          "line": 98
         },
         {
           "name": "Checked",
-          "line": 104
+          "line": 105
         },
         {
           "name": "status",
-          "line": 127
+          "line": 128
         },
         {
           "name": "is_available",
-          "line": 150
+          "line": 151
         },
         {
           "name": "checked_ago",
-          "line": 158
+          "line": 159
         },
         {
           "name": "check",
-          "line": 167
+          "line": 168
         },
         {
           "name": "spawn_checker",
-          "line": 204
+          "line": 205
         },
         {
           "name": "Found",
-          "line": 228
+          "line": 229
+        },
+        {
+          "name": "LatestRelease",
+          "line": 236
+        },
+        {
+          "name": "tag_version",
+          "line": 241
         },
         {
           "name": "WorkflowRuns",
-          "line": 235
-        },
-        {
-          "name": "WorkflowRun",
-          "line": 240
-        },
-        {
-          "name": "Comparison",
           "line": 246
         },
         {
-          "name": "ComparedCommit",
+          "name": "WorkflowRun",
+          "line": 251
+        },
+        {
+          "name": "Comparison",
           "line": 257
         },
         {
+          "name": "ComparedCommit",
+          "line": 268
+        },
+        {
           "name": "CommitDetail",
-          "line": 263
-        },
-        {
-          "name": "CommitSignature",
-          "line": 269
-        },
-        {
-          "name": "CommitInfo",
           "line": 274
         },
         {
+          "name": "CommitSignature",
+          "line": 280
+        },
+        {
+          "name": "CommitInfo",
+          "line": 285
+        },
+        {
           "name": "find_newest",
-          "line": 278
+          "line": 289
         },
         {
           "name": "release",
-          "line": 345
+          "line": 370
         },
         {
           "name": "installed_time",
-          "line": 386
+          "line": 412
         },
         {
           "name": "get_json",
-          "line": 397
+          "line": 423
         },
         {
           "name": "same_commit",
-          "line": 421
+          "line": 447
         },
         {
           "name": "millis",
-          "line": 431
+          "line": 457
         },
         {
           "name": "tests",
-          "line": 438
+          "line": 464
         },
         {
           "name": "comparison",
-          "line": 441
+          "line": 467
         },
         {
           "name": "changes_are_listed_newest_first_by_their_first_line",
-          "line": 461
+          "line": 487
         },
         {
           "name": "a_long_list_keeps_its_count",
-          "line": 478
+          "line": 504
         },
         {
           "name": "without_a_comparison_the_release_links_its_commit",
-          "line": 490
+          "line": 516
         },
         {
           "name": "short_and_full_commits_match",
-          "line": 499
+          "line": 525
+        },
+        {
+          "name": "a_release_tag_names_its_version",
+          "line": 535
         },
         {
           "name": "github_times_become_milliseconds",
-          "line": 509
+          "line": 541
         }
       ]
     },
@@ -16716,9 +16728,9 @@
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "8a988836336f94e85fb69f03b899643c106c152557910a1b7156267ed40ffd7b",
+      "sha256": "b72505aae07c37dc2cf580def29ea2600659f5dc9f600f56f8ef994c2bd2fd8c",
       "language": "Markdown",
-      "bytes": 6606,
+      "bytes": 6635,
       "symbols": []
     },
     "docs/external_tasks.md": {
@@ -16770,9 +16782,9 @@
       "symbols": []
     },
     "docs/releasing.md": {
-      "sha256": "f8132174647e5624c77c9195de24938d74a0f487b4e22df72656eeaa86ac84ae",
+      "sha256": "0fbc99a3555b1886df79d9e2cec80383e70ac14c166095ebef7d8a8212afbd23",
       "language": "Markdown",
-      "bytes": 3735,
+      "bytes": 4034,
       "symbols": []
     },
     "docs/remote_source.md": {
@@ -20732,9 +20744,9 @@
       ]
     },
     "frontend/src/components/settings/SettingsUpdates.vue": {
-      "sha256": "2c30763a8da1779a5eb100702481137494d7a84630109935ab37256f4ad8f83e",
+      "sha256": "41f4414527be498aa3ce283e9f208dd22a3bf63e12e832565768f8ccd12e0951",
       "language": "Vue",
-      "bytes": 17437,
+      "bytes": 17639,
       "symbols": [
         {
           "name": "indexStore",
@@ -23910,9 +23922,9 @@
       ]
     },
     "frontend/src/types/update.d.ts": {
-      "sha256": "8cb0c7959743c40106f20c4a000b7aefb61e61edd50dda7aab2146324651b538",
+      "sha256": "8f8a454531b4f2e88f5e67547c85d569802e5c709f1f2596898ab98ed9159d37",
       "language": "TypeScript",
-      "bytes": 1540,
+      "bytes": 1616,
       "symbols": [
         {
           "name": "UpdateChange",
@@ -23924,11 +23936,11 @@
         },
         {
           "name": "UpdaterStatus",
-          "line": 21
+          "line": 23
         },
         {
           "name": "UpdateStatus",
-          "line": 30
+          "line": 32
         }
       ]
     },
@@ -25509,13 +25521,13 @@
       "symbols": []
     },
     "package-lock.json": {
-      "sha256": "b39a8c13a7eed65f648abd93a9c79eeab6722d354c4826e470987bd3cb8c3951",
+      "sha256": "82f8ce73c4ebfe49cd25f96919a00783d46fac7d76b6b7fd638cb174ae6b4b9a",
       "language": "JSON",
       "bytes": 215132,
       "symbols": []
     },
     "package.json": {
-      "sha256": "5e1a2ac5103958277295fe7fb0c186d10f4ade07b53d715377c58c9cba16041c",
+      "sha256": "81fca26bde3c67c4244a7b694ea49fb4c14f97f4e488989b7ac69c3db354a088",
       "language": "JSON",
       "bytes": 1526,
       "symbols": []

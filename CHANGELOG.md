@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-26
+
 ### Added
 
 - **Ad breaks (SCTE-35)** on SRT and UDP outputs. Runs of commercials in the
@@ -29,6 +31,14 @@ one is tagged.
   version from these notes, dates them, sets the version everywhere and opens
   the release pull request; merging it tags the version and publishes the
   release and images ([docs](docs/releasing.md#making-a-release)).
+
+### Changed
+
+- The `latest` image now is the newest stable release, never a build of
+  `main` or a release candidate; builds of `main` are published as `main`.
+  The update notice and **Update now** follow `latest`, so they offer only
+  releases, and show the version number
+  ([docs](docs/releasing.md#image-tags)).
 
 ### Fixed
 
@@ -181,5 +191,6 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/LuizStSantos/NoAr/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LuizStSantos/NoAr/releases/tag/v1.0.0

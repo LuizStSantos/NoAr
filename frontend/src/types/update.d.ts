@@ -8,6 +8,8 @@ declare global {
     }
 
     interface UpdateRelease {
+        /** Its version, such as `1.1.0`. */
+        version: string | null
         commit: string
         /** When the image was published, Unix milliseconds. */
         published_at: number | null

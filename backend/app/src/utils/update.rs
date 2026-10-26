@@ -1,5 +1,5 @@
-//! Looks for a newer NoAr image: the last image the main branch published on
-//! GitHub, compared with the commit this program was built from.
+//! Looks for a newer NoAr image: the newest stable release on GitHub (the
+//! `latest` image), compared with the commit this program was built from.
 
 use std::{
     sync::{LazyLock, PoisonError, RwLock},
@@ -27,7 +27,6 @@ const DEFAULT_REPOSITORY: &str = "LuizStSantos/NoAr";
 const GITHUB_API: &str = "https://api.github.com";
 /// The workflow that publishes the image.
 const IMAGE_WORKFLOW: &str = "docker.yml";
-const IMAGE_BRANCH: &str = "main";
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
 /// The first check lets the channels start first.
 const FIRST_CHECK_AFTER: Duration = Duration::from_secs(15);
@@ -82,6 +81,8 @@ pub struct UpdateStatus {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Release {
+    /// Its version, such as `1.1.0`.
+    pub version: Option<String>,
     pub commit: String,
     /// When the image was published, Unix milliseconds.
     pub published_at: Option<i64>,
@@ -232,6 +233,16 @@ struct Found {
 }
 
 #[derive(Deserialize)]
+struct LatestRelease {
+    tag_name: String,
+}
+
+/// The version a release tag names: `v1.1.0` is `1.1.0`.
+fn tag_version(tag: &str) -> String {
+    tag.strip_prefix('v').unwrap_or(tag).to_string()
+}
+
+#[derive(Deserialize)]
 struct WorkflowRuns {
     workflow_runs: Vec<WorkflowRun>,
 }
@@ -280,13 +291,27 @@ async fn find_newest(
     installed: Option<&str>,
     known_time: Option<i64>,
 ) -> Result<Found, String> {
+    // GitHub's latest release leaves out release candidates and drafts.
+    let Some(stable) =
+        get_json::<LatestRelease>(&format!("{GITHUB_API}/repos/{repository}/releases/latest"))
+            .await?
+    else {
+        return Ok(Found::default());
+    };
+    // Its image is out once the image workflow for its tag succeeded.
     let runs: WorkflowRuns = get_json(&format!(
-        "{GITHUB_API}/repos/{repository}/actions/workflows/{IMAGE_WORKFLOW}/runs?branch={IMAGE_BRANCH}&status=success&per_page=1"
+        "{GITHUB_API}/repos/{repository}/actions/workflows/{IMAGE_WORKFLOW}/runs?branch={}&status=success&per_page=1",
+        stable.tag_name
     ))
     .await?
     .ok_or_else(|| format!("{repository} has no image workflow"))?;
     let Some(run) = runs.workflow_runs.into_iter().next() else {
         return Ok(Found::default());
+    };
+    let version = Some(tag_version(&stable.tag_name));
+    let release = |commit: String, published_at, comparison: Option<&Comparison>| Release {
+        version: version.clone(),
+        ..release(repository, commit, published_at, comparison)
     };
     let published_at = run.updated_at.as_deref().and_then(millis);
     let commit_time = match (installed, known_time) {
@@ -296,7 +321,7 @@ async fn find_newest(
     let Some(installed) = installed else {
         // A build without a commit cannot tell what it lacks.
         return Ok(Found {
-            latest: Some(release(repository, run.head_sha, published_at, None)),
+            latest: Some(release(run.head_sha, published_at, None)),
             available: false,
             commit_time,
         });
@@ -304,7 +329,7 @@ async fn find_newest(
 
     if same_commit(installed, &run.head_sha) {
         return Ok(Found {
-            latest: Some(release(repository, run.head_sha, published_at, None)),
+            latest: Some(release(run.head_sha, published_at, None)),
             available: false,
             commit_time,
         });
@@ -319,7 +344,7 @@ async fn find_newest(
     Ok(match comparison {
         Some(comparison) => {
             let available = matches!(comparison.status.as_str(), "ahead" | "diverged");
-            let mut latest = release(repository, run.head_sha, published_at, Some(&comparison));
+            let mut latest = release(run.head_sha, published_at, Some(&comparison));
 
             if !available {
                 latest.changes.clear();
@@ -335,7 +360,7 @@ async fn find_newest(
         // GitHub does not know the installed commit (a local build): the
         // image is different, but what changed is unknown.
         None => Found {
-            latest: Some(release(repository, run.head_sha, published_at, None)),
+            latest: Some(release(run.head_sha, published_at, None)),
             available: true,
             commit_time,
         },
@@ -375,6 +400,7 @@ fn release(
     );
 
     Release {
+        version: None,
         change_count: comparison.map(|comparison| comparison.ahead_by),
         changes,
         published_at,
@@ -503,6 +529,12 @@ mod tests {
         assert!(same_commit(full, full));
         assert!(!same_commit("02856", full));
         assert!(!same_commit("c20f3f92", full));
+    }
+
+    #[test]
+    fn a_release_tag_names_its_version() {
+        assert_eq!(tag_version("v1.1.0"), "1.1.0");
+        assert_eq!(tag_version("1.2.0"), "1.2.0");
     }
 
     #[test]
