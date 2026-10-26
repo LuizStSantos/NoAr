@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 
 import LogoMarksEditor from '@/components/storage/LogoMarksEditor.vue'
+import TrimBar from '@/components/storage/TrimBar.vue'
 import { isRemoteSource, parseLength, preciseLength, storageLabel } from '@/composables/player'
+import { type LogoSpan, type VideoMarks, readLogoMarks, saveLogoMarks } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
+import { useIndex } from '@/stores/index'
 
 const props = defineProps<{
     item: PlaylistItem
@@ -31,8 +34,13 @@ const durationText = ref(preciseLength(props.item.duration))
 const showAdvanced = ref(Boolean(props.item.custom_filter))
 const parts = ref(1)
 const configStore = useConfig()
-/** The stretches without logo of the video are open in their editor. */
-const editingLogo = ref(false)
+const indexStore = useIndex()
+/** The marks of the video are open in their editor, on this tab. */
+const editingMarks = ref<'trim' | 'hide' | null>(null)
+/** The trim saved with the video in the storage, once read. */
+const savedTrim = ref<LogoSpan | null>(null)
+const savingTrim = ref(false)
+const channelId = computed(() => configStore.channels[configStore.i]?.id)
 
 /** The parent swaps the file or the audio after a pick. */
 watch(
@@ -53,6 +61,11 @@ watch(
 )
 
 const isRemote = computed(() => props.remote || isRemoteSource(draft.value.source))
+
+function setInOut(start: number, end: number) {
+    inText.value = preciseLength(start)
+    outText.value = preciseLength(end)
+}
 /** The video's path in the storage, for its stretches without logo. */
 const storagePath = computed(() => {
     const root = props.storage.replace(/\/+$/, '')
@@ -99,6 +112,91 @@ const bar = computed(() => {
         length,
     }
 })
+
+/** The in and out points as the handles of the bar move them. */
+const barFrom = computed({
+    get: () => parsedIn.value ?? 0,
+    set: (seconds: number) => (inText.value = preciseLength(seconds)),
+})
+const barTo = computed({
+    get: () => parsedOut.value ?? parsedDuration.value ?? 0,
+    set: (seconds: number) => (outText.value = preciseLength(seconds)),
+})
+
+/** The saved trim, as far as this file goes. */
+const savedInOut = computed(() => {
+    const trim = savedTrim.value
+    const length = draft.value.duration
+
+    return trim && (!length || trim.from < length)
+        ? { in: trim.from, out: length ? Math.min(trim.to, length) : trim.to }
+        : null
+})
+const usesSavedTrim = computed(
+    () =>
+        !!savedInOut.value &&
+        Math.abs((parsedIn.value ?? -1) - savedInOut.value.in) < 0.05 &&
+        Math.abs((parsedOut.value ?? -1) - savedInOut.value.out) < 0.05,
+)
+/** In and out keep the whole file. */
+const whole = computed(
+    () => (parsedIn.value ?? 0) <= 0 && Math.abs((parsedOut.value ?? 0) - draft.value.duration) < 0.05,
+)
+
+async function loadSavedTrim() {
+    if (!storagePath.value || !channelId.value || isRemote.value) {
+        savedTrim.value = null
+        return
+    }
+
+    try {
+        savedTrim.value = (await readLogoMarks(channelId.value, storagePath.value)).trim
+    } catch {
+        savedTrim.value = null
+    }
+}
+
+/** Keep these in and out points with the video, for every playlist it goes into. */
+async function saveTrimToFile() {
+    if (!channelId.value || !storagePath.value || error.value) {
+        return
+    }
+
+    savingTrim.value = true
+
+    try {
+        const marks = await readLogoMarks(channelId.value, storagePath.value)
+        const saved = await saveLogoMarks(channelId.value, storagePath.value, {
+            ...marks,
+            trim: whole.value ? null : { from: parsedIn.value ?? 0, to: parsedOut.value ?? draft.value.duration },
+        })
+
+        savedTrim.value = saved.trim
+        indexStore.msgAlert('success', whole.value ? t('onair.trimCleared') : t('onair.trimSaved'), 3)
+    } catch (err) {
+        indexStore.msgAlert('error', err instanceof Error ? err.message : String(err), 4)
+    } finally {
+        savingTrim.value = false
+    }
+}
+
+/** After the marks editor saves: take its trim when this clip still plays the whole file. */
+function marksSaved(marks: VideoMarks) {
+    const wasWhole = whole.value || usesSavedTrim.value
+
+    savedTrim.value = marks.trim
+
+    if (wasWhole) {
+        if (savedInOut.value) {
+            setInOut(savedInOut.value.in, savedInOut.value.out)
+        } else {
+            setInOut(0, draft.value.duration)
+        }
+    }
+}
+
+onMounted(loadSavedTrim)
+watch(() => draft.value.source, loadSavedTrim)
 
 function apply() {
     if (error.value) {
@@ -161,19 +259,52 @@ function apply() {
         </div>
 
         <div class="flex flex-col gap-1.5">
-            <div class="relative h-8.5 bg-field border border-line-strong rounded-field overflow-hidden">
+            <TrimBar
+                v-if="!isRemote && bar.length > 0"
+                v-model:from="barFrom"
+                v-model:to="barTo"
+                :duration="bar.length"
+            />
+            <div v-else class="relative h-8.5 bg-field border border-line-strong rounded-field overflow-hidden">
                 <div
                     class="absolute inset-y-0 bg-accent-soft border-x-4 border-accent"
                     :style="{ left: `${bar.left}%`, width: `${bar.width}%` }"
                 />
-                <span class="absolute left-3 top-1.5 font-mono text-xs text-accent-text">
+            </div>
+            <div class="flex justify-between gap-2 font-mono text-[11px] text-muted">
+                <span>{{ preciseLength(0) }}</span>
+                <span class="text-accent-text">
                     {{ t('onair.goesOnAir', { onAir: preciseLength(bar.onAir), length: preciseLength(bar.length) }) }}
                 </span>
-            </div>
-            <div class="flex justify-between font-mono text-[11px] text-muted">
-                <span>{{ preciseLength(0) }}</span>
-                <span>{{ preciseLength(bar.length / 2) }}</span>
                 <span>{{ preciseLength(bar.length) }}</span>
+            </div>
+            <div v-if="storagePath && !isRemote" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                <span v-if="savedInOut" class="text-muted">
+                    <i class="bi bi-scissors me-1" aria-hidden="true" />{{
+                        t('onair.savedTrim', {
+                            from: preciseLength(savedInOut.in),
+                            to: preciseLength(savedInOut.out),
+                        })
+                    }}
+                </span>
+                <button
+                    v-if="savedInOut && !usesSavedTrim"
+                    class="link-accent min-h-8"
+                    @click="setInOut(savedInOut.in, savedInOut.out)"
+                >
+                    {{ t('onair.useSavedTrim') }}
+                </button>
+                <button
+                    v-if="!usesSavedTrim && !(whole && !savedInOut)"
+                    class="link-accent min-h-8"
+                    :disabled="savingTrim || !!error"
+                    @click="saveTrimToFile"
+                >
+                    {{ whole ? t('onair.clearSavedTrim') : t('onair.saveTrimToFile') }}
+                </button>
+                <button class="link-accent min-h-8" @click="editingMarks = 'trim'">
+                    <i class="bi bi-film me-1" aria-hidden="true" />{{ t('onair.trimWithVideo') }}
+                </button>
             </div>
         </div>
 
@@ -220,7 +351,7 @@ function apply() {
                 v-if="storagePath && !isRemote && !commercial && !draft.ad"
                 class="btn-quiet min-h-9"
                 :title="t('storage.logoMarks.intro')"
-                @click="editingLogo = true"
+                @click="editingMarks = 'hide'"
             >
                 <i class="bi bi-badge-tm" aria-hidden="true" />{{ t('storage.logoMarks.title') }}
             </button>
@@ -262,11 +393,13 @@ function apply() {
         </div>
 
         <LogoMarksEditor
-            v-if="editingLogo && configStore.channels[configStore.i]?.id"
-            :channel-id="configStore.channels[configStore.i]!.id"
+            v-if="editingMarks && channelId"
+            :channel-id="channelId"
             :path="storagePath"
             :length="draft.duration"
-            @close="editingLogo = false"
+            :initial-kind="editingMarks"
+            @saved="marksSaved"
+            @close="editingMarks = null"
         />
     </div>
 </template>

@@ -11,6 +11,48 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-26
+
+### Added
+
+- **Trim a video once, in Storage**: drag the in and out points on a bar
+  while the video plays (or press **In here** / **Out here**, type the
+  times, or use the arrow keys), and the video comes in trimmed in every
+  playlist, the Scheduler, folder mode and the playlist generator. The
+  Player library shows the trimmed length, and the clip editor has the same
+  draggable bar, uses the saved trim, or saves a clip's in and out with the
+  video ([docs](docs/trim.md)).
+- **Convert uploaded videos to the output format**: with the new switch in
+  Settings › Playlist and storage, each uploaded video is converted once to
+  the output's size and frame rate, high-quality H.264 and 48 kHz AAC, so
+  the playout no longer scales it or changes its frame rate on air, and
+  damaged files are rewritten from what decodes. Storage shows the progress
+  of each one ([docs](docs/uploads.md)).
+- **SCTE-35 breaks from encoders and automation**: a key, like the logo
+  key, lets vMix, OBS, Companion or a script mark and cancel breaks at
+  `/scte35/{id}/break` and `/scte35/{id}/cancel` without logging in.
+  Settings › Ad breaks has a tutorial with the addresses ready to copy
+  ([docs](docs/ad_breaks.md#from-an-encoder-or-an-automation-with-the-scte-35-key)).
+
+### Changed
+
+- The Player's **Live** view shows only the air: preview, clock and
+  controls. The library and the playlist are in **Build the playlist**,
+  where they fill the screen: the library and the playlist header (date,
+  undo, Save) stay put and only the list scrolls.
+
+### Fixed
+
+- The light Player preview flooded the channel log with h264 errors
+  ("non-existing PPS 0 referenced", "Missing reference picture", "no
+  frame!"). Joining the stream mid-way, its analysis often ended before the
+  first key frame of a 1080p stream, so it failed and started again every
+  second. It now waits for a key frame, keeps FFmpeg's messages out of the
+  channel log, and when it fails, waits longer each time and logs one
+  warning with the reason.
+- After a seek, or when joining a live source, the playout waits for a key
+  frame instead of decoding pictures whose references never came.
+
 ## [1.2.0] - 2026-10-26
 
 ### Added
@@ -247,7 +289,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/LuizStSantos/NoAr/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LuizStSantos/NoAr/releases/tag/v1.0.0

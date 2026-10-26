@@ -111,6 +111,8 @@ impl PreviewFeed {
             .name(format!("noar-light-preview-{channel_id}"))
             .spawn(move || {
                 info!(channel = channel_id; "Light Player preview started");
+                let mut retry = Duration::from_secs(1);
+                let mut warned = false;
 
                 while light.receiver_count() > 0 && !stop.is_cancelled() {
                     let (input, output) = mpsc::channel::<Vec<u8>>();
@@ -157,12 +159,23 @@ impl PreviewFeed {
                     );
                     ended.store(true, Ordering::Release);
 
-                    if let Err(error) = result {
-                        debug!(channel = channel_id; "Light Player preview: {error:#}");
+                    // The playout restarted or paused, or the preview could
+                    // not be read: wait before reading again, longer each
+                    // time it fails, and say why once.
+                    match result {
+                        Ok(()) => retry = Duration::from_secs(1),
+                        Err(error) => {
+                            if warned {
+                                debug!(channel = channel_id; "Light Player preview: {error:#}");
+                            } else {
+                                warn!(channel = channel_id; "Light Player preview failed, trying again: {error:#}");
+                                warned = true;
+                            }
+                        }
                     }
 
-                    // The playout restarted or paused: wait before reading again.
-                    std::thread::sleep(Duration::from_secs(1));
+                    std::thread::sleep(retry);
+                    retry = (retry * 2).min(Duration::from_secs(30));
                 }
 
                 running.store(false, Ordering::Release);

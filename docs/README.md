@@ -22,6 +22,11 @@ Portuguese and English; menus are named here in English.
   daily playlists.
 - **[Videos from a URL](remote_source.md)**: playlist entries that point to a
   remote file or stream.
+- **[Trimming videos](trim.md)**: cut the slate, bars or black off a video
+  once in Storage, and it comes in trimmed in every playlist, the Scheduler,
+  folder mode and the playlist generator.
+- **[Converting uploaded videos](uploads.md)**: videos converted to the
+  output format when they are uploaded, so the playout does less on air.
 - **[Commercials folders](commercials.md)**: clips that play as commercials
   everywhere, out of the guide and without the logo, and breaks inside a
   video.

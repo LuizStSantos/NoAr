@@ -24,6 +24,7 @@ import GenericModal from '@/components/utils/GenericModal.vue'
 import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 
 import { authFetch } from '@/composables/authFetch'
+import { type Conversion, useConversions } from '@/composables/conversions'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
 import {
@@ -80,6 +81,8 @@ const editorPath = ref<string | null>(null)
 /** Storage path of the video whose stretches without logo are being edited. */
 const logoMarksPath = ref<string | null>(null)
 const logoMarksLength = ref(0)
+/** The tab the marks editor opens on. */
+const logoMarksKind = ref<'trim' | 'hide'>('hide')
 const treeVersion = ref(0)
 const disk = ref<{ total: number; free: number } | null>(null)
 const dropActive = ref(false)
@@ -556,10 +559,30 @@ async function load(path: string) {
     await mediaStore.getTree(`/${path}`, false, true)
 }
 
+// Uploaded videos converting to the output format; the folder reloads as
+// each one ends, for its new size or name.
+const conversions = useConversions(channelId, () => refresh())
+
+function conversionOf(name: string): Conversion | undefined {
+    return conversions.byPath.value.get(storageJoin(current.value, name).replace(/^\/+/, ''))
+}
+
+function conversionLabel(conversion: Conversion): string {
+    if (conversion.state === 'converting') {
+        return t('storage.conversion.converting', { percent: Math.round(conversion.progress * 100) })
+    }
+
+    return t(`storage.conversion.${conversion.state}`)
+}
+
 // A queued file reached the folder on screen (or the folder of its sheet).
 watch(
     () => uploads.landed,
     (landed) => {
+        if (landed && landed.channelId === channelId.value) {
+            conversions.poll()
+        }
+
         if (landed && landed.channelId === channelId.value && landed.folder === current.value) {
             refresh()
         }
@@ -607,6 +630,7 @@ async function loadDisk() {
 }
 
 onMounted(async () => {
+    conversions.poll()
     // Other pages link to a folder with `?path=` (the log, for example).
     const linked = typeof route.query.path === 'string' ? storageJoin(route.query.path) : null
 
@@ -923,7 +947,8 @@ async function finishMove(confirmed: boolean) {
     }
 }
 
-function openLogoMarks(row: Row) {
+function openLogoMarks(row: Row, kind: 'trim' | 'hide' = 'hide') {
+    logoMarksKind.value = kind
     logoMarksLength.value = row.file?.duration ?? 0
     logoMarksPath.value = storageJoin(current.value, row.name)
 }
@@ -1356,6 +1381,21 @@ const uploadAccept = computed(() =>
                                                 {{ row.name }}
                                             </button>
                                             <button
+                                                v-if="row.file?.trim && isVideo(row.file)"
+                                                type="button"
+                                                class="shrink-0 text-[11px] text-accent-text border border-accent/50 rounded-md px-1.5 leading-4 bg-transparent cursor-pointer"
+                                                :title="
+                                                    t('storage.trim.badgeHint', {
+                                                        from: clock(row.file.trim.from),
+                                                        to: clock(row.file.trim.to),
+                                                    })
+                                                "
+                                                @click="openLogoMarks(row, 'trim')"
+                                            >
+                                                <i class="bi bi-scissors" aria-hidden="true" />
+                                                {{ t('storage.trim.badge') }}
+                                            </button>
+                                            <button
                                                 v-if="row.file?.logo_marks && isVideo(row.file)"
                                                 type="button"
                                                 class="shrink-0 text-[11px] text-after-clip border border-after-clip/50 rounded-md px-1.5 leading-4 bg-transparent cursor-pointer"
@@ -1364,6 +1404,19 @@ const uploadAccept = computed(() =>
                                             >
                                                 {{ t('storage.logoMarks.badge') }}
                                             </button>
+                                            <span
+                                                v-if="conversionOf(row.name)"
+                                                class="shrink-0 text-[11px] rounded-md px-1.5 leading-4 border"
+                                                :class="
+                                                    conversionOf(row.name)?.state === 'failed'
+                                                        ? 'text-error border-error/50'
+                                                        : 'text-muted border-line-strong'
+                                                "
+                                                :title="conversionOf(row.name)?.error ?? t('storage.conversion.hint')"
+                                                role="status"
+                                            >
+                                                {{ conversionLabel(conversionOf(row.name)!) }}
+                                            </span>
                                             <span
                                                 v-if="!isImage(row.name) && !isVideo(row.file)"
                                                 class="truncate"
@@ -1472,6 +1525,16 @@ const uploadAccept = computed(() =>
                                                     :class="isImage(row.name) ? 'bi-eye' : 'bi-play-fill'"
                                                     aria-hidden="true"
                                                 />
+                                            </button>
+                                            <button
+                                                v-if="row.file && isVideo(row.file)"
+                                                type="button"
+                                                class="btn-icon text-muted"
+                                                :aria-label="t('storage.trim.open', { name: row.name })"
+                                                :title="t('storage.trim.title')"
+                                                @click="openLogoMarks(row, 'trim')"
+                                            >
+                                                <i class="bi bi-scissors" aria-hidden="true" />
                                             </button>
                                             <button
                                                 v-if="row.file && isVideo(row.file)"
@@ -1633,6 +1696,7 @@ const uploadAccept = computed(() =>
             :channel-id="channelId"
             :path="logoMarksPath"
             :length="logoMarksLength"
+            :initial-kind="logoMarksKind"
             @close="logoMarksPath = null"
             @saved="refresh"
         />

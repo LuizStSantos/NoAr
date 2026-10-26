@@ -18,6 +18,7 @@ mod analysis;
 mod audio_mixer;
 mod benchmark;
 mod compositor;
+mod convert;
 mod input;
 #[cfg(feature = "desktop-base")]
 mod loudness_preview;
@@ -38,6 +39,7 @@ pub use audio_mixer::{
 pub use compositor::logo::{
     LogoControl, LogoState, LogoTransition, LogoTransitions, MAX_LOGO_TRANSITION_SECONDS,
 };
+pub use convert::{ConvertTarget, MediaShape, convert_to_output, probe_shape};
 use input::live::{LiveEnded, LiveOverrideOutput};
 pub use input::live::{
     LiveInputBackend, LiveListenerConfig, LiveReceiver, live_protocol_available,

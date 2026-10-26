@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import SaveBar from '@/components/settings/SaveBar.vue'
+import Scte35Remote from '@/components/settings/Scte35Remote.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import { usePlayoutPage } from '@/composables/settingsPage'
@@ -267,6 +268,8 @@ async function cancel(eventId: number) {
                 </table>
             </div>
         </SectionCard>
+
+        <Scte35Remote />
 
         <SaveBar
             :changes="changes"

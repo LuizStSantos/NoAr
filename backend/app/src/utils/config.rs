@@ -932,6 +932,10 @@ pub struct Storage {
     pub filler_path: PathBuf,
     pub extensions: Vec<String>,
     pub shuffle: bool,
+    /// Convert uploaded videos to the output's size, frame rate and sample
+    /// rate when they arrive.
+    #[serde(default)]
+    pub convert_uploads: bool,
     #[serde(skip_deserializing)]
     pub shared_storage: bool,
 }
@@ -949,6 +953,7 @@ impl Storage {
                 .map(String::from)
                 .collect(),
             shuffle: config.storage_shuffle,
+            convert_uploads: config.storage_convert_uploads,
             shared_storage,
         }
     }
@@ -985,6 +990,9 @@ pub struct Scte35 {
     /// signalled.
     pub min_break: f64,
     pub max_break: f64,
+    /// Lets encoders and automation mark breaks at `/scte35/{id}/...`
+    /// without logging in; empty turns that route off.
+    pub key: String,
 }
 
 impl Default for Scte35 {
@@ -995,6 +1003,7 @@ impl Default for Scte35 {
             preroll: noar_engine::DEFAULT_SCTE35_PREROLL_SECONDS,
             min_break: 30.0,
             max_break: 300.0,
+            key: String::new(),
         }
     }
 }
@@ -1007,6 +1016,7 @@ impl Scte35 {
             preroll: scte35.preroll,
             min_break: scte35.min_break,
             max_break: scte35.max_break,
+            key: scte35.api_key.clone(),
         }
     }
 

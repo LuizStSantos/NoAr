@@ -48,6 +48,19 @@ thread_local! {
     static UNEXPECTED_RTMP_STREAM: RefCell<Option<(String, String)>> = const { RefCell::new(None) };
     static INGEST_LOG_CONTEXT: Cell<Option<IngestLogContext>> = const { Cell::new(None) };
     static INGEST_INTERRUPTED: Cell<bool> = const { Cell::new(false) };
+    /// FFmpeg messages of this thread are dropped, short of fatal ones.
+    static QUIET: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Runs `operation` without logging FFmpeg's messages on this thread, for
+/// work whose decoding hiccups are expected and harmless to the air, like
+/// the light Player preview joining a stream mid-way.
+pub(crate) fn quiet_ffmpeg_logs<T>(operation: impl FnOnce() -> T) -> T {
+    let previous = QUIET.with(|quiet| quiet.replace(true));
+    let result = operation();
+    QUIET.with(|quiet| quiet.set(previous));
+
+    result
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -315,6 +328,10 @@ unsafe extern "C" fn log_callback(
     vl: FfmpegVaList,
 ) {
     let context = INGEST_LOG_CONTEXT.with(Cell::get);
+
+    if QUIET.with(Cell::get) && level > ffi::AV_LOG_FATAL {
+        return;
+    }
 
     if level > unsafe { ffi::av_log_get_level() } || level > configured_level(context) {
         return;

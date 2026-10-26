@@ -6,6 +6,19 @@ export interface LibraryFile {
     source: string
     name: string
     duration: number
+    /** The part that airs by default, saved with the video in Armazenamento. */
+    trim?: { from: number; to: number } | null
+}
+
+/** Where a file starts and ends in a playlist: its saved trim, else all of it. */
+export function fileInOut(file: LibraryFile): { in: number; out: number } {
+    const trim = file.trim
+
+    if (trim && trim.from < file.duration && trim.to > trim.from) {
+        return { in: trim.from, out: Math.min(trim.to, file.duration) }
+    }
+
+    return { in: 0, out: file.duration }
 }
 
 export const LIBRARY_DRAG_TYPE = 'application/x-noar-media'

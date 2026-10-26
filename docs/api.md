@@ -222,13 +222,17 @@ curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
 
 ### Ad breaks (SCTE-35)
 
-Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md).
+Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md). The
+`/scte35/{id}/{break|cancel}` route takes the channel's SCTE-35 key instead
+of a login, for encoders and automation
+([docs](ad_breaks.md#from-an-encoder-or-an-automation-with-the-scte-35-key)).
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
 | `GET` | `/api/control/{id}/scte35` | `GA, CA, U` | Read the state, the breaks to come and on air, and the last 20. |
 | `POST` | `/api/control/{id}/scte35/break` | `GA, CA, U` | `{ "duration": 120 }`: mark a break of that many seconds, from now plus the pre-roll. |
 | `DELETE` | `/api/control/{id}/scte35/break/{event_id}` | `GA, CA, U` | Call off a break that has not started. |
+| `GET`, `POST` | `/scte35/{id}/{break\|cancel}` | SCTE-35 key | Query `key` (or header `X-Scte35-Key`), `duration` for `break`, `event` for `cancel` (else the next break). |
 
 ## Live preview
 
@@ -284,19 +288,20 @@ rejected.
 | `POST` | `/api/file/{id}/remove` | `{ "source": "file.mp4", "recursive": false }` |
 | `GET` | `/api/file/{id}/upload?path=folder&file_name=clip.mp4&size=1234&batch_id=<ID>` | Returns already received byte ranges for a resumable upload |
 | `PUT` | `/api/file/{id}/upload?path=folder` | Chunked `multipart/form-data` upload |
+| `GET` | `/api/file/{id}/conversions` | Uploaded videos queued, being or recently converted to the output format: `[{ "path", "converted", "state", "progress", "error", "updated" }]`; `state` is `queued`, `converting`, `done`, `skipped` or `failed`. See [Converting uploaded videos](uploads.md). |
 | `PUT` | `/api/file/{id}/import?file=list.m3u&date=YYYY-MM-DD` | `multipart/form-data` with a file field |
 | `POST` | `/api/file/{id}/access-token` | `{ "filename": "folder/file.mp4" }` |
 | `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
 | `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
-| `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...] }` |
-| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35. At most 16 of each, not overlapping; empty lists remove them. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
+| `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...], "trim": { "from": 8, "to": 1790.5 } }` |
+| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35. At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
 | `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
 | `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
 | `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |
 
 The browse response lists `folders`, `files` (with `duration`, `size`,
-`modified`, whether a video has its own `sheet`, and `logo_marks` when it keeps
-the logo off somewhere), `sheet_folders` (the
+`modified`, whether a video has its own `sheet`, `logo_marks` when it has
+marks, and its `trim` when it has one), `sheet_folders` (the
 subfolders with a program sheet) and `movie_folders` (the films among them).
 
 A sheet holds the form `fields` (`title`, `plot`, `genres`, `rating`, `year`,

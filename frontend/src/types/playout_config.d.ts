@@ -107,9 +107,19 @@ preroll: number,
  * Runs of commercials outside these lengths, in seconds, are not
  * signalled.
  */
-min_break: number, max_break: number, };
+min_break: number, max_break: number, 
+/**
+ * Lets encoders and automation mark breaks at `/scte35/{id}/...`
+ * without logging in; empty turns that route off.
+ */
+key: string, };
 
-export type Storage = { filler: string, extensions: Array<string>, shuffle: boolean, shared_storage: boolean, };
+export type Storage = { filler: string, extensions: Array<string>, shuffle: boolean, 
+/**
+ * Convert uploaded videos to the output's size, frame rate and sample
+ * rate when they arrive.
+ */
+convert_uploads: boolean, shared_storage: boolean, };
 
 export type StreamType = "rtmp" | "srt" | "udp" | "custom";
 

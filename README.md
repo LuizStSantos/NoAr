@@ -14,11 +14,12 @@ them it adds:
 - **Player**: live preview straight from the output (about a second behind
   the air, for HLS, RTMP or SRT), in a **light** quality for slow connections
   or the output's own; a clock with what is on air and what comes next;
-  transport controls; and the day's playlist grouped by program the way the
-  guide names it. A **build view** puts the library and the list on top:
-  add files or a whole program folder (its next episode, every video in
-  order, or the ones you pick) at the end, after the selection or at a time,
-  with undo, keys and how much of the day is still to fill.
+  and transport controls. A **build view** shows the library and the day's
+  playlist, grouped by program the way the guide names it, filling the
+  screen: only the list scrolls. Add files or a whole program folder (its
+  next episode, every video in order, or the ones you pick) at the end,
+  after the selection or at a time, with undo, keys and how much of the day
+  is still to fill.
 - **Output that keeps going**: an SRT, RTMP or UDP destination that is down
   never stops the channel. NoAr reconnects by itself, the preview keeps
   playing, and the Player says whether the output is sending, waiting for a
@@ -29,7 +30,11 @@ them it adds:
   output ([docs](docs/scheduler.md)).
 - **Storage**: program folders with their guide sheet edited in the browser,
   poster and wide image, series with one sheet for every episode, and uploads
-  that keep going in the background while you work on other pages.
+  that keep going in the background while you work on other pages. Uploaded
+  videos can be **converted to the output format** once, so the playout does
+  less on air ([docs](docs/uploads.md)), and **trimmed** once, by dragging the
+  in and out points while the video plays, so they come in trimmed in every
+  playlist, the Scheduler and folder mode ([docs](docs/trim.md)).
 - **Commercials folders**: mark a folder once and everything in it plays as a
   commercial in playlists and scheduled breaks: out of the guide and without
   the logo ([docs](docs/commercials.md)).
@@ -42,7 +47,9 @@ them it adds:
   breaks marked inside a programme video (where it leaves and comes back,
   like the logo) are signalled in the SRT or UDP output for FAST platforms
   and ad servers to replace, frame-accurately and announced ahead, with the
-  next break and the one on air shown in the Player ([docs](docs/ad_breaks.md)).
+  next break and the one on air shown in the Player. Encoders and automation
+  mark breaks with a key, like the logo's, with a tutorial in the settings
+  ([docs](docs/ad_breaks.md)).
 - **Report**: what aired, with the actual times and how each item ended, and
   what is still to come, for a day or a period; narrowed to one commercial,
   program, live or event when needed, and downloaded as a PDF or a
@@ -75,8 +82,9 @@ how each video will show up in the guide.
 
 ![Storage](docs/images/storage.png)
 
-**Building a playlist**: the build view, with the library next to the list,
-undo, and what is still missing to fill the day.
+**Building a playlist**: the build view fills the screen; the library and
+the list header stay put while the list scrolls. Two clips selected, with
+what can be done to them, and how far the day runs over.
 
 ![Building a playlist](docs/images/builder.png)
 

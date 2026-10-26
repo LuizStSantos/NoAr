@@ -37,9 +37,9 @@ use crate::{
         config::PlayoutConfig,
         errors::ServiceError,
         schedule::{
-            Occurrence, clip_duration,
+            Occurrence,
             live::{live_protocol, read_live_url},
-            occurrences_between, seconds,
+            occurrences_between, seconds, trimmed_clip, trimmed_length,
         },
         time_machine::time_now,
     },
@@ -901,7 +901,8 @@ async fn play_clips(
         }
 
         let path = config.channel.storage.join(source);
-        let Some(duration) = clip_duration(&path).await else {
+        // The part the trim saved with the clip keeps.
+        let Some((start, duration)) = trimmed_clip(&path).await else {
             error!(channel = id; "Scheduled clip <span class=\"log-addr\">{source}</span> cannot be read; skipped");
             completed = false;
             continue;
@@ -912,8 +913,9 @@ async fn play_clips(
             continue;
         }
 
-        let seek = std::mem::take(&mut skip);
-        let length = duration - seek;
+        let resumed = std::mem::take(&mut skip);
+        let seek = start + resumed;
+        let length = duration - resumed;
 
         manager.schedule.set_item(source.clone());
         show_on_air(manager, &path.to_string_lossy(), &event.title, length).await;
@@ -1014,7 +1016,7 @@ async fn event_breaks(
             break;
         }
 
-        match clip_duration(&config.channel.storage.join(source)).await {
+        match trimmed_length(&config.channel.storage.join(source)).await {
             Some(duration) => commercials_next += duration,
             None => break,
         }

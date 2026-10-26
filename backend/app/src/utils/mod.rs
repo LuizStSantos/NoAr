@@ -20,6 +20,7 @@ pub mod channels;
 pub mod commercial;
 pub mod config;
 pub mod control;
+pub mod convert;
 pub mod episodes;
 pub mod errors;
 pub mod generator;

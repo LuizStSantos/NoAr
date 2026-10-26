@@ -56,6 +56,7 @@ pub fn routes() -> Router<AppState> {
                 )
                 .route("/file/{id}/sheet", post(get_sheet).put(update_sheet))
                 .route("/file/{id}/commercial", put(mark_commercial))
+                .route("/file/{id}/conversions", get(get_conversions))
                 .route(
                     "/file/{id}/logo-marks",
                     post(get_logo_marks).put(update_logo_marks),
@@ -135,6 +136,10 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/logo/{id}/{action}",
             get(control_logo_with_key).post(control_logo_with_key),
+        )
+        .route(
+            "/scte35/{id}/{action}",
+            get(control_scte35_with_key).post(control_scte35_with_key),
         )
         .route("/xmltv/{id}/images/{*image}", get(get_xmltv_image))
 }

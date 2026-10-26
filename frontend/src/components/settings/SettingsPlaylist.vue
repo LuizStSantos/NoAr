@@ -180,6 +180,17 @@ function pickFiller(file: { path: string }) {
                 :label="t('settings.playlist.shuffle')"
                 :hint="t('settings.playlist.shuffleHint')"
             />
+            <ToggleRow
+                v-model="configStore.playout.storage.convert_uploads"
+                :label="t('settings.playlist.convertUploads')"
+                :hint="
+                    t('settings.playlist.convertUploadsHint', {
+                        width: configStore.playout.output?.width,
+                        height: configStore.playout.output?.height,
+                        fps: configStore.playout.output?.fps,
+                    })
+                "
+            />
         </SectionCard>
 
         <SaveBar

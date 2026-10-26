@@ -35,6 +35,10 @@ pub struct LogoMarks {
     /// carries it: the break leaves at `from` and returns at `to`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub breaks: Vec<LogoSpan>,
+    /// The part of the video that airs by default: where it starts and ends,
+    /// in seconds of the video. A playlist entry still sets its own.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trim: Option<LogoSpan>,
 }
 
 impl LogoMarks {
@@ -44,11 +48,28 @@ impl LogoMarks {
         self.hide = validated_spans(self.hide, "stretches without logo")?;
         self.breaks = validated_spans(self.breaks, "ad breaks")?;
 
+        if let Some(trim) = self.trim {
+            validated_spans(vec![trim], "trim")?;
+        }
+
         Ok(self)
     }
 
     pub fn is_empty(&self) -> bool {
-        self.hide.is_empty() && self.breaks.is_empty()
+        self.hide.is_empty() && self.breaks.is_empty() && self.trim.is_none()
+    }
+
+    /// Where the video starts and how long it plays, after its saved trim,
+    /// for a video of `duration` seconds.
+    pub fn trimmed(&self, duration: f64) -> (f64, f64) {
+        match self.trim {
+            Some(trim) if trim.from < duration => {
+                let end = trim.to.min(duration);
+
+                (trim.from, (end - trim.from).max(0.0))
+            }
+            _ => (0.0, duration),
+        }
     }
 
     pub fn gaps(&self) -> LogoGaps {
@@ -178,6 +199,7 @@ mod tests {
         let marks = LogoMarks {
             hide: vec![span(300.0, 360.0), span(60.0, 90.0)],
             breaks: Vec::new(),
+            trim: None,
         }
         .validated()
         .unwrap();
@@ -187,6 +209,7 @@ mod tests {
             LogoMarks {
                 hide: vec![span(10.0, 5.0)],
                 breaks: Vec::new(),
+                trim: None,
             }
             .validated()
             .is_err()
@@ -195,6 +218,7 @@ mod tests {
             LogoMarks {
                 hide: vec![span(10.0, 30.0), span(20.0, 40.0)],
                 breaks: Vec::new(),
+                trim: None,
             }
             .validated()
             .is_err()
@@ -203,6 +227,7 @@ mod tests {
             LogoMarks {
                 hide: vec![span(-1.0, 5.0)],
                 breaks: Vec::new(),
+                trim: None,
             }
             .validated()
             .is_err()
@@ -214,6 +239,7 @@ mod tests {
         let marks = LogoMarks {
             hide: Vec::new(),
             breaks: vec![span(60.0, 90.0), span(290.0, 320.0), span(900.0, 960.0)],
+            trim: None,
         };
 
         // The whole video.
@@ -228,6 +254,29 @@ mod tests {
         assert_eq!(marks.breaks_in_clip(0.0, Some(75.0)), [(60.0, 15.0)]);
     }
 
+    #[test]
+    fn a_saved_trim_sets_where_the_video_starts_and_how_long_it_plays() {
+        let mut marks = LogoMarks::default();
+        assert_eq!(marks.trimmed(600.0), (0.0, 600.0));
+
+        marks.trim = Some(span(12.5, 590.0));
+        assert_eq!(marks.trimmed(600.0), (12.5, 577.5));
+        // A shorter file than when it was trimmed: it ends with the file.
+        assert_eq!(marks.trimmed(300.0), (12.5, 287.5));
+        // Past the end: the whole video.
+        assert_eq!(marks.trimmed(10.0), (0.0, 10.0));
+
+        assert!(
+            LogoMarks {
+                trim: Some(span(30.0, 10.0)),
+                ..LogoMarks::default()
+            }
+            .validated()
+            .is_err()
+        );
+        assert!(!marks.is_empty());
+    }
+
     #[tokio::test]
     async fn marks_live_next_to_the_video() {
         let dir = std::env::temp_dir().join(format!("noar-logo-marks-{}", uuid::Uuid::new_v4()));
@@ -236,6 +285,7 @@ mod tests {
         let marks = LogoMarks {
             hide: vec![span(750.0, 990.5)],
             breaks: Vec::new(),
+            trim: None,
         };
 
         assert_eq!(marks_path(&video), dir.join("Programa 01.logo.json"));

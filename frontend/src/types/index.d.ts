@@ -179,6 +179,8 @@ declare global {
         sheet?: boolean
         /** Whether it keeps the logo off somewhere (`<name>.logo.json`). */
         logo_marks?: boolean
+        /** The part that airs by default, saved in its marks. */
+        trim?: { from: number; to: number } | null
     }
 
     interface Folder {

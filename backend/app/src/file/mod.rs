@@ -90,6 +90,9 @@ pub struct VideoFile {
     /// Whether it keeps the logo off somewhere (`<name>.logo.json`).
     #[serde(default)]
     logo_marks: bool,
+    /// The part of the video that airs by default, saved in its marks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    trim: Option<crate::utils::logo_marks::LogoSpan>,
 }
 
 fn default_true() -> bool {

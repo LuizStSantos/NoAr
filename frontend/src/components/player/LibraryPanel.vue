@@ -5,7 +5,14 @@ import { storeToRefs } from 'pinia'
 
 import { authFetch } from '@/composables/authFetch'
 import { stringFormatter } from '@/composables/helper'
-import { FOLDER_DRAG_TYPE, LIBRARY_DRAG_TYPE, isGuideAsset, lengthLabel, type LibraryFile } from '@/composables/player'
+import {
+    FOLDER_DRAG_TYPE,
+    LIBRARY_DRAG_TYPE,
+    fileInOut,
+    isGuideAsset,
+    lengthLabel,
+    type LibraryFile,
+} from '@/composables/player'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -28,7 +35,14 @@ interface BrowseResult {
     movie_folders?: string[]
     live_folders?: string[]
     commercial_folders?: string[]
-    files: { name: string; duration: number }[]
+    files: LibraryEntry[]
+}
+
+/** A file of the folder on screen, with its saved trim when it has one. */
+interface LibraryEntry {
+    name: string
+    duration: number
+    trim?: { from: number; to: number } | null
 }
 
 const source = ref('')
@@ -39,7 +53,7 @@ const liveFolders = ref<string[]>([])
 const commercialFolders = ref<string[]>([])
 const creating = ref(false)
 const newFolder = ref('')
-const files = ref<{ name: string; duration: number }[]>([])
+const files = ref<LibraryEntry[]>([])
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -56,6 +70,13 @@ const shownFiles = computed(() =>
             kind: mediaType(file.name) ?? 'other',
         })),
 )
+
+/** How long the file plays when added: its saved trim, else all of it. */
+function fileLength(item: LibraryEntry): number {
+    const { in: start, out } = fileInOut(file(item))
+
+    return out - start
+}
 
 function joinPath(...parts: string[]): string {
     return parts.join('/').split('/').filter(Boolean).join('/')
@@ -99,13 +120,13 @@ async function open(path: string) {
     }
 }
 
-function file(name: string, duration: number): LibraryFile {
-    return { source: absolute(name), name, duration: duration || 10 }
+function file(item: LibraryEntry): LibraryFile {
+    return { source: absolute(item.name), name: item.name, duration: item.duration || 10, trim: item.trim ?? null }
 }
 
-function dragStart(event: DragEvent, name: string, duration: number) {
-    event.dataTransfer?.setData(LIBRARY_DRAG_TYPE, JSON.stringify(file(name, duration)))
-    event.dataTransfer?.setData('text/plain', absolute(name))
+function dragStart(event: DragEvent, item: LibraryEntry) {
+    event.dataTransfer?.setData(LIBRARY_DRAG_TYPE, JSON.stringify(file(item)))
+    event.dataTransfer?.setData('text/plain', absolute(item.name))
 
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'copy'
@@ -275,7 +296,7 @@ watch(i, () => open(''))
                 class="group flex items-center gap-2.5 px-2 py-1.5 rounded-field min-h-10"
                 :class="item.guide ? 'text-muted' : 'hover:bg-raised cursor-grab'"
                 :draggable="!item.guide && props.allowAdd"
-                @dragstart="dragStart($event, item.name, item.duration)"
+                @dragstart="dragStart($event, item)"
             >
                 <i
                     v-if="item.guide"
@@ -311,8 +332,13 @@ watch(i, () => open(''))
                     <span class="text-xs">{{ t('onair.guideAsset') }}</span>
                 </template>
                 <template v-else>
-                    <span class="font-mono text-xs text-muted group-hover:hidden group-focus-within:hidden">
-                        {{ lengthLabel(item.duration) }}
+                    <span
+                        class="font-mono text-xs text-muted group-hover:hidden group-focus-within:hidden"
+                        :title="item.trim ? t('onair.trimmedFile', { length: lengthLabel(item.duration) }) : undefined"
+                    >
+                        <i v-if="item.trim" class="bi bi-scissors me-0.5 text-accent-text" aria-hidden="true" />{{
+                            lengthLabel(item.trim ? fileLength(item) : item.duration)
+                        }}
                     </span>
                     <span class="hidden group-hover:flex group-focus-within:flex items-center">
                         <button
@@ -329,7 +355,7 @@ watch(i, () => open(''))
                         class="btn-icon min-w-8 min-h-8"
                         :aria-label="t('onair.addFile', { name: item.name })"
                         :title="t('onair.addFileHint')"
-                        @click="emit('add', file(item.name, item.duration))"
+                        @click="emit('add', file(item))"
                     >
                         <i class="bi bi-plus-lg" aria-hidden="true" />
                     </button>

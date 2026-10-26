@@ -305,6 +305,7 @@ pub struct Configuration {
     pub storage_filler: String,
     pub storage_extensions: String,
     pub storage_shuffle: bool,
+    pub storage_convert_uploads: bool,
 
     pub task_enable: bool,
     pub task_path: String,
@@ -386,6 +387,7 @@ impl Configuration {
             storage_filler: config.storage.filler,
             storage_extensions: config.storage.extensions.join(";"),
             storage_shuffle: config.storage.shuffle,
+            storage_convert_uploads: config.storage.convert_uploads,
             task_enable: config.task.enable,
             task_path: config.task.path.to_string_lossy().to_string(),
             output_id: config.output.id,
@@ -422,6 +424,7 @@ pub struct Scte35 {
     pub preroll: f64,
     pub min_break: f64,
     pub max_break: f64,
+    pub api_key: String,
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, sqlx::FromRow)]

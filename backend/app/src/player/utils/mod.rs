@@ -31,6 +31,7 @@ use crate::{
     utils::{
         config::{OutputMode::*, PlayoutConfig},
         errors::ProcessError,
+        logo_marks::read_marks,
         time_machine::time_now,
     },
 };
@@ -353,6 +354,40 @@ impl Media {
         }
     }
 
+    /// How long the clip plays: from `in` to `out`.
+    pub fn length(&self) -> f64 {
+        (self.out - self.seek).max(0.0)
+    }
+
+    /// Play only the part of the video saved as its trim in Armazenamento,
+    /// unless the clip already sets its own `in` and `out`.
+    pub async fn apply_saved_trim(&mut self) {
+        if self.source.is_empty() || is_remote(&self.source) || is_live_source(&self.source) {
+            return;
+        }
+
+        let whole =
+            self.seek == 0.0 && (self.out <= 0.0 || is_close(self.out, self.duration, 0.01));
+
+        if !whole {
+            return;
+        }
+
+        let marks = read_marks(Path::new(&self.source)).await;
+        let Some(trim) = marks.trim else {
+            return;
+        };
+
+        if self.duration > 0.0 {
+            let (start, length) = marks.trimmed(self.duration);
+            self.seek = start;
+            self.out = start + length;
+        } else {
+            self.seek = trim.from;
+            self.out = trim.to;
+        }
+    }
+
     pub async fn add_probe(&mut self, check_audio: bool) -> Result<(), String> {
         let mut errors = vec![];
         let source_is_live = is_live_source(&self.source);
@@ -626,7 +661,7 @@ pub fn is_close(a: f64, b: f64, to: f64) -> bool {
 
 /// add duration from all media clips
 pub fn sum_durations(clip_list: &[Media]) -> f64 {
-    clip_list.iter().map(|item| item.out).sum()
+    clip_list.iter().map(Media::length).sum()
 }
 
 /// Get delta between clip start and current time. This value we need to check,
@@ -1001,5 +1036,55 @@ mod tests {
         assert_eq!(custom_format("{x}", &["foo"]), "{x}");
         assert_eq!(custom_format("{0", &["foo"]), "{0");
         assert_eq!(custom_format("}", &["foo"]), "}");
+    }
+
+    #[tokio::test]
+    async fn a_video_plays_its_saved_trim_unless_the_clip_sets_its_own() {
+        use crate::utils::logo_marks::{LogoMarks, LogoSpan, write_marks};
+
+        let dir = std::env::temp_dir().join(format!("noar-saved-trim-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let video = dir.join("Programa.mp4");
+        std::fs::write(&video, b"").unwrap();
+        let source = video.to_string_lossy().to_string();
+        let clip = |seek: f64, out: f64| Media {
+            seek,
+            out,
+            duration: 600.0,
+            source: source.clone(),
+            ..Media::default()
+        };
+
+        let mut whole = clip(0.0, 600.0);
+        whole.apply_saved_trim().await;
+        assert_eq!((whole.seek, whole.out), (0.0, 600.0));
+
+        let marks = LogoMarks {
+            trim: Some(LogoSpan {
+                from: 8.0,
+                to: 590.0,
+            }),
+            ..LogoMarks::default()
+        };
+        write_marks(&video, &marks).await.unwrap();
+
+        whole.apply_saved_trim().await;
+        assert_eq!((whole.seek, whole.out, whole.length()), (8.0, 590.0, 582.0));
+
+        // A playlist entry that sets its own in and out keeps them.
+        let mut own = clip(30.0, 120.0);
+        own.apply_saved_trim().await;
+        assert_eq!((own.seek, own.out), (30.0, 120.0));
+
+        // Not probed yet (folder mode): the saved times as they are.
+        let mut unprobed = Media {
+            duration: 0.0,
+            out: 0.0,
+            ..clip(0.0, 0.0)
+        };
+        unprobed.apply_saved_trim().await;
+        assert_eq!((unprobed.seek, unprobed.out), (8.0, 590.0));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -314,7 +314,7 @@ pub async fn prepare_event(
             let mut total = 0.0;
 
             for (path, relative) in &sources {
-                total += clip_duration(path).await.ok_or_else(|| {
+                total += trimmed_length(path).await.ok_or_else(|| {
                     bad_request(format!("cannot read the length of '{relative}'"))
                 })?;
             }
@@ -380,6 +380,23 @@ pub async fn prepare_event(
         retry_seconds: input.retry_seconds.min(3600),
         enabled: input.enabled,
     })
+}
+
+/// Where a clip starts and how long it plays, in seconds, after the trim
+/// saved with it in the storage; `None` when it cannot be read.
+pub async fn trimmed_clip(path: &Path) -> Option<(f64, f64)> {
+    let duration = clip_duration(path).await?;
+
+    Some(
+        crate::utils::logo_marks::read_marks(path)
+            .await
+            .trimmed(duration),
+    )
+}
+
+/// How long a clip plays, after its saved trim.
+pub async fn trimmed_length(path: &Path) -> Option<f64> {
+    trimmed_clip(path).await.map(|(_, length)| length)
 }
 
 /// Length of a clip in seconds, or `None` when it cannot be read.

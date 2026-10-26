@@ -240,26 +240,24 @@ mod tests {
         let path = dir.join("noar.db");
         let pool = file_pool(&path).await;
 
-        // A fresh database has nothing to keep.
-        db_migrate(&pool).await.unwrap();
-        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
-
-        // As if the newest migration came with an update.
+        // A database from before the newest migration, as the previous
+        // release left it.
         let newest = MIGRATOR
             .iter()
             .map(|migration| migration.version)
             .max()
             .unwrap();
-        sqlx::query("DELETE FROM _sqlx_migrations WHERE version = $1")
-            .bind(newest)
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query("DROP TABLE as_run_archive")
-            .execute(&pool)
-            .await
-            .unwrap();
+        let previous = Migrator::with_migrations(
+            MIGRATOR
+                .iter()
+                .filter(|migration| migration.version != newest)
+                .cloned()
+                .collect(),
+        );
+        previous.run(&pool).await.unwrap();
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
 
+        // The update brings the newest migration.
         db_migrate(&pool).await.unwrap();
 
         let copies: Vec<PathBuf> = std::fs::read_dir(&dir)
@@ -271,13 +269,17 @@ mod tests {
 
         // The copy is the database as it was: without the newest migration.
         let copy = file_pool(&copies[0]).await;
-        let has_archive: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name = 'as_run_archive')",
-        )
-        .fetch_one(&copy)
-        .await
-        .unwrap();
-        assert!(!has_archive);
+        let applied = |pool: SqlitePool| async move {
+            sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM _sqlx_migrations WHERE version = $1)",
+            )
+            .bind(newest)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+        };
+        assert!(!applied(copy.clone()).await);
+        assert!(applied(pool.clone()).await);
 
         // Nothing pending: no new copy.
         db_migrate(&pool).await.unwrap();

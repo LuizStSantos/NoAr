@@ -20,7 +20,12 @@ use tokio::fs;
 use crate::{
     file::norm_abs_path,
     player::utils::{file_extension, probe_media},
-    utils::{config::PlayoutConfig, errors::ServiceError, playlist::read_playlist},
+    utils::{
+        config::PlayoutConfig,
+        errors::ServiceError,
+        logo_marks::{LogoSpan, read_marks},
+        playlist::read_playlist,
+    },
 };
 
 /// How far back the last aired episode is looked up.
@@ -33,6 +38,9 @@ pub struct Episode {
     /// Path inside the program folder.
     pub name: String,
     pub duration: f64,
+    /// The part that airs by default, when the video has a saved trim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trim: Option<LogoSpan>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -189,7 +197,10 @@ pub async fn program_episodes(
             }
         };
 
+        let trim = read_marks(&path).await.trim;
+
         episodes.push(Episode {
+            trim,
             name: path
                 .strip_prefix(&folder)
                 .unwrap_or(&path)
