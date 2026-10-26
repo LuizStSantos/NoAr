@@ -1,0 +1,459 @@
+{
+  "repository": "LuizStSantos/NoAr",
+  "ref": "adc206154c8a5cde6262e2e3479c765bc4fb639c",
+  "scope": "full frontend",
+  "council": "frontend",
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "Playlist load errors swallowed; empty playlist marked as saved",
+      "severity": "HIGH",
+      "category": "api-contract",
+      "evidence": [
+        "frontend/src/stores/playlist.ts:83",
+        "frontend/src/stores/playlist.ts:87",
+        "frontend/src/stores/playlist.ts:91",
+        "frontend/src/composables/authFetch.ts:9"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "e.status is undefined on AuthFetchError (status is on e.response.status); 403/5xx shows an empty playlist with no alert, marked saved; a later save may overwrite the real day with an empty playlist",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer; lead re-read source"
+    },
+    {
+      "id": "F-002",
+      "title": "Any token-refresh failure (incl. 5xx/network) logs out all tabs",
+      "severity": "HIGH",
+      "category": "auth",
+      "evidence": [
+        "frontend/src/stores/auth.ts:235",
+        "frontend/src/stores/auth.ts:248",
+        "frontend/src/stores/auth.ts:120"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Backend restart/self-update overlapping a refresh drops operator sessions in every tab",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer; lead re-read source"
+    },
+    {
+      "id": "F-003",
+      "title": "Modal dialogs lack focus move/trap/restore; Schedule/Live dialogs ignore Escape (WCAG 2.4.3, 2.1.1)",
+      "severity": "HIGH",
+      "category": "accessibility",
+      "evidence": [
+        "frontend/src/components/utils/GenericModal.vue:75",
+        "frontend/src/components/schedule/ScheduleDialog.vue:380",
+        "frontend/src/components/schedule/LiveDialog.vue:201",
+        "frontend/src/components/player/AddProgramDialog.vue:159",
+        "frontend/src/components/settings/RestartDialog.vue:12"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Keyboard users can tab into background controls while a modal is open; focus lost on close",
+      "is_blocker": true,
+      "proposed_by": "accessibility-reviewer"
+    },
+    {
+      "id": "F-004",
+      "title": "<html lang> fixed to 'en' regardless of locale (WCAG 3.1.1)",
+      "severity": "HIGH",
+      "category": "accessibility",
+      "evidence": [
+        "frontend/index.html:2",
+        "frontend/src/App.vue:59",
+        "frontend/src/i18n.ts:31"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Screen readers use English pronunciation for pt-BR/de/ru UI",
+      "is_blocker": true,
+      "proposed_by": "accessibility-reviewer"
+    },
+    {
+      "id": "F-005",
+      "title": "Destructive buttons hard-code #ff9da0 text: ~2:1 contrast in light theme",
+      "severity": "HIGH",
+      "category": "visual/contrast",
+      "evidence": [
+        "frontend/src/components/settings/SettingsGeneral.vue:314",
+        "frontend/src/components/settings/UserEditor.vue:98",
+        "frontend/src/components/settings/SettingsIngest.vue:240",
+        "frontend/src/components/player/PlaylistPanel.vue:1236"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Delete actions are least legible controls in light mode (WCAG 1.4.3 failure)",
+      "is_blocker": false,
+      "proposed_by": "visual-design-reviewer"
+    },
+    {
+      "id": "F-006",
+      "title": "SCTE-35 error and config warning share style; error dot same red as on-air",
+      "severity": "HIGH",
+      "category": "visual/state",
+      "evidence": [
+        "frontend/src/components/settings/SettingsBreaks.vue:112",
+        "frontend/src/components/settings/SettingsBreaks.vue:118",
+        "frontend/src/components/settings/SettingsBreaks.vue:128"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Operators cannot distinguish error vs warning vs on-air at a glance",
+      "is_blocker": false,
+      "proposed_by": "visual-design-reviewer"
+    },
+    {
+      "id": "F-007",
+      "title": "obtainUuid 401 check never fires; failed uuid fetch leaves SSE status stream dead",
+      "severity": "MEDIUM",
+      "category": "api-contract/sse",
+      "evidence": [
+        "frontend/src/stores/auth.ts:324",
+        "frontend/src/stores/auth.ts:327",
+        "frontend/src/composables/playoutStatus.ts:32",
+        "frontend/src/composables/playoutStatus.ts:59"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Live on-air/playout status can go stale until next configInit",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer"
+    },
+    {
+      "id": "F-008",
+      "title": "Channel-list failure falls back to fabricated 'Channel 1'",
+      "severity": "MEDIUM",
+      "category": "error-handling",
+      "evidence": [
+        "frontend/src/stores/config.ts:99",
+        "frontend/src/stores/config.ts:114"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Operator may act on a channel id not provided by the server",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer"
+    },
+    {
+      "id": "F-009",
+      "title": "Chunked upload: sibling workers not aborted on chunk failure; retry can race same batch",
+      "severity": "MEDIUM",
+      "category": "upload",
+      "evidence": [
+        "frontend/src/composables/chunkedUpload.ts:76",
+        "frontend/src/composables/chunkedUpload.ts:116",
+        "frontend/src/stores/uploads.ts:144",
+        "frontend/src/stores/uploads.ts:178"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Orphan chunk requests; possible concurrent writers to same media file",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer"
+    },
+    {
+      "id": "F-010",
+      "title": "Concurrent playlist loads unguarded; stale response overwrites state and save snapshot",
+      "severity": "MEDIUM",
+      "category": "state/race",
+      "evidence": [
+        "frontend/src/stores/playlist.ts:66",
+        "frontend/src/stores/playlist.ts:89"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Fast date/channel switching can make dirty/save target wrong day",
+      "is_blocker": false,
+      "proposed_by": "frontend-reviewer"
+    },
+    {
+      "id": "F-011",
+      "title": "Media browse store applies stale responses; isLoading reset by first finisher",
+      "severity": "MEDIUM",
+      "category": "state/race",
+      "evidence": [
+        "frontend/src/stores/media.ts:40",
+        "frontend/src/stores/media.ts:95"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Late response from previous folder/channel overwrites current view",
+      "is_blocker": false,
+      "proposed_by": "frontend-reviewer"
+    },
+    {
+      "id": "F-012",
+      "title": "msgAlert overlapping timers hide newer alerts early",
+      "severity": "MEDIUM",
+      "category": "state/race",
+      "evidence": [
+        "frontend/src/stores/index.ts:21"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Error alerts can vanish after ~1s before being read",
+      "is_blocker": false,
+      "proposed_by": "frontend-reviewer"
+    },
+    {
+      "id": "F-013",
+      "title": "de-DE/ru-RU ~1561 keys missing; pt-BR missing a few keys and has orphan keys",
+      "severity": "MEDIUM",
+      "category": "i18n",
+      "evidence": [
+        "frontend/src/locales/de-DE.ts:1",
+        "frontend/src/locales/ru-RU.ts:1",
+        "frontend/src/i18n.ts:33"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Mixed-language UI for de/ru operators",
+      "is_blocker": false,
+      "proposed_by": "frontend-reviewer"
+    },
+    {
+      "id": "F-014",
+      "title": "No unsaved-changes guard on in-app route navigation",
+      "severity": "MEDIUM",
+      "category": "flow/data-loss",
+      "evidence": [
+        "frontend/src/router/index.ts:156",
+        "frontend/src/components/player/PlaylistPanel.vue:234",
+        "frontend/src/views/ConfigureView.vue:78"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Unsaved playlist/settings edits may be lost when navigating via menu (actual loss NOT_VERIFIED)",
+      "is_blocker": false,
+      "proposed_by": "functional-reviewer"
+    },
+    {
+      "id": "F-015",
+      "title": "On-air state changes not in live region; error alerts time out in 3-4s (WCAG 4.1.3)",
+      "severity": "MEDIUM",
+      "category": "accessibility",
+      "evidence": [
+        "frontend/src/components/player/NowPanel.vue:169",
+        "frontend/src/components/player/TransportBar.vue:118",
+        "frontend/src/components/utils/AlertMsg.vue:9"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Screen-reader operators not told when playout starts/stops/resyncs",
+      "is_blocker": false,
+      "proposed_by": "accessibility-reviewer"
+    },
+    {
+      "id": "F-016",
+      "title": "Login password label wraps show/hide button; compound accessible name",
+      "severity": "MEDIUM",
+      "category": "accessibility",
+      "evidence": [
+        "frontend/src/views/LoginView.vue:135"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Field announced as 'Password Show password'; ambiguous toggle state",
+      "is_blocker": false,
+      "proposed_by": "accessibility-reviewer"
+    },
+    {
+      "id": "F-017",
+      "title": "Logging error-count pill styled identically to ON AIR badge",
+      "severity": "MEDIUM",
+      "category": "visual/state",
+      "evidence": [
+        "frontend/src/views/LoggingView.vue:316",
+        "frontend/src/components/HeaderMenu.vue:112"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Error count reads as on-air state",
+      "is_blocker": false,
+      "proposed_by": "visual-design-reviewer"
+    },
+    {
+      "id": "F-018",
+      "title": "Live protocol selection #1c1c1c on --live ~3.15:1 in light; timeline live colour differs",
+      "severity": "MEDIUM",
+      "category": "visual/contrast",
+      "evidence": [
+        "frontend/src/components/live/LiveFields.vue:249",
+        "frontend/src/composables/schedule.ts:12"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Contrast failure and inconsistent 'live' colour",
+      "is_blocker": false,
+      "proposed_by": "visual-design-reviewer"
+    },
+    {
+      "id": "F-019",
+      "title": "On-air/warning colours bypass theme tokens (two reds, yellow vs orange)",
+      "severity": "MEDIUM",
+      "category": "visual/tokens",
+      "evidence": [
+        "frontend/src/components/HeaderMenu.vue:116",
+        "frontend/src/components/player/LivePreview.vue:183",
+        "frontend/src/views/LoggingView.vue:273",
+        "frontend/src/views/LoggingView.vue:264"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Same state renders differently across screens",
+      "is_blocker": false,
+      "proposed_by": "visual-design-reviewer"
+    },
+    {
+      "id": "F-020",
+      "title": "Playlist table min-w 760px; actions off-screen on narrow viewports",
+      "severity": "MEDIUM",
+      "category": "visual/responsive",
+      "evidence": [
+        "frontend/src/components/player/PlaylistPanel.vue:1355",
+        "frontend/src/components/player/PlaylistPanel.vue:1368"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "On-air playlist controls need horizontal scroll on phones (layout NOT_VERIFIED)",
+      "is_blocker": false,
+      "proposed_by": "visual-design-reviewer"
+    },
+    {
+      "id": "F-021",
+      "title": "Arbitrary text sizes; on-air marker at 10px below --text-xs floor",
+      "severity": "LOW",
+      "category": "visual/typography",
+      "evidence": [
+        "frontend/src/components/player/PlaylistPanel.vue:1499",
+        "frontend/src/components/player/PlaylistPanel.vue:1281"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Critical status among smallest text",
+      "is_blocker": false,
+      "proposed_by": "visual-design-reviewer"
+    },
+    {
+      "id": "F-022",
+      "title": "authFetchRaw returns second 401 after refresh without ending session",
+      "severity": "LOW",
+      "category": "auth",
+      "evidence": [
+        "frontend/src/composables/authFetch.ts:83"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Revoked users see repeated toasts instead of login redirect",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer"
+    },
+    {
+      "id": "F-023",
+      "title": "Tokens in localStorage/BroadcastChannel; SSE uuid and access token in URL query",
+      "severity": "LOW",
+      "category": "security",
+      "evidence": [
+        "frontend/src/stores/auth.ts:91",
+        "frontend/src/stores/auth.ts:104",
+        "frontend/src/composables/playoutStatus.ts:32",
+        "frontend/src/composables/fileAccess.ts:11"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "XSS would enable token theft; time-limited log leakage (server IP-binds tokens)",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer"
+    },
+    {
+      "id": "F-024",
+      "title": "uploadPhoto bypasses authFetch (no refresh/retry); unguarded JSON.parse",
+      "severity": "LOW",
+      "category": "auth/upload",
+      "evidence": [
+        "frontend/src/composables/storage.ts:199",
+        "frontend/src/composables/storage.ts:220"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Long photo uploads fail with raw error",
+      "is_blocker": false,
+      "proposed_by": "backend-reviewer"
+    },
+    {
+      "id": "F-025",
+      "title": "Updates poller interval never stopped",
+      "severity": "LOW",
+      "category": "state/leak",
+      "evidence": [
+        "frontend/src/stores/updates.ts:38",
+        "frontend/src/components/HeaderMenu.vue:41"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Small bounded no-op polling after logout",
+      "is_blocker": false,
+      "proposed_by": "frontend-reviewer"
+    },
+    {
+      "id": "F-026",
+      "title": "App.vue global listeners never removed; theme localStorage read without try/catch",
+      "severity": "LOW",
+      "category": "state/leak",
+      "evidence": [
+        "frontend/src/App.vue:22",
+        "frontend/src/App.vue:62",
+        "frontend/src/App.vue:71"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "HMR duplication; setup can throw if storage unavailable",
+      "is_blocker": false,
+      "proposed_by": "frontend-reviewer"
+    },
+    {
+      "id": "F-027",
+      "title": "'any' on config payloads and auth responses",
+      "severity": "LOW",
+      "category": "types",
+      "evidence": [
+        "frontend/src/stores/config.ts:181",
+        "frontend/src/stores/config.ts:227",
+        "frontend/src/stores/auth.ts:307"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Shape changes not caught at compile time",
+      "is_blocker": false,
+      "proposed_by": "frontend-reviewer"
+    },
+    {
+      "id": "F-028",
+      "title": "No catch-all route",
+      "severity": "LOW",
+      "category": "routing",
+      "evidence": [
+        "frontend/src/router/index.ts:19"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Mistyped/stale URLs likely render blank (NOT_VERIFIED)",
+      "is_blocker": false,
+      "proposed_by": "functional-reviewer"
+    },
+    {
+      "id": "F-029",
+      "title": "Role gating only on /configure; operator views ungated client-side",
+      "severity": "LOW",
+      "category": "authorization/ux",
+      "evidence": [
+        "frontend/src/router/index.ts:195"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "UI shows operator views to 'user' role; server enforcement not confirmed here",
+      "is_blocker": false,
+      "proposed_by": "functional-reviewer"
+    },
+    {
+      "id": "F-030",
+      "title": "Setup redirect check only on home and fails open",
+      "severity": "LOW",
+      "category": "flow",
+      "evidence": [
+        "frontend/src/router/index.ts:158"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Fresh install opened at /player bypasses /init redirect",
+      "is_blocker": false,
+      "proposed_by": "functional-reviewer"
+    },
+    {
+      "id": "F-031",
+      "title": "UserEditor password-mismatch error not linked to fields",
+      "severity": "LOW",
+      "category": "accessibility",
+      "evidence": [
+        "frontend/src/components/settings/UserEditor.vue:46",
+        "frontend/src/components/settings/UserEditor.vue:89"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "impact": "Error not associated with fields; placeholder-only instruction",
+      "is_blocker": false,
+      "proposed_by": "accessibility-reviewer"
+    }
+  ]
+}
