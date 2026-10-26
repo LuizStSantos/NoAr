@@ -461,9 +461,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "7612be735bed4ab3ea689d39d3986b4b23cd2e9d5b75667a798d3492d7d9fbac",
+      "sha256": "8ff92eed5e7758374426504e6b39b640b7bfd54282b15eefcfe106a49f98de18",
       "language": "Markdown",
-      "bytes": 5488,
+      "bytes": 5888,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -16801,145 +16801,145 @@
       ]
     },
     "frontend/src/components/player/AddProgramDialog.vue": {
-      "sha256": "5423a9af4d902c3ca8e5c4a79b27cc71b619fea6faddf7fddf91c23299a1d645",
+      "sha256": "de67b484534be55956b2277a9cbc9282131cdab9d185f8e67ed6ed22b1ddc4c2",
       "language": "Vue",
-      "bytes": 11032,
+      "bytes": 10997,
       "symbols": [
         {
           "name": "props",
-          "line": 16
-        },
-        {
-          "name": "emit",
           "line": 17
         },
         {
-          "name": "configStore",
-          "line": 20
+          "name": "emit",
+          "line": 18
         },
         {
-          "name": "playlistStore",
+          "name": "configStore",
           "line": 21
         },
         {
-          "name": "loading",
-          "line": 36
+          "name": "playlistStore",
+          "line": 22
         },
         {
-          "name": "error",
+          "name": "loading",
           "line": 37
         },
         {
-          "name": "found",
+          "name": "error",
           "line": 38
         },
         {
-          "name": "choice",
+          "name": "found",
           "line": 39
         },
         {
-          "name": "picked",
+          "name": "choice",
           "line": 40
         },
         {
-          "name": "channel",
-          "line": 42
+          "name": "picked",
+          "line": 41
         },
         {
-          "name": "label",
+          "name": "channel",
           "line": 43
         },
         {
-          "name": "storage",
+          "name": "label",
           "line": 44
         },
         {
-          "name": "folderPath",
+          "name": "storage",
           "line": 45
         },
         {
-          "name": "episodes",
+          "name": "folderPath",
           "line": 46
         },
         {
-          "name": "next",
+          "name": "episodes",
           "line": 47
         },
         {
-          "name": "total",
+          "name": "next",
           "line": 48
         },
         {
-          "name": "summary",
+          "name": "total",
           "line": 49
         },
         {
-          "name": "places",
-          "line": 57
+          "name": "summary",
+          "line": 50
         },
         {
-          "name": "list",
+          "name": "places",
           "line": 58
         },
         {
-          "name": "end",
+          "name": "list",
           "line": 59
         },
         {
-          "name": "startOfDay",
+          "name": "end",
           "line": 60
         },
         {
+          "name": "startOfDay",
+          "line": 61
+        },
+        {
           "name": "begin",
-          "line": 63
+          "line": 64
         },
         {
           "name": "place",
-          "line": 76
+          "line": 77
         },
         {
           "name": "lastLine",
-          "line": 78
-        },
-        {
-          "name": "last",
           "line": 79
         },
         {
+          "name": "last",
+          "line": 80
+        },
+        {
           "name": "name",
-          "line": 85
+          "line": 86
         },
         {
           "name": "chosen",
-          "line": 97
+          "line": 98
         },
         {
           "name": "lastInPlaylist",
-          "line": 110
-        },
-        {
-          "name": "prefix",
           "line": 111
         },
         {
+          "name": "prefix",
+          "line": 112
+        },
+        {
           "name": "load",
-          "line": 116
+          "line": 117
         },
         {
           "name": "add",
-          "line": 133
-        },
-        {
-          "name": "files",
           "line": 134
         },
         {
-          "name": "where",
-          "line": 139
+          "name": "files",
+          "line": 135
         },
         {
-          "name": "onKey",
-          "line": 144
+          "name": "where",
+          "line": 140
+        },
+        {
+          "name": "dialog",
+          "line": 145
         }
       ]
     },
@@ -17566,237 +17566,237 @@
       ]
     },
     "frontend/src/components/player/PlaylistGenerator.vue": {
-      "sha256": "4d5d32073daa77c1e622ebabe9f187b6e0502ac4abe715a3714c8520375a11fb",
+      "sha256": "1288ed3e4debee682d984ecb6885ccaeb86770121bc72d7bd38d2f013f22c99f",
       "language": "Vue",
-      "bytes": 28459,
+      "bytes": 28498,
       "symbols": [
         {
           "name": "props",
-          "line": 19
+          "line": 20
         },
         {
           "name": "configStore",
-          "line": 22
-        },
-        {
-          "name": "indexStore",
           "line": 23
         },
         {
-          "name": "playlistStore",
+          "name": "indexStore",
           "line": 24
         },
         {
-          "name": "mode",
-          "line": 37
+          "name": "playlistStore",
+          "line": 25
         },
         {
-          "name": "channelId",
+          "name": "mode",
           "line": 38
         },
         {
-          "name": "dayStart",
+          "name": "channelId",
           "line": 39
         },
         {
-          "name": "dayLength",
+          "name": "dayStart",
           "line": 40
         },
         {
-          "name": "browsePath",
-          "line": 43
+          "name": "dayLength",
+          "line": 41
         },
         {
-          "name": "folders",
+          "name": "browsePath",
           "line": 44
         },
         {
-          "name": "sheetFolders",
+          "name": "folders",
           "line": 45
         },
         {
-          "name": "movieFolders",
+          "name": "sheetFolders",
           "line": 46
         },
         {
-          "name": "loadingFolders",
+          "name": "movieFolders",
           "line": 47
         },
         {
-          "name": "chosen",
+          "name": "loadingFolders",
           "line": 48
         },
         {
-          "name": "wholeStorage",
+          "name": "chosen",
           "line": 49
         },
         {
-          "name": "shuffle",
+          "name": "wholeStorage",
           "line": 50
         },
         {
-          "name": "fill",
+          "name": "shuffle",
           "line": 51
         },
         {
-          "name": "nextId",
-          "line": 54
+          "name": "fill",
+          "line": 52
         },
         {
-          "name": "blocks",
+          "name": "nextId",
           "line": 55
         },
         {
-          "name": "pickerFor",
+          "name": "blocks",
           "line": 56
         },
         {
+          "name": "pickerFor",
+          "line": 57
+        },
+        {
           "name": "generating",
-          "line": 58
+          "line": 59
         },
         {
           "name": "dayLabel",
-          "line": 60
-        },
-        {
-          "name": "label",
           "line": 61
         },
         {
-          "name": "currentLength",
-          "line": 67
+          "name": "label",
+          "line": 62
         },
         {
-          "name": "missing",
+          "name": "currentLength",
           "line": 68
         },
         {
-          "name": "crumbs",
+          "name": "missing",
           "line": 69
         },
         {
-          "name": "parts",
+          "name": "crumbs",
           "line": 70
         },
         {
-          "name": "toClock",
-          "line": 78
+          "name": "parts",
+          "line": 71
         },
         {
-          "name": "value",
+          "name": "toClock",
           "line": 79
         },
         {
-          "name": "pad",
+          "name": "value",
           "line": 80
         },
         {
+          "name": "pad",
+          "line": 81
+        },
+        {
           "name": "toSeconds",
-          "line": 85
+          "line": 86
         },
         {
           "name": "normalizeClock",
-          "line": 92
+          "line": 93
         },
         {
           "name": "pad",
-          "line": 97
+          "line": 98
         },
         {
           "name": "newBlock",
-          "line": 102
+          "line": 103
         },
         {
           "name": "offsetOf",
-          "line": 107
+          "line": 108
         },
         {
           "name": "coverage",
-          "line": 111
-        },
-        {
-          "name": "spans",
           "line": 112
         },
         {
-          "name": "gaps",
-          "line": 115
+          "name": "spans",
+          "line": 113
         },
         {
-          "name": "overlaps",
+          "name": "gaps",
           "line": 116
         },
         {
-          "name": "reached",
+          "name": "overlaps",
           "line": 117
         },
         {
+          "name": "reached",
+          "line": 118
+        },
+        {
           "name": "percent",
-          "line": 133
+          "line": 134
         },
         {
           "name": "ticks",
-          "line": 154
+          "line": 155
         },
         {
           "name": "canGenerate",
-          "line": 158
+          "line": 159
         },
         {
           "name": "browse",
-          "line": 170
+          "line": 171
         },
         {
           "name": "listing",
-          "line": 174
+          "line": 175
         },
         {
           "name": "toggleFolder",
-          "line": 187
+          "line": 188
         },
         {
           "name": "addBlock",
-          "line": 191
-        },
-        {
-          "name": "end",
           "line": 192
         },
         {
+          "name": "end",
+          "line": 193
+        },
+        {
           "name": "removeBlock",
-          "line": 197
+          "line": 198
         },
         {
           "name": "addPath",
-          "line": 201
+          "line": 202
         },
         {
           "name": "generate",
-          "line": 209
+          "line": 210
         },
         {
           "name": "body",
-          "line": 212
+          "line": 213
         },
         {
           "name": "response",
-          "line": 234
+          "line": 235
         },
         {
           "name": "generated",
-          "line": 242
+          "line": 243
         },
         {
           "name": "added",
-          "line": 245
-        },
-        {
-          "name": "length",
           "line": 246
         },
         {
-          "name": "onKey",
-          "line": 274
+          "name": "length",
+          "line": 247
+        },
+        {
+          "name": "dialog",
+          "line": 275
         }
       ]
     },
@@ -18343,157 +18343,161 @@
       ]
     },
     "frontend/src/components/schedule/LiveDialog.vue": {
-      "sha256": "dbfa1f1dd1115263b883b1215de083cc3d15616b8d1a74d7d4ecfede0097da55",
+      "sha256": "e46e305eb02668eb31622c39065e3dfd21ae8e8d93a0a3b1728921e1114e1de4",
       "language": "Vue",
-      "bytes": 12409,
+      "bytes": 12660,
       "symbols": [
         {
           "name": "props",
-          "line": 18
-        },
-        {
-          "name": "emit",
           "line": 19
         },
         {
-          "name": "configStore",
-          "line": 22
+          "name": "emit",
+          "line": 20
         },
         {
-          "name": "indexStore",
+          "name": "configStore",
           "line": 23
         },
         {
-          "name": "scheduleStore",
+          "name": "indexStore",
           "line": 24
         },
         {
-          "name": "date",
-          "line": 26
+          "name": "scheduleStore",
+          "line": 25
         },
         {
-          "name": "start",
+          "name": "date",
           "line": 27
         },
         {
-          "name": "end",
+          "name": "start",
           "line": 28
         },
         {
-          "name": "repeatMode",
+          "name": "end",
           "line": 29
         },
         {
-          "name": "repeatDays",
+          "name": "repeatMode",
           "line": 30
         },
         {
-          "name": "entryMode",
+          "name": "repeatDays",
           "line": 31
         },
         {
-          "name": "afterMode",
+          "name": "entryMode",
           "line": 32
         },
         {
-          "name": "retrySeconds",
+          "name": "afterMode",
           "line": 33
         },
         {
-          "name": "showInGuide",
+          "name": "retrySeconds",
           "line": 34
         },
         {
-          "name": "signal",
+          "name": "showInGuide",
           "line": 35
         },
         {
-          "name": "testing",
+          "name": "signal",
           "line": 36
         },
         {
-          "name": "saving",
+          "name": "testing",
           "line": 37
         },
         {
-          "name": "error",
+          "name": "saving",
           "line": 38
         },
         {
-          "name": "formKey",
-          "line": 40
+          "name": "error",
+          "line": 39
         },
         {
-          "name": "form",
+          "name": "formKey",
           "line": 41
         },
         {
-          "name": "existing",
-          "line": 43
+          "name": "form",
+          "line": 42
         },
         {
-          "name": "channelId",
+          "name": "existing",
           "line": 44
         },
         {
-          "name": "liveFolder",
-          "line": 46
+          "name": "channelId",
+          "line": 45
         },
         {
-          "name": "liveTitle",
+          "name": "liveFolder",
           "line": 47
         },
         {
-          "name": "posterUrl",
+          "name": "liveTitle",
           "line": 48
         },
         {
-          "name": "editingSheet",
+          "name": "posterUrl",
           "line": 49
         },
         {
+          "name": "editingSheet",
+          "line": 50
+        },
+        {
           "name": "loadSheet",
-          "line": 51
+          "line": 52
         },
         {
           "name": "sheet",
-          "line": 60
+          "line": 61
         },
         {
           "name": "event",
-          "line": 78
+          "line": 79
         },
         {
           "name": "testSignal",
-          "line": 97
-        },
-        {
-          "name": "address",
           "line": 98
         },
         {
-          "name": "signalText",
-          "line": 118
+          "name": "address",
+          "line": 99
         },
         {
-          "name": "test",
+          "name": "signalText",
           "line": 119
         },
         {
+          "name": "test",
+          "line": 120
+        },
+        {
           "name": "save",
-          "line": 140
+          "line": 141
         },
         {
           "name": "live",
-          "line": 160
+          "line": 161
         },
         {
           "name": "withSeconds",
-          "line": 167
+          "line": 168
         },
         {
           "name": "bits",
-          "line": 168
+          "line": 169
+        },
+        {
+          "name": "dialog",
+          "line": 200
         }
       ]
     },
@@ -18545,249 +18549,249 @@
       ]
     },
     "frontend/src/components/schedule/ScheduleDialog.vue": {
-      "sha256": "b06e9b43ffa0373c59a3a71bf558a745be6d9c7b944d7aad0564408ca611fb77",
+      "sha256": "b30305b40913b0e93ec8ce5553374d47c503919cd4503d74b8298d177601aa74",
       "language": "Vue",
-      "bytes": 30927,
+      "bytes": 31178,
       "symbols": [
         {
           "name": "props",
-          "line": 26
-        },
-        {
-          "name": "emit",
           "line": 27
         },
         {
-          "name": "configStore",
-          "line": 36
+          "name": "emit",
+          "line": 28
         },
         {
-          "name": "indexStore",
+          "name": "configStore",
           "line": 37
         },
         {
-          "name": "scheduleStore",
+          "name": "indexStore",
           "line": 38
         },
         {
-          "name": "sources",
-          "line": 40
+          "name": "scheduleStore",
+          "line": 39
         },
         {
-          "name": "title",
+          "name": "sources",
           "line": 41
         },
         {
-          "name": "date",
+          "name": "title",
           "line": 42
         },
         {
-          "name": "time",
+          "name": "date",
           "line": 43
         },
         {
-          "name": "repeatMode",
+          "name": "time",
           "line": 44
         },
         {
-          "name": "repeatDays",
+          "name": "repeatMode",
           "line": 45
         },
         {
-          "name": "entryMode",
+          "name": "repeatDays",
           "line": 46
         },
         {
-          "name": "afterMode",
+          "name": "entryMode",
           "line": 47
         },
         {
-          "name": "showInGuide",
+          "name": "afterMode",
           "line": 48
         },
         {
-          "name": "showPicker",
+          "name": "showInGuide",
           "line": 49
         },
         {
-          "name": "editing",
-          "line": 51
+          "name": "showPicker",
+          "line": 50
         },
         {
-          "name": "saving",
+          "name": "editing",
           "line": 52
         },
         {
-          "name": "error",
+          "name": "saving",
           "line": 53
         },
         {
+          "name": "error",
+          "line": 54
+        },
+        {
           "name": "event",
-          "line": 62
+          "line": 63
         },
         {
           "name": "commercials",
-          "line": 80
-        },
-        {
-          "name": "allCommercial",
           "line": 81
         },
         {
-          "name": "paths",
-          "line": 88
+          "name": "allCommercial",
+          "line": 82
         },
         {
-          "name": "id",
+          "name": "paths",
           "line": 89
         },
         {
+          "name": "id",
+          "line": 90
+        },
+        {
           "name": "flags",
-          "line": 96
+          "line": 97
         },
         {
           "name": "guide",
-          "line": 107
+          "line": 108
         },
         {
           "name": "sheetTitle",
-          "line": 109
+          "line": 110
         },
         {
           "name": "posters",
-          "line": 112
-        },
-        {
-          "name": "channelId",
           "line": 113
         },
         {
-          "name": "loadGuide",
-          "line": 115
+          "name": "channelId",
+          "line": 114
         },
         {
-          "name": "paths",
+          "name": "loadGuide",
           "line": 116
         },
         {
-          "name": "channel",
+          "name": "paths",
           "line": 117
         },
         {
+          "name": "channel",
+          "line": 118
+        },
+        {
           "name": "found",
-          "line": 126
+          "line": 127
         },
         {
           "name": "pictures",
-          "line": 133
+          "line": 134
         },
         {
           "name": "poster",
-          "line": 136
+          "line": 137
         },
         {
           "name": "total",
-          "line": 157
-        },
-        {
-          "name": "known",
           "line": 158
         },
         {
+          "name": "known",
+          "line": 159
+        },
+        {
           "name": "repeatBits",
-          "line": 163
+          "line": 164
         },
         {
           "name": "programName",
-          "line": 172
-        },
-        {
-          "name": "block",
           "line": 173
         },
         {
-          "name": "clipAtTime",
-          "line": 182
+          "name": "block",
+          "line": 174
         },
         {
-          "name": "at",
+          "name": "clipAtTime",
           "line": 183
         },
         {
-          "name": "start",
-          "line": 192
+          "name": "at",
+          "line": 184
         },
         {
-          "name": "end",
+          "name": "start",
           "line": 193
         },
         {
-          "name": "eventOnAir",
-          "line": 207
+          "name": "end",
+          "line": 194
         },
         {
-          "name": "at",
+          "name": "eventOnAir",
           "line": 208
         },
         {
-          "name": "ownStart",
+          "name": "at",
           "line": 209
         },
         {
-          "name": "entryPreview",
-          "line": 222
+          "name": "ownStart",
+          "line": 210
         },
         {
-          "name": "block",
+          "name": "entryPreview",
           "line": 223
         },
         {
+          "name": "block",
+          "line": 224
+        },
+        {
           "name": "clip",
-          "line": 232
+          "line": 233
         },
         {
           "name": "name",
-          "line": 238
+          "line": 239
         },
         {
           "name": "preview",
-          "line": 246
-        },
-        {
-          "name": "clip",
           "line": 247
         },
         {
-          "name": "at",
-          "line": 253
+          "name": "clip",
+          "line": 248
         },
         {
-          "name": "start",
+          "name": "at",
           "line": 254
         },
         {
-          "name": "clipName",
+          "name": "start",
           "line": 255
         },
         {
-          "name": "nextName",
+          "name": "clipName",
           "line": 256
         },
         {
-          "name": "nextLength",
+          "name": "nextName",
           "line": 257
         },
         {
-          "name": "windowStart",
-          "line": 259
+          "name": "nextLength",
+          "line": 258
         },
         {
-          "name": "leftOfClip",
+          "name": "windowStart",
           "line": 260
         },
         {
-          "name": "event",
+          "name": "leftOfClip",
           "line": 261
+        },
+        {
+          "name": "event",
+          "line": 262
         }
       ]
     },
@@ -19147,21 +19151,21 @@
       ]
     },
     "frontend/src/components/settings/RestartDialog.vue": {
-      "sha256": "3d3ffb2968afa54912a00a56a68cf6c88dd1288901c97841671a2d78da601105",
+      "sha256": "8b6867f089272e655e6cdccb8a9120503ffc04cdf10277b75e0db5a276b01349",
       "language": "Vue",
-      "bytes": 2506,
+      "bytes": 2369,
       "symbols": [
         {
           "name": "props",
-          "line": 6
+          "line": 8
         },
         {
           "name": "emit",
-          "line": 7
+          "line": 9
         },
         {
-          "name": "onKey",
-          "line": 11
+          "name": "dialog",
+          "line": 13
         }
       ]
     },
@@ -20509,61 +20513,65 @@
       ]
     },
     "frontend/src/components/settings/UpdateProgress.vue": {
-      "sha256": "6322853a750334267d9c2dccbd48d803f36e0af47bcd886c5cafb0742221a3bb",
+      "sha256": "0eba77e102caf005f0f21f00c8738e6e77a047ce84cfcfec0833a6855553b819",
       "language": "Vue",
-      "bytes": 5036,
+      "bytes": 5218,
       "symbols": [
         {
           "name": "props",
-          "line": 12
+          "line": 13
         },
         {
           "name": "emit",
-          "line": 17
+          "line": 18
         },
         {
           "name": "authStore",
-          "line": 20
+          "line": 21
         },
         {
           "name": "LATE_MS",
-          "line": 23
-        },
-        {
-          "name": "POLL_MS",
           "line": 24
         },
         {
-          "name": "step",
-          "line": 28
+          "name": "POLL_MS",
+          "line": 25
         },
         {
-          "name": "late",
+          "name": "step",
           "line": 29
         },
         {
-          "name": "deadline",
+          "name": "late",
           "line": 30
         },
         {
-          "name": "timer",
+          "name": "deadline",
           "line": 31
         },
         {
+          "name": "timer",
+          "line": 32
+        },
+        {
           "name": "steps",
-          "line": 33
+          "line": 34
         },
         {
           "name": "poll",
-          "line": 41
+          "line": 42
         },
         {
           "name": "response",
-          "line": 43
+          "line": 44
         },
         {
           "name": "info",
-          "line": 46
+          "line": 47
+        },
+        {
+          "name": "dialog",
+          "line": 69
         }
       ]
     },
@@ -20909,57 +20917,57 @@
       ]
     },
     "frontend/src/components/storage/ImageViewer.vue": {
-      "sha256": "8a7d746846cc2baced1454c42f1a9936d5e3a83082ef118327899ab9366b0f96",
+      "sha256": "d9fe59ceaa3e1853cdafdac7a7f41b6421859f473489d6379013bd32fdf087d3",
       "language": "Vue",
-      "bytes": 8176,
+      "bytes": 8205,
       "symbols": [
         {
           "name": "props",
-          "line": 19
+          "line": 20
         },
         {
           "name": "index",
-          "line": 32
+          "line": 33
         },
         {
           "name": "emit",
-          "line": 34
+          "line": 35
         },
         {
           "name": "dialog",
-          "line": 43
-        },
-        {
-          "name": "strip",
           "line": 44
         },
         {
-          "name": "image",
+          "name": "strip",
           "line": 45
         },
         {
-          "name": "details",
-          "line": 47
+          "name": "image",
+          "line": 46
         },
         {
-          "name": "current",
+          "name": "details",
           "line": 48
         },
         {
-          "name": "go",
-          "line": 64
+          "name": "current",
+          "line": 49
         },
         {
-          "name": "total",
+          "name": "go",
           "line": 65
         },
         {
+          "name": "total",
+          "line": 66
+        },
+        {
           "name": "loaded",
-          "line": 72
+          "line": 73
         },
         {
           "name": "element",
-          "line": 73
+          "line": 74
         }
       ]
     },
@@ -21051,248 +21059,252 @@
       ]
     },
     "frontend/src/components/storage/LiveEditor.vue": {
-      "sha256": "7f24d935fff4f948d40b4b74252bbf4a300d62e76dc6f0b35cab85bfff17cfb5",
+      "sha256": "609d83ff743c61ca4c7a6766e60d6325819c94dcc8059bfb0e4b48b2397f03df",
       "language": "Vue",
-      "bytes": 3455,
+      "bytes": 3630,
       "symbols": [
         {
           "name": "props",
-          "line": 12
+          "line": 13
         },
         {
           "name": "emit",
-          "line": 20
+          "line": 21
         },
         {
           "name": "indexStore",
-          "line": 26
+          "line": 27
         },
         {
           "name": "form",
-          "line": 28
-        },
-        {
-          "name": "saving",
           "line": 29
         },
         {
-          "name": "error",
+          "name": "saving",
           "line": 30
         },
         {
-          "name": "save",
+          "name": "error",
+          "line": 31
+        },
+        {
+          "name": "dialog",
           "line": 32
         },
         {
+          "name": "save",
+          "line": 36
+        },
+        {
           "name": "live",
-          "line": 42
+          "line": 46
         }
       ]
     },
     "frontend/src/components/storage/LogoMarksEditor.vue": {
-      "sha256": "ae400896b34a9beff8c28038776acfd25a67ec81e1b67e02f81ac9eaedd52fa4",
+      "sha256": "3d46b8b521a368c61c133c0a1f294e6af2ad9a7ecfa35d98c96f2a5737241886",
       "language": "Vue",
-      "bytes": 17415,
+      "bytes": 17425,
       "symbols": [
         {
           "name": "props",
-          "line": 16
+          "line": 17
         },
         {
           "name": "emit",
-          "line": 24
+          "line": 25
         },
         {
           "name": "configStore",
-          "line": 27
-        },
-        {
-          "name": "indexStore",
           "line": 28
         },
         {
+          "name": "indexStore",
+          "line": 29
+        },
+        {
           "name": "MAX_SPANS",
-          "line": 30
+          "line": 31
         },
         {
           "name": "spans",
-          "line": 32
-        },
-        {
-          "name": "baseline",
           "line": 33
         },
         {
-          "name": "loading",
+          "name": "baseline",
           "line": 34
         },
         {
-          "name": "saving",
+          "name": "loading",
           "line": 35
         },
         {
-          "name": "videoUrl",
+          "name": "saving",
           "line": 36
         },
         {
-          "name": "logoUrl",
+          "name": "videoUrl",
           "line": 37
         },
         {
-          "name": "videoFailed",
+          "name": "logoUrl",
           "line": 38
         },
         {
-          "name": "video",
+          "name": "videoFailed",
           "line": 39
         },
         {
-          "name": "position",
+          "name": "video",
           "line": 40
         },
         {
-          "name": "duration",
+          "name": "position",
           "line": 41
         },
         {
+          "name": "duration",
+          "line": 42
+        },
+        {
           "name": "pendingFrom",
-          "line": 43
+          "line": 44
         },
         {
           "name": "drafts",
-          "line": 45
-        },
-        {
-          "name": "confirmClose",
           "line": 46
         },
         {
-          "name": "dirty",
-          "line": 48
+          "name": "confirmClose",
+          "line": 47
         },
         {
-          "name": "sorted",
+          "name": "dirty",
           "line": 49
         },
         {
-          "name": "hiddenNow",
+          "name": "sorted",
           "line": 50
         },
         {
-          "name": "overlaps",
+          "name": "hiddenNow",
           "line": 51
         },
         {
+          "name": "overlaps",
+          "line": 52
+        },
+        {
           "name": "invalid",
-          "line": 54
+          "line": 55
         },
         {
           "name": "formatTime",
-          "line": 57
-        },
-        {
-          "name": "total",
           "line": 58
         },
         {
-          "name": "h",
+          "name": "total",
           "line": 59
         },
         {
-          "name": "m",
+          "name": "h",
           "line": 60
         },
         {
-          "name": "s",
+          "name": "m",
           "line": 61
         },
         {
-          "name": "parseTime",
-          "line": 67
+          "name": "s",
+          "line": 62
         },
         {
-          "name": "parts",
+          "name": "parseTime",
           "line": 68
         },
         {
+          "name": "parts",
+          "line": 69
+        },
+        {
           "name": "fieldText",
-          "line": 77
+          "line": 78
         },
         {
           "name": "setField",
-          "line": 81
+          "line": 82
         },
         {
           "name": "seconds",
-          "line": 84
+          "line": 85
         },
         {
           "name": "settleField",
-          "line": 91
+          "line": 92
         },
         {
           "name": "seek",
-          "line": 95
+          "line": 96
         },
         {
           "name": "seekBar",
-          "line": 103
-        },
-        {
-          "name": "bar",
           "line": 104
         },
         {
-          "name": "share",
+          "name": "bar",
           "line": 105
         },
         {
+          "name": "share",
+          "line": 106
+        },
+        {
           "name": "markOff",
-          "line": 112
+          "line": 113
         },
         {
           "name": "markOn",
-          "line": 116
+          "line": 117
         },
         {
           "name": "remove",
-          "line": 126
+          "line": 127
         },
         {
           "name": "percent",
-          "line": 131
+          "line": 132
         },
         {
           "name": "previewUrl",
-          "line": 135
+          "line": 136
         },
         {
           "name": "load",
-          "line": 139
+          "line": 140
         },
         {
           "name": "hide",
-          "line": 143
+          "line": 144
         },
         {
           "name": "logo",
-          "line": 154
+          "line": 155
         },
         {
           "name": "save",
-          "line": 161
+          "line": 162
         },
         {
           "name": "hide",
-          "line": 165
+          "line": 166
         },
         {
           "name": "requestClose",
-          "line": 179
+          "line": 180
         },
         {
-          "name": "onKey",
-          "line": 187
+          "name": "dialog",
+          "line": 188
         }
       ]
     },
@@ -21352,181 +21364,181 @@
       ]
     },
     "frontend/src/components/storage/SheetEditor.vue": {
-      "sha256": "2755f7a83f22bdb0e68b9ad96a0d139a172903851698abe955412bc37d69ac80",
+      "sha256": "0003dd5a06b61b006fc2391c17c57d99a9c58ad73bf0428fc367c93153c965fb",
       "language": "Vue",
-      "bytes": 23495,
+      "bytes": 23505,
       "symbols": [
         {
           "name": "props",
-          "line": 17
+          "line": 18
         },
         {
           "name": "emit",
-          "line": 23
+          "line": 24
         },
         {
           "name": "indexStore",
-          "line": 26
+          "line": 27
         },
         {
           "name": "RATINGS",
-          "line": 28
+          "line": 29
         },
         {
           "name": "sheet",
-          "line": 30
-        },
-        {
-          "name": "kind",
           "line": 31
         },
         {
-          "name": "fields",
+          "name": "kind",
           "line": 32
         },
         {
-          "name": "baseline",
-          "line": 34
+          "name": "fields",
+          "line": 33
         },
         {
-          "name": "raw",
+          "name": "baseline",
           "line": 35
         },
         {
-          "name": "tab",
+          "name": "raw",
           "line": 36
         },
         {
-          "name": "saving",
+          "name": "tab",
           "line": 37
         },
         {
-          "name": "busyArtwork",
+          "name": "saving",
           "line": 38
         },
         {
-          "name": "confirmClose",
+          "name": "busyArtwork",
           "line": 39
         },
         {
-          "name": "leaveTo",
-          "line": 41
+          "name": "confirmClose",
+          "line": 40
         },
         {
-          "name": "confirmDelete",
+          "name": "leaveTo",
           "line": 42
         },
         {
-          "name": "genreInput",
+          "name": "confirmDelete",
           "line": 43
         },
         {
-          "name": "firstField",
+          "name": "genreInput",
           "line": 44
         },
         {
-          "name": "isClip",
-          "line": 46
+          "name": "firstField",
+          "line": 45
         },
         {
-          "name": "stem",
+          "name": "isClip",
           "line": 47
         },
         {
-          "name": "dirty",
+          "name": "stem",
           "line": 48
         },
         {
+          "name": "dirty",
+          "line": 49
+        },
+        {
           "name": "fileName",
-          "line": 59
+          "line": 60
         },
         {
           "name": "kinds",
-          "line": 70
-        },
-        {
-          "name": "ratingOptions",
           "line": 71
         },
         {
+          "name": "ratingOptions",
+          "line": 72
+        },
+        {
           "name": "listText",
-          "line": 75
+          "line": 76
         },
         {
           "name": "textList",
-          "line": 79
+          "line": 80
         },
         {
           "name": "countries",
-          "line": 86
+          "line": 87
         },
         {
           "name": "apply",
-          "line": 91
+          "line": 92
         },
         {
           "name": "wholeNumber",
-          "line": 106
+          "line": 107
         },
         {
           "name": "load",
-          "line": 110
+          "line": 111
         },
         {
           "name": "addGenre",
-          "line": 121
+          "line": 122
         },
         {
           "name": "removeGenre",
-          "line": 131
+          "line": 132
         },
         {
           "name": "onGenreKey",
-          "line": 135
+          "line": 136
         },
         {
           "name": "save",
-          "line": 144
+          "line": 145
         },
         {
           "name": "next",
-          "line": 152
+          "line": 153
         },
         {
           "name": "changeArtwork",
-          "line": 175
+          "line": 176
         },
         {
           "name": "next",
-          "line": 179
+          "line": 180
         },
         {
           "name": "deleteSheet",
-          "line": 196
+          "line": 197
         },
         {
           "name": "next",
-          "line": 210
+          "line": 211
         },
         {
           "name": "requestClose",
-          "line": 223
+          "line": 224
         },
         {
           "name": "requestOpen",
-          "line": 234
+          "line": 235
         },
         {
           "name": "leave",
-          "line": 244
+          "line": 245
         },
         {
           "name": "onPhotos",
-          "line": 252
+          "line": 253
         },
         {
-          "name": "onKey",
-          "line": 258
+          "name": "dialog",
+          "line": 259
         }
       ]
     },
@@ -21542,17 +21554,17 @@
       ]
     },
     "frontend/src/components/utils/GenericModal.vue": {
-      "sha256": "a3c3c36241a8ef4a2942623cba43683b00ab63b3e9f7809a52b7a9e705b8dd32",
+      "sha256": "fb7b6f38f04b1e37cb36caabbfcfd5f3e84a95c7467c18fdf7d6affe01643376",
       "language": "Vue",
-      "bytes": 3104,
+      "bytes": 3025,
       "symbols": [
         {
           "name": "props",
-          "line": 7
+          "line": 9
         },
         {
-          "name": "onKey",
-          "line": 49
+          "name": "dialog",
+          "line": 51
         }
       ]
     },
@@ -21749,6 +21761,37 @@
         {
           "name": "settingLabel",
           "line": 34
+        }
+      ]
+    },
+    "frontend/src/composables/dialogFocus.ts": {
+      "sha256": "c7dc8b80ffe2ea99bd1e73f5e352b01cc8778250c3c2371fa9599ce893580e8b",
+      "language": "TypeScript",
+      "bytes": 3559,
+      "symbols": [
+        {
+          "name": "DialogFocusOptions",
+          "line": 16
+        },
+        {
+          "name": "useDialogFocus",
+          "line": 29
+        },
+        {
+          "name": "focusables",
+          "line": 34
+        },
+        {
+          "name": "onKey",
+          "line": 44
+        },
+        {
+          "name": "activate",
+          "line": 80
+        },
+        {
+          "name": "deactivate",
+          "line": 102
         }
       ]
     },
@@ -22648,17 +22691,17 @@
       ]
     },
     "frontend/src/stores/playlist.ts": {
-      "sha256": "c77c3d3e407de04d537000228cdb906eb3e719ed9d6ed2cbc2eb73d83bd2d966",
+      "sha256": "82a2b9f12f5d98d8ab1f140d900d4b06f491c227d5649eb26af8884a2f87b20b",
       "language": "TypeScript",
-      "bytes": 4896,
+      "bytes": 5288,
       "symbols": [
         {
           "name": "snapshot",
-          "line": 19
+          "line": 22
         },
         {
           "name": "usePlaylist",
-          "line": 34
+          "line": 37
         }
       ]
     },

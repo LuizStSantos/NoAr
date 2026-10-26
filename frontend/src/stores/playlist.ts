@@ -15,6 +15,9 @@ dayjs.extend(timezone)
 
 const { processPlaylist } = playlistOperations()
 
+/** Counts playlist loads, so a slow answer for an earlier date or channel is ignored. */
+let loadRequest = 0
+
 /** What is saved of a playlist entry, to tell edited lists from saved ones. */
 function snapshot(list: PlaylistItem[]): string {
     return JSON.stringify(
@@ -71,25 +74,35 @@ export const usePlaylist = defineStore('playlist', {
             const configStore = useConfig()
             const indexStore = useIndex()
             const channel = configStore.channels[configStore.i]?.id
+            const request = ++loadRequest
 
             this.isLoading = true
 
-            await authFetch<Playlist>(`/api/playlist/${channel}?date=${date}`, {
-                method: 'GET',
-                headers: authStore.authHeader,
-            })
-                .then((data: Playlist | undefined) => {
-                    // 204 No Content: no playlist exists for this date yet.
-                    this.playlist = data?.program ? processPlaylist(date, data.program, false) : []
-                    this.loadFailed = false
+            let program: PlaylistItem[] = []
+            let failed = false
+
+            try {
+                const data = await authFetch<Playlist | undefined>(`/api/playlist/${channel}?date=${date}`, {
+                    method: 'GET',
+                    headers: authStore.authHeader,
                 })
-                .catch((e) => {
+                // 204 No Content: no playlist exists for this date yet.
+                program = data?.program ? processPlaylist(date, data.program, false) : []
+            } catch (e) {
+                failed = true
+
+                if (request === loadRequest) {
                     indexStore.msgAlert('error', e instanceof Error ? e.message : String(e), 5)
+                }
+            }
 
-                    this.playlist = []
-                    this.loadFailed = true
-                })
+            // A later load has started meanwhile; its answer decides the list.
+            if (request !== loadRequest) {
+                return
+            }
 
+            this.playlist = program
+            this.loadFailed = failed
             this.loadedKey = `${channel}:${date}`
             this.markSaved()
             this.isLoading = false

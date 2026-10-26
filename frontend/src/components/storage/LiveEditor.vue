@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import LiveFields from '@/components/live/LiveFields.vue'
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { useIndex } from '@/stores/index'
 
 /**
@@ -28,6 +29,9 @@ const indexStore = useIndex()
 const form = ref<InstanceType<typeof LiveFields>>()
 const saving = ref(false)
 const error = ref('')
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog, { onEscape: () => emit('close') })
 
 async function save(schedule: boolean) {
     error.value = form.value?.check() ?? ''
@@ -54,11 +58,12 @@ async function save(schedule: boolean) {
 <template>
     <div class="z-50 fixed inset-0 bg-black/50 overflow-auto flex justify-center items-start py-8 px-3">
         <div
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="live-editor-title"
-            class="w-full max-w-170 bg-base-100 border border-base-content/20 rounded-lg shadow-xl flex flex-col"
-            @keydown.esc="emit('close')"
+            tabindex="-1"
+            class="outline-none w-full max-w-170 bg-base-100 border border-base-content/20 rounded-lg shadow-xl flex flex-col"
         >
             <div class="flex items-center justify-between px-5 py-3 border-b border-base-300">
                 <h2 id="live-editor-title" class="text-lg font-semibold flex items-center gap-2 m-0">

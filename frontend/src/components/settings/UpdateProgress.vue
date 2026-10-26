@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { useAuth } from '@/stores/auth'
 
 /**
@@ -65,16 +66,22 @@ async function poll() {
     timer = setTimeout(poll, POLL_MS)
 }
 
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog)
+
 onMounted(() => (timer = setTimeout(poll, POLL_MS)))
 onBeforeUnmount(() => clearTimeout(timer))
 </script>
 <template>
     <div class="z-50 fixed inset-0 flex items-center justify-center bg-black/70 px-4" role="presentation">
         <section
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="update-progress"
-            class="w-full max-w-[560px] bg-base-100 border border-line-strong rounded-[14px] shadow-xl px-6 py-5.5 flex flex-col gap-4"
+            tabindex="-1"
+            class="outline-none w-full max-w-[560px] bg-base-100 border border-line-strong rounded-[14px] shadow-xl px-6 py-5.5 flex flex-col gap-4"
         >
             <h2 id="update-progress" class="m-0 text-lg font-semibold">{{ t('settings.updates.progressTitle') }}</h2>
             <ol class="m-0 p-0 list-none flex flex-col gap-3" aria-live="polite">

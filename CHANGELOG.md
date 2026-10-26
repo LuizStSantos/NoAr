@@ -35,6 +35,13 @@ one is tagged.
   now keeps retrying.
 - Saving a playlist that had not changed now says there is nothing new to
   save instead of showing an error.
+- Switching dates or channels quickly in the Player could show, and then
+  save, the playlist of the day you had left; only the last one asked for
+  is shown now.
+- Dialogs now take keyboard focus when they open, keep Tab inside, close
+  with Escape (the scheduling and live dialogs did not), and hand focus back
+  when they close. Escape in a dialog opened from another closes only the
+  inner one.
 
 ## [1.0.0] - 2026-10-21
 

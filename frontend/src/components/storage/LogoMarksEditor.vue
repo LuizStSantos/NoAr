@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { type LogoSpan, baseName, readLogoMarks, saveLogoMarks } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
@@ -184,30 +185,28 @@ function requestClose() {
     }
 }
 
-function onKey(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-        requestClose()
-    }
-}
+const dialog = ref<HTMLElement>()
+
+useDialogFocus(dialog, { onEscape: requestClose })
 
 onMounted(() => {
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', onKey)
     load()
 })
 
 onBeforeUnmount(() => {
     document.body.style.overflow = ''
-    window.removeEventListener('keydown', onKey)
 })
 </script>
 <template>
     <div class="z-50 fixed inset-0 flex justify-end bg-black/50" @click.self="requestClose">
         <section
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="logo-marks-title"
-            class="w-full max-w-[800px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
+            tabindex="-1"
+            class="outline-none w-full max-w-[800px] h-full overflow-y-auto bg-base-100 border-l border-line-strong shadow-2xl flex flex-col"
         >
             <header class="flex items-start gap-3 px-5 pt-5 pb-3">
                 <div class="flex-1 min-w-0">

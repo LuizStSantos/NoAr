@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import dayjs from 'dayjs'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { authFetch } from '@/composables/authFetch'
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { useOnAir } from '@/composables/onAir'
 import { clockTime, lengthLabel, totalLength, type AddPlace, type LibraryFile } from '@/composables/player'
 import { useConfig } from '@/stores/config'
@@ -141,26 +142,21 @@ function add() {
     emit('add', files, where, label.value)
 }
 
-function onKey(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-        emit('close')
-    }
-}
+const dialog = ref<HTMLElement>()
 
-onMounted(() => {
-    window.addEventListener('keydown', onKey)
-    load()
-})
+useDialogFocus(dialog, { onEscape: () => emit('close') })
 
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+onMounted(load)
 </script>
 <template>
     <div class="z-50 fixed inset-0 flex justify-center bg-black/55 overflow-auto py-6 px-4" @click.self="emit('close')">
         <section
+            ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="program-title"
-            class="my-auto w-full max-w-[460px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl flex flex-col"
+            tabindex="-1"
+            class="outline-none my-auto w-full max-w-[460px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl flex flex-col"
         >
             <header class="flex items-start gap-3 px-5 pt-5 pb-2">
                 <div class="flex-1 min-w-0">

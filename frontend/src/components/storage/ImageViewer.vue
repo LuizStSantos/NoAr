@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useEventListener } from '@vueuse/core'
 
+import { useDialogFocus } from '@/composables/dialogFocus'
 import { stringFormatter } from '@/composables/helper'
 
 /** One image of the open folder, with the address it can be shown from. */
@@ -77,10 +78,10 @@ function loaded(event: Event, item: ViewerImage) {
     }
 }
 
+useDialogFocus(dialog, { onEscape: () => emit('close') })
+
 useEventListener(window, 'keydown', (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-        emit('close')
-    } else if (event.key === 'ArrowLeft') {
+    if (event.key === 'ArrowLeft') {
         go(-1)
     } else if (event.key === 'ArrowRight') {
         go(1)
@@ -95,7 +96,6 @@ watch(index, async () => {
 
 onMounted(() => {
     document.body.style.overflow = 'hidden'
-    dialog.value?.focus()
 })
 
 onBeforeUnmount(() => {
