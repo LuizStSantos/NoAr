@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-26
+
 ### Added
 
 - **Breaks marked inside a video (SCTE-35)**: where a commercial break was
@@ -245,6 +247,7 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/LuizStSantos/NoAr/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LuizStSantos/NoAr/releases/tag/v1.0.0
