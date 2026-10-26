@@ -55,3 +55,4 @@ Videos/
 *.tar*
 home
 home/
+__pycache__/
