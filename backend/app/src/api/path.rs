@@ -136,5 +136,9 @@ pub fn routes() -> Router<AppState> {
             "/logo/{id}/{action}",
             get(control_logo_with_key).post(control_logo_with_key),
         )
+        .route(
+            "/scte35/{id}/{action}",
+            get(control_scte35_with_key).post(control_scte35_with_key),
+        )
         .route("/xmltv/{id}/images/{*image}", get(get_xmltv_image))
 }

@@ -36,9 +36,9 @@ pub async fn update_scte35_on(
     channel_id: i32,
     scte35: &Scte35Config,
 ) -> Result<SqliteQueryResult, ProcessError> {
-    Ok(sqlx::query("UPDATE config_scte35 SET enabled = $2, pid = $3, preroll = $4, min_break = $5, max_break = $6 WHERE config_id = (SELECT id FROM config WHERE channel_id = $1)")
+    Ok(sqlx::query("UPDATE config_scte35 SET enabled = $2, pid = $3, preroll = $4, min_break = $5, max_break = $6, api_key = $7 WHERE config_id = (SELECT id FROM config WHERE channel_id = $1)")
         .bind(channel_id).bind(scte35.enable).bind(i64::from(scte35.pid)).bind(scte35.preroll)
-        .bind(scte35.min_break).bind(scte35.max_break)
+        .bind(scte35.min_break).bind(scte35.max_break).bind(scte35.key.trim())
         .execute(connection).await?)
 }
 
@@ -72,6 +72,7 @@ mod tests {
                 preroll: 4.0,
                 min_break: 15.0,
                 max_break: 240.0,
+                key: " k3y ".to_string(),
             },
         )
         .await
@@ -82,5 +83,6 @@ mod tests {
         assert!(saved.enabled);
         assert_eq!((saved.pid, saved.preroll), (600, 4.0));
         assert_eq!((saved.min_break, saved.max_break), (15.0, 240.0));
+        assert_eq!(saved.api_key, "k3y", "saved trimmed");
     }
 }

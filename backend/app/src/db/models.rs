@@ -422,6 +422,7 @@ pub struct Scte35 {
     pub preroll: f64,
     pub min_break: f64,
     pub max_break: f64,
+    pub api_key: String,
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, sqlx::FromRow)]

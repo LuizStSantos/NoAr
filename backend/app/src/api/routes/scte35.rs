@@ -6,7 +6,8 @@ use std::time::SystemTime;
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
+    http::HeaderMap,
 };
 use log::*;
 use noar_engine::{BreakInfo, BreakSource, BreakState, SpliceError, SpliceStatus};
@@ -15,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{
-        routes::{AuthUser, ensure_any_authority},
+        routes::{AuthUser, ensure_any_authority, logo::key_matches},
         state::AppState,
     },
     db::models::Role,
@@ -122,9 +123,20 @@ pub async fn insert_scte35_break(
     Json(request): Json<BreakRequest>,
 ) -> Result<Json<BreakStatus>, ServiceError> {
     let manager = authorized(&state, id, &user, &details).await?;
+    let info = insert_break(&manager, id, request.duration, "by hand").await?;
+
+    Ok(Json(BreakStatus::from(&info)))
+}
+
+async fn insert_break(
+    manager: &ChannelManager,
+    id: i32,
+    duration: f64,
+    by: &str,
+) -> Result<BreakInfo, ServiceError> {
     let scte35 = manager.config.read().await.scte35.clone();
 
-    if !scte35.signals(request.duration) {
+    if !scte35.signals(duration) {
         return Err(ServiceError::BadRequest(format!(
             "A break runs from {} to {} seconds",
             scte35.min_break, scte35.max_break
@@ -133,15 +145,109 @@ pub async fn insert_scte35_break(
 
     let info = manager
         .splice_control
-        .insert_break(request.duration)
+        .insert_break(duration)
         .map_err(splice_error)?;
 
     info!(channel = id;
-        "SCTE-35: break {} of <span class=\"log-number\">{:.0}</span> s asked for by hand",
+        "SCTE-35: break {} of <span class=\"log-number\">{:.0}</span> s asked for {by}",
         info.event_id, info.duration
     );
 
-    Ok(Json(BreakStatus::from(&info)))
+    Ok(info)
+}
+
+/// Header an encoder can send the key in, instead of the `key` query.
+const KEY_HEADER: &str = "x-scte35-key";
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum KeyedAction {
+    /// Mark a break, from now plus the pre-roll.
+    Break,
+    /// Call off a break that has not started: the one named, or the next.
+    Cancel,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct KeyedQuery {
+    #[serde(default)]
+    key: Option<String>,
+    /// Seconds, for `break`.
+    #[serde(default)]
+    duration: Option<f64>,
+    /// The break to call off, for `cancel`; the next one when left out.
+    #[serde(default)]
+    event: Option<u32>,
+}
+
+/// **Mark or call off a break, with the channel's SCTE-35 key**
+///
+/// For encoders and automation that cannot log in, like the logo key. The
+/// key is set in Settings › Ad breaks; without one this answers 403.
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/scte35/1/break?key=<KEY>&duration=120'
+/// curl -X POST 'http://127.0.0.1:8787/scte35/1/cancel?key=<KEY>'
+/// ```
+pub async fn control_scte35_with_key(
+    State(state): State<AppState>,
+    Path((id, action)): Path<(i32, KeyedAction)>,
+    Query(query): Query<KeyedQuery>,
+    headers: HeaderMap,
+) -> Result<Json<Scte35Status>, ServiceError> {
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
+    let expected = manager.config.read().await.scte35.key.clone();
+    let given = headers
+        .get(KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .or(query.key.as_deref())
+        .unwrap_or_default();
+
+    if !key_matches(&expected, given) {
+        return Err(ServiceError::Forbidden(
+            "Wrong or missing SCTE-35 key".to_string(),
+        ));
+    }
+
+    match action {
+        KeyedAction::Break => {
+            let duration = query.duration.ok_or_else(|| {
+                ServiceError::BadRequest("Give the break length: duration=<seconds>".to_string())
+            })?;
+
+            insert_break(&manager, id, duration, "with the key").await?;
+        }
+        KeyedAction::Cancel => {
+            let event_id = match query.event {
+                Some(event_id) => event_id,
+                None => next_break_to_cancel(&manager)
+                    .ok_or_else(|| ServiceError::NotFound("No break to call off".to_string()))?,
+            };
+
+            manager
+                .splice_control
+                .cancel_break(event_id)
+                .map_err(splice_error)?;
+            info!(channel = id; "SCTE-35: break {event_id} called off with the key");
+        }
+    }
+
+    Ok(Json(status(&manager).await))
+}
+
+/// The next break that has not started yet.
+fn next_break_to_cancel(manager: &ChannelManager) -> Option<u32> {
+    manager
+        .splice_control
+        .status()
+        .breaks
+        .iter()
+        .find(|b| matches!(b.state, BreakState::Scheduled | BreakState::Announced))
+        .map(|b| b.event_id)
 }
 
 /// **Call off a break that has not started**

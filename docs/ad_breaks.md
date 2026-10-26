@@ -134,12 +134,28 @@ The other details: `splice_insert` for the whole programme, no
 | `GET` | `/api/control/{id}/scte35` | `GA, CA, U` | The state, the breaks to come and on air, and the last 20. |
 | `POST` | `/api/control/{id}/scte35/break` | `GA, CA, U` | `{ "duration": 120 }`: mark a break of that many seconds, from now plus the pre-roll. |
 | `DELETE` | `/api/control/{id}/scte35/break/{event_id}` | `GA, CA, U` | Call off a break that has not started. |
+| `GET`, `POST` | `/scte35/{id}/{break\|cancel}` | SCTE-35 key | Query `key` (or header `X-Scte35-Key`); `duration` (seconds) for `break`; `event` for `cancel`, else the next break that has not started. Answers with the state, as `GET /api/control/{id}/scte35`. |
 
 ```bash
 curl -X POST http://127.0.0.1:8787/api/control/1/scte35/break \
   -H 'Authorization: Bearer <ACCESS_TOKEN>' \
   -H 'Content-Type: application/json' \
   --data '{"duration": 120}'
+```
+
+### From an encoder or an automation, with the SCTE-35 key
+
+The `/scte35/...` route is for switchers, encoders and automation that cannot
+log in (vMix, OBS, Bitfocus Companion, a playout system), like the
+[logo key](api.md#logo-on-air). Create the key in **Settings › Ad breaks ›
+Breaks by API** and save; the tutorial there lists the addresses ready to
+copy, with examples for each tool. Without a key, or with a wrong one, it
+answers 403. Such a break is a manual one: it starts after the pre-roll and
+must last between the shortest and the longest break set.
+
+```bash
+curl -X POST 'http://127.0.0.1:8787/scte35/1/break?key=<KEY>&duration=120'
+curl -X POST 'http://127.0.0.1:8787/scte35/1/cancel?key=<KEY>'
 ```
 
 Times in the answers are Unix milliseconds. A break is `scheduled`,

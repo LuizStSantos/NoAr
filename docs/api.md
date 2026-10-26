@@ -222,7 +222,10 @@ curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
 
 ### Ad breaks (SCTE-35)
 
-Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md).
+Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md). The
+`/scte35/{id}/{break|cancel}` route takes the channel's SCTE-35 key instead
+of a login, for encoders and automation
+([docs](ad_breaks.md#from-an-encoder-or-an-automation-with-the-scte-35-key)).
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |

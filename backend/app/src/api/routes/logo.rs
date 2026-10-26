@@ -146,7 +146,7 @@ async fn authorized(
 
 /// An empty key turns the keyed route off. Compares every byte, so the time
 /// taken tells nothing about how much of a guess was right.
-fn key_matches(expected: &str, given: &str) -> bool {
+pub(crate) fn key_matches(expected: &str, given: &str) -> bool {
     let expected = expected.trim().as_bytes();
     let given = given.trim().as_bytes();
 
