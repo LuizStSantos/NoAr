@@ -11,6 +11,15 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- On a phone, **Add program** in the Player went past the edge of the
+  screen when an episode had a long file name with no spaces, and on short
+  screens its **Add** button was out of reach. It now opens as a sheet from
+  the bottom whose buttons stay in view while the options scroll, and long
+  names wrap. **Generate** works the same way. Fieldsets no longer widen to
+  their longest word anywhere in NoAr.
+
 ## [1.4.0] - 2026-10-26
 
 ### Added

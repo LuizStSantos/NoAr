@@ -166,6 +166,15 @@ html {
     background-color: var(--color-base-200);
 }
 
+/* A fieldset is as wide as its widest line by default, so a long file name
+   with no spaces pushed dialogs past the edge of a phone. Let it shrink like
+   any other box. */
+@layer base {
+    fieldset {
+        min-width: 0;
+    }
+}
+
 .tabular {
     font-variant-numeric: tabular-nums;
 }
