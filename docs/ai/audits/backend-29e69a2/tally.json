@@ -1,0 +1,471 @@
+{
+  "council": "backend",
+  "readiness": "BLOCKED",
+  "readiness_votes": {
+    "approve": 0,
+    "deny": 5,
+    "abstain": 0
+  },
+  "confirmed_blockers": [
+    "F-001",
+    "F-002"
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "Playlist date unvalidated: User can write/delete arbitrary *.json via path traversal; short date panics",
+      "severity": "HIGH",
+      "is_blocker": true,
+      "verification": "VERIFIED_STATIC",
+      "decision": "CONFIRMED",
+      "votes": {
+        "confirm": 3,
+        "dismiss": 0,
+        "abstain": 2
+      }
+    },
+    {
+      "id": "F-002",
+      "title": "Rate limiter runs before RealIpLayer/GrantsLayer: spoofable or shared IP key, authenticated bypass never applies",
+      "severity": "HIGH",
+      "is_blocker": true,
+      "verification": "VERIFIED_STATIC",
+      "decision": "CONFIRMED",
+      "votes": {
+        "confirm": 3,
+        "dismiss": 0,
+        "abstain": 2
+      }
+    },
+    {
+      "id": "F-003",
+      "title": "Panic in run_channel kills supervisor silently; is_alive stays true, no restart or alarm",
+      "severity": "HIGH",
+      "is_blocker": true,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 2,
+        "dismiss": 0,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-004",
+      "title": "process_control busy flag racy (load then store) and not cancellation-safe; client disconnect can wedge channel",
+      "severity": "HIGH",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 2,
+        "dismiss": 0,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-005",
+      "title": "Mid-clip failure writes filler for the whole clip duration, not the remainder",
+      "severity": "HIGH",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-006",
+      "title": "Single bad packet (send_packet ?) aborts clip or live session; receive_frame errors not distinguished",
+      "severity": "HIGH",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-007",
+      "title": "Docker/release workflows publish without depending on validate; published feature set never tested",
+      "severity": "HIGH",
+      "is_blocker": true,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-008",
+      "title": "Scheduled auto-update restarts container with no on-air guard (opt-in)",
+      "severity": "HIGH",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 2,
+        "dismiss": 0,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-009",
+      "title": "Failed schedule update returns early before invalidate(); ticker keeps stale events",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 2,
+        "dismiss": 0,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-010",
+      "title": "Occurrence marked seen before claim; transient DB error drops it permanently",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 2,
+        "dismiss": 0,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-011",
+      "title": "DST spring-forward silently skips Media events in the gap",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-012",
+      "title": "Error from a scheduled event tears down and restarts the whole playout",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 1,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-013",
+      "title": "Pacing clock never re-anchors after a stall: unthrottled burst catch-up",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-014",
+      "title": "No hardware-encoder fallback; VAAPI device hard-wired",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-015",
+      "title": "Live reader permits can wedge (2 per input) until process restart; fixed 1s retry",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-016",
+      "title": "SCTE-35 injector fails open: one bad sync byte stops all signalling, no return/cancel",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-017",
+      "title": "2FA /auth/verify has no attempt limit or lockout",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-018",
+      "title": "ChannelAdmin can set custom output URL to a local file path",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-019",
+      "title": "Console request log records full URIs incl. access/key/uuid secrets",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-020",
+      "title": "Playlist import writes user-named file in shared temp dir; no cleanup on error",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-021",
+      "title": "config_global init trigger+insert not atomic, CREATE TRIGGER without IF NOT EXISTS",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-022",
+      "title": "create_channel_records deferred transaction reads before writing (SQLITE_BUSY_SNAPSHOT)",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-023",
+      "title": "Deleting a channel cascades away its as-run history",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-024",
+      "title": "No backup/snapshot before migrations or self-update; forward-only migrations",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-025",
+      "title": "Critical-path test gaps: SCTE-35 integration, DST fall-back, restart, migration upgrade fixtures, 401/403 matrix",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "CONFIRMED",
+      "votes": {
+        "confirm": 4,
+        "dismiss": 0,
+        "abstain": 1
+      }
+    },
+    {
+      "id": "F-026",
+      "title": "Container runs as root with no healthcheck or health route",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-027",
+      "title": "Unpinned base images, mixed action majors, untagged watchtower with docker socket",
+      "severity": "MEDIUM",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 2,
+        "dismiss": 0,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-028",
+      "title": "Released-migration immutability not provable (no tags/checksum gate)",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-029",
+      "title": "Migration 00003 INNER JOIN copies can drop orphan legacy rows",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-030",
+      "title": "Graceful shutdown does not drain HTTP/SSE",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-031",
+      "title": "Logs rotate daily without a size cap",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-032",
+      "title": "Manual trigger unbounded/duplicable; plain User may trigger and stop events",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 1,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-033",
+      "title": "SSE broadcaster does serial per-client work, no client cap",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    },
+    {
+      "id": "F-034",
+      "title": "Role/channel/password changes not applied to live sessions (JWT claims trusted; refresh not revoked)",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 2,
+        "dismiss": 0,
+        "abstain": 3
+      }
+    },
+    {
+      "id": "F-035",
+      "title": "Setup endpoint unauthenticated until first-run completes; port published on all interfaces",
+      "severity": "LOW",
+      "is_blocker": false,
+      "verification": "VERIFIED_STATIC",
+      "decision": "UNRESOLVED",
+      "votes": {
+        "confirm": 1,
+        "dismiss": 0,
+        "abstain": 4
+      }
+    }
+  ],
+  "note": "This audit result does not authorize merge, deploy or release. Runtime behavior requires actual tests."
+}
