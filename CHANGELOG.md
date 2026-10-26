@@ -11,6 +11,12 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- When the update check cannot reach GitHub, Settings › Updates now says why
+  (a DNS failure, a refused connection, a time-out or a certificate problem)
+  instead of only "error sending request".
+
 ## [1.1.0] - 2026-10-26
 
 ### Added

@@ -419,6 +419,26 @@ async fn installed_time(repository: &str, installed: &str) -> Option<i64> {
     info.commit.committer?.date.as_deref().and_then(millis)
 }
 
+/// An error with what caused it, such as a DNS failure, a refused connection,
+/// a time-out or a certificate problem: the request error alone only says the
+/// request was not sent.
+fn with_causes(error: &dyn std::error::Error) -> String {
+    let mut text = error.to_string();
+    let mut source = error.source();
+
+    while let Some(cause) = source {
+        let cause_text = cause.to_string();
+
+        if !text.contains(&cause_text) {
+            text.push_str(": ");
+            text.push_str(&cause_text);
+        }
+        source = cause.source();
+    }
+
+    text
+}
+
 /// `None` when GitHub answers "not found".
 async fn get_json<T: for<'de> Deserialize<'de>>(url: &str) -> Result<Option<T>, String> {
     let response = CLIENT
@@ -427,7 +447,7 @@ async fn get_json<T: for<'de> Deserialize<'de>>(url: &str) -> Result<Option<T>, 
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|error| format!("GitHub did not answer: {error}"))?;
+        .map_err(|error| format!("GitHub did not answer: {}", with_causes(&error)))?;
 
     match response.status() {
         StatusCode::NOT_FOUND | StatusCode::UNPROCESSABLE_ENTITY => Ok(None),
@@ -529,6 +549,35 @@ mod tests {
         assert!(same_commit(full, full));
         assert!(!same_commit("02856", full));
         assert!(!same_commit("c20f3f92", full));
+    }
+
+    #[test]
+    fn a_failed_request_says_why() {
+        let error = std::io::Error::other(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "dns error: no record",
+        ));
+
+        assert_eq!(with_causes(&error), "dns error: no record");
+
+        #[derive(Debug)]
+        struct Outer(std::io::Error);
+        impl std::fmt::Display for Outer {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("error sending request")
+            }
+        }
+        impl std::error::Error for Outer {
+            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+                Some(&self.0)
+            }
+        }
+
+        let error = Outer(std::io::Error::other("connection refused"));
+        assert_eq!(
+            with_causes(&error),
+            "error sending request: connection refused"
+        );
     }
 
     #[test]
