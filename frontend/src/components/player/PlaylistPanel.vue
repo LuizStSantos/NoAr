@@ -27,6 +27,7 @@ import {
     lengthLabel,
     totalLength,
     type LibraryFile,
+    fileInOut,
 } from '@/composables/player'
 import { addDays, secondsFromDay, splitDateTime } from '@/composables/schedule'
 import { useAuth } from '@/stores/auth'
@@ -828,8 +829,7 @@ function itemFromFile(file: LibraryFile): PlaylistItem {
         uid: genUID(),
         begin: 0,
         source: file.source,
-        in: 0,
-        out: file.duration,
+        ...fileInOut(file),
         duration: file.duration,
         ad: false,
     }
@@ -1345,43 +1345,43 @@ defineExpose({ addFile, addFiles })
             </template>
             <div class="flex-auto" />
             <div class="flex flex-wrap items-center gap-2">
-            <span v-if="unsaved" class="inline-flex items-center gap-1.5 text-accent-text text-[13px]">
-                <span class="dot w-1.75 h-1.75 bg-accent" aria-hidden="true" />{{ t('onair.unsaved', unsaved) }}
-            </span>
-            <button
-                class="btn-icon border border-line-strong min-w-9.5 min-h-9.5"
-                :disabled="!playlistStore.undoCount"
-                :aria-label="t('onair.undo')"
-                :title="t('onair.undoHint')"
-                @click="undo"
-            >
-                <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />
-            </button>
-            <button
-                class="btn-icon border border-line-strong min-w-9.5 min-h-9.5"
-                :disabled="!playlistStore.redoCount"
-                :aria-label="t('onair.redo')"
-                :title="t('onair.redoHint')"
-                @click="redo"
-            >
-                <i class="bi bi-arrow-clockwise" aria-hidden="true" />
-            </button>
-            <button
-                class="btn-quiet min-h-9.5"
-                :disabled="!playlistStore.dirty"
-                :title="playlistStore.dirty ? '' : t('onair.noChanges')"
-                @click="showDiscard = true"
-            >
-                {{ t('onair.discard') }}
-            </button>
-            <button
-                class="btn-main min-h-9.5"
-                :disabled="!playlistStore.dirty || saving || playlistStore.loadFailed"
-                :title="playlistStore.dirty ? '' : t('onair.noChanges')"
-                @click="save()"
-            >
-                {{ t('onair.save') }}
-            </button>
+                <span v-if="unsaved" class="inline-flex items-center gap-1.5 text-accent-text text-[13px]">
+                    <span class="dot w-1.75 h-1.75 bg-accent" aria-hidden="true" />{{ t('onair.unsaved', unsaved) }}
+                </span>
+                <button
+                    class="btn-icon border border-line-strong min-w-9.5 min-h-9.5"
+                    :disabled="!playlistStore.undoCount"
+                    :aria-label="t('onair.undo')"
+                    :title="t('onair.undoHint')"
+                    @click="undo"
+                >
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                </button>
+                <button
+                    class="btn-icon border border-line-strong min-w-9.5 min-h-9.5"
+                    :disabled="!playlistStore.redoCount"
+                    :aria-label="t('onair.redo')"
+                    :title="t('onair.redoHint')"
+                    @click="redo"
+                >
+                    <i class="bi bi-arrow-clockwise" aria-hidden="true" />
+                </button>
+                <button
+                    class="btn-quiet min-h-9.5"
+                    :disabled="!playlistStore.dirty"
+                    :title="playlistStore.dirty ? '' : t('onair.noChanges')"
+                    @click="showDiscard = true"
+                >
+                    {{ t('onair.discard') }}
+                </button>
+                <button
+                    class="btn-main min-h-9.5"
+                    :disabled="!playlistStore.dirty || saving || playlistStore.loadFailed"
+                    :title="playlistStore.dirty ? '' : t('onair.noChanges')"
+                    @click="save()"
+                >
+                    {{ t('onair.save') }}
+                </button>
             </div>
             <button class="btn-quiet min-h-9.5" @click="emit('generate')">
                 <i class="bi bi-stars" aria-hidden="true" />{{ t('onair.generate') }}
@@ -1851,7 +1851,9 @@ defineExpose({ addFile, addFiles })
                         <td colspan="6" class="px-4 py-3 text-xs text-subtle text-center">
                             <span v-if="!infinite" class="font-mono me-1">
                                 {{ t('onair.listEndsAt', { time: clockTime(listEnd) }) }}
-                                <template v-if="dayGap >= 1"> · {{ t('onair.dayMissing', { time: totalLength(dayGap) }) }}</template>
+                                <template v-if="dayGap >= 1">
+                                    · {{ t('onair.dayMissing', { time: totalLength(dayGap) }) }}</template
+                                >
                                 ·
                             </span>
                             <button

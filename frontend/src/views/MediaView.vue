@@ -81,6 +81,8 @@ const editorPath = ref<string | null>(null)
 /** Storage path of the video whose stretches without logo are being edited. */
 const logoMarksPath = ref<string | null>(null)
 const logoMarksLength = ref(0)
+/** The tab the marks editor opens on. */
+const logoMarksKind = ref<'trim' | 'hide'>('hide')
 const treeVersion = ref(0)
 const disk = ref<{ total: number; free: number } | null>(null)
 const dropActive = ref(false)
@@ -945,7 +947,8 @@ async function finishMove(confirmed: boolean) {
     }
 }
 
-function openLogoMarks(row: Row) {
+function openLogoMarks(row: Row, kind: 'trim' | 'hide' = 'hide') {
+    logoMarksKind.value = kind
     logoMarksLength.value = row.file?.duration ?? 0
     logoMarksPath.value = storageJoin(current.value, row.name)
 }
@@ -1378,6 +1381,21 @@ const uploadAccept = computed(() =>
                                                 {{ row.name }}
                                             </button>
                                             <button
+                                                v-if="row.file?.trim && isVideo(row.file)"
+                                                type="button"
+                                                class="shrink-0 text-[11px] text-accent-text border border-accent/50 rounded-md px-1.5 leading-4 bg-transparent cursor-pointer"
+                                                :title="
+                                                    t('storage.trim.badgeHint', {
+                                                        from: clock(row.file.trim.from),
+                                                        to: clock(row.file.trim.to),
+                                                    })
+                                                "
+                                                @click="openLogoMarks(row, 'trim')"
+                                            >
+                                                <i class="bi bi-scissors" aria-hidden="true" />
+                                                {{ t('storage.trim.badge') }}
+                                            </button>
+                                            <button
                                                 v-if="row.file?.logo_marks && isVideo(row.file)"
                                                 type="button"
                                                 class="shrink-0 text-[11px] text-after-clip border border-after-clip/50 rounded-md px-1.5 leading-4 bg-transparent cursor-pointer"
@@ -1507,6 +1525,16 @@ const uploadAccept = computed(() =>
                                                     :class="isImage(row.name) ? 'bi-eye' : 'bi-play-fill'"
                                                     aria-hidden="true"
                                                 />
+                                            </button>
+                                            <button
+                                                v-if="row.file && isVideo(row.file)"
+                                                type="button"
+                                                class="btn-icon text-muted"
+                                                :aria-label="t('storage.trim.open', { name: row.name })"
+                                                :title="t('storage.trim.title')"
+                                                @click="openLogoMarks(row, 'trim')"
+                                            >
+                                                <i class="bi bi-scissors" aria-hidden="true" />
                                             </button>
                                             <button
                                                 v-if="row.file && isVideo(row.file)"
@@ -1668,6 +1696,7 @@ const uploadAccept = computed(() =>
             :channel-id="channelId"
             :path="logoMarksPath"
             :length="logoMarksLength"
+            :initial-kind="logoMarksKind"
             @close="logoMarksPath = null"
             @saved="refresh"
         />

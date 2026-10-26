@@ -48,13 +48,13 @@ pub fn random_list(clip_list: Vec<Media>, total_length: f64) -> Vec<Media> {
 
         if selected_clip_count == usage_limit
             || last_clip == selected_clip
-            || target_duration + selected_clip.duration > total_length
+            || target_duration + selected_clip.length() > total_length
         {
             max_attempts -= 1;
             continue;
         }
 
-        target_duration += selected_clip.duration;
+        target_duration += selected_clip.length();
         randomized_clip_list.push(selected_clip.clone());
         max_attempts -= 1;
         last_clip = selected_clip;
@@ -77,7 +77,7 @@ pub fn ordered_list(clip_list: Vec<Media>, total_length: f64) -> Vec<Media> {
 
         let selected_clip = clip_list[index].clone();
 
-        if sum_durations(&ordered_clip_list) + selected_clip.duration > total_length
+        if sum_durations(&ordered_clip_list) + selected_clip.length() > total_length
             || (!ordered_clip_list.is_empty()
                 && selected_clip == ordered_clip_list[ordered_clip_list.len() - 1])
         {
@@ -86,7 +86,7 @@ pub fn ordered_list(clip_list: Vec<Media>, total_length: f64) -> Vec<Media> {
             continue;
         }
 
-        target_duration += selected_clip.duration;
+        target_duration += selected_clip.length();
         ordered_clip_list.push(selected_clip);
         index += 1;
     }
@@ -162,7 +162,8 @@ pub async fn generate_from_template(
             }
 
             for entry in file_list {
-                let media = Media::new(0, &entry, true).await;
+                let mut media = Media::new(0, &entry, true).await;
+                media.apply_saved_trim().await;
                 source_list.push(media);
             }
         }
@@ -297,7 +298,7 @@ pub async fn playlist_generator(
             playlist.program = media_list.to_vec();
         } else {
             while let Some(item) = folder_iter.next().await {
-                let duration = item.duration;
+                let duration = item.length();
 
                 if total_length >= length + duration {
                     playlist.program.push(item);

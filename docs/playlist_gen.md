@@ -72,3 +72,9 @@ curl -X POST http://127.0.0.1:8787/api/playlist/1/generate/2026-09-05
                 {"start": "00:00:00", "duration": "10:00:00", "shuffle": true, "paths": ["path/1", "path/2"]}, \
                 {"start": "10:00:00", "duration": "14:00:00", "shuffle": false, "paths": ["path/3", "path/4"]}]}}'
 ```
+
+## Trimmed videos
+
+A video with a [saved trim](trim.md) goes into the generated day with its
+trim as the in and out points, and only the trimmed part counts toward the
+length of the day or block.

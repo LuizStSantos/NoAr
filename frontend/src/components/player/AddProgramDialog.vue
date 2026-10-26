@@ -26,6 +26,7 @@ interface Episode {
     source: string
     name: string
     duration: number
+    trim?: { from: number; to: number } | null
 }
 
 interface ProgramEpisodes {
@@ -182,6 +183,7 @@ function add() {
         source: episode.source,
         name: episode.name,
         duration: episode.duration || 10,
+        trim: episode.trim ?? null,
     }))
     const where: AddPlace =
         place.value === 'drop'

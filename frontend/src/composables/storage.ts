@@ -100,6 +100,8 @@ export interface VideoMarks {
     hide: LogoSpan[]
     /** Ad breaks signalled with SCTE-35: out at `from`, back at `to`. */
     breaks: LogoSpan[]
+    /** The part of the video that airs by default; a playlist entry may still set its own. */
+    trim: LogoSpan | null
 }
 
 /** The marks of the video at `path`. */
@@ -110,7 +112,7 @@ export async function readLogoMarks(channelId: number, path: string): Promise<Vi
         body: JSON.stringify({ path }),
     })
 
-    return { hide: marks.hide ?? [], breaks: marks.breaks ?? [] }
+    return { hide: marks.hide ?? [], breaks: marks.breaks ?? [], trim: marks.trim ?? null }
 }
 
 export async function saveLogoMarks(channelId: number, path: string, marks: VideoMarks): Promise<VideoMarks> {
@@ -120,7 +122,7 @@ export async function saveLogoMarks(channelId: number, path: string, marks: Vide
         body: JSON.stringify({ path, ...marks }),
     })
 
-    return { hide: saved.hide ?? [], breaks: saved.breaks ?? [] }
+    return { hide: saved.hide ?? [], breaks: saved.breaks ?? [], trim: saved.trim ?? null }
 }
 
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {

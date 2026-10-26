@@ -32,7 +32,9 @@ them it adds:
   poster and wide image, series with one sheet for every episode, and uploads
   that keep going in the background while you work on other pages. Uploaded
   videos can be **converted to the output format** once, so the playout does
-  less on air ([docs](docs/uploads.md)).
+  less on air ([docs](docs/uploads.md)), and **trimmed** once, by dragging the
+  in and out points while the video plays, so they come in trimmed in every
+  playlist, the Scheduler and folder mode ([docs](docs/trim.md)).
 - **Commercials folders**: mark a folder once and everything in it plays as a
   commercial in playlists and scheduled breaks: out of the guide and without
   the logo ([docs](docs/commercials.md)).

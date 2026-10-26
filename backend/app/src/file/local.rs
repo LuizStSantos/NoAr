@@ -33,6 +33,7 @@ use crate::utils::{
     commercial::{COMMERCIAL_MARKER, CommercialFolders},
     config::PlayoutConfig,
     errors::ServiceError,
+    logo_marks::read_marks,
     schedule::live::LIVE_EXTENSION,
     xmltv::sheet::{SheetKind, program_sheet_kind},
 };
@@ -174,9 +175,17 @@ impl LocalStorage {
                 0.0
             };
 
+            let logo_marks = media && logo_stems.contains(&stem);
+            let trim = if logo_marks {
+                read_marks(&file).await.trim
+            } else {
+                None
+            };
+
             media_files.push(VideoFile {
                 sheet: media && sheet_stems.contains(&stem),
-                logo_marks: media && logo_stems.contains(&stem),
+                logo_marks,
+                trim,
                 name,
                 duration,
                 size: metadata.len(),

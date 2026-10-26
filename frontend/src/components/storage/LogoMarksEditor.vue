@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
+import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { type Size, logoBox, logoBoxStyle, storageImageUrl } from '@/composables/logo'
@@ -12,9 +13,10 @@ import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
 /**
- * Side panel that marks, while the video plays, where it keeps the logo off
- * and where its ad breaks are (signalled with SCTE-35), such as a commercial
- * break edited into a programme.
+ * Side panel that marks, while the video plays, the part of it that airs
+ * (its trim), where it keeps the logo off and where its ad breaks are
+ * (signalled with SCTE-35), such as a commercial break edited into a
+ * programme.
  */
 const props = defineProps<{
     channelId: number
@@ -22,6 +24,8 @@ const props = defineProps<{
     path: string
     /** Its length, known before the browser loads it (or when it cannot). */
     length?: number
+    /** The tab it opens on. */
+    initialKind?: Tab
 }>()
 
 const emit = defineEmits<{ close: []; saved: [marks: VideoMarks] }>()
@@ -33,13 +37,14 @@ const indexStore = useIndex()
 const MAX_SPANS = 16
 
 type MarkKind = 'hide' | 'breaks'
+type Tab = MarkKind | 'trim'
 
-const marks = ref<VideoMarks>({ hide: [], breaks: [] })
-const baseline = ref<VideoMarks>({ hide: [], breaks: [] })
+const marks = ref<VideoMarks>({ hide: [], breaks: [], trim: null })
+const baseline = ref<VideoMarks>({ hide: [], breaks: [], trim: null })
 /** Which marks the buttons and the list edit. */
-const kind = ref<MarkKind>('hide')
+const kind = ref<Tab>(props.initialKind ?? 'hide')
 /** The list being edited; changes go straight into `marks`. */
-const spans = computed(() => marks.value[kind.value])
+const spans = computed(() => marks.value[kind.value === 'breaks' ? 'breaks' : 'hide'])
 const loading = ref(true)
 const saving = ref(false)
 const videoUrl = ref('')
@@ -56,11 +61,104 @@ const pendingFrom = ref<number | null>(null)
 const drafts = ref<Record<string, string>>({})
 const confirmClose = ref(false)
 
-const dirty = computed(() => !isEqual(marks.value, baseline.value))
+const dirty = computed(() => !isEqual(normalized(marks.value), normalized(baseline.value)))
 const sorted = computed(() => [...spans.value].sort((a, b) => a.from - b.from))
 
 function sortedOf(list: LogoSpan[]): LogoSpan[] {
     return [...list].sort((a, b) => a.from - b.from)
+}
+
+/** Where the part that airs starts and ends: the saved trim, else the whole video. */
+const trimFrom = computed({
+    get: () => marks.value.trim?.from ?? 0,
+    set: (from: number) => (marks.value.trim = { from, to: trimTo.value }),
+})
+const trimTo = computed({
+    get: () => marks.value.trim?.to ?? duration.value,
+    set: (to: number) => (marks.value.trim = { from: trimFrom.value, to }),
+})
+const trimInvalid = computed(() => {
+    const trim = marks.value.trim
+
+    return !!trim && (!(trim.to > trim.from) || trim.from < 0 || (duration.value > 0 && trim.from >= duration.value))
+})
+/** A trim that keeps the whole video is no trim. */
+function normalized(value: VideoMarks): VideoMarks {
+    const trim = value.trim
+    const whole = trim && trim.from <= 0 && duration.value > 0 && trim.to >= duration.value - 0.05
+
+    return { hide: sortedOf(value.hide), breaks: sortedOf(value.breaks), trim: whole ? null : (trim ?? null) }
+}
+
+/** Playing the part that airs: stop at its end. */
+const previewingTrim = ref(false)
+
+function playTrim() {
+    seek(trimFrom.value)
+    previewingTrim.value = true
+    video.value?.play().catch(() => (previewingTrim.value = false))
+}
+
+/** Hear the cut at the out point: start a few seconds before it. */
+function playOut() {
+    seek(Math.max(trimFrom.value, trimTo.value - 3))
+    previewingTrim.value = true
+    video.value?.play().catch(() => (previewingTrim.value = false))
+}
+
+function timeUpdate(event: Event) {
+    position.value = (event.target as HTMLVideoElement).currentTime
+
+    if (previewingTrim.value && position.value >= trimTo.value) {
+        video.value?.pause()
+        previewingTrim.value = false
+    }
+}
+
+function trimText(edge: 'from' | 'to'): string {
+    return drafts.value[`trim-${edge}`] ?? formatTime(edge === 'from' ? trimFrom.value : trimTo.value)
+}
+
+function setTrimText(edge: 'from' | 'to', text: string) {
+    drafts.value[`trim-${edge}`] = text
+
+    const seconds = parseTime(text)
+
+    if (seconds !== null) {
+        if (edge === 'from') {
+            trimFrom.value = seconds
+        } else {
+            trimTo.value = seconds
+        }
+    }
+}
+
+function selectKind(option: Tab) {
+    kind.value = option
+    pendingFrom.value = null
+    drafts.value = {}
+}
+
+/** Put the in or the out point at the play position. */
+function trimHere(edge: 'from' | 'to') {
+    const seconds = Math.round(position.value * 10) / 10
+
+    if (edge === 'from') {
+        trimFrom.value = seconds
+    } else {
+        trimTo.value = seconds
+    }
+
+    drafts.value = {}
+}
+
+function settleTrim(edge: 'from' | 'to') {
+    delete drafts.value[`trim-${edge}`]
+}
+
+function clearTrim() {
+    marks.value.trim = null
+    drafts.value = {}
 }
 
 function inside(list: LogoSpan[]): boolean {
@@ -92,15 +190,17 @@ function copyFromLogo() {
 const overlaps = computed(() =>
     sorted.value.some((span, index) => index > 0 && span.from < sorted.value[index - 1]!.to),
 )
-const invalid = computed(() =>
-    (['hide', 'breaks'] as const).some((which) => {
-        const list = sortedOf(marks.value[which])
+const invalid = computed(
+    () =>
+        trimInvalid.value ||
+        (['hide', 'breaks'] as const).some((which) => {
+            const list = sortedOf(marks.value[which])
 
-        return (
-            list.some((span) => !(span.to > span.from) || span.from < 0) ||
-            list.some((span, index) => index > 0 && span.from < list[index - 1]!.to)
-        )
-    }),
+            return (
+                list.some((span) => !(span.to > span.from) || span.from < 0) ||
+                list.some((span, index) => index > 0 && span.from < list[index - 1]!.to)
+            )
+        }),
 )
 
 /** `1:02:03.4` or `02:03.4`, tenths kept. */
@@ -243,10 +343,7 @@ async function save() {
     saving.value = true
 
     try {
-        const saved = await saveLogoMarks(props.channelId, props.path, {
-            hide: sortedOf(marks.value.hide),
-            breaks: sortedOf(marks.value.breaks),
-        })
+        const saved = await saveLogoMarks(props.channelId, props.path, normalized(marks.value))
 
         baseline.value = cloneDeep(saved)
         marks.value = cloneDeep(saved)
@@ -306,31 +403,46 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-else class="px-5 pb-5 flex flex-col gap-4">
-                <div role="radiogroup" :aria-label="t('storage.logoMarks.kind')" class="flex gap-1 bg-base-200 rounded-md p-1 self-start">
+                <div
+                    role="radiogroup"
+                    :aria-label="t('storage.logoMarks.kind')"
+                    class="flex flex-wrap gap-1 bg-base-200 rounded-md p-1 self-start"
+                >
                     <button
-                        v-for="option in ['hide', 'breaks'] as const"
+                        v-for="option in ['trim', 'hide', 'breaks'] as const"
                         :key="option"
                         type="button"
                         role="radio"
                         :aria-checked="kind === option"
                         class="px-3 py-1 rounded text-[13px] cursor-pointer"
                         :class="kind === option ? 'bg-base-100 font-semibold shadow-sm' : 'text-muted'"
-                        @click="
-                            kind = option;
-                            pendingFrom = null;
-                            drafts = {}
-                        "
+                        @click="selectKind(option)"
                     >
                         <i
                             class="bi me-1"
-                            :class="option === 'hide' ? 'bi-eye-slash' : 'bi-badge-ad'"
+                            :class="{ trim: 'bi-scissors', hide: 'bi-eye-slash', breaks: 'bi-badge-ad' }[option]"
                             aria-hidden="true"
-                        />{{ option === 'hide' ? t('storage.logoMarks.kindLogo') : t('storage.logoMarks.kindBreaks') }}
-                        <span class="text-muted font-normal">({{ marks[option].length }})</span>
+                        />{{
+                            {
+                                trim: t('storage.trim.kind'),
+                                hide: t('storage.logoMarks.kindLogo'),
+                                breaks: t('storage.logoMarks.kindBreaks'),
+                            }[option]
+                        }}
+                        <span v-if="option !== 'trim'" class="text-muted font-normal"
+                            >({{ marks[option].length }})</span
+                        >
+                        <i
+                            v-else-if="normalized(marks).trim"
+                            class="bi bi-check2 text-accent-text"
+                            :aria-label="t('storage.trim.set')"
+                        />
                     </button>
                 </div>
 
-                <p class="m-0 text-[13px] text-muted">{{ label('intro') }}</p>
+                <p class="m-0 text-[13px] text-muted">
+                    {{ kind === 'trim' ? t('storage.trim.intro') : label('intro') }}
+                </p>
 
                 <div
                     class="relative w-full bg-black rounded-field overflow-hidden"
@@ -344,8 +456,9 @@ onBeforeUnmount(() => {
                         preload="auto"
                         playsinline
                         class="w-full h-full object-contain"
-                        @timeupdate="position = ($event.target as HTMLVideoElement).currentTime"
+                        @timeupdate="timeUpdate"
                         @seeked="position = ($event.target as HTMLVideoElement).currentTime"
+                        @pause="previewingTrim = false"
                         @loadedmetadata="duration = ($event.target as HTMLVideoElement).duration || duration"
                         @error="videoFailed = true"
                     />
@@ -371,7 +484,114 @@ onBeforeUnmount(() => {
                     >
                 </div>
 
-                <div class="flex flex-col gap-1.5">
+                <div v-if="kind === 'trim'" class="flex flex-col gap-3">
+                    <TrimBar
+                        v-model:from="trimFrom"
+                        v-model:to="trimTo"
+                        :duration="duration"
+                        :position="position"
+                        @seek="seek"
+                    />
+                    <div class="flex justify-between font-mono text-xs text-muted">
+                        <span>{{ formatTime(position) }}</span>
+                        <span
+                            :class="position < trimFrom || position > trimTo ? 'text-after-clip' : 'text-ok'"
+                            role="status"
+                        >
+                            {{
+                                position < trimFrom || position > trimTo
+                                    ? t('storage.trim.cutHere')
+                                    : t('storage.trim.airsHere')
+                            }}
+                        </span>
+                        <span>{{ duration ? formatTime(duration) : '' }}</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            class="btn-quiet"
+                            :disabled="position >= trimTo"
+                            @click="trimHere('from')"
+                        >
+                            <i class="bi bi-chevron-bar-left" aria-hidden="true" />{{ t('storage.trim.inHere') }}
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-quiet"
+                            :disabled="position <= trimFrom"
+                            @click="trimHere('to')"
+                        >
+                            <i class="bi bi-chevron-bar-right" aria-hidden="true" />{{ t('storage.trim.outHere') }}
+                        </button>
+                        <button type="button" class="btn-quiet" :disabled="!videoUrl || videoFailed" @click="playTrim">
+                            <i class="bi bi-play-fill" aria-hidden="true" />{{ t('storage.trim.play') }}
+                        </button>
+                        <button type="button" class="btn-quiet" :disabled="!videoUrl || videoFailed" @click="playOut">
+                            <i class="bi bi-skip-end-fill" aria-hidden="true" />{{ t('storage.trim.playOut') }}
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 bg-base-200 rounded-md px-3 py-2">
+                        <label class="flex items-center gap-1.5 text-xs text-muted">
+                            {{ t('storage.trim.in') }}
+                            <input
+                                :value="trimText('from')"
+                                class="field-input font-mono text-[13px] w-28 min-h-8"
+                                @input="setTrimText('from', ($event.target as HTMLInputElement).value)"
+                                @blur="settleTrim('from')"
+                            />
+                        </label>
+                        <button
+                            type="button"
+                            class="btn-icon min-w-8 min-h-8"
+                            :aria-label="t('storage.logoMarks.goTo', { time: formatTime(trimFrom) })"
+                            @click="seek(trimFrom)"
+                        >
+                            <i class="bi bi-skip-start" aria-hidden="true" />
+                        </button>
+                        <label class="flex items-center gap-1.5 text-xs text-muted">
+                            {{ t('storage.trim.out') }}
+                            <input
+                                :value="trimText('to')"
+                                class="field-input font-mono text-[13px] w-28 min-h-8"
+                                @input="setTrimText('to', ($event.target as HTMLInputElement).value)"
+                                @blur="settleTrim('to')"
+                            />
+                        </label>
+                        <button
+                            type="button"
+                            class="btn-icon min-w-8 min-h-8"
+                            :aria-label="t('storage.logoMarks.goTo', { time: formatTime(trimTo) })"
+                            @click="seek(trimTo)"
+                        >
+                            <i class="bi bi-skip-end" aria-hidden="true" />
+                        </button>
+                        <span class="flex-1 text-xs text-right font-mono">
+                            {{
+                                trimTo > trimFrom
+                                    ? t('storage.trim.airs', { length: formatTime(trimTo - trimFrom) })
+                                    : ''
+                            }}
+                        </span>
+                        <button
+                            v-if="marks.trim"
+                            type="button"
+                            class="btn-icon min-w-8 min-h-8 text-error"
+                            :aria-label="t('storage.trim.clear')"
+                            :title="t('storage.trim.clear')"
+                            @click="clearTrim"
+                        >
+                            <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                        </button>
+                    </div>
+                    <p v-if="trimInvalid" class="m-0 text-[13px] text-error" role="alert">
+                        {{ t('storage.trim.invalid') }}
+                    </p>
+                    <p class="m-0 field-hint">{{ t('storage.trim.hint') }}</p>
+                </div>
+
+                <div v-if="kind !== 'trim'" class="flex flex-col gap-1.5">
                     <div
                         class="relative h-7 rounded-md bg-field border border-line cursor-pointer overflow-hidden"
                         role="presentation"
@@ -417,16 +637,18 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
+                <div v-if="kind !== 'trim'" class="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
                         class="btn-quiet"
                         :disabled="spans.length >= MAX_SPANS || insideNow"
                         @click="markOff"
                     >
-                        <i class="bi" :class="kind === 'hide' ? 'bi-eye-slash' : 'bi-box-arrow-right'" aria-hidden="true" />{{
-                            label('markOff')
-                        }}
+                        <i
+                            class="bi"
+                            :class="kind === 'hide' ? 'bi-eye-slash' : 'bi-box-arrow-right'"
+                            aria-hidden="true"
+                        />{{ label('markOff') }}
                     </button>
                     <button
                         type="button"
@@ -434,9 +656,11 @@ onBeforeUnmount(() => {
                         :disabled="pendingFrom === null || position <= pendingFrom"
                         @click="markOn"
                     >
-                        <i class="bi" :class="kind === 'hide' ? 'bi-eye' : 'bi-box-arrow-in-left'" aria-hidden="true" />{{
-                            label('markOn')
-                        }}
+                        <i
+                            class="bi"
+                            :class="kind === 'hide' ? 'bi-eye' : 'bi-box-arrow-in-left'"
+                            aria-hidden="true"
+                        />{{ label('markOn') }}
                     </button>
                     <span v-if="pendingFrom !== null" class="text-[13px] text-after-clip" role="status">
                         {{ label('pending', { time: formatTime(pendingFrom) }) }}
@@ -450,7 +674,7 @@ onBeforeUnmount(() => {
                     </span>
                 </div>
 
-                <div class="flex flex-col gap-2">
+                <div v-if="kind !== 'trim'" class="flex flex-col gap-2">
                     <h3 class="m-0 text-sm font-semibold">{{ label('list') }}</h3>
                     <p v-if="!spans.length" class="m-0 text-[13px] text-muted">
                         {{ label('none') }}
@@ -517,7 +741,7 @@ onBeforeUnmount(() => {
                             </button>
                         </li>
                     </ul>
-                    <p v-if="invalid" class="m-0 text-[13px] text-error" role="alert">
+                    <p v-if="invalid && !trimInvalid" class="m-0 text-[13px] text-error" role="alert">
                         {{ overlaps ? label('overlap') : label('reversed') }}
                     </p>
                     <p class="m-0 field-hint">{{ label('hint', { preroll: prerollLabel }) }}</p>

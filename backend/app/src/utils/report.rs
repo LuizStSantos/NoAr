@@ -27,7 +27,7 @@ use crate::{
         paths::storage_relative,
         playlist::read_playlist,
         program::{channel_datetime, playlist_day_start},
-        schedule::{Occurrence, clip_duration, event_name, occurrences_between, parse_date},
+        schedule::{Occurrence, event_name, occurrences_between, parse_date, trimmed_length},
         time_machine::time_now,
         xmltv::{PlannedSlot, clip_titles, filler_path, library::NfoLibrary, planned_slots},
     },
@@ -591,7 +591,7 @@ impl Describer {
             return *duration;
         }
 
-        let duration = clip_duration(&self.storage.join(source)).await;
+        let duration = trimmed_length(&self.storage.join(source)).await;
 
         self.durations.insert(source.to_string(), duration);
 

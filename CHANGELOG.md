@@ -15,6 +15,13 @@ one is tagged.
 
 ### Added
 
+- **Trim a video once, in Storage**: drag the in and out points on a bar
+  while the video plays (or press **In here** / **Out here**, type the
+  times, or use the arrow keys), and the video comes in trimmed in every
+  playlist, the Scheduler, folder mode and the playlist generator. The
+  Player library shows the trimmed length, and the clip editor has the same
+  draggable bar, uses the saved trim, or saves a clip's in and out with the
+  video ([docs](docs/trim.md)).
 - **Convert uploaded videos to the output format**: with the new switch in
   Settings › Playlist and storage, each uploaded video is converted once to
   the output's size and frame rate, high-quality H.264 and 48 kHz AAC, so
