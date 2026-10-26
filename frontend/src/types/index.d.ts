@@ -320,6 +320,18 @@ declare global {
         /** Seconds since the playout was started. */
         uptime?: number | null
         title?: string
+        /** How a network output (SRT, RTMP, UDP) reaches its destination. */
+        output_link?: OutputLinkStatus
+    }
+
+    interface OutputLinkStatus {
+        state: 'idle' | 'connecting' | 'listening' | 'connected' | 'retrying'
+        /** Address without query string or stream key. */
+        destination: string | null
+        error: string | null
+        /** Seconds in the current state. */
+        seconds: number | null
+        connections: number
     }
 
     /** The guide programme a playlist clip belongs to. */

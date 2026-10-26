@@ -1365,7 +1365,7 @@ const uploadAccept = computed(() =>
                                                 {{ t('storage.logoMarks.badge') }}
                                             </button>
                                             <span
-                                                v-else
+                                                v-if="!isImage(row.name) && !isVideo(row.file)"
                                                 class="truncate"
                                                 :class="row.file?.media === false ? 'text-muted' : ''"
                                             >

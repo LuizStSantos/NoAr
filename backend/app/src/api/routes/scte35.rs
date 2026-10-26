@@ -67,6 +67,7 @@ impl From<&BreakInfo> for BreakStatus {
             source: match info.source {
                 BreakSource::Commercials => "commercials",
                 BreakSource::Manual => "manual",
+                BreakSource::Marked => "marked",
             },
             state: match info.state {
                 BreakState::Scheduled => "scheduled",

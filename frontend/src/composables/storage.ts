@@ -95,25 +95,32 @@ export interface LogoSpan {
     to: number
 }
 
-/** Where the video at `path` keeps the logo off. */
-export async function readLogoMarks(channelId: number, path: string): Promise<LogoSpan[]> {
-    const marks = await authFetch<{ hide?: LogoSpan[] }>(`/api/file/${channelId}/logo-marks`, {
+/** Marks inside a video: where it keeps the logo off, and its ad breaks. */
+export interface VideoMarks {
+    hide: LogoSpan[]
+    /** Ad breaks signalled with SCTE-35: out at `from`, back at `to`. */
+    breaks: LogoSpan[]
+}
+
+/** The marks of the video at `path`. */
+export async function readLogoMarks(channelId: number, path: string): Promise<VideoMarks> {
+    const marks = await authFetch<Partial<VideoMarks>>(`/api/file/${channelId}/logo-marks`, {
         method: 'POST',
         headers: JSON_HEADERS,
         body: JSON.stringify({ path }),
     })
 
-    return marks.hide ?? []
+    return { hide: marks.hide ?? [], breaks: marks.breaks ?? [] }
 }
 
-export async function saveLogoMarks(channelId: number, path: string, hide: LogoSpan[]): Promise<LogoSpan[]> {
-    const marks = await authFetch<{ hide?: LogoSpan[] }>(`/api/file/${channelId}/logo-marks`, {
+export async function saveLogoMarks(channelId: number, path: string, marks: VideoMarks): Promise<VideoMarks> {
+    const saved = await authFetch<Partial<VideoMarks>>(`/api/file/${channelId}/logo-marks`, {
         method: 'PUT',
         headers: JSON_HEADERS,
-        body: JSON.stringify({ path, hide }),
+        body: JSON.stringify({ path, ...marks }),
     })
 
-    return marks.hide ?? []
+    return { hide: saved.hide ?? [], breaks: saved.breaks ?? [] }
 }
 
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {

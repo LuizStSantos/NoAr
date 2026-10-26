@@ -37,6 +37,7 @@ use crate::{
 
 use super::{
     hls,
+    link::{self, LinkFormat},
     preview::PreviewMuxer,
     recording::{self, RecordingMonitor, RecordingMuxer},
     scte35::{self, SpliceControl},
@@ -254,6 +255,7 @@ impl EncodedOutput {
         recording_cfg.recording = None;
         recording_cfg.preview_url = None;
         recording_cfg.scte35 = None;
+        recording_cfg.output_link = crate::OutputLink::default();
         let (pattern, monitor) = recording::prepare_recording(recording_config)?;
         let mut output = Self::open(
             pattern
@@ -417,6 +419,17 @@ impl EncodedOutput {
         };
         // Network outputs get a write timeout so a stalled TCP connection
         // surfaces as an error instead of blocking the playout worker forever.
+        let network_link = match &output_format {
+            EncodedFormat::Recording { .. } => false,
+            EncodedFormat::Stream { muxer } => {
+                is_network_url(path) && LinkFormat::for_muxer(muxer).is_some()
+            }
+            EncodedFormat::Auto => path.starts_with("rtmp://") || path.starts_with("rtmps://"),
+            EncodedFormat::Hls { .. } => false,
+        };
+        if !network_link && !matches!(output_format, EncodedFormat::Recording { .. }) {
+            cfg.output_link.idle();
+        }
         let mut octx = match output_format {
             // The HLS muxer opens its playlists and segments itself. Avoid
             // preopening the output path because that truncates a standalone
@@ -436,16 +449,37 @@ impl EncodedOutput {
                     &cfg.protocol_options,
                     cfg.splice_control.clone(),
                     scte35.pid,
+                    &cfg.output_link,
+                    cfg.channel_id,
                 )
                 .inspect_err(|_| cfg.splice_control.close_output())?
             }
+            // SRT, RTMP and UDP: the connection lives on its own thread, so
+            // a destination that is down does not stop the playout.
             EncodedFormat::Stream { ref muxer } if is_network_url(path) => {
-                open_network_output(path, Some(muxer), &cfg.protocol_options)?
+                match LinkFormat::for_muxer(muxer) {
+                    Some(format) => link::open_output(
+                        path,
+                        muxer,
+                        format,
+                        &cfg.protocol_options,
+                        cfg.output_link.clone(),
+                        cfg.channel_id,
+                    )?,
+                    None => open_network_output(path, Some(muxer), &cfg.protocol_options)?,
+                }
             }
             EncodedFormat::Stream { ref muxer } => format::output_as(path, muxer)?,
             EncodedFormat::Recording { .. } => recording::segment_output_context(Path::new(path))?,
             EncodedFormat::Auto if path.starts_with("rtmp://") || path.starts_with("rtmps://") => {
-                open_network_output(path, Some("flv"), &cfg.protocol_options)?
+                link::open_output(
+                    path,
+                    "flv",
+                    LinkFormat::Flv,
+                    &cfg.protocol_options,
+                    cfg.output_link.clone(),
+                    cfg.channel_id,
+                )?
             }
             EncodedFormat::Auto if is_network_url(path) => {
                 open_network_output(path, None, &cfg.protocol_options)?
@@ -2495,6 +2529,7 @@ mod open_tests {
         control.plan_next_clip(crate::ClipBreaks {
             at_start: None,
             after: Some(1.0),
+            within: Vec::new(),
         });
         let event_id = control.clip_started(0, Some(1.0)).unwrap();
 

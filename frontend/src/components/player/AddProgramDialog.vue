@@ -66,15 +66,61 @@ const places = computed(() => {
         list.push({ value: 'drop', label: t('onair.program.placeDrop', { time: clockTime(begin) }) })
     }
 
+    const selection = selectionEnd.value
+
+    if (selection !== null) {
+        const begin = playlistStore.playlist[selection]?.begin ?? startOfDay + end
+
+        list.push({ value: 'selection', label: t('onair.program.placeSelection', { time: clockTime(begin) }) })
+    }
+
     list.push({ value: 'end', label: t('onair.program.placeEnd', { time: clockTime(startOfDay + end) }) })
 
     if (viewingOnAir.value && onAirIndex.value >= 0) {
         list.push({ value: 'onair', label: t('onair.program.placeOnAir') })
     }
 
+    if (playlistStore.playlist.length) {
+        list.push({ value: 'start', label: t('onair.program.placeStart', { time: clockTime(startOfDay) }) })
+        list.push({ value: 'time', label: t('onair.program.placeTime') })
+    }
+
     return list
 })
-const place = ref(props.dropIndex !== null ? 'drop' : 'end')
+
+/** Where clips go after the selected ones in the playlist, if any are selected. */
+const selectionEnd = computed(() => {
+    const indices = playlistStore.playlist
+        .map((item, index) => (playlistStore.selectedUids.includes(item.uid) ? index : -1))
+        .filter((index) => index >= 0)
+
+    return indices.length ? (indices[indices.length - 1] as number) + 1 : null
+})
+
+/** The time typed for "at a time", `HH:MM:SS`. */
+const atTime = ref('')
+
+/** The clip that plays at `atTime`: the new clips go before it. */
+const timeIndex = computed(() => {
+    const [hours = 0, minutes = 0, seconds = 0] = atTime.value.split(':').map(Number)
+    const dayStart = configStore.playout.playlist?.startInSec ?? 0
+    let target = hours * 3600 + minutes * 60 + seconds
+
+    if (target < dayStart) {
+        target += 86400
+    }
+
+    const at = playlistStore.playlist.findIndex((item) => (item.begin ?? 0) + (item.out - item.in) > target)
+
+    return at < 0 ? playlistStore.playlist.length : at
+})
+
+const timeTarget = computed(() => {
+    const item = playlistStore.playlist[timeIndex.value]
+
+    return item ? { time: clockTime(item.begin ?? 0), name: item.source.split('/').pop() ?? '' } : null
+})
+const place = ref(props.dropIndex !== null ? 'drop' : selectionEnd.value !== null ? 'selection' : 'end')
 
 const lastLine = computed(() => {
     const last = found.value?.last
@@ -137,7 +183,14 @@ function add() {
         name: episode.name,
         duration: episode.duration || 10,
     }))
-    const where: AddPlace = place.value === 'drop' ? (props.dropIndex ?? 'end') : (place.value as 'end' | 'onair')
+    const where: AddPlace =
+        place.value === 'drop'
+            ? (props.dropIndex ?? 'end')
+            : place.value === 'start'
+              ? 0
+              : place.value === 'time'
+                ? timeIndex.value
+                : (place.value as 'end' | 'onair' | 'selection')
 
     emit('add', files, where, label.value)
 }
@@ -246,11 +299,23 @@ onMounted(load)
                         </option>
                     </select>
                 </label>
+                <label v-if="place === 'time'" class="field-label">
+                    {{ t('onair.program.atTime') }}
+                    <input v-model="atTime" type="time" step="1" class="field-input font-mono" />
+                    <span v-if="atTime && timeTarget" class="field-hint">
+                        {{ t('onair.program.atTimeHint', timeTarget) }}
+                    </span>
+                </label>
             </div>
 
             <footer class="flex justify-end gap-2.5 px-5 py-4 mt-1 border-t border-line">
                 <button type="button" class="btn-quiet" @click="emit('close')">{{ t('cancel') }}</button>
-                <button type="button" class="btn-main" :disabled="loading || !chosen.length" @click="add">
+                <button
+                    type="button"
+                    class="btn-main"
+                    :disabled="loading || !chosen.length || (place === 'time' && !atTime)"
+                    @click="add"
+                >
                     {{ t('onair.program.add', chosen.length) }}
                 </button>
             </footer>

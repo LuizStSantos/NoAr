@@ -11,6 +11,62 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-26
+
+### Added
+
+- **Breaks marked inside a video (SCTE-35)**: where a commercial break was
+  edited into a programme file, mark where it leaves and comes back, the same
+  way as the logo, and NoAr signals it with SCTE-35 wherever the video plays
+  ([docs](docs/ad_breaks.md#breaks-marked-inside-a-video)).
+- **Light preview**: the Player opens the preview at 640×360, 15 frames per
+  second and about 0.6 Mb/s, for slow connections; **High** switches to the
+  output itself. Light is encoded only while someone watches it
+  ([docs](docs/output.md#light-and-high-quality)).
+- The Player says how the output reaches its destination: sending,
+  connecting, waiting for a receiver, or no connection and why
+  ([docs](docs/output.md#when-the-destination-is-down)).
+- Building a playlist in the Player:
+  - a **Build the playlist** view that puts the library and the list on top;
+  - **undo and redo** (Ctrl+Z, Ctrl+Shift+Z);
+  - add after the selected clips, at the start or at a time;
+  - **To the start** and **To the end** for the selection;
+  - keys for the selection (Delete, Alt+↑/↓, Esc);
+  - how much of the day is still to fill or runs over, with **Fill the day**
+    at the end of the list.
+
+### Changed
+
+- The + of each file in the Player library is always shown, as it is for
+  folders. Adding a file goes after the selected clips when some are
+  selected, and the message says where it went.
+- Programmes of fewer than 40 clips show all their clips in the grouped
+  view.
+- The playlist header, with Save, stays in view while scrolling, and
+  **Discard** asks first.
+
+### Fixed
+
+- **An SRT, RTMP or UDP destination that is down no longer stops the
+  channel.** The connection now runs on its own and reconnects, resuming
+  on the next key frame; the playout, the Player preview, the recording and
+  the as-run log carry on. Before, a refused connection made the channel
+  restart every few seconds with a black Player preview, and an SRT output
+  in listener mode held everything until a receiver connected.
+- The Player preview no longer stays black without a word: it says when it
+  waits for pictures and, when it cannot play, why.
+- When the update check cannot reach GitHub, Settings › Updates now says why
+  (a DNS failure, a refused connection, a time-out or a certificate problem)
+  instead of only "error sending request".
+- Storage showed the name of every video and image twice unless the video
+  had stretches without logo.
+
+### Documentation
+
+- How to get back into NoAr after forgetting the admin password
+  ([docs](docs/docker.md#forgotten-admin-password)).
+- New screenshots in the README, and the image tags explained there.
+
 ## [1.1.0] - 2026-10-26
 
 ### Added
@@ -191,6 +247,7 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/LuizStSantos/NoAr/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LuizStSantos/NoAr/releases/tag/v1.0.0

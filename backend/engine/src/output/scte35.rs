@@ -19,13 +19,14 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use ffmpeg_next::{
     self as ffmpeg, Dictionary, ffi,
     format::{self, context::StreamIo},
 };
 
-use crate::utils::helper::{is_network_url, network_output_options};
+use super::link::{LinkFormat, NetworkSink, OutputLink};
+use crate::utils::helper::is_network_url;
 
 /// The PID NoAr carries SCTE-35 on unless set otherwise.
 pub const DEFAULT_SCTE35_PID: u16 = 500;
@@ -83,6 +84,8 @@ pub enum BreakSource {
     Commercials,
     /// Asked for by hand, from the interface or the API.
     Manual,
+    /// Marked inside a video, where a break was edited into it.
+    Marked,
 }
 
 /// Where a break is.
@@ -135,7 +138,7 @@ pub struct SpliceStatus {
 }
 
 /// Breaks around the next clip to play, as the playlist knows them.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct ClipBreaks {
     /// A break of this many seconds starts with the clip; it can only be
     /// announced as it starts.
@@ -143,6 +146,9 @@ pub struct ClipBreaks {
     /// A break of this many seconds starts when the clip ends; it is
     /// announced the pre-roll ahead.
     pub after: Option<f64>,
+    /// Breaks marked inside the clip: when each starts, in seconds from the
+    /// start of the clip as it plays, and how long it lasts.
+    pub within: Vec<(f64, f64)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -203,6 +209,8 @@ struct SpliceState {
     last_frame: Option<i64>,
     next_event_id: u32,
     plan: ClipBreaks,
+    /// Breaks marked inside the clip on air, called off if it is cut short.
+    within: Vec<u32>,
     breaks: Vec<Break>,
     recent: VecDeque<BreakInfo>,
 }
@@ -359,8 +367,24 @@ impl SpliceControl {
         let mut state = self.lock();
         let plan = std::mem::take(&mut state.plan);
 
+        state.within.clear();
+
         if !state.active {
             return None;
+        }
+
+        for (offset, length) in plan.within {
+            let (Some(offset), Some(frames)) = (state.frames_or_zero(offset), state.frames(length))
+            else {
+                continue;
+            };
+
+            match state.schedule(start + offset, start + offset + frames, BreakSource::Marked) {
+                Ok(id) => state.within.push(id),
+                Err(error) => {
+                    log::warn!("SCTE-35: break marked in the clip not signalled: {error}");
+                }
+            }
         }
 
         if let Some(frames) = plan.at_start.and_then(|seconds| state.frames(seconds)) {
@@ -392,11 +416,22 @@ impl SpliceControl {
     /// The clip a break followed ended. If it did not play to its end, the
     /// break has not come and is called off.
     pub(crate) fn clip_finished(&self, following_break: Option<u32>, played: bool) {
-        let Some(id) = following_break else {
-            return;
-        };
+        let within = std::mem::take(&mut self.lock().within);
 
-        if !played && self.cancel_break(id).is_ok() {
+        if played {
+            return;
+        }
+
+        // Breaks still to come inside the clip will not come either.
+        for id in within {
+            if self.cancel_break(id).is_ok() {
+                log::info!("SCTE-35: break {id} called off; the clip it was in was cut short");
+            }
+        }
+
+        if let Some(id) = following_break
+            && self.cancel_break(id).is_ok()
+        {
             log::info!("SCTE-35: break {id} called off; the clip before it was cut short");
         }
     }
@@ -525,6 +560,12 @@ impl SpliceState {
             let micros = i128::from((seconds * 1_000_000.0).round() as i64);
             ((micros * i128::from(self.fps) + 999_999) / 1_000_000) as i64
         })
+    }
+
+    /// The frame `seconds` into a clip, zero included.
+    fn frames_or_zero(&self, seconds: f64) -> Option<i64> {
+        (seconds.is_finite() && seconds >= 0.0 && self.fps > 0)
+            .then(|| (seconds * f64::from(self.fps)).round() as i64)
     }
 
     fn preroll_frames(&self) -> i64 {
@@ -1087,28 +1128,30 @@ fn pes_pts(packet: &[u8; TS_PACKET]) -> Option<(i64, bool)> {
 
 /// Opens a stream output whose transport stream gains SCTE-35 on its way to
 /// `path`, a network address or a file.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn open_output(
     path: &str,
     muxer: &str,
     protocol_options: &std::collections::BTreeMap<String, String>,
     control: SpliceControl,
     pid: u16,
+    link: &OutputLink,
+    channel_id: Option<i32>,
 ) -> Result<format::context::Output> {
-    let options = if is_network_url(path) {
-        network_output_options(protocol_options)
-    } else {
-        Dictionary::new()
-    };
-    let (sink, remaining) = Scte35Sink::open(path, options, control, pid)?;
-    let unused: Vec<_> = remaining
-        .iter()
-        .filter(|(key, _)| protocol_options.contains_key(*key))
-        .map(|(key, _)| key)
-        .collect();
+    let sink = if is_network_url(path) {
+        // The connection runs on its own thread, like any stream output.
+        let network = NetworkSink::start(
+            path,
+            LinkFormat::TransportStream,
+            protocol_options,
+            link.clone(),
+            channel_id,
+        )?;
 
-    if !unused.is_empty() {
-        bail!("unused output protocol options: {}", unused.join(", "));
-    }
+        Scte35Sink::network(network, control, pid)
+    } else {
+        Scte35Sink::open(path, Dictionary::new(), control, pid)?.0
+    };
 
     // Seven transport packets, the size SRT and UDP send at a time.
     let io = StreamIo::from_write_with_capacity(sink, 7 * TS_PACKET)?;
@@ -1121,6 +1164,8 @@ pub(crate) fn open_output(
 /// an AVIO context NoAr opened.
 pub(crate) struct Scte35Sink {
     io: *mut ffi::AVIOContext,
+    /// A network destination, written through instead of `io`.
+    network: Option<NetworkSink>,
     injector: TsInjector,
 }
 
@@ -1157,13 +1202,26 @@ impl Scte35Sink {
         Ok((
             Self {
                 io,
+                network: None,
                 injector: TsInjector::new(control, pid),
             },
             remaining,
         ))
     }
 
+    fn network(network: NetworkSink, control: SpliceControl, pid: u16) -> Self {
+        Self {
+            io: ptr::null_mut(),
+            network: Some(network),
+            injector: TsInjector::new(control, pid),
+        }
+    }
+
     fn check(&self) -> io::Result<()> {
+        if self.io.is_null() {
+            return Ok(());
+        }
+
         let error = unsafe { (*self.io).error };
 
         if error < 0 {
@@ -1177,6 +1235,12 @@ impl Scte35Sink {
 impl io::Write for Scte35Sink {
     fn write(&mut self, data: &[u8]) -> io::Result<usize> {
         let out = self.injector.process(data);
+
+        if let Some(network) = &mut self.network {
+            io::Write::write_all(network, &out)?;
+
+            return Ok(data.len());
+        }
 
         if !out.is_empty() {
             let size = i32::try_from(out.len()).map_err(io::Error::other)?;
@@ -1192,6 +1256,10 @@ impl io::Write for Scte35Sink {
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        if self.io.is_null() {
+            return Ok(());
+        }
+
         unsafe { ffi::avio_flush(self.io) };
         self.check()
     }
@@ -1199,7 +1267,10 @@ impl io::Write for Scte35Sink {
 
 impl Drop for Scte35Sink {
     fn drop(&mut self) {
-        unsafe { ffi::avio_closep(&mut self.io) };
+        self.network.take();
+        if !self.io.is_null() {
+            unsafe { ffi::avio_closep(&mut self.io) };
+        }
         self.injector.control.close_output();
     }
 }
@@ -1429,6 +1500,7 @@ mod tests {
         control.plan_next_clip(ClipBreaks {
             at_start: None,
             after: Some(1.2),
+            within: Vec::new(),
         });
         let following = control.clip_started(0, Some(2.0));
         assert!(following.is_some());
@@ -1493,6 +1565,40 @@ mod tests {
     }
 
     #[test]
+    fn breaks_marked_in_a_clip_splice_at_their_frames_and_go_when_it_is_cut() {
+        // 25 frames per second: a break 4 s into the clip, 2 s long, and
+        // one at 20 s that never comes.
+        let control = active_control(2.0);
+        control.plan_next_clip(ClipBreaks {
+            at_start: None,
+            after: None,
+            within: vec![(4.0, 2.0), (20.0, 5.0)],
+        });
+        assert_eq!(control.clip_started(100, Some(30.0)), None);
+
+        let breaks = control.status().breaks;
+        assert_eq!(breaks.len(), 2);
+        assert!(breaks.iter().all(|b| b.source == BreakSource::Marked));
+        assert!((breaks[0].duration - 2.0).abs() < 1e-9);
+
+        for frame in 100..260_i64 {
+            let key_frame = control.frame_needs_key_frame(frame);
+            assert_eq!(key_frame, frame == 200 || frame == 250, "frame {frame}");
+        }
+
+        // Cut at 6.4 s: the break at 20 s is called off.
+        control.clip_finished(None, false);
+        let left: Vec<_> = control
+            .status()
+            .breaks
+            .into_iter()
+            .filter(|b| b.state != BreakState::Cancelled)
+            .collect();
+        assert!(left.iter().all(|b| b.duration < 3.0), "{left:?}");
+        assert!(!control.frame_needs_key_frame(600));
+    }
+
+    #[test]
     fn a_break_after_a_cut_clip_is_called_off() {
         let control = active_control(2.0);
         let (pat, pmt) = pat_and_pmt();
@@ -1504,6 +1610,7 @@ mod tests {
         control.plan_next_clip(ClipBreaks {
             at_start: None,
             after: Some(10.0),
+            within: Vec::new(),
         });
         let following = control.clip_started(0, Some(2.0));
 

@@ -11,7 +11,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
  * video.js, or an FLV stream.
  */
 const props = defineProps<{ src: string; muted: boolean; direct?: boolean; token?: string }>()
-const emit = defineEmits<{ failed: [] }>()
+const emit = defineEmits<{
+    /** The stream could not play; `reason` says why, when the player knows. */
+    failed: [reason: string]
+    /** Pictures are coming in. */
+    playing: []
+}>()
 
 /** Seconds without new video before a live stream is reopened. */
 const STALL_SECONDS = 6
@@ -47,10 +52,18 @@ function stop() {
     }
 }
 
-function scheduleRetry() {
+function scheduleRetry(reason = '') {
     clearTimeout(retry)
-    emit('failed')
+    emit('failed', reason)
     retry = setTimeout(start, 3000)
+}
+
+/** `NetworkError: HttpStatusCodeInvalid (401)` from an mpegts.js error. */
+function streamError(type: unknown, detail: unknown, info: unknown): string {
+    const message = (info as { msg?: string; code?: number } | undefined) ?? {}
+    const extra = message.msg || (message.code ? String(message.code) : '')
+
+    return [type, detail].filter(Boolean).join(': ') + (extra ? ` (${extra})` : '')
 }
 
 /** A live stream that stops moving (a restart, a lost connection) is reopened. */
@@ -60,6 +73,9 @@ function watchStream() {
     watchdog = setInterval(() => {
         const time = video.value?.currentTime ?? 0
 
+        if (time > lastTime) {
+            emit('playing')
+        }
         stalledFor = time > lastTime ? 0 : stalledFor + 1
         lastTime = time
 
@@ -90,7 +106,9 @@ function startStream(type: 'mpegts' | 'flv') {
     )
     streamPlayer.attachMediaElement(video.value)
     streamPlayer.load()
-    streamPlayer.on(mpegts.Events.ERROR, scheduleRetry)
+    streamPlayer.on(mpegts.Events.ERROR, (type: unknown, detail: unknown, info: unknown) =>
+        scheduleRetry(streamError(type, detail, info)),
+    )
     video.value.muted = props.muted
     void video.value.play()?.catch(() => undefined)
     watchStream()
@@ -124,7 +142,7 @@ function start() {
             liveui: false,
             suppressNotSupportedError: true,
         })
-        hlsPlayer.on('error', scheduleRetry)
+        hlsPlayer.on('error', () => scheduleRetry(hlsPlayer?.error()?.message ?? ''))
     }
 
     hlsPlayer.src({ src: props.src, type: 'application/x-mpegURL' })

@@ -7,13 +7,14 @@ import { isEqual } from 'es-toolkit/predicate'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { type Size, logoBox, logoBoxStyle, storageImageUrl } from '@/composables/logo'
-import { type LogoSpan, baseName, readLogoMarks, saveLogoMarks } from '@/composables/storage'
+import { type LogoSpan, type VideoMarks, baseName, readLogoMarks, saveLogoMarks } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
 /**
- * Side panel that marks where a video keeps the logo off, such as a
- * commercial break edited into a programme, while the video plays.
+ * Side panel that marks, while the video plays, where it keeps the logo off
+ * and where its ad breaks are (signalled with SCTE-35), such as a commercial
+ * break edited into a programme.
  */
 const props = defineProps<{
     channelId: number
@@ -23,7 +24,7 @@ const props = defineProps<{
     length?: number
 }>()
 
-const emit = defineEmits<{ close: []; saved: [hide: LogoSpan[]] }>()
+const emit = defineEmits<{ close: []; saved: [marks: VideoMarks] }>()
 
 const { t } = useI18n()
 const configStore = useConfig()
@@ -31,8 +32,14 @@ const indexStore = useIndex()
 
 const MAX_SPANS = 16
 
-const spans = ref<LogoSpan[]>([])
-const baseline = ref<LogoSpan[]>([])
+type MarkKind = 'hide' | 'breaks'
+
+const marks = ref<VideoMarks>({ hide: [], breaks: [] })
+const baseline = ref<VideoMarks>({ hide: [], breaks: [] })
+/** Which marks the buttons and the list edit. */
+const kind = ref<MarkKind>('hide')
+/** The list being edited; changes go straight into `marks`. */
+const spans = computed(() => marks.value[kind.value])
 const loading = ref(true)
 const saving = ref(false)
 const videoUrl = ref('')
@@ -49,13 +56,52 @@ const pendingFrom = ref<number | null>(null)
 const drafts = ref<Record<string, string>>({})
 const confirmClose = ref(false)
 
-const dirty = computed(() => !isEqual(spans.value, baseline.value))
+const dirty = computed(() => !isEqual(marks.value, baseline.value))
 const sorted = computed(() => [...spans.value].sort((a, b) => a.from - b.from))
-const hiddenNow = computed(() => sorted.value.some((span) => position.value >= span.from && position.value <= span.to))
+
+function sortedOf(list: LogoSpan[]): LogoSpan[] {
+    return [...list].sort((a, b) => a.from - b.from)
+}
+
+function inside(list: LogoSpan[]): boolean {
+    return list.some((span) => position.value >= span.from && position.value <= span.to)
+}
+
+/** The logo is off at the play position. */
+const hiddenNow = computed(() => inside(marks.value.hide))
+/** The play position is inside a marked break. */
+const breakNow = computed(() => inside(marks.value.breaks))
+/** Inside a mark of the kind being edited. */
+const insideNow = computed(() => (kind.value === 'hide' ? hiddenNow.value : breakNow.value))
+
+/** Labels of the kind being edited. */
+function label(key: string, values?: Record<string, unknown>): string {
+    const scope = kind.value === 'hide' ? 'storage.logoMarks' : 'storage.breakMarks'
+
+    return values ? t(`${scope}.${key}`, values) : t(`${scope}.${key}`)
+}
+
+/** How far ahead a break is announced, from the ad break settings. */
+const prerollLabel = computed(() => `${configStore.playout?.scte35?.preroll ?? 6} s`)
+
+/** Breaks often sit exactly where the logo goes off: start from those. */
+function copyFromLogo() {
+    marks.value.breaks = cloneDeep(marks.value.hide)
+    drafts.value = {}
+}
 const overlaps = computed(() =>
     sorted.value.some((span, index) => index > 0 && span.from < sorted.value[index - 1]!.to),
 )
-const invalid = computed(() => spans.value.some((span) => !(span.to > span.from) || span.from < 0) || overlaps.value)
+const invalid = computed(() =>
+    (['hide', 'breaks'] as const).some((which) => {
+        const list = sortedOf(marks.value[which])
+
+        return (
+            list.some((span) => !(span.to > span.from) || span.from < 0) ||
+            list.some((span, index) => index > 0 && span.from < list[index - 1]!.to)
+        )
+    }),
+)
 
 /** `1:02:03.4` or `02:03.4`, tenths kept. */
 function formatTime(seconds: number): string {
@@ -144,10 +190,10 @@ async function load() {
     loading.value = true
 
     try {
-        const hide = await readLogoMarks(props.channelId, props.path)
+        const loaded = await readLogoMarks(props.channelId, props.path)
 
-        spans.value = cloneDeep(hide)
-        baseline.value = cloneDeep(hide)
+        marks.value = cloneDeep(loaded)
+        baseline.value = cloneDeep(loaded)
         videoUrl.value = await previewUrl(props.path)
     } catch (error) {
         indexStore.msgAlert('error', error instanceof Error ? error.message : String(error), 4)
@@ -197,12 +243,15 @@ async function save() {
     saving.value = true
 
     try {
-        const hide = await saveLogoMarks(props.channelId, props.path, sorted.value)
+        const saved = await saveLogoMarks(props.channelId, props.path, {
+            hide: sortedOf(marks.value.hide),
+            breaks: sortedOf(marks.value.breaks),
+        })
 
-        baseline.value = cloneDeep(hide)
-        spans.value = cloneDeep(hide)
+        baseline.value = cloneDeep(saved)
+        marks.value = cloneDeep(saved)
         indexStore.msgAlert('success', t('storage.logoMarks.saved'), 2)
-        emit('saved', hide)
+        emit('saved', saved)
         emit('close')
     } catch (error) {
         indexStore.msgAlert('error', error instanceof Error ? error.message : String(error), 4)
@@ -257,7 +306,31 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-else class="px-5 pb-5 flex flex-col gap-4">
-                <p class="m-0 text-[13px] text-muted">{{ t('storage.logoMarks.intro') }}</p>
+                <div role="radiogroup" :aria-label="t('storage.logoMarks.kind')" class="flex gap-1 bg-base-200 rounded-md p-1 self-start">
+                    <button
+                        v-for="option in ['hide', 'breaks'] as const"
+                        :key="option"
+                        type="button"
+                        role="radio"
+                        :aria-checked="kind === option"
+                        class="px-3 py-1 rounded text-[13px] cursor-pointer"
+                        :class="kind === option ? 'bg-base-100 font-semibold shadow-sm' : 'text-muted'"
+                        @click="
+                            kind = option;
+                            pendingFrom = null;
+                            drafts = {}
+                        "
+                    >
+                        <i
+                            class="bi me-1"
+                            :class="option === 'hide' ? 'bi-eye-slash' : 'bi-badge-ad'"
+                            aria-hidden="true"
+                        />{{ option === 'hide' ? t('storage.logoMarks.kindLogo') : t('storage.logoMarks.kindBreaks') }}
+                        <span class="text-muted font-normal">({{ marks[option].length }})</span>
+                    </button>
+                </div>
+
+                <p class="m-0 text-[13px] text-muted">{{ label('intro') }}</p>
 
                 <div
                     class="relative w-full bg-black rounded-field overflow-hidden"
@@ -305,9 +378,20 @@ onBeforeUnmount(() => {
                         @click="seekBar"
                     >
                         <span
-                            v-for="(span, index) in sorted"
-                            :key="index"
-                            class="absolute inset-y-0 bg-after-clip/40 border-x border-after-clip"
+                            v-for="(span, index) in sortedOf(marks.hide)"
+                            :key="`hide-${index}`"
+                            class="absolute top-0 h-1/2 bg-after-clip/40 border-x border-after-clip"
+                            :class="kind === 'hide' ? '' : 'opacity-40'"
+                            :style="{
+                                left: percent(span.from),
+                                width: `calc(${percent(span.to)} - ${percent(span.from)})`,
+                            }"
+                        />
+                        <span
+                            v-for="(span, index) in sortedOf(marks.breaks)"
+                            :key="`break-${index}`"
+                            class="absolute bottom-0 h-1/2 bg-live/40 border-x border-live"
+                            :class="kind === 'breaks' ? '' : 'opacity-40'"
                             :style="{
                                 left: percent(span.from),
                                 width: `calc(${percent(span.to)} - ${percent(span.from)})`,
@@ -315,7 +399,8 @@ onBeforeUnmount(() => {
                         />
                         <span
                             v-if="pendingFrom !== null && position > pendingFrom"
-                            class="absolute inset-y-0 bg-after-clip/20"
+                            class="absolute inset-y-0"
+                            :class="kind === 'hide' ? 'bg-after-clip/20' : 'bg-live/20'"
                             :style="{
                                 left: percent(pendingFrom),
                                 width: `calc(${percent(position)} - ${percent(pendingFrom)})`,
@@ -325,8 +410,8 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="flex justify-between font-mono text-xs text-muted">
                         <span>{{ formatTime(position) }}</span>
-                        <span :class="hiddenNow ? 'text-after-clip' : 'text-ok'">
-                            {{ hiddenNow ? t('storage.logoMarks.offHere') : t('storage.logoMarks.onHere') }}
+                        <span :class="insideNow ? (kind === 'hide' ? 'text-after-clip' : 'text-live') : 'text-ok'">
+                            {{ insideNow ? label('offHere') : label('onHere') }}
                         </span>
                         <span>{{ duration ? formatTime(duration) : '' }}</span>
                     </div>
@@ -336,10 +421,12 @@ onBeforeUnmount(() => {
                     <button
                         type="button"
                         class="btn-quiet"
-                        :disabled="spans.length >= MAX_SPANS || hiddenNow"
+                        :disabled="spans.length >= MAX_SPANS || insideNow"
                         @click="markOff"
                     >
-                        <i class="bi bi-eye-slash" aria-hidden="true" />{{ t('storage.logoMarks.markOff') }}
+                        <i class="bi" :class="kind === 'hide' ? 'bi-eye-slash' : 'bi-box-arrow-right'" aria-hidden="true" />{{
+                            label('markOff')
+                        }}
                     </button>
                     <button
                         type="button"
@@ -347,10 +434,12 @@ onBeforeUnmount(() => {
                         :disabled="pendingFrom === null || position <= pendingFrom"
                         @click="markOn"
                     >
-                        <i class="bi bi-eye" aria-hidden="true" />{{ t('storage.logoMarks.markOn') }}
+                        <i class="bi" :class="kind === 'hide' ? 'bi-eye' : 'bi-box-arrow-in-left'" aria-hidden="true" />{{
+                            label('markOn')
+                        }}
                     </button>
                     <span v-if="pendingFrom !== null" class="text-[13px] text-after-clip" role="status">
-                        {{ t('storage.logoMarks.pending', { time: formatTime(pendingFrom) }) }}
+                        {{ label('pending', { time: formatTime(pendingFrom) }) }}
                         <button
                             type="button"
                             class="ms-1 bg-transparent border-0 p-0 text-muted cursor-pointer hover:underline"
@@ -362,8 +451,18 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <h3 class="m-0 text-sm font-semibold">{{ t('storage.logoMarks.list') }}</h3>
-                    <p v-if="!spans.length" class="m-0 text-[13px] text-muted">{{ t('storage.logoMarks.none') }}</p>
+                    <h3 class="m-0 text-sm font-semibold">{{ label('list') }}</h3>
+                    <p v-if="!spans.length" class="m-0 text-[13px] text-muted">
+                        {{ label('none') }}
+                        <button
+                            v-if="kind === 'breaks' && marks.hide.length"
+                            type="button"
+                            class="ms-1 bg-transparent border-0 p-0 text-accent cursor-pointer hover:underline"
+                            @click="copyFromLogo"
+                        >
+                            {{ t('storage.breakMarks.fromLogo', marks.hide.length) }}
+                        </button>
+                    </p>
                     <ul v-else class="m-0 p-0 list-none flex flex-col gap-1.5">
                         <li
                             v-for="(span, index) in spans"
@@ -372,7 +471,7 @@ onBeforeUnmount(() => {
                         >
                             <span class="text-xs text-muted w-4">{{ index + 1 }}</span>
                             <label class="flex items-center gap-1.5 text-xs text-muted">
-                                {{ t('storage.logoMarks.from') }}
+                                {{ label('from') }}
                                 <input
                                     :value="fieldText(index, 'from')"
                                     class="field-input font-mono text-[13px] w-28 min-h-8"
@@ -389,7 +488,7 @@ onBeforeUnmount(() => {
                                 <i class="bi bi-skip-start" aria-hidden="true" />
                             </button>
                             <label class="flex items-center gap-1.5 text-xs text-muted">
-                                {{ t('storage.logoMarks.to') }}
+                                {{ label('to') }}
                                 <input
                                     :value="fieldText(index, 'to')"
                                     class="field-input font-mono text-[13px] w-28 min-h-8"
@@ -419,9 +518,9 @@ onBeforeUnmount(() => {
                         </li>
                     </ul>
                     <p v-if="invalid" class="m-0 text-[13px] text-error" role="alert">
-                        {{ overlaps ? t('storage.logoMarks.overlap') : t('storage.logoMarks.reversed') }}
+                        {{ overlaps ? label('overlap') : label('reversed') }}
                     </p>
-                    <p class="m-0 field-hint">{{ t('storage.logoMarks.hint') }}</p>
+                    <p class="m-0 field-hint">{{ label('hint', { preroll: prerollLabel }) }}</p>
                 </div>
             </div>
 
@@ -440,7 +539,7 @@ onBeforeUnmount(() => {
                     <button type="button" class="btn-quiet" @click="requestClose">{{ t('cancel') }}</button>
                     <button type="button" class="btn-main" :disabled="saving || !dirty || invalid" @click="save">
                         <span v-if="saving" class="loading loading-spinner loading-sm" />
-                        {{ t('storage.logoMarks.save') }}
+                        {{ t('storage.logoMarks.saveAll') }}
                     </button>
                 </template>
             </footer>

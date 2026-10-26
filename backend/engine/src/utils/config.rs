@@ -292,6 +292,8 @@ pub struct OutputConfig {
     pub scte35: Option<crate::Scte35Config>,
     /// The breaks the channel signals; outlasts a playout restart.
     pub splice_control: crate::SpliceControl,
+    /// How a network output reaches its destination; outlasts a restart.
+    pub output_link: crate::OutputLink,
 }
 
 /// Settings for a segmented Matroska recording derived from an encoded output.
@@ -1404,6 +1406,7 @@ impl OutputConfig {
             preview_url: None,
             scte35: None,
             splice_control: crate::SpliceControl::default(),
+            output_link: crate::OutputLink::default(),
         }
     }
 
@@ -1537,6 +1540,11 @@ impl OutputConfig {
 
     pub fn with_splice_control(mut self, splice_control: crate::SpliceControl) -> Self {
         self.splice_control = splice_control;
+        self
+    }
+
+    pub fn with_output_link(mut self, output_link: crate::OutputLink) -> Self {
+        self.output_link = output_link;
         self
     }
 

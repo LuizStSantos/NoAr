@@ -1,4 +1,12 @@
-use std::io;
+use std::{
+    io,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+    },
+    time::Duration,
+};
 
 use axum::body::Bytes;
 use log::*;
@@ -17,8 +25,12 @@ const BACKLOG: usize = 1024;
 /// receives the same bytes over HTTP.
 #[derive(Debug)]
 pub struct PreviewFeed {
+    channel_id: i32,
     url: String,
     sender: broadcast::Sender<Bytes>,
+    /// The light preview: re-encoded small, only while someone watches it.
+    light: broadcast::Sender<Bytes>,
+    light_running: Arc<AtomicBool>,
     /// Stops the forwarding task when the channel goes away.
     stop: CancellationToken,
 }
@@ -57,8 +69,11 @@ impl PreviewFeed {
         });
 
         Ok(Self {
+            channel_id,
             url: format!("udp://127.0.0.1:{port}?pkt_size={DATAGRAM_SIZE}"),
             sender,
+            light: broadcast::channel(BACKLOG).0,
+            light_running: Arc::new(AtomicBool::new(false)),
             stop,
         })
     }
@@ -70,6 +85,94 @@ impl PreviewFeed {
 
     pub fn subscribe(&self) -> broadcast::Receiver<Bytes> {
         self.sender.subscribe()
+    }
+
+    /// The light preview, started for the first viewer and stopped after
+    /// the last one leaves.
+    pub fn subscribe_light(&self) -> broadcast::Receiver<Bytes> {
+        let receiver = self.light.subscribe();
+
+        if !self.light_running.swap(true, Ordering::AcqRel) {
+            self.start_light();
+        }
+
+        receiver
+    }
+
+    fn start_light(&self) {
+        let channel_id = self.channel_id;
+        let source = self.sender.clone();
+        let light = self.light.clone();
+        let running = self.light_running.clone();
+        let stop = self.stop.clone();
+        let runtime = tokio::runtime::Handle::current();
+
+        let started = std::thread::Builder::new()
+            .name(format!("noar-light-preview-{channel_id}"))
+            .spawn(move || {
+                info!(channel = channel_id; "Light Player preview started");
+
+                while light.receiver_count() > 0 && !stop.is_cancelled() {
+                    let (input, output) = mpsc::channel::<Vec<u8>>();
+                    let ended = Arc::new(AtomicBool::new(false));
+                    let forward_ended = ended.clone();
+                    let mut source = source.subscribe();
+                    let watchers = light.clone();
+
+                    // Hand the full preview to the encoder thread.
+                    runtime.spawn(async move {
+                        let mut check = tokio::time::interval(Duration::from_millis(500));
+
+                        loop {
+                            tokio::select! {
+                                received = source.recv() => match received {
+                                    Ok(bytes) => {
+                                        if input.send(bytes.to_vec()).is_err() {
+                                            break;
+                                        }
+                                    }
+                                    Err(broadcast::error::RecvError::Lagged(_)) => {}
+                                    Err(broadcast::error::RecvError::Closed) => break,
+                                },
+                                _ = check.tick() => {
+                                    if forward_ended.load(Ordering::Acquire)
+                                        || watchers.receiver_count() == 0
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    let deliver_to = light.clone();
+                    let result = noar_engine::transcode_light_preview(
+                        output,
+                        move |bytes| {
+                            let _ = deliver_to.send(Bytes::from(bytes));
+                            deliver_to.receiver_count() > 0
+                        },
+                        noar_engine::LightPreview::default(),
+                        ended.clone(),
+                    );
+                    ended.store(true, Ordering::Release);
+
+                    if let Err(error) = result {
+                        debug!(channel = channel_id; "Light Player preview: {error:#}");
+                    }
+
+                    // The playout restarted or paused: wait before reading again.
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+
+                running.store(false, Ordering::Release);
+                info!(channel = channel_id; "Light Player preview stopped");
+            });
+
+        if let Err(error) = started {
+            self.light_running.store(false, Ordering::Release);
+            warn!(channel = channel_id; "Light Player preview could not start: {error}");
+        }
     }
 }
 

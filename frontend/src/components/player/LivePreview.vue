@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import mpegts from 'mpegts.js'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import LiveVideo from '@/components/player/LiveVideo.vue'
@@ -23,7 +23,38 @@ const muted = ref(true)
 const channel = computed(() => configStore.channels[configStore.i])
 /** Optional outside address (public HLS, CDN) set in the channel settings. */
 const addressUrl = computed(() => channel.value?.preview_url?.trim() ?? '')
-const directUrl = computed(() => (channel.value ? `/api/preview/${channel.value.id}` : ''))
+type PreviewQuality = 'light' | 'high'
+
+/** Light by default: on a slow connection the full preview would stutter. */
+function savedQuality(): PreviewQuality {
+    try {
+        return localStorage.getItem('noar.preview.quality') === 'high' ? 'high' : 'light'
+    } catch {
+        return 'light'
+    }
+}
+
+const quality = ref<PreviewQuality>(savedQuality())
+
+function chooseQuality(value: PreviewQuality) {
+    quality.value = value
+
+    try {
+        localStorage.setItem('noar.preview.quality', value)
+    } catch {
+        // Only remembered for this visit.
+    }
+}
+
+const directUrl = computed(() => {
+    if (!channel.value) {
+        return ''
+    }
+
+    const url = `/api/preview/${channel.value.id}`
+
+    return quality.value === 'light' ? `${url}?quality=light` : url
+})
 
 type PreviewSource = 'direct' | 'address'
 
@@ -77,6 +108,52 @@ const placeholder = computed(() => {
 
     return t('onair.previewUnsupported')
 })
+
+/** No picture yet after this long: say what the preview waits for. */
+const WAIT_NOTICE_MS = 5000
+
+const previewHasPicture = ref(false)
+const previewWaiting = ref(false)
+const previewError = ref('')
+let waitTimer: ReturnType<typeof setTimeout> | undefined
+
+const previewNotice = computed(() => {
+    if (previewHasPicture.value) {
+        return ''
+    }
+
+    if (previewError.value) {
+        return t('onair.previewFailed', { reason: previewError.value })
+    }
+
+    if (previewWaiting.value) {
+        return t('onair.previewWaiting')
+    }
+
+    return ''
+})
+
+function resetPreviewState() {
+    clearTimeout(waitTimer)
+    previewHasPicture.value = false
+    previewWaiting.value = false
+    previewError.value = ''
+    waitTimer = setTimeout(() => (previewWaiting.value = true), WAIT_NOTICE_MS)
+}
+
+function previewPlaying() {
+    clearTimeout(waitTimer)
+    previewHasPicture.value = true
+    previewError.value = ''
+}
+
+function previewFailed(reason: string) {
+    previewHasPicture.value = false
+    previewError.value = reason || t('onair.previewNoReason')
+}
+
+watch(() => `${source.value}:${previewUrl.value}`, resetPreviewState, { immediate: true })
+onBeforeUnmount(() => clearTimeout(waitTimer))
 
 function chooseSource(value: PreviewSource) {
     source.value = value
@@ -155,6 +232,28 @@ const title = computed(() => {
     return playlistStore.playoutIsRunning ? currentTitle.value : t('onair.notRunning')
 })
 
+/** Whether a network output reaches its receiver; empty for HLS and desktop. */
+const outputLinkLabel = computed(() => {
+    const link = playlistStore.outputLink
+
+    if (!playlistStore.playoutIsRunning || !link || link.state === 'idle') {
+        return ''
+    }
+
+    const destination = link.destination ?? ''
+
+    switch (link.state) {
+        case 'connecting':
+            return t('onair.outputConnecting', { destination })
+        case 'listening':
+            return t('onair.outputListening', { destination })
+        case 'connected':
+            return t('onair.outputConnected', { destination })
+        default:
+            return t('onair.outputRetrying', { destination, error: link.error ?? '' })
+    }
+})
+
 const listeners = computed(() => configStore.playout.ingest?.listeners?.filter((input) => input.enabled) ?? [])
 const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/guide.xml` : ''))
 </script>
@@ -168,9 +267,19 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                 :direct="direct"
                 :token="authStore.jwtToken"
                 :muted="muted"
+                @playing="previewPlaying"
+                @failed="previewFailed"
             />
             <div
-                v-else
+                v-if="previewUrl && previewNotice"
+                role="status"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#c9c7c3] text-sm p-6 text-center pointer-events-none"
+            >
+                <i class="bi bi-hourglass-split text-2xl" aria-hidden="true" />
+                <span class="max-w-[46ch]">{{ previewNotice }}</span>
+            </div>
+            <div
+                v-if="!previewUrl"
                 class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#8e8c88] text-sm p-6 text-center"
             >
                 <i class="bi bi-camera-video-off text-2xl" aria-hidden="true" />
@@ -201,6 +310,26 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                 >
                     {{ outputLabel }}
                 </span>
+                <div
+                    v-if="direct && previewUrl"
+                    role="radiogroup"
+                    :aria-label="t('onair.previewQuality')"
+                    class="flex bg-[rgba(23,24,26,0.86)] rounded-md p-0.5 text-xs"
+                >
+                    <button
+                        v-for="option in ['light', 'high'] as const"
+                        :key="option"
+                        type="button"
+                        role="radio"
+                        :aria-checked="quality === option"
+                        :title="option === 'light' ? t('onair.previewLightHint') : t('onair.previewHighHint')"
+                        class="px-2 py-0.5 rounded cursor-pointer"
+                        :class="quality === option ? 'bg-[#3c3e44] text-[#e8e6e3]' : 'text-[#a9a7a3]'"
+                        @click="chooseQuality(option)"
+                    >
+                        {{ option === 'light' ? t('onair.previewLight') : t('onair.previewHigh') }}
+                    </button>
+                </div>
                 <div
                     v-if="addressUrl"
                     role="radiogroup"
@@ -263,6 +392,25 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
             </span>
             <span v-else-if="listeners.length">{{ t('onair.ingestWaiting', listeners.length) }}</span>
             <span v-else>{{ t('onair.ingestNone') }}</span>
+            <span
+                v-if="outputLinkLabel"
+                class="inline-flex items-center gap-1.5"
+                :class="playlistStore.outputLink?.state === 'retrying' ? 'text-on-air-text' : ''"
+                role="status"
+            >
+                <span
+                    class="dot"
+                    :class="
+                        playlistStore.outputLink?.state === 'connected'
+                            ? 'bg-ok'
+                            : playlistStore.outputLink?.state === 'retrying'
+                              ? 'bg-on-air'
+                              : 'bg-subtle'
+                    "
+                    aria-hidden="true"
+                />
+                {{ outputLinkLabel }}
+            </span>
             <a v-if="xmltvUrl" :href="xmltvUrl" target="_blank" rel="noopener" class="link-accent">
                 {{ t('onair.xmltvLink') }}
             </a>

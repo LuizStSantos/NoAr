@@ -89,12 +89,61 @@ and not with NoAr itself, which serves it for previewing.**
 
 ## Player preview
 
-Whatever the output mode (HLS, RTMP, SRT), the Player shows NoAr's own
+Whatever the output mode (HLS, RTMP, SRT, UDP), the Player shows NoAr's own
 copy of the encoded output: the first rendition is also sent, as MPEG-TS, to
 a local UDP port, and the browser receives it from
 [`/api/preview/{id}`](api.md#live-preview) about a second behind the air.
 Nothing is encoded twice. Browsers without live Media Source playback (older
 iPhones) fall back to the HLS output, when the channel has one.
+
+The preview does not depend on the destination being reachable: see
+[When the destination is down](#when-the-destination-is-down). When the
+browser cannot play the preview, the Player shows the reason instead of a
+black picture.
+
+### Light and High quality
+
+The Player opens the preview in **Light** quality: 640×360, 15 frames per
+second, about 0.6 Mb/s with the sound, so it plays on a slow connection
+(a phone, a VPN, the studio Wi-Fi). **High** sends the output itself, with its
+picture and bit rate. The switch is on the preview, next to the output
+label, and the browser remembers the choice.
+
+Light is encoded by NoAr from the preview copy, only while someone watches it
+in Light, and stops a moment after the last viewer leaves. It takes some CPU
+on the server (a 360p H.264 encode); it never touches what goes on air. The
+API address is `/api/preview/{id}?quality=light`.
+
+## When the destination is down
+
+For SRT, RTMP and UDP outputs, the connection to the destination runs on its
+own: the playout, the Player preview, the recording and the record of what
+aired keep going whatever happens to it. Under the preview, the Player says
+how the output reaches its destination:
+
+| Line under the preview | Meaning |
+| --- | --- |
+| *Output: sending to …* | Connected and sending. |
+| *Output: connecting to …* | Calling the destination (SRT caller, RTMP). |
+| *Output: waiting for a receiver on …* | An SRT output in **listener** mode (`?mode=listener`) waiting for a receiver to call. |
+| *Output: no connection to … (error)* | The last attempt failed or the connection dropped; NoAr tries again after 1 s, then up to every 10 s. |
+
+When the destination comes back (the RTMP server restarts, the receiver
+connects), it gets the stream from the next key frame; an RTMP server gets
+the stream header and codec settings again first. Addresses in that line and
+in the log leave out passwords, query strings and the RTMP stream key.
+
+Data that cannot go out is dropped rather than held, so a slow link never
+slows the playout: past about 8 MB waiting (some 10 s of a typical channel)
+the destination skips ahead to the next key frame.
+
+Before NoAr 1.2, a destination that refused the connection stopped the
+channel, which restarted every few seconds with a black preview, and an SRT
+listener held the whole output until a receiver connected.
+
+This covers every network output written as MPEG-TS or FLV, whatever the
+protocol. An output with another muxer (for example RTSP) still opens
+directly, and a failure there restarts the playout as before.
 
 The outside preview address in Settings › General is optional. Set it only to
 check the output another way, such as the public HLS of a CDN; the Player then

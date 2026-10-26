@@ -143,6 +143,34 @@ The updater only replaces containers labelled
 on NoAr. A private image needs the `docker login ghcr.io` credentials mounted
 into the updater (the line is in the compose file, commented out).
 
+## Forgotten admin password
+
+The password can be set again from the server, without losing anything and
+without stopping the channels:
+
+```sh
+docker exec -it noar noar --user-set
+```
+
+It asks for the **username** (the existing one, to change its password), the
+new **password**, the **email** and whether to keep **two-factor
+authentication**. Answer *no* there unless the server's mail (SMTP) works:
+with it on, signing in waits for a code sent by mail. Sign in with the new
+password right away. Without the prompts:
+
+```sh
+docker exec -it noar noar --user-set -u admin -m admin@example.org -p 'new password' --two-factor false
+```
+
+(this one leaves the password in the shell history). A username that does
+not exist yet creates another global administrator, which can then change or
+remove the old account in **Settings › Users**. Outside Docker, run
+`noar --user-set --db /path/to/noar.db` on the server.
+
+If signing in then fails with *"Could not sign in right now"* (*"Não foi
+possível entrar agora"*), wait a minute and try once: sign-in allows three
+attempts a minute. A wrong password says so instead.
+
 ## Behind a reverse proxy
 
 Forward `X-Forwarded-Proto` and `X-Forwarded-Host` so XMLTV image links use

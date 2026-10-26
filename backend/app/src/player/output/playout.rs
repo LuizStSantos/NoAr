@@ -27,7 +27,7 @@ use crate::{
         config::{ENGINE_AUDIO_SAMPLE_RATE, OutputMode, PlayoutConfig, RecordingSource},
         control::{PlayerCtl, control_state},
         errors::ServiceError,
-        logo_marks::logo_gaps,
+        logo_marks::clip_marks,
     },
 };
 
@@ -67,7 +67,8 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     )?
     .with_preview_url(Some(manager.preview.url().to_string()))
     .with_logo_control(manager.logo_control.clone())
-    .with_splice_control(manager.splice_control.clone());
+    .with_splice_control(manager.splice_control.clone())
+    .with_output_link(manager.output_link.clone());
     let playout = open_playout(&config, output_config.clone()).await?;
     *manager.playback_control.lock().await = playout.playback_control();
     *manager.preloader.lock().await = playout.preloader();
@@ -329,9 +330,14 @@ async fn play_loop(
             1.0
         };
         let is_ad = node.ad;
-        let logo_gaps = logo_gaps(&config.channel.storage, &node.source).await;
-        let breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
-        manager.splice_control.plan_next_clip(breaks);
+        let marks = clip_marks(&config.channel.storage, &node.source).await;
+        let logo_gaps = marks.gaps();
+        let mut breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
+        // Breaks marked inside the video itself, when it is not a commercial.
+        if !node.ad {
+            breaks.within = marks.breaks_in_clip(node.seek, duration);
+        }
+        manager.splice_control.plan_next_clip(breaks.clone());
         let aired = as_run::record_start(&manager, as_run::programme_entry(config, &node)).await;
         let clip_started = std::time::Instant::now();
         let result = playout
@@ -476,6 +482,7 @@ async fn playlist_breaks(
             ClipBreaks {
                 at_start: Some(run),
                 after: None,
+                within: Vec::new(),
             },
         )
     } else {
@@ -490,6 +497,7 @@ async fn playlist_breaks(
             ClipBreaks {
                 at_start: None,
                 after: Some(commercials_next),
+                within: Vec::new(),
             },
         )
     };
@@ -934,7 +942,7 @@ pub(crate) async fn play_plain_from(
             subtitle_media_path(config, source),
             LogoFade {
                 hidden: commercial,
-                gaps: logo_gaps(&config.channel.storage, source).await,
+                gaps: clip_marks(&config.channel.storage, source).await.gaps(),
                 ..LogoFade::default()
             },
             1.0,

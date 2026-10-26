@@ -519,7 +519,7 @@ pub async fn get_logo_marks(
     Ok(Json(read_marks(&video).await))
 }
 
-/// **Save where a video keeps the logo off**
+/// **Save where a video keeps the logo off, and its ad breaks**
 ///
 /// Stretches in seconds of the video. They apply wherever it plays, from
 /// the next time it starts; none removes them.

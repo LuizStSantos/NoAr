@@ -24,6 +24,7 @@ mod loudness_preview;
 mod output;
 mod playback_control;
 mod playout;
+mod preview_quality;
 mod utils;
 
 pub use analysis::audio_level::{AudioFrameCallback, AudioLevel, AudioLevelCallback};
@@ -46,6 +47,7 @@ use input::preload::Preloaded;
 pub use input::preload::{PreloadSignal, Preloader};
 #[cfg(all(feature = "desktop-base", feature = "tokio"))]
 pub use output::desktop::thread::run_on_main_thread as run_desktop_on_main_thread;
+pub use output::link::{LinkState, LinkStatus, OutputLink};
 pub use output::resolved_variant_playlist_path;
 pub use output::scte35::{
     BreakInfo, BreakSource, BreakState, ClipBreaks, DEFAULT_SCTE35_PID,
@@ -54,6 +56,7 @@ pub use output::scte35::{
 use output::{FrameOutput, Output, PlaybackStopped};
 pub use playback_control::{LiveSession, NavigationBlocked, PlaybackControl, PlaylistNavigation};
 use playout::{PlaybackRestart, PlaybackSkipped, Timeline, write_fallback};
+pub use preview_quality::{LightPreview, transcode_light_preview};
 pub use utils::{
     clock,
     config::{

@@ -42,7 +42,7 @@ without restarting the playout.
   in a [commercials folder](commercials.md), play without the logo. It fades
   back in on the next clip.
 - **Stretches inside a video**: when a programme file has a break edited into
-  it, open **Logo in this video** for that video (a row action in Storage, or the
+  it, open **Logo and breaks in this video** for that video (a row action in Storage, or the
   same button in the Player's clip editor). Then mark, while it plays, where the
   logo goes off and where it comes back, or type the times. See
   [commercials](commercials.md#a-break-inside-a-video).
