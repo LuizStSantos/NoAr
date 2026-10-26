@@ -11,6 +11,17 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-26
+
+### Fixed
+
+- On a phone, **Add program** in the Player went past the edge of the
+  screen when an episode had a long file name with no spaces, and on short
+  screens its **Add** button was out of reach. It now opens as a sheet from
+  the bottom whose buttons stay in view while the options scroll, and long
+  names wrap. **Generate** works the same way. Fieldsets no longer widen to
+  their longest word anywhere in NoAr.
+
 ## [1.4.0] - 2026-10-26
 
 ### Added
@@ -321,7 +332,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/LuizStSantos/NoAr/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/LuizStSantos/NoAr/compare/v1.1.0...v1.2.0

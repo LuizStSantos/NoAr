@@ -300,14 +300,18 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-    <div class="z-50 fixed inset-0 flex justify-center bg-black/55 overflow-auto py-6 px-4" @click.self="close()">
+    <!-- On a phone a sheet from the bottom; the buttons stay in view while the rest scrolls. -->
+    <div
+        class="z-50 fixed inset-0 flex items-end sm:items-center justify-center bg-black/55 sm:py-6 sm:px-4 overscroll-contain"
+        @click.self="close()"
+    >
         <section
             ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="generator-title"
             tabindex="-1"
-            class="outline-none my-auto w-full max-w-[720px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl flex flex-col"
+            class="outline-none w-full sm:max-w-[720px] max-h-[92dvh] sm:max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain bg-base-100 border border-line-strong rounded-t-[16px] sm:rounded-[16px] shadow-2xl flex flex-col"
         >
             <header class="flex items-start gap-3 px-5 pt-5 pb-3">
                 <div class="flex-1 min-w-0">
@@ -623,7 +627,9 @@ onBeforeUnmount(() => {
                 <i class="bi bi-info-circle mt-0.5" aria-hidden="true" />{{ t('generator.draftHint') }}
             </p>
 
-            <footer class="flex flex-wrap items-center gap-2.5 px-5 py-4 mt-4 border-t border-line">
+            <footer
+                class="sticky bottom-0 z-10 bg-base-100 flex flex-wrap items-center gap-2.5 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4 mt-4 border-t border-line"
+            >
                 <span class="basis-full sm:basis-auto text-[13px] text-muted">
                     <template v-if="mode === 'blocks'">
                         {{

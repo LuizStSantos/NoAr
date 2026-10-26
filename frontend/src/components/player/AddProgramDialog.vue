@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import dayjs from 'dayjs'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { authFetch } from '@/composables/authFetch'
@@ -201,21 +201,33 @@ const dialog = ref<HTMLElement>()
 
 useDialogFocus(dialog, { onEscape: () => emit('close') })
 
-onMounted(load)
+onMounted(() => {
+    // The page behind does not scroll under a finger on the dialog.
+    document.body.style.overflow = 'hidden'
+    load()
+})
+
+onBeforeUnmount(() => {
+    document.body.style.overflow = ''
+})
 </script>
 <template>
-    <div class="z-50 fixed inset-0 flex justify-center bg-black/55 overflow-auto py-6 px-4" @click.self="emit('close')">
+    <!-- On a phone a sheet from the bottom; else centred. Only the middle scrolls, so the buttons stay in view. -->
+    <div
+        class="z-50 fixed inset-0 flex items-end sm:items-center justify-center bg-black/55 sm:py-6 sm:px-4 overscroll-contain"
+        @click.self="emit('close')"
+    >
         <section
             ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="program-title"
             tabindex="-1"
-            class="outline-none my-auto w-full max-w-[460px] bg-base-100 border border-line-strong rounded-[16px] shadow-2xl flex flex-col"
+            class="outline-none w-full sm:max-w-[460px] max-h-[92dvh] sm:max-h-[calc(100dvh-3rem)] bg-base-100 border border-line-strong rounded-t-[16px] sm:rounded-[16px] shadow-2xl flex flex-col"
         >
-            <header class="flex items-start gap-3 px-5 pt-5 pb-2">
+            <header class="flex items-start gap-3 px-5 pt-5 pb-2 shrink-0">
                 <div class="flex-1 min-w-0">
-                    <h2 id="program-title" class="m-0 text-lg font-semibold">
+                    <h2 id="program-title" class="m-0 text-lg font-semibold [overflow-wrap:anywhere]">
                         {{ t('onair.program.title', { name: label }) }}
                     </h2>
                     <p v-if="!loading && found" class="m-0 text-[13px] text-muted">
@@ -231,28 +243,31 @@ onMounted(load)
             <p v-else-if="error" role="alert" class="mx-5 my-4 text-on-air-text">{{ error }}</p>
             <p v-else-if="!episodes.length" class="mx-5 my-4 text-muted">{{ t('onair.program.empty') }}</p>
 
-            <div v-else class="px-5 py-3 flex flex-col gap-3.5">
-                <fieldset class="border-0 p-0 m-0 flex flex-col gap-2">
+            <div v-else class="px-5 py-3 flex flex-col gap-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                <fieldset class="border-0 p-0 m-0 min-w-0 flex flex-col gap-2">
                     <legend class="text-xs text-muted mb-1.5">{{ t('onair.program.what') }}</legend>
                     <label
-                        class="flex gap-2.5 items-start rounded-[10px] border px-3 py-2.5 cursor-pointer"
+                        class="flex gap-2.5 items-start min-w-0 rounded-[10px] border px-3 py-2.5 cursor-pointer"
                         :class="choice === 'next' ? 'border-accent bg-accent-soft' : 'border-line-strong'"
                     >
                         <input v-model="choice" type="radio" value="next" class="radio radio-xs radio-accent mt-1" />
-                        <span class="min-w-0">
+                        <span class="min-w-0 flex-1">
                             <span class="block font-semibold">{{ t('onair.program.next') }}</span>
-                            <span class="block text-[13px] text-base-content/85 truncate" :title="next?.name">
+                            <span
+                                class="block text-[13px] text-base-content/85 [overflow-wrap:anywhere]"
+                                :title="next?.name"
+                            >
                                 {{ next?.name }} · {{ lengthLabel(next?.duration ?? 0) }}
                             </span>
-                            <span class="block text-xs text-muted">{{ lastLine }}</span>
+                            <span class="block text-xs text-muted [overflow-wrap:anywhere]">{{ lastLine }}</span>
                         </span>
                     </label>
                     <label
-                        class="flex gap-2.5 items-start rounded-[10px] border px-3 py-2.5 cursor-pointer"
+                        class="flex gap-2.5 items-start min-w-0 rounded-[10px] border px-3 py-2.5 cursor-pointer"
                         :class="choice === 'all' ? 'border-accent bg-accent-soft' : 'border-line-strong'"
                     >
                         <input v-model="choice" type="radio" value="all" class="radio radio-xs radio-accent mt-1" />
-                        <span>
+                        <span class="min-w-0 flex-1">
                             <span class="block font-semibold">{{ t('onair.program.all') }}</span>
                             <span class="block text-[13px] text-base-content/85">
                                 {{ summary }}
@@ -260,11 +275,11 @@ onMounted(load)
                         </span>
                     </label>
                     <label
-                        class="flex gap-2.5 items-start rounded-[10px] border px-3 py-2.5 cursor-pointer"
+                        class="flex gap-2.5 items-start min-w-0 rounded-[10px] border px-3 py-2.5 cursor-pointer"
                         :class="choice === 'pick' ? 'border-accent bg-accent-soft' : 'border-line-strong'"
                     >
                         <input v-model="choice" type="radio" value="pick" class="radio radio-xs radio-accent mt-1" />
-                        <span>
+                        <span class="min-w-0 flex-1">
                             <span class="block font-semibold">{{ t('onair.program.pick') }}</span>
                             <span class="block text-[13px] text-base-content/85">{{
                                 t('onair.program.pickHint')
@@ -275,7 +290,7 @@ onMounted(load)
 
                 <ul
                     v-if="choice === 'pick'"
-                    class="m-0 p-1 list-none border border-line rounded-[10px] bg-base-200 max-h-56 overflow-y-auto"
+                    class="m-0 p-1 list-none border border-line rounded-[10px] bg-base-200 sm:max-h-56 sm:overflow-y-auto"
                 >
                     <li v-for="episode in episodes" :key="episode.source">
                         <label
@@ -310,7 +325,9 @@ onMounted(load)
                 </label>
             </div>
 
-            <footer class="flex justify-end gap-2.5 px-5 py-4 mt-1 border-t border-line">
+            <footer
+                class="flex justify-end gap-2.5 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4 border-t border-line shrink-0"
+            >
                 <button type="button" class="btn-quiet" @click="emit('close')">{{ t('cancel') }}</button>
                 <button
                     type="button"
