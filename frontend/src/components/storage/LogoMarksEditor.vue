@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
+import SpanBar from '@/components/storage/SpanBar.vue'
 import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
@@ -133,7 +134,21 @@ function setTrimText(edge: 'from' | 'to', text: string) {
     }
 }
 
+/** The stretch picked on the bar or in the list. */
+const selectedSpan = ref<number | null>(null)
+
+/** A handle of the bar moved a stretch. */
+function changeSpan(index: number, span: LogoSpan) {
+    spans.value[index] = span
+    delete drafts.value[`${index}-from`]
+    delete drafts.value[`${index}-to`]
+}
+
+/** The play position is in a part the trim cuts off. */
+const trimCutNow = computed(() => position.value < trimFrom.value || position.value > trimTo.value)
+
 function selectKind(option: Tab) {
+    selectedSpan.value = null
     kind.value = option
     pendingFrom.value = null
     drafts.value = {}
@@ -250,15 +265,6 @@ function seek(seconds: number) {
     position.value = seconds
 }
 
-function seekBar(event: MouseEvent) {
-    const bar = event.currentTarget as HTMLElement
-    const share = (event.clientX - bar.getBoundingClientRect().left) / bar.clientWidth
-
-    if (duration.value) {
-        seek(Math.min(duration.value, Math.max(0, share * duration.value)))
-    }
-}
-
 function markOff() {
     pendingFrom.value = position.value
 }
@@ -274,6 +280,7 @@ function markOn() {
 }
 
 function remove(index: number) {
+    selectedSpan.value = null
     spans.value.splice(index, 1)
     drafts.value = {}
 }
@@ -492,19 +499,24 @@ onBeforeUnmount(() => {
                         :position="position"
                         @seek="seek"
                     />
-                    <div class="flex justify-between font-mono text-xs text-muted">
-                        <span>{{ formatTime(position) }}</span>
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs">
+                        <span class="flex flex-col leading-tight">
+                            <span class="text-muted">{{ t('storage.marks.position') }}</span>
+                            <span class="font-mono tabular-nums">{{ formatTime(position) }}</span>
+                        </span>
                         <span
-                            :class="position < trimFrom || position > trimTo ? 'text-after-clip' : 'text-ok'"
+                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium whitespace-nowrap"
+                            :class="trimCutNow ? 'bg-base-content/10 text-muted' : 'bg-ok/15 text-ok'"
                             role="status"
                         >
-                            {{
-                                position < trimFrom || position > trimTo
-                                    ? t('storage.trim.cutHere')
-                                    : t('storage.trim.airsHere')
+                            <i class="bi" :class="trimCutNow ? 'bi-scissors' : 'bi-broadcast'" aria-hidden="true" />{{
+                                trimCutNow ? t('storage.trim.cutHere') : t('storage.trim.airsHere')
                             }}
                         </span>
-                        <span>{{ duration ? formatTime(duration) : '' }}</span>
+                        <span class="flex flex-col leading-tight text-right">
+                            <span class="text-muted">{{ t('storage.marks.length') }}</span>
+                            <span class="font-mono tabular-nums">{{ duration ? formatTime(duration) : '—' }}</span>
+                        </span>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
@@ -567,13 +579,7 @@ onBeforeUnmount(() => {
                         >
                             <i class="bi bi-skip-end" aria-hidden="true" />
                         </button>
-                        <span class="flex-1 text-xs text-right font-mono">
-                            {{
-                                trimTo > trimFrom
-                                    ? t('storage.trim.airs', { length: formatTime(trimTo - trimFrom) })
-                                    : ''
-                            }}
-                        </span>
+                        <span class="flex-1" />
                         <button
                             v-if="marks.trim"
                             type="button"
@@ -588,52 +594,92 @@ onBeforeUnmount(() => {
                     <p v-if="trimInvalid" class="m-0 text-[13px] text-error" role="alert">
                         {{ t('storage.trim.invalid') }}
                     </p>
+                    <div
+                        v-else-if="duration > 0"
+                        class="flex flex-wrap gap-x-4 gap-y-1 rounded-md border border-line px-3 py-2 text-[13px]"
+                        role="status"
+                    >
+                        <span>
+                            <i class="bi bi-broadcast me-1 text-ok" aria-hidden="true" />{{
+                                t('storage.trim.summaryAirs', {
+                                    length: formatTime(trimTo - trimFrom),
+                                    total: formatTime(duration),
+                                })
+                            }}
+                        </span>
+                        <span v-if="trimFrom > 0 || trimTo < duration - 0.05" class="text-muted">
+                            <i class="bi bi-scissors me-1" aria-hidden="true" />{{
+                                t('storage.trim.summaryCut', {
+                                    start: formatTime(trimFrom),
+                                    end: formatTime(Math.max(0, duration - trimTo)),
+                                })
+                            }}
+                        </span>
+                        <span v-else class="text-muted">{{ t('storage.trim.summaryWhole') }}</span>
+                    </div>
                     <p class="m-0 field-hint">{{ t('storage.trim.hint') }}</p>
                 </div>
 
-                <div v-if="kind !== 'trim'" class="flex flex-col gap-1.5">
-                    <div
-                        class="relative h-7 rounded-md bg-field border border-line cursor-pointer overflow-hidden"
-                        role="presentation"
-                        @click="seekBar"
-                    >
+                <div v-if="kind !== 'trim'" class="flex flex-col gap-2">
+                    <SpanBar
+                        :duration="duration"
+                        :spans="spans"
+                        :tone="kind === 'hide' ? 'logo' : 'break'"
+                        :position="position"
+                        :pending="pendingFrom"
+                        :trim="normalized(marks).trim"
+                        :selected="selectedSpan"
+                        @change="changeSpan"
+                        @select="selectedSpan = $event"
+                        @seek="seek"
+                    />
+                    <!-- The other kind of marks, for reference. -->
+                    <div class="relative h-1.5 rounded-full bg-field overflow-hidden" aria-hidden="true">
                         <span
-                            v-for="(span, index) in sortedOf(marks.hide)"
-                            :key="`hide-${index}`"
-                            class="absolute top-0 h-1/2 bg-after-clip/40 border-x border-after-clip"
-                            :class="kind === 'hide' ? '' : 'opacity-40'"
-                            :style="{
-                                left: percent(span.from),
-                                width: `calc(${percent(span.to)} - ${percent(span.from)})`,
-                            }"
-                        />
-                        <span
-                            v-for="(span, index) in sortedOf(marks.breaks)"
-                            :key="`break-${index}`"
-                            class="absolute bottom-0 h-1/2 bg-live/40 border-x border-live"
-                            :class="kind === 'breaks' ? '' : 'opacity-40'"
-                            :style="{
-                                left: percent(span.from),
-                                width: `calc(${percent(span.to)} - ${percent(span.from)})`,
-                            }"
-                        />
-                        <span
-                            v-if="pendingFrom !== null && position > pendingFrom"
+                            v-for="(span, index) in marks[kind === 'hide' ? 'breaks' : 'hide']"
+                            :key="`other-${index}`"
                             class="absolute inset-y-0"
-                            :class="kind === 'hide' ? 'bg-after-clip/20' : 'bg-live/20'"
+                            :class="kind === 'hide' ? 'bg-live/60' : 'bg-after-clip/60'"
                             :style="{
-                                left: percent(pendingFrom),
-                                width: `calc(${percent(position)} - ${percent(pendingFrom)})`,
+                                left: percent(span.from),
+                                width: `calc(${percent(span.to)} - ${percent(span.from)})`,
                             }"
                         />
-                        <span class="absolute inset-y-0 w-0.5 bg-accent" :style="{ left: percent(position) }" />
                     </div>
-                    <div class="flex justify-between font-mono text-xs text-muted">
-                        <span>{{ formatTime(position) }}</span>
-                        <span :class="insideNow ? (kind === 'hide' ? 'text-after-clip' : 'text-live') : 'text-ok'">
-                            {{ insideNow ? label('offHere') : label('onHere') }}
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs">
+                        <span class="flex flex-col leading-tight">
+                            <span class="text-muted">{{ t('storage.marks.position') }}</span>
+                            <span class="font-mono tabular-nums">{{ formatTime(position) }}</span>
                         </span>
-                        <span>{{ duration ? formatTime(duration) : '' }}</span>
+                        <span
+                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium whitespace-nowrap"
+                            :class="
+                                insideNow
+                                    ? kind === 'hide'
+                                        ? 'bg-after-clip/15 text-after-clip'
+                                        : 'bg-live/15 text-live'
+                                    : 'bg-ok/15 text-ok'
+                            "
+                            role="status"
+                        >
+                            <i
+                                class="bi"
+                                :class="
+                                    kind === 'hide'
+                                        ? insideNow
+                                            ? 'bi-eye-slash'
+                                            : 'bi-eye'
+                                        : insideNow
+                                          ? 'bi-badge-ad'
+                                          : 'bi-tv'
+                                "
+                                aria-hidden="true"
+                            />{{ insideNow ? label('offHere') : label('onHere') }}
+                        </span>
+                        <span class="flex flex-col leading-tight text-right">
+                            <span class="text-muted">{{ t('storage.marks.length') }}</span>
+                            <span class="font-mono tabular-nums">{{ duration ? formatTime(duration) : '—' }}</span>
+                        </span>
                     </div>
                 </div>
 
@@ -691,7 +737,9 @@ onBeforeUnmount(() => {
                         <li
                             v-for="(span, index) in spans"
                             :key="index"
-                            class="flex flex-wrap items-center gap-2 bg-base-200 rounded-md px-3 py-2"
+                            class="flex flex-wrap items-center gap-2 bg-base-200 rounded-md px-3 py-2 border"
+                            :class="selectedSpan === index ? 'border-accent' : 'border-transparent'"
+                            @focusin="selectedSpan = index"
                         >
                             <span class="text-xs text-muted w-4">{{ index + 1 }}</span>
                             <label class="flex items-center gap-1.5 text-xs text-muted">

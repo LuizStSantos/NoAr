@@ -35,9 +35,11 @@ const pickKicker = computed(() => {
         :aria-label="t('report.summary.label')"
         class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(160px,1fr))]"
     >
-        <div class="card-box px-4 py-3.5 flex flex-col gap-0.5">
+        <div class="card-box min-w-0 px-4 py-3.5 flex flex-col gap-0.5">
             <span class="text-xs text-muted">{{ t('report.summary.aired') }}</span>
-            <span class="font-mono text-[22px] font-medium tabular">{{ duration(summary.aired.seconds) }}</span>
+            <span class="font-mono text-lg sm:text-[22px] font-medium tabular [overflow-wrap:anywhere]">{{
+                duration(summary.aired.seconds)
+            }}</span>
             <span class="text-xs text-muted">
                 {{ t('report.summary.items', { count: summary.aired.count }, summary.aired.count) }}
                 <template v-if="nowInRange && !period">
@@ -46,18 +48,20 @@ const pickKicker = computed(() => {
                 </template>
             </span>
         </div>
-        <div class="card-box px-4 py-3.5 flex flex-col gap-0.5">
+        <div class="card-box min-w-0 px-4 py-3.5 flex flex-col gap-0.5">
             <span class="text-xs text-muted">{{ t('report.summary.planned') }}</span>
-            <span class="font-mono text-[22px] font-medium tabular text-base-content/80">
+            <span
+                class="font-mono text-lg sm:text-[22px] font-medium tabular [overflow-wrap:anywhere] text-base-content/80"
+            >
                 {{ duration(summary.planned.seconds) }}
             </span>
             <span class="text-xs text-muted">
                 {{ t('report.summary.items', { count: summary.planned.count }, summary.planned.count) }}
             </span>
         </div>
-        <div class="card-box px-4 py-3.5 flex flex-col gap-0.5">
+        <div class="card-box min-w-0 px-4 py-3.5 flex flex-col gap-0.5">
             <span class="text-xs text-after-clip">{{ t('report.summary.commercials') }}</span>
-            <span class="font-mono text-[22px] font-medium tabular">
+            <span class="font-mono text-lg sm:text-[22px] font-medium tabular [overflow-wrap:anywhere]">
                 {{ summary.commercials.count }} · {{ duration(summary.commercials.seconds) }}
             </span>
             <span class="text-xs text-muted">
@@ -69,20 +73,22 @@ const pickKicker = computed(() => {
                 }}
             </span>
         </div>
-        <div class="card-box px-4 py-3.5 flex flex-col gap-0.5">
+        <div class="card-box min-w-0 px-4 py-3.5 flex flex-col gap-0.5">
             <span class="text-xs text-live">{{ t('report.summary.lives') }}</span>
-            <span class="font-mono text-[22px] font-medium tabular">
+            <span class="font-mono text-lg sm:text-[22px] font-medium tabular [overflow-wrap:anywhere]">
                 {{ summary.lives.count }} · {{ duration(summary.lives.seconds) }}
             </span>
             <span class="text-xs text-muted truncate" :title="summary.lives.names.join(', ')">
                 {{ summary.lives.names.join(' · ') || t('report.summary.noLives') }}
             </span>
         </div>
-        <div class="card-box px-4 py-3.5 flex flex-col gap-0.5" :class="occurrences ? 'border-accent/50' : ''">
+        <div class="card-box min-w-0 px-4 py-3.5 flex flex-col gap-0.5" :class="occurrences ? 'border-accent/50' : ''">
             <span class="text-xs" :class="occurrences ? 'text-accent-text' : 'text-muted'">
                 {{ t('report.summary.occurrences') }}
             </span>
-            <span class="font-mono text-[22px] font-medium tabular">{{ occurrences }}</span>
+            <span class="font-mono text-lg sm:text-[22px] font-medium tabular [overflow-wrap:anywhere]">{{
+                occurrences
+            }}</span>
             <span class="text-xs text-muted">
                 {{ t('report.summary.occurrencesText', { cut: summary.cut, failed: summary.failed }) }}
             </span>
