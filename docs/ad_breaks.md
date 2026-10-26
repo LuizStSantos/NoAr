@@ -46,7 +46,38 @@ Saving restarts the playout.
   from now. They only mark the stream: what airs meanwhile is still the
   programme, as in a live whose encoder goes to commercials.
 
-Stretches without logo inside a video and the logo API are not breaks.
+- **Breaks marked inside a video**, where a break was edited into a
+  programme file: see below.
+
+Stretches without logo inside a video and the logo API are not breaks; a
+stretch becomes a break only when it is marked as one.
+
+### Breaks marked inside a video
+
+When a programme file has its commercial break edited in, mark where the
+programme leaves and where it comes back, the same way as the logo: in
+**Storage**, open the video's **Logo and breaks in this video** (or the same
+button in the Player's clip editor), choose **SCTE-35 breaks**, and while it
+plays press **Break starts here** and **Back from the break here**, or type
+the times. When the logo is already marked off there, **Use the stretches
+without logo** copies them.
+
+- Up to 16 breaks per video, in seconds of the video itself. They are kept
+  with the logo stretches in `<name>.logo.json`, as `"breaks"`, and count
+  wherever the video plays: the playlist and the Scheduler, from the next
+  time it starts.
+- Each one is a break like the others: announced the pre-roll ahead (three
+  copies), with a key frame at the splice points, and shown in the Player and
+  in Settings › Ad breaks. A break that starts less than the pre-roll into
+  the clip is announced as it starts.
+- When the playlist plays only part of the video, only the breaks in that
+  part count; one that runs past the end of the clip ends with it. When the
+  clip is cut short (skipped, interrupted by a scheduled event), the breaks
+  still to come are called off.
+- A marked break that overlaps another break (a run of commercials still on
+  air, a manual break) is not signalled; the log says so.
+- Commercials themselves never carry marked breaks: they are already part of
+  a break.
 
 ## What NoAr sends
 

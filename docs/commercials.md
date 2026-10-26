@@ -26,7 +26,7 @@ Scheduled events made only of commercials never show in the guide; their
 
 When a programme file has a commercial break edited into it, mark the
 stretches where the logo goes off instead: in **Storage**, open the
-video's **Logo in this video** (or the same button in the Player's clip editor)
+video's **Logo and breaks in this video** (or the same button in the Player's clip editor)
 and mark, while it plays, where the logo goes off and where it comes back, or
 type the times. Up to 16 stretches, in seconds of the video itself, so they
 hold whatever part of the video a playlist plays. The logo fades out and back
@@ -39,8 +39,12 @@ The stretches are kept next to the video in `<name>.logo.json`, like its
 { "hide": [{ "from": 750.0, "to": 990.5 }] }
 ```
 
-Videos with stretches show a "logo marked" tag in Storage. A live with a
+Videos with marks show a "marks" tag in Storage. A live with a
 break of its own uses the [logo API](api.md#logo-on-air) instead.
+
+The same panel marks the break itself for SCTE-35, so FAST platforms and ad
+servers can replace it: see
+[breaks marked inside a video](ad_breaks.md#breaks-marked-inside-a-video).
 
 ## Marking a folder
 

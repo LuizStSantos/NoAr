@@ -163,6 +163,26 @@ Process stop and restart remain available. The `ingest` field in current-media
 responses and playout events indicates an actual live takeover, not merely a
 listener waiting for a connection.
 
+Current-media responses and playout events also carry `output_link`: how an
+SRT, RTMP or UDP output reaches its destination
+([docs](output.md#when-the-destination-is-down)).
+
+```json
+"output_link": {
+  "state": "retrying",
+  "destination": "rtmp://live.example.org/…",
+  "error": "Connection refused",
+  "seconds": 12,
+  "connections": 0
+}
+```
+
+`state` is `idle` (no network output: HLS, desktop, a file), `connecting`,
+`listening` (an SRT listener waiting for a receiver), `connected` or
+`retrying`; `seconds` is the time in that state and `connections` how many
+times the destination was reached since the playout started. The address
+leaves out credentials, the query string and the RTMP stream key.
+
 ```bash
 curl -X POST http://127.0.0.1:8787/api/control/1/process \
   -H 'Authorization: Bearer <ACCESS_TOKEN>' \
@@ -215,12 +235,15 @@ Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md).
 | Method | Endpoint | Access | Description |
 | --- | --- | --- | --- |
 | `GET` | `/api/preview/{id}` | `GA, CA, U` | The channel output as a live MPEG-TS stream (`video/mp2t`). |
+| `GET` | `/api/preview/{id}?quality=light` | `GA, CA, U` | A lighter copy: 640×360, 15 frames per second, about 0.6 Mb/s. |
 
 The Player shows this stream. It is a copy of the packets the output
 encoders already produced, so it costs no extra encoding, works the same for
 HLS, RTMP and SRT outputs, and plays about a second behind the air. The
 response never ends while the client reads it; nothing is sent while the
-playout is stopped, and a client that falls behind skips ahead.
+playout is stopped, and a client that falls behind skips ahead. The light copy
+is encoded from it only while someone reads it
+([docs](output.md#light-and-high-quality)).
 
 ```bash
 curl -N http://127.0.0.1:8787/api/preview/1 \
@@ -265,8 +288,8 @@ rejected.
 | `POST` | `/api/file/{id}/access-token` | `{ "filename": "folder/file.mp4" }` |
 | `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
 | `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
-| `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: where the video keeps the logo off, `{ "hide": [{ "from": 750, "to": 990.5 }] }` |
-| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...] }`: seconds of the video, at most 16 stretches, not overlapping; an empty list removes them. See [commercials](commercials.md#a-break-inside-a-video). |
+| `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...] }` |
+| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35. At most 16 of each, not overlapping; empty lists remove them. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
 | `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
 | `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
 | `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |

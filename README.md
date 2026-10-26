@@ -12,10 +12,17 @@ Baecker, whose engine, playlist format and API it keeps and extends. On top of
 them it adds:
 
 - **Player**: live preview straight from the output (about a second behind
-  the air, for HLS, RTMP or SRT), a clock with what is on air and what comes
-  next, transport controls, and the day's playlist grouped by program the way
-  the guide names it. Drag files from the library, or add a whole program
-  folder: its next episode, every video in order, or the ones you pick.
+  the air, for HLS, RTMP or SRT), in a **light** quality for slow connections
+  or the output's own; a clock with what is on air and what comes next;
+  transport controls; and the day's playlist grouped by program the way the
+  guide names it. A **build view** puts the library and the list on top:
+  add files or a whole program folder (its next episode, every video in
+  order, or the ones you pick) at the end, after the selection or at a time,
+  with undo, keys and how much of the day is still to fill.
+- **Output that keeps going**: an SRT, RTMP or UDP destination that is down
+  never stops the channel. NoAr reconnects by itself, the preview keeps
+  playing, and the Player says whether the output is sending, waiting for a
+  receiver or cannot connect, and why ([docs](docs/output.md#when-the-destination-is-down)).
 - **Scheduler**: place a break, a clip or a live show (SRT, RTMP, HLS) at a
   time over whatever is on air, either waiting for the current clip to end or
   interrupting it and resuming at the exact point, without dropping the
@@ -31,10 +38,11 @@ them it adds:
   length you choose, and cross-fades when swapped for another image. It can
   also be hidden or swapped on air by API, for example from the encoder of a
   live, with a tutorial in the settings ([docs](docs/logo.md)).
-- **Ad breaks (SCTE-35)**: runs of commercials, and breaks marked by hand,
-  are marked in the SRT or UDP output for FAST platforms and ad servers to
-  replace, frame-accurately and announced ahead, with the next break and the
-  one on air shown in the Player ([docs](docs/ad_breaks.md)).
+- **Ad breaks (SCTE-35)**: runs of commercials, breaks marked by hand, and
+  breaks marked inside a programme video (where it leaves and comes back,
+  like the logo) are signalled in the SRT or UDP output for FAST platforms
+  and ad servers to replace, frame-accurately and announced ahead, with the
+  next break and the one on air shown in the Player ([docs](docs/ad_breaks.md)).
 - **Report**: what aired, with the actual times and how each item ended, and
   what is still to come, for a day or a period; narrowed to one commercial,
   program, live or event when needed, and downloaded as a PDF or a
@@ -67,10 +75,21 @@ how each video will show up in the guide.
 
 ![Storage](docs/images/storage.png)
 
+**Building a playlist**: the build view, with the library next to the list,
+undo, and what is still missing to fill the day.
+
+![Building a playlist](docs/images/builder.png)
+
 **Adding a program to the playlist**: the next episode, the whole folder or
-the videos you pick.
+the videos you pick, at the end, after the selection or at a time.
 
 ![Adding a program folder](docs/images/program-folder.png)
+
+**Logo and breaks in a video**: where a break edited into the programme
+leaves and comes back, signalled with SCTE-35, next to where the logo goes
+off.
+
+![Marks in a video](docs/images/marks.png)
 
 **Report**: the day so far with the actual times, and what is still to come
 from the playlist and the Scheduler, with totals for commercials and lives.
@@ -121,10 +140,9 @@ Forgot the admin password? Set a new one from the server with
 `docker exec -it noar noar --user-set`; see
 [docs/docker.md](docs/docker.md#forgotten-admin-password).
 
-If the Player preview stays black with an SRT output in listener mode
-(`?mode=listener`), that output sends nothing, to the receiver or to the
-preview, until a receiver connects; the Player says so. See
-[docs/output.md](docs/output.md#player-preview).
+The Player preview keeps playing even when the SRT or RTMP destination is
+down or an SRT listener waits for its receiver; the line under it says how the
+output is doing. See [docs/output.md](docs/output.md#when-the-destination-is-down).
 
 ## Versions
 
