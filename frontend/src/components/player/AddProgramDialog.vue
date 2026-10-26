@@ -253,7 +253,10 @@ onBeforeUnmount(() => {
                         <input v-model="choice" type="radio" value="next" class="radio radio-xs radio-accent mt-1" />
                         <span class="min-w-0 flex-1">
                             <span class="block font-semibold">{{ t('onair.program.next') }}</span>
-                            <span class="block text-[13px] text-base-content/85 [overflow-wrap:anywhere]" :title="next?.name">
+                            <span
+                                class="block text-[13px] text-base-content/85 [overflow-wrap:anywhere]"
+                                :title="next?.name"
+                            >
                                 {{ next?.name }} · {{ lengthLabel(next?.duration ?? 0) }}
                             </span>
                             <span class="block text-xs text-muted [overflow-wrap:anywhere]">{{ lastLine }}</span>
