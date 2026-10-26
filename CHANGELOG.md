@@ -64,6 +64,21 @@ one is tagged.
   air; the scheduler now tries again on its next check.
 - Changing a scheduled event when part of its bookkeeping failed could leave
   the old version on air; the change now always takes effect.
+- A scheduled event cut by a short output failure (for example the RTMP
+  server dropping the connection) was closed as failed; it now goes back on
+  air where it was when the playout restarts, like after a stop.
+- After a stall (a slow file open, a long fallback), the output sent all the
+  time it had fallen behind at once, flooding RTMP, SRT and UDP receivers.
+  It now catches up only on delays under a second and otherwise carries on
+  from the late packet.
+- A first start interrupted while setting up the database could make every
+  later start fail; setting up is now done in one step.
+- Creating channels at the same time as other database writes could fail with
+  "database is locked".
+- Before an update changes the database, NoAr now keeps a copy of it to go
+  back to ([docs](docs/docker.md#if-an-update-goes-wrong)).
+- Deleting a channel no longer deletes the record of what it aired: the
+  entries move to an archive table ([docs](docs/report.md)).
 - Start, stop and restart can no longer run twice at once, and a restart
   finishes even if the browser disconnects halfway. Before, that could leave
   the channel off air and refusing every further command until NoAr was

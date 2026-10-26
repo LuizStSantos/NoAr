@@ -89,13 +89,34 @@ where
     Ok(result)
 }
 
+/// Delete a channel and everything of it, keeping its as-run in
+/// `as_run_archive`: the broadcast record must outlive the channel.
 pub async fn delete_channel(
     pool: &SqlitePool,
     id: &i32,
 ) -> Result<SqliteQueryResult, ProcessError> {
+    const ARCHIVE: &str = "INSERT INTO as_run_archive (channel_id, channel_name, deleted_at,
+            started_at, ended_at, source, title, kind, origin, event_id, event_title,
+            scheduled_at, seek, planned_seconds, replaces, status, reason, detail)
+        SELECT as_run.channel_id, channels.name, $2,
+            started_at, ended_at, source, title, kind, origin, event_id, event_title,
+            scheduled_at, seek, planned_seconds, replaces, status, reason, detail
+        FROM as_run JOIN channels ON channels.id = as_run.channel_id
+        WHERE as_run.channel_id = $1";
     const QUERY: &str = "DELETE FROM channels WHERE id = $1";
 
-    let result = sqlx::query(QUERY).bind(id).execute(pool).await?;
+    let mut transaction = pool.begin().await?;
+
+    sqlx::query(ARCHIVE)
+        .bind(id)
+        .bind(chrono::Utc::now().timestamp_millis())
+        .execute(&mut *transaction)
+        .await?;
+    let result = sqlx::query(QUERY)
+        .bind(id)
+        .execute(&mut *transaction)
+        .await?;
+    transaction.commit().await?;
 
     Ok(result)
 }
@@ -142,7 +163,10 @@ pub async fn create_channel_records(
     conn: &SqlitePool,
     target_channel: Channel,
 ) -> Result<Channel, ServiceError> {
-    let mut transaction = conn.begin().await?;
+    // It reads the ingest ports in use before it writes: an immediate
+    // transaction takes the write lock first, so a concurrent writer makes it
+    // wait (busy timeout) instead of failing on a stale snapshot.
+    let mut transaction = conn.begin_with("BEGIN IMMEDIATE").await?;
     let configured_ingest_urls = handles::select_rtmp_ingest_urls(&mut *transaction).await?;
     let ingest_url = default_ingest_url(next_available_ingest_port(&configured_ingest_urls)?);
     let channel = handles::insert_channel(&mut *transaction, target_channel).await?;
@@ -274,6 +298,62 @@ mod tests {
         .unwrap();
 
         assert_eq!(assigned_roles, [1, 1]);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn channels_created_at_the_same_time_all_succeed_with_their_own_port() {
+        use std::str::FromStr;
+
+        use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode};
+
+        let path = std::env::temp_dir().join(format!("noar-channels-{}.db", uuid::Uuid::new_v4()));
+        let options = SqliteConnectOptions::from_str(&path.to_string_lossy())
+            .unwrap()
+            .create_if_missing(true)
+            .journal_mode(SqliteJournalMode::Wal)
+            .busy_timeout(std::time::Duration::from_secs(5));
+        let pool = SqlitePoolOptions::new()
+            .max_connections(3)
+            .connect_with(options)
+            .await
+            .unwrap();
+        handles::db_migrate(&pool).await.unwrap();
+
+        let tasks = (0..6)
+            .map(|n| {
+                let pool = pool.clone();
+                tokio::spawn(async move {
+                    create_channel_records(
+                        &pool,
+                        Channel {
+                            name: format!("channel-{n}"),
+                            ..Channel::default()
+                        },
+                    )
+                    .await
+                })
+            })
+            .collect::<Vec<_>>();
+
+        for task in tasks {
+            task.await.unwrap().unwrap();
+        }
+
+        let urls: Vec<String> = sqlx::query_scalar(
+            "SELECT identifier FROM config_live_input
+                WHERE backend = 'rtmp' AND takeover_mode = 'connection'",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        let unique = urls.iter().collect::<HashSet<_>>();
+        assert_eq!(urls.len(), 7);
+        assert_eq!(unique.len(), 7);
+
+        pool.close().await;
+        for suffix in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{}{suffix}", path.to_string_lossy()));
+        }
     }
 
     #[tokio::test]
@@ -414,5 +494,60 @@ mod tests {
                 .unwrap();
             assert_eq!(count, 0, "orphaned row in {table}");
         }
+    }
+
+    #[tokio::test]
+    async fn deleting_a_channel_keeps_its_as_run_in_the_archive() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        handles::db_migrate(&pool).await.unwrap();
+        let channel = create_channel_records(
+            &pool,
+            Channel {
+                name: "Sports".to_string(),
+                ..Channel::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        for (started, title) in [(1_000, "Match"), (2_000, "Highlights")] {
+            sqlx::query(
+                "INSERT INTO as_run (channel_id, started_at, ended_at, source, title, kind, origin, status)
+                 VALUES ($1, $2, $2 + 500, 'clip.mp4', $3, 'program', 'playlist', 'completed')",
+            )
+            .bind(channel.id)
+            .bind(started)
+            .bind(title)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        handles::delete_channel(&pool, &channel.id).await.unwrap();
+
+        let live: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM as_run WHERE channel_id = $1")
+            .bind(channel.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let archived: Vec<(i32, String, String)> = sqlx::query_as(
+            "SELECT channel_id, channel_name, title FROM as_run_archive ORDER BY started_at",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(live, 0);
+        assert_eq!(
+            archived,
+            vec![
+                (channel.id, "Sports".to_string(), "Match".to_string()),
+                (channel.id, "Sports".to_string(), "Highlights".to_string()),
+            ]
+        );
     }
 }

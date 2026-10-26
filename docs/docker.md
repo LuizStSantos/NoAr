@@ -128,6 +128,16 @@ Settings › Updates then shows **Updater connected**, and offers:
 - **Update on its own**: every day at the given time, when a new version is
   out.
 
+### If an update goes wrong
+
+Before a new version changes the database, NoAr copies it next to itself, as
+`noar.db.pre-update-<date>-<time>-v<N>.bak` in the database folder
+(`/data/db` in the container); the three newest copies are kept. To go back:
+stop the container, run the previous image tag again, and put the copy in
+place of `noar.db` (removing `noar.db-wal` and `noar.db-shm` beside it). If
+the copy cannot be made, for example on a full disk, the log says so and the
+update goes on.
+
 The updater only replaces containers labelled
 `com.centurylinklabs.watchtower.enable: "true"`, which the compose file puts
 on NoAr. A private image needs the `docker login ghcr.io` credentials mounted

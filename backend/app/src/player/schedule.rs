@@ -830,9 +830,10 @@ pub(crate) async fn play_queued_event(
     manager.list_init.store(true, Ordering::SeqCst);
     manager.schedule.lock().active = None;
 
-    // The playout stopping cut the event: it stays open, and the next start
-    // puts it back on air if its time is not over.
-    if stopping(manager) {
+    // The playout stopping, or the output failing and the playout restarting,
+    // cut the event: it stays open, and the next start puts it back on air if
+    // its time is not over.
+    if stays_open(stopping(manager), &result) {
         info!(channel = channel_id;
             "Scheduled event <span class=\"log-addr\">{}</span> stopped with the playout",
             event.title
@@ -859,6 +860,16 @@ pub(crate) async fn play_queued_event(
     );
 
     result.map(|end| Some(end.stopped))
+}
+
+/// Whether an event cut short stays open for the next start to resume.
+///
+/// Only an output failure or a requested playout restart comes back as an
+/// error here (a clip that cannot play falls back instead), and the playout
+/// restarts after it: the event must not be closed as failed by a short
+/// output loss.
+fn stays_open<T>(stopping: bool, result: &Result<T, ServiceError>) -> bool {
+    stopping || result.is_err()
 }
 
 struct EventEnd {
@@ -1653,6 +1664,15 @@ mod tests {
             enabled: true,
             ..ScheduleEvent::default()
         }
+    }
+
+    #[test]
+    fn an_event_cut_by_the_output_stays_open_to_resume() {
+        let failed: Result<(), ServiceError> = Err(ServiceError::Conflict("output lost".into()));
+
+        assert!(stays_open(false, &failed));
+        assert!(stays_open(true, &Ok(())));
+        assert!(!stays_open(false, &Ok(())));
     }
 
     #[test]
