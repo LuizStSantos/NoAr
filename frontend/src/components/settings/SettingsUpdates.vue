@@ -206,7 +206,10 @@ async function copy(text: string) {
                             {{ t('settings.updates.changes', { count: latest.change_count }, latest.change_count) }} ·
                         </template>
                         <template v-else>{{ t('settings.updates.changesUnknown') }} · </template>
-                        <span class="font-mono">{{ short(status.commit) || '?' }} → {{ short(latest.commit) }}</span>
+                        <span v-if="latest.version" class="font-mono">{{ status.version }} → {{ latest.version }}</span>
+                        <span v-else class="font-mono"
+                            >{{ short(status.commit) || '?' }} → {{ short(latest.commit) }}</span
+                        >
                     </span>
                 </div>
                 <a :href="latest.url" target="_blank" rel="noopener" class="link-accent text-[13px] pt-1">
@@ -296,7 +299,7 @@ async function copy(text: string) {
                         {{
                             status.commit
                                 ? t('settings.updates.newest')
-                                : t('settings.updates.latestIs', { commit: short(latest.commit) })
+                                : t('settings.updates.latestIs', { commit: latest.version ?? short(latest.commit) })
                         }}
                     </template>
                 </span>

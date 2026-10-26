@@ -32,6 +32,14 @@ one is tagged.
   the release pull request; merging it tags the version and publishes the
   release and images ([docs](docs/releasing.md#making-a-release)).
 
+### Changed
+
+- The `latest` image now is the newest stable release, never a build of
+  `main` or a release candidate; builds of `main` are published as `main`.
+  The update notice and **Update now** follow `latest`, so they offer only
+  releases, and show the version number
+  ([docs](docs/releasing.md#image-tags)).
+
 ### Fixed
 
 - A clip usually lasted one frame longer than its duration: its last audio

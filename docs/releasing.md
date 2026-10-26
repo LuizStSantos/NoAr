@@ -62,13 +62,15 @@ For a tag, the workflows then:
 
 | Tag | What it is |
 | --- | --- |
-| `latest` | The newest build of `main`. This is what `docker-compose.yml` uses and what the update notice compares with. |
+| `latest` | The newest stable release (never a release candidate). This is what `docker-compose.yml` uses, what the update notice compares with and what **Update now** installs. |
 | `X.Y.Z` | One release, never rebuilt. |
-| `X.Y` | The newest patch of a minor release. Pin this to get fixes only. |
-| `sha-abcdef0` | One commit of `main`. |
+| `X.Y` | The newest patch of a minor release. Pin this to get fixes only; the updater then stays on `X.Y`. |
+| `main` | The newest build of `main`, for following development. Not for production. |
+| `sha-abcdef0` | One commit, from `main` or a release, to go back to an exact build. |
 
-To stay on a release instead of following `main`, set the image in
-`docker-compose.yml` to `ghcr.io/luizstsantos/noar:1.0` (or `:1.0.0`).
+`latest` moves only when a release is published. To stay on one minor
+release and get only its fixes, set the image in `docker-compose.yml` to
+`ghcr.io/luizstsantos/noar:1.1` (or `:1.1.0` to stay on one release).
 
 ## Where the version shows
 

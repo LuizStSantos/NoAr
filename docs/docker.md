@@ -93,9 +93,9 @@ updates without building.
 ## Updates
 
 NoAr checks every six hours whether a newer image was published: it asks the
-GitHub API for the last successful image build of `main` and compares its
-commit with the one it was built from (the image build passes it in as the
-`NOAR_COMMIT` build argument). A newer image lights a dot on Settings and a
+GitHub API for the newest stable release whose image was built (the `latest`
+image) and compares its commit with the one NoAr was built from (the image
+build passes it in as the `NOAR_COMMIT` build argument). A newer image lights a dot on Settings and a
 notice on the home page for the global administrator; **Settings › Updates**
 lists what changed and shows the command that updates the server. The check
 can be turned off on that page, and **Check now** runs it at once.
