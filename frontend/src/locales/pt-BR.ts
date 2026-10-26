@@ -212,6 +212,14 @@ export default {
         show: 'Mostrar',
         videos: 'Vídeos',
         allFiles: 'Todos os arquivos',
+        conversion: {
+            queued: 'na fila para converter',
+            converting: 'convertendo {percent}%',
+            done: 'convertido',
+            skipped: 'já no formato',
+            failed: 'conversão falhou',
+            hint: 'Convertido para o formato da saída (Configurações › Playlist e armazenamento)',
+        },
         logoMarks: {
             title: 'Logo e breaks neste vídeo',
             open: 'Logo e breaks neste vídeo: {name}',
@@ -1849,6 +1857,9 @@ export default {
             addExtension: 'adicionar',
             removeExtension: 'Remover {name}',
             shuffle: 'Embaralhar',
+            convertUploads: 'Converter os vídeos enviados para o formato da saída',
+            convertUploadsHint:
+                'Ao terminar o envio, o vídeo é convertido uma vez para {width}×{height} a {fps} quadros/s, H.264 em alta qualidade e som AAC a 48 kHz, e fica no lugar do original (o mesmo nome; WebM, AVI e outros viram .mp4). No ar o NoAr não precisa mais redimensionar nem mudar a taxa de quadros, e arquivos com defeito são regravados a partir do que decodifica. A conversão usa CPU do servidor enquanto roda; vídeos que já estão no formato ficam como estão.',
             shuffleHint: 'No modo pasta e no tapa-buraco, toca em ordem aleatória.',
         },
         logo: {

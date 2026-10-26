@@ -2178,17 +2178,25 @@ impl VideoDecoder {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct VideoScale {
-    output_width: u32,
-    output_height: u32,
-    scaled_width: u32,
-    scaled_height: u32,
-    x_offset: u32,
-    y_offset: u32,
+pub(crate) struct VideoScale {
+    pub(crate) output_width: u32,
+    pub(crate) output_height: u32,
+    pub(crate) scaled_width: u32,
+    pub(crate) scaled_height: u32,
+    pub(crate) x_offset: u32,
+    pub(crate) y_offset: u32,
 }
 
 impl VideoScale {
-    fn new(input_width: u32, input_height: u32, cfg: &OutputConfig) -> Self {
+    /// The picture does not fill the output: black bars go around it.
+    pub(crate) fn needs_padding(&self) -> bool {
+        self.scaled_width != self.output_width
+            || self.scaled_height != self.output_height
+            || self.x_offset != 0
+            || self.y_offset != 0
+    }
+
+    pub(crate) fn new(input_width: u32, input_height: u32, cfg: &OutputConfig) -> Self {
         let (scaled_width, scaled_height) =
             fit_dimensions(cfg.width, cfg.height, input_width, input_height);
         let x_offset = even((cfg.width.saturating_sub(scaled_width)) / 2);
@@ -2224,7 +2232,7 @@ fn fit_dimensions(
     }
 }
 
-struct FrameRateConverter {
+pub(crate) struct FrameRateConverter {
     input_time_base: Rational,
     output_time_base: Rational,
     timestamps_reliable: bool,
@@ -2234,7 +2242,11 @@ struct FrameRateConverter {
 }
 
 impl FrameRateConverter {
-    fn new(input_time_base: Rational, output_fps: u32, timestamps_reliable: bool) -> Self {
+    pub(crate) fn new(
+        input_time_base: Rational,
+        output_fps: u32,
+        timestamps_reliable: bool,
+    ) -> Self {
         Self {
             input_time_base,
             output_time_base: Rational(1, output_fps as i32),
@@ -2245,7 +2257,7 @@ impl FrameRateConverter {
         }
     }
 
-    fn output_frames(&mut self, timestamp: Option<i64>) -> i64 {
+    pub(crate) fn output_frames(&mut self, timestamp: Option<i64>) -> i64 {
         let timestamp = if self.timestamps_reliable {
             timestamp
         } else {
@@ -2805,7 +2817,7 @@ fn black_video_frame_for_config(cfg: &OutputConfig) -> frame::Video {
     black_video_frame(cfg.width, cfg.height)
 }
 
-fn black_video_frame(width: u32, height: u32) -> frame::Video {
+pub(crate) fn black_video_frame(width: u32, height: u32) -> frame::Video {
     let mut frame = frame::Video::new(Pixel::YUV420P, width, height);
     fill_plane(&mut frame, 0, 16);
     fill_plane(&mut frame, 1, 128);
@@ -2833,7 +2845,7 @@ fn fill_plane(frame: &mut frame::Video, plane: usize, value: u8) {
     }
 }
 
-fn copy_video_frame(
+pub(crate) fn copy_video_frame(
     source: &frame::Video,
     target: &mut frame::Video,
     x_offset: u32,

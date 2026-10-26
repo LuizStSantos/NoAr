@@ -224,9 +224,38 @@ pub async fn upload_file(
     }
     .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
 
-    manager.storage.upload(payload, &obj.path, user.id).await?;
+    if let Some(file) = manager.storage.upload(payload, &obj.path, user.id).await? {
+        let config = manager.config.read().await.clone();
+        manager.conversions.enqueue(&config, &file);
+    }
 
     Ok(StatusCode::OK)
+}
+
+/// **Uploaded videos being converted to the output format**
+///
+/// ```BASH
+/// curl http://127.0.0.1:8787/api/file/1/conversions -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_conversions(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<crate::utils::convert::Conversion>>, ServiceError> {
+    ensure_any_authority(
+        &details,
+        &[&Role::GlobalAdmin, &Role::ChannelAdmin, &Role::User],
+    )?;
+    user.ensure_channel_or_admin(id)?;
+
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
+
+    Ok(Json(manager.conversions.list()))
 }
 
 pub async fn create_file_access_token(

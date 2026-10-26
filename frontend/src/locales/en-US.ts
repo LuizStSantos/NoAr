@@ -212,6 +212,14 @@ export default {
         show: 'Show',
         videos: 'Videos',
         allFiles: 'All files',
+        conversion: {
+            queued: 'queued to convert',
+            converting: 'converting {percent}%',
+            done: 'converted',
+            skipped: 'already in the format',
+            failed: 'conversion failed',
+            hint: 'Converted to the output format (Settings › Playlist and storage)',
+        },
         logoMarks: {
             title: 'Logo and breaks in this video',
             open: 'Logo and breaks in this video: {name}',
@@ -1842,6 +1850,9 @@ export default {
             addExtension: 'add',
             removeExtension: 'Remove {name}',
             shuffle: 'Shuffle',
+            convertUploads: 'Convert uploaded videos to the output format',
+            convertUploadsHint:
+                'When an upload ends, the video is converted once to {width}×{height} at {fps} frames/s, high-quality H.264 and 48 kHz AAC sound, and takes the place of the original (same name; WebM, AVI and others become .mp4). On air NoAr no longer scales it or changes its frame rate, and damaged files are rewritten from what decodes. The conversion uses server CPU while it runs; videos already in the format stay as they are.',
             shuffleHint: 'In folder mode and for the filler, play in random order.',
         },
         logo: {

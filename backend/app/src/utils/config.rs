@@ -932,6 +932,10 @@ pub struct Storage {
     pub filler_path: PathBuf,
     pub extensions: Vec<String>,
     pub shuffle: bool,
+    /// Convert uploaded videos to the output's size, frame rate and sample
+    /// rate when they arrive.
+    #[serde(default)]
+    pub convert_uploads: bool,
     #[serde(skip_deserializing)]
     pub shared_storage: bool,
 }
@@ -949,6 +953,7 @@ impl Storage {
                 .map(String::from)
                 .collect(),
             shuffle: config.storage_shuffle,
+            convert_uploads: config.storage_convert_uploads,
             shared_storage,
         }
     }

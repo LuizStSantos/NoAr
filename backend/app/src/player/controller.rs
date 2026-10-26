@@ -122,6 +122,8 @@ pub struct ChannelManager {
     pub splice_control: noar_engine::SpliceControl,
     /// How the network output reaches its destination; outlasts restarts.
     pub output_link: noar_engine::OutputLink,
+    /// Uploaded videos being converted to the output format.
+    pub conversions: crate::utils::convert::Conversions,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
     /// Opens the next clip, live or event ahead of its turn.
@@ -160,6 +162,7 @@ impl ChannelManager {
         system: SystemStat,
     ) -> Result<Self, ServiceError> {
         let channel_extensions = channel.extra_extensions.clone();
+        let conversions = crate::utils::convert::Conversions::new(channel.id);
         let mut extensions = config.storage.extensions.clone();
         let mut extra_extensions = channel_extensions
             .split(',')
@@ -213,6 +216,7 @@ impl ChannelManager {
             logo_control: noar_engine::LogoControl::default(),
             splice_control: noar_engine::SpliceControl::default(),
             output_link: noar_engine::OutputLink::default(),
+            conversions,
             audio_level: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
             preloader: Arc::new(Mutex::new(Preloader::default())),

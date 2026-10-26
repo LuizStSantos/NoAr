@@ -118,6 +118,7 @@ pub async fn select_configuration(
         storage.filler AS storage_filler,
         storage.extensions AS storage_extensions,
         storage.shuffle AS storage_shuffle,
+        storage.convert_uploads AS storage_convert_uploads,
         task.enable AS task_enable, task.path AS task_path,
         output.id AS output_id
     FROM config c
@@ -380,12 +381,13 @@ pub async fn update_configuration_on(
     .execute(&mut *connection)
     .await?;
     sqlx::query(
-        "UPDATE config_storage SET filler = $2, extensions = $3, shuffle = $4 WHERE config_id = $1",
+        "UPDATE config_storage SET filler = $2, extensions = $3, shuffle = $4, convert_uploads = $5 WHERE config_id = $1",
     )
     .bind(id)
     .bind(config.storage.filler)
     .bind(config.storage.extensions.join(";"))
     .bind(config.storage.shuffle)
+    .bind(config.storage.convert_uploads)
     .execute(&mut *connection)
     .await?;
     sqlx::query("UPDATE config_task SET enable = $2, path = $3 WHERE config_id = $1")

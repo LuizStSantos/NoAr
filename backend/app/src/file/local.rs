@@ -368,7 +368,7 @@ impl LocalStorage {
         mut data: Multipart,
         path: &Path,
         user_id: i32,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<Option<PathBuf>, ServiceError> {
         let mut file_name: Option<String> = None;
         let mut start: Option<u64> = None;
         let mut end: Option<u64> = None;
@@ -407,9 +407,11 @@ impl LocalStorage {
         if write_upload_chunk(&upload, start, end, &chunk_data).await? {
             finalize_upload(&output_file, &upload).await?;
             info!("Upload complete: {file_name}");
+
+            return Ok(Some(output_file));
         }
 
-        Ok(())
+        Ok(None)
     }
 
     pub async fn watchman(

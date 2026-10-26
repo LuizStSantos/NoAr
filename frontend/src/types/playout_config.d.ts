@@ -114,7 +114,12 @@ min_break: number, max_break: number,
  */
 key: string, };
 
-export type Storage = { filler: string, extensions: Array<string>, shuffle: boolean, shared_storage: boolean, };
+export type Storage = { filler: string, extensions: Array<string>, shuffle: boolean, 
+/**
+ * Convert uploaded videos to the output's size, frame rate and sample
+ * rate when they arrive.
+ */
+convert_uploads: boolean, shared_storage: boolean, };
 
 export type StreamType = "rtmp" | "srt" | "udp" | "custom";
 

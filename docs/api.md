@@ -287,6 +287,7 @@ rejected.
 | `POST` | `/api/file/{id}/remove` | `{ "source": "file.mp4", "recursive": false }` |
 | `GET` | `/api/file/{id}/upload?path=folder&file_name=clip.mp4&size=1234&batch_id=<ID>` | Returns already received byte ranges for a resumable upload |
 | `PUT` | `/api/file/{id}/upload?path=folder` | Chunked `multipart/form-data` upload |
+| `GET` | `/api/file/{id}/conversions` | Uploaded videos queued, being or recently converted to the output format: `[{ "path", "converted", "state", "progress", "error", "updated" }]`; `state` is `queued`, `converting`, `done`, `skipped` or `failed`. See [Converting uploaded videos](uploads.md). |
 | `PUT` | `/api/file/{id}/import?file=list.m3u&date=YYYY-MM-DD` | `multipart/form-data` with a file field |
 | `POST` | `/api/file/{id}/access-token` | `{ "filename": "folder/file.mp4" }` |
 | `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |

@@ -56,6 +56,7 @@ pub fn routes() -> Router<AppState> {
                 )
                 .route("/file/{id}/sheet", post(get_sheet).put(update_sheet))
                 .route("/file/{id}/commercial", put(mark_commercial))
+                .route("/file/{id}/conversions", get(get_conversions))
                 .route(
                     "/file/{id}/logo-marks",
                     post(get_logo_marks).put(update_logo_marks),

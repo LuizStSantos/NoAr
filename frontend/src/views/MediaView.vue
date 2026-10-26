@@ -24,6 +24,7 @@ import GenericModal from '@/components/utils/GenericModal.vue'
 import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 
 import { authFetch } from '@/composables/authFetch'
+import { type Conversion, useConversions } from '@/composables/conversions'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
 import {
@@ -556,10 +557,30 @@ async function load(path: string) {
     await mediaStore.getTree(`/${path}`, false, true)
 }
 
+// Uploaded videos converting to the output format; the folder reloads as
+// each one ends, for its new size or name.
+const conversions = useConversions(channelId, () => refresh())
+
+function conversionOf(name: string): Conversion | undefined {
+    return conversions.byPath.value.get(storageJoin(current.value, name).replace(/^\/+/, ''))
+}
+
+function conversionLabel(conversion: Conversion): string {
+    if (conversion.state === 'converting') {
+        return t('storage.conversion.converting', { percent: Math.round(conversion.progress * 100) })
+    }
+
+    return t(`storage.conversion.${conversion.state}`)
+}
+
 // A queued file reached the folder on screen (or the folder of its sheet).
 watch(
     () => uploads.landed,
     (landed) => {
+        if (landed && landed.channelId === channelId.value) {
+            conversions.poll()
+        }
+
         if (landed && landed.channelId === channelId.value && landed.folder === current.value) {
             refresh()
         }
@@ -607,6 +628,7 @@ async function loadDisk() {
 }
 
 onMounted(async () => {
+    conversions.poll()
     // Other pages link to a folder with `?path=` (the log, for example).
     const linked = typeof route.query.path === 'string' ? storageJoin(route.query.path) : null
 
@@ -1364,6 +1386,19 @@ const uploadAccept = computed(() =>
                                             >
                                                 {{ t('storage.logoMarks.badge') }}
                                             </button>
+                                            <span
+                                                v-if="conversionOf(row.name)"
+                                                class="shrink-0 text-[11px] rounded-md px-1.5 leading-4 border"
+                                                :class="
+                                                    conversionOf(row.name)?.state === 'failed'
+                                                        ? 'text-error border-error/50'
+                                                        : 'text-muted border-line-strong'
+                                                "
+                                                :title="conversionOf(row.name)?.error ?? t('storage.conversion.hint')"
+                                                role="status"
+                                            >
+                                                {{ conversionLabel(conversionOf(row.name)!) }}
+                                            </span>
                                             <span
                                                 v-if="!isImage(row.name) && !isVideo(row.file)"
                                                 class="truncate"
