@@ -69,7 +69,9 @@ without logo** copies them.
 - Each one is a break like the others: announced the pre-roll ahead (three
   copies), with a key frame at the splice points, and shown in the Player and
   in Settings › Ad breaks. A break that starts less than the pre-roll into
-  the clip is announced as it starts.
+  the clip is announced as it starts. In the status and the
+  [API](api.md) their `source` is `marked` (the others are `commercials` and
+  `manual`).
 - When the playlist plays only part of the video, only the breaks in that
   part count; one that runs past the end of the clip ends with it. When the
   clip is cut short (skipped, interrupted by a scheduled event), the breaks

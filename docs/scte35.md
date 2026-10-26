@@ -1,7 +1,8 @@
 **SCTE-35 study**
 ================
 
-*Status: step 2, SCTE-35 on the SRT/UDP output, is done; how to use it is in
+*Status: step 2, SCTE-35 on the SRT/UDP output, is done, with breaks marked
+inside videos since NoAr 1.2; how to use it is in
 [Ad breaks (SCTE-35)](ad_breaks.md). Written for NoAr 1.0.0 (October 2026) to
 decide whether and in what order NoAr should signal and read ad breaks, and
 kept up to date with the decisions taken since: one fixed signal from NoAr,

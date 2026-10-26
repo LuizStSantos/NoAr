@@ -350,6 +350,9 @@ browser `EventSource` URL.
 3. Connect to `GET /data/event/{id}?endpoint=playout&uuid=<UUID>` or
    `GET /data/event/{id}?endpoint=system&uuid=<UUID>`.
 
+Playout events carry the same data as `media/current`, `output_link`
+included (see [Playout control](#playout-control)).
+
 The UUID expires after 30 minutes and is bound to the request IP address.
 
 ## Public HLS files

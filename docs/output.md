@@ -89,7 +89,7 @@ and not with NoAr itself, which serves it for previewing.**
 
 ## Player preview
 
-Whatever the output mode (HLS, RTMP, SRT), the Player shows NoAr's own
+Whatever the output mode (HLS, RTMP, SRT, UDP), the Player shows NoAr's own
 copy of the encoded output: the first rendition is also sent, as MPEG-TS, to
 a local UDP port, and the browser receives it from
 [`/api/preview/{id}`](api.md#live-preview) about a second behind the air.
@@ -141,8 +141,9 @@ Before NoAr 1.2, a destination that refused the connection stopped the
 channel, which restarted every few seconds with a black preview, and an SRT
 listener held the whole output until a receiver connected.
 
-Other network outputs (for example a custom muxer to `tcp://` or `rist://`)
-still open directly, and a failure there restarts the playout as before.
+This covers every network output written as MPEG-TS or FLV, whatever the
+protocol. An output with another muxer (for example RTSP) still opens
+directly, and a failure there restarts the playout as before.
 
 The outside preview address in Settings › General is optional. Set it only to
 check the output another way, such as the public HLS of a CDN; the Player then

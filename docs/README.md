@@ -28,11 +28,14 @@ Portuguese and English; menus are named here in English.
 
 ## Picture and output
 
-- **[Output modes](output.md)**: HLS, and RTMP, SRT or UDP streams.
+- **[Output modes](output.md)**: HLS, and RTMP, SRT or UDP streams; the
+  Player preview in light or high quality, and why a destination that is
+  down never stops the channel.
 - **[Logo](logo.md)**: placing the logo, where it goes off by itself, and
   hiding or swapping it on air by API.
 - **[Ad breaks (SCTE-35)](ad_breaks.md)**: breaks marked in the SRT or UDP
-  output for FAST platforms and ad servers, and how to check them.
+  output for FAST platforms and ad servers, including breaks marked inside a
+  video, and how to check them.
 - **[Closed captions](closed_captions.md)**: WebVTT files as HLS subtitles.
 
 ## Lives
