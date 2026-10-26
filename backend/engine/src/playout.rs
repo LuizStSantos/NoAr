@@ -610,6 +610,44 @@ fn ramp(distance: i64, frames: i64) -> f64 {
     }
 }
 
+/// Video packets skipped at most while waiting for a key frame: about ten
+/// seconds, in case a stream never flags its key frames.
+const MAX_PACKETS_BEFORE_KEY_FRAME: u32 = 250;
+
+/// Holds video back until a key frame when decoding starts mid-stream: after
+/// a seek in a file without an index (MPEG-TS) or on joining a live source.
+/// Before it, the decoder only has pictures that refer to ones it never got,
+/// which come out broken and fill the log with "non-existing PPS" and
+/// "missing reference picture" errors.
+struct KeyFrameGate {
+    waiting: bool,
+    skipped: u32,
+}
+
+impl KeyFrameGate {
+    fn new(mid_stream: bool) -> Self {
+        Self {
+            waiting: mid_stream,
+            skipped: 0,
+        }
+    }
+
+    /// Whether to leave this video packet out.
+    fn skip(&mut self, packet: &ffmpeg_next::Packet) -> bool {
+        if !self.waiting {
+            return false;
+        }
+
+        if packet.is_key() || self.skipped >= MAX_PACKETS_BEFORE_KEY_FRAME {
+            self.waiting = false;
+            return false;
+        }
+
+        self.skipped += 1;
+        true
+    }
+}
+
 /// Packets a decoder may reject in a row before its input counts as broken:
 /// a few seconds of video or audio, well past a damaged spot or a short loss.
 const MAX_REJECTED_PACKETS: u32 = 100;
@@ -709,6 +747,9 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
         seek_input(&mut ictx, seek_seconds)?;
     }
 
+    let mut key_frame_gate = KeyFrameGate::new(
+        seek_seconds.is_some_and(|seconds| seconds > 0.0) || is_live_input(label),
+    );
     let video_stream = ictx.streams().best(media::Type::Video);
     let audio_stream = ictx.streams().best(media::Type::Audio);
 
@@ -846,6 +887,10 @@ pub(crate) fn play_opened_input<O: FrameOutput>(
 
             if Some(stream_index) == video_index {
                 if !video_finished && let Some(video) = video.as_mut() {
+                    if key_frame_gate.skip(&packet) {
+                        continue;
+                    }
+
                     if let Some(diagnostics) = output.input_diagnostics() {
                         diagnostics.set_stage(LiveInputStage::ProcessingVideo);
                     }

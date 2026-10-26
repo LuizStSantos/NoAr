@@ -110,6 +110,20 @@ pub fn transcode_light_preview<F>(
 where
     F: FnMut(Vec<u8>) -> bool + Send + 'static,
 {
+    // Joining mid-stream, FFmpeg's stream analysis decodes pictures whose
+    // references it never got; those messages say nothing about the air.
+    crate::utils::logging::quiet_ffmpeg_logs(|| transcode(input, deliver, settings, stop))
+}
+
+fn transcode<F>(
+    input: Receiver<Vec<u8>>,
+    deliver: F,
+    settings: LightPreview,
+    stop: Arc<AtomicBool>,
+) -> Result<()>
+where
+    F: FnMut(Vec<u8>) -> bool + Send + 'static,
+{
     let feed = Feed {
         receiver: input,
         pending: Vec::new(),
@@ -117,9 +131,11 @@ where
         stop: stop.clone(),
     };
     let mut probe = Dictionary::new();
-    // Start quickly: the preview repeats its tables every 0.2 s.
-    probe.set("analyzeduration", "2000000");
-    probe.set("probesize", "2000000");
+    // A viewer joins mid-stream: the codec settings only come with the next
+    // key frame, a GOP away, and a 1080p GOP can pass 2 MB. The analysis
+    // ends as soon as it has them; these are only its limits.
+    probe.set("analyzeduration", "15000000");
+    probe.set("probesize", "33554432");
     let mut ictx = format::input_from_stream(
         StreamIo::from_read_with_capacity(feed, 64 * 1024)?,
         Some("preview.ts"),
@@ -195,6 +211,9 @@ where
         / i64::from(settings.fps.max(1))
         / i64::from(video_in_time_base.0.max(1));
     let mut last_kept: Option<i64> = None;
+    // The copy is joined mid-stream: wait for a key frame rather than
+    // decode pictures whose references never came (and log about each).
+    let mut key_frame_seen = false;
     let mut last_dts = [i64::MIN; 2];
     let mut decoded = frame::Video::empty();
     let mut scaled = frame::Video::empty();
@@ -233,7 +252,13 @@ where
             continue;
         }
 
-        if index != video_index || decoder.send_packet(&packet).is_err() {
+        if index != video_index {
+            continue;
+        }
+
+        key_frame_seen |= packet.is_key();
+
+        if !key_frame_seen || decoder.send_packet(&packet).is_err() {
             continue;
         }
 
