@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-10-27
+
 ### Added
 
 - Marks editor: **Watch stretch**, **Watch it go in** and **Watch it come
@@ -494,7 +496,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/LuizStSantos/NoAr/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/LuizStSantos/NoAr/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...v1.4.4
