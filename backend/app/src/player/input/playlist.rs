@@ -598,6 +598,17 @@ impl CurrentProgram {
 
         trace!("Clip length: {duration}, duration: {}", node.duration);
 
+        // Put in a playlist before it was converted to an .mp4 of the same name.
+        if let Some(converted) = crate::utils::convert::converted_in_place_of(&node.source) {
+            info!(
+                channel = self.channel_id;
+                "Playing the converted <span class=\"log-addr\">{converted}</span> in place of <span class=\"log-addr\">{}</span>",
+                node.source
+            );
+            node.source = converted;
+            node.probe = None;
+        }
+
         if node.probe.is_none()
             && !node.source.is_empty()
             && let Err(e) = node.add_probe(true).await

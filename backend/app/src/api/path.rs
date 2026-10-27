@@ -37,6 +37,10 @@ pub fn routes() -> Router<AppState> {
                 .route("/control/{id}/media/current", get(media_current))
                 .route("/control/{id}/process", post(process_control))
                 .route("/control/{id}/logo", get(get_logo_state).post(control_logo))
+                .route(
+                    "/control/{id}/lshape",
+                    get(get_lshape_state).post(control_lshape),
+                )
                 .route("/control/{id}/scte35", get(get_scte35_state))
                 .route("/control/{id}/scte35/break", post(insert_scte35_break))
                 .route(
@@ -84,6 +88,7 @@ pub fn routes() -> Router<AppState> {
                     get(get_playout_config).put(update_playout_config),
                 )
                 .route("/playout/config/{id}/test-alert", post(send_test_alert))
+                .route("/playout/config/{id}/keys/{kind}", post(update_remote_key))
                 .route("/playout/outputs/{id}", get(get_playout_outputs))
                 .route("/playout/codecs/{id}", get(get_playout_codecs))
                 .route("/program/{id}", get(get_program))
@@ -136,6 +141,10 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/logo/{id}/{action}",
             get(control_logo_with_key).post(control_logo_with_key),
+        )
+        .route(
+            "/lshape/{id}/{action}",
+            get(control_lshape_with_key).post(control_lshape_with_key),
         )
         .route(
             "/scte35/{id}/{action}",

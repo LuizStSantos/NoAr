@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
+import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import SpanBar from '@/components/storage/SpanBar.vue'
+import GenericModal from '@/components/utils/GenericModal.vue'
 import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
@@ -15,9 +17,9 @@ import { useIndex } from '@/stores/index'
 
 /**
  * Side panel that marks, while the video plays, the part of it that airs
- * (its trim), where it keeps the logo off and where its ad breaks are
+ * (its trim), where it keeps the logo off, where its ad breaks are
  * (signalled with SCTE-35), such as a commercial break edited into a
- * programme.
+ * programme, and where it goes into the L-shape.
  */
 const props = defineProps<{
     channelId: number
@@ -37,15 +39,66 @@ const indexStore = useIndex()
 
 const MAX_SPANS = 16
 
-type MarkKind = 'hide' | 'breaks'
+type MarkKind = 'hide' | 'breaks' | 'lshape'
 type Tab = MarkKind | 'trim'
 
-const marks = ref<VideoMarks>({ hide: [], breaks: [], trim: null })
-const baseline = ref<VideoMarks>({ hide: [], breaks: [], trim: null })
+const MARK_KINDS: MarkKind[] = ['hide', 'breaks', 'lshape']
+
+/** How each kind of mark looks: bar colour, labels, chip and icons in and out of a stretch. */
+const LOOK: Record<
+    MarkKind,
+    {
+        tone: 'logo' | 'break' | 'lshape'
+        scope: string
+        chip: string
+        bar: string
+        inside: string
+        outside: string
+        off: string
+        on: string
+    }
+> = {
+    hide: {
+        tone: 'logo',
+        scope: 'storage.logoMarks',
+        chip: 'bg-after-clip/15 text-after-clip',
+        bar: 'bg-after-clip/60',
+        inside: 'bi-eye-slash',
+        outside: 'bi-eye',
+        off: 'bi-eye-slash',
+        on: 'bi-eye',
+    },
+    breaks: {
+        tone: 'break',
+        scope: 'storage.breakMarks',
+        chip: 'bg-live/15 text-live',
+        bar: 'bg-live/60',
+        inside: 'bi-badge-ad',
+        outside: 'bi-tv',
+        off: 'bi-box-arrow-right',
+        on: 'bi-box-arrow-in-left',
+    },
+    lshape: {
+        tone: 'lshape',
+        scope: 'storage.lshapeMarks',
+        chip: 'bg-info/15 text-info',
+        bar: 'bg-info/60',
+        inside: 'bi-aspect-ratio',
+        outside: 'bi-fullscreen',
+        off: 'bi-aspect-ratio',
+        on: 'bi-fullscreen',
+    },
+}
+
+const marks = ref<VideoMarks>({ hide: [], breaks: [], trim: null, lshape: [], lshape_graphic: null })
+const baseline = ref<VideoMarks>({ hide: [], breaks: [], trim: null, lshape: [], lshape_graphic: null })
 /** Which marks the buttons and the list edit. */
 const kind = ref<Tab>(props.initialKind ?? 'hide')
+/** The kind of stretch being edited (the logo's while on the trim tab). */
+const markKind = computed<MarkKind>(() => (kind.value === 'trim' ? 'hide' : kind.value))
+const look = computed(() => LOOK[markKind.value])
 /** The list being edited; changes go straight into `marks`. */
-const spans = computed(() => marks.value[kind.value === 'breaks' ? 'breaks' : 'hide'])
+const spans = computed(() => marks.value[markKind.value])
 const loading = ref(true)
 const saving = ref(false)
 const videoUrl = ref('')
@@ -93,7 +146,13 @@ function normalized(value: VideoMarks): VideoMarks {
     const trim = value.trim
     const whole = trim && trim.from <= 0 && duration.value > 0 && trim.to >= duration.value - 0.05
 
-    return { hide: sortedOf(value.hide), breaks: sortedOf(value.breaks), trim: whole ? null : (trim ?? null) }
+    return {
+        hide: sortedOf(value.hide),
+        breaks: sortedOf(value.breaks),
+        trim: whole ? null : (trim ?? null),
+        lshape: sortedOf(value.lshape),
+        lshape_graphic: value.lshape_graphic?.trim() || null,
+    }
 }
 
 /** Playing the part that airs: stop at its end. */
@@ -187,17 +246,30 @@ function inside(list: LogoSpan[]): boolean {
 
 /** The logo is off at the play position. */
 const hiddenNow = computed(() => inside(marks.value.hide))
-/** The play position is inside a marked break. */
-const breakNow = computed(() => inside(marks.value.breaks))
+/** The play position is inside an L-shape stretch. */
+const lshapeNow = computed(() => inside(marks.value.lshape))
 /** Inside a mark of the kind being edited. */
-const insideNow = computed(() => (kind.value === 'hide' ? hiddenNow.value : breakNow.value))
+const insideNow = computed(() => inside(marks.value[markKind.value]))
 
 /** Labels of the kind being edited. */
 function label(key: string, values?: Record<string, unknown>): string {
-    const scope = kind.value === 'hide' ? 'storage.logoMarks' : 'storage.breakMarks'
+    const scope = look.value.scope
 
     return values ? t(`${scope}.${key}`, values) : t(`${scope}.${key}`)
 }
+
+/** The L-shape graphic and where the picture goes, as the channel puts it on air. */
+const lshapeUrl = ref('')
+const lshapeWindow = computed(() => {
+    const processing = configStore.playout?.processing
+    const share = (processing?.lshape_scale ?? 75) / 100
+    const corner = processing?.lshape_corner || 'top-right'
+
+    return {
+        transform: lshapeNow.value ? `scale(${share})` : 'none',
+        transformOrigin: `${corner.startsWith('top') ? 'top' : 'bottom'} ${corner.endsWith('left') ? 'left' : 'right'}`,
+    }
+})
 
 /** How far ahead a break is announced, from the ad break settings. */
 const prerollLabel = computed(() => `${configStore.playout?.scte35?.preroll ?? 6} s`)
@@ -213,7 +285,7 @@ const overlaps = computed(() =>
 const invalid = computed(
     () =>
         trimInvalid.value ||
-        (['hide', 'breaks'] as const).some((which) => {
+        MARK_KINDS.some((which) => {
             const list = sortedOf(marks.value[which])
 
             return (
@@ -316,6 +388,24 @@ async function load() {
     const channel = configStore.channels.find((entry) => entry.id === props.channelId)
 
     logoUrl.value = await storageImageUrl(channel, configStore.playout?.processing?.logo).catch(() => '')
+    await loadLShape()
+}
+
+/** The video's own L-shape graphic, else the channel's. */
+async function loadLShape() {
+    const channel = configStore.channels.find((entry) => entry.id === props.channelId)
+    const graphic = marks.value.lshape_graphic?.trim() || configStore.playout?.processing?.lshape
+
+    lshapeUrl.value = await storageImageUrl(channel, graphic).catch(() => '')
+}
+
+watch(() => marks.value.lshape_graphic, loadLShape)
+
+const pickingGraphic = ref(false)
+
+function pickGraphic(file: { path: string }) {
+    marks.value.lshape_graphic = file.path
+    pickingGraphic.value = false
 }
 
 /** The output picture, which the preview takes the shape of. */
@@ -421,7 +511,7 @@ onBeforeUnmount(() => {
                     class="flex flex-wrap gap-1 bg-base-200 rounded-md p-1 self-start"
                 >
                     <button
-                        v-for="option in ['trim', 'hide', 'breaks'] as const"
+                        v-for="option in ['trim', 'hide', 'breaks', 'lshape'] as const"
                         :key="option"
                         type="button"
                         role="radio"
@@ -432,13 +522,21 @@ onBeforeUnmount(() => {
                     >
                         <i
                             class="bi me-1"
-                            :class="{ trim: 'bi-scissors', hide: 'bi-eye-slash', breaks: 'bi-badge-ad' }[option]"
+                            :class="
+                                {
+                                    trim: 'bi-scissors',
+                                    hide: 'bi-eye-slash',
+                                    breaks: 'bi-badge-ad',
+                                    lshape: 'bi-aspect-ratio',
+                                }[option]
+                            "
                             aria-hidden="true"
                         />{{
                             {
                                 trim: t('storage.trim.kind'),
                                 hide: t('storage.logoMarks.kindLogo'),
                                 breaks: t('storage.logoMarks.kindBreaks'),
+                                lshape: t('storage.logoMarks.kindLShape'),
                             }[option]
                         }}
                         <span v-if="option !== 'trim'" class="text-muted font-normal"
@@ -460,6 +558,15 @@ onBeforeUnmount(() => {
                     class="relative w-full bg-black rounded-field overflow-hidden"
                     :style="{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }"
                 >
+                    <!-- The L-shape graphic, under the picture while it is in the L-shape. -->
+                    <img
+                        v-if="lshapeUrl && lshapeNow"
+                        :src="lshapeUrl"
+                        alt=""
+                        class="absolute inset-0 w-full h-full object-fill pointer-events-none"
+                        aria-hidden="true"
+                        @error="lshapeUrl = ''"
+                    />
                     <video
                         v-if="videoUrl && !videoFailed"
                         ref="video"
@@ -467,7 +574,8 @@ onBeforeUnmount(() => {
                         controls
                         preload="auto"
                         playsinline
-                        class="w-full h-full object-contain"
+                        class="relative w-full h-full object-contain transition-transform duration-[800ms]"
+                        :style="lshapeWindow"
                         @timeupdate="timeUpdate"
                         @seeked="position = ($event.target as HTMLVideoElement).currentTime"
                         @pause="previewingTrim = false"
@@ -629,7 +737,7 @@ onBeforeUnmount(() => {
                     <SpanBar
                         :duration="duration"
                         :spans="spans"
-                        :tone="kind === 'hide' ? 'logo' : 'break'"
+                        :tone="look.tone"
                         :position="position"
                         :pending="pendingFrom"
                         :trim="normalized(marks).trim"
@@ -638,13 +746,18 @@ onBeforeUnmount(() => {
                         @select="selectedSpan = $event"
                         @seek="seek"
                     />
-                    <!-- The other kind of marks, for reference. -->
-                    <div class="relative h-1.5 rounded-full bg-field overflow-hidden" aria-hidden="true">
+                    <!-- The other kinds of marks, for reference. -->
+                    <div
+                        v-for="other in MARK_KINDS.filter((which) => which !== markKind)"
+                        :key="other"
+                        class="relative h-1.5 rounded-full bg-field overflow-hidden"
+                        aria-hidden="true"
+                    >
                         <span
-                            v-for="(span, index) in marks[kind === 'hide' ? 'breaks' : 'hide']"
-                            :key="`other-${index}`"
+                            v-for="(span, index) in marks[other]"
+                            :key="`${other}-${index}`"
                             class="absolute inset-y-0"
-                            :class="kind === 'hide' ? 'bg-live/60' : 'bg-after-clip/60'"
+                            :class="LOOK[other].bar"
                             :style="{
                                 left: percent(span.from),
                                 width: `calc(${percent(span.to)} - ${percent(span.from)})`,
@@ -658,28 +771,12 @@ onBeforeUnmount(() => {
                         </span>
                         <span
                             class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium whitespace-nowrap"
-                            :class="
-                                insideNow
-                                    ? kind === 'hide'
-                                        ? 'bg-after-clip/15 text-after-clip'
-                                        : 'bg-live/15 text-live'
-                                    : 'bg-ok/15 text-ok'
-                            "
+                            :class="insideNow ? look.chip : 'bg-ok/15 text-ok'"
                             role="status"
                         >
-                            <i
-                                class="bi"
-                                :class="
-                                    kind === 'hide'
-                                        ? insideNow
-                                            ? 'bi-eye-slash'
-                                            : 'bi-eye'
-                                        : insideNow
-                                          ? 'bi-badge-ad'
-                                          : 'bi-tv'
-                                "
-                                aria-hidden="true"
-                            />{{ insideNow ? label('offHere') : label('onHere') }}
+                            <i class="bi" :class="insideNow ? look.inside : look.outside" aria-hidden="true" />{{
+                                insideNow ? label('offHere') : label('onHere')
+                            }}
                         </span>
                         <span class="flex flex-col leading-tight text-right">
                             <span class="text-muted">{{ t('storage.marks.length') }}</span>
@@ -695,11 +792,7 @@ onBeforeUnmount(() => {
                         :disabled="spans.length >= MAX_SPANS || insideNow"
                         @click="markOff"
                     >
-                        <i
-                            class="bi"
-                            :class="kind === 'hide' ? 'bi-eye-slash' : 'bi-box-arrow-right'"
-                            aria-hidden="true"
-                        />{{ label('markOff') }}
+                        <i class="bi" :class="look.off" aria-hidden="true" />{{ label('markOff') }}
                     </button>
                     <button
                         type="button"
@@ -707,11 +800,7 @@ onBeforeUnmount(() => {
                         :disabled="pendingFrom === null || position <= pendingFrom"
                         @click="markOn"
                     >
-                        <i
-                            class="bi"
-                            :class="kind === 'hide' ? 'bi-eye' : 'bi-box-arrow-in-left'"
-                            aria-hidden="true"
-                        />{{ label('markOn') }}
+                        <i class="bi" :class="look.on" aria-hidden="true" />{{ label('markOn') }}
                     </button>
                     <span v-if="pendingFrom !== null" class="text-[13px] text-after-clip" role="status">
                         {{ label('pending', { time: formatTime(pendingFrom) }) }}
@@ -723,6 +812,32 @@ onBeforeUnmount(() => {
                             {{ t('cancel') }}
                         </button>
                     </span>
+                </div>
+
+                <div v-if="kind === 'lshape'" class="flex flex-col gap-1.5">
+                    <span class="text-xs text-muted">{{ t('storage.lshapeMarks.graphic') }}</span>
+                    <div class="flex flex-wrap gap-2">
+                        <input
+                            :value="marks.lshape_graphic ?? ''"
+                            class="field-input font-mono text-[13px] flex-[1_1_240px] min-w-0"
+                            :placeholder="t('storage.lshapeMarks.graphicChannel')"
+                            :aria-label="t('storage.lshapeMarks.graphic')"
+                            spellcheck="false"
+                            @input="marks.lshape_graphic = ($event.target as HTMLInputElement).value || null"
+                        />
+                        <button type="button" class="btn-quiet" @click="pickingGraphic = true">
+                            {{ t('settings.choose') }}
+                        </button>
+                        <button
+                            v-if="marks.lshape_graphic"
+                            type="button"
+                            class="btn-quiet"
+                            @click="marks.lshape_graphic = null"
+                        >
+                            {{ t('storage.lshapeMarks.graphicReset') }}
+                        </button>
+                    </div>
+                    <span class="field-hint">{{ t('storage.lshapeMarks.graphicHint') }}</span>
                 </div>
 
                 <div v-if="kind !== 'trim'" class="flex flex-col gap-2">
@@ -821,5 +936,16 @@ onBeforeUnmount(() => {
                 </template>
             </footer>
         </section>
+
+        <GenericModal
+            :show="pickingGraphic"
+            :title="t('storage.lshapeMarks.graphic')"
+            hide-buttons
+            :modal-action="() => (pickingGraphic = false)"
+        >
+            <div class="w-[min(520px,90vw)] max-h-[60vh] flex flex-col">
+                <StoragePicker @pick="pickGraphic" />
+            </div>
+        </GenericModal>
     </div>
 </template>

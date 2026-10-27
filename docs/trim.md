@@ -27,10 +27,12 @@ on the **Trim** tab:
 Press **Save marks**. Trimmed videos show a "trimmed" tag in Storage; its
 tooltip gives the in and out points, and a click opens the panel again.
 
-The trim is kept with the video's other marks, in `<name>.logo.json` next to
+The trim is kept with the video's other marks, in `<name>.marks.json` next to
 it. Renaming, moving or deleting the video in Storage takes that file along;
 outside NoAr, move it with the video. Videos of the same name with other
-extensions (`Programa.mp4` and `Programa.mov`) share it.
+extensions (`Programa.mp4` and `Programa.mov`) share it. Before 1.5 the file
+was `<name>.logo.json`; that name is still read, and saving the marks renames
+it.
 
 ```json
 { "trim": { "from": 8.0, "to": 1790.5 } }

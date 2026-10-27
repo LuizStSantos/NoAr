@@ -36,8 +36,8 @@ Portuguese and English; menus are named here in English.
 - **[Output modes](output.md)**: HLS, and RTMP, SRT or UDP streams; the
   Player preview in light or high quality, and why a destination that is
   down never stops the channel.
-- **[Logo](logo.md)**: placing the logo, where it goes off by itself, and
-  hiding or swapping it on air by API.
+- **[Logo](logo.md)**: placing the logo, where it goes off by itself,
+  hiding or swapping it on air by API, and the L-shape.
 - **[Ad breaks (SCTE-35)](ad_breaks.md)**: breaks marked in the SRT or UDP
   output for FAST platforms and ad servers, including breaks marked inside a
   video, and how to check them.

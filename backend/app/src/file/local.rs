@@ -135,7 +135,11 @@ impl LocalStorage {
                 sheet_stems.insert(name[..name.len() - 4].to_lowercase());
             }
 
-            if let Some(stem) = name.to_lowercase().strip_suffix(".logo.json") {
+            let lower = name.to_lowercase();
+            if let Some(stem) = lower
+                .strip_suffix(crate::utils::logo_marks::MARKS_SUFFIX)
+                .or_else(|| lower.strip_suffix(crate::utils::logo_marks::LEGACY_MARKS_SUFFIX))
+            {
                 logo_stems.insert(stem.to_string());
             }
 
@@ -181,7 +185,7 @@ impl LocalStorage {
                 let marks = read_marks(&file).await;
 
                 (
-                    !marks.hide.is_empty() || !marks.breaks.is_empty(),
+                    !marks.hide.is_empty() || !marks.breaks.is_empty() || !marks.lshape.is_empty(),
                     marks.trim,
                 )
             } else {

@@ -627,6 +627,25 @@ pub struct Processing {
     /// clips, 0.4 s when switched from outside).
     #[serde(default)]
     pub logo_transition_seconds: Option<f64>,
+    /// The L-shape graphic, a full-screen image relative to the storage;
+    /// empty turns the L-shape off.
+    #[serde(default)]
+    pub lshape: String,
+    /// Size of the picture in the L-shape, in percent of the screen.
+    #[serde(default = "default_lshape_scale")]
+    pub lshape_scale: f64,
+    /// Corner the picture goes to: `top-right`, `top-left`, `bottom-right`
+    /// or `bottom-left`.
+    #[serde(default = "default_lshape_corner")]
+    pub lshape_corner: String,
+}
+
+fn default_lshape_scale() -> f64 {
+    75.0
+}
+
+fn default_lshape_corner() -> String {
+    "top-right".to_string()
 }
 
 /// How the logo comes up or goes off.
@@ -692,7 +711,43 @@ impl Processing {
             logo_transition_in: LogoTransition::new(&config.processing_logo_transition_in),
             logo_transition_out: LogoTransition::new(&config.processing_logo_transition_out),
             logo_transition_seconds: config.processing_logo_transition_seconds,
+            lshape: config.processing_lshape.clone(),
+            lshape_scale: config.processing_lshape_scale,
+            lshape_corner: config.processing_lshape_corner.clone(),
         }
+    }
+
+    /// The L-shape for a storage at `storage`, or none when it is off; why
+    /// the settings are not accepted.
+    pub fn lshape_config(
+        &self,
+        storage: &std::path::Path,
+    ) -> Result<Option<noar_engine::LShapeConfig>, String> {
+        if self.lshape.trim().is_empty() {
+            return Ok(None);
+        }
+
+        let corner = noar_engine::LShapeCorner::parse(&self.lshape_corner)
+            .ok_or_else(|| format!("unknown L-shape corner '{}'", self.lshape_corner))?;
+
+        if !(noar_engine::LSHAPE_MIN_SCALE..=noar_engine::LSHAPE_MAX_SCALE)
+            .contains(&self.lshape_scale)
+        {
+            return Err(format!(
+                "the picture in the L-shape must be between {} and {}% of the screen",
+                noar_engine::LSHAPE_MIN_SCALE,
+                noar_engine::LSHAPE_MAX_SCALE
+            ));
+        }
+
+        Ok(Some(noar_engine::LShapeConfig {
+            path: storage
+                .join(self.lshape.trim())
+                .to_string_lossy()
+                .to_string(),
+            scale: self.lshape_scale,
+            corner,
+        }))
     }
 
     /// How the logo comes up, goes off and gives way to another image, or

@@ -177,19 +177,26 @@ async function openPreview(source: string) {
                 v-if="playlistMode"
                 role="radiogroup"
                 :aria-label="t('onair.layout')"
-                class="inline-flex bg-base-200 border border-line-strong rounded-field p-[3px]"
+                class="inline-flex bg-base-200 border border-line-strong rounded-field p-1 gap-1"
             >
+                <!-- Building the playlist is the main work here: it stands out even when not chosen. -->
                 <button
                     v-for="option in [false, true]"
                     :key="String(option)"
                     type="button"
                     role="radio"
                     :aria-checked="building === option"
-                    class="border-0 rounded-md px-3 min-h-8 text-[13px] cursor-pointer inline-flex items-center gap-1.5"
-                    :class="building === option ? 'bg-base-300 text-base-content' : 'bg-transparent text-muted'"
+                    class="border-0 rounded-md px-4 min-h-10 text-[15px] font-medium cursor-pointer inline-flex items-center gap-2"
+                    :class="
+                        building === option
+                            ? 'bg-accent text-accent-content shadow-sm'
+                            : option
+                              ? 'bg-transparent text-accent-text hover:bg-raised'
+                              : 'bg-transparent text-muted hover:text-base-content hover:bg-raised'
+                    "
                     @click="building = option"
                 >
-                    <i class="bi" :class="option ? 'bi-list-check' : 'bi-broadcast'" aria-hidden="true" />
+                    <i class="bi text-[16px]" :class="option ? 'bi-list-check' : 'bi-broadcast'" aria-hidden="true" />
                     {{ option ? t('onair.layoutBuild') : t('onair.layoutLive') }}
                 </button>
             </div>

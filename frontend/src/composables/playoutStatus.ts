@@ -43,8 +43,12 @@ export function usePlayoutStatusStream() {
         },
     })
 
+    // Only a new login or another channel starts over. Every page reloads the
+    // channel list (same values, new objects): comparing an array made anew
+    // each time would count that as a change, blank the status ("stopped" for
+    // a moment, then on air again) and reopen the stream.
     watch(
-        () => [authStore.isLogin, configStore.channels[configStore.i]?.id],
+        () => `${authStore.isLogin}|${configStore.channels[configStore.i]?.id ?? ''}`,
         () => {
             playlistStore.resetStatus()
             playlistStore.playoutIsRunning = false

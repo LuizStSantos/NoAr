@@ -234,6 +234,11 @@ pub async fn validate_playlist(
                 }
             }
 
+            // Converted to an .mp4 since the playlist was made: the playout plays that.
+            if let Some(converted) = crate::utils::convert::converted_in_place_of(&item.source) {
+                item.source = converted;
+            }
+
             if item.audio.is_empty() {
                 if let Err(e) = item.add_probe(false).await {
                     error!(channel = id;
