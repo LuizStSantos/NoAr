@@ -11,6 +11,37 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- **Place the logo anywhere.** The logo's `move` takes `x` and `y` from 0
+  to 100 (shares of the room around it, on any output size) or `X%:Y%`,
+  besides the corners, which now include `top`, `bottom`, `left`, `right`
+  and `center`.
+- **Move the L-shape video to another corner on air.** The L-shape has a
+  `move` action (and `on` takes a `position`) with a corner and `scale` for
+  the video's size, for a graphic whose space for the video is in another
+  corner, until moved back.
+- Settings › Logo › Live graphics: a small screen to place the logo (click,
+  drag or arrow keys), and corner buttons and a size slider for the L-shape
+  video, each with a button back to its own place.
+
+### Fixed
+
+- A scheduled live from SRT, RTMP, HLS or UDP no longer freezes the channel
+  when the source's timestamps jump, as when its encoder restarts: the
+  picture goes on from the next frame instead of repeating one frame for the
+  length of the jump (while the source piled up unread) or waiting for the
+  time to catch up. Pacing no longer waits more than 2 s for one packet.
+- When a source changes its picture size or pixel format midway (an encoder
+  restarting with other settings), the scaling follows it instead of failing
+  the clip and showing black for the rest of the slot.
+
+### Removed
+
+- The German and Russian interface languages, which were mostly
+  untranslated. Whoever had chosen one gets the browser's language if NoAr
+  has it, else English.
+
 ## [1.5.1] - 2026-10-27
 
 ### Added

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import PositionPad, { type Shares } from '@/components/settings/PositionPad.vue'
 import RemoteKeyField from '@/components/settings/RemoteKeyField.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
@@ -27,9 +28,47 @@ interface LShapeStatus {
     on: boolean
     ready: boolean
     replacement: string | null
+    /** The corner the picture was moved to; null is the graphic's. */
+    position?: string | null
+    scale?: number | null
 }
 
-const CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
+const CORNER_SHARES: Record<string, Shares> = {
+    'top-left': { x: 0, y: 0 },
+    top: { x: 50, y: 0 },
+    'top-right': { x: 100, y: 0 },
+    left: { x: 0, y: 50 },
+    center: { x: 50, y: 50 },
+    right: { x: 100, y: 50 },
+    'bottom-left': { x: 0, y: 100 },
+    bottom: { x: 50, y: 100 },
+    'bottom-right': { x: 100, y: 100 },
+}
+
+/** The logo's box on the pad, in percent of the screen. */
+const LOGO_BOX = { width: 12, height: 12 * (16 / 9) }
+
+/**
+ * Where a position puts the box, as shares: `X%:Y%`, a place name, or an
+ * expression like `W-w-12:12` (read as its edge or middle).
+ */
+function sharesOf(position: string | null | undefined): Shares {
+    const value = position?.trim() ?? ''
+    const shares = /^([\d.]+)%?\s*:\s*([\d.]+)%?$/.exec(value)
+
+    if (CORNER_SHARES[value]) {
+        return CORNER_SHARES[value]
+    }
+
+    if (shares && value.includes('%')) {
+        return { x: Number(shares[1]), y: Number(shares[2]) }
+    }
+
+    const [x = '', y = ''] = value.split(':')
+    const axis = (part: string, full: RegExp) => (part.includes('/2') ? 50 : full.test(part) ? 100 : 0)
+
+    return { x: axis(x, /W|main_w/), y: axis(y, /H|main_h/) }
+}
 
 const { t } = useI18n()
 const authStore = useAuth()
@@ -76,6 +115,7 @@ const groups = computed(() => [
                 }),
             },
             { action: 'move', url: keyedUrl('logo', 'move', { position: 'bottom-left' }) },
+            { action: 'moveShares', url: keyedUrl('logo', 'move', { x: '90', y: '5' }) },
             { action: 'moveBack', url: keyedUrl('logo', 'move', { position: 'default' }) },
         ],
     },
@@ -90,6 +130,8 @@ const groups = computed(() => [
             { action: 'lshapeOnWith', url: keyedUrl('lshape', 'on', { graphic: graphicExample.value }) },
             { action: 'lshapeReplace', url: keyedUrl('lshape', 'replace', { graphic: graphicExample.value }) },
             { action: 'lshapeReset', url: keyedUrl('lshape', 'reset') },
+            { action: 'lshapeMove', url: keyedUrl('lshape', 'move', { position: 'bottom-left', scale: '70' }) },
+            { action: 'lshapeMoveBack', url: keyedUrl('lshape', 'move', { position: 'default' }) },
         ],
     },
 ])
@@ -119,6 +161,11 @@ const snippet = computed(() => {
             return [hide, show, lshapeOn, lshapeOff].map((url) => `curl -X POST "${url}"`).join('\n')
     }
 })
+
+const logoShares = computed(() => sharesOf(status.value?.position ?? processing.value.logo_position))
+const LSHAPE_CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
+const lshapeCorner = computed(() => lshape.value?.position ?? processing.value.lshape_corner)
+const lshapeScale = computed(() => lshape.value?.scale ?? processing.value.lshape_scale ?? 75)
 
 const stateText = computed(() => {
     if (!status.value) {
@@ -164,14 +211,15 @@ async function load() {
     lshape.value = shape.status === 'fulfilled' ? shape.value : null
 }
 
-async function send(action: 'hide' | 'show' | 'replace' | 'move', logo?: string, position?: string) {
+async function send(action: 'hide' | 'show' | 'replace' | 'move', logo?: string, place?: Shares | 'default') {
     busy.value = true
+    const where = place === 'default' ? { position: 'default' } : place
 
     try {
         status.value = await authFetch<LogoStatus>(`/api/control/${channelId.value}/logo`, {
             method: 'POST',
             headers: headers(),
-            body: JSON.stringify({ action, logo, position }),
+            body: JSON.stringify({ action, logo, ...where }),
         })
     } catch (error) {
         indexStore.msgAlert('error', error instanceof Error ? error.message : String(error), 4)
@@ -180,14 +228,18 @@ async function send(action: 'hide' | 'show' | 'replace' | 'move', logo?: string,
     }
 }
 
-async function sendLShape(action: 'on' | 'off' | 'replace' | 'reset', graphic?: string) {
+async function sendLShape(
+    action: 'on' | 'off' | 'replace' | 'reset' | 'move',
+    graphic?: string,
+    place?: { position: string; scale?: number },
+) {
     busy.value = true
 
     try {
         lshape.value = await authFetch<LShapeStatus>(`/api/control/${channelId.value}/lshape`, {
             method: 'POST',
             headers: headers(),
-            body: JSON.stringify({ action, graphic }),
+            body: JSON.stringify({ action, graphic, ...place }),
         })
     } catch (error: any) {
         indexStore.msgAlert('error', error?.data ?? t('settings.logo.remote.lshapeFailed'), 4)
@@ -251,21 +303,38 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
                 <button class="btn-quiet" :disabled="busy" @click="picking = 'now'">
                     <i class="bi bi-arrow-left-right" aria-hidden="true" />{{ t('settings.logo.remote.replace') }}
                 </button>
-                <label class="inline-flex items-center gap-2 text-[13px]">
-                    <span class="text-muted">{{ t('settings.logo.remote.moveTo') }}</span>
-                    <select
-                        class="field-input min-h-9 w-auto"
+            </div>
+            <div class="flex flex-wrap items-start gap-3 sm:ps-[5.625rem]">
+                <PositionPad
+                    class="sm:w-60"
+                    :shares="logoShares"
+                    :width="LOGO_BOX.width"
+                    :height="LOGO_BOX.height"
+                    :label="t('settings.logo.remote.logoPad')"
+                    :disabled="busy"
+                    @place="send('move', undefined, $event)"
+                />
+                <div class="flex flex-col gap-1.5 text-[13px] max-w-64">
+                    <span class="text-muted">{{ t('settings.logo.remote.padHint') }}</span>
+                    <span>
+                        {{ t('settings.logo.remote.moveTo') }}:
+                        <strong class="font-semibold">{{
+                            status?.position
+                                ? `${logoShares.x}% × ${logoShares.y}%`
+                                : t('settings.logo.remote.moveDefault')
+                        }}</strong>
+                    </span>
+                    <button
+                        v-if="status?.position"
+                        class="btn-quiet self-start"
                         :disabled="busy"
-                        :value="status?.position ? 'custom' : 'default'"
-                        @change="send('move', undefined, ($event.target as HTMLSelectElement).value)"
+                        @click="send('move', undefined, 'default')"
                     >
-                        <option value="default">{{ t('settings.logo.remote.moveDefault') }}</option>
-                        <option v-for="corner in CORNERS" :key="corner" :value="corner">
-                            {{ t(`lshape.corners.${corner}`) }}
-                        </option>
-                        <option v-if="status?.position" value="custom" disabled>{{ status.position }}</option>
-                    </select>
-                </label>
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />{{
+                            t('settings.logo.remote.moveBack')
+                        }}
+                    </button>
+                </div>
             </div>
 
             <!-- The L-shape, now. -->
@@ -294,6 +363,61 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
                 <span v-if="lshape && !lshape.ready" class="basis-full field-hint">{{
                     t('settings.logo.remote.lshapeNotReady')
                 }}</span>
+            </div>
+            <div v-if="lshape?.ready" class="flex flex-wrap items-start gap-3 sm:ps-[5.625rem]">
+                <div
+                    role="group"
+                    :aria-label="t('settings.logo.remote.lshapePad')"
+                    class="grid grid-cols-2 gap-1.5 aspect-video w-40 rounded-md border border-line-strong bg-field p-1.5"
+                >
+                    <button
+                        v-for="corner in LSHAPE_CORNERS"
+                        :key="corner"
+                        type="button"
+                        class="rounded-sm border cursor-pointer disabled:cursor-not-allowed"
+                        :class="
+                            lshapeCorner === corner
+                                ? 'bg-accent border-accent'
+                                : 'bg-base-100 border-line-strong hover:border-accent'
+                        "
+                        :aria-pressed="lshapeCorner === corner"
+                        :aria-label="t(`lshape.corners.${corner}`)"
+                        :title="t(`lshape.corners.${corner}`)"
+                        :disabled="busy"
+                        @click="sendLShape('move', undefined, { position: corner, scale: lshapeScale })"
+                    />
+                </div>
+                <div class="flex flex-col gap-1.5 text-[13px] max-w-64">
+                    <span class="text-muted">{{ t('settings.logo.remote.lshapePadHint') }}</span>
+                    <label class="flex flex-col gap-1">
+                        <span>{{ t('lshape.size', { n: lshapeScale }) }}</span>
+                        <input
+                            type="range"
+                            class="range range-xs range-accent"
+                            min="30"
+                            max="95"
+                            step="5"
+                            :value="lshapeScale"
+                            :disabled="busy"
+                            @change="
+                                sendLShape('move', undefined, {
+                                    position: lshapeCorner,
+                                    scale: Number(($event.target as HTMLInputElement).value),
+                                })
+                            "
+                        />
+                    </label>
+                    <button
+                        v-if="lshape?.position"
+                        class="btn-quiet self-start"
+                        :disabled="busy"
+                        @click="sendLShape('move', undefined, { position: 'default' })"
+                    >
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />{{
+                            t('settings.logo.remote.lshapeMoveBack')
+                        }}
+                    </button>
+                </div>
             </div>
         </div>
 

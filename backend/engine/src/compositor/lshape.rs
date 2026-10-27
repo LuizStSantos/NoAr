@@ -54,12 +54,23 @@ pub enum LShapeCorner {
 
 impl LShapeCorner {
     pub fn parse(value: &str) -> Option<Self> {
-        match value {
+        match value.trim() {
             "top-right" => Some(Self::TopRight),
             "top-left" => Some(Self::TopLeft),
             "bottom-right" => Some(Self::BottomRight),
             "bottom-left" => Some(Self::BottomLeft),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for LShapeCorner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TopRight => f.write_str("top-right"),
+            Self::TopLeft => f.write_str("top-left"),
+            Self::BottomRight => f.write_str("bottom-right"),
+            Self::BottomLeft => f.write_str("bottom-left"),
         }
     }
 }
@@ -77,8 +88,10 @@ pub struct LShapeConfig {
 /// The graphic as drawn: the background at the output's size, and the
 /// window the picture takes in it.
 pub struct LShapeGraphic {
-    background: frame::Video,
+    background: Arc<frame::Video>,
     window: Rect,
+    /// The window the graphic was made for, before any move from outside.
+    home: Rect,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -142,10 +155,31 @@ impl LShapeGraphic {
         )?
         .run(&decoded, &mut background)?;
 
+        let home = window(config, width, height);
+
         Ok(Self {
-            background,
-            window: window(config, width, height),
+            background: Arc::new(background),
+            window: home,
+            home,
         })
+    }
+
+    /// The same graphic with the picture placed elsewhere, or back home.
+    fn placed(&self, placement: Option<LShapePlacement>) -> Self {
+        let (width, height) = (self.background.width(), self.background.height());
+        let window = placement.map_or(self.home, |placement| {
+            let scale = placement
+                .scale
+                .unwrap_or_else(|| f64::from(self.home.width) * 100.0 / f64::from(width.max(1)));
+
+            window_in(placement.corner, scale, width, height)
+        });
+
+        Self {
+            background: self.background.clone(),
+            window,
+            home: self.home,
+        }
     }
 
     /// Where the picture is when the L-shape is `level` of the way in (0 is
@@ -167,12 +201,16 @@ impl LShapeGraphic {
 }
 
 fn window(config: &LShapeConfig, width: u32, height: u32) -> Rect {
-    let share = config.scale / 100.0;
+    window_in(config.corner, config.scale, width, height)
+}
+
+fn window_in(corner: LShapeCorner, scale: f64, width: u32, height: u32) -> Rect {
+    let share = scale.clamp(LSHAPE_MIN_SCALE, LSHAPE_MAX_SCALE) / 100.0;
     let window_width = even((f64::from(width) * share).round() as u32).max(2);
     let window_height = even((f64::from(height) * share).round() as u32).max(2);
     let right = width - window_width;
     let bottom = height - window_height;
-    let (x, y) = match config.corner {
+    let (x, y) = match corner {
         LShapeCorner::TopRight => (right, 0),
         LShapeCorner::TopLeft => (0, 0),
         LShapeCorner::BottomRight => (right, bottom),
@@ -185,6 +223,15 @@ fn window(config: &LShapeConfig, width: u32, height: u32) -> Rect {
         width: window_width,
         height: window_height,
     }
+}
+
+/// Where the picture goes when moved from outside, over any graphic.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LShapePlacement {
+    pub corner: LShapeCorner,
+    /// Size of the picture, in percent of the screen; `None` keeps the
+    /// graphic's.
+    pub scale: Option<f64>,
 }
 
 /// Switches the L-shape on air from outside the playout. Clones share the
@@ -201,6 +248,9 @@ struct LShapeState {
     replacement: Option<(String, Arc<LShapeGraphic>)>,
     /// The graphic of the clip playing, for its marked stretches.
     clip: Option<(LShapeConfig, Arc<LShapeGraphic>)>,
+    /// Where the picture was moved to from outside; it applies to the
+    /// channel's graphic and the one swapped in, not to a clip's own.
+    placement: Option<LShapePlacement>,
     on: bool,
     /// Level when the last switch began, and when that was.
     from: f64,
@@ -257,10 +307,11 @@ impl LShapeControl {
     ) -> Result<()> {
         let graphic = config
             .map(|config| LShapeGraphic::load(config, width, height))
-            .transpose()?
-            .map(Arc::new);
+            .transpose()?;
+        let mut state = self.lock();
+        let placement = state.placement;
 
-        self.lock().graphic = graphic;
+        state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
 
         Ok(())
     }
@@ -276,10 +327,42 @@ impl LShapeControl {
         height: u32,
     ) -> Result<()> {
         let graphic = LShapeGraphic::load(config, width, height)?;
+        let mut state = self.lock();
+        let placement = state.placement;
 
-        self.lock().replacement = Some((label.to_string(), Arc::new(graphic)));
+        state.replacement = Some((label.to_string(), Arc::new(graphic.placed(placement))));
 
         Ok(())
+    }
+
+    /// Put the picture somewhere else in the L-shape, on or off, until moved
+    /// again; `None` puts it back where each graphic places it.
+    pub fn place(&self, placement: Option<LShapePlacement>) -> Result<()> {
+        if let Some(scale) = placement.and_then(|placement| placement.scale)
+            && !(LSHAPE_MIN_SCALE..=LSHAPE_MAX_SCALE).contains(&scale)
+        {
+            return Err(anyhow!(
+                "the picture in the L-shape must be between {LSHAPE_MIN_SCALE} and {LSHAPE_MAX_SCALE}% of the screen"
+            ));
+        }
+
+        let mut state = self.lock();
+        state.placement = placement;
+        state.graphic = state
+            .graphic
+            .as_ref()
+            .map(|graphic| Arc::new(graphic.placed(placement)));
+
+        if let Some((label, graphic)) = state.replacement.take() {
+            state.replacement = Some((label, Arc::new(graphic.placed(placement))));
+        }
+
+        Ok(())
+    }
+
+    /// Where the picture was moved to from outside, if it was.
+    pub fn placement(&self) -> Option<LShapePlacement> {
+        self.lock().placement
     }
 
     /// Back to the channel's graphic.
@@ -438,7 +521,7 @@ pub(crate) fn apply_lshape(
     let mut picture = frame::Video::empty();
     context.run(frame, &mut picture)?;
 
-    let mut composed = graphic.background.clone();
+    let mut composed = (*graphic.background).clone();
     paste(&picture, &mut composed, rect);
     composed.set_pts(frame.pts());
     *frame = composed;
@@ -506,9 +589,12 @@ mod tests {
             corner,
         };
 
+        let home = window(&config, 1920, 1080);
+
         LShapeGraphic {
-            background,
-            window: window(&config, 1920, 1080),
+            background: Arc::new(background),
+            window: home,
+            home,
         }
     }
 
@@ -543,6 +629,65 @@ mod tests {
             Some(LShapeCorner::BottomRight)
         );
         assert_eq!(LShapeCorner::parse("middle"), None);
+    }
+
+    #[test]
+    fn a_corner_reads_back_as_its_name() {
+        for corner in [
+            LShapeCorner::TopRight,
+            LShapeCorner::TopLeft,
+            LShapeCorner::BottomRight,
+            LShapeCorner::BottomLeft,
+        ] {
+            assert_eq!(LShapeCorner::parse(&corner.to_string()), Some(corner));
+        }
+        assert_eq!(LShapeCorner::parse("50%:50%"), None);
+    }
+
+    #[test]
+    fn a_move_from_outside_places_every_graphic_until_it_is_undone() {
+        let control = LShapeControl::default();
+        control.lock().graphic = Some(Arc::new(graphic(LShapeCorner::TopRight)));
+        let window = |control: &LShapeControl| control.frame(1.0).unwrap().0.window;
+        let home = window(&control);
+
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::BottomLeft,
+                scale: Some(50.0),
+            }))
+            .unwrap();
+        assert_eq!(
+            window(&control),
+            Rect {
+                x: 0,
+                y: 540,
+                width: 960,
+                height: 540
+            }
+        );
+
+        // The size stays the graphic's when only the corner is given.
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::TopLeft,
+                scale: None,
+            }))
+            .unwrap();
+        assert_eq!(window(&control).width, home.width);
+        assert_eq!((window(&control).x, window(&control).y), (0, 0));
+
+        assert!(
+            control
+                .place(Some(LShapePlacement {
+                    corner: LShapeCorner::TopLeft,
+                    scale: Some(10.0),
+                }))
+                .is_err()
+        );
+
+        control.place(None).unwrap();
+        assert_eq!(window(&control), home);
     }
 
     #[test]

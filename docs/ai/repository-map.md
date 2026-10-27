@@ -10,21 +10,21 @@ Machine-generated navigation index; verify behavior against current source code.
 - `.github/`: 6 indexed files
 - `.vscode/`: 2 indexed files
 - `assets/`: 1 indexed files
-- `backend/`: 191 indexed files
+- `backend/`: 192 indexed files
 - `docs/`: 23 indexed files
-- `frontend/`: 129 indexed files
-- `migrations/`: 19 indexed files
+- `frontend/`: 131 indexed files
+- `migrations/`: 20 indexed files
 - `qa/`: 6 indexed files
 - `tests_assets/`: 13 indexed files
 
 ## Languages and formats
 
-- Rust: 187
-- Vue: 77
+- Rust: 188
+- Vue: 80
 - Markdown: 54
-- TypeScript: 49
+- TypeScript: 48
 - JSON: 24
-- SQL: 19
+- SQL: 20
 - Other: 11
 - Python: 9
 - YAML: 6

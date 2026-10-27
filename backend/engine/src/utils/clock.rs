@@ -11,6 +11,12 @@ use ffmpeg_next::{Rational, Rescale, rescale};
 /// once would flood RTMP, SRT and UDP receivers.
 const MAX_CATCH_UP: Duration = Duration::from_secs(1);
 
+/// The longest the output waits for one packet. Packets follow each other a
+/// frame apart; a longer wait is media time that jumped ahead, and waiting
+/// for it would stop reading the source (a live's receive buffer then
+/// overflows). Past it, the clock starts over from that packet.
+const MAX_WAIT: Duration = Duration::from_secs(2);
+
 pub(crate) struct PlayoutClock {
     anchor_wall: Option<Instant>,
     anchor_media_us: i64,
@@ -70,6 +76,14 @@ impl PlayoutClock {
         let elapsed = now.saturating_duration_since(anchor_wall);
 
         match target.checked_sub(elapsed) {
+            Some(delay) if delay > MAX_WAIT => {
+                log::warn!(
+                    "Output media time jumped {:.1} s ahead; pacing restarts without waiting",
+                    delay.as_secs_f64()
+                );
+                self.anchor(target_us, now);
+                None
+            }
             Some(delay) => Some(delay),
             None if elapsed - target > MAX_CATCH_UP => {
                 log::warn!(
@@ -107,6 +121,20 @@ mod tests {
         assert_eq!(
             clock.delay(2 * SECOND, start + Duration::from_millis(1500)),
             Some(Duration::from_millis(500))
+        );
+    }
+
+    #[test]
+    fn media_time_that_jumps_ahead_is_not_waited_for() {
+        let mut clock = PlayoutClock::new();
+        let start = Instant::now();
+        clock.delay(0, start);
+
+        // Four minutes ahead at once: sent now, and pacing goes on from there.
+        assert_eq!(clock.delay(240 * SECOND, start), None);
+        assert_eq!(
+            clock.delay(240 * SECOND + SECOND / 25, start),
+            Some(Duration::from_millis(40))
         );
     }
 

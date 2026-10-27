@@ -74,14 +74,20 @@ a live whose encoder runs its own commercial break.
   http://<server>:8787/logo/<channel>/hide?key=<KEY>
   http://<server>:8787/logo/<channel>/show?key=<KEY>
   http://<server>:8787/logo/<channel>/replace?key=<KEY>&logo=00-assets/other-logo.png
+  http://<server>:8787/logo/<channel>/move?key=<KEY>&x=90&y=5
   http://<server>:8787/logo/<channel>/move?key=<KEY>&position=bottom-left
   http://<server>:8787/logo/<channel>/move?key=<KEY>&position=default
   ```
 
-  `position` is a corner (`top-left`, `top-right`, `bottom-left`,
-  `bottom-right`, 12 pixels from the edges), an `X:Y` expression like the
-  one in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
-  place. A swapped image goes to the same place.
+  `x` and `y` go from 0 to 100: shares of the room around the logo, so
+  `x=0` is the left edge, `x=100` the right one and `50` the middle, on any
+  output size. `position` is also a place 12 pixels from the edges
+  (`top-left`, `top`, `top-right`, `left`, `center`, `right`,
+  `bottom-left`, `bottom`, `bottom-right`), an `X:Y` expression like the one
+  in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
+  place. A swapped image goes to the same place. In the card, the logo's
+  small screen does the same: click or drag the logo where it goes, or move
+  it with the arrow keys.
 
   The card has a tutorial with these addresses ready to copy, and examples for
   curl, vMix, OBS (Advanced Scene Switcher) and Bitfocus Companion.
@@ -130,7 +136,9 @@ It goes on air:
 - **From NoAr**: the L-shape row of the **Live graphics** card, just below,
   with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
   after a swap, **Channel graphic**. It stays until switched back or the
-  server restarts.
+  server restarts. Its four corner buttons and size slider move the video to
+  where another graphic needs it; **Back to the graphic’s position** undoes
+  that.
 - **From an encoder or a script**, with the graphics key, like the logo:
 
   ```text
@@ -144,6 +152,19 @@ It goes on air:
   `replace` swaps the graphic without going in, so the next `on` shows it;
   `on` with `graphic` swaps and goes in at once; `reset` goes back to the
   channel's graphic. A swap lasts until `reset` or a server restart.
+
+  For a graphic whose space for the video is in another corner, move it:
+
+  ```text
+  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=bottom-left&scale=70
+  http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/news.png&position=top-left
+  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=default
+  ```
+
+  `position` is `top-left`, `top-right`, `bottom-left` or `bottom-right`;
+  `scale` is the video's size in percent of the screen (30 to 95), the
+  graphic's when left out. It lasts until moved again,
+  `position=default` or a server restart.
 
   The API is described in [api.md](api.md#l-shape).
 
