@@ -37,6 +37,10 @@ const configStore = useConfig()
 const indexStore = useIndex()
 /** The marks of the video are open in their editor, on this tab. */
 const editingMarks = ref<'trim' | 'hide' | null>(null)
+/** The marks of this entry alone are open in the editor. */
+const editingEntryMarks = ref(false)
+/** This entry has marks of its own. */
+const hasEntryMarks = computed(() => !!draft.value.marks)
 /** The trim saved with the video in the storage, once read. */
 const savedTrim = ref<LogoSpan | null>(null)
 const savingTrim = ref(false)
@@ -193,6 +197,23 @@ function marksSaved(marks: VideoMarks) {
             setInOut(0, draft.value.duration)
         }
     }
+}
+
+/** The marks of this entry came back from the editor: its cut becomes the part it plays. */
+function entryMarksSaved(marks: VideoMarks) {
+    setInOut(marks.trim?.from ?? 0, marks.trim?.to ?? draft.value.duration)
+
+    const own = { ...marks, trim: null }
+    const empty =
+        !own.hide.length &&
+        !own.breaks.length &&
+        !own.lshape.length &&
+        !own.lshape_graphic &&
+        !own.lshape_corner &&
+        own.lshape_scale === null &&
+        !own.logo_position
+
+    draft.value.marks = empty ? null : own
 }
 
 onMounted(loadSavedTrim)
@@ -357,14 +378,25 @@ function apply() {
                     {{ t('onair.chooseFile') }}
                 </button>
             </div>
-            <button
+            <span
                 v-if="storagePath && !isRemote && !commercial && !draft.ad"
-                class="btn-quiet min-h-9"
-                :title="t('storage.logoMarks.intro')"
-                @click="editingMarks = 'hide'"
+                class="inline-flex flex-wrap items-center gap-2"
             >
-                <i class="bi bi-badge-tm" aria-hidden="true" />{{ t('storage.logoMarks.title') }}
-            </button>
+                <button class="btn-quiet min-h-9" :title="t('onair.entryMarksHint')" @click="editingEntryMarks = true">
+                    <i class="bi bi-badge-tm" aria-hidden="true" />{{ t('onair.entryMarks') }}
+                    <span
+                        v-if="hasEntryMarks"
+                        class="text-[11px] font-semibold rounded-full bg-accent/15 text-accent-text px-1.5"
+                        >{{ t('onair.entryMarksOwn') }}</span
+                    >
+                </button>
+                <button v-if="hasEntryMarks" class="link-accent min-h-8 text-[13px]" @click="draft.marks = null">
+                    {{ t('onair.entryMarksReset') }}
+                </button>
+                <button class="link-accent min-h-8 text-[13px]" @click="editingMarks = 'hide'">
+                    {{ t('onair.videoMarks') }}
+                </button>
+            </span>
             <button
                 class="flex items-center gap-1.5 min-h-10 text-muted bg-transparent border-0 cursor-pointer"
                 :aria-expanded="showAdvanced"
@@ -410,6 +442,16 @@ function apply() {
             :initial-kind="editingMarks"
             @saved="marksSaved"
             @close="editingMarks = null"
+        />
+        <LogoMarksEditor
+            v-if="editingEntryMarks && channelId"
+            :channel-id="channelId"
+            :path="storagePath"
+            :length="draft.duration"
+            initial-kind="hide"
+            :entry="{ marks: draft.marks ?? null, from: parsedIn ?? 0, to: parsedOut ?? draft.duration }"
+            @saved="entryMarksSaved"
+            @close="editingEntryMarks = false"
         />
     </div>
 </template>

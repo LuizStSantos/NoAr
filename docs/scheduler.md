@@ -74,6 +74,28 @@ Avoid pointing a live at one of the channel's own [live inputs](live_ingest.md)
 (the same port): NoAr would be calling itself. Send the encoder to the live
 input instead, which takes over the channel on its own.
 
+## Scheduled graphics
+
+**Schedule graphics** puts the logo and the L-shape on a timetable without
+touching what plays: at the start time NoAr applies the changes, and at the
+end time it undoes them (the L-shape goes off and the logo goes back to the
+channel's, where the channel puts it). Without an end, the change stays until
+something else changes it. An end before the start means the next day.
+
+An event can:
+
+- bring the L-shape in or take it off, with its graphic, the corner the
+  picture goes to and its size;
+- show the channel's logo, hide it, or swap it for another image;
+- move the logo to one of nine places, back to the channel's place, or to a
+  free `X% × Y%` position.
+
+Scheduled graphics have their own lane on the timeline and a list under the
+day's events, where they are edited or removed. They repeat like the other
+events: once, every day or on chosen weekdays. NoAr checks them every second
+while the playout runs; one whose start passed more than a minute ago while
+the playout was stopped is applied only if its end is still ahead.
+
 ## Guide
 
 Events appear in the [XMLTV guide](xmltv.md) at the time they air, and the
@@ -102,6 +124,10 @@ All routes need a login with access to the channel.
 | `POST` | `/api/schedule/{id}/lives` | Create or update a live: `{"name", "url", "guide": {"title", "plot", "genre", "rating"}}` |
 | `PUT` | `/api/schedule/{id}/lives` | Change the address of a live, keeping its guide data: `{"path", "url"}` |
 | `POST` | `/api/schedule/{id}/lives/test` | Check a source: `{"url"}` |
+| `GET` | `/api/schedule/{id}/graphics` | All scheduled graphics |
+| `POST` | `/api/schedule/{id}/graphics` | Add scheduled graphics |
+| `PUT` | `/api/schedule/{id}/graphics/{event}` | Change scheduled graphics |
+| `DELETE` | `/api/schedule/{id}/graphics/{event}` | Remove scheduled graphics |
 
 An event:
 
@@ -127,3 +153,29 @@ needs `end_time` (an end before the start means the next day). `repeat_days`
 holds weekday bits: Sunday 1, Monday 2, Tuesday 4, Wednesday 8, Thursday 16,
 Friday 32, Saturday 64; `0` plays once on `start_date`, `62` is Monday to
 Friday, `127` every day. Paths are relative to the channel storage.
+
+Scheduled graphics:
+
+```json
+{
+  "title": "Sponsor",
+  "actions": {
+    "logo": "show",
+    "logo_image": null,
+    "logo_position": "90%:50%",
+    "lshape": "on",
+    "lshape_graphic": "Graphics/sponsor.png",
+    "lshape_corner": "bottom-left",
+    "lshape_scale": 70
+  },
+  "start_date": "2026-10-27",
+  "start_time": "21:00",
+  "end_time": "21:05",
+  "repeat_days": 0,
+  "enabled": true
+}
+```
+
+`actions` takes the same fields as a [quick scene](logo.md) without its name:
+`logo` is `keep`, `show`, `hide` or `replace` (with `logo_image`); `lshape` is
+`keep`, `on` or `off`; `null` leaves a field as it is.

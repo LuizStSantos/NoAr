@@ -164,6 +164,8 @@ declare global {
         ad?: boolean
         custom_filter?: string
         overtime?: boolean
+        /** Marks of this entry alone; none uses the video's, from the storage. */
+        marks?: import('@/composables/storage').VideoMarks | null
     }
 
     interface FileObject {

@@ -117,6 +117,16 @@ pub async fn save_playlist(
     .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
 
     let config = manager.config.read().await.clone();
+    let mut data = data;
+
+    // Marks of single entries are checked like the video's own.
+    for item in &mut data.program {
+        if let Some(marks) = item.marks.take() {
+            let marks = marks.validated()?;
+
+            item.marks = (!marks.is_empty()).then_some(marks);
+        }
+    }
 
     match write_playlist(&config, data).await {
         Ok(res) => Ok(Json(res)),

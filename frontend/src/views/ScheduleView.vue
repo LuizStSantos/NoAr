@@ -14,6 +14,7 @@ import { useHead } from '@unhead/vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import GenericModal from '@/components/utils/GenericModal.vue'
+import GraphicsEventDialog from '@/components/schedule/GraphicsEventDialog.vue'
 import LiveDialog from '@/components/schedule/LiveDialog.vue'
 import ScheduleDialog from '@/components/schedule/ScheduleDialog.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
@@ -69,6 +70,10 @@ const ghost = ref<{ lane: 'grade' | 'events'; seconds: number; label: string } |
 const mediaDraft = ref<MediaDraft | null>(null)
 const liveDraft = ref<LiveDraft | null>(null)
 const deleting = ref<ScheduleEvent | null>(null)
+const graphicsDraft = ref<{ event: GraphicsEvent | null; date: string; time: string } | null>(null)
+const deletingGraphics = ref<GraphicsEvent | null>(null)
+/** The colour of graphics on the timeline. */
+const GRAPHICS_COLOR = '#8f7ae6'
 
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 let clockTimer: ReturnType<typeof setInterval> | undefined
@@ -225,7 +230,7 @@ function sourcesLabel(event: ScheduleEvent): string {
 
 async function refresh() {
     try {
-        await Promise.all([scheduleStore.loadDay(date.value), scheduleStore.loadStatus()])
+        await Promise.all([scheduleStore.loadDay(date.value), scheduleStore.loadStatus(), scheduleStore.loadGraphics()])
     } catch (err) {
         indexStore.msgAlert('error', err instanceof Error ? err.message : String(err), 4)
     }
@@ -445,6 +450,95 @@ async function confirmDelete(confirmed: boolean) {
     }
 }
 
+/** Graphics events that happen on the day shown, as spans of the timeline. */
+const graphicsBlocks = computed(() =>
+    scheduleStore.graphics
+        .filter((event) => {
+            if (!event.enabled) {
+                return false
+            }
+
+            if (!event.repeat_days) {
+                return event.start_date === date.value
+            }
+
+            return date.value >= event.start_date && Boolean(event.repeat_days & (1 << dayjs(date.value).day()))
+        })
+        .map((event) => {
+            const start = timeToSeconds(event.start_time)
+            let end = event.end_time ? timeToSeconds(event.end_time) : start + 600
+
+            if (end <= start) {
+                end = DAY
+            }
+
+            return { event, start, end, open: !event.end_time }
+        })
+        .sort((a, b) => a.start - b.start),
+)
+
+/** What a graphics event does, in a few words. */
+function graphicsSummary(event: GraphicsEvent): string {
+    const actions = event.actions
+    const parts: string[] = []
+
+    if (actions.logo !== 'keep') {
+        parts.push(t(`graphics.scenes.summary.logo.${actions.logo}`))
+    }
+
+    if (actions.logo_position) {
+        parts.push(t('graphics.scenes.summary.logoMoves'))
+    }
+
+    if (actions.lshape !== 'keep') {
+        parts.push(t(`graphics.scenes.summary.lshape.${actions.lshape}`))
+    }
+
+    if (actions.lshape_corner && actions.lshape_corner !== 'default') {
+        parts.push(t(`lshape.corners.${actions.lshape_corner}`).toLowerCase())
+    }
+
+    if (actions.lshape_scale) {
+        parts.push(`${actions.lshape_scale}%`)
+    }
+
+    return parts.join(' · ') || t('graphics.scenes.summary.nothing')
+}
+
+function newGraphics() {
+    graphicsDraft.value = {
+        event: null,
+        date: date.value,
+        time: secondsToTime(isToday.value ? Math.ceil((nowSeconds.value + 300) / 300) * 300 : 12 * 3600),
+    }
+}
+
+function editGraphics(event: GraphicsEvent) {
+    graphicsDraft.value = { event, date: event.start_date, time: event.start_time }
+}
+
+async function graphicsSaved() {
+    graphicsDraft.value = null
+    await refresh()
+}
+
+async function confirmDeleteGraphics(confirmed: boolean) {
+    const event = deletingGraphics.value
+    deletingGraphics.value = null
+
+    if (!confirmed || !event) {
+        return
+    }
+
+    try {
+        await scheduleStore.deleteGraphics(event.id)
+        indexStore.msgAlert('success', t('schedule.graphics.removed'), 2)
+        await refresh()
+    } catch (err) {
+        indexStore.msgAlert('error', err instanceof Error ? err.message : String(err), 4)
+    }
+}
+
 function newMaterial() {
     mediaDraft.value = {
         sources: [],
@@ -587,6 +681,9 @@ watch(zoom, scrollToFocus)
             <button class="btn-quiet rounded-[10px]" @click="newLive">
                 <i class="bi bi-broadcast" aria-hidden="true" />{{ t('schedule.newLive') }}
             </button>
+            <button class="btn-quiet rounded-[10px]" @click="newGraphics">
+                <i class="bi bi-layers" aria-hidden="true" />{{ t('schedule.graphics.new') }}
+            </button>
             <button class="btn-main rounded-[10px] px-4.5" @click="newMaterial">
                 <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('schedule.scheduleMaterial') }}
             </button>
@@ -683,6 +780,11 @@ watch(zoom, scrollToFocus)
                         <span class="flex items-center gap-2"
                             ><span class="w-3 h-3 rounded-[3px]" :style="{ background: SCHEDULE_COLORS.live }" />{{
                                 t('schedule.live')
+                            }}</span
+                        >
+                        <span class="flex items-center gap-2"
+                            ><span class="w-3 h-3 rounded-[3px]" :style="{ background: GRAPHICS_COLOR }" />{{
+                                t('schedule.graphics.lane')
                             }}</span
                         >
                     </div>
@@ -811,6 +913,40 @@ watch(zoom, scrollToFocus)
                                 >
                                     {{ ghost.label }}
                                 </div>
+                            </div>
+
+                            <div
+                                class="sticky left-0 z-20 bg-base-100 text-[13px] text-base-content/85 flex items-center"
+                            >
+                                {{ t('schedule.graphics.lane') }}
+                            </div>
+                            <div class="relative h-12 bg-base-200 rounded-lg">
+                                <button
+                                    v-for="block in graphicsBlocks"
+                                    :key="`gr-${block.event.id}`"
+                                    type="button"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 overflow-hidden text-left cursor-pointer min-w-24 border-0 text-[#16121f]"
+                                    :class="block.open ? 'rounded-e-none' : ''"
+                                    :style="{
+                                        left: left(block.start),
+                                        width: width(block.start, block.end),
+                                        background: block.open
+                                            ? `linear-gradient(90deg, ${GRAPHICS_COLOR} 70%, transparent)`
+                                            : GRAPHICS_COLOR,
+                                    }"
+                                    :title="`${block.event.title} · ${graphicsSummary(block.event)}`"
+                                    @click="editGraphics(block.event)"
+                                >
+                                    <div class="text-[13px] font-semibold truncate leading-tight">
+                                        {{ block.event.title }}
+                                    </div>
+                                    <div class="font-mono text-[11px] opacity-85 truncate">
+                                        {{ block.event.start_time.slice(0, 5) }}
+                                        <template v-if="block.event.end_time">
+                                            – {{ block.event.end_time.slice(0, 5) }}</template
+                                        >
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -945,8 +1081,68 @@ watch(zoom, scrollToFocus)
                         </table>
                     </div>
                 </section>
+
+                <section :aria-label="t('schedule.graphics.list')" class="card-box">
+                    <div class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
+                        <h2 class="m-0 text-base font-semibold inline-flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-[3px]" :style="{ background: GRAPHICS_COLOR }" />
+                            {{ t('schedule.graphics.list') }}
+                        </h2>
+                        <button class="btn-quiet" @click="newGraphics">
+                            <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('schedule.graphics.new') }}
+                        </button>
+                    </div>
+                    <ul class="m-0 p-0 list-none">
+                        <li
+                            v-for="block in graphicsBlocks"
+                            :key="`grl-${block.event.id}`"
+                            class="flex flex-wrap items-center gap-3 px-4.5 py-3 border-t border-line first:border-t-0"
+                        >
+                            <span class="font-mono text-sm w-28">
+                                {{ block.event.start_time.slice(0, 5) }}
+                                –
+                                {{ block.event.end_time?.slice(0, 5) ?? t('schedule.graphics.untilChanged') }}
+                            </span>
+                            <span class="flex-1 min-w-48">
+                                <strong class="font-semibold">{{ block.event.title }}</strong>
+                                <span class="block text-[13px] text-muted">
+                                    {{ graphicsSummary(block.event) }} · {{ repeatLabel(block.event.repeat_days) }}
+                                </span>
+                            </span>
+                            <button
+                                class="btn-icon min-w-10 min-h-10 border border-line-strong"
+                                :aria-label="t('schedule.edit')"
+                                :title="t('schedule.edit')"
+                                @click="editGraphics(block.event)"
+                            >
+                                <i class="bi bi-pencil" aria-hidden="true" />
+                            </button>
+                            <button
+                                class="btn-icon min-w-10 min-h-10 border border-line-strong text-error"
+                                :aria-label="t('schedule.graphics.remove')"
+                                :title="t('schedule.graphics.remove')"
+                                @click="deletingGraphics = block.event"
+                            >
+                                <i class="bi bi-trash" aria-hidden="true" />
+                            </button>
+                        </li>
+                        <li v-if="!graphicsBlocks.length" class="px-4.5 py-6 text-center text-muted">
+                            {{ t('schedule.graphics.none') }}
+                        </li>
+                    </ul>
+                </section>
             </main>
         </div>
+
+        <GraphicsEventDialog :draft="graphicsDraft" @close="graphicsDraft = null" @saved="graphicsSaved" />
+        <GenericModal
+            :show="Boolean(deletingGraphics)"
+            :title="t('schedule.graphics.remove')"
+            :text="t('schedule.graphics.removeConfirm', { title: deletingGraphics?.title ?? '' })"
+            :ok-label="t('schedule.remove')"
+            danger
+            :modal-action="confirmDeleteGraphics"
+        />
 
         <ScheduleDialog
             :draft="mediaDraft"

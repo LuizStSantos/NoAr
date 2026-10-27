@@ -7,7 +7,11 @@ export type General = { stop_threshold: number, };
 /**
  * A named set of logo and L-shape changes, applied in one go.
  */
-export type GraphicsScene = { name: string, logo: SceneLogo, 
+export type GraphicsScene = { 
+/**
+ * The scene's name; a scheduled graphics event takes its title.
+ */
+name: string, logo: SceneLogo, 
 /**
  * Storage path of the image, for `replace`.
  */

@@ -6,6 +6,22 @@ declare global {
     type AfterMode = 'continue' | 'clock'
     type RunStatus = 'running' | 'done' | 'skipped' | 'failed'
 
+    /** Logo and L-shape changes at a set time, undone at the end. */
+    interface GraphicsEvent {
+        id: number
+        channel_id: number
+        title: string
+        actions: import('@/types/playout_config').GraphicsScene
+        start_date: string
+        start_time: string
+        /** None leaves the change on. */
+        end_time: string | null
+        repeat_days: number
+        enabled: boolean
+    }
+
+    type GraphicsEventInput = Omit<GraphicsEvent, 'id' | 'channel_id'>
+
     interface ScheduleEvent {
         id: number
         channel_id: number

@@ -642,6 +642,47 @@ text_enum!(ScheduleKind { Media => "media", Live => "live" });
 text_enum!(EntryMode { AfterClip => "after_clip", Interrupt => "interrupt" });
 text_enum!(AfterMode { Continue => "continue", Clock => "clock" });
 
+/// A row of `graphics_events`: logo and L-shape changes at a set time,
+/// undone at the end. Times are in the channel time zone.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct GraphicsEvent {
+    pub id: i32,
+    pub channel_id: i32,
+    pub title: String,
+    /// What it does to the logo and the L-shape.
+    pub actions: crate::utils::config::GraphicsScene,
+    /// `YYYY-MM-DD`
+    pub start_date: String,
+    /// `HH:MM:SS`
+    pub start_time: String,
+    /// `HH:MM:SS`; none leaves the change on.
+    pub end_time: Option<String>,
+    /// Weekday bits, Sunday = 1 ... Saturday = 64; zero happens once.
+    pub repeat_days: u8,
+    pub enabled: bool,
+}
+
+impl FromRow<'_, SqliteRow> for GraphicsEvent {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let actions: String = row.try_get("actions")?;
+
+        Ok(Self {
+            id: row.try_get("id")?,
+            channel_id: row.try_get("channel_id")?,
+            title: row.try_get("title")?,
+            actions: serde_json::from_str(&actions).map_err(|e| sqlx::Error::ColumnDecode {
+                index: "actions".to_string(),
+                source: e.to_string().into(),
+            })?,
+            start_date: row.try_get("start_date")?,
+            start_time: row.try_get("start_time")?,
+            end_time: row.try_get("end_time")?,
+            repeat_days: row.try_get::<i64, _>("repeat_days")?.clamp(0, 127) as u8,
+            enabled: row.try_get("enabled")?,
+        })
+    }
+}
+
 /// A row of `schedule_events`. Times are in the channel time zone.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct ScheduleEvent {

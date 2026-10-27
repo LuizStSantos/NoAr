@@ -659,7 +659,12 @@ function shiftSelection(step: -1 | 1) {
 
 function duplicateSelection() {
     const indices = selectedIndices.value
-    const copies = indices.map((index) => ({ ...cloneDeep(playlistStore.playlist[index]!), uid: genUID() }))
+    // A copy is another entry: the marks of one entry stay with it.
+    const copies = indices.map((index) => ({
+        ...cloneDeep(playlistStore.playlist[index]!),
+        uid: genUID(),
+        marks: undefined,
+    }))
 
     if (copies.length) {
         insertAt((indices[indices.length - 1] as number) + 1, copies)
@@ -1222,7 +1227,8 @@ function fillDay() {
                 break
             }
 
-            filled.push({ ...cloneDeep(item), uid: genUID() })
+            // Repeats do not take the marks of a single entry.
+            filled.push({ ...cloneDeep(item), uid: genUID(), marks: undefined })
             length += item.out - item.in
         }
     }

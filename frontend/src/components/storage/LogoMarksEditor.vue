@@ -31,6 +31,12 @@ const props = defineProps<{
     length?: number
     /** The tab it opens on. */
     initialKind?: Tab
+    /**
+     * One entry of a playlist: its own marks (none yet: a copy of the
+     * video's to start from) and the part it plays. Saving hands them back
+     * and leaves the video's marks in the storage as they are.
+     */
+    entry?: { marks: VideoMarks | null; from: number; to: number }
 }>()
 
 const emit = defineEmits<{ close: []; saved: [marks: VideoMarks] }>()
@@ -499,7 +505,14 @@ async function load() {
     loading.value = true
 
     try {
-        const loaded = await readLogoMarks(props.channelId, props.path)
+        const loaded = props.entry?.marks
+            ? cloneDeep(props.entry.marks)
+            : await readLogoMarks(props.channelId, props.path)
+
+        // An entry's cut is the part it plays.
+        if (props.entry) {
+            loaded.trim = { from: props.entry.from, to: props.entry.to }
+        }
 
         marks.value = cloneDeep(loaded)
         baseline.value = cloneDeep(loaded)
@@ -582,6 +595,12 @@ async function save() {
     saving.value = true
 
     try {
+        if (props.entry) {
+            emit('saved', normalized(marks.value))
+            emit('close')
+            return
+        }
+
         const saved = await saveLogoMarks(props.channelId, props.path, normalized(marks.value))
 
         baseline.value = cloneDeep(saved)
@@ -636,6 +655,12 @@ onBeforeUnmount(() => {
                             {{ t('storage.logoMarks.title') }}
                         </h2>
                         <p class="m-0 text-[13px] text-muted truncate font-mono" :title="path">{{ baseName(path) }}</p>
+                        <p
+                            v-if="entry"
+                            class="m-0 mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-accent/15 text-accent-text px-2.5 py-0.5 text-xs font-medium"
+                        >
+                            <i class="bi bi-pin-angle" aria-hidden="true" />{{ t('storage.marks.entryOnly') }}
+                        </p>
                     </div>
                     <button type="button" class="btn-icon" :aria-label="t('storage.close')" @click="requestClose">
                         <i class="bi bi-x-lg" aria-hidden="true" />
@@ -1311,7 +1336,7 @@ onBeforeUnmount(() => {
                     <button type="button" class="btn-quiet" @click="requestClose">{{ t('cancel') }}</button>
                     <button type="button" class="btn-main" :disabled="saving || !dirty || invalid" @click="save">
                         <span v-if="saving" class="loading loading-spinner loading-sm" />
-                        {{ t('storage.logoMarks.saveAll') }}
+                        {{ entry ? t('storage.marks.entryApply') : t('storage.logoMarks.saveAll') }}
                     </button>
                 </template>
             </footer>

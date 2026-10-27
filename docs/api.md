@@ -345,6 +345,14 @@ playlist input may still contain `"category": "advertisement"`; the server
 reads it as `"ad": true` and only serializes the new field. Programme responses
 expose the resolved state as an `ad` boolean.
 
+An item can carry its own `marks` (the same fields as `logo-marks` below,
+without `trim`): they apply to that item only, instead of the video's marks
+in the storage. They are checked when the playlist is saved; an empty `marks`
+is dropped ([docs](logo.md#marks-of-one-playlist-item)).
+
+Scheduled graphics (logo and L-shape changes at a time) are under
+`/api/schedule/{id}/graphics`; see [Scheduler](scheduler.md#api).
+
 ## Files
 
 All file-management endpoints require `GA, CA, U` access to the channel.

@@ -57,6 +57,13 @@ const router = createRouter({
             meta: { showHeader: true },
         },
         {
+            path: '/playlist',
+            name: 'playlist',
+            component: () => import('@/views/PlayerView.vue'),
+            props: { build: true },
+            meta: { showHeader: true },
+        },
+        {
             path: '/graphics',
             name: 'graphics',
             component: () => import('@/views/GraphicsView.vue'),

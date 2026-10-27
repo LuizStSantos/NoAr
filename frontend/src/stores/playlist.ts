@@ -41,6 +41,7 @@ function snapshot(list: PlaylistItem[]): string {
             Boolean(item.ad),
             item.audio || '',
             item.custom_filter || '',
+            item.marks ?? null,
         ]),
     )
 }
