@@ -3156,7 +3156,7 @@ dependencies = [
 
 [[package]]
 name = "noar"
-version = "1.4.3"
+version = "1.4.4"
 dependencies = [
  "argon2",
  "async-walkdir",
@@ -3210,7 +3210,7 @@ dependencies = [
 
 [[package]]
 name = "noar-engine"
-version = "1.4.3"
+version = "1.4.4"
 dependencies = [
  "anyhow",
  "bytemuck",
