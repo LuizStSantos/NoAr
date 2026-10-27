@@ -8,7 +8,7 @@ import { cloneDeep } from 'es-toolkit/object'
 import PlayoutCard from '@/components/settings/PlayoutCard.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { useConfig } from '@/stores/config'
-import { useSettings, type SettingsSectionName } from '@/stores/settings'
+import { countChannelChanges, useSettings, type SettingsSectionName } from '@/stores/settings'
 import { useUpdates } from '@/stores/updates'
 
 const { t } = useI18n()
@@ -88,11 +88,16 @@ function confirmChannel(discard: boolean) {
     }
 }
 
-// The general page edits a copy of the selected channel.
+// The general page edits a copy of the selected channel. The channels are
+// loaded again on every settings page: a copy without edits takes the new
+// values, so it never trails what the server has.
 watch(
     () => configStore.channels[configStore.i],
-    (channel) => {
-        if (!settings.channelDraft || settings.channelDraft.id !== channel?.id) {
+    (channel, previous) => {
+        const draft = settings.channelDraft
+        const unedited = !draft || !previous || countChannelChanges(draft, previous) === 0
+
+        if (!draft || draft.id !== channel?.id || unedited) {
             settings.channelDraft = channel ? cloneDeep(channel) : null
         }
     },

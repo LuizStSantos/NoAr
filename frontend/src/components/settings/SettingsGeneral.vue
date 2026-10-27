@@ -100,7 +100,16 @@ async function save() {
             body: JSON.stringify(channel),
         })
 
-        configStore.channels[configStore.i] = cloneDeep(channel)
+        // The saved fields from the copy; the playout's own (running, last
+        // date) stay as the server last said.
+        const saved = configStore.channels[configStore.i]
+        configStore.channels[configStore.i] = {
+            ...cloneDeep(channel),
+            active: saved?.active,
+            last_date: saved?.last_date,
+            time_shift: saved?.time_shift,
+        }
+        settings.channelDraft = cloneDeep(configStore.channels[configStore.i] ?? channel)
         configStore.timezone = channel.timezone || 'UTC'
 
         if (oldTimezone !== configStore.timezone && playlistStore.playoutIsRunning) {

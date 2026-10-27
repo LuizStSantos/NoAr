@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-10-27
+
+### Fixed
+
+- Settings › General showed "1 unsaved change" without any edit once the
+  playout had started or stopped since the page was first opened (the page
+  compared its copy against fields the playout changes on its own). Only the
+  fields the page edits count now, and a copy without edits follows the
+  server.
+
 ## [1.4.4] - 2026-10-27
 
 Includes the changes prepared for 1.4.3, which was never published as its own release.
@@ -412,7 +422,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.4...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.5...HEAD
+[1.4.5]: https://github.com/LuizStSantos/NoAr/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...v1.4.4
 [1.4.2]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...v1.4.1
