@@ -42,6 +42,37 @@ pub async fn update_scte35_on(
         .execute(connection).await?)
 }
 
+/// Which remote-control key: the logo's (also the L-shape's) or the SCTE-35 one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RemoteKey {
+    Logo,
+    Scte35,
+}
+
+/// Store `key` as the channel's `kind` key, alone: saving the rest of the
+/// configuration never changes a key.
+pub async fn update_remote_key(
+    pool: &sqlx::SqlitePool,
+    channel_id: i32,
+    kind: RemoteKey,
+    key: &str,
+) -> Result<SqliteQueryResult, ProcessError> {
+    let query = match kind {
+        RemoteKey::Logo => {
+            "UPDATE config_processing SET logo_key = $2 WHERE config_id = (SELECT id FROM config WHERE channel_id = $1)"
+        }
+        RemoteKey::Scte35 => {
+            "UPDATE config_scte35 SET api_key = $2 WHERE config_id = (SELECT id FROM config WHERE channel_id = $1)"
+        }
+    };
+
+    Ok(sqlx::query(query)
+        .bind(channel_id)
+        .bind(key)
+        .execute(pool)
+        .await?)
+}
+
 #[cfg(test)]
 mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
@@ -84,5 +115,20 @@ mod tests {
         assert_eq!((saved.pid, saved.preroll), (600, 4.0));
         assert_eq!((saved.min_break, saved.max_break), (15.0, 240.0));
         assert_eq!(saved.api_key, "k3y", "saved trimmed");
+
+        update_remote_key(&pool, 1, RemoteKey::Scte35, "n3w")
+            .await
+            .unwrap();
+        update_remote_key(&pool, 1, RemoteKey::Logo, "l0go")
+            .await
+            .unwrap();
+        assert_eq!(select_scte35(&pool, 1).await.unwrap().api_key, "n3w");
+        let logo: String = sqlx::query_scalar(
+            "SELECT logo_key FROM config_processing WHERE config_id = (SELECT id FROM config WHERE channel_id = 1)",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(logo, "l0go");
     }
 }

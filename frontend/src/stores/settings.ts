@@ -50,6 +50,9 @@ const PROCESSING_LOGO = [
     'logo_transition_in',
     'logo_transition_out',
     'logo_transition_seconds',
+    'lshape',
+    'lshape_scale',
+    'lshape_corner',
 ].map((key) => `processing.${key}`)
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [

@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import LogoRemote from '@/components/settings/LogoRemote.vue'
+import LShapeSettings from '@/components/settings/LShapeSettings.vue'
 import SaveBar from '@/components/settings/SaveBar.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import RadioCards from '@/components/settings/RadioCards.vue'
@@ -540,6 +541,8 @@ function pick(file: { path: string }) {
                 <p class="m-0 field-hint">{{ t('settings.logo.transitions.hint') }}</p>
             </div>
         </SectionCard>
+
+        <LShapeSettings />
 
         <SectionCard :title="t('settings.logo.guideLogo')" :description="t('settings.logo.guideLogoHint')">
             <div class="flex flex-wrap items-center gap-4">

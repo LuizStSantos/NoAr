@@ -1,0 +1,228 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+import SectionCard from '@/components/settings/SectionCard.vue'
+import StoragePicker from '@/components/schedule/StoragePicker.vue'
+import GenericModal from '@/components/utils/GenericModal.vue'
+import { authFetch } from '@/composables/authFetch'
+import { storageImageUrl } from '@/composables/logo'
+import { useAuth } from '@/stores/auth'
+import { useConfig } from '@/stores/config'
+import { useIndex } from '@/stores/index'
+
+/**
+ * The L-shape: a full-screen graphic the picture shrinks into, its size and
+ * corner, and switching it on air now. Stretches of a video go into it from
+ * its marks in Storage; encoders switch it with the logo key.
+ */
+type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+
+const CORNERS: Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+
+const { t } = useI18n()
+const authStore = useAuth()
+const configStore = useConfig()
+const indexStore = useIndex()
+
+const picking = ref(false)
+const imageUrl = ref('')
+const imageFailed = ref(false)
+const status = ref<{ on: boolean; ready: boolean } | null>(null)
+const busy = ref(false)
+
+const processing = computed(() => configStore.playout.processing)
+const channelId = computed(() => configStore.channels[configStore.i]?.id)
+const frame = computed(() => ({
+    width: Math.max(1, configStore.playout.output?.width || 1920),
+    height: Math.max(1, configStore.playout.output?.height || 1080),
+}))
+
+const scale = computed({
+    get: () => processing.value.lshape_scale ?? 75,
+    set: (value: number) => (processing.value.lshape_scale = Math.min(95, Math.max(30, Math.round(value)))),
+})
+
+/** Where the picture goes, in percent of the frame, as the engine places it. */
+const windowStyle = computed(() => {
+    const share = scale.value
+    const corner = (processing.value.lshape_corner || 'top-right') as Corner
+    const style: Record<string, string> = { width: `${share}%`, height: `${share}%` }
+
+    style[corner.startsWith('top') ? 'top' : 'bottom'] = '0'
+    style[corner.endsWith('left') ? 'left' : 'right'] = '0'
+
+    return style
+})
+
+/** Saved settings: what the playout uses until the next save. */
+const saved = computed(() => configStore.playoutSaved.processing?.lshape ?? '')
+
+async function loadImage() {
+    imageFailed.value = false
+    imageUrl.value = ''
+
+    try {
+        imageUrl.value = await storageImageUrl(configStore.channels[configStore.i], processing.value?.lshape)
+    } catch {
+        imageFailed.value = true
+    }
+}
+
+async function loadStatus() {
+    if (!channelId.value) {
+        return
+    }
+
+    try {
+        status.value = await authFetch(`/api/control/${channelId.value}/lshape`, { headers: authStore.authHeader })
+    } catch {
+        status.value = null
+    }
+}
+
+async function send(action: 'on' | 'off') {
+    busy.value = true
+
+    try {
+        status.value = await authFetch(`/api/control/${channelId.value}/lshape`, {
+            method: 'POST',
+            headers: { ...configStore.contentType, ...authStore.authHeader },
+            body: JSON.stringify({ action }),
+        })
+    } catch (error: any) {
+        indexStore.msgAlert('error', error?.data ?? t('lshape.failed'), 4)
+    } finally {
+        busy.value = false
+    }
+}
+
+function pick(file: { path: string }) {
+    processing.value.lshape = file.path
+    picking.value = false
+}
+
+watch(() => processing.value?.lshape, loadImage, { immediate: true })
+// A save loads the graphic on air.
+watch(saved, loadStatus)
+watch(channelId, loadStatus)
+onMounted(loadStatus)
+</script>
+<template>
+    <SectionCard :title="t('lshape.title')" :description="t('lshape.intro')">
+        <div class="flex flex-wrap gap-6">
+            <div class="w-full max-w-[480px] flex-none self-start flex flex-col gap-2">
+                <div
+                    class="relative w-full rounded-xl overflow-hidden bg-[#0b0c0d] border border-line"
+                    :style="{ aspectRatio: `${frame.width} / ${frame.height}` }"
+                >
+                    <img
+                        v-if="imageUrl && !imageFailed"
+                        :src="imageUrl"
+                        alt=""
+                        class="absolute inset-0 w-full h-full object-fill"
+                        @error="imageFailed = true"
+                    />
+                    <span
+                        v-else
+                        class="absolute inset-0 flex items-center justify-center text-[#6e6e72] text-xs text-center px-4"
+                        >{{ t('lshape.noGraphic') }}</span
+                    >
+                    <span
+                        class="absolute bg-[#2a2d33]/90 border-2 border-accent flex items-center justify-center text-[11px] text-white"
+                        :style="windowStyle"
+                        >{{ t('lshape.picture') }}</span
+                    >
+                </div>
+                <span class="field-hint">{{ t('lshape.previewHint') }}</span>
+            </div>
+            <div class="flex-[1_1_300px] flex flex-col gap-4 min-w-0">
+                <label class="field-label">
+                    {{ t('lshape.graphic') }}
+                    <span class="flex gap-2">
+                        <input
+                            v-model.trim="processing.lshape"
+                            class="field-input font-mono text-[13px]"
+                            :placeholder="t('lshape.graphicPlaceholder')"
+                            spellcheck="false"
+                        />
+                        <button class="btn-quiet flex-none" @click="picking = true">
+                            {{ t('settings.choose') }}
+                        </button>
+                    </span>
+                    <span class="field-hint">{{ t('lshape.graphicHint', frame) }}</span>
+                </label>
+                <div class="flex flex-wrap gap-5">
+                    <div class="field-label">
+                        {{ t('lshape.corner') }}
+                        <div
+                            role="radiogroup"
+                            :aria-label="t('lshape.corner')"
+                            class="grid grid-cols-2 gap-1.5 w-[92px]"
+                        >
+                            <button
+                                v-for="corner in CORNERS"
+                                :key="corner"
+                                role="radio"
+                                :aria-checked="(processing.lshape_corner || 'top-right') === corner"
+                                :aria-label="t(`lshape.corners.${corner}`)"
+                                class="h-[38px] rounded-md border cursor-pointer"
+                                :class="
+                                    (processing.lshape_corner || 'top-right') === corner
+                                        ? 'bg-accent border-accent'
+                                        : 'bg-field border-line-strong hover:border-subtle'
+                                "
+                                @click="processing.lshape_corner = corner"
+                            />
+                        </div>
+                    </div>
+                    <label class="field-label flex-[1_1_200px]">
+                        {{ t('lshape.size', { n: scale }) }}
+                        <input
+                            v-model.number="scale"
+                            type="range"
+                            min="30"
+                            max="95"
+                            class="range range-xs range-accent max-w-[360px]"
+                        />
+                    </label>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-xs text-muted">{{ t('lshape.onAir') }}</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span
+                            class="inline-flex items-center gap-1.5 text-[13px]"
+                            :class="status?.on ? 'text-accent-text' : 'text-muted'"
+                            role="status"
+                        >
+                            <span
+                                class="size-2 rounded-full"
+                                :class="status?.on ? 'bg-accent' : 'bg-subtle'"
+                                aria-hidden="true"
+                            />{{ status?.on ? t('lshape.stateOn') : t('lshape.stateOff') }}
+                        </span>
+                        <button class="btn-quiet" :disabled="busy || !status?.ready || status?.on" @click="send('on')">
+                            <i class="bi bi-aspect-ratio" aria-hidden="true" />{{ t('lshape.on') }}
+                        </button>
+                        <button class="btn-quiet" :disabled="busy || !status?.on" @click="send('off')">
+                            <i class="bi bi-fullscreen" aria-hidden="true" />{{ t('lshape.off') }}
+                        </button>
+                    </div>
+                    <span class="field-hint">{{ status?.ready ? t('lshape.onAirHint') : t('lshape.notReady') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <GenericModal
+            :show="picking"
+            :title="t('settings.choose')"
+            hide-buttons
+            :modal-action="() => (picking = false)"
+        >
+            <div class="w-[min(520px,90vw)] max-h-[60vh] flex flex-col">
+                <StoragePicker @pick="pick" />
+            </div>
+        </GenericModal>
+    </SectionCard>
+</template>

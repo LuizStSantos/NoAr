@@ -58,7 +58,8 @@ a live whose encoder runs its own commercial break.
   subtitles shows what the logo is doing, with **Hide**, **Back to the channel
   logo** and **Swap for…**.
 - From an encoder or a script: create the channel's **logo key** in the same
-  card and save. Calling these addresses (GET or POST) then changes the logo,
+  card. It works at once and stays the same until you make a new one there.
+  Calling these addresses (GET or POST) then changes the logo,
   with the channel's logo animation:
 
   ```text
@@ -74,6 +75,44 @@ A swapped logo takes the size, position and opacity of the configured one, and
 cross-fades with the image it replaces. A
 commercial still keeps any logo off. The API is described in
 [api.md](api.md#logo-on-air).
+
+## L-shape
+
+In an L-shape the programme picture shrinks into a corner of the screen and a
+full-screen graphic fills the band around it, with news, a sponsor or what is
+on next. It goes in and comes back out in 0.8 s, easing in and out, over the
+picture of clips, lives and ingest alike; the logo and texts stay on top.
+
+Set it up in **Settings › Logo › L-shape**:
+
+- **L-shape graphic**: an image in the storage, made for the whole screen
+  (1920×1080 for a 1080p output; another size is stretched to the output).
+  Draw the band and leave the video's space plain: the picture covers it.
+- **Video corner**: top right, top left, bottom right or bottom left.
+- **Video size**: how much of the screen the picture keeps, from 30% to 95%
+  (75% by default), its aspect ratio kept.
+
+The preview there shows the graphic and the picture's rectangle as on air.
+Saving loads the graphic at once, without a restart; one that cannot be read
+is refused when saving. Without a graphic the L-shape stays off.
+
+It goes on air:
+
+- **For stretches of a video**, marked in **Storage › Trim, logo, breaks and
+  L-shape** on the L-shape tab, like the [stretches without logo](#where-the-logo-goes-off-by-itself).
+  They are kept in the video's `<name>.logo.json` as `"lshape"` and apply
+  wherever the video plays; a playlist that plays part of the video gets the
+  stretches of that part.
+- **From here**: **Go to L-shape** and **Back to full screen** in the same
+  card. It stays until switched back or the server restarts.
+- **From an encoder or a script**, with the logo key, like the logo:
+
+  ```text
+  http://<server>:8787/lshape/<channel>/on?key=<KEY>
+  http://<server>:8787/lshape/<channel>/off?key=<KEY>
+  ```
+
+  The API is described in [api.md](api.md#l-shape).
 
 ## Logo in the guide
 

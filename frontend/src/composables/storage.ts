@@ -102,6 +102,8 @@ export interface VideoMarks {
     breaks: LogoSpan[]
     /** The part of the video that airs by default; a playlist entry may still set its own. */
     trim: LogoSpan | null
+    /** Stretches shown in the L-shape. */
+    lshape: LogoSpan[]
 }
 
 /** The marks of the video at `path`. */
@@ -112,7 +114,7 @@ export async function readLogoMarks(channelId: number, path: string): Promise<Vi
         body: JSON.stringify({ path }),
     })
 
-    return { hide: marks.hide ?? [], breaks: marks.breaks ?? [], trim: marks.trim ?? null }
+    return { hide: marks.hide ?? [], breaks: marks.breaks ?? [], trim: marks.trim ?? null, lshape: marks.lshape ?? [] }
 }
 
 export async function saveLogoMarks(channelId: number, path: string, marks: VideoMarks): Promise<VideoMarks> {
@@ -122,7 +124,7 @@ export async function saveLogoMarks(channelId: number, path: string, marks: Vide
         body: JSON.stringify({ path, ...marks }),
     })
 
-    return { hide: saved.hide ?? [], breaks: saved.breaks ?? [], trim: saved.trim ?? null }
+    return { hide: saved.hide ?? [], breaks: saved.breaks ?? [], trim: saved.trim ?? null, lshape: saved.lshape ?? [] }
 }
 
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {

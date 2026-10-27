@@ -265,6 +265,8 @@ pub struct OutputConfig {
     pub logo: Option<LogoConfig>,
     /// Hides or swaps the logo on air from outside the playout.
     pub logo_control: LogoControl,
+    /// Switches the L-shape on air from outside the playout.
+    pub lshape_control: crate::LShapeControl,
     pub text: Option<TextConfig>,
     pub text_overlay_state: TextOverlayState,
     pub stream_type: StreamType,
@@ -1385,6 +1387,7 @@ impl OutputConfig {
             loudness_meter_control: LoudnessMeterControl::default(),
             logo: None,
             logo_control: LogoControl::default(),
+            lshape_control: crate::LShapeControl::default(),
             text: None,
             text_overlay_state: TextOverlayState::default(),
             stream_type: StreamType::Rtmp,
@@ -1469,6 +1472,11 @@ impl OutputConfig {
 
     pub fn with_logo_control(mut self, logo_control: LogoControl) -> Self {
         self.logo_control = logo_control;
+        self
+    }
+
+    pub fn with_lshape_control(mut self, lshape_control: crate::LShapeControl) -> Self {
+        self.lshape_control = lshape_control;
         self
     }
 

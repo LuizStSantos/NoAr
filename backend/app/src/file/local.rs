@@ -181,7 +181,7 @@ impl LocalStorage {
                 let marks = read_marks(&file).await;
 
                 (
-                    !marks.hide.is_empty() || !marks.breaks.is_empty(),
+                    !marks.hide.is_empty() || !marks.breaks.is_empty() || !marks.lshape.is_empty(),
                     marks.trim,
                 )
             } else {

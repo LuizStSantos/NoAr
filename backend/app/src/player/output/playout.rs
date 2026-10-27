@@ -39,6 +39,25 @@ const HLS_RATE_CORRECTION_MAX_DELTA_FACTOR: f64 = 1.0;
 /// The next clip opens this long before the one on air ends.
 const PRELOAD_LEAD_SECONDS: f64 = 10.0;
 
+/// The channel's L-shape graphic, sized to the output. One that cannot be
+/// read leaves the L-shape off rather than the channel.
+pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
+    let loaded = config
+        .processing
+        .lshape_config(&config.channel.storage)
+        .and_then(|lshape| {
+            manager
+                .lshape_control
+                .set_graphic(lshape.as_ref(), config.output.width, config.output.height)
+                .map_err(|error| format!("{error:#}"))
+        });
+
+    if let Err(error) = loaded {
+        let _ = manager.lshape_control.set_graphic(None, 0, 0);
+        warn!(channel = config.general.channel_id; "L-shape off: {error}");
+    }
+}
+
 pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     let config = manager.config.read().await.clone();
     let _running_config = manager.track_running_config(config.clone());
@@ -57,6 +76,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
             .logo_transitions()
             .map_err(ServiceError::Conflict)?,
     );
+    load_lshape(&manager, &config);
     let output_config = engine_output_config(
         &config,
         manager.audio_effects.clone(),
@@ -67,6 +87,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     )?
     .with_preview_url(Some(manager.preview.url().to_string()))
     .with_logo_control(manager.logo_control.clone())
+    .with_lshape_control(manager.lshape_control.clone())
     .with_splice_control(manager.splice_control.clone())
     .with_output_link(manager.output_link.clone());
     let playout = open_playout(&config, output_config.clone()).await?;
@@ -332,6 +353,7 @@ async fn play_loop(
         let is_ad = node.ad;
         let marks = clip_marks(&config.channel.storage, &node.source).await;
         let logo_gaps = marks.gaps();
+        let lshape = marks.lshape_spans();
         let mut breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
         // Breaks marked inside the video itself, when it is not a commercial.
         if !node.ad {
@@ -354,6 +376,7 @@ async fn play_loop(
                     // fading it out before them (a playlist that opens on one).
                     hidden: is_ad,
                     gaps: logo_gaps,
+                    lshape,
                 },
                 playout_rate,
             )
@@ -940,10 +963,15 @@ pub(crate) async fn play_plain_from(
             Some(duration),
             None,
             subtitle_media_path(config, source),
-            LogoFade {
-                hidden: commercial,
-                gaps: clip_marks(&config.channel.storage, source).await.gaps(),
-                ..LogoFade::default()
+            {
+                let marks = clip_marks(&config.channel.storage, source).await;
+
+                LogoFade {
+                    hidden: commercial,
+                    gaps: marks.gaps(),
+                    lshape: marks.lshape_spans(),
+                    ..LogoFade::default()
+                }
             },
             1.0,
         )

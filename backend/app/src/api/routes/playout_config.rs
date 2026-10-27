@@ -109,6 +109,10 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
             processing.remove("logo_transition_in");
             processing.remove("logo_transition_out");
             processing.remove("logo_transition_seconds");
+            // The L-shape graphic is loaded on air right away.
+            processing.remove("lshape");
+            processing.remove("lshape_scale");
+            processing.remove("lshape_corner");
         }
         if let Some(audio) = config
             .get_mut("audio")
@@ -284,11 +288,38 @@ pub async fn update_playout_config(
     let config = manager.config.read().await.clone();
     let config_id = config.general.id;
 
+    // The remote-control keys change only with `/keys/{kind}`: a page that
+    // saves an older copy of the settings must not bring back an old key.
+    data.processing.logo_key = config.processing.logo_key.clone();
+    data.scte35.key = config.scte35.key.clone();
+
     let (_, _, logo) = norm_abs_path(storage, &data.processing.logo)?;
     let (_, _, filler) = norm_abs_path(storage, &data.storage.filler)?;
 
     data.processing.logo = logo;
     data.storage.filler = filler;
+    if !data.processing.lshape.trim().is_empty() {
+        let (_, _, lshape) = norm_abs_path(storage, &data.processing.lshape)?;
+        data.processing.lshape = lshape;
+    }
+    // Checked now, so a graphic that cannot be read is refused here rather
+    // than leaving the L-shape off on air.
+    if let Some(lshape) = data
+        .processing
+        .lshape_config(storage)
+        .map_err(ServiceError::BadRequest)?
+    {
+        noar_engine::LShapeControl::default()
+            .set_graphic(Some(&lshape), data.output.width, data.output.height)
+            .map_err(|error| {
+                // The cause only: the full path is the server's business.
+                ServiceError::BadRequest(format!(
+                    "{}: the L-shape graphic cannot be read ({})",
+                    data.processing.lshape,
+                    error.root_cause()
+                ))
+            })?;
+    }
     data.processing
         .hls_subtitle()
         .map_err(ServiceError::BadRequest)?;
@@ -552,9 +583,73 @@ pub async fn update_playout_config(
         crate::player::controller::loudness_config(&new_config.audio),
     );
     manager.logo_control.set_transitions(logo_transitions);
+    crate::player::output::load_lshape(&manager, &new_config);
     manager.update_config(new_config).await;
 
     Ok(Json(PlayoutConfigUpdate { requires_restart }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct KeyRequest {
+    /// `renew` for a new key, `clear` for none (the control is off).
+    action: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct KeyResponse {
+    pub key: String,
+}
+
+/// **Renew or clear a remote-control key**
+///
+/// `kind` is `logo` (the logo and L-shape links) or `scte35`. The key is
+/// made and saved here, at once, and stays until it is renewed or cleared
+/// again: saving the other settings never changes it.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/playout/config/1/keys/logo -H "Content-Type: application/json" \
+/// -d '{"action": "renew"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn update_remote_key(
+    State(state): State<AppState>,
+    AxumPath((id, kind)): AxumPath<(i32, String)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<KeyRequest>,
+) -> Result<Json<KeyResponse>, ServiceError> {
+    ensure_any_authority(&details, &[&Role::GlobalAdmin, &Role::ChannelAdmin])?;
+    user.ensure_channel_or_admin(id)?;
+
+    let kind = match kind.as_str() {
+        "logo" => handles::RemoteKey::Logo,
+        "scte35" => handles::RemoteKey::Scte35,
+        _ => return Err(ServiceError::BadRequest(format!("unknown key '{kind}'"))),
+    };
+    let key = match request.action.as_str() {
+        "renew" => uuid::Uuid::new_v4().simple().to_string(),
+        "clear" => String::new(),
+        action => {
+            return Err(ServiceError::BadRequest(format!(
+                "unknown action '{action}'"
+            )));
+        }
+    };
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
+
+    handles::update_remote_key(&state.pool, id, kind, &key).await?;
+
+    let mut config = manager.config.read().await.clone();
+    match kind {
+        handles::RemoteKey::Logo => config.processing.logo_key.clone_from(&key),
+        handles::RemoteKey::Scte35 => config.scte35.key.clone_from(&key),
+    }
+    manager.update_config(config).await;
+
+    Ok(Json(KeyResponse { key }))
 }
 
 fn validate_loudness(processing: &crate::utils::config::Audio) -> Result<(), ServiceError> {
@@ -868,6 +963,34 @@ mod tests {
         assert_eq!(transitions.show, noar_engine::LogoTransition::Fade);
         assert_eq!(transitions.hide, noar_engine::LogoTransition::Cut);
         assert_eq!(transitions.seconds, Some(1.5));
+    }
+
+    #[test]
+    fn the_lshape_is_off_without_a_graphic_and_checks_its_settings() {
+        let mut config = PlayoutConfig::default();
+        let storage = std::path::Path::new("/storage");
+
+        assert_eq!(config.processing.lshape_config(storage), Ok(None));
+
+        config.processing.lshape = "00-assets/lshape.png".to_string();
+        config.processing.lshape_scale = 75.0;
+        config.processing.lshape_corner = "top-right".to_string();
+        let lshape = config.processing.lshape_config(storage).unwrap().unwrap();
+        assert_eq!(lshape.path, "/storage/00-assets/lshape.png");
+        assert_eq!(lshape.corner, noar_engine::LShapeCorner::TopRight);
+
+        config.processing.lshape_scale = 99.0;
+        assert!(config.processing.lshape_config(storage).is_err());
+        config.processing.lshape_scale = 60.0;
+        config.processing.lshape_corner = "middle".to_string();
+        assert!(config.processing.lshape_config(storage).is_err());
+
+        // Switched on air at once, like the logo transitions.
+        let current = PlayoutConfig::default();
+        let mut updated = current.clone();
+        updated.processing.lshape = "00-assets/lshape.png".to_string();
+        updated.processing.lshape_scale = 60.0;
+        assert!(!requires_playout_restart(&current, &updated));
     }
 
     #[test]

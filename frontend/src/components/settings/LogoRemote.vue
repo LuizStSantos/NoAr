@@ -2,11 +2,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import RemoteKeyField from '@/components/settings/RemoteKeyField.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { authFetch } from '@/composables/authFetch'
-import { copyText, randomId } from '@/composables/browser'
+import { copyText } from '@/composables/browser'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -48,10 +49,17 @@ function actionUrl(action: 'hide' | 'show' | 'replace'): string {
     return `${window.location.origin}/logo/${channelId.value}/${action}?${params.toString().replace(/%2F/g, '/')}`
 }
 
+/** The L-shape is switched with the same key. */
+function lshapeUrl(action: 'on' | 'off'): string {
+    return `${window.location.origin}/lshape/${channelId.value}/${action}?${new URLSearchParams({ key: keyPlaceholder.value })}`
+}
+
 const urls = computed(() => [
     { action: 'hide', url: actionUrl('hide') },
     { action: 'show', url: actionUrl('show') },
     { action: 'replace', url: actionUrl('replace') },
+    { action: 'lshapeOn', url: lshapeUrl('on') },
+    { action: 'lshapeOff', url: lshapeUrl('off') },
 ])
 
 const snippet = computed(() => {
@@ -133,10 +141,6 @@ function pick(file: { path: string }) {
     picking.value = null
 }
 
-function newKey() {
-    processing.value.logo_key = randomId().replace(/-/g, '')
-}
-
 async function copy(text: string) {
     try {
         await copyText(text)
@@ -171,30 +175,12 @@ watch(channelId, load)
             </button>
         </div>
 
-        <div class="flex flex-col gap-1.5">
-            <span class="text-xs text-muted">{{ t('settings.logo.remote.key') }}</span>
-            <div class="flex flex-wrap gap-2">
-                <input
-                    :value="key"
-                    readonly
-                    class="field-input font-mono text-[13px] flex-[1_1_260px] min-w-0"
-                    :placeholder="t('settings.logo.remote.noKey')"
-                    :aria-label="t('settings.logo.remote.key')"
-                />
-                <button class="btn-quiet" @click="newKey">
-                    <i class="bi bi-key" aria-hidden="true" />{{
-                        key ? t('settings.logo.remote.newKey') : t('settings.logo.remote.createKey')
-                    }}
-                </button>
-                <button v-if="key" class="btn-quiet" @click="copy(key)">
-                    <i class="bi bi-clipboard" aria-hidden="true" />{{ t('settings.logo.remote.copy') }}
-                </button>
-                <button v-if="key" class="btn-quiet" @click="processing.logo_key = ''">
-                    {{ t('settings.logo.remote.removeKey') }}
-                </button>
-            </div>
-            <span class="field-hint">{{ t('settings.logo.remote.keyHint') }}</span>
-        </div>
+        <RemoteKeyField
+            kind="logo"
+            :label="t('settings.logo.remote.key')"
+            :no-key="t('settings.logo.remote.noKey')"
+            :hint="t('settings.logo.remote.keyHint')"
+        />
 
         <button
             class="flex items-center gap-2 bg-transparent border-0 p-0 min-h-8 cursor-pointer text-accent-text text-left font-medium"

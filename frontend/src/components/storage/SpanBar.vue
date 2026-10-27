@@ -14,8 +14,8 @@ const props = defineProps<{
     /** Length of the video, in seconds. */
     duration: number
     spans: LogoSpan[]
-    /** `logo` for stretches without logo, `break` for ad breaks. */
-    tone: 'logo' | 'break'
+    /** `logo` for stretches without logo, `break` for ad breaks, `lshape` for the L-shape. */
+    tone: 'logo' | 'break' | 'lshape'
     /** Play position, when there is a video to play. */
     position?: number
     /** Where a stretch being marked started, while it is open. */
@@ -41,8 +41,15 @@ type Edge = 'from' | 'to'
 const track = ref<HTMLElement>()
 const dragging = ref<{ index: number; edge: Edge } | null>(null)
 
-const fill = computed(() => (props.tone === 'logo' ? 'bg-after-clip/35 border-after-clip' : 'bg-live/35 border-live'))
-const handle = computed(() => (props.tone === 'logo' ? 'bg-after-clip' : 'bg-live'))
+const fill = computed(
+    () =>
+        ({
+            logo: 'bg-after-clip/35 border-after-clip',
+            break: 'bg-live/35 border-live',
+            lshape: 'bg-info/35 border-info',
+        })[props.tone],
+)
+const handle = computed(() => ({ logo: 'bg-after-clip', break: 'bg-live', lshape: 'bg-info' })[props.tone])
 
 function percent(seconds: number): string {
     return `${props.duration > 0 ? Math.min(100, Math.max(0, (seconds / props.duration) * 100)) : 0}%`
@@ -163,7 +170,7 @@ function label(seconds: number): string {
 }
 
 function handleLabel(index: number, edge: Edge): string {
-    const key = props.tone === 'logo' ? 'storage.logoMarks' : 'storage.breakMarks'
+    const key = { logo: 'storage.logoMarks', break: 'storage.breakMarks', lshape: 'storage.lshapeMarks' }[props.tone]
 
     return `${t(`${key}.${edge}`)} · ${index + 1}`
 }

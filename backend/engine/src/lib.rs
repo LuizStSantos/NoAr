@@ -39,6 +39,9 @@ pub use audio_mixer::{
 pub use compositor::logo::{
     LogoControl, LogoState, LogoTransition, LogoTransitions, MAX_LOGO_TRANSITION_SECONDS,
 };
+pub use compositor::lshape::{
+    LSHAPE_MAX_SCALE, LSHAPE_MIN_SCALE, LSHAPE_SECONDS, LShapeConfig, LShapeControl, LShapeCorner,
+};
 pub use convert::{ConvertTarget, MediaShape, convert_to_output, probe_shape, video_matches};
 use input::live::{LiveEnded, LiveOverrideOutput};
 pub use input::live::{
@@ -113,6 +116,8 @@ pub struct LogoFade {
     /// Stretches of the clip that keep the logo off, such as a commercial
     /// break edited into a programme.
     pub gaps: LogoGaps,
+    /// Stretches of the clip shown in the L-shape.
+    pub lshape: LogoGaps,
 }
 
 /// The most stretches without logo a clip can have.

@@ -118,6 +118,7 @@ pub struct ChannelManager {
     pub loudness_meter: noar_engine::LoudnessMeterControl,
     /// Hides or swaps the logo on air; kept across playout restarts.
     pub logo_control: noar_engine::LogoControl,
+    pub lshape_control: noar_engine::LShapeControl,
     /// The SCTE-35 ad breaks the channel signals.
     pub splice_control: noar_engine::SpliceControl,
     /// How the network output reaches its destination; outlasts restarts.
@@ -215,6 +216,7 @@ impl ChannelManager {
             live_loudness,
             loudness_meter: noar_engine::LoudnessMeterControl::default(),
             logo_control: noar_engine::LogoControl::default(),
+            lshape_control: noar_engine::LShapeControl::default(),
             splice_control: noar_engine::SpliceControl::default(),
             output_link: noar_engine::OutputLink::default(),
             conversions,

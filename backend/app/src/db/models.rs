@@ -297,6 +297,12 @@ pub struct Configuration {
     pub processing_logo_transition_out: String,
     #[serde(default)]
     pub processing_logo_transition_seconds: Option<f64>,
+    #[serde(default)]
+    pub processing_lshape: String,
+    #[serde(default = "default_lshape_scale")]
+    pub processing_lshape_scale: f64,
+    #[serde(default = "default_lshape_corner")]
+    pub processing_lshape_corner: String,
 
     pub playlist_day_start: String,
     pub playlist_length: String,
@@ -381,6 +387,9 @@ impl Configuration {
             processing_logo_transition_in: config.processing.logo_transition_in.to_string(),
             processing_logo_transition_out: config.processing.logo_transition_out.to_string(),
             processing_logo_transition_seconds: config.processing.logo_transition_seconds,
+            processing_lshape: config.processing.lshape,
+            processing_lshape_scale: config.processing.lshape_scale,
+            processing_lshape_corner: config.processing.lshape_corner,
             playlist_day_start: config.playlist.day_start,
             playlist_length: config.playlist.length,
             playlist_infinit: config.playlist.infinit,
@@ -772,4 +781,12 @@ pub struct NewAsRunEntry {
 
 fn default_logo_transition() -> String {
     "fade".to_string()
+}
+
+fn default_lshape_scale() -> f64 {
+    75.0
+}
+
+fn default_lshape_corner() -> String {
+    "top-right".to_string()
 }

@@ -1,6 +1,7 @@
 //! Hides, shows or swaps the logo on air while the channel plays, for
 //! example from the encoder of a live whose programme has a commercial
-//! break. The change lasts until the next one or a server restart.
+//! break. The change lasts until the next one or a server restart. The
+//! L-shape is switched the same way, with the same key.
 
 use axum::{
     Json,
@@ -123,6 +124,117 @@ pub async fn control_logo_with_key(
     }
 
     apply(&manager, action, query.logo.as_deref()).await
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum LShapeAction {
+    /// Shrink the picture into the L-shape.
+    On,
+    /// Bring the picture back to the full screen.
+    Off,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LShapeRequest {
+    action: LShapeAction,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LShapeStatus {
+    /// Switched on from outside; a stretch marked in a video also shows it.
+    on: bool,
+    /// Whether the channel has an L-shape graphic.
+    ready: bool,
+}
+
+/// **Whether the L-shape is on**
+pub async fn get_lshape_state(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<LShapeStatus>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details).await?;
+
+    Ok(Json(lshape_status(&manager)))
+}
+
+/// **Switch the L-shape on air**
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/control/1/lshape -H 'Content-Type: application/json' \
+/// -d '{"action": "on"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn control_lshape(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<LShapeRequest>,
+) -> Result<Json<LShapeStatus>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details).await?;
+
+    apply_lshape(&manager, request.action)
+}
+
+/// **Switch the L-shape on air, with the channel's logo key**
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>'
+/// curl -X POST 'http://127.0.0.1:8787/lshape/1/off?key=<KEY>'
+/// ```
+pub async fn control_lshape_with_key(
+    State(state): State<AppState>,
+    Path((id, action)): Path<(i32, LShapeAction)>,
+    Query(query): Query<LogoKeyQuery>,
+    headers: HeaderMap,
+) -> Result<Json<LShapeStatus>, ServiceError> {
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
+    let expected = manager.config.read().await.processing.logo_key.clone();
+    let given = headers
+        .get(KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .or(query.key.as_deref())
+        .unwrap_or_default();
+
+    if !key_matches(&expected, given) {
+        return Err(ServiceError::Forbidden(
+            "Wrong or missing logo key".to_string(),
+        ));
+    }
+
+    apply_lshape(&manager, action)
+}
+
+fn apply_lshape(
+    manager: &ChannelManager,
+    action: LShapeAction,
+) -> Result<Json<LShapeStatus>, ServiceError> {
+    let control = &manager.lshape_control;
+
+    match action {
+        LShapeAction::On if !control.is_ready() => {
+            return Err(ServiceError::Conflict(
+                "No L-shape graphic: choose one in Settings › Logo".to_string(),
+            ));
+        }
+        LShapeAction::On => control.on(),
+        LShapeAction::Off => control.off(),
+    }
+
+    Ok(Json(lshape_status(manager)))
+}
+
+fn lshape_status(manager: &ChannelManager) -> LShapeStatus {
+    LShapeStatus {
+        on: manager.lshape_control.is_on(),
+        ready: manager.lshape_control.is_ready(),
+    }
 }
 
 async fn authorized(

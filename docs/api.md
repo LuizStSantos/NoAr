@@ -94,6 +94,7 @@ listed authenticated endpoints also enforce the channel assignment where an
 | `PUT` | `/api/playout/config/{id}` | `GA, CA` | Replace the complete `PlayoutConfig`. Use the response from `GET` as the request shape. The response contains `requires_restart`; mail, notification, and volume changes are runtime-safe and return `false`. |
 | `GET` | `/api/playout/outputs/{id}` | `GA, CA, U` | List configured outputs for the channel. |
 | `GET` | `/api/playout/codecs/{id}` | `GA, CA, U` | List supported codecs for HLS, RTMP, SRT, UDP, and custom outputs, including compatible hardware encoders and their curated encoder-setting schema. |
+| `POST` | `/api/playout/config/{id}/keys/{kind}` | `GA, CA` | `kind` is `logo` (logo and L-shape links) or `scte35`; `{ "action": "renew" }` makes and saves a new key, `{ "action": "clear" }` turns it off. Answers `{ "key": "..." }`. `PUT /api/playout/config/{id}` keeps the stored keys whatever it is sent. |
 | `POST` | `/api/playout/config/{id}/test-alert` | `GA, CA` | `{ "kind": "mail", "recipient": "...", "subject": "..." }` or `{ "kind": "push", "topic": "...", "tags": "..." }`. Sends one test alert with these values, saved or not. `409` when no mail or push server is configured. |
 
 `PUT /api/playout/config/{id}` validates output mode, codecs, HLS subtitle
@@ -212,12 +213,32 @@ takes the size, position and opacity of the configured logo.
 The `/logo/...` route is for encoders and scripts that cannot log in (vMix,
 OBS, Bitfocus Companion). It needs the channel's logo key, created in
 Settings › Logo, where a tutorial lists the addresses ready to copy. Without
-a key, or with a wrong one, it answers 403.
+a key, or with a wrong one, it answers 403. A key stays the same until it is
+renewed or turned off with `POST /api/playout/config/{id}/keys/{logo|scte35}`;
+saving the configuration never changes it.
 
 ```bash
 curl -X POST 'http://127.0.0.1:8787/logo/1/hide?key=<KEY>'
 curl -X POST 'http://127.0.0.1:8787/logo/1/replace?key=<KEY>&logo=00-assets/logo-ao-vivo.png'
 curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
+```
+
+### L-shape
+
+The picture shrinks into a corner over the channel's L-shape graphic
+([docs](logo.md#l-shape)). Switched on here, it stays until switched off or
+the server restarts; stretches marked in a video go into it by themselves.
+The keyed route takes the channel's logo key.
+
+| Method | Endpoint | Access | Request body |
+| --- | --- | --- | --- |
+| `GET` | `/api/control/{id}/lshape` | `GA, CA, U` | Read the state: `{ "on": false, "ready": true }`; `ready` is false without a graphic. |
+| `POST` | `/api/control/{id}/lshape` | `GA, CA, U` | `{ "action": "on" \| "off" }`. `on` without a graphic answers 409. |
+| `GET`, `POST` | `/lshape/{id}/{on\|off}` | Logo key | Query `key` (or header `X-Logo-Key`). |
+
+```bash
+curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>'
+curl -X POST 'http://127.0.0.1:8787/lshape/1/off?key=<KEY>'
 ```
 
 ### Ad breaks (SCTE-35)
@@ -294,7 +315,7 @@ rejected.
 | `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
 | `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
 | `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...], "trim": { "from": 8, "to": 1790.5 } }` |
-| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35. At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
+| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35, `lshape` the stretches in the [L-shape](logo.md#l-shape). At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
 | `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
 | `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
 | `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |

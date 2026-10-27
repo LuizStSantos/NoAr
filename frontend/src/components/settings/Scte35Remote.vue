@@ -2,8 +2,9 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import RemoteKeyField from '@/components/settings/RemoteKeyField.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
-import { copyText, randomId } from '@/composables/browser'
+import { copyText } from '@/composables/browser'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
@@ -67,10 +68,6 @@ const snippet = computed(() => {
     }
 })
 
-function newKey() {
-    scte35.value.key = randomId().replace(/-/g, '')
-}
-
 async function copy(text: string) {
     try {
         await copyText(text)
@@ -82,30 +79,12 @@ async function copy(text: string) {
 </script>
 <template>
     <SectionCard :title="t('scte35.remote.title')" :description="t('scte35.remote.intro')">
-        <div class="flex flex-col gap-1.5">
-            <span class="text-xs text-muted">{{ t('scte35.remote.key') }}</span>
-            <div class="flex flex-wrap gap-2">
-                <input
-                    :value="key"
-                    readonly
-                    class="field-input font-mono text-[13px] flex-[1_1_260px] min-w-0"
-                    :placeholder="t('scte35.remote.noKey')"
-                    :aria-label="t('scte35.remote.key')"
-                />
-                <button class="btn-quiet" @click="newKey">
-                    <i class="bi bi-key" aria-hidden="true" />{{
-                        key ? t('settings.logo.remote.newKey') : t('settings.logo.remote.createKey')
-                    }}
-                </button>
-                <button v-if="key" class="btn-quiet" @click="copy(key)">
-                    <i class="bi bi-clipboard" aria-hidden="true" />{{ t('settings.logo.remote.copy') }}
-                </button>
-                <button v-if="key" class="btn-quiet" @click="scte35.key = ''">
-                    {{ t('settings.logo.remote.removeKey') }}
-                </button>
-            </div>
-            <span class="field-hint">{{ t('scte35.remote.keyHint') }}</span>
-        </div>
+        <RemoteKeyField
+            kind="scte35"
+            :label="t('scte35.remote.key')"
+            :no-key="t('scte35.remote.noKey')"
+            :hint="t('scte35.remote.keyHint')"
+        />
 
         <button
             class="flex items-center gap-2 bg-transparent border-0 p-0 min-h-8 cursor-pointer text-accent-text text-left font-medium"

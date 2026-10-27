@@ -11,6 +11,31 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- **L-shape**: the programme picture shrinks into a corner over a
+  full-screen graphic (news, sponsors, what is on next) and grows back,
+  animated, on clips, lives and ingest. Set the graphic, the corner and the
+  picture's size in Settings › Logo › L-shape, which also switches it on air.
+  It goes in for stretches marked in a video (Storage › marks, new L-shape
+  tab, kept in `<name>.logo.json` as `"lshape"`) and from encoders with the
+  logo key: `/lshape/{id}/{on|off}`, or `/api/control/{id}/lshape` with a
+  login. The settings are in migration 00020.
+- The uploads panel follows each video after its upload: a blue bar while it
+  waits for or goes through conversion to the output format, then whether it
+  was converted, was already in the format or failed.
+- A video put in a playlist before its conversion plays the converted file;
+  one that became an `.mp4` (a WebM, AVI…) plays in place of the original.
+
+### Fixed
+
+- The logo and SCTE-35 keys could change by themselves: they were saved with
+  the rest of the settings, so a page or a browser with an older copy brought
+  an old key back, and a key made in the page worked only after a save. Keys
+  are now made and saved at once by **New key**, after a confirmation, and
+  stay the same until renewed or turned off; saving the settings never
+  changes them (`POST /api/playout/config/{id}/keys/{logo|scte35}`).
+
 ## [1.4.5] - 2026-10-27
 
 ### Fixed

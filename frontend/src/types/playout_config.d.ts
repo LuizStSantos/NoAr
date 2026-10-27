@@ -84,7 +84,21 @@ logo_transition_out: LogoTransition,
  * takes its place, in seconds; empty keeps the built-in lengths (1 s on
  * clips, 0.4 s when switched from outside).
  */
-logo_transition_seconds: number | null, };
+logo_transition_seconds: number | null, 
+/**
+ * The L-shape graphic, a full-screen image relative to the storage;
+ * empty turns the L-shape off.
+ */
+lshape: string, 
+/**
+ * Size of the picture in the L-shape, in percent of the screen.
+ */
+lshape_scale: number, 
+/**
+ * Corner the picture goes to: `top-right`, `top-left`, `bottom-right`
+ * or `bottom-left`.
+ */
+lshape_corner: string, };
 
 export type Recording = { enable: boolean, source: RecordingSource, source_output_id: number | null, variant: string, path: string, segment_duration: number, retention_days: number, minimum_free_space_gb: number, width: number, height: number, video_codec: string, video_options: { [key in string]: string }, audio_codec: string, audio_options: { [key in string]: string }, audio_bitrate: number, };
 

@@ -43,6 +43,10 @@ pub struct LogoMarks {
     /// in seconds of the video. A playlist entry still sets its own.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trim: Option<LogoSpan>,
+    /// Stretches shown in the L-shape: the picture shrinks into its corner
+    /// over the channel's L-shape graphic.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lshape: Vec<LogoSpan>,
 }
 
 impl LogoMarks {
@@ -51,6 +55,7 @@ impl LogoMarks {
     pub fn validated(mut self) -> Result<Self, ServiceError> {
         self.hide = validated_spans(self.hide, "stretches without logo")?;
         self.breaks = validated_spans(self.breaks, "ad breaks")?;
+        self.lshape = validated_spans(self.lshape, "L-shape stretches")?;
 
         if let Some(trim) = self.trim {
             validated_spans(vec![trim], "trim")?;
@@ -60,7 +65,10 @@ impl LogoMarks {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.hide.is_empty() && self.breaks.is_empty() && self.trim.is_none()
+        self.hide.is_empty()
+            && self.breaks.is_empty()
+            && self.lshape.is_empty()
+            && self.trim.is_none()
     }
 
     /// Where the video starts and how long it plays, after its saved trim,
@@ -78,6 +86,11 @@ impl LogoMarks {
 
     pub fn gaps(&self) -> LogoGaps {
         LogoGaps::new(self.hide.iter().map(|span| (span.from, span.to)))
+    }
+
+    /// The stretches in the L-shape, for the engine.
+    pub fn lshape_spans(&self) -> LogoGaps {
+        LogoGaps::new(self.lshape.iter().map(|span| (span.from, span.to)))
     }
 
     /// The ad breaks of a clip that plays from `seek` for `duration`
@@ -278,6 +291,7 @@ mod tests {
             hide: vec![span(300.0, 360.0), span(60.0, 90.0)],
             breaks: Vec::new(),
             trim: None,
+            lshape: Vec::new(),
         }
         .validated()
         .unwrap();
@@ -288,6 +302,7 @@ mod tests {
                 hide: vec![span(10.0, 5.0)],
                 breaks: Vec::new(),
                 trim: None,
+                lshape: Vec::new(),
             }
             .validated()
             .is_err()
@@ -297,6 +312,7 @@ mod tests {
                 hide: vec![span(10.0, 30.0), span(20.0, 40.0)],
                 breaks: Vec::new(),
                 trim: None,
+                lshape: Vec::new(),
             }
             .validated()
             .is_err()
@@ -306,6 +322,7 @@ mod tests {
                 hide: vec![span(-1.0, 5.0)],
                 breaks: Vec::new(),
                 trim: None,
+                lshape: Vec::new(),
             }
             .validated()
             .is_err()
@@ -318,6 +335,7 @@ mod tests {
             hide: Vec::new(),
             breaks: vec![span(60.0, 90.0), span(290.0, 320.0), span(900.0, 960.0)],
             trim: None,
+            lshape: Vec::new(),
         };
 
         // The whole video.
@@ -355,6 +373,30 @@ mod tests {
         assert!(!marks.is_empty());
     }
 
+    #[test]
+    fn lshape_stretches_are_checked_and_given_to_the_engine() {
+        let marks = LogoMarks {
+            lshape: vec![span(120.0, 180.0), span(10.0, 20.0)],
+            ..LogoMarks::default()
+        }
+        .validated()
+        .unwrap();
+
+        assert!(!marks.is_empty());
+        assert_eq!(
+            marks.lshape_spans().iter().collect::<Vec<_>>(),
+            [(10_000, 20_000), (120_000, 180_000)]
+        );
+        assert!(
+            LogoMarks {
+                lshape: vec![span(10.0, 30.0), span(20.0, 40.0)],
+                ..LogoMarks::default()
+            }
+            .validated()
+            .is_err()
+        );
+    }
+
     #[tokio::test]
     async fn marks_live_next_to_the_video() {
         let dir = std::env::temp_dir().join(format!("noar-logo-marks-{}", uuid::Uuid::new_v4()));
@@ -364,6 +406,7 @@ mod tests {
             hide: vec![span(750.0, 990.5)],
             breaks: Vec::new(),
             trim: None,
+            lshape: Vec::new(),
         };
 
         assert_eq!(marks_path(&video), dir.join("Programa 01.logo.json"));
@@ -394,6 +437,7 @@ mod tests {
             hide: vec![span(1.0, 2.0)],
             breaks: Vec::new(),
             trim: None,
+            lshape: Vec::new(),
         };
         let video = dir.join("A.mp4");
         std::fs::write(&video, b"x").unwrap();
