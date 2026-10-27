@@ -42,7 +42,9 @@ const groups = computed(() =>
     (['channel', 'system'] as const)
         .map((group) => ({
             group,
-            sections: settings.visibleSections.filter((section) => section.group === group && matches(section.name)),
+            sections: settings.visibleSections.filter(
+                (section) => section.group === group && !section.elsewhere && matches(section.name),
+            ),
         }))
         .filter((entry) => entry.sections.length),
 )
@@ -142,7 +144,11 @@ watch(
             <label class="field-label lg:hidden">
                 {{ t('settings.page') }}
                 <select class="field-input bg-base-100!" :value="current" @change="selectSection">
-                    <option v-for="section in settings.visibleSections" :key="section.name" :value="section.name">
+                    <option
+                        v-for="section in settings.visibleSections.filter((item) => !item.elsewhere)"
+                        :key="section.name"
+                        :value="section.name"
+                    >
                         {{ t(`settings.sections.${section.name}`)
                         }}{{ settings.changedSections.includes(section.name) ? ' •' : '' }}
                     </option>

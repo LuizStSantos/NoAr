@@ -225,7 +225,8 @@ The state then has `"position"`, which a swapped logo uses too.
 
 The `/logo/...` route is for encoders and scripts that cannot log in (vMix,
 OBS, Bitfocus Companion). It needs the channel's logo key, created in
-Settings › Logo, where a tutorial lists the addresses ready to copy. Without
+Graphics › External control (API), where a tutorial lists the addresses ready
+to copy. Without
 a key, or with a wrong one, it answers 403. A key stays the same until it is
 renewed or turned off with `POST /api/playout/config/{id}/keys/{logo|scte35}`;
 saving the configuration never changes it.
@@ -269,6 +270,26 @@ graphic for its marked stretches, until moved again, `position` `default`,
 or a server restart.
 
 The logo goes off while the picture is in the L-shape and comes back after.
+
+### Quick scenes
+
+A scene is a named set of logo and L-shape changes saved in the channel
+configuration (`processing.graphics_scenes`, at most 24, unique names) and
+applied in one go ([docs](logo.md#quick-scenes)).
+
+| Method | Endpoint | Access | Request body |
+| --- | --- | --- | --- |
+| `POST` | `/api/control/{id}/scene` | `GA, CA, U` | `{ "name": "Intervalo comercial" }`. Answers `{ "scene", "logo", "lshape" }` with the state after it; 404 for an unknown scene, 409 when it goes to the L-shape without a graphic. |
+| `GET`, `POST` | `/scene/{id}/{name}` | Logo key | `name` in lower case with dashes (`intervalo-comercial`); query `key` or header `X-Logo-Key`. |
+
+A scene in `graphics_scenes` is
+`{ "name", "logo": "keep" | "hide" | "show" | "replace", "logo_image", "logo_position", "lshape": "keep" | "on" | "off", "lshape_graphic", "lshape_corner", "lshape_scale" }`;
+`null` values leave that part as it is on air, `logo_position` and
+`lshape_corner` also take `default`.
+
+```bash
+curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
+```
 
 ### Ad breaks (SCTE-35)
 

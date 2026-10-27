@@ -113,6 +113,8 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
             processing.remove("lshape");
             processing.remove("lshape_scale");
             processing.remove("lshape_corner");
+            // Scenes only apply when called.
+            processing.remove("graphics_scenes");
         }
         if let Some(audio) = config
             .get_mut("audio")
@@ -319,6 +321,24 @@ pub async fn update_playout_config(
                     error.root_cause()
                 ))
             })?;
+    }
+    data.processing
+        .check_graphics_scenes()
+        .map_err(ServiceError::BadRequest)?;
+    for scene in &mut data.processing.graphics_scenes {
+        scene.name = scene.name.trim().to_string();
+        for image in [&mut scene.logo_image, &mut scene.lshape_graphic] {
+            if let Some(path) = image
+                .as_deref()
+                .map(str::trim)
+                .filter(|path| !path.is_empty())
+            {
+                let (_, _, relative) = norm_abs_path(storage, path)?;
+                *image = Some(relative);
+            } else {
+                *image = None;
+            }
+        }
     }
     data.processing
         .hls_subtitle()

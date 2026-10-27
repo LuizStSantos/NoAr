@@ -9,6 +9,7 @@ import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { authFetch } from '@/composables/authFetch'
 import { copyText } from '@/composables/browser'
+import { LOGO_BOX, LSHAPE_CORNERS, sharesOf } from '@/composables/graphics'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -33,42 +34,8 @@ interface LShapeStatus {
     scale?: number | null
 }
 
-const CORNER_SHARES: Record<string, Shares> = {
-    'top-left': { x: 0, y: 0 },
-    top: { x: 50, y: 0 },
-    'top-right': { x: 100, y: 0 },
-    left: { x: 0, y: 50 },
-    center: { x: 50, y: 50 },
-    right: { x: 100, y: 50 },
-    'bottom-left': { x: 0, y: 100 },
-    bottom: { x: 50, y: 100 },
-    'bottom-right': { x: 100, y: 100 },
-}
-
-/** The logo's box on the pad, in percent of the screen. */
-const LOGO_BOX = { width: 12, height: 12 * (16 / 9) }
-
-/**
- * Where a position puts the box, as shares: `X%:Y%`, a place name, or an
- * expression like `W-w-12:12` (read as its edge or middle).
- */
-function sharesOf(position: string | null | undefined): Shares {
-    const value = position?.trim() ?? ''
-    const shares = /^([\d.]+)%?\s*:\s*([\d.]+)%?$/.exec(value)
-
-    if (CORNER_SHARES[value]) {
-        return CORNER_SHARES[value]
-    }
-
-    if (shares && value.includes('%')) {
-        return { x: Number(shares[1]), y: Number(shares[2]) }
-    }
-
-    const [x = '', y = ''] = value.split(':')
-    const axis = (part: string, full: RegExp) => (part.includes('/2') ? 50 : full.test(part) ? 100 : 0)
-
-    return { x: axis(x, /W|main_w/), y: axis(y, /H|main_h/) }
-}
+/** `live` is the controls on air; `api` the key and the tutorial. */
+const props = withDefaults(defineProps<{ part?: 'live' | 'api' }>(), { part: 'live' })
 
 const { t } = useI18n()
 const authStore = useAuth()
@@ -82,7 +49,7 @@ const busy = ref(false)
 const picking = ref<'now' | 'example' | 'lshapeNow' | 'lshapeExample' | null>(null)
 const exampleLogo = ref('')
 const exampleGraphic = ref('')
-const showGuide = ref(false)
+const showGuide = ref(props.part === 'api')
 const example = ref<'curl' | 'vmix' | 'obs' | 'companion'>('curl')
 
 const processing = computed(() => configStore.playout.processing)
@@ -163,7 +130,6 @@ const snippet = computed(() => {
 })
 
 const logoShares = computed(() => sharesOf(status.value?.position ?? processing.value.logo_position))
-const LSHAPE_CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
 const lshapeCorner = computed(() => lshape.value?.position ?? processing.value.lshape_corner)
 const lshapeScale = computed(() => lshape.value?.scale ?? processing.value.lshape_scale ?? 75)
 
@@ -312,13 +278,17 @@ async function copy(text: string) {
 }
 
 onMounted(load)
+defineExpose({ load })
 watch(channelId, load)
 // A save loads the channel's graphic on air.
 watch(() => configStore.playoutSaved.processing?.lshape, load)
 </script>
 <template>
-    <SectionCard :title="t('settings.logo.remote.title')" :description="t('settings.logo.remote.intro')">
-        <div class="flex flex-col gap-3">
+    <SectionCard
+        :title="props.part === 'api' ? t('graphics.api.title') : t('settings.logo.remote.title')"
+        :description="props.part === 'api' ? t('graphics.api.intro') : t('settings.logo.remote.intro')"
+    >
+        <div v-if="props.part === 'live'" class="flex flex-col gap-3">
             <!-- The logo, now. -->
             <div class="flex flex-wrap items-center gap-2.5">
                 <span class="w-20 flex-none text-[13px] font-semibold">{{ t('settings.logo.remote.logo') }}</span>
@@ -483,98 +453,100 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
             </div>
         </div>
 
-        <RemoteKeyField
-            kind="logo"
-            :label="t('settings.logo.remote.key')"
-            :no-key="t('settings.logo.remote.noKey')"
-            :hint="t('settings.logo.remote.keyHint')"
-        />
+        <template v-if="props.part === 'api'">
+            <RemoteKeyField
+                kind="logo"
+                :label="t('settings.logo.remote.key')"
+                :no-key="t('settings.logo.remote.noKey')"
+                :hint="t('settings.logo.remote.keyHint')"
+            />
 
-        <button
-            class="flex items-center gap-2 bg-transparent border-0 p-0 min-h-8 cursor-pointer text-accent-text text-left font-medium"
-            :aria-expanded="showGuide"
-            @click="showGuide = !showGuide"
-        >
-            <i class="bi text-xs" :class="showGuide ? 'bi-chevron-down' : 'bi-chevron-right'" aria-hidden="true" />
-            {{ t('settings.logo.remote.howTo') }}
-        </button>
+            <button
+                class="flex items-center gap-2 bg-transparent border-0 p-0 min-h-8 cursor-pointer text-accent-text text-left font-medium"
+                :aria-expanded="showGuide"
+                @click="showGuide = !showGuide"
+            >
+                <i class="bi text-xs" :class="showGuide ? 'bi-chevron-down' : 'bi-chevron-right'" aria-hidden="true" />
+                {{ t('settings.logo.remote.howTo') }}
+            </button>
 
-        <ol v-if="showGuide" class="m-0 ps-5 flex flex-col gap-4 text-[13px] leading-relaxed">
-            <li>
-                {{ t('settings.logo.remote.step1') }}
-            </li>
-            <li class="flex flex-col gap-3">
-                <span>{{ t('settings.logo.remote.step2') }}</span>
-                <section v-for="group in groups" :key="group.name" class="flex flex-col gap-2">
-                    <h3 class="m-0 text-[13px] font-semibold flex items-center gap-1.5">
-                        <i
-                            class="bi"
-                            :class="group.name === 'logo' ? 'bi-badge-tm' : 'bi-aspect-ratio'"
-                            aria-hidden="true"
-                        />{{ t(`settings.logo.remote.${group.name}`) }}
-                    </h3>
-                    <div v-for="item in group.urls" :key="item.action" class="flex flex-col gap-1">
-                        <span class="text-xs text-muted">{{ t(`settings.logo.remote.url.${item.action}`) }}</span>
-                        <div class="flex gap-2 items-start">
-                            <code
-                                class="flex-1 min-w-0 break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-1.5"
-                                >{{ item.url }}</code
-                            >
-                            <button
-                                class="btn-icon min-w-8 min-h-8 flex-none"
-                                :aria-label="t('settings.logo.remote.copy')"
-                                @click="copy(item.url)"
-                            >
-                                <i class="bi bi-clipboard" aria-hidden="true" />
-                            </button>
+            <ol v-if="showGuide" class="m-0 ps-5 flex flex-col gap-4 text-[13px] leading-relaxed">
+                <li>
+                    {{ t('settings.logo.remote.step1') }}
+                </li>
+                <li class="flex flex-col gap-3">
+                    <span>{{ t('settings.logo.remote.step2') }}</span>
+                    <section v-for="group in groups" :key="group.name" class="flex flex-col gap-2">
+                        <h3 class="m-0 text-[13px] font-semibold flex items-center gap-1.5">
+                            <i
+                                class="bi"
+                                :class="group.name === 'logo' ? 'bi-badge-tm' : 'bi-aspect-ratio'"
+                                aria-hidden="true"
+                            />{{ t(`settings.logo.remote.${group.name}`) }}
+                        </h3>
+                        <div v-for="item in group.urls" :key="item.action" class="flex flex-col gap-1">
+                            <span class="text-xs text-muted">{{ t(`settings.logo.remote.url.${item.action}`) }}</span>
+                            <div class="flex gap-2 items-start">
+                                <code
+                                    class="flex-1 min-w-0 break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-1.5"
+                                    >{{ item.url }}</code
+                                >
+                                <button
+                                    class="btn-icon min-w-8 min-h-8 flex-none"
+                                    :aria-label="t('settings.logo.remote.copy')"
+                                    @click="copy(item.url)"
+                                >
+                                    <i class="bi bi-clipboard" aria-hidden="true" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <span class="field-hint">
-                        {{ group.hint }}
+                        <span class="field-hint">
+                            {{ group.hint }}
+                            <button
+                                class="bg-transparent border-0 p-0 text-accent-text cursor-pointer hover:underline"
+                                @click="picking = group.choose"
+                            >
+                                {{ group.chooseLabel }}
+                            </button>
+                        </span>
+                    </section>
+                </li>
+                <li class="flex flex-col gap-2">
+                    <span>{{ t('settings.logo.remote.step3') }}</span>
+                    <div role="tablist" class="flex flex-wrap gap-1.5">
                         <button
-                            class="bg-transparent border-0 p-0 text-accent-text cursor-pointer hover:underline"
-                            @click="picking = group.choose"
+                            v-for="tool in ['curl', 'vmix', 'obs', 'companion'] as const"
+                            :key="tool"
+                            role="tab"
+                            :aria-selected="example === tool"
+                            class="px-3 min-h-8 rounded-md border text-xs cursor-pointer"
+                            :class="
+                                example === tool
+                                    ? 'bg-accent/15 border-accent text-accent-text'
+                                    : 'bg-field border-line-strong text-muted hover:text-base-content'
+                            "
+                            @click="example = tool"
                         >
-                            {{ group.chooseLabel }}
+                            {{ t(`settings.logo.remote.tool.${tool}`) }}
                         </button>
-                    </span>
-                </section>
-            </li>
-            <li class="flex flex-col gap-2">
-                <span>{{ t('settings.logo.remote.step3') }}</span>
-                <div role="tablist" class="flex flex-wrap gap-1.5">
-                    <button
-                        v-for="tool in ['curl', 'vmix', 'obs', 'companion'] as const"
-                        :key="tool"
-                        role="tab"
-                        :aria-selected="example === tool"
-                        class="px-3 min-h-8 rounded-md border text-xs cursor-pointer"
-                        :class="
-                            example === tool
-                                ? 'bg-accent/15 border-accent text-accent-text'
-                                : 'bg-field border-line-strong text-muted hover:text-base-content'
-                        "
-                        @click="example = tool"
-                    >
-                        {{ t(`settings.logo.remote.tool.${tool}`) }}
-                    </button>
-                </div>
-                <p class="m-0 text-muted">{{ t(`settings.logo.remote.toolHelp.${example}`) }}</p>
-                <div class="flex gap-2 items-start">
-                    <pre
-                        class="flex-1 min-w-0 m-0 whitespace-pre-wrap break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-2"
-                        >{{ snippet }}</pre>
-                    <button
-                        class="btn-icon min-w-8 min-h-8 flex-none"
-                        :aria-label="t('settings.logo.remote.copy')"
-                        @click="copy(snippet)"
-                    >
-                        <i class="bi bi-clipboard" aria-hidden="true" />
-                    </button>
-                </div>
-            </li>
-            <li>{{ t('settings.logo.remote.step4') }}</li>
-        </ol>
+                    </div>
+                    <p class="m-0 text-muted">{{ t(`settings.logo.remote.toolHelp.${example}`) }}</p>
+                    <div class="flex gap-2 items-start">
+                        <pre
+                            class="flex-1 min-w-0 m-0 whitespace-pre-wrap break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-2"
+                            >{{ snippet }}</pre>
+                        <button
+                            class="btn-icon min-w-8 min-h-8 flex-none"
+                            :aria-label="t('settings.logo.remote.copy')"
+                            @click="copy(snippet)"
+                        >
+                            <i class="bi bi-clipboard" aria-hidden="true" />
+                        </button>
+                    </div>
+                </li>
+                <li>{{ t('settings.logo.remote.step4') }}</li>
+            </ol>
+        </template>
 
         <GenericModal
             :show="picking !== null"

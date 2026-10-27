@@ -13,6 +13,20 @@ one is tagged.
 
 ### Added
 
+- **Graphics tab** in the main menu. The logo, the L-shape, the subtitles and
+  the remote control left Settings for their own pages: **Live now**,
+  **Logo**, **L-shape**, **Subtitles**, **Quick scenes** and **External
+  control (API)**. Settings › Logo and subtitles links there.
+- **Quick scenes**: named sets of logo and L-shape changes (hide, swap or
+  move the logo; L-shape in or out with a graphic, corner and size), up to 24
+  per channel, applied with one click in Graphics › Live now and in the
+  Player, or by an encoder at `/scene/{channel}/{name}?key=…` (and
+  `POST /api/control/{id}/scene`). Kept in the channel configuration (new
+  migration `00021_graphics_scenes`).
+- **Graphics bar in the Player**, under the preview: the logo on and off and
+  where it is, the L-shape in and out and its corner (each move confirmed
+  first), the quick scenes, and a link to the Graphics tab.
+
 - **Place the logo anywhere.** The logo's `move` takes `x` and `y` from 0
   to 100 (shares of the room around it, on any output size) or `X%:Y%`,
   besides the corners, which now include `top`, `bottom`, `left`, `right`

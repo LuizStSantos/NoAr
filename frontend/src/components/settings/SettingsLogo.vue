@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import LogoRemote from '@/components/settings/LogoRemote.vue'
 import LShapeSettings from '@/components/settings/LShapeSettings.vue'
 import SaveBar from '@/components/settings/SaveBar.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
@@ -13,6 +12,9 @@ import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { type Size, logoBox, logoBoxStyle, storageImageUrl as sharedStorageImageUrl } from '@/composables/logo'
 import { usePlayoutPage } from '@/composables/settingsPage'
+
+/** Which part of the graphics settings this page shows. */
+const props = withDefaults(defineProps<{ part?: 'logo' | 'lshape' | 'subtitles' }>(), { part: 'logo' })
 
 const { t } = useI18n()
 const { ready, changes, alsoSaves, saveLabel, save, discard, settings, configStore } = usePlayoutPage('logo')
@@ -248,11 +250,11 @@ function pick(file: { path: string }) {
 <template>
     <template v-if="ready">
         <div>
-            <h1 class="m-0 text-xl font-semibold">{{ t('settings.sections.logo') }}</h1>
-            <p class="mt-1 mb-0 text-muted">{{ t('settings.logo.intro') }}</p>
+            <h1 class="m-0 text-xl font-semibold">{{ t(`graphics.sections.${props.part}`) }}</h1>
+            <p class="mt-1 mb-0 text-muted">{{ t(`graphics.intro.${props.part}`) }}</p>
         </div>
 
-        <SectionCard :title="t('settings.logo.logo')">
+        <SectionCard v-if="props.part === 'logo'" :title="t('settings.logo.logo')">
             <template #aside>
                 <input
                     v-model="processing.add_logo"
@@ -508,7 +510,11 @@ function pick(file: { path: string }) {
             </div>
         </SectionCard>
 
-        <SectionCard :title="t('settings.logo.transitions.title')" :description="t('settings.logo.transitions.intro')">
+        <SectionCard
+            v-if="props.part === 'logo'"
+            :title="t('settings.logo.transitions.title')"
+            :description="t('settings.logo.transitions.intro')"
+        >
             <div class="flex flex-col gap-4">
                 <div class="field-label">
                     {{ t('settings.logo.transitions.in') }}
@@ -542,11 +548,13 @@ function pick(file: { path: string }) {
             </div>
         </SectionCard>
 
-        <LShapeSettings />
+        <LShapeSettings v-if="props.part === 'lshape'" />
 
-        <LogoRemote />
-
-        <SectionCard :title="t('settings.logo.guideLogo')" :description="t('settings.logo.guideLogoHint')">
+        <SectionCard
+            v-if="props.part === 'logo'"
+            :title="t('settings.logo.guideLogo')"
+            :description="t('settings.logo.guideLogoHint')"
+        >
             <div class="flex flex-wrap items-center gap-4">
                 <div
                     class="w-24 h-24 flex-none rounded-xl border border-line bg-[#0b0c0d] flex items-center justify-center overflow-hidden p-2"
@@ -580,7 +588,11 @@ function pick(file: { path: string }) {
             </div>
         </SectionCard>
 
-        <SectionCard :title="t('settings.logo.subtitles')" :description="t('settings.logo.subtitlesHint')">
+        <SectionCard
+            v-if="props.part === 'subtitles'"
+            :title="t('settings.logo.subtitles')"
+            :description="t('settings.logo.subtitlesHint')"
+        >
             <template #aside>
                 <input
                     v-model="processing.vtt_enable"

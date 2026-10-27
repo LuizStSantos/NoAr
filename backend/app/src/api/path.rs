@@ -41,6 +41,7 @@ pub fn routes() -> Router<AppState> {
                     "/control/{id}/lshape",
                     get(get_lshape_state).post(control_lshape),
                 )
+                .route("/control/{id}/scene", post(control_scene))
                 .route("/control/{id}/scte35", get(get_scte35_state))
                 .route("/control/{id}/scte35/break", post(insert_scte35_break))
                 .route(
@@ -145,6 +146,10 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/lshape/{id}/{action}",
             get(control_lshape_with_key).post(control_lshape_with_key),
+        )
+        .route(
+            "/scene/{id}/{name}",
+            get(control_scene_with_key).post(control_scene_with_key),
         )
         .route(
             "/scte35/{id}/{action}",

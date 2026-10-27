@@ -609,9 +609,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "f8c1b21a18d95b14757e4d24e48922e5fd4c3bc1b7cb1ad1f94576e35cdc00d5",
+      "sha256": "fc7d09d877e8dbe1722636ca99e13441f3fd1d64f5bc9c5324a697664c2ca235",
       "language": "Markdown",
-      "bytes": 27692,
+      "bytes": 28691,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -982,9 +982,9 @@
       ]
     },
     "backend/app/src/api/path.rs": {
-      "sha256": "a8dc8583404640418508be44c5ee83e21090e6ddeebd01fbe8e016600c453a4e",
+      "sha256": "08baf3d48d6610cda2db8b1f4c819949d26d471de112cc1fdb5120b6619890e2",
       "language": "Rust",
-      "bytes": 7199,
+      "bytes": 7396,
       "symbols": [
         {
           "name": "auth_routes",
@@ -1244,137 +1244,157 @@
       ]
     },
     "backend/app/src/api/routes/logo.rs": {
-      "sha256": "3324813527f4f33c3bde668f3421e90839935c9821c7ec733c6d67ad449199ae",
+      "sha256": "b24f2e92ca3c1d999aeea920ddc62066f6621b708d2d01fb64e712532f4004dd",
       "language": "Rust",
-      "bytes": 22614,
+      "bytes": 26680,
       "symbols": [
         {
           "name": "LogoAction",
-          "line": 31
+          "line": 35
         },
         {
           "name": "LogoRequest",
-          "line": 43
+          "line": 47
         },
         {
           "name": "LogoKeyQuery",
-          "line": 62
+          "line": 66
         },
         {
           "name": "Place",
-          "line": 83
+          "line": 87
         },
         {
           "name": "Place",
-          "line": 89
+          "line": 93
         },
         {
           "name": "resolve",
-          "line": 91
+          "line": 95
         },
         {
           "name": "LogoStatus",
-          "line": 119
+          "line": 123
         },
         {
           "name": "logo_position",
-          "line": 131
+          "line": 135
         },
         {
           "name": "get_logo_state",
-          "line": 159
+          "line": 163
         },
         {
           "name": "control_logo",
-          "line": 176
+          "line": 180
         },
         {
           "name": "control_logo_with_key",
-          "line": 208
+          "line": 212
         },
         {
           "name": "LogoKeyQuery",
-          "line": 235
+          "line": 239
         },
         {
           "name": "place",
-          "line": 236
+          "line": 240
         },
         {
           "name": "LShapeAction",
-          "line": 247
+          "line": 251
         },
         {
           "name": "LShapeRequest",
-          "line": 262
+          "line": 266
         },
         {
           "name": "LShapeStatus",
-          "line": 283
+          "line": 282
         },
         {
           "name": "get_lshape_state",
-          "line": 298
+          "line": 296
         },
         {
           "name": "control_lshape",
-          "line": 315
+          "line": 313
         },
         {
           "name": "control_lshape_with_key",
-          "line": 347
+          "line": 339
         },
         {
           "name": "lshape_placement",
-          "line": 383
+          "line": 375
         },
         {
           "name": "apply_lshape",
-          "line": 415
+          "line": 399
         },
         {
           "name": "swap_lshape",
-          "line": 459
+          "line": 442
         },
         {
           "name": "lshape_status",
-          "line": 490
+          "line": 473
+        },
+        {
+          "name": "SceneRequest",
+          "line": 486
+        },
+        {
+          "name": "SceneStatus",
+          "line": 492
+        },
+        {
+          "name": "control_scene",
+          "line": 505
+        },
+        {
+          "name": "control_scene_with_key",
+          "line": 524
+        },
+        {
+          "name": "apply_scene",
+          "line": 553
         },
         {
           "name": "authorized",
-          "line": 502
+          "line": 658
         },
         {
           "name": "key_matches",
-          "line": 523
+          "line": 679
         },
         {
           "name": "apply",
-          "line": 536
+          "line": 692
         },
         {
           "name": "status",
-          "line": 592
+          "line": 748
         },
         {
           "name": "tests",
-          "line": 603
+          "line": 759
         },
         {
           "name": "a_logo_goes_to_a_corner_an_expression_or_back",
-          "line": 609
+          "line": 765
         },
         {
           "name": "a_logo_goes_anywhere_by_shares_or_by_name",
-          "line": 623
+          "line": 779
         },
         {
-          "name": "the_lshape_picture_goes_to_a_corner_a_share_or_back",
-          "line": 657
+          "name": "the_lshape_picture_goes_to_a_corner_or_back",
+          "line": 813
         },
         {
           "name": "the_logo_key_must_be_set_and_match",
-          "line": 690
+          "line": 827
         }
       ]
     },
@@ -1577,9 +1597,9 @@
       ]
     },
     "backend/app/src/api/routes/playout_config.rs": {
-      "sha256": "0be3a767ceb9f9b5d8719c8cc52646386af387b04e9b70c6debad1153611ca75",
+      "sha256": "da7f53c840c0cfb810c297e56dba6a1bd24068adc76324313deeb95a35f25c6f",
       "language": "Rust",
-      "bytes": 42117,
+      "bytes": 42847,
       "symbols": [
         {
           "name": "CodecOption",
@@ -1615,111 +1635,111 @@
         },
         {
           "name": "running_listener_port_in_use",
-          "line": 130
+          "line": 132
         },
         {
           "name": "codec_option",
-          "line": 148
+          "line": 150
         },
         {
           "name": "output_codec_options",
-          "line": 198
+          "line": 200
         },
         {
           "name": "custom_output_codec_options",
-          "line": 216
+          "line": 218
         },
         {
           "name": "get_playout_config",
-          "line": 241
+          "line": 243
         },
         {
           "name": "update_playout_config",
-          "line": 271
+          "line": 273
         },
         {
           "name": "KeyRequest",
-          "line": 593
-        },
-        {
-          "name": "KeyResponse",
-          "line": 599
-        },
-        {
-          "name": "update_remote_key",
           "line": 613
         },
         {
+          "name": "KeyResponse",
+          "line": 619
+        },
+        {
+          "name": "update_remote_key",
+          "line": 633
+        },
+        {
           "name": "validate_loudness",
-          "line": 655
+          "line": 675
         },
         {
           "name": "TestAlert",
-          "line": 729
+          "line": 749
         },
         {
           "name": "send_test_alert",
-          "line": 743
+          "line": 763
         },
         {
           "name": "get_playout_outputs",
-          "line": 800
+          "line": 820
         },
         {
           "name": "get_playout_codecs",
-          "line": 819
+          "line": 839
         },
         {
           "name": "tests",
-          "line": 841
+          "line": 861
         },
         {
           "name": "changing_live_listeners_requires_playout_restart",
-          "line": 848
+          "line": 868
         },
         {
           "name": "later_volume_save_still_requires_restart_for_unapplied_listener_change",
-          "line": 862
+          "line": 882
         },
         {
           "name": "running_listener_reserves_its_old_port_until_playout_stops",
-          "line": 879
+          "line": 899
         },
         {
           "name": "notification_and_volume_changes_do_not_require_restart",
-          "line": 912
+          "line": 932
         },
         {
           "name": "guide_logo_and_logo_key_do_not_require_restart",
-          "line": 923
+          "line": 943
         },
         {
           "name": "logo_transitions_apply_without_restart",
-          "line": 936
+          "line": 956
         },
         {
           "name": "logo_transition_length_must_be_a_sensible_number",
-          "line": 947
+          "line": 967
         },
         {
           "name": "the_lshape_is_off_without_a_graphic_and_checks_its_settings",
-          "line": 969
+          "line": 989
         },
         {
           "name": "loudness_parameter_changes_do_not_require_restart",
-          "line": 997
+          "line": 1017
         },
         {
           "name": "scope_changes_require_restart_but_dynamics_parameters_do_not",
-          "line": 1007
+          "line": 1027
         },
         {
           "name": "dynamics_validation_rejects_invalid_scope_and_detector_parameters",
-          "line": 1031
+          "line": 1051
         },
         {
           "name": "output_change_requires_restart",
-          "line": 1115
+          "line": 1135
         }
       ]
     },
@@ -2195,9 +2215,9 @@
       ]
     },
     "backend/app/src/db/handles/configuration.rs": {
-      "sha256": "aa727fca95512bedf2185e22feae73988e1e82511c014ce1a243d0ae2daf0cbc",
+      "sha256": "a9b5ed89215f88995e9c7266b86f2211f9139d553a12396d343362cdcbae98dc",
       "language": "Rust",
-      "bytes": 42204,
+      "bytes": 42403,
       "symbols": [
         {
           "name": "select_rtmp_ingest_urls",
@@ -2213,87 +2233,87 @@
         },
         {
           "name": "insert_configuration",
-          "line": 143
+          "line": 144
         },
         {
           "name": "ingest_port_in_use",
-          "line": 184
+          "line": 185
         },
         {
           "name": "live_listener_port_in_use",
-          "line": 192
+          "line": 193
         },
         {
           "name": "live_listener_port_in_use_on",
-          "line": 212
+          "line": 213
         },
         {
           "name": "live_listener_urls_contain_port",
-          "line": 227
+          "line": 228
         },
         {
           "name": "update_configuration",
-          "line": 239
+          "line": 240
         },
         {
           "name": "update_configuration_on",
-          "line": 250
+          "line": 251
         },
         {
           "name": "activate_output",
-          "line": 408
+          "line": 410
         },
         {
           "name": "update_configuration_volume",
-          "line": 435
+          "line": 437
         },
         {
           "name": "tests",
-          "line": 450
+          "line": 452
         },
         {
           "name": "pool",
-          "line": 456
+          "line": 458
         },
         {
           "name": "loudness_migration_preserves_existing_scope_and_defaults_new_rows_to_all",
-          "line": 467
+          "line": 469
         },
         {
           "name": "migration_preserves_non_default_configuration_data",
-          "line": 520
+          "line": 522
         },
         {
           "name": "migration_preserves_one_active_output_and_enforces_uniqueness",
-          "line": 621
+          "line": 623
         },
         {
           "name": "future_pipeline_configuration_has_safe_defaults_and_audio_tracks_are_ordered",
-          "line": 639
+          "line": 641
         },
         {
           "name": "output_selection_is_switched_atomically",
-          "line": 815
+          "line": 817
         },
         {
           "name": "complete_configuration_update_rolls_back_all_topics_on_error",
-          "line": 833
+          "line": 835
         },
         {
           "name": "logo_transitions_are_saved_and_default_to_fades",
-          "line": 864
+          "line": 866
         },
         {
           "name": "live_listener_configuration_recreates_a_missing_listener_row",
-          "line": 899
+          "line": 901
         },
         {
           "name": "multiple_live_listeners_roundtrip_without_changing_the_rtmp_id",
-          "line": 935
+          "line": 937
         },
         {
           "name": "listener_port_check_uses_the_saving_transaction",
-          "line": 1005
+          "line": 1007
         }
       ]
     },
@@ -2869,9 +2889,9 @@
       ]
     },
     "backend/app/src/db/models.rs": {
-      "sha256": "9f3720d95af1686d17f2839b3b371f467b6f1e93bf1b45e65c2f84d9653e8a1e",
+      "sha256": "54ea2e049d14179418cec978869843dcdd4382cc0a8eb3945db1ed8a46b487b8",
       "language": "Rust",
-      "bytes": 27137,
+      "bytes": 27458,
       "symbols": [
         {
           "name": "GlobalSettings",
@@ -2975,135 +2995,139 @@
         },
         {
           "name": "Configuration",
-          "line": 322
+          "line": 324
         },
         {
           "name": "from",
-          "line": 323
+          "line": 325
         },
         {
           "name": "Recording",
-          "line": 408
+          "line": 412
         },
         {
           "name": "Scte35",
-          "line": 429
+          "line": 433
         },
         {
           "name": "Output",
-          "line": 440
+          "line": 444
         },
         {
           "name": "Output",
-          "line": 467
+          "line": 471
         },
         {
           "name": "new",
-          "line": 468
+          "line": 472
         },
         {
           "name": "default_vtt_name",
-          "line": 510
-        },
-        {
-          "name": "default_vtt_language",
           "line": 514
         },
         {
+          "name": "default_vtt_language",
+          "line": 518
+        },
+        {
           "name": "LiveInputRecord",
-          "line": 519
+          "line": 523
         },
         {
           "name": "SetupSettings",
-          "line": 531
+          "line": 535
         },
         {
           "name": "From",
-          "line": 544
+          "line": 548
         },
         {
           "name": "from",
-          "line": 545
+          "line": 549
         },
         {
           "name": "InitialSetup",
-          "line": 562
+          "line": 566
         },
         {
           "name": "SetupRollback",
-          "line": 574
+          "line": 578
         },
         {
           "name": "ScheduleKind",
-          "line": 584
+          "line": 588
         },
         {
           "name": "EntryMode",
-          "line": 595
+          "line": 599
         },
         {
           "name": "AfterMode",
-          "line": 606
+          "line": 610
         },
         {
           "name": "as_str",
-          "line": 617
+          "line": 621
         },
         {
           "name": "FromStr",
-          "line": 624
+          "line": 628
         },
         {
           "name": "Err",
-          "line": 625
+          "line": 629
         },
         {
           "name": "from_str",
-          "line": 627
+          "line": 631
         },
         {
           "name": "ScheduleEvent",
-          "line": 643
+          "line": 647
         },
         {
           "name": "FromRow",
-          "line": 667
+          "line": 671
         },
         {
           "name": "from_row",
-          "line": 668
+          "line": 672
         },
         {
           "name": "ScheduleRun",
-          "line": 705
+          "line": 709
         },
         {
           "name": "UnfinishedRun",
-          "line": 718
+          "line": 722
         },
         {
           "name": "UpdateSettings",
-          "line": 731
+          "line": 735
         },
         {
           "name": "AsRunEntry",
-          "line": 744
+          "line": 748
         },
         {
           "name": "NewAsRunEntry",
-          "line": 769
+          "line": 773
         },
         {
           "name": "default_logo_transition",
-          "line": 782
-        },
-        {
-          "name": "default_lshape_scale",
           "line": 786
         },
         {
-          "name": "default_lshape_corner",
+          "name": "default_lshape_scale",
           "line": 790
+        },
+        {
+          "name": "default_lshape_corner",
+          "line": 794
+        },
+        {
+          "name": "default_graphics_scenes",
+          "line": 798
         }
       ]
     },
@@ -5520,9 +5544,9 @@
       ]
     },
     "backend/app/src/utils/config.rs": {
-      "sha256": "15a57659134eec5391db6baae5a9c9fdd0a8104a8c20e0843cde562050d25a6f",
+      "sha256": "366a7fd7fd84895b4074eff39144b68df3a4681f1a39f9fcb2a165fbeab2787e",
       "language": "Rust",
-      "bytes": 71318,
+      "bytes": 78008,
       "symbols": [
         {
           "name": "OutputMode",
@@ -11318,9 +11342,9 @@
       ]
     },
     "backend/engine/src/compositor/lshape.rs": {
-      "sha256": "d07540e93d81395a6a0082b340dfbebfbb2533e581b04c8907a3c08f294ff5a5",
+      "sha256": "2315457e9b1b408b1eae13dc6a390b944b3ca31cc0c033191af3a791d4f8185f",
       "language": "Rust",
-      "bytes": 29064,
+      "bytes": 27153,
       "symbols": [
         {
           "name": "lshape_phases",
@@ -11332,215 +11356,211 @@
         },
         {
           "name": "LShapeCorner",
-          "line": 61
+          "line": 55
         },
         {
           "name": "parse",
-          "line": 63
-        },
-        {
-          "name": "shares",
-          "line": 90
+          "line": 56
         },
         {
           "name": "fmt",
-          "line": 101
+          "line": 67
         },
         {
           "name": "fmt",
-          "line": 102
+          "line": 68
         },
         {
           "name": "LShapeConfig",
-          "line": 115
+          "line": 80
         },
         {
           "name": "LShapeGraphic",
-          "line": 125
+          "line": 90
         },
         {
           "name": "Rect",
-          "line": 133
+          "line": 98
         },
         {
           "name": "LShapeGraphic",
-          "line": 140
+          "line": 105
         },
         {
           "name": "load",
-          "line": 141
+          "line": 106
         },
         {
           "name": "placed",
-          "line": 203
+          "line": 168
         },
         {
           "name": "rect_at",
-          "line": 222
+          "line": 187
         },
         {
           "name": "window",
-          "line": 238
+          "line": 203
         },
         {
           "name": "window_in",
-          "line": 242
+          "line": 207
         },
         {
           "name": "LShapePlacement",
-          "line": 263
+          "line": 230
         },
         {
           "name": "LShapeControl",
-          "line": 274
+          "line": 241
         },
         {
           "name": "LShapeState",
-          "line": 277
+          "line": 244
         },
         {
           "name": "LShapeState",
-          "line": 293
+          "line": 260
         },
         {
           "name": "level",
-          "line": 294
+          "line": 261
         },
         {
           "name": "set_on",
-          "line": 308
+          "line": 275
         },
         {
           "name": "fmt",
-          "line": 319
+          "line": 286
         },
         {
           "name": "fmt",
-          "line": 320
+          "line": 287
         },
         {
           "name": "LShapeControl",
-          "line": 328
+          "line": 295
         },
         {
           "name": "lock",
-          "line": 329
+          "line": 296
         },
         {
           "name": "set_graphic",
-          "line": 335
+          "line": 302
         },
         {
           "name": "replace",
-          "line": 355
+          "line": 322
         },
         {
           "name": "place",
-          "line": 373
+          "line": 340
         },
         {
           "name": "placement",
-          "line": 397
+          "line": 364
         },
         {
           "name": "reset",
-          "line": 402
+          "line": 369
         },
         {
           "name": "set_clip_graphic",
-          "line": 409
+          "line": 376
         },
         {
           "name": "replacement",
-          "line": 445
+          "line": 412
         },
         {
           "name": "on",
-          "line": 453
+          "line": 420
         },
         {
           "name": "off",
-          "line": 458
+          "line": 425
         },
         {
           "name": "is_on",
-          "line": 463
+          "line": 430
         },
         {
           "name": "is_ready",
-          "line": 468
+          "line": 435
         },
         {
           "name": "frame",
-          "line": 478
+          "line": 445
         },
         {
           "name": "level_after",
-          "line": 497
+          "line": 464
         },
         {
           "name": "LShapeScaler",
-          "line": 508
+          "line": 475
         },
         {
           "name": "ScaleKey",
-          "line": 511
+          "line": 478
         },
         {
           "name": "apply_lshape",
-          "line": 515
+          "line": 482
         },
         {
           "name": "paste",
-          "line": 566
+          "line": 533
         },
         {
           "name": "marked_level",
-          "line": 590
+          "line": 557
         },
         {
           "name": "tests",
-          "line": 607
+          "line": 574
         },
         {
           "name": "graphic",
-          "line": 612
+          "line": 579
         },
         {
           "name": "the_window_sits_in_its_corner",
+          "line": 602
+        },
+        {
+          "name": "a_corner_reads_back_as_its_name",
           "line": 635
         },
         {
-          "name": "the_window_goes_anywhere_in_between",
-          "line": 668
-        },
-        {
           "name": "a_move_from_outside_places_every_graphic_until_it_is_undone",
-          "line": 704
+          "line": 648
         },
         {
           "name": "the_picture_moves_from_the_full_screen_to_the_window",
-          "line": 750
+          "line": 694
         },
         {
           "name": "the_frame_is_drawn_into_the_window_over_the_graphic",
-          "line": 769
+          "line": 713
         },
         {
           "name": "switching_animates_both_ways",
-          "line": 797
+          "line": 741
         },
         {
           "name": "a_swapped_or_clip_graphic_takes_the_channels_place",
-          "line": 818
+          "line": 762
         },
         {
           "name": "the_logo_goes_off_before_the_picture_shrinks",
-          "line": 866
+          "line": 810
         },
         {
           "name": "marked_stretches_ease_in_and_out",
-          "line": 879
+          "line": 823
         }
       ]
     },
@@ -17799,15 +17819,15 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "79e90f3b201ae8ec8dee95c96c083abf9546e99e93290f4ad42f5035e322faa2",
+      "sha256": "b9aa7db4217f3d7c777f5e885d819acddaf8143e67d14786fe50a78b60a666f1",
       "language": "Markdown",
-      "bytes": 26824,
+      "bytes": 27799,
       "symbols": []
     },
     "docs/closed_captions.md": {
-      "sha256": "fec56e0fcf2f175677b79edd60dceecd319f96161e6193956d9c702e882faac0",
+      "sha256": "f587eb3e69a29df793a94623a6498a3355297634b83a3efaa0150ffe33ebf389",
       "language": "Markdown",
-      "bytes": 684,
+      "bytes": 675,
       "symbols": []
     },
     "docs/commercials.md": {
@@ -17853,9 +17873,9 @@
       "symbols": []
     },
     "docs/logo.md": {
-      "sha256": "0cbe384a1ebcb5466850bef97b1ecd2110f6672c6fcc5e7b4eea4ad41a7de70f",
+      "sha256": "b47318839d0643a19211b42de4a81799e2b7ce251c2b95710e4fe69eeee1ee8f",
       "language": "Markdown",
-      "bytes": 8753,
+      "bytes": 10636,
       "symbols": []
     },
     "docs/notifications.md": {
@@ -17919,7 +17939,7 @@
       "symbols": []
     },
     "docs/xmltv.md": {
-      "sha256": "f7edcd31236dc586849bf66588241bd5cc0c19feddd0197092fb5755eebd57b7",
+      "sha256": "78aea1a28eac8d998833766fa59808a01f18c6a9db41a0f9a28adf2f53c2ada6",
       "language": "Markdown",
       "bytes": 8065,
       "symbols": []
@@ -18012,9 +18032,9 @@
       "symbols": []
     },
     "frontend/src/components/HeaderMenu.vue": {
-      "sha256": "e216f04b8f271bb42d46ff8d4f39f655122782cd7ebb85a7aadb3a32278130ae",
+      "sha256": "3e2d989fd9b17f1bc3c8dcd59a0e1442a1e7911b0cae685b1866bad0565b0f35",
       "language": "Vue",
-      "bytes": 10041,
+      "bytes": 10131,
       "symbols": [
         {
           "name": "router",
@@ -18070,35 +18090,35 @@
         },
         {
           "name": "channelId",
-          "line": 61
+          "line": 62
         },
         {
           "name": "isActive",
-          "line": 65
+          "line": 66
         },
         {
           "name": "channelLink",
-          "line": 69
+          "line": 70
         },
         {
           "name": "selectChannel",
-          "line": 73
-        },
-        {
-          "name": "id",
           "line": 74
         },
         {
+          "name": "id",
+          "line": 75
+        },
+        {
           "name": "changeLang",
-          "line": 79
+          "line": 80
         },
         {
           "name": "toggleTheme",
-          "line": 84
+          "line": 85
         },
         {
           "name": "logout",
-          "line": 89
+          "line": 90
         }
       ]
     },
@@ -18200,6 +18220,174 @@
         {
           "name": "toggleTheme",
           "line": 23
+        }
+      ]
+    },
+    "frontend/src/components/graphics/GraphicsApi.vue": {
+      "sha256": "e3a8583e72329be8303797ef12478f32c801c78ce8d44721479f36e8715596d3",
+      "language": "Vue",
+      "bytes": 2871,
+      "symbols": [
+        {
+          "name": "configStore",
+          "line": 13
+        },
+        {
+          "name": "indexStore",
+          "line": 14
+        },
+        {
+          "name": "channelId",
+          "line": 16
+        },
+        {
+          "name": "key",
+          "line": 17
+        },
+        {
+          "name": "scenes",
+          "line": 20
+        },
+        {
+          "name": "slug",
+          "line": 23
+        },
+        {
+          "name": "sceneUrl",
+          "line": 31
+        },
+        {
+          "name": "copy",
+          "line": 35
+        }
+      ]
+    },
+    "frontend/src/components/graphics/GraphicsLive.vue": {
+      "sha256": "34e50185239b85daa75c9ed9084fb6e1182169b519588a69465aa451c79f1263",
+      "language": "Vue",
+      "bytes": 1691,
+      "symbols": [
+        {
+          "name": "authStore",
+          "line": 13
+        },
+        {
+          "name": "configStore",
+          "line": 14
+        },
+        {
+          "name": "remote",
+          "line": 16
+        },
+        {
+          "name": "isAdmin",
+          "line": 17
+        }
+      ]
+    },
+    "frontend/src/components/graphics/GraphicsScenes.vue": {
+      "sha256": "20e87ac7365533801a461d678f3d0ee36d07e42d031a460f97242c4fb0313f93",
+      "language": "Vue",
+      "bytes": 11242,
+      "symbols": [
+        {
+          "name": "MAX_SCENES",
+          "line": 16
+        },
+        {
+          "name": "LOGO_ACTIONS",
+          "line": 17
+        },
+        {
+          "name": "LSHAPE_ACTIONS",
+          "line": 18
+        },
+        {
+          "name": "PLACES",
+          "line": 19
+        },
+        {
+          "name": "CORNERS",
+          "line": 30
+        },
+        {
+          "name": "SIZES",
+          "line": 31
+        },
+        {
+          "name": "picking",
+          "line": 37
+        },
+        {
+          "name": "scenes",
+          "line": 39
+        },
+        {
+          "name": "addScene",
+          "line": 41
+        },
+        {
+          "name": "moveScene",
+          "line": 54
+        },
+        {
+          "name": "optional",
+          "line": 63
+        },
+        {
+          "name": "pick",
+          "line": 67
+        }
+      ]
+    },
+    "frontend/src/components/graphics/SceneButtons.vue": {
+      "sha256": "4da0a3aec75f2de70e2999886ef1f6c559c415f4071355587f3ece42dc204de3",
+      "language": "Vue",
+      "bytes": 3308,
+      "symbols": [
+        {
+          "name": "props",
+          "line": 12
+        },
+        {
+          "name": "emit",
+          "line": 13
+        },
+        {
+          "name": "authStore",
+          "line": 16
+        },
+        {
+          "name": "configStore",
+          "line": 17
+        },
+        {
+          "name": "indexStore",
+          "line": 18
+        },
+        {
+          "name": "busy",
+          "line": 20
+        },
+        {
+          "name": "channelId",
+          "line": 22
+        },
+        {
+          "name": "scenes",
+          "line": 24
+        },
+        {
+          "name": "summary",
+          "line": 27
+        },
+        {
+          "name": "parts",
+          "line": 28
+        },
+        {
+          "name": "apply",
+          "line": 53
         }
       ]
     },
@@ -18784,6 +18972,113 @@
         {
           "name": "item",
           "line": 206
+        }
+      ]
+    },
+    "frontend/src/components/player/GraphicsQuickBar.vue": {
+      "sha256": "7cbe8f0d070cbb942baaf23baa26d6b542d42e369c52f19cc0ee990bf808906b",
+      "language": "Vue",
+      "bytes": 12447,
+      "symbols": [
+        {
+          "name": "REFRESH_MS",
+          "line": 33
+        },
+        {
+          "name": "authStore",
+          "line": 36
+        },
+        {
+          "name": "configStore",
+          "line": 37
+        },
+        {
+          "name": "indexStore",
+          "line": 38
+        },
+        {
+          "name": "logo",
+          "line": 40
+        },
+        {
+          "name": "lshape",
+          "line": 41
+        },
+        {
+          "name": "busy",
+          "line": 42
+        },
+        {
+          "name": "open",
+          "line": 43
+        },
+        {
+          "name": "logoDraft",
+          "line": 44
+        },
+        {
+          "name": "cornerDraft",
+          "line": 45
+        },
+        {
+          "name": "timer",
+          "line": 46
+        },
+        {
+          "name": "channelId",
+          "line": 48
+        },
+        {
+          "name": "processing",
+          "line": 49
+        },
+        {
+          "name": "logoShares",
+          "line": 50
+        },
+        {
+          "name": "lshapeCorner",
+          "line": 51
+        },
+        {
+          "name": "logoOn",
+          "line": 52
+        },
+        {
+          "name": "headers",
+          "line": 54
+        },
+        {
+          "name": "load",
+          "line": 58
+        },
+        {
+          "name": "toggleLogo",
+          "line": 89
+        },
+        {
+          "name": "toggleLShape",
+          "line": 93
+        },
+        {
+          "name": "confirmLogo",
+          "line": 97
+        },
+        {
+          "name": "logoBack",
+          "line": 105
+        },
+        {
+          "name": "confirmCorner",
+          "line": 110
+        },
+        {
+          "name": "togglePanel",
+          "line": 123
+        },
+        {
+          "name": "closePanel",
+          "line": 129
         }
       ]
     },
@@ -20835,181 +21130,197 @@
       ]
     },
     "frontend/src/components/settings/LogoRemote.vue": {
-      "sha256": "eb2d418a61a698f9f1454cfbcb7b3eb710ee16f0061a7c491bc41c6b29a4cf5f",
+      "sha256": "e962d6564a2d7c6dbe8766e8bce9e77fab80b2299df2dd2193ea2900a7637e3b",
       "language": "Vue",
-      "bytes": 22159,
+      "bytes": 25434,
       "symbols": [
         {
-          "name": "CORNER_SHARES",
-          "line": 36
-        },
-        {
-          "name": "LOGO_BOX",
-          "line": 49
-        },
-        {
-          "name": "sharesOf",
-          "line": 55
-        },
-        {
-          "name": "value",
-          "line": 56
-        },
-        {
-          "name": "shares",
-          "line": 57
-        },
-        {
-          "name": "axis",
-          "line": 68
+          "name": "props",
+          "line": 38
         },
         {
           "name": "authStore",
-          "line": 74
+          "line": 41
         },
         {
           "name": "configStore",
-          "line": 75
+          "line": 42
         },
         {
           "name": "indexStore",
-          "line": 76
+          "line": 43
         },
         {
           "name": "status",
-          "line": 78
+          "line": 45
         },
         {
           "name": "lshape",
-          "line": 79
+          "line": 46
         },
         {
           "name": "busy",
-          "line": 80
+          "line": 47
         },
         {
           "name": "picking",
-          "line": 82
+          "line": 49
         },
         {
           "name": "exampleLogo",
-          "line": 83
+          "line": 50
         },
         {
           "name": "exampleGraphic",
-          "line": 84
+          "line": 51
         },
         {
           "name": "showGuide",
-          "line": 85
+          "line": 52
         },
         {
           "name": "example",
-          "line": 86
+          "line": 53
         },
         {
           "name": "processing",
-          "line": 88
+          "line": 55
         },
         {
           "name": "channelId",
-          "line": 89
+          "line": 56
         },
         {
           "name": "key",
-          "line": 90
+          "line": 57
         },
         {
           "name": "keyPlaceholder",
-          "line": 91
+          "line": 58
         },
         {
           "name": "keyedUrl",
-          "line": 94
+          "line": 61
         },
         {
           "name": "query",
-          "line": 95
+          "line": 62
         },
         {
           "name": "graphicExample",
-          "line": 100
+          "line": 67
         },
         {
           "name": "groups",
-          "line": 102
+          "line": 69
         },
         {
           "name": "snippet",
-          "line": 139
+          "line": 106
         },
         {
           "name": "hide",
-          "line": 140
+          "line": 107
         },
         {
           "name": "show",
-          "line": 141
+          "line": 108
         },
         {
           "name": "lshapeOn",
-          "line": 142
+          "line": 109
         },
         {
           "name": "lshapeOff",
-          "line": 143
+          "line": 110
         },
         {
           "name": "logoShares",
-          "line": 165
+          "line": 132
         },
         {
-          "name": "lshapeShares",
-          "line": 166
+          "name": "lshapeCorner",
+          "line": 133
         },
         {
           "name": "lshapeScale",
-          "line": 167
+          "line": 134
+        },
+        {
+          "name": "logoDraft",
+          "line": 140
+        },
+        {
+          "name": "lshapeDraft",
+          "line": 141
+        },
+        {
+          "name": "lshapeShown",
+          "line": 142
+        },
+        {
+          "name": "sameShares",
+          "line": 144
+        },
+        {
+          "name": "draftLogo",
+          "line": 148
+        },
+        {
+          "name": "draftLShape",
+          "line": 152
+        },
+        {
+          "name": "next",
+          "line": 153
+        },
+        {
+          "name": "confirmLogo",
+          "line": 158
+        },
+        {
+          "name": "confirmLShape",
+          "line": 165
         },
         {
           "name": "stateText",
-          "line": 169
+          "line": 172
         },
         {
           "name": "lshapeText",
-          "line": 183
+          "line": 186
         },
         {
           "name": "state",
-          "line": 188
+          "line": 191
         },
         {
           "name": "headers",
-          "line": 195
+          "line": 198
         },
         {
           "name": "load",
-          "line": 199
+          "line": 202
         },
         {
           "name": "send",
-          "line": 213
+          "line": 216
         },
         {
           "name": "where",
-          "line": 215
+          "line": 218
         },
         {
           "name": "sendLShape",
-          "line": 230
+          "line": 233
         },
         {
           "name": "pick",
-          "line": 250
+          "line": 253
         },
         {
           "name": "copy",
-          "line": 268
+          "line": 271
         }
       ]
     },
@@ -21057,9 +21368,9 @@
       ]
     },
     "frontend/src/components/settings/PositionPad.vue": {
-      "sha256": "5a90b7032070a6e9c7a2a6270334d94f4908675c89a53d629b72d922c3c86135",
+      "sha256": "2c01b1de5031bae49b698fa967c39ceaeb3047393d734aaf81422ebd23b1da49",
       "language": "Vue",
-      "bytes": 4399,
+      "bytes": 4858,
       "symbols": [
         {
           "name": "props",
@@ -21067,87 +21378,91 @@
         },
         {
           "name": "emit",
-          "line": 24
+          "line": 26
         },
         {
           "name": "SNAP",
-          "line": 27
-        },
-        {
-          "name": "screen",
           "line": 29
         },
         {
-          "name": "dragging",
-          "line": 30
-        },
-        {
-          "name": "shown",
+          "name": "screen",
           "line": 31
         },
         {
-          "name": "box",
+          "name": "dragging",
+          "line": 32
+        },
+        {
+          "name": "shown",
           "line": 33
         },
         {
+          "name": "placeAt",
+          "line": 35
+        },
+        {
+          "name": "box",
+          "line": 44
+        },
+        {
           "name": "snap",
-          "line": 40
+          "line": 46
         },
         {
           "name": "clamped",
-          "line": 41
+          "line": 47
         },
         {
           "name": "sharesAt",
-          "line": 53
+          "line": 59
         },
         {
           "name": "rect",
-          "line": 54
+          "line": 60
         },
         {
           "name": "room",
-          "line": 55
+          "line": 61
         },
         {
           "name": "x",
-          "line": 56
-        },
-        {
-          "name": "y",
-          "line": 57
-        },
-        {
-          "name": "down",
           "line": 62
         },
         {
-          "name": "move",
-          "line": 71
+          "name": "y",
+          "line": 63
         },
         {
-          "name": "up",
+          "name": "down",
+          "line": 68
+        },
+        {
+          "name": "move",
           "line": 77
         },
         {
+          "name": "up",
+          "line": 83
+        },
+        {
           "name": "key",
-          "line": 84
+          "line": 90
         },
         {
           "name": "step",
-          "line": 85
+          "line": 91
         },
         {
           "name": "moves",
-          "line": 86
+          "line": 92
         },
         {
           "name": "delta",
-          "line": 94
+          "line": 100
         },
         {
           "name": "clamp",
-          "line": 101
+          "line": 107
         }
       ]
     },
@@ -21840,201 +22155,205 @@
       ]
     },
     "frontend/src/components/settings/SettingsLogo.vue": {
-      "sha256": "f0b7773cae95ba40482c82061ac8c370151418a484bc4d9ec8952aec018d7827",
+      "sha256": "641ff8d09e5de2298a630606471e30bb10a7413d38de6dfcf10a13bd05275348",
       "language": "Vue",
-      "bytes": 28153,
+      "bytes": 28537,
       "symbols": [
         {
+          "name": "props",
+          "line": 17
+        },
+        {
           "name": "COLUMNS",
-          "line": 23
-        },
-        {
-          "name": "ROWS",
-          "line": 24
-        },
-        {
-          "name": "SIZES",
           "line": 25
         },
         {
-          "name": "picking",
+          "name": "ROWS",
+          "line": 26
+        },
+        {
+          "name": "SIZES",
           "line": 27
         },
         {
-          "name": "showAdvanced",
-          "line": 28
-        },
-        {
-          "name": "logoUrl",
+          "name": "picking",
           "line": 29
         },
         {
-          "name": "logoFailed",
+          "name": "showAdvanced",
           "line": 30
         },
         {
-          "name": "logoImage",
+          "name": "logoUrl",
+          "line": 31
+        },
+        {
+          "name": "logoFailed",
           "line": 32
         },
         {
-          "name": "processing",
+          "name": "logoImage",
           "line": 34
         },
         {
+          "name": "processing",
+          "line": 36
+        },
+        {
           "name": "output",
-          "line": 35
+          "line": 37
         },
         {
           "name": "parsePosition",
-          "line": 44
-        },
-        {
-          "name": "axis",
           "line": 46
         },
         {
+          "name": "axis",
+          "line": 48
+        },
+        {
           "name": "end",
-          "line": 55
+          "line": 57
         },
         {
           "name": "horizontal",
-          "line": 59
+          "line": 61
         },
         {
           "name": "vertical",
-          "line": 60
+          "line": 62
         },
         {
           "name": "margins",
-          "line": 66
+          "line": 68
         },
         {
           "name": "writePosition",
-          "line": 75
-        },
-        {
-          "name": "m",
-          "line": 76
-        },
-        {
-          "name": "x",
           "line": 77
         },
         {
-          "name": "y",
+          "name": "m",
           "line": 78
         },
         {
-          "name": "placement",
-          "line": 83
+          "name": "x",
+          "line": 79
         },
         {
-          "name": "margin",
+          "name": "y",
+          "line": 80
+        },
+        {
+          "name": "placement",
           "line": 85
         },
         {
+          "name": "margin",
+          "line": 87
+        },
+        {
           "name": "place",
-          "line": 94
+          "line": 96
         },
         {
           "name": "opacity",
-          "line": 98
+          "line": 100
         },
         {
           "name": "transitionOptions",
-          "line": 103
+          "line": 105
         },
         {
           "name": "transitionSeconds",
-          "line": 109
+          "line": 111
         },
         {
           "name": "seconds",
-          "line": 112
+          "line": 114
         },
         {
           "name": "sizeChoice",
-          "line": 118
+          "line": 120
         },
         {
           "name": "frameSize",
-          "line": 130
+          "line": 132
         },
         {
           "name": "safeAreas",
-          "line": 136
+          "line": 138
         },
         {
           "name": "GUIDES_KEY",
-          "line": 141
+          "line": 143
         },
         {
           "name": "showGuides",
-          "line": 142
-        },
-        {
-          "name": "readGuides",
           "line": 144
         },
         {
+          "name": "readGuides",
+          "line": 146
+        },
+        {
           "name": "previewStyle",
-          "line": 161
+          "line": 163
         },
         {
           "name": "box",
-          "line": 162
+          "line": 164
         },
         {
           "name": "spot",
-          "line": 171
-        },
-        {
-          "name": "size",
-          "line": 172
-        },
-        {
-          "name": "style",
           "line": 173
         },
         {
+          "name": "size",
+          "line": 174
+        },
+        {
+          "name": "style",
+          "line": 175
+        },
+        {
           "name": "mx",
-          "line": 177
+          "line": 179
         },
         {
           "name": "my",
-          "line": 178
+          "line": 180
         },
         {
           "name": "storageImageUrl",
-          "line": 198
+          "line": 200
         },
         {
           "name": "loadLogo",
-          "line": 202
+          "line": 204
         },
         {
           "name": "logoLoaded",
-          "line": 216
+          "line": 218
         },
         {
           "name": "image",
-          "line": 217
+          "line": 219
         },
         {
           "name": "guideLogoUrl",
-          "line": 222
+          "line": 224
         },
         {
           "name": "guideLogoFailed",
-          "line": 223
-        },
-        {
-          "name": "loadGuideLogo",
           "line": 225
         },
         {
+          "name": "loadGuideLogo",
+          "line": 227
+        },
+        {
           "name": "pick",
-          "line": 238
+          "line": 240
         }
       ]
     },
@@ -24412,6 +24731,21 @@
         }
       ]
     },
+    "frontend/src/composables/graphics.ts": {
+      "sha256": "f9f2b6aaf19da65a5e403ea5224a02dbc641395ff4304b6815fcaebab838dbd6",
+      "language": "TypeScript",
+      "bytes": 1402,
+      "symbols": [
+        {
+          "name": "sharesOf",
+          "line": 25
+        },
+        {
+          "name": "axis",
+          "line": 38
+        }
+      ]
+    },
     "frontend/src/composables/helper.ts": {
       "sha256": "28c12379da65ba4d5f5930febf8549769f162a4e783e8a43abf0d67033541ddb",
       "language": "TypeScript",
@@ -25264,15 +25598,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "14c6ad51dd56470ad95a91b38ad16b4337e44c2d25096d20a4180ba46374308a",
+      "sha256": "28c93f2c6dbe70648e3d62df8187241df3114afc8930520ee32940f1137c4c71",
       "language": "TypeScript",
-      "bytes": 114401,
+      "bytes": 118705,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "e8f078f791b3fb5822165926c563757e17ad9e8cf12a5e5aabda93c5518f90e3",
+      "sha256": "f6dab107205546432c69af63efd470de81224a1e1e8386f5a651f7b5deb1ea67",
       "language": "TypeScript",
-      "bytes": 119435,
+      "bytes": 123822,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -25282,9 +25616,9 @@
       "symbols": []
     },
     "frontend/src/router/index.ts": {
-      "sha256": "c056ffa967517ef2477b24e680ac9c57c903ff3f946922cbd4968188b435e517",
+      "sha256": "4f2bfd480a0e4f9b72be1704c8dda9414b739b1008993429e457466b8ee26ea5",
       "language": "TypeScript",
-      "bytes": 7876,
+      "bytes": 9979,
       "symbols": []
     },
     "frontend/src/stores/auth.ts": {
@@ -25441,9 +25775,9 @@
       ]
     },
     "frontend/src/stores/settings.ts": {
-      "sha256": "d58bdf47d999fc056ea2487f0c7950398762e5fbf80985e5063367fa99fba592",
+      "sha256": "5957bd336697c34c02c63c5a49a516a88514fb3f4310c40be5a0947528e2286a",
       "language": "TypeScript",
-      "bytes": 7009,
+      "bytes": 7158,
       "symbols": [
         {
           "name": "SettingsSectionName",
@@ -25455,51 +25789,51 @@
         },
         {
           "name": "getPath",
-          "line": 80
+          "line": 83
         },
         {
           "name": "setPath",
-          "line": 86
+          "line": 89
         },
         {
           "name": "countChannelChanges",
-          "line": 109
+          "line": 112
         },
         {
           "name": "useSettings",
-          "line": 114
+          "line": 117
         },
         {
           "name": "saving",
-          "line": 119
+          "line": 122
         },
         {
           "name": "restartPending",
-          "line": 121
+          "line": 124
         },
         {
           "name": "visibleSections",
-          "line": 123
+          "line": 126
         },
         {
           "name": "sectionChanges",
-          "line": 127
+          "line": 130
         },
         {
           "name": "changedSections",
-          "line": 148
+          "line": 151
         },
         {
           "name": "discardSection",
-          "line": 152
+          "line": 155
         },
         {
           "name": "savePlayout",
-          "line": 171
+          "line": 174
         },
         {
           "name": "restartPlayout",
-          "line": 199
+          "line": 202
         }
       ]
     },
@@ -25821,9 +26155,9 @@
       ]
     },
     "frontend/src/types/playout_config.d.ts": {
-      "sha256": "1ca58ae80e85bec223b64409280041b47e3ebf53df8060e618b296ca629e9243",
+      "sha256": "5a15717989b6f1d9a400cbba5275f6b761d65170dcab883b2fc3908727d56df1",
       "language": "TypeScript",
-      "bytes": 6174,
+      "bytes": 7194,
       "symbols": [
         {
           "name": "Audio",
@@ -25834,80 +26168,92 @@
           "line": 5
         },
         {
+          "name": "GraphicsScene",
+          "line": 10
+        },
+        {
           "name": "Ingest",
-          "line": 7
+          "line": 32
         },
         {
           "name": "LiveInput",
-          "line": 9
+          "line": 34
         },
         {
           "name": "Logging",
-          "line": 11
+          "line": 36
         },
         {
           "name": "LogoTransition",
-          "line": 16
+          "line": 41
         },
         {
           "name": "Mail",
-          "line": 18
+          "line": 43
         },
         {
           "name": "Notification",
-          "line": 20
+          "line": 45
         },
         {
           "name": "NotificationLevel",
-          "line": 22
+          "line": 47
         },
         {
           "name": "Output",
-          "line": 24
+          "line": 49
         },
         {
           "name": "OutputMode",
-          "line": 50
+          "line": 75
         },
         {
           "name": "Playlist",
-          "line": 52
+          "line": 77
         },
         {
           "name": "PlayoutConfig",
-          "line": 59
+          "line": 84
         },
         {
           "name": "ProcessMode",
-          "line": 61
+          "line": 86
         },
         {
           "name": "Processing",
-          "line": 63
+          "line": 88
         },
         {
           "name": "Recording",
-          "line": 103
+          "line": 133
         },
         {
           "name": "RecordingSource",
-          "line": 105
+          "line": 135
+        },
+        {
+          "name": "SceneLShape",
+          "line": 140
+        },
+        {
+          "name": "SceneLogo",
+          "line": 145
         },
         {
           "name": "Scte35",
-          "line": 111
+          "line": 151
         },
         {
           "name": "Storage",
-          "line": 131
+          "line": 171
         },
         {
           "name": "StreamType",
-          "line": 138
+          "line": 178
         },
         {
           "name": "Task",
-          "line": 140
+          "line": 180
         }
       ]
     },
@@ -26064,9 +26410,9 @@
       ]
     },
     "frontend/src/views/ConfigureView.vue": {
-      "sha256": "18ecc9b6dec9cef2ca6134d3669ed3e8b6f3ece3a879898eac20784434a5024f",
+      "sha256": "45b064d964d5b4b585d7973033bbb70bd02bab9daaea6e4cb22d69711b7aa076",
       "language": "Vue",
-      "bytes": 7727,
+      "bytes": 7907,
       "symbols": [
         {
           "name": "route",
@@ -26118,43 +26464,114 @@
         },
         {
           "name": "link",
-          "line": 50
+          "line": 52
         },
         {
           "name": "openFirstMatch",
-          "line": 54
+          "line": 56
         },
         {
           "name": "first",
-          "line": 55
+          "line": 57
         },
         {
           "name": "selectSection",
-          "line": 62
+          "line": 64
         },
         {
           "name": "changeChannel",
-          "line": 66
+          "line": 68
         },
         {
           "name": "id",
-          "line": 67
+          "line": 69
         },
         {
           "name": "confirmChannel",
-          "line": 78
+          "line": 80
         },
         {
           "name": "id",
-          "line": 79
+          "line": 81
         },
         {
           "name": "draft",
-          "line": 97
+          "line": 99
         },
         {
           "name": "unedited",
-          "line": 98
+          "line": 100
+        }
+      ]
+    },
+    "frontend/src/views/GraphicsView.vue": {
+      "sha256": "24d49a9fae2734ddba81add4ee8b52fce937627de2176612cc9a6394f9074e2f",
+      "language": "Vue",
+      "bytes": 5755,
+      "symbols": [
+        {
+          "name": "PAGES",
+          "line": 17
+        },
+        {
+          "name": "route",
+          "line": 29
+        },
+        {
+          "name": "router",
+          "line": 30
+        },
+        {
+          "name": "authStore",
+          "line": 31
+        },
+        {
+          "name": "configStore",
+          "line": 32
+        },
+        {
+          "name": "settings",
+          "line": 33
+        },
+        {
+          "name": "pendingChannel",
+          "line": 35
+        },
+        {
+          "name": "channelId",
+          "line": 37
+        },
+        {
+          "name": "current",
+          "line": 38
+        },
+        {
+          "name": "pages",
+          "line": 39
+        },
+        {
+          "name": "link",
+          "line": 47
+        },
+        {
+          "name": "selectPage",
+          "line": 51
+        },
+        {
+          "name": "changeChannel",
+          "line": 55
+        },
+        {
+          "name": "id",
+          "line": 56
+        },
+        {
+          "name": "confirmChannel",
+          "line": 67
+        },
+        {
+          "name": "id",
+          "line": 68
         }
       ]
     },
@@ -26814,125 +27231,125 @@
       ]
     },
     "frontend/src/views/PlayerView.vue": {
-      "sha256": "e0f988f68350b52a1407c42153fdb661496edb071dcbc3adf259064eda56f395",
+      "sha256": "4173b31ea93fb7432c0127acaf57b1e3ec3071b7795f4b22f9035e6e0a927b0b",
       "language": "Vue",
-      "bytes": 10848,
+      "bytes": 11030,
       "symbols": [
         {
           "name": "configStore",
-          "line": 29
-        },
-        {
-          "name": "indexStore",
           "line": 30
         },
         {
-          "name": "playlistStore",
+          "name": "indexStore",
           "line": 31
         },
         {
-          "name": "programmes",
+          "name": "playlistStore",
           "line": 32
         },
         {
-          "name": "scheduleStore",
+          "name": "programmes",
           "line": 33
         },
         {
-          "name": "playlistPanel",
-          "line": 35
+          "name": "scheduleStore",
+          "line": 34
         },
         {
-          "name": "showGenerator",
+          "name": "playlistPanel",
           "line": 36
         },
         {
-          "name": "program",
-          "line": 38
+          "name": "showGenerator",
+          "line": 37
         },
         {
-          "name": "preview",
+          "name": "program",
           "line": 39
         },
         {
-          "name": "statusTimer",
-          "line": 41
+          "name": "preview",
+          "line": 40
         },
         {
-          "name": "dayTimer",
+          "name": "statusTimer",
           "line": 42
         },
         {
+          "name": "dayTimer",
+          "line": 43
+        },
+        {
           "name": "playlistMode",
-          "line": 48
+          "line": 49
         },
         {
           "name": "building",
-          "line": 56
+          "line": 57
         },
         {
           "name": "readBuilding",
-          "line": 58
+          "line": 59
         },
         {
           "name": "refreshProgrammes",
-          "line": 75
+          "line": 76
         },
         {
           "name": "loadStatus",
-          "line": 79
+          "line": 80
         },
         {
           "name": "loadDay",
-          "line": 87
+          "line": 88
         },
         {
           "name": "addFile",
-          "line": 110
+          "line": 111
         },
         {
           "name": "addProgram",
-          "line": 114
+          "line": 115
         },
         {
           "name": "openGenerator",
-          "line": 119
+          "line": 120
         },
         {
           "name": "accessPath",
-          "line": 124
-        },
-        {
-          "name": "storage",
           "line": 125
         },
         {
-          "name": "parent",
+          "name": "storage",
           "line": 126
         },
         {
-          "name": "openPreview",
-          "line": 131
+          "name": "parent",
+          "line": 127
         },
         {
-          "name": "name",
+          "name": "openPreview",
           "line": 132
         },
         {
-          "name": "url",
+          "name": "name",
           "line": 133
         },
         {
-          "name": "kind",
-          "line": 144
+          "name": "url",
+          "line": 134
         },
         {
-          "name": "extension",
+          "name": "kind",
           "line": 145
         },
         {
-          "name": "type",
+          "name": "extension",
           "line": 146
+        },
+        {
+          "name": "type",
+          "line": 147
         }
       ]
     },
@@ -27671,6 +28088,12 @@
       "sha256": "f9de2f64c1f17d4aad8048b6d52203dee19fd6aa9a4b76b50cecbe7db8d1144d",
       "language": "SQL",
       "bytes": 440,
+      "symbols": []
+    },
+    "migrations/00021_graphics_scenes.sql": {
+      "sha256": "623cf74c2eacde02cd3b38a19fd8fa5c0402e80d9aeb03f9e7983ac6f76a9cc5",
+      "language": "SQL",
+      "bytes": 242,
       "symbols": []
     },
     "package-lock.json": {

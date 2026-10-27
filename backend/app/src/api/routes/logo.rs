@@ -20,7 +20,11 @@ use crate::{
     db::models::Role,
     file::norm_abs_path,
     player::controller::ChannelManager,
-    utils::{errors::ServiceError, xmltv::library::has_image_extension},
+    utils::{
+        config::{SceneLShape, SceneLogo, slug},
+        errors::ServiceError,
+        xmltv::library::has_image_extension,
+    },
 };
 
 /// Header an encoder can send the key in, instead of the `key` query.
@@ -476,6 +480,179 @@ fn lshape_status(manager: &ChannelManager) -> LShapeStatus {
         position: placement.map(|placement| placement.corner.to_string()),
         scale: placement.and_then(|placement| placement.scale),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SceneRequest {
+    /// The scene's name (case and punctuation do not matter).
+    name: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SceneStatus {
+    /// The scene's name as written.
+    scene: String,
+    logo: LogoStatus,
+    lshape: LShapeStatus,
+}
+
+/// **Apply a quick graphics scene**
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/control/1/scene -H 'Content-Type: application/json' \
+/// -d '{"name": "Intervalo comercial"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn control_scene(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<SceneRequest>,
+) -> Result<Json<SceneStatus>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details).await?;
+
+    apply_scene(&manager, &request.name).await
+}
+
+/// **Apply a quick graphics scene, with the channel's graphics key**
+///
+/// The scene is named in the address, lower case with dashes.
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
+/// ```
+pub async fn control_scene_with_key(
+    State(state): State<AppState>,
+    Path((id, name)): Path<(i32, String)>,
+    Query(query): Query<LogoKeyQuery>,
+    headers: HeaderMap,
+) -> Result<Json<SceneStatus>, ServiceError> {
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
+    let expected = manager.config.read().await.processing.logo_key.clone();
+    let given = headers
+        .get(KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .or(query.key.as_deref())
+        .unwrap_or_default();
+
+    if !key_matches(&expected, given) {
+        return Err(ServiceError::Forbidden(
+            "Wrong or missing logo key".to_string(),
+        ));
+    }
+
+    apply_scene(&manager, &name).await
+}
+
+/// Apply the scene called `name`: the L-shape graphic and place first, then
+/// the logo, then the L-shape in or out.
+async fn apply_scene(
+    manager: &ChannelManager,
+    name: &str,
+) -> Result<Json<SceneStatus>, ServiceError> {
+    let wanted = slug(name);
+    let scene = manager
+        .config
+        .read()
+        .await
+        .processing
+        .graphics_scenes
+        .iter()
+        .find(|scene| scene.slug() == wanted)
+        .cloned()
+        .ok_or_else(|| ServiceError::NotFound(format!("No scene called '{}'", name.trim())))?;
+    let control = &manager.lshape_control;
+
+    if let Some(graphic) = scene
+        .lshape_graphic
+        .as_deref()
+        .filter(|graphic| !graphic.is_empty())
+    {
+        swap_lshape(manager, graphic).await?;
+    }
+
+    match (scene.lshape_corner.as_deref(), scene.lshape_scale) {
+        (Some("default"), _) => {
+            control
+                .place(None)
+                .map_err(|error| ServiceError::BadRequest(format!("{error:#}")))?;
+        }
+        (None, None) => {}
+        (corner, scale) => {
+            let corner = match corner {
+                Some(corner) => corner.to_string(),
+                None => match control.placement() {
+                    Some(placement) => placement.corner.to_string(),
+                    None => manager.config.read().await.processing.lshape_corner.clone(),
+                },
+            };
+
+            control
+                .place(lshape_placement(Some(&corner), scale)?)
+                .map_err(|error| ServiceError::BadRequest(format!("{error:#}")))?;
+        }
+    }
+
+    match scene.logo {
+        SceneLogo::Keep => {}
+        SceneLogo::Hide => {
+            apply(manager, LogoAction::Hide, None, Place::default())
+                .await
+                .map(drop)?;
+        }
+        SceneLogo::Show => {
+            apply(manager, LogoAction::Show, None, Place::default())
+                .await
+                .map(drop)?;
+        }
+        SceneLogo::Replace => {
+            apply(
+                manager,
+                LogoAction::Replace,
+                scene.logo_image.as_deref(),
+                Place::default(),
+            )
+            .await
+            .map(drop)?;
+        }
+    }
+
+    if let Some(position) = scene
+        .logo_position
+        .as_deref()
+        .filter(|position| !position.trim().is_empty())
+    {
+        let place = Place {
+            position: Some(position),
+            x: None,
+            y: None,
+        };
+
+        apply(manager, LogoAction::Move, None, place)
+            .await
+            .map(drop)?;
+    }
+
+    match scene.lshape {
+        SceneLShape::Keep => {}
+        SceneLShape::On if !control.is_ready() => {
+            return Err(ServiceError::Conflict(
+                "No L-shape graphic: choose one in Grafismo › L-shape".to_string(),
+            ));
+        }
+        SceneLShape::On => control.on(),
+        SceneLShape::Off => control.off(),
+    }
+
+    Ok(Json(SceneStatus {
+        scene: scene.name,
+        logo: status(manager),
+        lshape: lshape_status(manager),
+    }))
 }
 
 async fn authorized(
