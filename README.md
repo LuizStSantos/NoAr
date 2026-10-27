@@ -14,7 +14,9 @@ them it adds:
 - **Player**: live preview straight from the output (about a second behind
   the air, for HLS, RTMP or SRT), in a **light** quality for slow connections
   or the output's own; a clock with what is on air and what comes next;
-  and transport controls. A **build view** shows the library and the day's
+  and transport controls. Under the preview, a **graphics bar** switches the
+  logo and the L-shape, moves them (dragged or typed, confirmed before they go
+  on air) and applies quick scenes, and locks like the transport. A **build view** shows the library and the day's
   playlist, grouped by program the way the guide names it, filling the
   screen: only the list scrolls. Add files or a whole program folder (its
   next episode, every video in order, or the ones you pick) at the end,
@@ -38,11 +40,16 @@ them it adds:
 - **Commercials folders**: mark a folder once and everything in it plays as a
   commercial in playlists and scheduled breaks: out of the guide and without
   the logo ([docs](docs/commercials.md)).
-- **Logo control**: stretches without logo inside a video, for breaks edited
-  into a programme. The logo comes up and goes off with a fade or a cut, of a
-  length you choose, and cross-fades when swapped for another image. It can
-  also be hidden or swapped on air by API, for example from the encoder of a
-  live, with a tutorial in the settings ([docs](docs/logo.md)).
+- **Graphics**: its own tab for the logo, the L-shape and the subtitles. The
+  logo comes up and goes off with a fade or a cut, cross-fades when swapped,
+  and goes anywhere on the screen (`X% × Y%`). The **L-shape** shrinks the
+  picture into a corner over a full-screen graphic. **Quick scenes** apply a
+  set of logo and L-shape changes in one click. Everything can be hidden,
+  swapped, moved or applied on air from NoAr or by API from an encoder, with a
+  tutorial ([docs](docs/logo.md)).
+- **Marks in a video**: its trim, stretches without logo, ad breaks and
+  L-shape stretches on one timeline, played back as they air, plus where the
+  logo goes and the L-shape's graphic, corner and size for that video alone.
 - **Ad breaks (SCTE-35)**: runs of commercials, breaks marked by hand, and
   breaks marked inside a programme video (where it leaves and comes back,
   like the logo) are signalled in the SRT or UDP output for FAST platforms
@@ -61,7 +68,7 @@ them it adds:
   block at set times, as a draft you review before saving
   ([docs](docs/playlist_gen.md)).
 - **Log** that follows the channel live.
-- **Settings**: thirteen pages in a side menu, with search, unsaved-change
+- **Settings**: a side menu of pages, with search, unsaved-change
   markers, one save bar, and a restart of the playout or of the whole of NoAr.
 - **Docker-only install**: one command, then a setup page in the browser.
 
@@ -93,19 +100,24 @@ the videos you pick, at the end, after the selection or at a time.
 
 ![Adding a program folder](docs/images/program-folder.png)
 
-**Logo and breaks in a video**: where a break edited into the programme
-leaves and comes back, signalled with SCTE-35, next to where the logo goes
-off.
+**Marks in a video**: the trim, the logo, the SCTE-35 breaks and the L-shape
+on one timeline; here a break edited into the programme, where it leaves and
+comes back, next to where the logo goes off.
 
 ![Marks in a video](docs/images/marks.png)
+
+**Graphics › Live now**: the logo and the L-shape on air, placed by dragging
+or typing and confirmed before they move, and the quick scenes.
+
+![Graphics](docs/images/graphics.png)
 
 **Report**: the day so far with the actual times, and what is still to come
 from the playlist and the Scheduler, with totals for commercials and lives.
 
 ![Report](docs/images/report.png)
 
-**Settings**: the logo, where and how large it goes on air, and how it
-comes up and goes off.
+**Graphics › Logo**: the logo, where and how large it goes on air, and how
+it comes up and goes off.
 
 ![Settings](docs/images/settings.png)
 

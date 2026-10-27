@@ -230,6 +230,8 @@ pub struct AsyncPlayout {
     hls_health: Option<HlsHealth>,
     /// The L-shape of the output, to set each clip's own graphic.
     lshape_control: LShapeControl,
+    /// The logo of the output, to set each clip's own place.
+    logo_control: LogoControl,
 }
 
 /// How to wait for the playout worker to finish.
@@ -308,7 +310,10 @@ impl AsyncPlayout {
             Ok(mut playout) => {
                 playout.playback_control = worker_playback_control;
                 playout.preloader = worker_preloader;
-                let _ = ready_tx.send(Ok(playout.config.lshape_control.clone()));
+                let _ = ready_tx.send(Ok((
+                    playout.config.lshape_control.clone(),
+                    playout.config.logo_control.clone(),
+                )));
                 run_async_playout_worker(playout, command_rx);
             }
             Err(error) => {
@@ -324,8 +329,9 @@ impl AsyncPlayout {
             preloader,
             hls_health: None,
             lshape_control: LShapeControl::default(),
+            logo_control: LogoControl::default(),
         };
-        playout.lshape_control = ready_rx
+        (playout.lshape_control, playout.logo_control) = ready_rx
             .await
             .context("playout worker stopped during open")??;
         Ok(playout)
@@ -335,6 +341,12 @@ impl AsyncPlayout {
     /// here, before playing it.
     pub fn lshape_control(&self) -> LShapeControl {
         self.lshape_control.clone()
+    }
+
+    /// The logo of the output: set where the clip about to play puts it,
+    /// here, before playing it.
+    pub fn logo_control(&self) -> LogoControl {
+        self.logo_control.clone()
     }
 
     pub fn playback_control(&self) -> PlaybackControl {
@@ -1265,6 +1277,7 @@ mod tests {
             preloader: Preloader::default(),
             hls_health: None,
             lshape_control: LShapeControl::default(),
+            logo_control: LogoControl::default(),
         };
         let mut responses = Vec::new();
 

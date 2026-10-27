@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 /**
  * A small screen to place the logo or the L-shape picture on: click or drag
- * the box, or move it with the arrow keys. Positions are shares of the room
+ * the box, move it with the arrow keys, or type where it goes. Positions are shares of the room
  * around the box, in percent: 0 is the left (or top) edge, 100 the other.
  */
 export interface Shares {
@@ -24,6 +25,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ place: [Shares] }>()
+
+const { t } = useI18n()
 
 /** Shares snap to an edge or the middle when this close to it. */
 const SNAP = 4
@@ -109,6 +112,24 @@ function key(event: KeyboardEvent) {
     emit('place', { x: clamp(props.shares.x + delta[0]), y: clamp(props.shares.y + delta[1]) })
 }
 
+/** A typed share: a number from 0 to 100 (a comma works too), to a tenth. */
+function typed(value: string, current: number): number {
+    const share = Number(value.replace(',', '.').replace('%', '').trim())
+
+    return Number.isFinite(share) ? Math.round(Math.min(100, Math.max(0, share)) * 10) / 10 : current
+}
+
+function type(axis: 'x' | 'y', event: Event) {
+    const input = event.target as HTMLInputElement
+    const next = { ...props.shares, [axis]: typed(input.value, props.shares[axis]) }
+
+    input.value = String(next[axis])
+
+    if (next.x !== props.shares.x || next.y !== props.shares.y) {
+        emit('place', next)
+    }
+}
+
 // A new position from outside ends a drag that has not been dropped.
 watch(
     () => props.shares,
@@ -119,40 +140,72 @@ watch(
 </script>
 
 <template>
-    <div
-        ref="screen"
-        class="relative aspect-video w-full max-w-60 rounded-md border border-line-strong bg-field select-none touch-none overflow-hidden"
-        :class="disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-crosshair'"
-        @pointerdown="down"
-        @pointermove="move"
-        @pointerup="up"
-        @pointercancel="dragging = null"
-    >
-        <!-- Thirds, to aim by. -->
-        <span class="absolute inset-y-0 left-1/3 w-px bg-line" aria-hidden="true" />
-        <span class="absolute inset-y-0 left-2/3 w-px bg-line" aria-hidden="true" />
-        <span class="absolute inset-x-0 top-1/3 h-px bg-line" aria-hidden="true" />
-        <span class="absolute inset-x-0 top-2/3 h-px bg-line" aria-hidden="true" />
-        <!-- Where it is on air, while the new place waits for a confirmation. -->
-        <span
-            v-if="ghost"
-            class="absolute rounded-sm border-2 border-dashed border-muted/70"
-            :style="placeAt(ghost)"
-            aria-hidden="true"
-        />
-        <button
-            type="button"
-            role="slider"
-            class="absolute rounded-sm border-2 border-accent bg-accent/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            :class="dragging ? '' : 'transition-all duration-200'"
-            :style="box"
-            :disabled="disabled"
-            :aria-label="label"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            :aria-valuenow="shares.x"
-            :aria-valuetext="`${shares.x}% × ${shares.y}%`"
-            @keydown="key"
-        />
+    <div class="flex flex-col gap-2 w-full max-w-60">
+        <div
+            ref="screen"
+            class="relative aspect-video w-full rounded-md border border-line-strong bg-field select-none touch-none overflow-hidden"
+            :class="disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-crosshair'"
+            @pointerdown="down"
+            @pointermove="move"
+            @pointerup="up"
+            @pointercancel="dragging = null"
+        >
+            <!-- Thirds, to aim by. -->
+            <span class="absolute inset-y-0 left-1/3 w-px bg-line" aria-hidden="true" />
+            <span class="absolute inset-y-0 left-2/3 w-px bg-line" aria-hidden="true" />
+            <span class="absolute inset-x-0 top-1/3 h-px bg-line" aria-hidden="true" />
+            <span class="absolute inset-x-0 top-2/3 h-px bg-line" aria-hidden="true" />
+            <!-- Where it is on air, while the new place waits for a confirmation. -->
+            <span
+                v-if="ghost"
+                class="absolute rounded-sm border-2 border-dashed border-muted/70"
+                :style="placeAt(ghost)"
+                aria-hidden="true"
+            />
+            <button
+                type="button"
+                role="slider"
+                class="absolute rounded-sm border-2 border-accent bg-accent/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                :class="dragging ? '' : 'transition-all duration-200'"
+                :style="box"
+                :disabled="disabled"
+                :aria-label="label"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                :aria-valuenow="shares.x"
+                :aria-valuetext="`${shares.x}% × ${shares.y}%`"
+                @keydown="key"
+            />
+        </div>
+        <!-- Or typed: X% × Y%. -->
+        <div class="flex items-center gap-1.5 text-[13px]" role="group" :aria-label="t('graphics.pad.typed')">
+            <label class="inline-flex items-center gap-1">
+                <span class="text-muted">X</span>
+                <input
+                    type="text"
+                    inputmode="decimal"
+                    class="field-input min-h-8 w-16 px-2 py-0 text-right font-mono tabular"
+                    :value="shares.x"
+                    :disabled="disabled"
+                    :aria-label="t('graphics.pad.x')"
+                    @change="type('x', $event)"
+                    @keydown.enter.prevent="type('x', $event)"
+                />%
+            </label>
+            <span class="text-muted" aria-hidden="true">×</span>
+            <label class="inline-flex items-center gap-1">
+                <span class="text-muted">Y</span>
+                <input
+                    type="text"
+                    inputmode="decimal"
+                    class="field-input min-h-8 w-16 px-2 py-0 text-right font-mono tabular"
+                    :value="shares.y"
+                    :disabled="disabled"
+                    :aria-label="t('graphics.pad.y')"
+                    @change="type('y', $event)"
+                    @keydown.enter.prevent="type('y', $event)"
+                />%
+            </label>
+        </div>
     </div>
 </template>

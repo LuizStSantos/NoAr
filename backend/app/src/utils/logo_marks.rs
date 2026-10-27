@@ -55,6 +55,20 @@ pub struct LogoMarks {
     /// in place of the channel's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lshape_graphic: Option<String>,
+    /// The corner of the picture in this video's L-shape stretches, in place
+    /// of the channel's: `top-left`, `top-right`, `bottom-left` or
+    /// `bottom-right`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lshape_corner: Option<String>,
+    /// The size of the picture in this video's L-shape stretches, in percent
+    /// of the screen, in place of the channel's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lshape_scale: Option<f64>,
+    /// Where the logo goes while this video plays, as `X%:Y%` (shares of the
+    /// room around it), in place of the channel's place. A move from outside
+    /// still goes first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo_position: Option<String>,
 }
 
 impl LogoMarks {
@@ -68,6 +82,37 @@ impl LogoMarks {
             .lshape_graphic
             .map(|graphic| graphic.trim().to_string())
             .filter(|graphic| !graphic.is_empty());
+        self.lshape_corner = self
+            .lshape_corner
+            .map(|corner| corner.trim().to_string())
+            .filter(|corner| !corner.is_empty() && corner != "default");
+
+        if let Some(corner) = &self.lshape_corner
+            && noar_engine::LShapeCorner::parse(corner).is_none()
+        {
+            return Err(ServiceError::BadRequest(format!(
+                "Unknown L-shape corner '{corner}': use top-left, top-right, bottom-left or bottom-right"
+            )));
+        }
+
+        if let Some(scale) = self.lshape_scale
+            && !(noar_engine::LSHAPE_MIN_SCALE..=noar_engine::LSHAPE_MAX_SCALE).contains(&scale)
+        {
+            return Err(ServiceError::BadRequest(format!(
+                "The picture in the L-shape must be between {} and {}% of the screen",
+                noar_engine::LSHAPE_MIN_SCALE,
+                noar_engine::LSHAPE_MAX_SCALE
+            )));
+        }
+
+        self.logo_position = match self.logo_position.as_deref().map(str::trim) {
+            None | Some("" | "default") => None,
+            Some(position) => Some(logo_shares(position).ok_or_else(|| {
+                ServiceError::BadRequest(format!(
+                    "The logo position '{position}' must be X%:Y%, each from 0 to 100"
+                ))
+            })?),
+        };
 
         if let Some(trim) = self.trim {
             validated_spans(vec![trim], "trim")?;
@@ -81,6 +126,9 @@ impl LogoMarks {
             && self.breaks.is_empty()
             && self.lshape.is_empty()
             && self.lshape_graphic.is_none()
+            && self.lshape_corner.is_none()
+            && self.lshape_scale.is_none()
+            && self.logo_position.is_none()
             && self.trim.is_none()
     }
 
@@ -122,6 +170,26 @@ impl LogoMarks {
             })
             .collect()
     }
+}
+
+/// `X%:Y%` (the `%` may be left out, spaces and `×` too), each share from 0
+/// to 100, written back as `X%:Y%`.
+fn logo_shares(position: &str) -> Option<String> {
+    let normalized = position.replace(['×', 'x', 'X'], ":");
+    let (x, y) = normalized.split_once(':')?;
+    let share = |value: &str| {
+        value
+            .trim()
+            .trim_end_matches('%')
+            .trim()
+            .replace(',', ".")
+            .parse::<f64>()
+            .ok()
+            .filter(|share| (0.0..=100.0).contains(share))
+            .map(|share| (share * 10.0).round() / 10.0)
+    };
+
+    Some(format!("{}%:{}%", share(x)?, share(y)?))
 }
 
 fn validated_spans(mut spans: Vec<LogoSpan>, what: &str) -> Result<Vec<LogoSpan>, ServiceError> {
@@ -334,6 +402,52 @@ pub async fn logo_gaps(storage: &Path, source: &str) -> LogoGaps {
 mod tests {
     use super::*;
 
+    #[test]
+    fn a_video_places_its_logo_and_its_lshape_picture() {
+        let marks = LogoMarks {
+            logo_position: Some(" 50 × 1 ".to_string()),
+            lshape_corner: Some("bottom-left".to_string()),
+            lshape_scale: Some(70.0),
+            ..LogoMarks::default()
+        }
+        .validated()
+        .unwrap();
+
+        assert_eq!(marks.logo_position.as_deref(), Some("50%:1%"));
+        assert_eq!(marks.lshape_corner.as_deref(), Some("bottom-left"));
+        assert!(!marks.is_empty());
+
+        let back = LogoMarks {
+            logo_position: Some("default".to_string()),
+            lshape_corner: Some("default".to_string()),
+            ..LogoMarks::default()
+        }
+        .validated()
+        .unwrap();
+        assert!(back.is_empty());
+
+        for wrong in [
+            LogoMarks {
+                logo_position: Some("120%:0%".to_string()),
+                ..LogoMarks::default()
+            },
+            LogoMarks {
+                logo_position: Some("W-w-12:12".to_string()),
+                ..LogoMarks::default()
+            },
+            LogoMarks {
+                lshape_corner: Some("middle".to_string()),
+                ..LogoMarks::default()
+            },
+            LogoMarks {
+                lshape_scale: Some(10.0),
+                ..LogoMarks::default()
+            },
+        ] {
+            assert!(wrong.validated().is_err());
+        }
+    }
+
     fn span(from: f64, to: f64) -> LogoSpan {
         LogoSpan { from, to }
     }
@@ -346,6 +460,9 @@ mod tests {
             trim: None,
             lshape: Vec::new(),
             lshape_graphic: None,
+            lshape_corner: None,
+            lshape_scale: None,
+            logo_position: None,
         }
         .validated()
         .unwrap();
@@ -358,6 +475,9 @@ mod tests {
                 trim: None,
                 lshape: Vec::new(),
                 lshape_graphic: None,
+                lshape_corner: None,
+                lshape_scale: None,
+                logo_position: None,
             }
             .validated()
             .is_err()
@@ -369,6 +489,9 @@ mod tests {
                 trim: None,
                 lshape: Vec::new(),
                 lshape_graphic: None,
+                lshape_corner: None,
+                lshape_scale: None,
+                logo_position: None,
             }
             .validated()
             .is_err()
@@ -380,6 +503,9 @@ mod tests {
                 trim: None,
                 lshape: Vec::new(),
                 lshape_graphic: None,
+                lshape_corner: None,
+                lshape_scale: None,
+                logo_position: None,
             }
             .validated()
             .is_err()
@@ -394,6 +520,9 @@ mod tests {
             trim: None,
             lshape: Vec::new(),
             lshape_graphic: None,
+            lshape_corner: None,
+            lshape_scale: None,
+            logo_position: None,
         };
 
         // The whole video.
@@ -466,6 +595,9 @@ mod tests {
             trim: None,
             lshape: Vec::new(),
             lshape_graphic: None,
+            lshape_corner: None,
+            lshape_scale: None,
+            logo_position: None,
         };
 
         assert_eq!(marks_path(&video), dir.join("Programa 01.marks.json"));
@@ -529,6 +661,9 @@ mod tests {
             trim: None,
             lshape: Vec::new(),
             lshape_graphic: None,
+            lshape_corner: None,
+            lshape_scale: None,
+            logo_position: None,
         };
         let video = dir.join("A.mp4");
         std::fs::write(&video, b"x").unwrap();

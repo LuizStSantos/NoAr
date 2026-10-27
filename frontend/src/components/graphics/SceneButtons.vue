@@ -9,7 +9,7 @@ import { useIndex } from '@/stores/index'
 import type { GraphicsScene } from '@/types/playout_config'
 
 /** The channel's saved quick scenes, one button each, applied at once. */
-const props = defineProps<{ compact?: boolean }>()
+const props = defineProps<{ compact?: boolean; disabled?: boolean }>()
 const emit = defineEmits<{ applied: [] }>()
 
 const { t } = useI18n()
@@ -79,9 +79,9 @@ async function apply(scene: GraphicsScene) {
             v-for="scene in scenes"
             :key="scene.name"
             type="button"
-            class="cursor-pointer border border-line-strong bg-base-100 hover:border-accent rounded-field text-left disabled:opacity-60 disabled:cursor-wait"
+            class="cursor-pointer border border-line-strong bg-base-100 hover:border-accent rounded-field text-left disabled:opacity-60 disabled:cursor-not-allowed"
             :class="props.compact ? 'min-h-11 px-3 text-sm' : 'min-h-16 px-3 py-2.5 flex flex-col gap-0.5'"
-            :disabled="busy !== null"
+            :disabled="busy !== null || props.disabled"
             :title="props.compact ? summary(scene) : undefined"
             @click="apply(scene)"
         >
