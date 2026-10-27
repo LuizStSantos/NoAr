@@ -1,17 +1,76 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { authFetch } from '@/composables/authFetch'
+import type { Conversion } from '@/composables/conversions'
 import { stringFormatter } from '@/composables/helper'
 import { baseName } from '@/composables/storage'
+import { useAuth } from '@/stores/auth'
 import { useUploads, type UploadItem } from '@/stores/uploads'
 
 /** The uploads of the session, in a corner of every page. */
 const { t } = useI18n()
 const { fileSize } = stringFormatter()
 const uploads = useUploads()
+const authStore = useAuth()
 
 const open = ref(true)
+
+/**
+ * After the upload, the server converts the video to the output format
+ * (when the channel does): followed here, by channel and storage path, while
+ * any is queued or converting.
+ */
+const conversions = ref(new Map<string, Conversion>())
+let conversionTimer: ReturnType<typeof setTimeout> | undefined
+
+function storagePath(folder: string, name: string): string {
+    return [folder, name].filter(Boolean).join('/').replace(/^\/+/, '')
+}
+
+function conversionOf(item: UploadItem): Conversion | undefined {
+    return item.status === 'done'
+        ? conversions.value.get(`${item.channelId}\0${storagePath(item.folder, item.name)}`)
+        : undefined
+}
+
+function converting(conversion: Conversion | undefined): boolean {
+    return conversion?.state === 'queued' || conversion?.state === 'converting'
+}
+
+const convertingCount = computed(() => uploads.items.filter((item) => converting(conversionOf(item))).length)
+
+async function pollConversions() {
+    clearTimeout(conversionTimer)
+
+    const channels = [...new Set(uploads.items.filter((item) => item.status === 'done').map((item) => item.channelId))]
+    const next = new Map<string, Conversion>()
+
+    for (const channel of channels) {
+        try {
+            const list = await authFetch<Conversion[]>(`/api/file/${channel}/conversions`, {
+                headers: authStore.authHeader,
+            })
+
+            for (const conversion of list) {
+                next.set(`${channel}\0${conversion.path.replace(/^\/+/, '')}`, conversion)
+            }
+        } catch {
+            // Asked again with the next upload.
+        }
+    }
+
+    conversions.value = next
+
+    if ([...next.values()].some((conversion) => converting(conversion))) {
+        conversionTimer = setTimeout(pollConversions, 3000)
+    }
+}
+
+// Each finished upload may start a conversion.
+watch(() => uploads.landed?.at, pollConversions, { immediate: true })
+onBeforeUnmount(() => clearTimeout(conversionTimer))
 
 const failed = computed(() => uploads.items.filter((item) => item.status === 'error').length)
 const finished = computed(() => uploads.items.some((item) => item.status !== 'waiting' && item.status !== 'uploading'))
@@ -22,6 +81,10 @@ const percent = computed(() =>
 const title = computed(() => {
     if (uploads.busy) {
         return t('uploads.sending', { count: uploads.active.length }, uploads.active.length)
+    }
+
+    if (convertingCount.value) {
+        return t('uploads.converting', { count: convertingCount.value }, convertingCount.value)
     }
 
     return failed.value ? t('uploads.failed', { count: failed.value }, failed.value) : t('uploads.done')
@@ -72,8 +135,17 @@ function itemLine(item: UploadItem): string {
             })
         case 'waiting':
             return t('uploads.waiting', { folder: folderName(item) })
-        case 'done':
-            return t('uploads.sent', { folder: folderName(item) })
+        case 'done': {
+            const conversion = conversionOf(item)
+
+            if (conversion?.state === 'converting') {
+                return t('uploads.conversion.converting', { percent: Math.floor(conversion.progress * 100) })
+            }
+
+            return conversion
+                ? t(`uploads.conversion.${conversion.state}`, { folder: folderName(item) })
+                : t('uploads.sent', { folder: folderName(item) })
+        }
         case 'canceled':
             return t('uploads.canceled')
         default:
@@ -97,9 +169,11 @@ function clearAll() {
                 :class="
                     uploads.busy
                         ? 'bi-cloud-arrow-up text-accent-text'
-                        : failed
-                          ? 'bi-exclamation-circle text-on-air-text'
-                          : 'bi-check2-circle text-ok'
+                        : convertingCount
+                          ? 'bi-arrow-repeat text-info'
+                          : failed
+                            ? 'bi-exclamation-circle text-on-air-text'
+                            : 'bi-check2-circle text-ok'
                 "
                 aria-hidden="true"
             />
@@ -143,15 +217,25 @@ function clearAll() {
                         <div
                             class="text-xs truncate"
                             :class="
-                                item.status === 'done'
-                                    ? 'text-ok'
-                                    : item.status === 'error'
+                                converting(conversionOf(item))
+                                    ? 'text-info'
+                                    : conversionOf(item)?.state === 'failed' || item.status === 'error'
                                       ? 'text-on-air-text'
-                                      : 'text-muted'
+                                      : item.status === 'done'
+                                        ? 'text-ok'
+                                        : 'text-muted'
                             "
-                            :title="item.error || undefined"
+                            :title="item.error || conversionOf(item)?.error || undefined"
                         >
-                            <i v-if="item.status === 'done'" class="bi bi-check2 me-1" aria-hidden="true" />
+                            <i
+                                v-if="converting(conversionOf(item))"
+                                class="bi bi-arrow-repeat me-1"
+                                aria-hidden="true"
+                            /><i
+                                v-else-if="conversionOf(item)?.state === 'failed'"
+                                class="bi bi-exclamation-circle me-1"
+                                aria-hidden="true"
+                            /><i v-else-if="item.status === 'done'" class="bi bi-check2 me-1" aria-hidden="true" />
                             <i
                                 v-else-if="item.status === 'error'"
                                 class="bi bi-exclamation-circle me-1"
@@ -191,6 +275,26 @@ function clearAll() {
                         <div
                             class="h-full bg-accent transition-[width]"
                             :style="{ width: `${item.size ? (item.loaded / item.size) * 100 : 0}%` }"
+                        />
+                    </div>
+                    <!-- Blue: the server converting it, after the upload. -->
+                    <div
+                        v-else-if="converting(conversionOf(item))"
+                        class="col-span-full h-1 rounded-full bg-base-300 overflow-hidden"
+                        role="progressbar"
+                        :aria-label="t('uploads.conversionOf', { name: item.name })"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        :aria-valuenow="Math.floor((conversionOf(item)?.progress ?? 0) * 100)"
+                    >
+                        <div
+                            class="h-full bg-info transition-[width]"
+                            :class="conversionOf(item)?.state === 'queued' ? 'w-full opacity-30 animate-pulse' : ''"
+                            :style="
+                                conversionOf(item)?.state === 'converting'
+                                    ? { width: `${(conversionOf(item)?.progress ?? 0) * 100}%` }
+                                    : undefined
+                            "
                         />
                     </div>
                 </li>

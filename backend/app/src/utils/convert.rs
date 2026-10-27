@@ -336,6 +336,20 @@ fn stale_temporaries(storage: &Path) -> Vec<PathBuf> {
     found
 }
 
+/// The file a conversion put in place of `source`: a WebM, AVI… in a
+/// playlist made before it was converted is gone, and its `.mp4` is there.
+pub fn converted_in_place_of(source: &str) -> Option<String> {
+    let path = Path::new(source);
+
+    if source.is_empty() || source.contains("://") || path.is_file() {
+        return None;
+    }
+
+    let result = result_path(path);
+
+    (result != path && result.is_file()).then(|| result.to_string_lossy().to_string())
+}
+
 /// `.Name.converting.mp4` next to the result.
 fn temporary_path(result: &Path) -> PathBuf {
     let name = result
@@ -445,6 +459,30 @@ mod tests {
         assert!(is_temporary(&temporary_path(Path::new("/m/a.b.mkv"))));
         assert!(!is_temporary(Path::new("/m/a.converting.mp4")));
         assert!(!is_temporary(Path::new("/m/.hidden.mp4")));
+    }
+
+    #[test]
+    fn a_converted_file_stands_in_for_its_original() {
+        let dir =
+            std::env::temp_dir().join(format!("noar_convert_in_place_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let webm = dir.join("Programa.webm");
+        let mov = dir.join("Outro.mov");
+        std::fs::write(dir.join("Programa.mp4"), b"x").unwrap();
+        let path = |file: &Path| file.to_string_lossy().to_string();
+
+        assert_eq!(
+            converted_in_place_of(&path(&webm)),
+            Some(path(&dir.join("Programa.mp4")))
+        );
+        // Still there: it plays as it is.
+        std::fs::write(&webm, b"x").unwrap();
+        assert_eq!(converted_in_place_of(&path(&webm)), None);
+        // Containers that keep their name have nothing to stand in.
+        assert_eq!(converted_in_place_of(&path(&mov)), None);
+        assert_eq!(converted_in_place_of("srt://127.0.0.1:9000"), None);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
