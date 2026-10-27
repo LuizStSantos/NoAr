@@ -27,7 +27,7 @@ use crate::{
         config::{ENGINE_AUDIO_SAMPLE_RATE, OutputMode, PlayoutConfig, RecordingSource},
         control::{PlayerCtl, control_state},
         errors::ServiceError,
-        logo_marks::clip_marks,
+        logo_marks::{LogoMarks, clip_marks},
     },
 };
 
@@ -55,6 +55,39 @@ pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     if let Err(error) = loaded {
         let _ = manager.lshape_control.set_graphic(None, 0, 0);
         warn!(channel = config.general.channel_id; "L-shape off: {error}");
+    }
+}
+
+/// Before a clip plays: the L-shape graphic of its own, for its marked
+/// stretches, or the channel's. One that cannot be read is logged, and the
+/// channel's is used.
+async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: &LogoMarks) {
+    let graphic = marks
+        .lshape_graphic
+        .as_deref()
+        .filter(|_| !marks.lshape.is_empty())
+        .and_then(|graphic| {
+            let mut processing = config.processing.clone();
+            processing.lshape = graphic.to_string();
+
+            match processing.lshape_config(&config.channel.storage) {
+                Ok(lshape) => lshape,
+                Err(error) => {
+                    warn!(channel = config.general.channel_id; "L-shape graphic {graphic}: {error}");
+                    None
+                }
+            }
+        });
+    let control = playout.lshape_control();
+    let (width, height) = (config.output.width, config.output.height);
+
+    let loaded = tokio::task::spawn_blocking(move || {
+        control.set_clip_graphic(graphic.as_ref(), width, height)
+    })
+    .await;
+
+    if let Ok(Err(error)) = loaded {
+        warn!(channel = config.general.channel_id; "L-shape graphic of the clip: {error:#}");
     }
 }
 
@@ -354,6 +387,7 @@ async fn play_loop(
         let marks = clip_marks(&config.channel.storage, &node.source).await;
         let logo_gaps = marks.gaps();
         let lshape = marks.lshape_spans();
+        set_clip_lshape(playout, config, &marks).await;
         let mut breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
         // Breaks marked inside the video itself, when it is not a commercial.
         if !node.ad {
@@ -965,6 +999,7 @@ pub(crate) async fn play_plain_from(
             subtitle_media_path(config, source),
             {
                 let marks = clip_marks(&config.channel.storage, source).await;
+                set_clip_lshape(playout, config, &marks).await;
 
                 LogoFade {
                     hidden: commercial,

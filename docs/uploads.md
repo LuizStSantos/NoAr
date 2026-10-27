@@ -15,6 +15,13 @@ On air, NoAr then has no picture to resize and no frame rate to convert, so
 the playout uses less CPU. A file with damaged spots is rewritten from what
 decodes, so the damage stays out of the air and the log.
 
+**Recommended:** leave it on. Videos from cameras, editors and the internet
+often have odd frame rates, variable frame rates, broken timestamps, sound
+that starts late or damaged spots. Each of these makes the playout work
+harder on air, and can show as stutters, sound out of sync, frozen frames or
+errors in the log, at the worst moment. A converted file is clean and in the
+channel's own format, so it plays the same way every time.
+
 ## How it works
 
 - One video at a time per channel, in the background, on at most half the

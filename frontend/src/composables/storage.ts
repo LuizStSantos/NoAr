@@ -104,6 +104,8 @@ export interface VideoMarks {
     trim: LogoSpan | null
     /** Stretches shown in the L-shape. */
     lshape: LogoSpan[]
+    /** This video's own L-shape graphic (storage path), for its stretches. */
+    lshape_graphic: string | null
 }
 
 /** The marks of the video at `path`. */
@@ -114,7 +116,13 @@ export async function readLogoMarks(channelId: number, path: string): Promise<Vi
         body: JSON.stringify({ path }),
     })
 
-    return { hide: marks.hide ?? [], breaks: marks.breaks ?? [], trim: marks.trim ?? null, lshape: marks.lshape ?? [] }
+    return {
+        hide: marks.hide ?? [],
+        breaks: marks.breaks ?? [],
+        trim: marks.trim ?? null,
+        lshape: marks.lshape ?? [],
+        lshape_graphic: marks.lshape_graphic ?? null,
+    }
 }
 
 export async function saveLogoMarks(channelId: number, path: string, marks: VideoMarks): Promise<VideoMarks> {
@@ -124,7 +132,13 @@ export async function saveLogoMarks(channelId: number, path: string, marks: Vide
         body: JSON.stringify({ path, ...marks }),
     })
 
-    return { hide: saved.hide ?? [], breaks: saved.breaks ?? [], trim: saved.trim ?? null, lshape: saved.lshape ?? [] }
+    return {
+        hide: saved.hide ?? [],
+        breaks: saved.breaks ?? [],
+        trim: saved.trim ?? null,
+        lshape: saved.lshape ?? [],
+        lshape_graphic: saved.lshape_graphic ?? null,
+    }
 }
 
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {

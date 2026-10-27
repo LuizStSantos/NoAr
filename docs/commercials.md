@@ -34,7 +34,7 @@ arrow keys (Shift moves a second). Up to 16 stretches, in seconds of the video i
 hold whatever part of the video a playlist plays. The logo fades out and back
 in with its usual fade, wherever the video plays, from the next time it starts.
 
-The stretches are kept next to the video in `<name>.logo.json`, like its
+The stretches are kept next to the video in `<name>.marks.json`, like its
 `.nfo` sheet, and follow it when it is renamed, moved or deleted in Storage:
 
 ```json

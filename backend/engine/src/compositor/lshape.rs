@@ -174,7 +174,12 @@ pub struct LShapeControl(Arc<Mutex<LShapeState>>);
 
 #[derive(Default)]
 struct LShapeState {
+    /// The channel's graphic.
     graphic: Option<Arc<LShapeGraphic>>,
+    /// Another graphic swapped in from outside, and its name.
+    replacement: Option<(String, Arc<LShapeGraphic>)>,
+    /// The graphic of the clip playing, for its marked stretches.
+    clip: Option<(LShapeConfig, Arc<LShapeGraphic>)>,
     on: bool,
     /// Level when the last switch began, and when that was.
     from: f64,
@@ -238,6 +243,74 @@ impl LShapeControl {
         Ok(())
     }
 
+    /// Use the graphic of `config` in place of the channel's, from now on
+    /// (also while it is on), until [`Self::reset`]. `label` names it in the
+    /// state.
+    pub fn replace(
+        &self,
+        label: &str,
+        config: &LShapeConfig,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        let graphic = LShapeGraphic::load(config, width, height)?;
+
+        self.lock().replacement = Some((label.to_string(), Arc::new(graphic)));
+
+        Ok(())
+    }
+
+    /// Back to the channel's graphic.
+    pub fn reset(&self) {
+        self.lock().replacement = None;
+    }
+
+    /// The graphic of the clip about to play, for the stretches marked in
+    /// it, or none to use the channel's. Loaded once while the same clip
+    /// graphic follows.
+    pub fn set_clip_graphic(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        let Some(config) = config else {
+            self.lock().clip = None;
+            return Ok(());
+        };
+
+        if self
+            .lock()
+            .clip
+            .as_ref()
+            .is_some_and(|(loaded, _)| loaded == config)
+        {
+            return Ok(());
+        }
+
+        let graphic = LShapeGraphic::load(config, width, height);
+        let mut state = self.lock();
+
+        match graphic {
+            Ok(graphic) => {
+                state.clip = Some((config.clone(), Arc::new(graphic)));
+                Ok(())
+            }
+            Err(error) => {
+                state.clip = None;
+                Err(error)
+            }
+        }
+    }
+
+    /// The name of the graphic swapped in from outside, when there is one.
+    pub fn replacement(&self) -> Option<String> {
+        self.lock()
+            .replacement
+            .as_ref()
+            .map(|(label, _)| label.clone())
+    }
+
     /// Shrink the picture into the L-shape.
     pub fn on(&self) {
         self.lock().set_on(true);
@@ -253,20 +326,33 @@ impl LShapeControl {
         self.lock().on
     }
 
-    /// Whether there is a graphic to show.
+    /// Whether there is a graphic to show when switched on.
     pub fn is_ready(&self) -> bool {
-        self.lock().graphic.is_some()
-    }
-
-    /// For the frame being drawn: the graphic, and how far in the L-shape
-    /// is from outside, between 0 (full screen) and 1.
-    pub(crate) fn frame(&self) -> Option<(Arc<LShapeGraphic>, f64)> {
         let state = self.lock();
 
-        state
-            .graphic
-            .clone()
-            .map(|graphic| (graphic, state.level(Instant::now())))
+        state.graphic.is_some() || state.replacement.is_some()
+    }
+
+    /// For the frame being drawn, with the clip's marks putting it `marked`
+    /// of the way in: the graphic, and how far in the L-shape is, between 0
+    /// (full screen) and 1. A marked stretch uses the clip's own graphic
+    /// when it has one; otherwise the one swapped in, else the channel's.
+    pub(crate) fn frame(&self, marked: f64) -> Option<(Arc<LShapeGraphic>, f64)> {
+        let state = self.lock();
+        let switched = state.level(Instant::now());
+        let current = state
+            .replacement
+            .as_ref()
+            .map(|(_, graphic)| graphic.clone())
+            .or_else(|| state.graphic.clone());
+
+        if marked > switched
+            && let Some((_, clip)) = &state.clip
+        {
+            return Some((clip.clone(), marked));
+        }
+
+        current.map(|graphic| (graphic, switched.max(marked)))
     }
 
     #[cfg(test)]
@@ -501,7 +587,55 @@ mod tests {
         assert_eq!(control.level_after(Duration::ZERO), 1.0);
         assert_eq!(control.level_after(Duration::from_secs(2)), 0.0);
         // No graphic: nothing to draw.
-        assert!(control.frame().is_none());
+        assert!(control.frame(1.0).is_none());
+    }
+
+    #[test]
+    fn a_swapped_or_clip_graphic_takes_the_channels_place() {
+        let control = LShapeControl::default();
+        let channel = Arc::new(graphic(LShapeCorner::TopRight));
+        let other = Arc::new(graphic(LShapeCorner::BottomLeft));
+        let clip = Arc::new(graphic(LShapeCorner::TopLeft));
+        control.lock().graphic = Some(channel.clone());
+
+        let (shown, level) = control.frame(0.0).unwrap();
+        assert!(Arc::ptr_eq(&shown, &channel));
+        assert_eq!(level, 0.0);
+
+        control.lock().replacement = Some(("sponsor.png".to_string(), other.clone()));
+        assert_eq!(control.replacement().as_deref(), Some("sponsor.png"));
+        assert!(Arc::ptr_eq(&control.frame(0.0).unwrap().0, &other));
+
+        // A marked stretch uses the clip's graphic.
+        let config = LShapeConfig {
+            path: String::new(),
+            scale: 75.0,
+            corner: LShapeCorner::TopLeft,
+        };
+        control.lock().clip = Some((config, clip.clone()));
+        let (shown, level) = control.frame(0.6).unwrap();
+        assert!(Arc::ptr_eq(&shown, &clip));
+        assert_eq!(level, 0.6);
+        // Without marks, the swapped one.
+        assert!(Arc::ptr_eq(&control.frame(0.0).unwrap().0, &other));
+
+        control.reset();
+        assert!(control.replacement().is_none());
+        control.set_clip_graphic(None, 1920, 1080).unwrap();
+        assert!(Arc::ptr_eq(&control.frame(0.6).unwrap().0, &channel));
+        assert!(
+            control
+                .set_clip_graphic(
+                    Some(&LShapeConfig {
+                        path: "/missing.png".to_string(),
+                        scale: 75.0,
+                        corner: LShapeCorner::TopLeft,
+                    }),
+                    1920,
+                    1080
+                )
+                .is_err()
+        );
     }
 
     #[test]

@@ -204,11 +204,14 @@ off.
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
 | `GET` | `/api/control/{id}/logo` | `GA, CA, U` | Read the state: `{ "hidden": false, "replacement": null }`. |
-| `POST` | `/api/control/{id}/logo` | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace", "logo": "<storage path>" }`; `logo` only for `replace`. |
-| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace}` | Logo key | Query `key` (or header `X-Logo-Key`), and `logo` for `replace`. |
+| `POST` | `/api/control/{id}/logo` | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace" \| "move", "logo": "<storage path>", "position": "bottom-left" }`; `logo` only for `replace`, `position` only for `move`. |
+| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace\|move}` | Logo key | Query `key` (or header `X-Logo-Key`), `logo` for `replace`, `position` for `move`. |
 
 `show` brings back the configured logo and drops a replacement. A replacement
-takes the size, position and opacity of the configured logo.
+takes the size, position and opacity of the configured logo. `move` puts the
+logo at `position`: `top-left`, `top-right`, `bottom-left` or `bottom-right`
+(12 px from the edges), an `X:Y` expression such as `W-w-40:H-h-40`, or
+`default` for the channel's place; the state then has `"position"`.
 
 The `/logo/...` route is for encoders and scripts that cannot log in (vMix,
 OBS, Bitfocus Companion). It needs the channel's logo key, created in
@@ -232,14 +235,18 @@ The keyed route takes the channel's logo key.
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
-| `GET` | `/api/control/{id}/lshape` | `GA, CA, U` | Read the state: `{ "on": false, "ready": true }`; `ready` is false without a graphic. |
-| `POST` | `/api/control/{id}/lshape` | `GA, CA, U` | `{ "action": "on" \| "off" }`. `on` without a graphic answers 409. |
-| `GET`, `POST` | `/lshape/{id}/{on\|off}` | Logo key | Query `key` (or header `X-Logo-Key`). |
+| `GET` | `/api/control/{id}/lshape` | `GA, CA, U` | Read the state: `{ "on": false, "ready": true, "replacement": null }`; `ready` is false without a graphic, `replacement` names a graphic swapped in. |
+| `POST` | `/api/control/{id}/lshape` | `GA, CA, U` | `{ "action": "on" \| "off" \| "replace" \| "reset", "graphic": "<storage path>" }`. `replace` swaps the graphic (needs `graphic`); `on` with `graphic` swaps and goes in; `reset` goes back to the channel's. `on` without any graphic answers 409. |
+| `GET`, `POST` | `/lshape/{id}/{on\|off\|replace\|reset}` | Logo key | Query `key` (or header `X-Logo-Key`), and `graphic`. |
 
 ```bash
 curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>'
 curl -X POST 'http://127.0.0.1:8787/lshape/1/off?key=<KEY>'
+curl -X POST 'http://127.0.0.1:8787/lshape/1/replace?key=<KEY>&graphic=00-assets/sponsor.png'
+curl -X POST 'http://127.0.0.1:8787/lshape/1/reset?key=<KEY>'
 ```
+
+The logo goes off while the picture is in the L-shape and comes back after.
 
 ### Ad breaks (SCTE-35)
 
@@ -315,7 +322,7 @@ rejected.
 | `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
 | `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
 | `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...], "trim": { "from": 8, "to": 1790.5 } }` |
-| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35, `lshape` the stretches in the [L-shape](logo.md#l-shape). At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
+| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35, `lshape` the stretches in the [L-shape](logo.md#l-shape) and `lshape_graphic` this video's own graphic for them. At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
 | `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
 | `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
 | `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |

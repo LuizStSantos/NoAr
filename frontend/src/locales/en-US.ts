@@ -256,7 +256,7 @@ export default {
             summaryWhole: 'No trim: the whole video airs',
             clear: 'Remove the trim (whole video)',
             invalid: 'The out point must come after the in point, inside the video.',
-            hint: 'Drag the handles of the bar, or select one and use the arrows (Shift: 1 s). Times as h:mm:ss.d. Saved in the .logo.json file next to the video.',
+            hint: 'Drag the handles of the bar, or select one and use the arrows (Shift: 1 s). Times as h:mm:ss.d. Saved in the .marks.json file next to the video.',
         },
         logoMarks: {
             title: 'Trim, logo, breaks and L-shape in this video',
@@ -283,7 +283,7 @@ export default {
             remove: 'Remove stretch',
             overlap: 'Stretches must not overlap.',
             reversed: 'Each stretch must come back after it goes off.',
-            hint: 'Times of the video itself (h:mm:ss.d), even when the playlist plays only part of it. The logo goes and comes back with the usual fade. Saved in a .logo.json file next to the video.',
+            hint: 'Times of the video itself (h:mm:ss.d), even when the playlist plays only part of it. The logo goes and comes back with the usual fade. Saved in a .marks.json file next to the video.',
             save: 'Save stretches',
             saved: 'Marks saved.',
             unsaved: 'There are unsaved changes.',
@@ -292,6 +292,11 @@ export default {
         },
         lshapeMarks: {
             intro: 'Mark where the video goes into the L-shape and where it comes back to full screen: the picture shrinks into its corner and the channel’s graphic (Settings › Logo › L-shape) fills the band around it, animated. It applies wherever the video plays.',
+            graphic: 'This video’s L-shape graphic',
+            graphicChannel: 'The channel’s graphic',
+            graphicReset: 'Use the channel’s',
+            graphicHint:
+                'Optional: another graphic for this video’s stretches only, with the channel’s size and corner.',
             onHere: 'Full screen at this point',
             offHere: 'L-shape at this point',
             markOff: 'Into the L-shape here',
@@ -1593,6 +1598,15 @@ export default {
         onAirHint:
             'Applies to clips, lives and ingest until you go back to full screen. Encoders use the addresses in the logo tutorial.',
         notReady: 'Choose a graphic and save to use the L-shape on air.',
+        replaced: 'Graphic swapped by API: {graphic}. Use reset to go back to the channel’s.',
+        template: {
+            download: 'Download a base for the image editor',
+            hint: 'A PNG of the output’s size with the video’s space marked, to draw the band around it.',
+            band: 'GRAPHIC AREA (BAND)',
+            video: 'VIDEO SPACE',
+            safe: 'Keep text inside the blue line (safe area)',
+            failed: 'Could not make the base.',
+        },
         failed: 'Could not change the L-shape.',
     },
     remoteKey: {
@@ -1958,7 +1972,7 @@ export default {
             shuffle: 'Shuffle',
             convertUploads: 'Convert uploaded videos to the output format',
             convertUploadsHint:
-                'When an upload ends, the video is converted once to {width}×{height} at {fps} frames/s, high-quality H.264 and 48 kHz AAC sound, and takes the place of the original (same name; WebM, AVI and others become .mp4). On air NoAr no longer scales it or changes its frame rate, and damaged files are rewritten from what decodes. The conversion uses server CPU while it runs; videos already in the format stay as they are.',
+                'When an upload ends, the video is converted once to {width}×{height} at {fps} frames/s, high-quality H.264 and 48 kHz AAC sound, and takes the place of the original (same name; WebM, AVI and others become .mp4). On air NoAr no longer scales it or changes its frame rate, and damaged files are rewritten from what decodes. The conversion uses server CPU while it runs; videos already in the format stay as they are. Recommended: it avoids stutters, sound out of sync and playout errors with videos from cameras, editors and the internet.',
             shuffleHint: 'In folder mode and for the filler, play in random order.',
         },
         logo: {
@@ -2037,6 +2051,8 @@ export default {
                 noKey: 'No key: only from NoAr itself',
                 createKey: 'Create key',
                 newKey: 'New key',
+                moveTo: 'Position',
+                moveDefault: 'The channel’s',
                 removeKey: 'Turn off',
                 copy: 'Copy',
                 copied: 'Copied.',
@@ -2051,6 +2067,9 @@ export default {
                     hide: 'Hide the logo',
                     show: 'Back to the channel logo',
                     replace: 'Swap for another image from Storage',
+                    move: 'Move the logo (top-left, top-right, bottom-left, bottom-right or X:Y)',
+                    moveBack: 'Logo back to the channel’s position',
+                    lshapeReplace: 'Swap the L-shape graphic (until reset; with on, swaps and goes in)',
                     lshapeOn: 'Go to the L-shape (same key)',
                     lshapeOff: 'Back to full screen',
                 },

@@ -26,9 +26,36 @@ one is tagged.
   was converted, was already in the format or failed.
 - A video put in a playlist before its conversion plays the converted file;
   one that became an `.mp4` (a WebM, AVI…) plays in place of the original.
+- Logo API `move`: put the logo in a corner, at an `X:Y` expression, or back
+  in its place (`/logo/{id}/move?position=bottom-left`, also from the logo
+  card in Settings). A swapped image goes to the same place.
+- L-shape API `replace` and `reset`: swap the graphic before or while it is
+  on (`on` with `graphic` swaps and goes in at once), and go back to the
+  channel's.
+- A video can have its own L-shape graphic for its marked stretches (L-shape
+  tab of the marks editor, `"lshape_graphic"`).
+- **Download a base for the image editor** in Settings › Logo › L-shape: a
+  PNG of the output's size with the video's space, its size and place in
+  pixels, and the title safe area, for whoever designs the graphic.
+
+### Changed
+
+- The logo goes off while the picture is in the L-shape, and comes back with
+  it.
+- The marks file next to a video is now `<name>.marks.json` (trim, logo,
+  breaks and L-shape). `<name>.logo.json` is still read, and saving the marks
+  replaces it; moving or deleting the video in Storage takes either along.
+- The main menu is larger, with an icon for each page, and **Build the
+  playlist** stands out in the Player.
+- The converter setting and its guide recommend converting uploads: it avoids
+  stutters, sound out of sync and playout errors.
 
 ### Fixed
 
+- The **ON AIR** badge, and the playout card in Settings, read **STOPPED**
+  for a moment at every click in the menu: each page reloaded the channel
+  list, which the status took for a new channel. It now starts over only for
+  a new login or another channel.
 - The logo and SCTE-35 keys could change by themselves: they were saved with
   the rest of the settings, so a page or a browser with an older copy brought
   an old key back, and a key made in the page worked only after a save. Keys

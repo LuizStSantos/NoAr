@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
+import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import SpanBar from '@/components/storage/SpanBar.vue'
+import GenericModal from '@/components/utils/GenericModal.vue'
 import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
@@ -88,8 +90,8 @@ const LOOK: Record<
     },
 }
 
-const marks = ref<VideoMarks>({ hide: [], breaks: [], trim: null, lshape: [] })
-const baseline = ref<VideoMarks>({ hide: [], breaks: [], trim: null, lshape: [] })
+const marks = ref<VideoMarks>({ hide: [], breaks: [], trim: null, lshape: [], lshape_graphic: null })
+const baseline = ref<VideoMarks>({ hide: [], breaks: [], trim: null, lshape: [], lshape_graphic: null })
 /** Which marks the buttons and the list edit. */
 const kind = ref<Tab>(props.initialKind ?? 'hide')
 /** The kind of stretch being edited (the logo's while on the trim tab). */
@@ -149,6 +151,7 @@ function normalized(value: VideoMarks): VideoMarks {
         breaks: sortedOf(value.breaks),
         trim: whole ? null : (trim ?? null),
         lshape: sortedOf(value.lshape),
+        lshape_graphic: value.lshape_graphic?.trim() || null,
     }
 }
 
@@ -385,7 +388,24 @@ async function load() {
     const channel = configStore.channels.find((entry) => entry.id === props.channelId)
 
     logoUrl.value = await storageImageUrl(channel, configStore.playout?.processing?.logo).catch(() => '')
-    lshapeUrl.value = await storageImageUrl(channel, configStore.playout?.processing?.lshape).catch(() => '')
+    await loadLShape()
+}
+
+/** The video's own L-shape graphic, else the channel's. */
+async function loadLShape() {
+    const channel = configStore.channels.find((entry) => entry.id === props.channelId)
+    const graphic = marks.value.lshape_graphic?.trim() || configStore.playout?.processing?.lshape
+
+    lshapeUrl.value = await storageImageUrl(channel, graphic).catch(() => '')
+}
+
+watch(() => marks.value.lshape_graphic, loadLShape)
+
+const pickingGraphic = ref(false)
+
+function pickGraphic(file: { path: string }) {
+    marks.value.lshape_graphic = file.path
+    pickingGraphic.value = false
 }
 
 /** The output picture, which the preview takes the shape of. */
@@ -794,6 +814,32 @@ onBeforeUnmount(() => {
                     </span>
                 </div>
 
+                <div v-if="kind === 'lshape'" class="flex flex-col gap-1.5">
+                    <span class="text-xs text-muted">{{ t('storage.lshapeMarks.graphic') }}</span>
+                    <div class="flex flex-wrap gap-2">
+                        <input
+                            :value="marks.lshape_graphic ?? ''"
+                            class="field-input font-mono text-[13px] flex-[1_1_240px] min-w-0"
+                            :placeholder="t('storage.lshapeMarks.graphicChannel')"
+                            :aria-label="t('storage.lshapeMarks.graphic')"
+                            spellcheck="false"
+                            @input="marks.lshape_graphic = ($event.target as HTMLInputElement).value || null"
+                        />
+                        <button type="button" class="btn-quiet" @click="pickingGraphic = true">
+                            {{ t('settings.choose') }}
+                        </button>
+                        <button
+                            v-if="marks.lshape_graphic"
+                            type="button"
+                            class="btn-quiet"
+                            @click="marks.lshape_graphic = null"
+                        >
+                            {{ t('storage.lshapeMarks.graphicReset') }}
+                        </button>
+                    </div>
+                    <span class="field-hint">{{ t('storage.lshapeMarks.graphicHint') }}</span>
+                </div>
+
                 <div v-if="kind !== 'trim'" class="flex flex-col gap-2">
                     <h3 class="m-0 text-sm font-semibold">{{ label('list') }}</h3>
                     <p v-if="!spans.length" class="m-0 text-[13px] text-muted">
@@ -890,5 +936,16 @@ onBeforeUnmount(() => {
                 </template>
             </footer>
         </section>
+
+        <GenericModal
+            :show="pickingGraphic"
+            :title="t('storage.lshapeMarks.graphic')"
+            hide-buttons
+            :modal-action="() => (pickingGraphic = false)"
+        >
+            <div class="w-[min(520px,90vw)] max-h-[60vh] flex flex-col">
+                <StoragePicker @pick="pickGraphic" />
+            </div>
+        </GenericModal>
     </div>
 </template>

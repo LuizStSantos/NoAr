@@ -7,6 +7,7 @@ import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { authFetch } from '@/composables/authFetch'
 import { storageImageUrl } from '@/composables/logo'
+import { lshapeTemplate, lshapeTemplateName } from '@/composables/lshapeTemplate'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -28,7 +29,7 @@ const indexStore = useIndex()
 const picking = ref(false)
 const imageUrl = ref('')
 const imageFailed = ref(false)
-const status = ref<{ on: boolean; ready: boolean } | null>(null)
+const status = ref<{ on: boolean; ready: boolean; replacement: string | null } | null>(null)
 const busy = ref(false)
 
 const processing = computed(() => configStore.playout.processing)
@@ -97,6 +98,31 @@ async function send(action: 'on' | 'off') {
     }
 }
 
+/** The base for the image editor, for the size and corner set here. */
+async function downloadTemplate() {
+    const layout = {
+        width: frame.value.width,
+        height: frame.value.height,
+        scale: scale.value,
+        corner: processing.value.lshape_corner || 'top-right',
+    }
+
+    try {
+        const blob = await lshapeTemplate(layout, {
+            band: t('lshape.template.band'),
+            video: t('lshape.template.video'),
+            safe: t('lshape.template.safe'),
+        })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = lshapeTemplateName(layout)
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+    } catch {
+        indexStore.msgAlert('error', t('lshape.template.failed'), 3)
+    }
+}
+
 function pick(file: { path: string }) {
     processing.value.lshape = file.path
     picking.value = false
@@ -152,6 +178,12 @@ onMounted(loadStatus)
                     </span>
                     <span class="field-hint">{{ t('lshape.graphicHint', frame) }}</span>
                 </label>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <button type="button" class="btn-quiet" @click="downloadTemplate">
+                        <i class="bi bi-download" aria-hidden="true" />{{ t('lshape.template.download') }}
+                    </button>
+                    <span class="field-hint">{{ t('lshape.template.hint') }}</span>
+                </div>
                 <div class="flex flex-wrap gap-5">
                     <div class="field-label">
                         {{ t('lshape.corner') }}
@@ -209,6 +241,9 @@ onMounted(loadStatus)
                             <i class="bi bi-fullscreen" aria-hidden="true" />{{ t('lshape.off') }}
                         </button>
                     </div>
+                    <span v-if="status?.replacement" class="field-hint text-info!">
+                        {{ t('lshape.replaced', { graphic: status.replacement }) }}
+                    </span>
                     <span class="field-hint">{{ status?.ready ? t('lshape.onAirHint') : t('lshape.notReady') }}</span>
                 </div>
             </div>

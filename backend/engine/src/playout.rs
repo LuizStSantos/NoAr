@@ -1610,9 +1610,14 @@ fn encode_composited_frame<O: FrameOutput>(
     video
         .runtime_text
         .update(timeline.video_pts, timeline.text_pts);
-    // The L-shape first: the logo and texts go over it.
-    if let Some((graphic, level)) = video.lshape_control.frame() {
-        let level = level.max(logo_fade_plan.lshape_level(timeline.video_pts));
+    // The L-shape first: the texts go over it, and the logo gives way to it.
+    let mut lshape_level = 0.0;
+
+    if let Some((graphic, level)) = video
+        .lshape_control
+        .frame(logo_fade_plan.lshape_level(timeline.video_pts))
+    {
+        lshape_level = level;
 
         if let Err(error) = crate::compositor::lshape::apply_lshape(
             &mut frame,
@@ -1636,7 +1641,14 @@ fn encode_composited_frame<O: FrameOutput>(
         make_video_frame_writable(&mut frame)?;
     }
     apply_video_fade(&mut frame, video_opacity);
-    apply_overlays(&mut frame, video, timeline, logo_fade_plan, output);
+    apply_overlays(
+        &mut frame,
+        video,
+        timeline,
+        logo_fade_plan,
+        lshape_level,
+        output,
+    );
     frame.set_pts(Some(if timeline.source_timestamp_mode {
         source_pts.unwrap_or(timeline.video_pts)
     } else {
@@ -1669,6 +1681,7 @@ fn apply_overlays(
     video: &mut VideoDecoder,
     timeline: &mut Timeline,
     logo_fade_plan: LogoFadePlan,
+    lshape_level: f64,
     output: &mut impl FrameOutput,
 ) {
     let opacity = logo_fade_plan.opacity_at(timeline.video_pts, timeline.logo_opacity);
@@ -1677,19 +1690,47 @@ fn apply_overlays(
     // Hidden or swapped from outside: the clip's own fade still applies, so
     // a commercial keeps any logo off.
     let logo = video.logo_control.frame();
-    let opacity = opacity * logo.visibility * logo_fade_plan.gap_factor(timeline.video_pts);
+    // The logo goes off as the picture goes into the L-shape, and comes back
+    // with it.
+    let opacity = opacity
+        * logo.visibility
+        * logo_fade_plan.gap_factor(timeline.video_pts)
+        * (1.0 - lshape_level.clamp(0.0, 1.0));
     let mut incoming = 1.0;
+
+    // Moved from outside: the configured logo drawn at the new place, made
+    // once for each place.
+    match (&logo.position, &video.logo) {
+        (Some(position), Some(configured))
+            if video
+                .moved_logo
+                .as_ref()
+                .is_none_or(|(at, _)| at != position) =>
+        {
+            video.moved_logo = configured
+                .moved_to(position, video.output_width, video.output_height)
+                .ok()
+                .map(|moved| (position.clone(), moved));
+        }
+        (None, _) => video.moved_logo = None,
+        _ => {}
+    }
+    let configured = video
+        .moved_logo
+        .as_ref()
+        .map(|(_, moved)| moved)
+        .or(video.logo.as_ref());
 
     // Another image took the logo's place: the old one fades as the new one
     // comes up.
     if let Some((image, left)) = &logo.outgoing {
-        if let Some(old) = image.as_deref().or(video.logo.as_ref()) {
+        if let Some(old) = image.as_deref().or(configured) {
             draw_logo(frame, old, opacity * left, output);
         }
         incoming = 1.0 - left;
     }
 
-    if let Some(current) = logo.replacement.as_deref().or(video.logo.as_ref()) {
+    if let Some(current) = logo.replacement.as_deref().or(configured) {
         draw_logo(frame, current, opacity * incoming, output);
     }
 
@@ -2086,6 +2127,8 @@ struct VideoDecoder {
     x_offset: u32,
     y_offset: u32,
     logo: Option<LogoOverlay>,
+    /// The configured logo where it was moved to from outside, and where.
+    moved_logo: Option<(String, LogoOverlay)>,
     logo_control: LogoControl,
     lshape_control: crate::LShapeControl,
     lshape_scaler: crate::compositor::lshape::LShapeScaler,
@@ -2154,6 +2197,7 @@ impl VideoDecoder {
                 .as_ref()
                 .map(|logo| LogoOverlay::load(logo, cfg.width, cfg.height))
                 .transpose()?,
+            moved_logo: None,
             logo_control: cfg.logo_control.clone(),
             lshape_control: cfg.lshape_control.clone(),
             lshape_scaler: Default::default(),

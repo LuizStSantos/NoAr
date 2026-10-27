@@ -112,6 +112,18 @@ impl LogoOverlay {
         })
     }
 
+    /// The same image placed at `position` (an `X:Y` expression) in an
+    /// output of `width` x `height`.
+    pub(crate) fn moved_to(&self, position: &str, width: u32, height: u32) -> Result<Self> {
+        let (x, y) = logo_position(position, width, height, self.width, self.height)?;
+        let mut moved = self.clone();
+
+        moved.x = even(x);
+        moved.y = even(y);
+
+        Ok(moved)
+    }
+
     fn as_overlay(&self) -> OverlayRef<'_> {
         OverlayRef {
             frame: &self.frame,
@@ -324,6 +336,8 @@ struct LogoOverride {
     /// The image giving way to the one now shown, while they cross-fade.
     outgoing: Option<Outgoing>,
     transitions: LogoTransitions,
+    /// Where the logo is moved to (`X:Y`), in place of the configured spot.
+    position: Option<String>,
 }
 
 struct Outgoing {
@@ -342,6 +356,8 @@ pub(crate) struct LogoFrame {
     /// The image giving way to it (`None` inside: the configured logo), and
     /// how much of it is still drawn, between 0 and 1.
     pub outgoing: Option<(Option<Arc<LogoOverlay>>, f64)>,
+    /// Where the configured logo is moved to, when it is.
+    pub position: Option<String>,
 }
 
 impl LogoOverride {
@@ -395,6 +411,8 @@ pub struct LogoState {
     pub hidden: bool,
     /// The image shown in place of the configured logo.
     pub replacement: Option<String>,
+    /// Where the logo is moved to (`X:Y`), when it is.
+    pub position: Option<String>,
 }
 
 impl fmt::Debug for LogoControl {
@@ -439,12 +457,40 @@ impl LogoControl {
     /// placed for an output of `width` x `height`. `label` names it in
     /// [`LogoState`].
     pub fn replace(&self, label: &str, config: &LogoConfig, width: u32, height: u32) -> Result<()> {
-        let overlay = LogoOverlay::load(config, width, height)?;
+        let mut overlay = LogoOverlay::load(config, width, height)?;
         let mut state = self.lock();
+
+        if let Some(position) = &state.position {
+            overlay = overlay.moved_to(position, width, height)?;
+        }
 
         state.hand_over(Instant::now());
         state.replacement = Some((label.to_string(), Arc::new(overlay)));
         state.set_hidden(false);
+
+        Ok(())
+    }
+
+    /// Put the logo, whichever image it is, at `position` (an `X:Y`
+    /// expression such as `W-w-12:12`) in an output of `width` x `height`;
+    /// `None` puts it back where the channel places it. It stays there
+    /// until moved again or the server restarts.
+    pub fn move_to(&self, position: Option<&str>, width: u32, height: u32) -> Result<()> {
+        let mut state = self.lock();
+
+        match position {
+            Some(position) => {
+                // Checked here, so a wrong expression is refused, not drawn wrong.
+                logo_position(position, width, height, 2, 2)?;
+
+                if let Some((label, overlay)) = &state.replacement {
+                    let moved = overlay.moved_to(position, width, height)?;
+                    state.replacement = Some((label.clone(), Arc::new(moved)));
+                }
+                state.position = Some(position.to_string());
+            }
+            None => state.position = None,
+        }
 
         Ok(())
     }
@@ -455,6 +501,7 @@ impl LogoControl {
         LogoState {
             hidden: state.hidden,
             replacement: state.replacement.as_ref().map(|(label, _)| label.clone()),
+            position: state.position.clone(),
         }
     }
 
@@ -488,6 +535,7 @@ impl LogoControl {
                 .as_ref()
                 .map(|(_, overlay)| overlay.clone()),
             outgoing,
+            position: state.position.clone(),
         }
     }
 }
@@ -640,6 +688,28 @@ mod tests {
                 )
                 .is_err()
         );
+    }
+
+    #[test]
+    fn the_logo_can_be_moved_and_put_back() {
+        let control = LogoControl::default();
+
+        assert!(control.move_to(Some("nonsense"), 1920, 1080).is_err());
+        control.move_to(Some("12:H-h-12"), 1920, 1080).unwrap();
+        assert_eq!(control.state().position.as_deref(), Some("12:H-h-12"));
+        assert_eq!(control.frame().position.as_deref(), Some("12:H-h-12"));
+
+        // A replacement goes to the same place, and moves with it.
+        control.replace("a.png", &logo_asset(), 1920, 1080).unwrap();
+        let replacement = control.frame().replacement.unwrap();
+        assert_eq!(replacement.x, 12);
+        assert_eq!(replacement.y, 1080 - replacement.height - 12);
+        control.move_to(Some("W-w-12:12"), 1920, 1080).unwrap();
+        let replacement = control.frame().replacement.unwrap();
+        assert_eq!(replacement.x, 1920 - replacement.width - 12);
+
+        control.move_to(None, 1920, 1080).unwrap();
+        assert_eq!(control.state().position, None);
     }
 
     #[test]

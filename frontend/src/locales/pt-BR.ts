@@ -256,7 +256,7 @@ export default {
             summaryWhole: 'Sem corte: vai ao ar o vídeo inteiro',
             clear: 'Remover o corte (vídeo inteiro)',
             invalid: 'A saída precisa vir depois da entrada, dentro do vídeo.',
-            hint: 'Arraste as alças da barra, ou selecione uma e use as setas (Shift: 1 s). Tempos em h:mm:ss.d. Salvo no arquivo .logo.json ao lado do vídeo.',
+            hint: 'Arraste as alças da barra, ou selecione uma e use as setas (Shift: 1 s). Tempos em h:mm:ss.d. Salvo no arquivo .marks.json ao lado do vídeo.',
         },
         logoMarks: {
             title: 'Corte, logo, breaks e L-shape neste vídeo',
@@ -283,7 +283,7 @@ export default {
             remove: 'Remover trecho',
             overlap: 'Os trechos não podem se sobrepor.',
             reversed: 'Cada trecho precisa voltar depois de sumir.',
-            hint: 'Tempos do próprio vídeo (h:mm:ss.d), mesmo que a playlist toque só uma parte dele. A logo some e volta com o fade de sempre. Salvo em um arquivo .logo.json ao lado do vídeo.',
+            hint: 'Tempos do próprio vídeo (h:mm:ss.d), mesmo que a playlist toque só uma parte dele. A logo some e volta com o fade de sempre. Salvo em um arquivo .marks.json ao lado do vídeo.',
             save: 'Salvar trechos',
             saved: 'Marcações salvas.',
             unsaved: 'Há mudanças não salvas.',
@@ -292,6 +292,10 @@ export default {
         },
         lshapeMarks: {
             intro: 'Marque onde o vídeo entra no L-shape e onde volta à tela cheia: a imagem encolhe para o canto e a arte do canal (Configurações › Logo › L-shape) ocupa a faixa em volta, com animação. Vale em todo lugar onde o vídeo tocar.',
+            graphic: 'Arte do L-shape deste vídeo',
+            graphicChannel: 'A arte do canal',
+            graphicReset: 'Usar a do canal',
+            graphicHint: 'Opcional: outra arte só nos trechos deste vídeo, com o tamanho e o canto do canal.',
             onHere: 'Tela cheia neste ponto',
             offHere: 'L-shape neste ponto',
             markOff: 'Entra no L-shape aqui',
@@ -1597,6 +1601,15 @@ export default {
         onAirHint:
             'Vale para clipes, lives e ingest até você voltar à tela cheia. Encoders usam os endereços do tutorial da logo.',
         notReady: 'Escolha uma arte e salve para usar o L-shape no ar.',
+        replaced: 'Arte trocada pela API: {graphic}. Use reset para voltar à do canal.',
+        template: {
+            download: 'Baixar base para o editor de imagens',
+            hint: 'PNG no tamanho da saída com o espaço do vídeo marcado, para desenhar a faixa em volta.',
+            band: 'ÁREA DA ARTE (FAIXA)',
+            video: 'ESPAÇO DO VÍDEO',
+            safe: 'Textos dentro da linha azul (área segura)',
+            failed: 'Não deu para gerar a base.',
+        },
         failed: 'Não deu para mudar o L-shape.',
     },
     remoteKey: {
@@ -1964,7 +1977,7 @@ export default {
             shuffle: 'Embaralhar',
             convertUploads: 'Converter os vídeos enviados para o formato da saída',
             convertUploadsHint:
-                'Ao terminar o envio, o vídeo é convertido uma vez para {width}×{height} a {fps} quadros/s, H.264 em alta qualidade e som AAC a 48 kHz, e fica no lugar do original (o mesmo nome; WebM, AVI e outros viram .mp4). No ar o NoAr não precisa mais redimensionar nem mudar a taxa de quadros, e arquivos com defeito são regravados a partir do que decodifica. A conversão usa CPU do servidor enquanto roda; vídeos que já estão no formato ficam como estão.',
+                'Ao terminar o envio, o vídeo é convertido uma vez para {width}×{height} a {fps} quadros/s, H.264 em alta qualidade e som AAC a 48 kHz, e fica no lugar do original (o mesmo nome; WebM, AVI e outros viram .mp4). No ar o NoAr não precisa mais redimensionar nem mudar a taxa de quadros, e arquivos com defeito são regravados a partir do que decodifica. A conversão usa CPU do servidor enquanto roda; vídeos que já estão no formato ficam como estão. Recomendado: evita travadas, som fora de sincronia e erros no playout com vídeos de câmeras, editores e internet.',
             shuffleHint: 'No modo pasta e no tapa-buraco, toca em ordem aleatória.',
         },
         logo: {
@@ -2043,6 +2056,8 @@ export default {
                 noKey: 'Sem chave: só daqui do NoAr',
                 createKey: 'Criar chave',
                 newKey: 'Nova chave',
+                moveTo: 'Posição',
+                moveDefault: 'A do canal',
                 removeKey: 'Desligar',
                 copy: 'Copiar',
                 copied: 'Copiado.',
@@ -2057,6 +2072,9 @@ export default {
                     hide: 'Esconder a logo',
                     show: 'Voltar a logo do canal',
                     replace: 'Trocar por outra imagem do Armazenamento',
+                    move: 'Mover a logo (top-left, top-right, bottom-left, bottom-right ou X:Y)',
+                    moveBack: 'Voltar a logo para a posição do canal',
+                    lshapeReplace: 'Trocar a arte do L-shape (vale até reset; com on, troca e já entra)',
                     lshapeOn: 'Entrar no L-shape (mesma chave)',
                     lshapeOff: 'Voltar à tela cheia',
                 },

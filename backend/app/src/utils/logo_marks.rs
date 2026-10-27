@@ -1,8 +1,12 @@
-//! Marks inside a video: stretches that keep the logo off, and ad breaks
-//! signalled with SCTE-35, such as a commercial break edited into a
-//! programme. They live next to the video, in `<name>.logo.json`, like its
-//! `.nfo` sheet and `.vtt` subtitles, so they apply wherever the video plays:
-//! the playlist, the scheduler or a preview.
+//! Marks inside a video: its trim, stretches that keep the logo off, ad
+//! breaks signalled with SCTE-35, such as a commercial break edited into a
+//! programme, and stretches in the L-shape. They live next to the video, in
+//! `<name>.marks.json`, like its `.nfo` sheet and `.vtt` subtitles, so they
+//! apply wherever the video plays: the playlist, the scheduler or a preview.
+//!
+//! Before 1.5 the file was `<name>.logo.json`, when it only held logo
+//! stretches. That name is still read; saving the marks writes the new one
+//! and removes it.
 //!
 //! ```json
 //! { "hide": [{ "from": 750.0, "to": 990.5 }], "breaks": [{ "from": 750.0, "to": 990.5 }] }
@@ -47,6 +51,10 @@ pub struct LogoMarks {
     /// over the channel's L-shape graphic.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub lshape: Vec<LogoSpan>,
+    /// The L-shape graphic of this video, a storage path, for its stretches
+    /// in place of the channel's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lshape_graphic: Option<String>,
 }
 
 impl LogoMarks {
@@ -56,6 +64,10 @@ impl LogoMarks {
         self.hide = validated_spans(self.hide, "stretches without logo")?;
         self.breaks = validated_spans(self.breaks, "ad breaks")?;
         self.lshape = validated_spans(self.lshape, "L-shape stretches")?;
+        self.lshape_graphic = self
+            .lshape_graphic
+            .map(|graphic| graphic.trim().to_string())
+            .filter(|graphic| !graphic.is_empty());
 
         if let Some(trim) = self.trim {
             validated_spans(vec![trim], "trim")?;
@@ -68,6 +80,7 @@ impl LogoMarks {
         self.hide.is_empty()
             && self.breaks.is_empty()
             && self.lshape.is_empty()
+            && self.lshape_graphic.is_none()
             && self.trim.is_none()
     }
 
@@ -143,15 +156,39 @@ fn validated_spans(mut spans: Vec<LogoSpan>, what: &str) -> Result<Vec<LogoSpan>
     Ok(spans)
 }
 
-/// `Programa.mp4` -> `Programa.logo.json`, next to it.
+/// Ending of the marks file of a video.
+pub const MARKS_SUFFIX: &str = ".marks.json";
+
+/// Its name before 1.5, still read.
+pub const LEGACY_MARKS_SUFFIX: &str = ".logo.json";
+
+/// `Programa.mp4` -> `Programa.marks.json`, next to it.
 pub fn marks_path(video: &Path) -> PathBuf {
+    video.with_extension("marks.json")
+}
+
+/// `Programa.mp4` -> `Programa.logo.json`, the name before 1.5.
+fn legacy_marks_path(video: &Path) -> PathBuf {
     video.with_extension("logo.json")
+}
+
+/// The marks file the video has: the new name, else the old one.
+async fn existing_marks(video: &Path) -> Option<PathBuf> {
+    for path in [marks_path(video), legacy_marks_path(video)] {
+        if fs::try_exists(&path).await.unwrap_or(false) {
+            return Some(path);
+        }
+    }
+
+    None
 }
 
 /// The marks of the video at `video`; none when it has no file or the file
 /// cannot be read.
 pub async fn read_marks(video: &Path) -> LogoMarks {
-    let path = marks_path(video);
+    let Some(path) = existing_marks(video).await else {
+        return LogoMarks::default();
+    };
 
     match fs::read_to_string(&path).await {
         Ok(text) => serde_json::from_str(&text).unwrap_or_else(|error| {
@@ -162,15 +199,24 @@ pub async fn read_marks(video: &Path) -> LogoMarks {
     }
 }
 
-/// Write the marks of `video`; no stretches removes the file.
+/// Remove `path`; one that is not there is fine.
+async fn remove_if_there(path: &Path) -> std::io::Result<()> {
+    match fs::remove_file(path).await {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(error),
+        _ => Ok(()),
+    }
+}
+
+/// Write the marks of `video` under the current name, removing a file of the
+/// old name; no marks removes both.
 pub async fn write_marks(video: &Path, marks: &LogoMarks) -> Result<(), ServiceError> {
     let path = marks_path(video);
 
     if marks.is_empty() {
-        return match fs::remove_file(&path).await {
-            Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(error.into()),
-            _ => Ok(()),
-        };
+        remove_if_there(&path).await?;
+        remove_if_there(&legacy_marks_path(video)).await?;
+
+        return Ok(());
     }
 
     let text = serde_json::to_string_pretty(marks)
@@ -186,12 +232,18 @@ pub async fn write_marks(video: &Path, marks: &LogoMarks) -> Result<(), ServiceE
         return Err(error.into());
     }
 
+    // The old name would only come back if the new file went.
+    if let Err(error) = remove_if_there(&legacy_marks_path(video)).await {
+        warn!("Old marks file of {} not removed: {error}", video.display());
+    }
+
     Ok(())
 }
 
 /// Whether another file in the folder of `video` shares its marks.
 async fn marks_shared(video: &Path) -> bool {
     let marks = marks_path(video);
+    let legacy = legacy_marks_path(video);
     let Some(folder) = video.parent() else {
         return false;
     };
@@ -202,7 +254,7 @@ async fn marks_shared(video: &Path) -> bool {
     while let Ok(Some(entry)) = entries.next_entry().await {
         let path = entry.path();
 
-        if path != video && path != marks && marks_path(&path) == marks {
+        if path != video && path != marks && path != legacy && marks_path(&path) == marks {
             return true;
         }
     }
@@ -213,9 +265,13 @@ async fn marks_shared(video: &Path) -> bool {
 /// After `source` was renamed or moved to `target`: take its marks along.
 /// The file move stands even when this fails, which is logged.
 pub async fn follow_move(source: &Path, target: &Path) {
-    let (from, to) = (marks_path(source), marks_path(target));
+    let Some(from) = existing_marks(source).await else {
+        return;
+    };
+    // Under the current name at the new place.
+    let to = marks_path(target);
 
-    if from == to || !fs::try_exists(&from).await.unwrap_or(false) {
+    if from == to {
         return;
     }
 
@@ -241,17 +297,14 @@ pub async fn follow_move(source: &Path, target: &Path) {
 
 /// After `video` was deleted: delete its marks, unless another video shares them.
 pub async fn follow_remove(video: &Path) {
-    let marks = marks_path(video);
-
     if marks_shared(video).await {
         return;
     }
 
-    match fs::remove_file(&marks).await {
-        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+    for marks in [marks_path(video), legacy_marks_path(video)] {
+        if let Err(error) = remove_if_there(&marks).await {
             warn!("Logo marks {} not deleted: {error}", marks.display());
         }
-        _ => {}
     }
 }
 
@@ -292,6 +345,7 @@ mod tests {
             breaks: Vec::new(),
             trim: None,
             lshape: Vec::new(),
+            lshape_graphic: None,
         }
         .validated()
         .unwrap();
@@ -303,6 +357,7 @@ mod tests {
                 breaks: Vec::new(),
                 trim: None,
                 lshape: Vec::new(),
+                lshape_graphic: None,
             }
             .validated()
             .is_err()
@@ -313,6 +368,7 @@ mod tests {
                 breaks: Vec::new(),
                 trim: None,
                 lshape: Vec::new(),
+                lshape_graphic: None,
             }
             .validated()
             .is_err()
@@ -323,6 +379,7 @@ mod tests {
                 breaks: Vec::new(),
                 trim: None,
                 lshape: Vec::new(),
+                lshape_graphic: None,
             }
             .validated()
             .is_err()
@@ -336,6 +393,7 @@ mod tests {
             breaks: vec![span(60.0, 90.0), span(290.0, 320.0), span(900.0, 960.0)],
             trim: None,
             lshape: Vec::new(),
+            lshape_graphic: None,
         };
 
         // The whole video.
@@ -407,9 +465,10 @@ mod tests {
             breaks: Vec::new(),
             trim: None,
             lshape: Vec::new(),
+            lshape_graphic: None,
         };
 
-        assert_eq!(marks_path(&video), dir.join("Programa 01.logo.json"));
+        assert_eq!(marks_path(&video), dir.join("Programa 01.marks.json"));
         assert!(logo_gaps(&dir, "Programa 01.mp4").await.is_empty());
 
         write_marks(&video, &marks).await.unwrap();
@@ -430,6 +489,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn marks_of_the_old_name_are_read_and_replaced_on_save() {
+        let dir = std::env::temp_dir().join(format!("noar-logo-legacy-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let video = dir.join("Programa.mp4");
+        std::fs::write(&video, b"x").unwrap();
+        std::fs::write(
+            dir.join("Programa.logo.json"),
+            r#"{ "hide": [{ "from": 1.0, "to": 2.0 }] }"#,
+        )
+        .unwrap();
+
+        let marks = read_marks(&video).await;
+        assert_eq!(marks.hide, [span(1.0, 2.0)]);
+
+        // Moved: it lands under the new name.
+        let moved = dir.join("Outro.mp4");
+        std::fs::rename(&video, &moved).unwrap();
+        follow_move(&video, &moved).await;
+        assert!(dir.join("Outro.marks.json").exists());
+        assert!(!dir.join("Programa.logo.json").exists());
+
+        // Saved: the new name only.
+        std::fs::write(dir.join("Outro.logo.json"), "{}").unwrap();
+        write_marks(&moved, &marks).await.unwrap();
+        assert!(!dir.join("Outro.logo.json").exists());
+        assert_eq!(read_marks(&moved).await.hide, [span(1.0, 2.0)]);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
     async fn marks_follow_the_video_unless_another_shares_them() {
         let dir = std::env::temp_dir().join(format!("noar-logo-follow-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(dir.join("folder")).unwrap();
@@ -438,6 +528,7 @@ mod tests {
             breaks: Vec::new(),
             trim: None,
             lshape: Vec::new(),
+            lshape_graphic: None,
         };
         let video = dir.join("A.mp4");
         std::fs::write(&video, b"x").unwrap();

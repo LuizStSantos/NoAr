@@ -65,7 +65,7 @@ moves a second); a break cannot run into the next. When the logo is already
 marked off there, **Use the stretches without logo** copies them.
 
 - Up to 16 breaks per video, in seconds of the video itself. They are kept
-  with the logo stretches in `<name>.logo.json`, as `"breaks"`, and count
+  with the logo stretches in `<name>.marks.json`, as `"breaks"`, and count
   wherever the video plays: the playlist and the Scheduler, from the next
   time it starts.
 - Each one is a break like the others: announced the pre-roll ahead (three

@@ -19,7 +19,11 @@ import { useIndex } from '@/stores/index'
 interface LogoStatus {
     hidden: boolean
     replacement: string | null
+    /** Where it was moved to (`X:Y`); null is the channel's place. */
+    position?: string | null
 }
+
+const CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
 
 const { t } = useI18n()
 const authStore = useAuth()
@@ -50,16 +54,29 @@ function actionUrl(action: 'hide' | 'show' | 'replace'): string {
 }
 
 /** The L-shape is switched with the same key. */
-function lshapeUrl(action: 'on' | 'off'): string {
-    return `${window.location.origin}/lshape/${channelId.value}/${action}?${new URLSearchParams({ key: keyPlaceholder.value })}`
+function lshapeUrl(action: 'on' | 'off' | 'replace', graphic?: string): string {
+    const params = new URLSearchParams({ key: keyPlaceholder.value })
+
+    if (graphic) {
+        params.set('graphic', graphic)
+    }
+
+    return `${window.location.origin}/lshape/${channelId.value}/${action}?${params.toString().replace(/%2F/g, '/')}`
+}
+
+function moveUrl(position: string): string {
+    return `${window.location.origin}/logo/${channelId.value}/move?${new URLSearchParams({ key: keyPlaceholder.value, position })}`
 }
 
 const urls = computed(() => [
     { action: 'hide', url: actionUrl('hide') },
     { action: 'show', url: actionUrl('show') },
     { action: 'replace', url: actionUrl('replace') },
+    { action: 'move', url: moveUrl('bottom-left') },
+    { action: 'moveBack', url: moveUrl('default') },
     { action: 'lshapeOn', url: lshapeUrl('on') },
     { action: 'lshapeOff', url: lshapeUrl('off') },
+    { action: 'lshapeReplace', url: lshapeUrl('replace', 'pasta/lshape-patrocinio.png') },
 ])
 
 const snippet = computed(() => {
@@ -115,14 +132,14 @@ async function load() {
     }
 }
 
-async function send(action: 'hide' | 'show' | 'replace', logo?: string) {
+async function send(action: 'hide' | 'show' | 'replace' | 'move', logo?: string, position?: string) {
     busy.value = true
 
     try {
         status.value = await authFetch<LogoStatus>(`/api/control/${channelId.value}/logo`, {
             method: 'POST',
             headers: headers(),
-            body: JSON.stringify({ action, logo }),
+            body: JSON.stringify({ action, logo, position }),
         })
     } catch (error) {
         indexStore.msgAlert('error', error instanceof Error ? error.message : String(error), 4)
@@ -173,6 +190,21 @@ watch(channelId, load)
             <button class="btn-quiet" :disabled="busy" @click="picking = 'now'">
                 <i class="bi bi-arrow-left-right" aria-hidden="true" />{{ t('settings.logo.remote.replace') }}
             </button>
+            <label class="inline-flex items-center gap-2 text-[13px]">
+                <span class="text-muted">{{ t('settings.logo.remote.moveTo') }}</span>
+                <select
+                    class="field-input min-h-9 w-auto"
+                    :disabled="busy"
+                    :value="status?.position ? 'custom' : 'default'"
+                    @change="send('move', undefined, ($event.target as HTMLSelectElement).value)"
+                >
+                    <option value="default">{{ t('settings.logo.remote.moveDefault') }}</option>
+                    <option v-for="corner in CORNERS" :key="corner" :value="corner">
+                        {{ t(`lshape.corners.${corner}`) }}
+                    </option>
+                    <option v-if="status?.position" value="custom" disabled>{{ status.position }}</option>
+                </select>
+            </label>
         </div>
 
         <RemoteKeyField

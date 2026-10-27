@@ -227,6 +227,8 @@ pub struct AsyncPlayout {
     playback_control: PlaybackControl,
     preloader: Preloader,
     hls_health: Option<HlsHealth>,
+    /// The L-shape of the output, to set each clip's own graphic.
+    lshape_control: LShapeControl,
 }
 
 /// How to wait for the playout worker to finish.
@@ -305,7 +307,7 @@ impl AsyncPlayout {
             Ok(mut playout) => {
                 playout.playback_control = worker_playback_control;
                 playout.preloader = worker_preloader;
-                let _ = ready_tx.send(Ok(()));
+                let _ = ready_tx.send(Ok(playout.config.lshape_control.clone()));
                 run_async_playout_worker(playout, command_rx);
             }
             Err(error) => {
@@ -314,17 +316,24 @@ impl AsyncPlayout {
         });
 
         // Own the cancellation guard before the await: opening can itself be cancelled.
-        let playout = Self {
+        let mut playout = Self {
             commands,
             completion: Some(WorkerCompletion::Thread(worker)),
             playback_control,
             preloader,
             hls_health: None,
+            lshape_control: LShapeControl::default(),
         };
-        ready_rx
+        playout.lshape_control = ready_rx
             .await
             .context("playout worker stopped during open")??;
         Ok(playout)
+    }
+
+    /// The L-shape of the output: set the graphic of the clip about to play
+    /// here, before playing it.
+    pub fn lshape_control(&self) -> LShapeControl {
+        self.lshape_control.clone()
     }
 
     pub fn playback_control(&self) -> PlaybackControl {
@@ -1254,6 +1263,7 @@ mod tests {
             playback_control: playback_control.clone(),
             preloader: Preloader::default(),
             hls_health: None,
+            lshape_control: LShapeControl::default(),
         };
         let mut responses = Vec::new();
 
