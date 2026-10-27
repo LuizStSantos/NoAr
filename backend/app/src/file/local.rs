@@ -33,7 +33,7 @@ use crate::utils::{
     commercial::{COMMERCIAL_MARKER, CommercialFolders},
     config::PlayoutConfig,
     errors::ServiceError,
-    logo_marks::read_marks,
+    logo_marks::{self, read_marks},
     schedule::live::LIVE_EXTENSION,
     xmltv::sheet::{SheetKind, program_sheet_kind},
 };
@@ -303,7 +303,14 @@ impl LocalStorage {
             ));
         }
 
-        rename_only(&source_path, &target_path).await
+        let is_file = source_path.is_file();
+        let moved = rename_only(&source_path, &target_path).await?;
+
+        if is_file {
+            logo_marks::follow_move(&source_path, &target_path).await;
+        }
+
+        Ok(moved)
     }
 
     pub async fn remove(&self, source_path: &str, recursive: bool) -> Result<(), ServiceError> {
@@ -332,8 +339,11 @@ impl LocalStorage {
         }
 
         if source.is_file() {
-            match fs::remove_file(source).await {
-                Ok(_) => return Ok(()),
+            match fs::remove_file(&source).await {
+                Ok(_) => {
+                    logo_marks::follow_remove(&source).await;
+                    return Ok(());
+                }
                 Err(e) => {
                     error!("{e}");
                     return Err(ServiceError::BadRequest("Delete file failed!".into()));

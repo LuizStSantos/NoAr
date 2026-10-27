@@ -10,6 +10,10 @@
 //!
 //! Times are seconds of the video itself, whatever part of it a playlist
 //! plays.
+//!
+//! Videos of the same name with other extensions (`Programa.mp4` and
+//! `Programa.mov`) share the file. Renaming, moving or deleting a video in
+//! the storage takes its marks along, unless another video still shares them.
 
 use std::path::{Path, PathBuf};
 
@@ -158,10 +162,84 @@ pub async fn write_marks(video: &Path, marks: &LogoMarks) -> Result<(), ServiceE
 
     let text = serde_json::to_string_pretty(marks)
         .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+    // Written whole, then put in place: a playout reading the marks never
+    // sees half a file.
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let temporary = path.with_file_name(format!(".{name}.{}.tmp", uuid::Uuid::new_v4()));
 
-    fs::write(&path, format!("{text}\n")).await?;
+    fs::write(&temporary, format!("{text}\n")).await?;
+    if let Err(error) = fs::rename(&temporary, &path).await {
+        let _ = fs::remove_file(&temporary).await;
+        return Err(error.into());
+    }
 
     Ok(())
+}
+
+/// Whether another file in the folder of `video` shares its marks.
+async fn marks_shared(video: &Path) -> bool {
+    let marks = marks_path(video);
+    let Some(folder) = video.parent() else {
+        return false;
+    };
+    let Ok(mut entries) = fs::read_dir(folder).await else {
+        return true;
+    };
+
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+
+        if path != video && path != marks && marks_path(&path) == marks {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// After `source` was renamed or moved to `target`: take its marks along.
+/// The file move stands even when this fails, which is logged.
+pub async fn follow_move(source: &Path, target: &Path) {
+    let (from, to) = (marks_path(source), marks_path(target));
+
+    if from == to || !fs::try_exists(&from).await.unwrap_or(false) {
+        return;
+    }
+
+    if fs::try_exists(&to).await.unwrap_or(true) {
+        warn!(
+            "Logo marks {} kept: {} already exists",
+            from.display(),
+            to.display()
+        );
+        return;
+    }
+
+    let moved = if marks_shared(source).await {
+        fs::copy(&from, &to).await.map(|_| ())
+    } else {
+        fs::rename(&from, &to).await
+    };
+
+    if let Err(error) = moved {
+        warn!("Logo marks {} not moved: {error}", from.display());
+    }
+}
+
+/// After `video` was deleted: delete its marks, unless another video shares them.
+pub async fn follow_remove(video: &Path) {
+    let marks = marks_path(video);
+
+    if marks_shared(video).await {
+        return;
+    }
+
+    match fs::remove_file(&marks).await {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+            warn!("Logo marks {} not deleted: {error}", marks.display());
+        }
+        _ => {}
+    }
 }
 
 /// The marks of the clip at `source`, an absolute path or one relative to
@@ -304,6 +382,46 @@ mod tests {
 
         write_marks(&video, &LogoMarks::default()).await.unwrap();
         assert!(!marks_path(&video).exists());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn marks_follow_the_video_unless_another_shares_them() {
+        let dir = std::env::temp_dir().join(format!("noar-logo-follow-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(dir.join("folder")).unwrap();
+        let marks = LogoMarks {
+            hide: vec![span(1.0, 2.0)],
+            breaks: Vec::new(),
+            trim: None,
+        };
+        let video = dir.join("A.mp4");
+        std::fs::write(&video, b"x").unwrap();
+        write_marks(&video, &marks).await.unwrap();
+
+        // Renamed: the marks go along.
+        let renamed = dir.join("B.mp4");
+        std::fs::rename(&video, &renamed).unwrap();
+        follow_move(&video, &renamed).await;
+        assert!(!marks_path(&video).exists());
+        assert_eq!(read_marks(&renamed).await, marks);
+
+        // Moved while B.mov still shares them: copied, B.mov keeps them.
+        std::fs::write(dir.join("B.mov"), b"x").unwrap();
+        let moved = dir.join("folder").join("B.mp4");
+        std::fs::rename(&renamed, &moved).unwrap();
+        follow_move(&renamed, &moved).await;
+        assert_eq!(read_marks(&moved).await, marks);
+        assert_eq!(read_marks(&dir.join("B.mov")).await, marks);
+
+        // Deleted: gone, unless shared.
+        std::fs::write(dir.join("folder").join("B.mkv"), b"x").unwrap();
+        std::fs::remove_file(&moved).unwrap();
+        follow_remove(&moved).await;
+        assert!(marks_path(&moved).exists());
+        std::fs::remove_file(dir.join("folder").join("B.mkv")).unwrap();
+        follow_remove(&dir.join("folder").join("B.mkv")).await;
+        assert!(!marks_path(&moved).exists());
 
         let _ = std::fs::remove_dir_all(&dir);
     }

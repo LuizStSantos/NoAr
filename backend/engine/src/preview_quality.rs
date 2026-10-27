@@ -17,7 +17,7 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use ffmpeg_next::{
-    Dictionary, Packet, Rational, codec,
+    Dictionary, Packet, Rational, Rescale, codec,
     format::{self, Pixel, context::StreamIo},
     frame, media,
     software::scaling,
@@ -215,6 +215,7 @@ where
     // decode pictures whose references never came (and log about each).
     let mut key_frame_seen = false;
     let mut last_dts = [i64::MIN; 2];
+    let mut continuity = Continuity::default();
     let mut decoded = frame::Video::empty();
     let mut scaled = frame::Video::empty();
 
@@ -235,6 +236,8 @@ where
         }
 
         let index = stream.index();
+        let mut packet = packet;
+        continuity.carry_on(&mut packet, stream.time_base());
 
         if let Some((audio_index, audio_time_base, _)) = audio_in
             && index == audio_index
@@ -308,4 +311,85 @@ where
     let _ = octx.write_trailer();
 
     Ok(())
+}
+
+/// Keeps the timestamps going forward when the preview's start over (a
+/// restarted playout, or MPEG-TS wrapping after 26 hours): later packets are
+/// moved to follow on from the last ones, so the light preview keeps going
+/// instead of dropping everything until the time catches up.
+#[derive(Debug, Default)]
+struct Continuity {
+    /// Added to every timestamp, in microseconds.
+    shift: i64,
+    /// The latest timestamp passed on, in microseconds, shift included.
+    latest: Option<i64>,
+}
+
+impl Continuity {
+    /// A step back further than this is a new start, not reordering.
+    const JUMP: i64 = 1_000_000;
+    /// The gap left after a new start: about a frame.
+    const GAP: i64 = 40_000;
+    const MICROSECONDS: Rational = Rational(1, 1_000_000);
+
+    fn carry_on(&mut self, packet: &mut Packet, time_base: Rational) {
+        let Some(stamp) = packet.dts().or(packet.pts()) else {
+            return;
+        };
+        let at = stamp.rescale(time_base, Self::MICROSECONDS) + self.shift;
+
+        if let Some(latest) = self.latest
+            && at < latest - Self::JUMP
+        {
+            self.shift += latest - at + Self::GAP;
+        }
+
+        if self.shift != 0 {
+            let shift = self.shift.rescale(Self::MICROSECONDS, time_base);
+            packet.set_pts(packet.pts().map(|pts| pts + shift));
+            packet.set_dts(packet.dts().map(|dts| dts + shift));
+        }
+
+        let at = stamp.rescale(time_base, Self::MICROSECONDS) + self.shift;
+        self.latest = Some(self.latest.map_or(at, |latest| latest.max(at)));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn packet(dts: i64) -> Packet {
+        let mut packet = Packet::empty();
+        packet.set_dts(Some(dts));
+        packet.set_pts(Some(dts));
+        packet
+    }
+
+    #[test]
+    fn a_new_start_follows_on_from_the_last_packet() {
+        let video = Rational(1, 90_000);
+        let audio = Rational(1, 48_000);
+        let mut continuity = Continuity::default();
+
+        // Ten minutes in.
+        let mut last = packet(54_000_000);
+        continuity.carry_on(&mut last, video);
+        assert_eq!(last.dts(), Some(54_000_000));
+        // Reordered a little: left as it is.
+        let mut early = packet(53_990_000);
+        continuity.carry_on(&mut early, video);
+        assert_eq!(early.dts(), Some(53_990_000));
+
+        // The playout starts again from 0: the sound comes first.
+        let mut sound = packet(0);
+        continuity.carry_on(&mut sound, audio);
+        let sound_at = sound.dts().unwrap() as f64 / 48_000.0;
+        assert!((600.0..600.1).contains(&sound_at), "{sound_at}");
+        // The picture of the new start lands at the same time.
+        let mut picture = packet(0);
+        continuity.carry_on(&mut picture, video);
+        let picture_at = picture.dts().unwrap() as f64 / 90_000.0;
+        assert!((sound_at - picture_at).abs() < 0.001, "{picture_at}");
+    }
 }

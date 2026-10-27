@@ -28,8 +28,9 @@ Press **Save marks**. Trimmed videos show a "trimmed" tag in Storage; its
 tooltip gives the in and out points, and a click opens the panel again.
 
 The trim is kept with the video's other marks, in `<name>.logo.json` next to
-it. Moving or renaming the video does not take that file along: copy or rename
-it too, or trim the video again.
+it. Renaming, moving or deleting the video in Storage takes that file along;
+outside NoAr, move it with the video. Videos of the same name with other
+extensions (`Programa.mp4` and `Programa.mov`) share it.
 
 ```json
 { "trim": { "from": 8.0, "to": 1790.5 } }

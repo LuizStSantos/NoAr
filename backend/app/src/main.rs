@@ -94,7 +94,35 @@ fn main() -> Result<(), ProcessError> {
     Ok(())
 }
 
+/// Panics go to the log with where they happened, then the default report
+/// runs; the playout supervisor restarts a channel whose task panicked.
+fn log_panics() {
+    let default_hook = std::panic::take_hook();
+
+    std::panic::set_hook(Box::new(move |info| {
+        let message = info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|message| (*message).to_string())
+            .or_else(|| info.payload().downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "unknown cause".to_string());
+        let location = info
+            .location()
+            .map(|location| format!("{}:{}", location.file(), location.line()))
+            .unwrap_or_default();
+        let thread = std::thread::current();
+
+        error!(
+            "Panic in thread {}: {message} ({location})",
+            thread.name().unwrap_or("unnamed")
+        );
+        default_hook(info);
+    }));
+}
+
 fn run_async_main() -> Result<(), ProcessError> {
+    log_panics();
+
     tokio::runtime::Builder::new_multi_thread()
         .max_blocking_threads(*MAX_BLOCKING_THREADS)
         .name("ff-tokio-runtime")
