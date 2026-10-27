@@ -51,6 +51,7 @@ function menuFocusOut(event: FocusEvent) {
 const navItems = computed(() => [
     { name: 'home', label: t('nav.home'), path: '/', icon: 'bi-house' },
     { name: 'player', label: t('nav.player'), path: '/player', icon: 'bi-play-btn' },
+    { name: 'playlist', label: t('nav.playlist'), path: '/playlist', icon: 'bi-list-check' },
     { name: 'graphics', label: t('nav.graphics'), path: '/graphics', icon: 'bi-layers' },
     { name: 'schedule', label: t('nav.schedule'), path: '/schedule', icon: 'bi-calendar-week' },
     { name: 'media', label: t('nav.media'), path: '/media', icon: 'bi-folder2' },
@@ -114,7 +115,7 @@ async function logout() {
                     :key="item.name"
                     :to="channelLink(item.path)"
                     :aria-current="isActive(item.path) ? 'page' : undefined"
-                    class="inline-flex items-center gap-2 px-3.5 min-h-10 rounded-field whitespace-nowrap text-[15px] font-medium"
+                    class="inline-flex items-center gap-1.5 px-2.5 2xl:px-3.5 min-h-10 rounded-field whitespace-nowrap text-[15px] font-medium"
                     :class="
                         isActive(item.path)
                             ? 'bg-base-300 text-base-content'

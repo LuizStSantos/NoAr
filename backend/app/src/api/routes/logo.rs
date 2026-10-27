@@ -21,7 +21,7 @@ use crate::{
     file::norm_abs_path,
     player::controller::ChannelManager,
     utils::{
-        config::{SceneLShape, SceneLogo, slug},
+        config::{GraphicsScene, SceneLShape, SceneLogo, slug},
         errors::ServiceError,
         xmltv::library::has_image_extension,
     },
@@ -565,6 +565,23 @@ async fn apply_scene(
         .find(|scene| scene.slug() == wanted)
         .cloned()
         .ok_or_else(|| ServiceError::NotFound(format!("No scene called '{}'", name.trim())))?;
+
+    apply_graphics(manager, &scene).await?;
+
+    Ok(Json(SceneStatus {
+        scene: scene.name,
+        logo: status(manager),
+        lshape: lshape_status(manager),
+    }))
+}
+
+/// Put the changes of `scene` on air: the L-shape graphic and place first,
+/// then the logo, then the L-shape in or out. A scene or a scheduled
+/// graphics event.
+pub(crate) async fn apply_graphics(
+    manager: &ChannelManager,
+    scene: &GraphicsScene,
+) -> Result<(), ServiceError> {
     let control = &manager.lshape_control;
 
     if let Some(graphic) = scene
@@ -648,11 +665,50 @@ async fn apply_scene(
         SceneLShape::Off => control.off(),
     }
 
-    Ok(Json(SceneStatus {
-        scene: scene.name,
-        logo: status(manager),
-        lshape: lshape_status(manager),
-    }))
+    Ok(())
+}
+
+/// Undo what `scene` put on air, when a scheduled graphics event ends: the
+/// L-shape it brought in goes out, its graphic and place go back to the
+/// channel's, and the logo it hid, swapped or moved comes back as the
+/// channel has it.
+pub(crate) async fn revert_graphics(
+    manager: &ChannelManager,
+    scene: &GraphicsScene,
+) -> Result<(), ServiceError> {
+    let control = &manager.lshape_control;
+
+    if scene.lshape == SceneLShape::On {
+        control.off();
+    }
+    if scene.lshape_graphic.is_some() {
+        control.reset();
+    }
+    if scene.lshape_corner.is_some() || scene.lshape_scale.is_some() {
+        control
+            .place(None)
+            .map_err(|error| ServiceError::BadRequest(format!("{error:#}")))?;
+    }
+
+    if matches!(scene.logo, SceneLogo::Hide | SceneLogo::Replace) {
+        apply(manager, LogoAction::Show, None, Place::default())
+            .await
+            .map(drop)?;
+    }
+
+    if scene.logo_position.is_some() {
+        let place = Place {
+            position: Some("default"),
+            x: None,
+            y: None,
+        };
+
+        apply(manager, LogoAction::Move, None, place)
+            .await
+            .map(drop)?;
+    }
+
+    Ok(())
 }
 
 async fn authorized(

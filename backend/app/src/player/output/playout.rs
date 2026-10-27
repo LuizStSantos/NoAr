@@ -209,6 +209,11 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     manager.schedule.reset();
     schedule::resume_unfinished(&manager).await;
     let ticker = tokio::spawn(schedule::run_ticker(manager.clone(), ticker_cancel.clone()));
+    // Graphics at a set time: the logo and the L-shape, never the programme.
+    let graphics_ticker = tokio::spawn(crate::player::graphics_schedule::run_graphics_ticker(
+        manager.clone(),
+        ticker_cancel.clone(),
+    ));
 
     let result = match config.output.mode {
         OutputMode::HLS => play_hls(manager.clone(), &config, &playout).await,
@@ -217,6 +222,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
 
     ticker_cancel.cancel();
     let _ = ticker.await;
+    let _ = graphics_ticker.await;
 
     if let Some(watcher) = ingest_watcher {
         let _ = watcher.await;
@@ -407,7 +413,12 @@ async fn play_loop(
             1.0
         };
         let is_ad = node.ad;
-        let marks = clip_marks(&config.channel.storage, &node.source).await;
+        // An entry marked while building the playlist keeps its own marks;
+        // other entries use the video's, from the storage.
+        let marks = match &node.marks {
+            Some(marks) => marks.clone(),
+            None => clip_marks(&config.channel.storage, &node.source).await,
+        };
         let logo_gaps = marks.gaps();
         let lshape = marks.lshape_spans();
         set_clip_lshape(playout, config, &marks).await;

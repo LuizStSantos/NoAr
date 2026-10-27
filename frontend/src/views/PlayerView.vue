@@ -25,6 +25,9 @@ import { usePlaylist } from '@/stores/playlist'
 import { useProgrammes } from '@/stores/programmes'
 import { useSchedule } from '@/stores/schedule'
 
+/** The Playlist page (`build`) or the Player page. */
+const props = withDefaults(defineProps<{ build?: boolean }>(), { build: false })
+
 const { t } = useI18n()
 const { mediaType } = stringFormatter()
 const configStore = useConfig()
@@ -43,34 +46,19 @@ let statusTimer: ReturnType<typeof setInterval> | undefined
 let dayTimer: ReturnType<typeof setInterval> | undefined
 
 useHead({
-    title: computed(() => t('nav.player')),
+    title: computed(() => (props.build ? t('nav.playlist') : t('nav.player'))),
 })
 
 const playlistMode = computed(() => configStore.playout.processing?.mode !== 'folder')
 const { currentTitle } = useOnAir()
 
 /**
- * Building a playlist: the video, clock and transport make way for the
- * library and the list, with a line saying what is on air. The preview
- * stops meanwhile, which also spares the network.
+ * The Playlist page builds the list: the library and the list fill the
+ * screen, with a line saying what is on air. The Player page shows the air:
+ * the video, clock and transport. Both are this view, so the list the
+ * clock and "up next" read stays loaded.
  */
-const building = ref(readBuilding())
-
-function readBuilding(): boolean {
-    try {
-        return localStorage.getItem('noar.player.build') === '1'
-    } catch {
-        return false
-    }
-}
-
-watch(building, (value) => {
-    try {
-        localStorage.setItem('noar.player.build', value ? '1' : '0')
-    } catch {
-        // Only remembered for this visit.
-    }
-})
+const building = computed(() => props.build)
 
 // The guide lookup runs a moment after the last change, not on every keystroke.
 const refreshProgrammes = useDebounceFn(() => programmes.refresh(), 400)
@@ -173,35 +161,9 @@ async function openPreview(source: string) {
         class="max-w-[1440px] mx-auto px-4 sm:px-6 pt-5 flex flex-col gap-4"
         :class="building && playlistMode ? 'pb-4 lg:h-[calc(100dvh-57px)]' : 'pb-8'"
     >
-        <div class="flex flex-wrap items-center gap-3">
-            <div
-                v-if="playlistMode"
-                role="radiogroup"
-                :aria-label="t('onair.layout')"
-                class="inline-flex bg-base-200 border border-line-strong rounded-field p-1 gap-1"
-            >
-                <!-- Building the playlist is the main work here: it stands out even when not chosen. -->
-                <button
-                    v-for="option in [false, true]"
-                    :key="String(option)"
-                    type="button"
-                    role="radio"
-                    :aria-checked="building === option"
-                    class="border-0 rounded-md px-4 min-h-10 text-[15px] font-medium cursor-pointer inline-flex items-center gap-2"
-                    :class="
-                        building === option
-                            ? 'bg-accent text-accent-content shadow-sm'
-                            : option
-                              ? 'bg-transparent text-accent-text hover:bg-raised'
-                              : 'bg-transparent text-muted hover:text-base-content hover:bg-raised'
-                    "
-                    @click="building = option"
-                >
-                    <i class="bi text-[16px]" :class="option ? 'bi-list-check' : 'bi-broadcast'" aria-hidden="true" />
-                    {{ option ? t('onair.layoutBuild') : t('onair.layoutLive') }}
-                </button>
-            </div>
-            <p v-if="building && playlistMode" class="m-0 text-[13px] text-muted truncate" role="status">
+        <div v-if="building" class="flex flex-wrap items-center gap-3">
+            <h1 class="m-0 text-xl font-semibold">{{ t('nav.playlist') }}</h1>
+            <p v-if="playlistMode" class="m-0 text-[13px] text-muted truncate" role="status">
                 <span v-if="playlistStore.playoutIsRunning" class="text-on-air-text font-semibold"
                     >● {{ t('nav.onAir') }}:</span
                 >
@@ -209,7 +171,7 @@ async function openPreview(source: string) {
             </p>
         </div>
 
-        <template v-if="!building || !playlistMode">
+        <template v-if="!building">
             <div class="flex flex-wrap gap-4">
                 <div class="flex-[999_1_640px] min-w-0 flex flex-col gap-3">
                     <LivePreview />

@@ -24,6 +24,7 @@ export const useSchedule = defineStore('schedule', {
         program: [] as ProgramItem[],
         grade: [] as GuideBlock[],
         lives: [] as LiveSource[],
+        graphics: [] as GraphicsEvent[],
         status: { active: null, queued: [], next: [] } as ScheduleStatus,
         loading: false,
     }),
@@ -56,6 +57,33 @@ export const useSchedule = defineStore('schedule', {
                 this.program = program ?? []
                 this.grade = grade ?? []
             }
+        },
+
+        async loadGraphics() {
+            const id = channelId()
+
+            if (id) {
+                this.graphics = await authFetch<GraphicsEvent[]>(`/api/schedule/${id}/graphics`, {
+                    headers: headers(),
+                })
+            }
+        },
+
+        async saveGraphics(input: GraphicsEventInput, eventId?: number): Promise<GraphicsEvent> {
+            const id = channelId()
+
+            return authFetch<GraphicsEvent>(
+                eventId ? `/api/schedule/${id}/graphics/${eventId}` : `/api/schedule/${id}/graphics`,
+                { method: eventId ? 'PUT' : 'POST', headers: headers(true), body: JSON.stringify(input) },
+            )
+        },
+
+        async deleteGraphics(eventId: number) {
+            await authFetch(`/api/schedule/${channelId()}/graphics/${eventId}`, {
+                method: 'DELETE',
+                headers: headers(),
+                responseType: 'text',
+            })
         },
 
         async loadLives() {

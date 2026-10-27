@@ -281,6 +281,13 @@ pub struct Media {
     #[serde(default, skip_serializing_if = "is_empty_string")]
     pub custom_filter: String,
 
+    /// Marks of this entry alone (logo, breaks, L-shape), set while
+    /// building the playlist. When present they replace the video's marks
+    /// in the storage for this entry; other entries of the same video keep
+    /// those.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marks: Option<crate::utils::logo_marks::LogoMarks>,
+
     #[serde(skip_serializing, skip_deserializing)]
     pub probe: Option<MediaProbe>,
 
@@ -343,6 +350,7 @@ impl Media {
             source: src.to_string(),
             audio: String::new(),
             custom_filter: String::new(),
+            marks: None,
             probe,
             probe_audio: None,
             last_ad: false,
@@ -463,6 +471,7 @@ impl Default for Media {
             source: String::new(),
             audio: String::new(),
             custom_filter: String::new(),
+            marks: None,
             probe: None,
             probe_audio: None,
             last_ad: false,
@@ -485,6 +494,7 @@ impl PartialEq for Media {
             && self.ad == other.ad
             && self.audio == other.audio
             && self.custom_filter == other.custom_filter
+            && self.marks == other.marks
     }
 }
 
@@ -881,6 +891,26 @@ pub fn custom_format<T: fmt::Display>(template: &str, args: &[T]) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn an_entry_keeps_marks_of_its_own() {
+        let entry: Media = serde_json::from_str(
+            r#"{"in": 0, "out": 60, "duration": 60, "source": "/media/a.mp4",
+                "marks": {"hide": [{"from": 10.0, "to": 20.0}], "logo_position": "50%:1%"}}"#,
+        )
+        .unwrap();
+        let marks = entry.marks.as_ref().unwrap();
+
+        assert_eq!(marks.hide.len(), 1);
+        assert_eq!(marks.logo_position.as_deref(), Some("50%:1%"));
+        // A copy without them is another entry.
+        let mut plain = entry.clone();
+        plain.marks = None;
+        assert_ne!(entry, plain);
+        // Entries without marks write none.
+        assert!(!serde_json::to_string(&plain).unwrap().contains("marks"));
+    }
+
     use std::path::{Path, PathBuf};
 
     use chrono_tz::Tz;

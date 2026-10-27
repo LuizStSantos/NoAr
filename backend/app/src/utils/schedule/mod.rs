@@ -13,6 +13,7 @@ use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use serde::{Deserialize, Serialize};
 use tokio::task;
 
+pub mod graphics;
 pub mod live;
 
 use crate::{

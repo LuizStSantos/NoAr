@@ -422,3 +422,88 @@ pub async fn test_live_signal(
 
     Ok(Json(test_signal(&request.url).await?))
 }
+
+/// **Graphics events of a channel**
+///
+/// Logo and L-shape changes at a set time, undone at the end.
+///
+/// ```BASH
+/// curl -X GET 'http://127.0.0.1:8787/api/schedule/1/graphics' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_graphics_events(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<crate::db::models::GraphicsEvent>>, ServiceError> {
+    authorized_manager(&state, id, &user, &details).await?;
+
+    Ok(Json(
+        handles::select_graphics_events(&state.pool, id).await?,
+    ))
+}
+
+/// **Add a graphics event**
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/schedule/1/graphics -H 'Content-Type: application/json' \
+/// -d '{"title": "Patrocínio", "start_date": "2026-10-27", "start_time": "12:00", "end_time": "12:05",
+///      "actions": {"logo": "hide", "lshape": "on", "lshape_corner": "bottom-left"}}' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn add_graphics_event(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(input): Json<crate::utils::schedule::graphics::GraphicsEventInput>,
+) -> Result<Json<crate::db::models::GraphicsEvent>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let mut event =
+        crate::utils::schedule::graphics::prepare_graphics_event(&storage, id, 0, input)?;
+
+    event.id = handles::insert_graphics_event(&state.pool, &event).await?;
+
+    Ok(Json(event))
+}
+
+/// **Change a graphics event**
+pub async fn update_graphics_event(
+    State(state): State<AppState>,
+    Path((id, event_id)): Path<(i32, i32)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(input): Json<crate::utils::schedule::graphics::GraphicsEventInput>,
+) -> Result<Json<crate::db::models::GraphicsEvent>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let event =
+        crate::utils::schedule::graphics::prepare_graphics_event(&storage, id, event_id, input)?;
+
+    if !handles::update_graphics_event(&state.pool, &event).await? {
+        return Err(ServiceError::NotFound(format!(
+            "Graphics event {event_id} not found"
+        )));
+    }
+
+    Ok(Json(event))
+}
+
+/// **Remove a graphics event**
+pub async fn delete_graphics_event(
+    State(state): State<AppState>,
+    Path((id, event_id)): Path<(i32, i32)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<&'static str>, ServiceError> {
+    authorized_manager(&state, id, &user, &details).await?;
+
+    if !handles::delete_graphics_event(&state.pool, id, event_id).await? {
+        return Err(ServiceError::NotFound(format!(
+            "Graphics event {event_id} not found"
+        )));
+    }
+
+    Ok(Json("removed"))
+}

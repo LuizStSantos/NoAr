@@ -206,6 +206,16 @@ They are saved in the video's `<name>.marks.json` (`logo_position`,
 `lshape_graphic`, `lshape_corner`, `lshape_scale`). A move from outside
 (Graphics, the Player, the API) goes before the video's own logo position.
 
+### Marks of one playlist item
+
+In the **Playlist** page, **Edit** on an item › **Marks of this entry** opens
+the same editor for that item alone: what is changed there applies only where
+it sits in that day's playlist, and the video's marks in the Storage stay as
+they are. The item shows **own** while it has them; **Back to the Storage's**
+drops them. They are saved with the playlist, in the item's `marks` field,
+which takes the same fields as `<name>.marks.json` (its trim becomes the
+item's in and out points). Items without `marks` use the video's.
+
 ## Quick scenes
 
 A scene is a named set of changes for a moment that repeats, like a
@@ -225,6 +235,9 @@ http://<server>:8787/scene/<channel>/intervalo-comercial?key=<KEY>
 **Graphics › External control (API)** lists each saved scene's address ready
 to copy. A scene applies the L-shape graphic and place first, then the logo,
 then the L-shape in or out, so the picture shrinks straight to its corner.
+
+A scene's changes can also be put on a timetable in the
+[Scheduler](scheduler.md#scheduled-graphics), and are undone when it ends.
 
 ## Logo in the guide
 

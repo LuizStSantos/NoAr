@@ -677,6 +677,8 @@ pub enum SceneLShape {
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, TS)]
 #[ts(export, export_to = "playout_config.d.ts")]
 pub struct GraphicsScene {
+    /// The scene's name; a scheduled graphics event takes its title.
+    #[serde(default)]
     pub name: String,
     #[serde(default)]
     pub logo: SceneLogo,
@@ -704,6 +706,46 @@ impl GraphicsScene {
     /// dashes for anything but letters and digits.
     pub fn slug(&self) -> String {
         slug(&self.name)
+    }
+}
+
+impl GraphicsScene {
+    /// Why the scene's values are not accepted.
+    pub fn check(&self) -> Result<(), String> {
+        let scene = self;
+
+        let blank =
+            |value: &Option<String>| value.as_deref().is_none_or(|value| value.trim().is_empty());
+
+        if scene.logo == SceneLogo::Replace && blank(&scene.logo_image) {
+            return Err(format!(
+                "scene '{}': choose the image that replaces the logo",
+                scene.name.trim()
+            ));
+        }
+
+        if let Some(corner) = scene.lshape_corner.as_deref().map(str::trim)
+            && corner != "default"
+            && noar_engine::LShapeCorner::parse(corner).is_none()
+        {
+            return Err(format!(
+                "scene '{}': unknown L-shape corner '{corner}'",
+                scene.name.trim()
+            ));
+        }
+
+        if let Some(scale) = scene.lshape_scale
+            && !(noar_engine::LSHAPE_MIN_SCALE..=noar_engine::LSHAPE_MAX_SCALE).contains(&scale)
+        {
+            return Err(format!(
+                "scene '{}': the picture in the L-shape must be between {} and {}% of the screen",
+                scene.name.trim(),
+                noar_engine::LSHAPE_MIN_SCALE,
+                noar_engine::LSHAPE_MAX_SCALE
+            ));
+        }
+
+        Ok(())
     }
 }
 
@@ -820,37 +862,7 @@ impl Processing {
                 return Err(format!("two scenes are called '{}'", scene.name.trim()));
             }
 
-            let blank = |value: &Option<String>| {
-                value.as_deref().is_none_or(|value| value.trim().is_empty())
-            };
-
-            if scene.logo == SceneLogo::Replace && blank(&scene.logo_image) {
-                return Err(format!(
-                    "scene '{}': choose the image that replaces the logo",
-                    scene.name.trim()
-                ));
-            }
-
-            if let Some(corner) = scene.lshape_corner.as_deref().map(str::trim)
-                && corner != "default"
-                && noar_engine::LShapeCorner::parse(corner).is_none()
-            {
-                return Err(format!(
-                    "scene '{}': unknown L-shape corner '{corner}'",
-                    scene.name.trim()
-                ));
-            }
-
-            if let Some(scale) = scene.lshape_scale
-                && !(noar_engine::LSHAPE_MIN_SCALE..=noar_engine::LSHAPE_MAX_SCALE).contains(&scale)
-            {
-                return Err(format!(
-                    "scene '{}': the picture in the L-shape must be between {} and {}% of the screen",
-                    scene.name.trim(),
-                    noar_engine::LSHAPE_MIN_SCALE,
-                    noar_engine::LSHAPE_MAX_SCALE
-                ));
-            }
+            scene.check()?;
         }
 
         Ok(())
