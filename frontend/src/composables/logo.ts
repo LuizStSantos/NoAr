@@ -91,7 +91,14 @@ function axis(expr: string, main: number, overlay: number): number {
         if (!Number.isInteger(divisor) || divisor <= 0) throw new Error(`logo position ${expr}`)
 
         const name = term.trim()
-        const value = name === 'M' ? main : name === 'O' ? overlay : Number(name)
+        // A share of the room around the logo: 0% the left (or top) edge, 100% the other.
+        const value = name.endsWith('%')
+            ? Math.round(((main - overlay) * Number(name.slice(0, -1).trim())) / 100)
+            : name === 'M'
+              ? main
+              : name === 'O'
+                ? overlay
+                : Number(name)
 
         if (!Number.isFinite(value)) throw new Error(`logo position ${expr}`)
 

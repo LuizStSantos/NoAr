@@ -15,7 +15,13 @@ are:
 
 The Player has the same at hand under its preview: the logo on and off and
 where it is, the L-shape in and out and its corner, the quick scenes, and a
-link to the tab. A move there also waits for **Move on air**.
+link to the tab. A move there also waits for **Move on air**. Like the
+transport, the bar starts **locked** while the channel is on air: unlock
+**Graphics locked** to use it.
+
+Wherever the logo is placed on a small screen (Live now, the Player, a
+video's marks), the place can also be typed: **X** across and **Y** down,
+in percent of the room around the logo (`50 × 1` is the top centre).
 
 ## Placing the logo
 
@@ -183,6 +189,22 @@ It goes on air:
   `position=default` or a server restart.
 
   The API is described in [api.md](api.md#l-shape).
+
+## Logo and L-shape of one video
+
+A video can put the logo somewhere else, and its L-shape in another corner or
+size, for itself alone, wherever it plays: open its marks in the Storage
+(**Cut, logo, breaks and L-shape in this video**).
+
+- **Logo** tab › **Logo position in this video**: **This video's own**, then
+  drag or type it. It applies while the video plays.
+- **L-shape** tab › **This video's L-shape**: its graphic, the video's corner
+  and its size, for its L-shape stretches; each left empty uses the channel's.
+  Pick the corner where that graphic left the video's space.
+
+They are saved in the video's `<name>.marks.json` (`logo_position`,
+`lshape_graphic`, `lshape_corner`, `lshape_scale`). A move from outside
+(Graphics, the Player, the API) goes before the video's own logo position.
 
 ## Quick scenes
 

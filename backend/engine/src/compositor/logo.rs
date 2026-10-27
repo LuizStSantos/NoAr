@@ -351,6 +351,9 @@ struct LogoOverride {
     transitions: LogoTransitions,
     /// Where the logo is moved to (`X:Y`), in place of the configured spot.
     position: Option<String>,
+    /// Where the clip playing puts the logo, when it has a place of its own;
+    /// a move from outside goes first.
+    clip_position: Option<String>,
 }
 
 struct Outgoing {
@@ -508,6 +511,18 @@ impl LogoControl {
         Ok(())
     }
 
+    /// Where the clip about to play puts the logo (an `X:Y` expression), or
+    /// none for the channel's place. A move from outside still goes first.
+    pub fn set_clip_position(&self, position: Option<&str>, width: u32, height: u32) -> Result<()> {
+        if let Some(position) = position {
+            logo_position(position, width, height, 2, 2)?;
+        }
+
+        self.lock().clip_position = position.map(str::to_string);
+
+        Ok(())
+    }
+
     pub fn state(&self) -> LogoState {
         let state = self.lock();
 
@@ -548,7 +563,10 @@ impl LogoControl {
                 .as_ref()
                 .map(|(_, overlay)| overlay.clone()),
             outgoing,
-            position: state.position.clone(),
+            position: state
+                .position
+                .clone()
+                .or_else(|| state.clip_position.clone()),
         }
     }
 }
@@ -723,6 +741,27 @@ mod tests {
 
         control.move_to(None, 1920, 1080).unwrap();
         assert_eq!(control.state().position, None);
+    }
+
+    #[test]
+    fn a_clip_places_the_logo_unless_it_was_moved_from_outside() {
+        let control = LogoControl::default();
+
+        control
+            .set_clip_position(Some("50%:100%"), 1920, 1080)
+            .unwrap();
+        assert_eq!(control.frame().position.as_deref(), Some("50%:100%"));
+        // Not a move from outside: the state shows none.
+        assert_eq!(control.state().position, None);
+
+        control.move_to(Some("12:12"), 1920, 1080).unwrap();
+        assert_eq!(control.frame().position.as_deref(), Some("12:12"));
+        control.move_to(None, 1920, 1080).unwrap();
+        assert_eq!(control.frame().position.as_deref(), Some("50%:100%"));
+
+        control.set_clip_position(None, 1920, 1080).unwrap();
+        assert_eq!(control.frame().position, None);
+        assert!(control.set_clip_position(Some("nope"), 1920, 1080).is_err());
     }
 
     #[test]

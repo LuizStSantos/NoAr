@@ -58,28 +58,51 @@ pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     }
 }
 
-/// Before a clip plays: the L-shape graphic of its own, for its marked
-/// stretches, or the channel's. One that cannot be read is logged, and the
-/// channel's is used.
+/// Before a clip plays: where it puts the logo, and the L-shape of its own
+/// for its marked stretches (its graphic, corner or size, each falling back
+/// to the channel's), or the channel's. A setting that cannot be used is
+/// logged, and the channel's is used.
 async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: &LogoMarks) {
-    let graphic = marks
-        .lshape_graphic
-        .as_deref()
-        .filter(|_| !marks.lshape.is_empty())
-        .and_then(|graphic| {
+    let (width, height) = (config.output.width, config.output.height);
+
+    if let Err(error) =
+        playout
+            .logo_control()
+            .set_clip_position(marks.logo_position.as_deref(), width, height)
+    {
+        warn!(channel = config.general.channel_id; "Logo position of the clip: {error:#}");
+        let _ = playout
+            .logo_control()
+            .set_clip_position(None, width, height);
+    }
+
+    let own = marks.lshape_graphic.is_some()
+        || marks.lshape_corner.is_some()
+        || marks.lshape_scale.is_some();
+    let graphic = (own && !marks.lshape.is_empty())
+        .then(|| {
             let mut processing = config.processing.clone();
-            processing.lshape = graphic.to_string();
+
+            if let Some(graphic) = &marks.lshape_graphic {
+                processing.lshape = graphic.clone();
+            }
+            if let Some(corner) = &marks.lshape_corner {
+                processing.lshape_corner = corner.clone();
+            }
+            if let Some(scale) = marks.lshape_scale {
+                processing.lshape_scale = scale;
+            }
 
             match processing.lshape_config(&config.channel.storage) {
                 Ok(lshape) => lshape,
                 Err(error) => {
-                    warn!(channel = config.general.channel_id; "L-shape graphic {graphic}: {error}");
+                    warn!(channel = config.general.channel_id; "L-shape of the clip: {error}");
                     None
                 }
             }
-        });
+        })
+        .flatten();
     let control = playout.lshape_control();
-    let (width, height) = (config.output.width, config.output.height);
 
     let loaded = tokio::task::spawn_blocking(move || {
         control.set_clip_graphic(graphic.as_ref(), width, height)

@@ -11,6 +11,27 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-27
+
+### Added
+
+- **Logo and L-shape of one video**: in a video's marks, the logo can go
+  somewhere else for that video (`logo_position`), and its L-shape can use
+  another corner and size (`lshape_corner`, `lshape_scale`) besides its own
+  graphic, for that video alone, wherever it plays. A move from outside still
+  goes first.
+- **Typed positions**: every small screen that places the logo (Graphics ›
+  Live now, the Player bar, a video's marks) also takes X % × Y % typed in.
+- **Graphics lock in the Player**: like the transport, the graphics bar starts
+  locked while the channel is on air.
+
+### Changed
+
+- The marks editor of a video is wider and in two columns: the video and a
+  timeline with one lane per kind of mark (cut, logo, breaks, L-shape) on the
+  left, the tab's tools and list on the right. Tabs show how many marks each
+  has, and a lane opens its tab.
+
 ## [1.6.0] - 2026-10-27
 
 ### Added
@@ -545,7 +566,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/LuizStSantos/NoAr/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/LuizStSantos/NoAr/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/LuizStSantos/NoAr/compare/v1.4.5...v1.5.0

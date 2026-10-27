@@ -9,6 +9,7 @@ import { LOGO_BOX, LSHAPE_CORNERS, sharesOf } from '@/composables/graphics'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
+import { usePlaylist } from '@/stores/playlist'
 
 /**
  * Graphics at hand under the Player's preview: the logo on and off and where
@@ -36,6 +37,7 @@ const { t } = useI18n()
 const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
+const playlistStore = usePlaylist()
 
 const logo = ref<LogoStatus | null>(null)
 const lshape = ref<LShapeStatus | null>(null)
@@ -44,6 +46,17 @@ const open = ref<'logo' | 'lshape' | null>(null)
 const logoDraft = ref<Shares | null>(null)
 const cornerDraft = ref<string | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
+
+/** Like the transport, the graphics start locked while the channel is on air. */
+const locked = ref(playlistStore.playoutIsRunning)
+/** Nothing here can change the air: locked, or a command on its way. */
+const blocked = computed(() => locked.value || busy.value)
+
+watch(
+    () => playlistStore.playoutIsRunning,
+    (running) => (locked.value = running),
+)
+watch(locked, (on) => on && closePanel())
 
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
 const processing = computed(() => configStore.playoutSaved?.processing)
@@ -144,6 +157,7 @@ onMounted(() => {
 onBeforeUnmount(() => clearInterval(timer))
 watch(channelId, () => {
     closePanel()
+    locked.value = playlistStore.playoutIsRunning
     load()
 })
 </script>
@@ -164,7 +178,7 @@ watch(channelId, () => {
                 class="min-h-11 px-3 inline-flex items-center gap-2 text-sm cursor-pointer disabled:opacity-50"
                 :class="logoOn ? 'bg-ok-soft text-ok font-semibold' : 'bg-base-100'"
                 :aria-pressed="logoOn"
-                :disabled="busy || !logo"
+                :disabled="blocked || !logo"
                 @click="toggleLogo"
             >
                 <span class="dot" :class="logoOn ? 'bg-ok' : 'bg-subtle'" aria-hidden="true" />{{
@@ -177,7 +191,7 @@ watch(channelId, () => {
                 :class="open === 'logo' ? 'bg-accent-soft' : 'bg-base-100'"
                 :aria-label="t('graphics.quick.moveLogo')"
                 :aria-expanded="open === 'logo'"
-                :disabled="busy || !logo"
+                :disabled="blocked || !logo"
                 @click="togglePanel('logo')"
             >
                 <i class="bi bi-arrows-move" aria-hidden="true" />
@@ -191,7 +205,7 @@ watch(channelId, () => {
                 class="min-h-11 px-3 inline-flex items-center gap-2 text-sm cursor-pointer disabled:opacity-50"
                 :class="lshape.on ? 'bg-accent-soft text-accent-text font-semibold' : 'bg-base-100'"
                 :aria-pressed="lshape.on"
-                :disabled="busy"
+                :disabled="blocked"
                 @click="toggleLShape"
             >
                 <i class="bi bi-aspect-ratio" aria-hidden="true" />{{ t('graphics.quick.lshape') }}
@@ -202,18 +216,26 @@ watch(channelId, () => {
                 :class="open === 'lshape' ? 'bg-accent-soft' : 'bg-base-100'"
                 :aria-label="t('graphics.quick.lshapeCorner')"
                 :aria-expanded="open === 'lshape'"
-                :disabled="busy"
+                :disabled="blocked"
                 @click="togglePanel('lshape')"
             >
                 <i class="bi bi-chevron-down" aria-hidden="true" />
             </button>
         </div>
 
-        <SceneButtons compact @applied="load" />
+        <SceneButtons compact :disabled="locked" @applied="load" />
 
+        <label
+            class="ms-auto flex items-center gap-2 min-h-11 cursor-pointer text-sm"
+            :class="locked ? 'text-base-content' : 'text-muted'"
+        >
+            <i class="bi" :class="locked ? 'bi-lock' : 'bi-unlock'" aria-hidden="true" />
+            {{ t('graphics.quick.locked') }}
+            <input v-model="locked" type="checkbox" role="switch" class="toggle toggle-sm toggle-accent" />
+        </label>
         <RouterLink
             :to="{ name: 'graphics-live', query: { channel: channelId } }"
-            class="link-accent ms-auto text-sm inline-flex items-center gap-1"
+            class="link-accent text-sm inline-flex items-center gap-1"
         >
             {{ t('graphics.quick.open') }} <i class="bi bi-arrow-right" aria-hidden="true" />
         </RouterLink>

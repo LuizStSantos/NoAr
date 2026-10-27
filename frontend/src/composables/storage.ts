@@ -106,6 +106,26 @@ export interface VideoMarks {
     lshape: LogoSpan[]
     /** This video's own L-shape graphic (storage path), for its stretches. */
     lshape_graphic: string | null
+    /** The corner of the picture in this video's L-shape; null is the channel's. */
+    lshape_corner: string | null
+    /** The size of the picture in this video's L-shape, in percent; null is the channel's. */
+    lshape_scale: number | null
+    /** Where the logo goes while this video plays (`X%:Y%`); null is the channel's place. */
+    logo_position: string | null
+}
+
+/** Marks read or saved, with every part present. */
+function completeMarks(marks: Partial<VideoMarks>): VideoMarks {
+    return {
+        hide: marks.hide ?? [],
+        breaks: marks.breaks ?? [],
+        trim: marks.trim ?? null,
+        lshape: marks.lshape ?? [],
+        lshape_graphic: marks.lshape_graphic ?? null,
+        lshape_corner: marks.lshape_corner ?? null,
+        lshape_scale: marks.lshape_scale ?? null,
+        logo_position: marks.logo_position ?? null,
+    }
 }
 
 /** The marks of the video at `path`. */
@@ -116,13 +136,7 @@ export async function readLogoMarks(channelId: number, path: string): Promise<Vi
         body: JSON.stringify({ path }),
     })
 
-    return {
-        hide: marks.hide ?? [],
-        breaks: marks.breaks ?? [],
-        trim: marks.trim ?? null,
-        lshape: marks.lshape ?? [],
-        lshape_graphic: marks.lshape_graphic ?? null,
-    }
+    return completeMarks(marks)
 }
 
 export async function saveLogoMarks(channelId: number, path: string, marks: VideoMarks): Promise<VideoMarks> {
@@ -132,13 +146,7 @@ export async function saveLogoMarks(channelId: number, path: string, marks: Vide
         body: JSON.stringify({ path, ...marks }),
     })
 
-    return {
-        hide: saved.hide ?? [],
-        breaks: saved.breaks ?? [],
-        trim: saved.trim ?? null,
-        lshape: saved.lshape ?? [],
-        lshape_graphic: saved.lshape_graphic ?? null,
-    }
+    return completeMarks(saved)
 }
 
 export function readSheet(channelId: number, path: string): Promise<MediaSheet> {
