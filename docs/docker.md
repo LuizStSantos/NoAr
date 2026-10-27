@@ -169,7 +169,11 @@ remove the old account in **Settings › Users**. Outside Docker, run
 
 If signing in then fails with *"Could not sign in right now"* (*"Não foi
 possível entrar agora"*), wait a minute and try once: sign-in allows three
-attempts a minute. A wrong password says so instead.
+attempts a minute from one address. A wrong password says so instead. Keeping
+a session open (the browser renewing its access every few minutes) allows 30
+renewals a minute from one address, so a team behind one office address stays
+signed in; a renewal the server cannot answer right away does not sign anyone
+out.
 
 ## Behind a reverse proxy
 

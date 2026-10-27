@@ -11,6 +11,75 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-10-27
+
+Includes the changes prepared for 1.4.3, which was never published as its own release.
+
+### Security
+
+- A Scheduler item's title was shown as HTML in the **Remove** confirmation,
+  so a title with markup ran script in the browser of whoever removed it.
+  Confirmation texts are now always plain text.
+- Files opened from the storage are sent with `X-Content-Type-Options:
+  nosniff`, and HTML, SVG and XML files also with `Content-Security-Policy:
+  sandbox`, so such a file opened on its own runs no script with access to
+  NoAr.
+- **Test signal** on a live answers every failure with the same message (the
+  cause is in the server log) and runs at most two tests at once, so it can
+  no longer be used to map the machines the server reaches.
+- A playlist import is written to a temporary file of its own name, created
+  new and always removed, instead of one named after the uploaded file.
+- The request log leaves out the values of `key`, `access`, `uuid` and
+  `token` in addresses, such as the SCTE-35 key.
+
+### Fixed
+
+- Operators were signed out when renewing their session was rate limited
+  (three renewals a minute per address, shared by a team behind one office
+  address). Renewals now have their own limit of 30 a minute, and only a
+  rejected session signs anyone out; a busy or restarting server keeps it.
+  Signing out from an expired session also no longer fails with an error.
+- Player › Build the playlist: **Save** and **Discard** wait while another
+  day's playlist loads, so the list on screen cannot be saved over the day
+  being opened. Saving a day whose clips were all removed now asks to delete
+  its playlist instead of doing nothing.
+- Report: clearing a date in **Period** no longer freezes the page, and a
+  range that cannot be shown (over 62 days, or reversed) no longer leaves the
+  previous range's figures under the new title.
+- Settings: a value out of its range is pointed at in its field before
+  anything is sent or the playout restarts, and a value the server refuses
+  is explained in words instead of the server's raw message.
+- Trim: an out point past the end of the video is refused, and the handles
+  keep their minimum distance with typed times.
+- Storage: a video with only a trim no longer shows the "marks" tag.
+- The Scheduler's remove confirmation says **Remove** instead of **Ok**; the
+  New folder and Rename dialogs put the cursor in their field; Escape closes
+  the user menu.
+- A panic in one channel's playout ended the whole server, every channel
+  with it, instead of restarting that channel as intended; one such panic
+  came from a remote clip whose server sent an unreadable `Last-Modified`
+  date. Panics are now caught per channel and logged.
+- The playlist generator hung, or stopped the channel, on a folder or
+  template source without playable clips (all of length 0, or empty). Such
+  clips are skipped and an empty source gives an empty list.
+- Converted uploads lost the gap between picture and sound at the start of a
+  file: sound that began half a second after the picture began with it.
+  The gap is now kept, as silence or the first picture held.
+- A conversion's hidden temporary file (`.Name.converting.mp4`) was taken as
+  a video by folder playout and the generator, and one left by a server
+  stopped midway stayed for good. It is never media now, and leftovers are
+  removed at start. A conversion whose original could not be deleted
+  afterwards is reported as converted, with a warning, instead of failed.
+- A video's marks file (`<name>.logo.json`, with its trim, logo stretches
+  and breaks) now follows the video when it is renamed, moved or deleted in
+  Storage, and is written in one piece.
+- A remote playlist or clip whose server does not answer no longer holds up
+  the playlist reader: requests give up after 15 seconds.
+- A channel whose playout ends as soon as it starts waits two seconds before
+  starting again, instead of restarting in a tight loop.
+- The light preview froze after the playout restarted, until the time caught
+  up with where the previous run had stopped. It now continues at once.
+
 ## [1.4.2] - 2026-10-26
 
 ### Fixed
@@ -343,7 +412,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.4...HEAD
+[1.4.4]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...v1.4.4
 [1.4.2]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...v1.4.0

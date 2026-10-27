@@ -26,6 +26,28 @@ const userMenu = ref<HTMLElement>()
 
 onClickOutside(userMenu, () => (menuOpen.value = false))
 
+/** Close the user menu; with `refocus`, focus returns to its button (Escape). */
+function closeMenu(refocus = false) {
+    if (!menuOpen.value) {
+        return
+    }
+
+    menuOpen.value = false
+
+    if (refocus) {
+        userMenu.value?.querySelector<HTMLElement>('button')?.focus()
+    }
+}
+
+/** Keyboard focus leaving the menu closes it, as a click outside does. */
+function menuFocusOut(event: FocusEvent) {
+    const next = event.relatedTarget as Node | null
+
+    if (next && !userMenu.value?.contains(next)) {
+        closeMenu()
+    }
+}
+
 const navItems = computed(() => [
     { name: 'home', label: t('nav.home'), path: '/' },
     { name: 'player', label: t('nav.player'), path: '/player' },
@@ -145,7 +167,7 @@ async function logout() {
                     {{ configStore.channels[0].name }}
                 </span>
 
-                <div ref="userMenu" class="relative">
+                <div ref="userMenu" class="relative" @keydown.esc="closeMenu(true)" @focusout="menuFocusOut">
                     <button
                         class="btn-icon border border-line-strong"
                         :aria-label="t('nav.userMenu')"

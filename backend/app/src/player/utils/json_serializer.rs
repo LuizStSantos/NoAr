@@ -137,7 +137,7 @@ pub async fn read_json(
     }
 
     if is_remote(&current_file) {
-        if let Ok(resp) = reqwest::Client::new().get(&current_file).send().await
+        if let Ok(resp) = super::REMOTE_CLIENT.get(&current_file).send().await
             && resp.status().is_success()
         {
             let headers = resp.headers().clone();

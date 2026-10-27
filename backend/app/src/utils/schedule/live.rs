@@ -18,9 +18,10 @@ use std::{
 };
 
 use async_walkdir::WalkDir;
+use log::info;
 use quick_xml::escape::escape;
 use serde::{Deserialize, Serialize};
-use tokio::{fs, task, time::timeout};
+use tokio::{fs, sync::Semaphore, task, time::timeout};
 use tokio_stream::StreamExt;
 
 use crate::{
@@ -47,6 +48,15 @@ const MAX_LIVES: usize = 500;
 
 /// How long a signal test waits for the source to answer.
 const TEST_TIMEOUT: Duration = Duration::from_secs(12);
+
+/// Signal tests running at once. The server connects where the address says,
+/// so tests are few and slow enough that they cannot sweep a network.
+static SIGNAL_TESTS: Semaphore = Semaphore::const_new(2);
+
+/// What a failed test says: the same whatever went wrong, so the answers
+/// tell nothing about other machines the server can reach. The cause is in
+/// the server log.
+const SIGNAL_FAILED: &str = "the source did not answer or could not be read";
 
 /// Check a source address and return it trimmed.
 pub fn validate_live_url(url: &str) -> Result<String, String> {
@@ -300,14 +310,24 @@ pub struct SignalTest {
 /// Open the source once and report its streams.
 pub async fn test_signal(url: &str) -> Result<SignalTest, ServiceError> {
     let url = validate_live_url(url).map_err(ServiceError::BadRequest)?;
-    let probe = task::spawn_blocking(move || noar_engine::probe_media(&url));
-    let failed = |error: String| SignalTest {
-        error: Some(error),
-        ..SignalTest::default()
+    let _permit = SIGNAL_TESTS
+        .acquire()
+        .await
+        .map_err(|_| ServiceError::InternalServerError)?;
+    let probe = task::spawn_blocking({
+        let url = url.clone();
+        move || noar_engine::probe_media(&url)
+    });
+    let failed = |cause: String| {
+        info!("Signal test of {} failed: {cause}", live_protocol(&url));
+        SignalTest {
+            error: Some(SIGNAL_FAILED.to_string()),
+            ..SignalTest::default()
+        }
     };
 
     let probe = match timeout(TEST_TIMEOUT, probe).await {
-        Err(_) => return Ok(failed("no answer from the source".to_string())),
+        Err(_) => return Ok(failed("no answer".to_string())),
         Ok(Err(join_error)) => return Ok(failed(join_error.to_string())),
         Ok(Ok(Err(error))) => return Ok(failed(error.to_string())),
         Ok(Ok(Ok(probe))) => probe,

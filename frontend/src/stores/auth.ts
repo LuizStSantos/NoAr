@@ -233,9 +233,10 @@ export const useAuth = defineStore('auth', {
                         body: JSON.stringify({ refresh: this.jwtRefresh }),
                     })
                     if (!response.ok) {
-                        // Only a rejected token ends the session; a server error or
-                        // restart keeps it, so the next request can retry the refresh.
-                        if (response.status < 500) {
+                        // Only a rejected token ends the session. A server error, a
+                        // restart or a rate limit (429) keeps it, so the next request
+                        // can retry the refresh.
+                        if ([400, 401, 403].includes(response.status)) {
                             this.removeToken()
                         }
                         return false
@@ -295,7 +296,12 @@ export const useAuth = defineStore('auth', {
                     return
                 }
                 if (expireRefresh - timestamp > 0) {
-                    await this.refreshToken()
+                    // A refresh that could not be done now (server busy, rate
+                    // limited, offline) keeps the session: the refresh token is
+                    // still valid and the next request tries again.
+                    if (!(await this.refreshToken()) && this.jwtRefresh) {
+                        this.isLogin = true
+                    }
                     return
                 }
 

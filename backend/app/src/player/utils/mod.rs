@@ -603,13 +603,27 @@ pub fn get_date(seek: bool, start: f64, get_next: bool, timezone: &Option<Tz>) -
     local.format("%Y-%m-%d").to_string()
 }
 
+/// For playlists and clips on a web server: one that stops answering holds
+/// up the playlist reader for seconds, not for good.
+pub(crate) static REMOTE_CLIENT: std::sync::LazyLock<reqwest::Client> =
+    std::sync::LazyLock::new(|| {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(15))
+            .user_agent(format!("NoAr/{}", env!("CARGO_PKG_VERSION")))
+            .build()
+            .unwrap_or_default()
+    });
+
 pub fn time_from_header(headers: &header::HeaderMap) -> Option<DateTime<Local>> {
     if let Some(time) = headers.get(header::LAST_MODIFIED)
         && let Ok(t) = time.to_str()
     {
-        let time = DateTime::parse_from_rfc2822(t);
-        let date_time: DateTime<Local> = time.unwrap().into();
-        return Some(date_time);
+        // A server can send any text here; a date that does not parse is no
+        // date, not a reason to stop.
+        return DateTime::parse_from_rfc2822(t).ok().map(Into::into);
     };
 
     None
@@ -618,7 +632,7 @@ pub fn time_from_header(headers: &header::HeaderMap) -> Option<DateTime<Local>> 
 /// Get file modification time.
 pub async fn modified_time(path: &str) -> Option<String> {
     if is_remote(path) {
-        let response = reqwest::Client::new().head(path).send().await;
+        let response = REMOTE_CLIENT.head(path).send().await;
 
         if let Ok(resp) = response
             && resp.status().is_success()
@@ -730,6 +744,11 @@ pub fn is_remote(path: &str) -> bool {
 /// Or when the file extension is set under storage config it can be include.
 pub fn include_file_extension(config: &PlayoutConfig, file_path: &Path) -> bool {
     let mut include = false;
+
+    // Half a conversion, not a video.
+    if crate::utils::convert::is_temporary(file_path) {
+        return false;
+    }
 
     if let Some(ext) = file_extension(file_path)
         && config.storage.extensions.contains(&ext.to_lowercase())
@@ -871,8 +890,8 @@ mod tests {
 
     use super::{
         DEFAULT_IMAGE_DURATION, DEFAULT_LIVE_SOURCE_DURATION, Media, PlayoutConfig, custom_format,
-        get_date, get_delta, is_remote, normalize_live_source_timing, playlist_file_path,
-        probe_media,
+        get_date, get_delta, header, is_remote, normalize_live_source_timing, playlist_file_path,
+        probe_media, time_from_header,
     };
 
     #[test]
@@ -1045,6 +1064,19 @@ mod tests {
                 "date {date:?}"
             );
         }
+    }
+
+    #[test]
+    fn a_last_modified_header_that_is_not_a_date_is_no_date() {
+        let mut headers = header::HeaderMap::new();
+        headers.insert(header::LAST_MODIFIED, "yesterday-ish".parse().unwrap());
+        assert_eq!(time_from_header(&headers), None);
+
+        headers.insert(
+            header::LAST_MODIFIED,
+            "Wed, 21 Oct 2015 07:28:00 GMT".parse().unwrap(),
+        );
+        assert!(time_from_header(&headers).is_some());
     }
 
     #[test]

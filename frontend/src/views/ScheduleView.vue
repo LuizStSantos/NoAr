@@ -961,6 +961,8 @@ watch(zoom, scrollToFocus)
             :show="Boolean(deleting)"
             :title="t('schedule.removeTitle')"
             :text="t('schedule.removeText', { title: deleting?.title ?? '' })"
+            :ok-label="t('schedule.remove')"
+            danger
             :modal-action="confirmDelete"
         />
     </div>

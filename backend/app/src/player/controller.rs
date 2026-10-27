@@ -162,7 +162,8 @@ impl ChannelManager {
         system: SystemStat,
     ) -> Result<Self, ServiceError> {
         let channel_extensions = channel.extra_extensions.clone();
-        let conversions = crate::utils::convert::Conversions::new(channel.id);
+        let conversions =
+            crate::utils::convert::Conversions::new(channel.id, &config.channel.storage);
         let mut extensions = config.storage.extensions.clone();
         let mut extra_extensions = channel_extensions
             .split(',')
@@ -744,6 +745,8 @@ async fn supervisor_loop(
     generation: usize,
 ) {
     const MAX_DELAY: Duration = Duration::from_secs(180);
+    // A playout that ran less than this before ending by itself waits as long.
+    const QUICK_END: Duration = Duration::from_secs(2);
     let mut elapsed = Duration::from_secs(5);
     let mut retry_delay = Duration::from_millis(500);
 
@@ -765,7 +768,22 @@ async fn supervisor_loop(
 
         let timer = Instant::now();
 
-        if let Err(e) = run_supervised(run_channel(manager.clone())).await {
+        let outcome = run_supervised(run_channel(manager.clone())).await;
+
+        let still_active = manager.channel.lock().await.active;
+
+        if outcome.is_ok() && timer.elapsed() < QUICK_END && still_active {
+            // A playout that ends as soon as it starts, with nothing to
+            // play, waits a moment instead of starting again in a tight loop.
+            warn!(channel = channel_id; "Run channel <span class=\"log-number\">{channel_id}</span> ended at once | Retry in <span class=\"log-number\">{}</span> seconds", QUICK_END.as_secs());
+
+            tokio::select! {
+                _ = token.cancelled() => break,
+                _ = sleep(QUICK_END) => {}
+            }
+        }
+
+        if let Err(e) = outcome {
             manager.stop_all(false).await;
 
             let active = {

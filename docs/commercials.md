@@ -35,7 +35,7 @@ hold whatever part of the video a playlist plays. The logo fades out and back
 in with its usual fade, wherever the video plays, from the next time it starts.
 
 The stretches are kept next to the video in `<name>.logo.json`, like its
-`.nfo` sheet:
+`.nfo` sheet, and follow it when it is renamed, moved or deleted in Storage:
 
 ```json
 { "hide": [{ "from": 750.0, "to": 990.5 }] }

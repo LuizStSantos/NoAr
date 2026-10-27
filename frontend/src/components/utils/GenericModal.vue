@@ -52,16 +52,24 @@ const dialog = ref<HTMLElement>()
 
 useDialogFocus(dialog, { open: () => props.show, onEscape: () => props.modalAction(false) })
 
+// Lock the page only while shown: a hidden modal must not unlock a dialog
+// that is open at the same time.
 watch(
     () => props.show,
-    (show) => {
-        document.body.style.overflow = show ? 'hidden' : ''
+    (show, wasShown) => {
+        if (show) {
+            document.body.style.overflow = 'hidden'
+        } else if (wasShown) {
+            document.body.style.overflow = ''
+        }
     },
     { immediate: true },
 )
 
 onBeforeUnmount(() => {
-    document.body.style.overflow = ''
+    if (props.show) {
+        document.body.style.overflow = ''
+    }
 })
 </script>
 <template>
@@ -83,7 +91,8 @@ onBeforeUnmount(() => {
 
             <div class="grow mt-3">
                 <slot>
-                    <div v-html="text" />
+                    <!-- Plain text: the message can carry names typed by users (titles, files). -->
+                    <p class="m-0 whitespace-pre-line [overflow-wrap:anywhere]">{{ text }}</p>
                 </slot>
             </div>
 

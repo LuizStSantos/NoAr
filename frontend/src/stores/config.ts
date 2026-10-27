@@ -1,6 +1,5 @@
 import { cloneDeep } from 'es-toolkit/object'
 import { defineStore } from 'pinia'
-import { useRouter } from 'vue-router'
 
 import { authFetch } from '@/composables/authFetch'
 import { countChanges } from '@/composables/diff'
@@ -71,9 +70,12 @@ export const useConfig = defineStore('config', {
 
         async logout() {
             const authStore = useAuth()
-            const router = useRouter()
             await authStore.logout()
 
+            // The router composable only works inside a component's setup; a
+            // store action takes the app's router itself (imported late: the
+            // router imports stores).
+            const { default: router } = await import('@/router')
             await router.push({ name: 'login' })
         },
 

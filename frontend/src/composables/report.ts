@@ -322,8 +322,17 @@ export function fullDuration(seconds: number): string {
     return `${pad(Math.floor(total / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`
 }
 
+/** `YYYY-MM-DD` that is a real day. */
+function validDay(date: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(new Date(`${date}T12:00:00Z`).getTime())
+}
+
 /** `Ter, 20 out` (`Tue, Oct 20`) in the interface's language. */
 export function dayLabel(date: string, locale: string, withYear = false): string {
+    if (!validDay(date)) {
+        return date
+    }
+
     const parts = new Intl.DateTimeFormat(locale, {
         weekday: 'short',
         day: '2-digit',
@@ -346,6 +355,11 @@ export function dayLabel(date: string, locale: string, withYear = false): string
 
 /** `20/10/2026` or `10/20/2026`, as the language writes dates. */
 export function shortDate(date: string, locale: string): string {
+    // A date field being edited can be empty or half typed.
+    if (!validDay(date)) {
+        return date
+    }
+
     return new Intl.DateTimeFormat(locale, { timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`))
 }
 

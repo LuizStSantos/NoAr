@@ -15,7 +15,7 @@ use std::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use log::*;
@@ -31,6 +31,10 @@ const KEEP_EXTENSIONS: &[&str] = &["mp4", "m4v", "mov", "mkv", "ts", "m2ts", "mt
 
 /// How long a finished conversion stays listed.
 const KEEP_FINISHED_SECONDS: u64 = 30 * 60;
+
+/// A temporary file untouched this long is left from a conversion that
+/// stopped (NoAr ended midway); a running one writes to it all the time.
+const STALE_TEMPORARY: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -73,6 +77,8 @@ pub struct Conversions {
     sender: mpsc::UnboundedSender<Job>,
     list: Arc<Mutex<BTreeMap<String, Conversion>>>,
     stop: Arc<AtomicBool>,
+    /// Counts the handles; the worker holds `stop`, not this.
+    handles: Arc<()>,
 }
 
 impl std::fmt::Debug for Conversions {
@@ -82,12 +88,28 @@ impl std::fmt::Debug for Conversions {
 }
 
 impl Conversions {
-    pub fn new(channel_id: i32) -> Self {
+    /// Also removes, in the background, what conversions that stopped
+    /// midway left in `storage`.
+    pub fn new(channel_id: i32, storage: &Path) -> Self {
         let (sender, mut receiver) = mpsc::unbounded_channel::<Job>();
         let list = Arc::new(Mutex::new(BTreeMap::new()));
         let stop = Arc::new(AtomicBool::new(false));
         let worker_list = list.clone();
         let worker_stop = stop.clone();
+        let storage = storage.to_path_buf();
+
+        tokio::task::spawn_blocking(move || {
+            for file in stale_temporaries(&storage) {
+                match std::fs::remove_file(&file) {
+                    Ok(()) => {
+                        info!(channel = channel_id; "Removed {} left by a stopped conversion", file.display());
+                    }
+                    Err(error) => {
+                        warn!(channel = channel_id; "Cannot remove {}: {error}", file.display());
+                    }
+                }
+            }
+        });
 
         tokio::spawn(async move {
             while let Some(job) = receiver.recv().await {
@@ -107,7 +129,12 @@ impl Conversions {
             }
         });
 
-        Self { sender, list, stop }
+        Self {
+            sender,
+            list,
+            stop,
+            handles: Arc::new(()),
+        }
     }
 
     /// Queue the uploaded video at `file` (inside `storage`), if the channel
@@ -170,7 +197,7 @@ impl Conversions {
 impl Drop for Conversions {
     fn drop(&mut self) {
         // The last handle: stop what runs.
-        if Arc::strong_count(&self.stop) == 1 {
+        if Arc::strong_count(&self.handles) == 1 {
             self.stop.store(true, Ordering::Release);
         }
     }
@@ -260,6 +287,55 @@ fn result_path(file: &Path) -> PathBuf {
     }
 }
 
+/// Whether `file` is a conversion's temporary file: never media, the
+/// playout and the storage list leave it out.
+pub fn is_temporary(file: &Path) -> bool {
+    file.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| {
+            name.starts_with('.')
+                && name
+                    .rsplit_once('.')
+                    .is_some_and(|(rest, _)| rest.ends_with(".converting"))
+        })
+}
+
+/// Temporary files under `storage` that no conversion writes to any more.
+fn stale_temporaries(storage: &Path) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    let mut folders = vec![storage.to_path_buf()];
+
+    while let Some(folder) = folders.pop() {
+        let Ok(entries) = std::fs::read_dir(&folder) else {
+            continue;
+        };
+
+        for entry in entries.flatten() {
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            let path = entry.path();
+
+            // Links are not followed: they can lead out of the storage.
+            if kind.is_dir() {
+                folders.push(path);
+            } else if kind.is_file()
+                && is_temporary(&path)
+                && entry
+                    .metadata()
+                    .and_then(|metadata| metadata.modified())
+                    .ok()
+                    .and_then(|modified| modified.elapsed().ok())
+                    .is_some_and(|age| age >= STALE_TEMPORARY)
+            {
+                found.push(path);
+            }
+        }
+    }
+
+    found
+}
+
 /// `.Name.converting.mp4` next to the result.
 fn temporary_path(result: &Path) -> PathBuf {
     let name = result
@@ -315,14 +391,16 @@ fn run(job: Job, list: &Mutex<BTreeMap<String, Conversion>>, stop: &AtomicBool, 
         update(list, &path, |entry| entry.progress = share);
     })
     .map_err(|error| format!("{error:#}"))
-    .and_then(|()| std::fs::rename(&temporary, &result).map_err(|error| error.to_string()))
-    .and_then(|()| {
-        if result != job.file {
-            std::fs::remove_file(&job.file).map_err(|error| error.to_string())?;
-        }
+    .and_then(|()| std::fs::rename(&temporary, &result).map_err(|error| error.to_string()));
 
-        Ok(())
-    });
+    // The converted file is in place: an original that stays is in the way,
+    // not a failed conversion.
+    if converted.is_ok()
+        && result != job.file
+        && let Err(error) = std::fs::remove_file(&job.file)
+    {
+        warn!(channel = channel_id; "{path} converted, but the original cannot be removed: {error}");
+    }
 
     match converted {
         Ok(()) => {
@@ -364,5 +442,38 @@ mod tests {
             temporary_path(Path::new("/m/Programa 01.mp4")),
             Path::new("/m/.Programa 01.converting.mp4")
         );
+        assert!(is_temporary(&temporary_path(Path::new("/m/a.b.mkv"))));
+        assert!(!is_temporary(Path::new("/m/a.converting.mp4")));
+        assert!(!is_temporary(Path::new("/m/.hidden.mp4")));
+    }
+
+    #[test]
+    fn only_old_temporary_files_are_stale() {
+        let dir = std::env::temp_dir().join(format!("noar_convert_sweep_{}", std::process::id()));
+        let nested = dir.join("folder");
+        std::fs::create_dir_all(&nested).unwrap();
+        let old = nested.join(".a.converting.mp4");
+        let fresh = dir.join(".b.converting.mp4");
+        let media = dir.join("c.mp4");
+        for file in [&old, &fresh, &media] {
+            std::fs::write(file, b"x").unwrap();
+        }
+        let long_ago = SystemTime::now() - STALE_TEMPORARY - Duration::from_secs(60);
+        std::fs::File::options()
+            .write(true)
+            .open(&old)
+            .unwrap()
+            .set_modified(long_ago)
+            .unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&media)
+            .unwrap()
+            .set_modified(long_ago)
+            .unwrap();
+
+        assert_eq!(stale_temporaries(&dir), vec![old]);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

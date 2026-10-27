@@ -87,7 +87,8 @@ pub struct VideoFile {
     /// Whether it has a sheet of its own (`<name>.nfo` next to it).
     #[serde(default)]
     sheet: bool,
-    /// Whether it keeps the logo off somewhere (`<name>.logo.json`).
+    /// Whether its marks (`<name>.logo.json`) keep the logo off somewhere or
+    /// mark SCTE-35 breaks; a trim alone is `trim`.
     #[serde(default)]
     logo_marks: bool,
     /// The part of the video that airs by default, saved in its marks.

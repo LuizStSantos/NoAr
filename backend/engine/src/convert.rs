@@ -208,10 +208,23 @@ fn convert(
     let video_index = video_in.index();
     let video_time_base = video_in.time_base();
     let video_parameters = video_in.parameters();
-    let audio_in = ictx
-        .streams()
-        .best(media::Type::Audio)
+    let audio_stream = ictx.streams().best(media::Type::Audio);
+    let audio_in = audio_stream
+        .as_ref()
         .map(|stream| (stream.index(), stream.parameters()));
+    // Where each stream starts: sound that starts after the picture (or the
+    // other way round) keeps that gap, as silence or the first picture held.
+    let video_start = start_seconds(&video_in);
+    let audio_start = audio_stream.as_ref().and_then(start_seconds);
+    let base = match (video_start, audio_start) {
+        (Some(video), Some(audio)) => Some(video.min(audio)),
+        (start, None) | (None, start) => start,
+    };
+    let lead = |start: Option<f64>| match (start, base) {
+        (Some(start), Some(base)) if start - base <= MAX_LEAD => start - base,
+        _ => 0.0,
+    };
+    let (video_lead, audio_lead) = (lead(video_start), lead(audio_start));
 
     // Half the cores at most: the playout runs on the same machine.
     let threads = std::thread::available_parallelism()
@@ -319,7 +332,10 @@ fn convert(
                 frame_size: (encoder.frame_size() as usize).max(1),
                 encoder,
                 resampler,
-                pending: [Vec::new(), Vec::new()],
+                pending: {
+                    let silence = (audio_lead * f64::from(target.sample_rate)).round() as usize;
+                    [vec![0.0; silence], vec![0.0; silence]]
+                },
                 next_pts: 0,
             })
         }
@@ -344,9 +360,12 @@ fn convert(
     let mut scaler: Option<(scaling::Context, (Pixel, u32, u32))> = None;
     let mut rate = FrameRateConverter::new(video_time_base, target.fps, true);
     let mut next_frame = 0_i64;
+    let mut lead_frames = (video_lead * f64::from(target.fps)).round() as i64;
     let mut decoded = frame::Video::empty();
     let mut last_reported = 0.0;
-    // Copied video starts at 0, like the converted sound.
+    // Copied video starts where the streams start, 0, like the converted sound.
+    let base_in_video =
+        video_start.map(|start| ((start - video_lead) / f64::from(video_time_base)).floor() as i64);
     let mut copy_offset: Option<i64> = None;
 
     let mut sink = Sink {
@@ -364,7 +383,10 @@ fn convert(
 
         while decoder.receive_frame(&mut decoded).is_ok() {
             let timestamp = decoded.timestamp().or(decoded.pts());
-            let copies = rate.output_frames(timestamp);
+            let mut copies = rate.output_frames(timestamp);
+            if copies > 0 {
+                copies += std::mem::take(&mut lead_frames);
+            }
 
             if let Some(timestamp) = timestamp {
                 reached = Some(timestamp as f64 * f64::from(video_time_base));
@@ -440,7 +462,8 @@ fn convert(
                     let Some(start) = packet.dts().or(packet.pts()) else {
                         continue;
                     };
-                    let offset = *copy_offset.get_or_insert(start);
+                    let offset = *copy_offset
+                        .get_or_insert_with(|| base_in_video.map_or(start, |base| base.min(start)));
                     packet.set_pts(packet.pts().map(|pts| pts - offset));
                     packet.set_dts(packet.dts().map(|dts| dts - offset));
                     let reached = packet
@@ -488,6 +511,17 @@ fn convert(
     progress(1.0);
 
     Ok(())
+}
+
+/// The longest gap kept at the start of a stream; a start time further off
+/// is taken as wrong.
+const MAX_LEAD: f64 = 30.0;
+
+fn start_seconds(stream: &format::stream::Stream) -> Option<f64> {
+    let start = stream.start_time();
+
+    (start != ffmpeg_next::ffi::AV_NOPTS_VALUE)
+        .then(|| start as f64 * f64::from(stream.time_base()))
 }
 
 struct Sink<'a> {
@@ -645,6 +679,30 @@ mod tests {
         channels: u16,
         seconds: f64,
     ) -> Result<()> {
+        write_delayed_test_clip(
+            path,
+            width,
+            height,
+            fps,
+            sample_rate,
+            channels,
+            seconds,
+            0.0,
+        )
+    }
+
+    /// The same, with the sound starting `audio_delay` seconds after the picture.
+    #[allow(clippy::too_many_arguments)]
+    fn write_delayed_test_clip(
+        path: &Path,
+        width: u32,
+        height: u32,
+        fps: u32,
+        sample_rate: u32,
+        channels: u16,
+        seconds: f64,
+        audio_delay: f64,
+    ) -> Result<()> {
         let mut octx = format::output(path)?;
         let global = octx
             .format()
@@ -715,7 +773,9 @@ mod tests {
                     *sample = ((done + offset) as f32 * 0.05).sin() * 0.2;
                 }
             }
-            tone.set_pts(Some(done as i64));
+            tone.set_pts(Some(
+                done as i64 + (audio_delay * f64::from(sample_rate)) as i64,
+            ));
             audio.send_frame(&tone)?;
             drain_audio(&mut audio, &mut octx, audio_out)?;
             done += frame_size;
@@ -879,6 +939,43 @@ mod tests {
         assert_eq!(video_packets(&target_path), video_packets(&source));
         let seconds = audio_seconds(&target_path);
         assert!((2.9..=3.15).contains(&seconds), "{seconds} s of sound");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn sound_that_starts_late_stays_late() {
+        ffmpeg_next::init().ok();
+        let dir = env::temp_dir().join(format!("noar_convert_delay_{}", process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("source.mkv");
+        // Three seconds of picture; the sound half a second later.
+        write_delayed_test_clip(&source, 320, 240, 25, 48_000, 2, 3.0, 0.5).unwrap();
+
+        // Encoded, and with the picture copied.
+        for (name, width) in [("encoded.mp4", 640), ("copied.mkv", 320)] {
+            let target_path = dir.join(name);
+            convert_to_output(
+                &source,
+                &target_path,
+                ConvertTarget {
+                    width,
+                    height: if width == 640 { 480 } else { 240 },
+                    fps: 25,
+                    sample_rate: 48_000,
+                },
+                &AtomicBool::new(false),
+                |_| {},
+            )
+            .unwrap();
+
+            // Half a second of silence, then the three seconds of sound.
+            let seconds = audio_seconds(&target_path);
+            assert!(
+                (3.4..=3.65).contains(&seconds),
+                "{name}: {seconds} s of sound"
+            );
+        }
 
         let _ = std::fs::remove_dir_all(&dir);
     }

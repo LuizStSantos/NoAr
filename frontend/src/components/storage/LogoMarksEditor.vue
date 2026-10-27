@@ -81,7 +81,12 @@ const trimTo = computed({
 const trimInvalid = computed(() => {
     const trim = marks.value.trim
 
-    return !!trim && (!(trim.to > trim.from) || trim.from < 0 || (duration.value > 0 && trim.from >= duration.value))
+    return (
+        !!trim &&
+        (!(trim.to > trim.from) ||
+            trim.from < 0 ||
+            (duration.value > 0 && (trim.from >= duration.value || trim.to > duration.value + 0.05)))
+    )
 })
 /** A trim that keeps the whole video is no trim. */
 function normalized(value: VideoMarks): VideoMarks {

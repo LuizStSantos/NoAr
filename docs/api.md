@@ -300,8 +300,8 @@ rejected.
 | `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |
 
 The browse response lists `folders`, `files` (with `duration`, `size`,
-`modified`, whether a video has its own `sheet`, `logo_marks` when it has
-marks, and its `trim` when it has one), `sheet_folders` (the
+`modified`, whether a video has its own `sheet`, `logo_marks` when its marks
+keep the logo off or mark SCTE-35 breaks, and its `trim` when it has one), `sheet_folders` (the
 subfolders with a program sheet) and `movie_folders` (the films among them).
 
 A sheet holds the form `fields` (`title`, `plot`, `genres`, `rating`, `year`,

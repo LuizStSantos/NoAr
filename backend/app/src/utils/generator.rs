@@ -30,7 +30,19 @@ use crate::{
     },
 };
 
+/// A clip that adds time to a day: a file that could not be probed has none,
+/// and filling a day with such clips would never end.
+fn plays(clip: &Media) -> bool {
+    clip.length().is_finite() && clip.length() > 0.0
+}
+
 pub fn random_list(clip_list: Vec<Media>, total_length: f64) -> Vec<Media> {
+    let clip_list: Vec<Media> = clip_list.into_iter().filter(plays).collect();
+
+    if clip_list.is_empty() {
+        return vec![];
+    }
+
     let mut max_attempts = 10000;
     let mut randomized_clip_list: Vec<Media> = vec![];
     let mut target_duration = 0.0;
@@ -64,6 +76,7 @@ pub fn random_list(clip_list: Vec<Media>, total_length: f64) -> Vec<Media> {
 }
 
 pub fn ordered_list(clip_list: Vec<Media>, total_length: f64) -> Vec<Media> {
+    let clip_list: Vec<Media> = clip_list.into_iter().filter(plays).collect();
     let mut index = 0;
     let mut skip_count = 0;
     let mut ordered_clip_list: Vec<Media> = vec![];
@@ -99,7 +112,13 @@ pub async fn filler_list(
     manager: &ChannelManager,
     total_length: f64,
 ) -> Vec<Media> {
-    let filler_list = manager.storage.fill_filler_list(config, None).await;
+    let filler_list: Vec<Media> = manager
+        .storage
+        .fill_filler_list(config, None)
+        .await
+        .into_iter()
+        .filter(|clip| clip.duration.is_finite() && clip.duration > 0.0)
+        .collect();
     let mut index = 0;
     let mut filler_clip_list: Vec<Media> = vec![];
     let mut target_duration = 0.0;
@@ -300,11 +319,21 @@ pub async fn playlist_generator(
             while let Some(item) = folder_iter.next().await {
                 let duration = item.length();
 
+                // A file without a length (unreadable) is left out; it counts
+                // as a miss, so a folder of such files still ends the day.
+                if !plays(&item) {
+                    if list_length == 0 || round >= list_length.saturating_sub(1) {
+                        break;
+                    }
+                    round += 1;
+                    continue;
+                }
+
                 if total_length >= length + duration {
                     playlist.program.push(item);
 
                     length += duration;
-                } else if round == list_length - 1 {
+                } else if round >= list_length.saturating_sub(1) {
                     break;
                 } else {
                     round += 1;
@@ -351,6 +380,30 @@ mod tests {
             ..Media::default()
         })
         .collect()
+    }
+
+    #[test]
+    fn empty_or_lengthless_sources_give_an_empty_list() {
+        let lengthless: Vec<Media> = ["broken-a", "broken-b"]
+            .into_iter()
+            .map(|source| Media {
+                source: source.to_string(),
+                ..Media::default()
+            })
+            .collect();
+
+        // These used to panic (empty range) or never return.
+        assert!(random_list(vec![], 600.0).is_empty());
+        assert!(ordered_list(vec![], 600.0).is_empty());
+        assert!(random_list(lengthless.clone(), 600.0).is_empty());
+        assert!(ordered_list(lengthless.clone(), 600.0).is_empty());
+
+        // Mixed with playable clips, only those are used.
+        let mut mixed = lengthless;
+        mixed.extend(clips());
+        let list = ordered_list(mixed, 200.0);
+        assert!(!list.is_empty());
+        assert!(list.iter().all(|clip| clip.length() > 0.0));
     }
 
     #[test]

@@ -33,7 +33,7 @@ use crate::utils::{
     commercial::{COMMERCIAL_MARKER, CommercialFolders},
     config::PlayoutConfig,
     errors::ServiceError,
-    logo_marks::read_marks,
+    logo_marks::{self, read_marks},
     schedule::live::LIVE_EXTENSION,
     xmltv::sheet::{SheetKind, program_sheet_kind},
 };
@@ -175,11 +175,17 @@ impl LocalStorage {
                 0.0
             };
 
-            let logo_marks = media && logo_stems.contains(&stem);
-            let trim = if logo_marks {
-                read_marks(&file).await.trim
+            // Read the marks file only when there is one: whether it keeps the
+            // logo off or marks breaks, and its trim, are told apart.
+            let (logo_marks, trim) = if media && logo_stems.contains(&stem) {
+                let marks = read_marks(&file).await;
+
+                (
+                    !marks.hide.is_empty() || !marks.breaks.is_empty(),
+                    marks.trim,
+                )
             } else {
-                None
+                (false, None)
             };
 
             media_files.push(VideoFile {
@@ -297,7 +303,14 @@ impl LocalStorage {
             ));
         }
 
-        rename_only(&source_path, &target_path).await
+        let is_file = source_path.is_file();
+        let moved = rename_only(&source_path, &target_path).await?;
+
+        if is_file {
+            logo_marks::follow_move(&source_path, &target_path).await;
+        }
+
+        Ok(moved)
     }
 
     pub async fn remove(&self, source_path: &str, recursive: bool) -> Result<(), ServiceError> {
@@ -326,8 +339,11 @@ impl LocalStorage {
         }
 
         if source.is_file() {
-            match fs::remove_file(source).await {
-                Ok(_) => return Ok(()),
+            match fs::remove_file(&source).await {
+                Ok(_) => {
+                    logo_marks::follow_remove(&source).await;
+                    return Ok(());
+                }
                 Err(e) => {
                     error!("{e}");
                     return Err(ServiceError::BadRequest("Delete file failed!".into()));
