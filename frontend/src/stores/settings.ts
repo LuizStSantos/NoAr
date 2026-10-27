@@ -88,6 +88,25 @@ function setPath(target: Record<string, unknown>, path: string, value: unknown) 
     parent[last] = value
 }
 
+/**
+ * The fields of a channel the General page edits. The others (`active`,
+ * `last_date`, `time_shift`) follow the playout and change on their own.
+ */
+const CHANNEL_FIELDS = [
+    'name',
+    'preview_url',
+    'extra_extensions',
+    'public',
+    'playlists',
+    'storage',
+    'timezone',
+] as const
+
+/** Edits in `draft` against the `saved` channel. */
+export function countChannelChanges(draft: Channel, saved: Channel): number {
+    return CHANNEL_FIELDS.reduce((sum, field) => sum + countChanges(draft[field], saved[field]), 0)
+}
+
 /** Shared state of the settings pages: what changed and how to save it. */
 export const useSettings = defineStore('settings', () => {
     const configStore = useConfig()
@@ -107,7 +126,7 @@ export const useSettings = defineStore('settings', () => {
             const saved = configStore.channels[configStore.i]
 
             return channelDraft.value && saved && channelDraft.value.id === saved.id
-                ? countChanges(channelDraft.value, saved)
+                ? countChannelChanges(channelDraft.value, saved)
                 : 0
         }
 

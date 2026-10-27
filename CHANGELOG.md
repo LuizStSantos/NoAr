@@ -11,6 +11,14 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- Settings › General showed "1 unsaved change" without any edit once the
+  playout had started or stopped since the page was first opened (the page
+  compared its copy against fields the playout changes on its own). Only the
+  fields the page edits count now, and a copy without edits follows the
+  server.
+
 ## [1.4.4] - 2026-10-27
 
 Includes the changes prepared for 1.4.3, which was never published as its own release.
