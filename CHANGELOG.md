@@ -11,6 +11,28 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-27
+
+### Added
+
+- **Scheduled graphics** in the Scheduler: at a time, bring the L-shape in
+  (graphic, corner and size), show, hide or swap the logo (the channel's one
+  too) and move it to a place or a free `X% × Y%` position; undone when the
+  event ends. Once, daily or on chosen weekdays, with their own lane on the
+  timeline and a list for the day. API under `/api/schedule/{id}/graphics`
+  (new migration `00022_graphics_events`).
+- **Marks of one playlist item**: in the Playlist page, an item's logo,
+  breaks and L-shape marks can be changed for that item alone, saved with the
+  playlist in its `marks` field; the video's marks in the Storage stay as
+  they are.
+
+### Changed
+
+- **Playlist** is its own item in the main menu (`/playlist`) instead of the
+  Player's "Build playlist" tab; the Player shows only what is on air.
+- The README lists all of NoAr's features, and every screenshot in `docs`
+  was taken again.
+
 ## [1.7.0] - 2026-10-27
 
 ### Added
@@ -566,7 +588,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/LuizStSantos/NoAr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/LuizStSantos/NoAr/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/LuizStSantos/NoAr/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...v1.5.1
