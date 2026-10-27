@@ -232,6 +232,10 @@ export default {
             hint: 'Converted to the output format (Settings › Playlist and storage)',
         },
         marks: {
+            watch: 'Watch stretch {n}',
+            watchIn: 'Watch it go in',
+            watchOut: 'Watch it come out',
+            watchHint: 'Plays with {s} s before and after, as it airs.',
             position: 'Position',
             length: 'Video length',
         },

@@ -155,28 +155,62 @@ function normalized(value: VideoMarks): VideoMarks {
     }
 }
 
-/** Playing the part that airs: stop at its end. */
-const previewingTrim = ref(false)
+/** Where a preview started with the buttons stops, while it plays. */
+const stopAt = ref<number | null>(null)
 
+/** Play from `from` and stop at `to`. */
+function playBetween(from: number, to: number) {
+    seek(Math.max(0, from))
+    stopAt.value = duration.value > 0 ? Math.min(to, duration.value) : to
+    video.value?.play().catch(() => (stopAt.value = null))
+}
+
+/** Playing the part that airs: stop at its end. */
 function playTrim() {
-    seek(trimFrom.value)
-    previewingTrim.value = true
-    video.value?.play().catch(() => (previewingTrim.value = false))
+    playBetween(trimFrom.value, trimTo.value)
 }
 
 /** Hear the cut at the out point: start a few seconds before it. */
 function playOut() {
-    seek(Math.max(trimFrom.value, trimTo.value - 3))
-    previewingTrim.value = true
-    video.value?.play().catch(() => (previewingTrim.value = false))
+    playBetween(Math.max(trimFrom.value, trimTo.value - 3), trimTo.value)
 }
+
+/** Seconds of video shown around a stretch, so how it goes in and out is seen. */
+const AROUND = 3
+
+/** Watch a stretch as it airs: all of it, or just how it goes in or comes out. */
+function playSpan(span: LogoSpan, part: 'whole' | 'in' | 'out') {
+    if (part === 'in') {
+        playBetween(span.from - AROUND, Math.min(span.to, span.from + AROUND))
+    } else if (part === 'out') {
+        playBetween(Math.max(span.from, span.to - AROUND), span.to + AROUND)
+    } else {
+        playBetween(span.from - AROUND, span.to + AROUND)
+    }
+}
+
+/** The stretch the watch buttons play: the one picked, else the first. */
+const watchedSpan = computed(() => spans.value[selectedSpan.value ?? -1] ?? sorted.value[0] ?? null)
+
+/** The play button of a row: pick that stretch and watch it. */
+function watchRow(index: number) {
+    const span = spans.value[index]
+
+    if (span) {
+        selectedSpan.value = index
+        playSpan(span, 'whole')
+    }
+}
+
+/** Its number in the list, for the buttons. */
+const watchedNumber = computed(() => (watchedSpan.value ? spans.value.indexOf(watchedSpan.value) + 1 : 0))
 
 function timeUpdate(event: Event) {
     position.value = (event.target as HTMLVideoElement).currentTime
 
-    if (previewingTrim.value && position.value >= trimTo.value) {
+    if (stopAt.value !== null && position.value >= stopAt.value) {
         video.value?.pause()
-        previewingTrim.value = false
+        stopAt.value = null
     }
 }
 
@@ -260,14 +294,28 @@ function label(key: string, values?: Record<string, unknown>): string {
 
 /** The L-shape graphic and where the picture goes, as the channel puts it on air. */
 const lshapeUrl = ref('')
+/** In the L-shape at the play position, with a graphic to show it: the logo is off then. */
+const inLShape = computed(() => lshapeNow.value && !!lshapeUrl.value)
+/** Just out of the L-shape: the logo waits for the picture to grow back. */
+const leftLShape = ref(false)
+let leftTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(inLShape, (inside, before) => {
+    clearTimeout(leftTimer)
+    leftLShape.value = before && !inside
+    leftTimer = leftLShape.value ? setTimeout(() => (leftLShape.value = false), 1300) : undefined
+})
+
+/** As on air: the logo goes off first (0.4 s), then the picture shrinks (0.8 s); out, the other way. */
 const lshapeWindow = computed(() => {
     const processing = configStore.playout?.processing
     const share = (processing?.lshape_scale ?? 75) / 100
     const corner = processing?.lshape_corner || 'top-right'
 
     return {
-        transform: lshapeNow.value ? `scale(${share})` : 'none',
+        transform: inLShape.value ? `scale(${share})` : 'none',
         transformOrigin: `${corner.startsWith('top') ? 'top' : 'bottom'} ${corner.endsWith('left') ? 'left' : 'right'}`,
+        transition: `transform 0.8s ease-in-out ${inLShape.value ? '0.4s' : '0s'}`,
     }
 })
 
@@ -425,11 +473,23 @@ const logoStyle = computed(() => {
     return box ? logoBoxStyle(box) : { top: '3%', right: '2%', height: '6%' }
 })
 
-const logoOpacity = computed(() => (hiddenNow.value ? 0 : (configStore.playout?.processing?.logo_opacity ?? 1)))
+const logoOpacity = computed(() =>
+    hiddenNow.value || inLShape.value ? 0 : (configStore.playout?.processing?.logo_opacity ?? 1),
+)
 
 /** The channel's animation as the logo goes off or comes back (a fade lasts 1 s unless set). */
 const logoTransition = computed(() => {
     const processing = configStore.playout?.processing
+
+    // The L-shape's own order: off before the picture shrinks, back after it grew back.
+    if (inLShape.value) {
+        return 'opacity 0.4s linear'
+    }
+
+    if (leftLShape.value) {
+        return 'opacity 0.4s linear 0.8s'
+    }
+
     const kind = hiddenNow.value ? processing?.logo_transition_out : processing?.logo_transition_in
 
     return kind === 'cut' ? 'none' : `opacity ${processing?.logo_transition_seconds ?? 1}s linear`
@@ -560,7 +620,7 @@ onBeforeUnmount(() => {
                 >
                     <!-- The L-shape graphic, under the picture while it is in the L-shape. -->
                     <img
-                        v-if="lshapeUrl && lshapeNow"
+                        v-if="lshapeUrl && marks.lshape.length"
                         :src="lshapeUrl"
                         alt=""
                         class="absolute inset-0 w-full h-full object-fill pointer-events-none"
@@ -574,11 +634,11 @@ onBeforeUnmount(() => {
                         controls
                         preload="auto"
                         playsinline
-                        class="relative w-full h-full object-contain transition-transform duration-[800ms]"
+                        class="relative w-full h-full object-contain bg-black"
                         :style="lshapeWindow"
                         @timeupdate="timeUpdate"
                         @seeked="position = ($event.target as HTMLVideoElement).currentTime"
-                        @pause="previewingTrim = false"
+                        @pause="stopAt = null"
                         @loadedmetadata="duration = ($event.target as HTMLVideoElement).duration || duration"
                         @error="videoFailed = true"
                     />
@@ -814,6 +874,40 @@ onBeforeUnmount(() => {
                     </span>
                 </div>
 
+                <!-- Watch a stretch as it airs, like the trim. -->
+                <div
+                    v-if="kind !== 'trim' && watchedSpan"
+                    class="flex flex-wrap items-center gap-2 bg-base-200 rounded-md px-3 py-2"
+                >
+                    <button
+                        type="button"
+                        class="btn-quiet"
+                        :disabled="!videoUrl || videoFailed"
+                        @click="playSpan(watchedSpan, 'whole')"
+                    >
+                        <i class="bi bi-play-fill" aria-hidden="true" />{{
+                            t('storage.marks.watch', { n: watchedNumber })
+                        }}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-quiet"
+                        :disabled="!videoUrl || videoFailed"
+                        @click="playSpan(watchedSpan, 'in')"
+                    >
+                        <i class="bi bi-box-arrow-in-right" aria-hidden="true" />{{ t('storage.marks.watchIn') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-quiet"
+                        :disabled="!videoUrl || videoFailed"
+                        @click="playSpan(watchedSpan, 'out')"
+                    >
+                        <i class="bi bi-box-arrow-right" aria-hidden="true" />{{ t('storage.marks.watchOut') }}
+                    </button>
+                    <span class="text-xs text-muted">{{ t('storage.marks.watchHint', { s: AROUND }) }}</span>
+                </div>
+
                 <div v-if="kind === 'lshape'" class="flex flex-col gap-1.5">
                     <span class="text-xs text-muted">{{ t('storage.lshapeMarks.graphic') }}</span>
                     <div class="flex flex-wrap gap-2">
@@ -862,6 +956,16 @@ onBeforeUnmount(() => {
                             @focusin="selectedSpan = index"
                         >
                             <span class="text-xs text-muted w-4">{{ index + 1 }}</span>
+                            <button
+                                type="button"
+                                class="btn-icon min-w-8 min-h-8"
+                                :disabled="!videoUrl || videoFailed"
+                                :aria-label="t('storage.marks.watch', { n: index + 1 })"
+                                :title="t('storage.marks.watch', { n: index + 1 })"
+                                @click="watchRow(index)"
+                            >
+                                <i class="bi bi-play-fill" aria-hidden="true" />
+                            </button>
                             <label class="flex items-center gap-1.5 text-xs text-muted">
                                 {{ label('from') }}
                                 <input

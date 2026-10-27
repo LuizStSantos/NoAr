@@ -232,6 +232,10 @@ export default {
             hint: 'Convertido para o formato da saída (Configurações › Playlist e armazenamento)',
         },
         marks: {
+            watch: 'Assistir o trecho {n}',
+            watchIn: 'Ver a entrada',
+            watchOut: 'Ver a saída',
+            watchHint: 'Toca com {s} s antes e depois, como vai ao ar.',
             position: 'Posição',
             length: 'Duração do vídeo',
         },

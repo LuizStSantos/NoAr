@@ -45,7 +45,11 @@ without restarting the playout.
   it, open **Logo and breaks in this video** for that video (a row action in Storage, or the
   same button in the Player's clip editor). Then mark, while it plays, where the
   logo goes off and where it comes back, or type the times, and drag the
-  handles of each stretch on the bar to adjust it. See
+  handles of each stretch on the bar to adjust it. **Watch stretch**, **Watch
+  it go in** and **Watch it come out** play the picked stretch (or the first)
+  with 3 seconds before and after, as it airs, and stop by themselves; the
+  play button of each row of the list does the same. The same buttons are on
+  the SCTE-35 breaks and L-shape tabs. See
   [commercials](commercials.md#a-break-inside-a-video).
 
 ## Hiding, swapping or moving the logo on air
@@ -91,9 +95,11 @@ commercial still keeps any logo off. The API is described in
 
 In an L-shape the programme picture shrinks into a corner of the screen and a
 full-screen graphic fills the band around it, with news, a sponsor or what is
-on next. It goes in and comes back out in 0.8 s, easing in and out, over the
-picture of clips, lives and ingest alike. The logo goes off as the picture
-goes in, and comes back as it returns to full screen; texts stay on top.
+on next, over the picture of clips, lives and ingest alike; texts stay on
+top. Going in, the logo goes off first (0.4 s) and then the picture shrinks
+(0.8 s, easing in and out); coming out, the picture grows back first and then
+the logo returns. A stretch marked in a video starts this at its first mark
+and ends it at its second.
 
 Set it up in **Settings › Logo › L-shape**:
 
