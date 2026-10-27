@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-27
+
 ### Added
 
 - **L-shape**: the programme picture shrinks into a corner over a
@@ -474,7 +476,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.5...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/LuizStSantos/NoAr/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/LuizStSantos/NoAr/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...v1.4.4
 [1.4.2]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...v1.4.2
