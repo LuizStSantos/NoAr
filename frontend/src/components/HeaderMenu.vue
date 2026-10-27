@@ -49,13 +49,13 @@ function menuFocusOut(event: FocusEvent) {
 }
 
 const navItems = computed(() => [
-    { name: 'home', label: t('nav.home'), path: '/' },
-    { name: 'player', label: t('nav.player'), path: '/player' },
-    { name: 'schedule', label: t('nav.schedule'), path: '/schedule' },
-    { name: 'media', label: t('nav.media'), path: '/media' },
-    { name: 'report', label: t('nav.report'), path: '/report' },
-    { name: 'logging', label: t('nav.logging'), path: '/logging' },
-    { name: 'configure', label: t('nav.configure'), path: '/configure' },
+    { name: 'home', label: t('nav.home'), path: '/', icon: 'bi-house' },
+    { name: 'player', label: t('nav.player'), path: '/player', icon: 'bi-play-btn' },
+    { name: 'schedule', label: t('nav.schedule'), path: '/schedule', icon: 'bi-calendar-week' },
+    { name: 'media', label: t('nav.media'), path: '/media', icon: 'bi-folder2' },
+    { name: 'report', label: t('nav.report'), path: '/report', icon: 'bi-bar-chart' },
+    { name: 'logging', label: t('nav.logging'), path: '/logging', icon: 'bi-journal-text' },
+    { name: 'configure', label: t('nav.configure'), path: '/configure', icon: 'bi-gear' },
 ])
 
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
@@ -94,10 +94,10 @@ async function logout() {
 </script>
 <template>
     <header class="bg-base-100 border-b border-line">
-        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 min-h-14 py-2 flex flex-wrap items-center gap-x-5 gap-y-2">
-            <RouterLink :to="channelLink('/')" class="flex items-center gap-2.5 font-semibold text-[16px]">
-                <span class="w-7 h-7 rounded-[7px] bg-accent flex items-center justify-center" aria-hidden="true">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="#17181a">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 min-h-16 py-2 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <RouterLink :to="channelLink('/')" class="flex items-center gap-2.5 font-semibold text-[18px]">
+                <span class="w-8 h-8 rounded-[8px] bg-accent flex items-center justify-center" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="#17181a">
                         <path d="M4 2.5v11l9.5-5.5z" />
                     </svg>
                 </span>
@@ -113,14 +113,18 @@ async function logout() {
                     :key="item.name"
                     :to="channelLink(item.path)"
                     :aria-current="isActive(item.path) ? 'page' : undefined"
-                    class="px-3 py-2 rounded-field whitespace-nowrap"
+                    class="inline-flex items-center gap-2 px-3.5 min-h-10 rounded-field whitespace-nowrap text-[15px] font-medium"
                     :class="
                         isActive(item.path)
                             ? 'bg-base-300 text-base-content'
                             : 'text-muted hover:text-base-content hover:bg-raised'
                     "
                 >
-                    {{ item.label }}
+                    <i
+                        class="bi text-[16px]"
+                        :class="[item.icon, isActive(item.path) ? 'text-accent-text' : '']"
+                        aria-hidden="true"
+                    />{{ item.label }}
                     <span
                         v-if="item.name === 'configure' && updates.available"
                         class="dot bg-accent ms-1.5 align-middle"
