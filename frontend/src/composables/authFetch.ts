@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { useAuth } from '@/stores/auth'
 
 type AuthResponseType = 'json' | 'text' | 'blob' | 'arrayBuffer'
@@ -20,9 +21,32 @@ export class AuthFetchError<T = unknown> extends Error {
     }
 }
 
+/**
+ * The server's message for a body it could not read, such as
+ * "Failed to deserialize the JSON body into the target type: scte35.pid:
+ * invalid value: integer `99999`, expected u16 at line 1 column 2528", told
+ * in the interface's language with the field it is about.
+ */
+function invalidBodyMessage(text: string): string | undefined {
+    const match =
+        /Failed to deserialize the JSON body into the target type: ([^:]+): (.+?)(?: at line \d+ column \d+)?$/s.exec(
+            text,
+        )
+
+    if (!match) {
+        return undefined
+    }
+
+    const value = /invalid value: \w+ `([^`]*)`/.exec(match[2]!)?.[1]
+
+    return value === undefined
+        ? i18n.t('error.invalidField', { field: match[1] })
+        : i18n.t('error.invalidValue', { field: match[1], value })
+}
+
 function fetchErrorMessage(response: Response, data: unknown): string {
     if (typeof data === 'string' && data) {
-        return data
+        return (response.status === 400 || response.status === 422 ? invalidBodyMessage(data) : undefined) ?? data
     }
     if (data && typeof data === 'object') {
         const detail = 'detail' in data && typeof data.detail === 'string' ? data.detail : undefined
@@ -86,7 +110,12 @@ export async function authFetchRaw(input: RequestInfo | URL, init?: RequestInit)
     // Another request may have completed the shared refresh while this one
     // was in flight. In that case retry with its already-current access token.
     if (auth.jwtToken === accessToken && !(await auth.refreshToken())) {
-        return response
+        // The refresh token was rejected: the session is over (401). Else the
+        // refresh only could not be done now (rate limit, server down): say
+        // so with a 503, so callers show an error instead of logging out.
+        return auth.jwtRefresh
+            ? new Response(null, { status: 503, statusText: 'Session refresh delayed; try again' })
+            : response
     }
 
     response = await send()

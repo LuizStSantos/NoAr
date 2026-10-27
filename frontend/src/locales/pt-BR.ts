@@ -21,6 +21,8 @@ export default {
     error: {
         notFound: 'Página não encontrada',
         serverError: 'Erro do servidor interno',
+        invalidField: 'O valor de "{field}" não é válido. Nada foi salvo.',
+        invalidValue: '"{value}" não é um valor válido para "{field}". Nada foi salvo.',
     },
     input: {
         username: 'Usuário',

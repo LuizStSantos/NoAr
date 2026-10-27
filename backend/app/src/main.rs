@@ -157,6 +157,10 @@ async fn async_main() -> Result<(), ProcessError> {
             max_memory: Some(64 * 1024 * 1024), // 64MB max memory
             routes: [
                 ("/auth/", RuleConfig::new(LDuration::minutes(1), 3).match_prefix(true)), // 3 req/min
+                // A refresh needs a valid signed refresh token, so it cannot be
+                // guessed; a tight limit would log out several operators who
+                // share one address (an exact route wins over the prefix).
+                ("/auth/refresh", RuleConfig::new(LDuration::minutes(1), 30)),
             ]
         )
         .await;
