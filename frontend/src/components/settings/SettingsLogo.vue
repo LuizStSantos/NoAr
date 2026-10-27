@@ -544,6 +544,8 @@ function pick(file: { path: string }) {
 
         <LShapeSettings />
 
+        <LogoRemote />
+
         <SectionCard :title="t('settings.logo.guideLogo')" :description="t('settings.logo.guideLogoHint')">
             <div class="flex flex-wrap items-center gap-4">
                 <div
@@ -577,8 +579,6 @@ function pick(file: { path: string }) {
                 </label>
             </div>
         </SectionCard>
-
-        <LogoRemote />
 
         <SectionCard :title="t('settings.logo.subtitles')" :description="t('settings.logo.subtitlesHint')">
             <template #aside>

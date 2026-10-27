@@ -55,11 +55,14 @@ from the storage, or moved to another place, until the next command or a
 server restart. A typical case is
 a live whose encoder runs its own commercial break.
 
-- From NoAr: the **Live logo: hide or swap** card in Settings › Logo and
-  subtitles shows what the logo is doing, with **Hide**, **Back to the channel
-  logo**, **Swap for…** and **Position** (a corner, or back to the channel's).
-- From an encoder or a script: create the channel's **logo key** in the same
-  card. It works at once and stays the same until you make a new one there.
+- From NoAr: the **Live graphics: logo and L-shape** card in Settings › Logo
+  and subtitles shows what the logo and the L-shape are doing. Its Logo row
+  has **Hide**, **Back to the channel logo**, **Swap for…** and **Position**
+  (a corner, or back to the channel's); its L-shape row is described
+  [below](#l-shape).
+- From an encoder or a script: create the channel's **graphics key** (logo
+  and L-shape) in the same card. It works at once and stays the same until
+  you make a new one there.
   Calling these addresses (GET or POST) then changes the logo,
   with the channel's logo animation:
 
@@ -118,9 +121,11 @@ It goes on air:
   stretches of that part. **This video's L-shape graphic** on that tab gives
   the video a graphic of its own (a sponsor of that programme), used for its
   stretches with the channel's size and corner; empty uses the channel's.
-- **From here**: **Go to L-shape** and **Back to full screen** in the same
-  card. It stays until switched back or the server restarts.
-- **From an encoder or a script**, with the logo key, like the logo:
+- **From NoAr**: the L-shape row of the **Live graphics** card, just below,
+  with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
+  after a swap, **Channel graphic**. It stays until switched back or the
+  server restarts.
+- **From an encoder or a script**, with the graphics key, like the logo:
 
   ```text
   http://<server>:8787/lshape/<channel>/on?key=<KEY>

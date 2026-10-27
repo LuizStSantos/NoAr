@@ -11,6 +11,14 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- Settings › Logo: the live card is now **Live graphics: logo and L-shape**,
+  right below the L-shape settings. It has a row for the logo (hide, swap,
+  position) and one for the L-shape (in, out, swap the graphic, back to the
+  channel's), one **graphics key** for both, and a tutorial in two parts with
+  every address for each. The L-shape card keeps only its settings.
+
 ## [1.5.0] - 2026-10-27
 
 ### Added
