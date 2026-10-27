@@ -175,11 +175,17 @@ impl LocalStorage {
                 0.0
             };
 
-            let logo_marks = media && logo_stems.contains(&stem);
-            let trim = if logo_marks {
-                read_marks(&file).await.trim
+            // Read the marks file only when there is one: whether it keeps the
+            // logo off or marks breaks, and its trim, are told apart.
+            let (logo_marks, trim) = if media && logo_stems.contains(&stem) {
+                let marks = read_marks(&file).await;
+
+                (
+                    !marks.hide.is_empty() || !marks.breaks.is_empty(),
+                    marks.trim,
+                )
             } else {
-                None
+                (false, None)
             };
 
             media_files.push(VideoFile {

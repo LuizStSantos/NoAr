@@ -83,8 +83,14 @@ function set(index: number, edge: Edge, seconds: number) {
     const { before, after } = neighbours(index)
     const value =
         edge === 'from'
-            ? round(Math.min(Math.max(before, seconds), span.to - MIN_LENGTH))
-            : round(Math.max(Math.min(after, seconds), span.from + MIN_LENGTH))
+            ? Math.max(
+                  Math.ceil(before * 10 - 1e-6) / 10,
+                  Math.min(round(seconds), Math.floor((span.to - MIN_LENGTH) * 10 + 1e-6) / 10),
+              )
+            : Math.min(
+                  Math.floor(after * 10 + 1e-6) / 10,
+                  Math.max(round(seconds), Math.ceil((span.from + MIN_LENGTH) * 10 - 1e-6) / 10),
+              )
 
     emit('change', index, edge === 'from' ? { from: value, to: span.to } : { from: span.from, to: value })
 }

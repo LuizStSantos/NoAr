@@ -1089,7 +1089,17 @@ function dropClass(before: number, after: number) {
 // Saving and the actions menu
 
 async function save(date = playlistStore.listDate) {
+    // A list is still loading: what is on screen belongs to the day or the
+    // channel before, and must not be written over the one being loaded.
+    if (playlistStore.isLoading) {
+        return
+    }
+    // Every clip removed: saving an empty day means deleting its playlist,
+    // which asks first.
     if (!playlistStore.playlist.length) {
+        if (date === playlistStore.listDate) {
+            showDelete.value = true
+        }
         return
     }
     if (playlistStore.loadFailed && date === playlistStore.listDate) {
@@ -1368,7 +1378,7 @@ defineExpose({ addFile, addFiles })
                 </button>
                 <button
                     class="btn-quiet min-h-9.5"
-                    :disabled="!playlistStore.dirty"
+                    :disabled="!playlistStore.dirty || playlistStore.isLoading"
                     :title="playlistStore.dirty ? '' : t('onair.noChanges')"
                     @click="showDiscard = true"
                 >
@@ -1376,7 +1386,7 @@ defineExpose({ addFile, addFiles })
                 </button>
                 <button
                     class="btn-main min-h-9.5"
-                    :disabled="!playlistStore.dirty || saving || playlistStore.loadFailed"
+                    :disabled="!playlistStore.dirty || saving || playlistStore.loadFailed || playlistStore.isLoading"
                     :title="playlistStore.dirty ? '' : t('onair.noChanges')"
                     @click="save()"
                 >

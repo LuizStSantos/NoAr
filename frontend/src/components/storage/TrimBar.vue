@@ -42,14 +42,27 @@ function round(seconds: number): number {
     return Math.round(seconds * 10) / 10
 }
 
+/**
+ * Keep an edge inside the video and at least MIN_LENGTH from the other one,
+ * on tenths of a second: rounded first, then held to the nearest tenth that
+ * still keeps the minimum (typed times can have more decimals).
+ */
 function clamp(edge: 'from' | 'to', seconds: number): number {
-    return edge === 'from'
-        ? Math.min(Math.max(0, seconds), props.to - MIN_LENGTH)
-        : Math.max(Math.min(props.duration, seconds), props.from + MIN_LENGTH)
+    const value = round(seconds)
+
+    if (edge === 'from') {
+        const latest = Math.floor((props.to - MIN_LENGTH) * 10 + 1e-6) / 10
+
+        return Math.max(0, Math.min(value, latest))
+    }
+
+    const earliest = Math.ceil((props.from + MIN_LENGTH) * 10 - 1e-6) / 10
+
+    return Math.max(earliest, Math.min(value, props.duration > 0 ? props.duration : value))
 }
 
 function set(edge: 'from' | 'to', seconds: number) {
-    const value = round(clamp(edge, seconds))
+    const value = clamp(edge, seconds)
 
     if (edge === 'from') {
         emit('update:from', value)

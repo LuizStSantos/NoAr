@@ -406,10 +406,20 @@ onBeforeUnmount(() => clearInterval(timer))
             </div>
             <div class="flex flex-col items-end gap-1.5">
                 <div class="flex flex-wrap justify-end gap-2">
-                    <button type="button" class="btn-quiet" :disabled="!report || loading" @click="sheet">
+                    <button
+                        type="button"
+                        class="btn-quiet"
+                        :disabled="!report || loading || !!rangeError"
+                        @click="sheet"
+                    >
                         <i class="bi bi-table" aria-hidden="true" />{{ t('report.downloadSheet') }}
                     </button>
-                    <button type="button" class="btn-main" :disabled="!report || loading || exporting" @click="pdf">
+                    <button
+                        type="button"
+                        class="btn-main"
+                        :disabled="!report || loading || exporting || !!rangeError"
+                        @click="pdf"
+                    >
                         <span v-if="exporting" class="loading loading-spinner loading-sm" />
                         <i v-else class="bi bi-download" aria-hidden="true" />{{ t('report.downloadPdf') }}
                     </button>
@@ -555,8 +565,9 @@ onBeforeUnmount(() => clearInterval(timer))
             <i class="bi bi-info-circle mt-px" aria-hidden="true" />{{ unrecordedSince }}
         </p>
 
+        <!-- With a range that cannot be shown, the figures of the last one would read as its totals. -->
         <ReportSummary
-            v-if="report"
+            v-if="report && !rangeError"
             :summary="summary"
             :picks="picks"
             :pick-detail="pickDetail"
@@ -565,7 +576,7 @@ onBeforeUnmount(() => clearInterval(timer))
             :range="bounds"
         />
 
-        <section aria-labelledby="report-list-title" class="card-box overflow-hidden relative">
+        <section v-if="!rangeError" aria-labelledby="report-list-title" class="card-box overflow-hidden relative">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3.5 border-b border-line">
                 <h2 id="report-list-title" class="m-0 text-[15px] font-semibold">
                     <template v-if="picks.length">

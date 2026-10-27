@@ -1620,14 +1620,14 @@ const uploadAccept = computed(() =>
         <GenericModal :show="renameTarget !== null" :title="t('storage.renameTitle')" :modal-action="finishRename">
             <label class="field-label w-[min(420px,80vw)]">
                 {{ t('storage.newName') }}
-                <input v-model="renameValue" class="field-input" @keydown.enter="finishRename(true)" />
+                <input v-model="renameValue" class="field-input" autofocus @keydown.enter="finishRename(true)" />
             </label>
         </GenericModal>
 
         <GenericModal :show="showCreate" :title="t('storage.createTitle')" :modal-action="finishCreate">
             <label class="field-label w-[min(420px,80vw)]">
                 {{ t('storage.folderName') }}
-                <input v-model="newFolderName" class="field-input" @keydown.enter="finishCreate(true)" />
+                <input v-model="newFolderName" class="field-input" autofocus @keydown.enter="finishCreate(true)" />
             </label>
         </GenericModal>
 
