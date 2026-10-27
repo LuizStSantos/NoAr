@@ -500,7 +500,10 @@ onBeforeUnmount(() => {
                             :style="{ left: `${span.left}%`, width: `${span.width}%` }"
                         />
                     </div>
-                    <div class="flex justify-between font-mono text-[11px] text-subtle" aria-hidden="true">
+                    <div
+                        class="flex justify-between font-mono text-[11px] text-subtle whitespace-nowrap max-sm:[&>:nth-child(even)]:hidden"
+                        aria-hidden="true"
+                    >
                         <span v-for="(tick, index) in ticks" :key="index">{{ tick }}</span>
                     </div>
                 </div>

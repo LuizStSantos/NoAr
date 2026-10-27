@@ -158,6 +158,20 @@ body {
     line-height: 1.45;
 }
 
+/* A file name, a title or an address with no spaces breaks where it has to
+   instead of pushing its card or dialog past the edge of a phone. Text kept
+   on one line (truncate, whitespace-nowrap) is not affected. */
+body {
+    overflow-wrap: anywhere;
+}
+
+/* Tables size their columns and buttons their labels from their words: there
+   a long name only wraps where a line runs out, so short words keep whole. */
+table,
+button {
+    overflow-wrap: break-word;
+}
+
 /* Keep the scrollbar space reserved, so pages do not shift sideways when a
    short page (no scrollbar) follows a long one. The page color also fills
    that space. */

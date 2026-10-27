@@ -1447,6 +1447,7 @@ export default {
     },
     nav: {
         main: 'Main',
+        menu: 'Menu',
         home: 'Home',
         player: 'Player',
         schedule: 'Scheduler',
