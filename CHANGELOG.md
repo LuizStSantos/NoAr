@@ -11,6 +11,38 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-10-27
+
+### Security
+
+- A Scheduler item's title was shown as HTML in the **Remove** confirmation,
+  so a title with markup ran script in the browser of whoever removed it.
+  Confirmation texts are now always plain text.
+
+### Fixed
+
+- Operators were signed out when renewing their session was rate limited
+  (three renewals a minute per address, shared by a team behind one office
+  address). Renewals now have their own limit of 30 a minute, and only a
+  rejected session signs anyone out; a busy or restarting server keeps it.
+  Signing out from an expired session also no longer fails with an error.
+- Player › Build the playlist: **Save** and **Discard** wait while another
+  day's playlist loads, so the list on screen cannot be saved over the day
+  being opened. Saving a day whose clips were all removed now asks to delete
+  its playlist instead of doing nothing.
+- Report: clearing a date in **Period** no longer freezes the page, and a
+  range that cannot be shown (over 62 days, or reversed) no longer leaves the
+  previous range's figures under the new title.
+- Settings: a value out of its range is pointed at in its field before
+  anything is sent or the playout restarts, and a value the server refuses
+  is explained in words instead of the server's raw message.
+- Trim: an out point past the end of the video is refused, and the handles
+  keep their minimum distance with typed times.
+- Storage: a video with only a trim no longer shows the "marks" tag.
+- The Scheduler's remove confirmation says **Remove** instead of **Ok**; the
+  New folder and Rename dialogs put the cursor in their field; Escape closes
+  the user menu.
+
 ## [1.4.2] - 2026-10-26
 
 ### Fixed
@@ -343,7 +375,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/LuizStSantos/NoAr/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/LuizStSantos/NoAr/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/LuizStSantos/NoAr/compare/v1.3.0...v1.4.0
