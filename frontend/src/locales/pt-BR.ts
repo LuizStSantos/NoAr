@@ -1451,6 +1451,7 @@ export default {
     },
     nav: {
         main: 'Principal',
+        menu: 'Menu',
         home: 'Início',
         player: 'Player',
         schedule: 'Agendador',

@@ -7,6 +7,9 @@ import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { usePlaylist } from '@/stores/playlist'
 
+/** How long a channel on air must report "not running" before it shows as stopped. */
+const STOPPED_AFTER_MS = 1500
+
 /**
  * Keeps one status stream of the selected channel open while someone is
  * logged in. The header and the player both read it from the playlist store.
@@ -23,6 +26,8 @@ export function usePlayoutStatusStream() {
     /** Loudness metering costs server time: only ask for it where it is shown. */
     const audioMeter = computed(() => route.path.startsWith('/player') || route.path.startsWith('/configure/audio'))
     let errorCounter = 0
+    /** When the stream first said "not running" in a row, or 0. */
+    let stoppedSince = 0
 
     function connect() {
         const id = configStore.channels[configStore.i]?.id
@@ -52,6 +57,8 @@ export function usePlayoutStatusStream() {
         () => {
             playlistStore.resetStatus()
             playlistStore.playoutIsRunning = false
+            playlistStore.statusKnown = false
+            stoppedSince = 0
             connect()
         },
         { immediate: true },
@@ -91,11 +98,29 @@ export function usePlayoutStatusStream() {
             return
         }
 
+        let status: PlayoutStatus | null = null
+
         try {
-            playlistStore.setStatus(JSON.parse(data.value) as PlayoutStatus)
+            status = JSON.parse(data.value) as PlayoutStatus
         } catch {
             // The stream sends "not running" while the playout is stopped.
+        }
+
+        if (status) {
+            stoppedSince = 0
+            playlistStore.setStatus(status)
+            return
+        }
+
+        // A channel on air turns "stopped" only once it says so for a while:
+        // one odd message (a restart of the stream, a phone waking up) must
+        // not make the badges blink between on air and stopped.
+        const now = Date.now()
+        stoppedSince ||= now
+
+        if (!playlistStore.playoutIsRunning || now - stoppedSince >= STOPPED_AFTER_MS) {
             playlistStore.playoutIsRunning = false
+            playlistStore.statusKnown = true
             playlistStore.resetStatus()
         }
     })

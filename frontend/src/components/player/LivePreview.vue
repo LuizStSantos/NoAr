@@ -294,7 +294,7 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                     ● {{ t('nav.onAir') }}
                 </span>
                 <span
-                    v-else
+                    v-else-if="playlistStore.statusKnown"
                     class="bg-[#3c3e44] text-[#e8e6e3] font-semibold text-xs tracking-wider px-2.5 py-1 rounded-md"
                 >
                     {{ t('nav.stopped') }}

@@ -1507,7 +1507,10 @@ defineExpose({ addFile, addFiles })
                     aria-hidden="true"
                 />
             </div>
-            <div class="flex justify-between font-mono text-[11px] text-subtle" aria-hidden="true">
+            <div
+                class="flex justify-between font-mono text-[11px] text-subtle whitespace-nowrap max-sm:[&>:nth-child(even)]:hidden"
+                aria-hidden="true"
+            >
                 <span v-for="(tick, index) in dayMap.ticks" :key="index">{{ tick }}</span>
             </div>
         </div>

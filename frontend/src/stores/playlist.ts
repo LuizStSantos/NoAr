@@ -79,6 +79,8 @@ export const usePlaylist = defineStore('playlist', {
         elapsedSec: 0,
         shift: 0,
         playoutIsRunning: false,
+        /** The status stream has answered for this channel: until then neither "on air" nor "stopped" is shown. */
+        statusKnown: false,
         firstLoad: true,
         scrollToItem: false,
     }),
@@ -188,6 +190,7 @@ export const usePlaylist = defineStore('playlist', {
 
         setStatus(item: PlayoutStatus) {
             this.playoutIsRunning = true
+            this.statusKnown = true
             this.current = item.media
             this.currentIndex = item.index
             this.elapsedSec = item.elapsed

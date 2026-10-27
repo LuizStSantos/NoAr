@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { onClickOutside } from '@vueuse/core'
+import { onClickOutside, useEventListener } from '@vueuse/core'
 
 import { locales } from '@/i18n'
 import { useAuth } from '@/stores/auth'
@@ -23,6 +23,23 @@ const updates = useUpdates()
 
 const menuOpen = ref(false)
 const userMenu = ref<HTMLElement>()
+/** The main menu on a phone, behind the menu button. */
+const navOpen = ref(false)
+
+const navButton = ref<HTMLButtonElement>()
+
+// Going to a page closes the phone menu, and so does Escape.
+watch(
+    () => route.fullPath,
+    () => (navOpen.value = false),
+)
+
+useEventListener(window, 'keydown', (event: KeyboardEvent) => {
+    if (navOpen.value && event.key === 'Escape') {
+        navOpen.value = false
+        navButton.value?.focus()
+    }
+})
 
 onClickOutside(userMenu, () => (menuOpen.value = false))
 
@@ -96,26 +113,50 @@ async function logout() {
 </script>
 <template>
     <header class="bg-base-100 border-b border-line">
-        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 min-h-16 py-2 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <RouterLink :to="channelLink('/')" class="flex items-center gap-2.5 font-semibold text-[18px]">
+        <div
+            class="max-w-[1440px] mx-auto px-4 sm:px-6 min-h-16 py-2 flex flex-wrap items-center gap-x-3 xl:gap-x-6 gap-y-2"
+        >
+            <button
+                ref="navButton"
+                class="btn-icon relative border border-line-strong xl:hidden"
+                :aria-label="t('nav.menu')"
+                :aria-expanded="navOpen"
+                aria-controls="main-nav"
+                @click="navOpen = !navOpen"
+            >
+                <i class="bi text-[18px]" :class="navOpen ? 'bi-x-lg' : 'bi-list'" aria-hidden="true" />
+                <span
+                    v-if="updates.available && !navOpen"
+                    class="dot bg-accent absolute top-1 end-1"
+                    role="img"
+                    :aria-label="t('settings.updates.dot')"
+                />
+            </button>
+
+            <RouterLink
+                :to="channelLink('/')"
+                class="flex items-center gap-2.5 font-semibold text-[18px] max-[359px]:hidden"
+            >
                 <span class="w-8 h-8 rounded-[8px] bg-accent flex items-center justify-center" aria-hidden="true">
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="#17181a">
                         <path d="M4 2.5v11l9.5-5.5z" />
                     </svg>
                 </span>
-                NoAr
+                <span class="max-sm:sr-only">NoAr</span>
             </RouterLink>
 
             <nav
+                id="main-nav"
                 :aria-label="t('nav.main')"
-                class="flex gap-1 min-w-0 order-last basis-full overflow-x-auto md:order-none md:basis-0 md:flex-1 md:flex-wrap md:overflow-visible"
+                class="gap-0.5 min-w-0 order-last basis-full grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 p-1.5 mb-1 bg-raised border border-line rounded-xl xl:flex xl:gap-1 xl:order-none xl:basis-0 xl:flex-1 xl:flex-wrap xl:p-0 xl:mb-0 xl:bg-transparent xl:border-0 xl:rounded-none"
+                :class="navOpen ? 'grid' : 'hidden'"
             >
                 <RouterLink
                     v-for="item in navItems"
                     :key="item.name"
                     :to="channelLink(item.path)"
                     :aria-current="isActive(item.path) ? 'page' : undefined"
-                    class="inline-flex items-center gap-1.5 px-2.5 2xl:px-3.5 min-h-10 rounded-field whitespace-nowrap text-[15px] font-medium"
+                    class="inline-flex items-center gap-2.5 xl:gap-1.5 px-3 xl:px-2.5 2xl:px-3.5 min-h-11 xl:min-h-10 shrink-0 rounded-field whitespace-nowrap text-[15px] font-medium"
                     :class="
                         isActive(item.path)
                             ? 'bg-base-300 text-base-content'
@@ -123,7 +164,7 @@ async function logout() {
                     "
                 >
                     <i
-                        class="bi text-[16px]"
+                        class="bi text-[16px] xl:max-[1439px]:hidden"
                         :class="[item.icon, isActive(item.path) ? 'text-accent-text' : '']"
                         aria-hidden="true"
                     />{{ item.label }}
@@ -144,16 +185,23 @@ async function logout() {
                     <span class="dot bg-[#ff5a5f]" aria-hidden="true" />{{ t('nav.onAir') }}
                 </span>
                 <span
-                    v-else
+                    v-else-if="playlistStore.statusKnown"
                     class="inline-flex items-center gap-2 bg-raised text-muted rounded-full px-3 py-1 font-semibold text-xs tracking-wide"
                 >
                     <span class="dot bg-subtle" aria-hidden="true" />{{ t('nav.stopped') }}
+                </span>
+                <span
+                    v-else
+                    class="inline-flex items-center gap-2 bg-raised rounded-full px-3 py-1 text-xs invisible"
+                    aria-hidden="true"
+                >
+                    <span class="dot" />{{ t('nav.onAir') }}
                 </span>
 
                 <label v-if="configStore.channels.length > 1" class="relative">
                     <span class="sr-only">{{ t('nav.channel') }}</span>
                     <select
-                        class="appearance-none bg-raised text-base-content border border-line-strong rounded-field ps-3 pe-8 min-h-9 cursor-pointer"
+                        class="appearance-none bg-raised text-base-content border border-line-strong rounded-field ps-3 pe-8 min-h-9 cursor-pointer max-w-[28vw] sm:max-w-[40vw] xl:max-w-60 truncate"
                         :value="channelId"
                         @change="selectChannel"
                     >
@@ -168,9 +216,10 @@ async function logout() {
                 </label>
                 <span
                     v-else-if="configStore.channels[0]"
-                    class="bg-raised border border-line-strong rounded-field px-3 min-h-9 inline-flex items-center"
+                    class="bg-raised border border-line-strong rounded-field px-3 min-h-9 inline-flex items-center max-w-[28vw] sm:max-w-[40vw] xl:max-w-60"
+                    :title="configStore.channels[0].name"
                 >
-                    {{ configStore.channels[0].name }}
+                    <span class="truncate">{{ configStore.channels[0].name }}</span>
                 </span>
 
                 <div ref="userMenu" class="relative" @keydown.esc="closeMenu(true)" @focusout="menuFocusOut">

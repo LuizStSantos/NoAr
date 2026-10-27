@@ -799,7 +799,7 @@ watch(zoom, scrollToFocus)
                                 <span
                                     v-for="tick in ticks"
                                     :key="tick.second"
-                                    class="absolute -translate-x-1/2 first:translate-x-0"
+                                    class="absolute -translate-x-1/2 first:translate-x-0 whitespace-nowrap"
                                     :style="{ left: left(tick.second) }"
                                 >
                                     {{ tick.label }}
@@ -820,7 +820,7 @@ watch(zoom, scrollToFocus)
                                 <div
                                     v-for="(block, index) in gradeBlocks"
                                     :key="`g${index}`"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1.5 overflow-hidden border-r-2 border-base-200"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1.5 overflow-hidden [overflow-wrap:normal] border-r-2 border-base-200"
                                     :class="block.scheduled ? 'text-[#1c1c1c]' : 'bg-[#44464c] text-white'"
                                     :style="{
                                         left: left(block.start),
@@ -869,7 +869,7 @@ watch(zoom, scrollToFocus)
                                 <button
                                     v-for="block in eventBlocks"
                                     :key="`${block.occurrence.event.id}-${block.occurrence.start}`"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1 overflow-hidden text-left cursor-grab min-w-30 border-0"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1 overflow-hidden [overflow-wrap:normal] text-left cursor-grab min-w-30 border-0"
                                     :class="{
                                         'opacity-50': block.occurrence.status === 'done',
                                         'ring-2 ring-error': block.occurrence.status === 'failed',
@@ -925,7 +925,7 @@ watch(zoom, scrollToFocus)
                                     v-for="block in graphicsBlocks"
                                     :key="`gr-${block.event.id}`"
                                     type="button"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 overflow-hidden text-left cursor-pointer min-w-24 border-0 text-[#16121f]"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 overflow-hidden [overflow-wrap:normal] text-left cursor-pointer min-w-24 border-0 text-[#16121f]"
                                     :class="block.open ? 'rounded-e-none' : ''"
                                     :style="{
                                         left: left(block.start),
@@ -1096,35 +1096,39 @@ watch(zoom, scrollToFocus)
                         <li
                             v-for="block in graphicsBlocks"
                             :key="`grl-${block.event.id}`"
-                            class="flex flex-wrap items-center gap-3 px-4.5 py-3 border-t border-line first:border-t-0"
+                            class="flex items-center gap-3 px-4.5 py-3 border-t border-line first:border-t-0"
                         >
-                            <span class="font-mono text-sm w-28">
-                                {{ block.event.start_time.slice(0, 5) }}
-                                –
-                                {{ block.event.end_time?.slice(0, 5) ?? t('schedule.graphics.untilChanged') }}
-                            </span>
-                            <span class="flex-1 min-w-48">
-                                <strong class="font-semibold">{{ block.event.title }}</strong>
-                                <span class="block text-[13px] text-muted">
-                                    {{ graphicsSummary(block.event) }} · {{ repeatLabel(block.event.repeat_days) }}
+                            <span class="flex-1 min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span class="font-mono text-sm w-28">
+                                    {{ block.event.start_time.slice(0, 5) }}
+                                    –
+                                    {{ block.event.end_time?.slice(0, 5) ?? t('schedule.graphics.untilChanged') }}
+                                </span>
+                                <span class="flex-1 min-w-40">
+                                    <strong class="font-semibold">{{ block.event.title }}</strong>
+                                    <span class="block text-[13px] text-muted">
+                                        {{ graphicsSummary(block.event) }} · {{ repeatLabel(block.event.repeat_days) }}
+                                    </span>
                                 </span>
                             </span>
-                            <button
-                                class="btn-icon min-w-10 min-h-10 border border-line-strong"
-                                :aria-label="t('schedule.edit')"
-                                :title="t('schedule.edit')"
-                                @click="editGraphics(block.event)"
-                            >
-                                <i class="bi bi-pencil" aria-hidden="true" />
-                            </button>
-                            <button
-                                class="btn-icon min-w-10 min-h-10 border border-line-strong text-error"
-                                :aria-label="t('schedule.graphics.remove')"
-                                :title="t('schedule.graphics.remove')"
-                                @click="deletingGraphics = block.event"
-                            >
-                                <i class="bi bi-trash" aria-hidden="true" />
-                            </button>
+                            <span class="flex gap-2 shrink-0">
+                                <button
+                                    class="btn-icon min-w-10 min-h-10 border border-line-strong"
+                                    :aria-label="t('schedule.edit')"
+                                    :title="t('schedule.edit')"
+                                    @click="editGraphics(block.event)"
+                                >
+                                    <i class="bi bi-pencil" aria-hidden="true" />
+                                </button>
+                                <button
+                                    class="btn-icon min-w-10 min-h-10 border border-line-strong text-error"
+                                    :aria-label="t('schedule.graphics.remove')"
+                                    :title="t('schedule.graphics.remove')"
+                                    @click="deletingGraphics = block.event"
+                                >
+                                    <i class="bi bi-trash" aria-hidden="true" />
+                                </button>
+                            </span>
                         </li>
                         <li v-if="!graphicsBlocks.length" class="px-4.5 py-6 text-center text-muted">
                             {{ t('schedule.graphics.none') }}

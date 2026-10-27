@@ -460,7 +460,10 @@ watch([level, search, fold], () => {
                                 </td>
                             </tr>
                             <tr v-else class="border-t border-raised align-top" :class="rowClass(row.line)">
-                                <td class="ps-3 sm:ps-4 pe-2 sm:pe-3 py-1.5 text-muted tabular" :title="row.line.stamp">
+                                <td
+                                    class="ps-3 sm:ps-4 pe-2 sm:pe-3 py-1.5 text-muted tabular whitespace-nowrap"
+                                    :title="row.line.stamp"
+                                >
                                     {{ row.line.time }}
                                 </td>
                                 <td class="px-2 sm:px-3 py-1.5">
