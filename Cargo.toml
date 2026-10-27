@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 description = "24/7 TV playout with a scheduler, an XMLTV guide and a web interface"
 readme = "README.md"
-version = "1.6.0"
+version = "1.7.0"
 license = "GPL-3.0"
 repository = "https://github.com/LuizStSantos/NoAr"
 authors = [
