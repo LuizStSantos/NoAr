@@ -6,7 +6,10 @@ use axum::{
     extract::{Multipart, Path, Query, State},
     http::{
         HeaderMap, HeaderValue, StatusCode,
-        header::{AUTHORIZATION, CONTENT_DISPOSITION, CONTENT_TYPE},
+        header::{
+            AUTHORIZATION, CONTENT_DISPOSITION, CONTENT_SECURITY_POLICY, CONTENT_TYPE,
+            X_CONTENT_TYPE_OPTIONS,
+        },
     },
     response::Response,
 };
@@ -352,19 +355,29 @@ pub async fn get_file(
     // Shown in the page (video and image previews), so it needs its real type:
     // Safari, on the iPhone and iPad above all, does not play a video sent as
     // a download. A download link still saves it with its name.
-    if let Ok(mime) = HeaderValue::from_str(
-        mime_guess::from_path(&path)
-            .first_or_octet_stream()
-            .essence_str(),
-    ) {
-        response.headers_mut().insert(CONTENT_TYPE, mime);
+    let mime = mime_guess::from_path(&path).first_or_octet_stream();
+    let headers = response.headers_mut();
+    if let Ok(value) = HeaderValue::from_str(mime.essence_str()) {
+        headers.insert(CONTENT_TYPE, value);
     }
 
-    response
-        .headers_mut()
-        .insert(CONTENT_DISPOSITION, HeaderValue::from_static("inline"));
+    headers.insert(CONTENT_DISPOSITION, HeaderValue::from_static("inline"));
+    headers.insert(X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
+    // A page or drawing from the storage (HTML, SVG, XML) opened on its own
+    // runs nothing and reaches nothing of NoAr's.
+    if is_active_content(mime.essence_str()) {
+        headers.insert(CONTENT_SECURITY_POLICY, HeaderValue::from_static("sandbox"));
+    }
 
     Ok(response)
+}
+
+/// Types a browser runs scripts in when it opens them.
+fn is_active_content(mime: &str) -> bool {
+    matches!(
+        mime,
+        "text/html" | "application/xhtml+xml" | "image/svg+xml" | "text/xml" | "application/xml"
+    ) || mime.contains("javascript")
 }
 
 /// **Import playlist**
@@ -398,22 +411,31 @@ pub async fn import_playlist(
 
     let channel_name = manager.channel.lock().await.name.clone();
     let playlists = manager.config.read().await.channel.playlists.clone();
-    let file = obj.file.file_name().unwrap_or_default();
-    let path = env::temp_dir().join(file);
-    let path_clone = path.clone();
-
-    if let Some(field) = payload.next_field().await? {
-        let bytes = field.bytes().await?;
-        fs::write(&path, &bytes).await?;
-    } else {
+    let Some(field) = payload.next_field().await? else {
         return Err(ServiceError::BadRequest("No file provided".into()));
+    };
+    let bytes = field.bytes().await?;
+    // A name of its own: two imports at once, or a file someone placed in
+    // the temporary folder under the uploaded name, cannot get in the way.
+    let path = env::temp_dir().join(format!("noar-import-{}.txt", uuid::Uuid::new_v4()));
+    let written = async {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .await?;
+        tokio::io::AsyncWriteExt::write_all(&mut file, &bytes).await?;
+        tokio::io::AsyncWriteExt::flush(&mut file).await
     }
+    .await;
+    let response = match written {
+        Ok(()) => import_file(&playlists, &obj.date, Some(channel_name), &path).await,
+        Err(error) => Err(error),
+    };
 
-    let response = import_file(&playlists, &obj.date, Some(channel_name), &path_clone).await?;
+    let _ = fs::remove_file(&path).await;
 
-    fs::remove_file(path).await?;
-
-    Ok(Json(response))
+    Ok(Json(response?))
 }
 
 #[derive(Debug, Deserialize)]

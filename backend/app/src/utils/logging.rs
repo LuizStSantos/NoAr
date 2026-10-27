@@ -751,20 +751,43 @@ pub fn log_line(id: i32, line: &str, level: &str) {
     }
 }
 
+/// Query values that grant access (the SCTE-35 key, file links, stream
+/// links), left out of the request log.
+const SECRET_PARAMETERS: [&str; 4] = ["key", "access", "uuid", "token"];
+
+/// `address` with the values of [`SECRET_PARAMETERS`] in its query replaced.
+fn redact_address(address: &str) -> String {
+    let Some((path, query)) = address.split_once('?') else {
+        return address.to_string();
+    };
+    let query = query
+        .split('&')
+        .map(|pair| match pair.split_once('=') {
+            Some((name, _)) if SECRET_PARAMETERS.contains(&name.to_ascii_lowercase().as_str()) => {
+                format!("{name}=***")
+            }
+            _ => pair.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("&");
+
+    format!("{path}?{query}")
+}
+
 pub async fn log_middleware(real_ip: RealIp, req: Request<Body>, next: Next) -> Response<Body> {
     let start = Instant::now();
     let ip = real_ip.ip();
 
     let m = req.method().clone();
-    let uri = req.uri().clone();
+    let uri = redact_address(&req.uri().to_string());
     let v = req.version();
 
-    let r = req
-        .headers()
-        .get(REFERER)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("-")
-        .to_string();
+    let r = redact_address(
+        req.headers()
+            .get(REFERER)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("-"),
+    );
 
     let a = req
         .headers()
@@ -818,8 +841,22 @@ mod tests {
 
     use super::{
         LogConsole, MultiFileLogger, cpu_bench_line_count, explicitly_targets_console,
-        format_level, html_to_ansi, record_channel,
+        format_level, html_to_ansi, record_channel, redact_address,
     };
+
+    #[test]
+    fn the_request_log_leaves_out_secrets() {
+        assert_eq!(
+            redact_address("/api/scte35/1/break?key=abc&duration=30"),
+            "/api/scte35/1/break?key=***&duration=30"
+        );
+        assert_eq!(
+            redact_address("/file/1/a.mp4?ACCESS=xyz"),
+            "/file/1/a.mp4?ACCESS=***"
+        );
+        assert_eq!(redact_address("/api/x?a=1&b"), "/api/x?a=1&b");
+        assert_eq!(redact_address("/api/x"), "/api/x");
+    }
 
     #[test]
     fn shared_console_preserves_messages_between_benchmark_updates() {
