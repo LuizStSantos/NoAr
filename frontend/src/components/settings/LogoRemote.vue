@@ -167,6 +167,42 @@ const LSHAPE_CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] 
 const lshapeCorner = computed(() => lshape.value?.position ?? processing.value.lshape_corner)
 const lshapeScale = computed(() => lshape.value?.scale ?? processing.value.lshape_scale ?? 75)
 
+/**
+ * A new place picked on the pads waits here until it is confirmed, so a
+ * slip of the mouse never moves anything on air.
+ */
+const logoDraft = ref<Shares | null>(null)
+const lshapeDraft = ref<{ position: string; scale: number } | null>(null)
+const lshapeShown = computed(() => lshapeDraft.value ?? { position: lshapeCorner.value, scale: lshapeScale.value })
+
+function sameShares(a: Shares, b: Shares) {
+    return a.x === b.x && a.y === b.y
+}
+
+function draftLogo(shares: Shares) {
+    logoDraft.value = sameShares(shares, logoShares.value) ? null : shares
+}
+
+function draftLShape(change: { position?: string; scale?: number }) {
+    const next = { ...lshapeShown.value, ...change }
+
+    lshapeDraft.value = next.position === lshapeCorner.value && next.scale === lshapeScale.value ? null : next
+}
+
+async function confirmLogo() {
+    if (logoDraft.value) {
+        await send('move', undefined, logoDraft.value)
+        logoDraft.value = null
+    }
+}
+
+async function confirmLShape() {
+    if (lshapeDraft.value) {
+        await sendLShape('move', undefined, lshapeDraft.value)
+        lshapeDraft.value = null
+    }
+}
+
 const stateText = computed(() => {
     if (!status.value) {
         return ''
@@ -307,12 +343,13 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
             <div class="flex flex-wrap items-start gap-3 sm:ps-[5.625rem]">
                 <PositionPad
                     class="sm:w-60"
-                    :shares="logoShares"
+                    :shares="logoDraft ?? logoShares"
+                    :ghost="logoDraft ? logoShares : null"
                     :width="LOGO_BOX.width"
                     :height="LOGO_BOX.height"
                     :label="t('settings.logo.remote.logoPad')"
                     :disabled="busy"
-                    @place="send('move', undefined, $event)"
+                    @place="draftLogo"
                 />
                 <div class="flex flex-col gap-1.5 text-[13px] max-w-64">
                     <span class="text-muted">{{ t('settings.logo.remote.padHint') }}</span>
@@ -323,9 +360,23 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
                                 ? `${logoShares.x}% × ${logoShares.y}%`
                                 : t('settings.logo.remote.moveDefault')
                         }}</strong>
+                        <template v-if="logoDraft">
+                            →
+                            <strong class="font-semibold text-accent-text"
+                                >{{ logoDraft.x }}% × {{ logoDraft.y }}%</strong
+                            >
+                        </template>
                     </span>
+                    <div v-if="logoDraft" class="flex flex-wrap gap-2" role="group">
+                        <button class="btn-main min-h-9 px-3" :disabled="busy" @click="confirmLogo">
+                            <i class="bi bi-check2" aria-hidden="true" />{{ t('settings.logo.remote.confirmMove') }}
+                        </button>
+                        <button class="btn-quiet" :disabled="busy" @click="logoDraft = null">
+                            {{ t('settings.logo.remote.cancelMove') }}
+                        </button>
+                    </div>
                     <button
-                        v-if="status?.position"
+                        v-else-if="status?.position"
                         class="btn-quiet self-start"
                         :disabled="busy"
                         @click="send('move', undefined, 'default')"
@@ -376,39 +427,50 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
                         type="button"
                         class="rounded-sm border cursor-pointer disabled:cursor-not-allowed"
                         :class="
-                            lshapeCorner === corner
-                                ? 'bg-accent border-accent'
-                                : 'bg-base-100 border-line-strong hover:border-accent'
+                            lshapeShown.position === corner
+                                ? lshapeDraft
+                                    ? 'bg-accent/40 border-accent border-dashed border-2'
+                                    : 'bg-accent border-accent'
+                                : lshapeDraft && lshapeCorner === corner
+                                  ? 'bg-base-100 border-muted border-dashed border-2'
+                                  : 'bg-base-100 border-line-strong hover:border-accent'
                         "
-                        :aria-pressed="lshapeCorner === corner"
+                        :aria-pressed="lshapeShown.position === corner"
                         :aria-label="t(`lshape.corners.${corner}`)"
                         :title="t(`lshape.corners.${corner}`)"
                         :disabled="busy"
-                        @click="sendLShape('move', undefined, { position: corner, scale: lshapeScale })"
+                        @click="draftLShape({ position: corner })"
                     />
                 </div>
                 <div class="flex flex-col gap-1.5 text-[13px] max-w-64">
                     <span class="text-muted">{{ t('settings.logo.remote.lshapePadHint') }}</span>
                     <label class="flex flex-col gap-1">
-                        <span>{{ t('lshape.size', { n: lshapeScale }) }}</span>
+                        <span>{{ t('lshape.size', { n: lshapeShown.scale }) }}</span>
                         <input
                             type="range"
                             class="range range-xs range-accent"
                             min="30"
                             max="95"
                             step="5"
-                            :value="lshapeScale"
+                            :value="lshapeShown.scale"
                             :disabled="busy"
-                            @change="
-                                sendLShape('move', undefined, {
-                                    position: lshapeCorner,
-                                    scale: Number(($event.target as HTMLInputElement).value),
-                                })
-                            "
+                            @input="draftLShape({ scale: Number(($event.target as HTMLInputElement).value) })"
                         />
                     </label>
+                    <div v-if="lshapeDraft" class="flex flex-wrap gap-2" role="group">
+                        <button class="btn-main min-h-9 px-3" :disabled="busy" @click="confirmLShape">
+                            <i class="bi bi-check2" aria-hidden="true" />{{
+                                lshape?.on
+                                    ? t('settings.logo.remote.confirmMove')
+                                    : t('settings.logo.remote.confirmPlace')
+                            }}
+                        </button>
+                        <button class="btn-quiet" :disabled="busy" @click="lshapeDraft = null">
+                            {{ t('settings.logo.remote.cancelMove') }}
+                        </button>
+                    </div>
                     <button
-                        v-if="lshape?.position"
+                        v-else-if="lshape?.position"
                         class="btn-quiet self-start"
                         :disabled="busy"
                         @click="sendLShape('move', undefined, { position: 'default' })"

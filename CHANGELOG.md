@@ -23,7 +23,9 @@ one is tagged.
   corner, until moved back.
 - Settings › Logo › Live graphics: a small screen to place the logo (click,
   drag or arrow keys), and corner buttons and a size slider for the L-shape
-  video, each with a button back to its own place.
+  video, each with a button back to its own place. A new place goes on air
+  only after **Move on air**, and can be cancelled; until then a dashed box
+  shows where it is now.
 
 ### Fixed
 

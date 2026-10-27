@@ -87,7 +87,8 @@ a live whose encoder runs its own commercial break.
   in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
   place. A swapped image goes to the same place. In the card, the logo's
   small screen does the same: click or drag the logo where it goes, or move
-  it with the arrow keys.
+  it with the arrow keys, then **Move on air**. Nothing moves before that
+  confirmation; a dashed box shows where the logo is on air meanwhile.
 
   The card has a tutorial with these addresses ready to copy, and examples for
   curl, vMix, OBS (Advanced Scene Switcher) and Bitfocus Companion.
@@ -137,8 +138,10 @@ It goes on air:
   with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
   after a swap, **Channel graphic**. It stays until switched back or the
   server restarts. Its four corner buttons and size slider move the video to
-  where another graphic needs it; **Back to the graphic’s position** undoes
-  that.
+  where another graphic needs it, after **Move on air** (or **Use this
+  place** while the L-shape is off); **Back to the graphic’s position**
+  undoes that. Use it with a graphic drawn for that corner: the band stays
+  where the graphic has it.
 - **From an encoder or a script**, with the graphics key, like the logo:
 
   ```text

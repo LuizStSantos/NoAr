@@ -2065,12 +2065,15 @@ export default {
                 moveTo: 'Posição',
                 moveDefault: 'A do canal',
                 moveBack: 'Voltar à posição do canal',
+                confirmMove: 'Mover no ar',
+                confirmPlace: 'Usar esta posição',
+                cancelMove: 'Cancelar',
                 logoPad: 'Posição da logo na tela',
                 padHint:
-                    'Clique ou arraste para onde a logo vai; as setas do teclado movem aos poucos (Shift para passos menores).',
+                    'Clique ou arraste para onde a logo vai, ou use as setas (Shift para passos menores), e confirme: nada muda no ar antes disso.',
                 lshapePad: 'Canto do vídeo no L-shape',
                 lshapePadHint:
-                    'Escolha o canto do vídeo no L-shape e o tamanho, no ar ou não. Fica assim até você voltar.',
+                    'Escolha o canto e o tamanho do vídeo no L-shape e confirme. Fica assim até você voltar. Use com uma arte desenhada para esse canto.',
                 lshapeMoveBack: 'Voltar à posição da arte',
                 removeKey: 'Desligar',
                 copy: 'Copiar',

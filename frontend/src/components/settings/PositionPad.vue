@@ -19,6 +19,8 @@ const props = defineProps<{
     height: number
     label: string
     disabled?: boolean
+    /** Where the box is on air while `shares` is still to be confirmed. */
+    ghost?: Shares | null
 }>()
 
 const emit = defineEmits<{ place: [Shares] }>()
@@ -30,12 +32,16 @@ const screen = ref<HTMLElement | null>(null)
 const dragging = ref<Shares | null>(null)
 const shown = computed(() => dragging.value ?? props.shares)
 
-const box = computed(() => ({
-    left: `${((100 - props.width) * shown.value.x) / 100}%`,
-    top: `${((100 - props.height) * shown.value.y) / 100}%`,
-    width: `${props.width}%`,
-    height: `${props.height}%`,
-}))
+function placeAt(shares: Shares) {
+    return {
+        left: `${((100 - props.width) * shares.x) / 100}%`,
+        top: `${((100 - props.height) * shares.y) / 100}%`,
+        width: `${props.width}%`,
+        height: `${props.height}%`,
+    }
+}
+
+const box = computed(() => placeAt(shown.value))
 
 function snap(value: number): number {
     const clamped = Math.min(100, Math.max(0, value))
@@ -127,6 +133,13 @@ watch(
         <span class="absolute inset-y-0 left-2/3 w-px bg-line" aria-hidden="true" />
         <span class="absolute inset-x-0 top-1/3 h-px bg-line" aria-hidden="true" />
         <span class="absolute inset-x-0 top-2/3 h-px bg-line" aria-hidden="true" />
+        <!-- Where it is on air, while the new place waits for a confirmation. -->
+        <span
+            v-if="ghost"
+            class="absolute rounded-sm border-2 border-dashed border-muted/70"
+            :style="placeAt(ghost)"
+            aria-hidden="true"
+        />
         <button
             type="button"
             role="slider"

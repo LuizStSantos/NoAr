@@ -2060,11 +2060,15 @@ export default {
                 moveTo: 'Position',
                 moveDefault: 'The channel’s',
                 moveBack: 'Back to the channel’s position',
+                confirmMove: 'Move on air',
+                confirmPlace: 'Use this place',
+                cancelMove: 'Cancel',
                 logoPad: 'Logo position on the screen',
-                padHint: 'Click or drag where the logo goes; arrow keys move it in steps (Shift for small ones).',
+                padHint:
+                    'Click or drag where the logo goes, or use the arrow keys (Shift for small steps), then confirm: nothing moves on air before that.',
                 lshapePad: 'Video corner in the L-shape',
                 lshapePadHint:
-                    'Pick the corner the video goes to in the L-shape, and its size, on air or not. It stays until you put it back.',
+                    'Pick the corner and size of the video in the L-shape, then confirm. It stays until you put it back. Use it with a graphic drawn for that corner.',
                 lshapeMoveBack: 'Back to the graphic’s position',
                 removeKey: 'Turn off',
                 copy: 'Copy',
