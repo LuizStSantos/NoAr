@@ -552,7 +552,7 @@ impl LogoFadePlan {
             gap_count,
             lshape,
             lshape_count,
-            lshape_frames: (crate::LSHAPE_SECONDS * fps).round() as i64,
+            lshape_frames: (crate::LSHAPE_SWITCH_SECONDS * fps).round() as i64,
         }
     }
 
@@ -1610,19 +1610,21 @@ fn encode_composited_frame<O: FrameOutput>(
     video
         .runtime_text
         .update(timeline.video_pts, timeline.text_pts);
-    // The L-shape first: the texts go over it, and the logo gives way to it.
-    let mut lshape_level = 0.0;
+    // The L-shape first: the texts go over it, and the logo gives way to it,
+    // going off before the picture shrinks and back after it grew back.
+    let mut logo_off = 0.0;
 
-    if let Some((graphic, level)) = video
+    if let Some((graphic, progress)) = video
         .lshape_control
         .frame(logo_fade_plan.lshape_level(timeline.video_pts))
     {
-        lshape_level = level;
+        let (gone, picture) = crate::compositor::lshape::lshape_phases(progress);
+        logo_off = gone;
 
         if let Err(error) = crate::compositor::lshape::apply_lshape(
             &mut frame,
             &graphic,
-            level,
+            picture,
             &mut video.lshape_scaler,
         ) {
             debug!("L-shape not drawn: {error}");
@@ -1646,7 +1648,7 @@ fn encode_composited_frame<O: FrameOutput>(
         video,
         timeline,
         logo_fade_plan,
-        lshape_level,
+        logo_off,
         output,
     );
     frame.set_pts(Some(if timeline.source_timestamp_mode {
@@ -1681,7 +1683,7 @@ fn apply_overlays(
     video: &mut VideoDecoder,
     timeline: &mut Timeline,
     logo_fade_plan: LogoFadePlan,
-    lshape_level: f64,
+    logo_off: f64,
     output: &mut impl FrameOutput,
 ) {
     let opacity = logo_fade_plan.opacity_at(timeline.video_pts, timeline.logo_opacity);
@@ -1690,12 +1692,12 @@ fn apply_overlays(
     // Hidden or swapped from outside: the clip's own fade still applies, so
     // a commercial keeps any logo off.
     let logo = video.logo_control.frame();
-    // The logo goes off as the picture goes into the L-shape, and comes back
-    // with it.
+    // The logo is off for the L-shape: it goes before the picture shrinks
+    // and comes back after the picture grew back.
     let opacity = opacity
         * logo.visibility
         * logo_fade_plan.gap_factor(timeline.video_pts)
-        * (1.0 - lshape_level.clamp(0.0, 1.0));
+        * (1.0 - logo_off.clamp(0.0, 1.0));
     let mut incoming = 1.0;
 
     // Moved from outside: the configured logo drawn at the new place, made
@@ -3656,9 +3658,10 @@ mod tests {
         };
         let plan = LogoFadePlan::new(1000, Some(60.0), Some(100.0), &cfg, fade);
 
-        // 10 s into the clip (250 frames) it starts going in, over 0.8 s (20 frames).
+        // 10 s into the clip (250 frames) it starts going in, over 1.2 s (30
+        // frames): the logo off, then the picture in.
         assert_eq!(plan.lshape_level(1000 + 249), 0.0);
-        assert!((plan.lshape_level(1000 + 260) - 0.5).abs() < 0.01);
+        assert!((plan.lshape_level(1000 + 265) - 0.5).abs() < 0.01);
         assert_eq!(plan.lshape_level(1000 + 375), 1.0);
         assert_eq!(plan.lshape_level(1000 + 501), 0.0);
         // A clip without stretches never goes into it.

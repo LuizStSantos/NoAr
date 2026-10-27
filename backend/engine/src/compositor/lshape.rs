@@ -17,6 +17,27 @@ use crate::utils::helper::{even, open_media_input};
 /// How long the picture takes to shrink or grow back.
 pub const LSHAPE_SECONDS: f64 = 0.8;
 
+/// How long the logo takes to go off before the picture shrinks, and to come
+/// back after it grew back.
+pub const LSHAPE_LOGO_SECONDS: f64 = 0.4;
+
+/// A whole switch: the logo off, then the picture in (or the other way).
+pub const LSHAPE_SWITCH_SECONDS: f64 = LSHAPE_LOGO_SECONDS + LSHAPE_SECONDS;
+
+/// How far a switch `progress` (0 to 1) is, as the logo's share gone (0 to 1)
+/// and the picture's way into the L-shape (0 to 1): the logo goes off first,
+/// then the picture shrinks; coming out, the picture grows back first, then
+/// the logo returns.
+pub fn lshape_phases(progress: f64) -> (f64, f64) {
+    let progress = progress.clamp(0.0, 1.0);
+    let logo_share = LSHAPE_LOGO_SECONDS / LSHAPE_SWITCH_SECONDS;
+
+    (
+        (progress / logo_share).min(1.0),
+        ((progress - logo_share) / (1.0 - logo_share)).max(0.0),
+    )
+}
+
 /// The smallest and largest the picture gets, in percent of the screen.
 pub const LSHAPE_MIN_SCALE: f64 = 30.0;
 pub const LSHAPE_MAX_SCALE: f64 = 95.0;
@@ -192,7 +213,8 @@ impl LShapeState {
 
         match self.switched_at {
             Some(at) => {
-                let progress = now.saturating_duration_since(at).as_secs_f64() / LSHAPE_SECONDS;
+                let progress =
+                    now.saturating_duration_since(at).as_secs_f64() / LSHAPE_SWITCH_SECONDS;
 
                 self.from + (target - self.from) * progress.min(1.0)
             }
@@ -578,7 +600,8 @@ mod tests {
         assert!(control.is_on());
         assert!(control.level_after(Duration::ZERO) < 0.01);
         assert!(
-            (control.level_after(Duration::from_secs_f64(LSHAPE_SECONDS / 2.0)) - 0.5).abs() < 0.01
+            (control.level_after(Duration::from_secs_f64(LSHAPE_SWITCH_SECONDS / 2.0)) - 0.5).abs()
+                < 0.01
         );
         assert_eq!(control.level_after(Duration::from_secs(2)), 1.0);
 
@@ -636,6 +659,19 @@ mod tests {
                 )
                 .is_err()
         );
+    }
+
+    #[test]
+    fn the_logo_goes_off_before_the_picture_shrinks() {
+        assert_eq!(lshape_phases(0.0), (0.0, 0.0));
+        // A third of the way: the logo is gone, the picture not moved yet.
+        let (logo, picture) = lshape_phases(LSHAPE_LOGO_SECONDS / LSHAPE_SWITCH_SECONDS);
+        assert!((logo - 1.0).abs() < 1e-9 && picture.abs() < 1e-9);
+        let (logo, picture) = lshape_phases(0.2);
+        assert!(logo > 0.5 && logo < 1.0 && picture == 0.0);
+        let (logo, picture) = lshape_phases(0.75);
+        assert!((logo - 1.0).abs() < 1e-9 && picture > 0.5 && picture < 1.0);
+        assert_eq!(lshape_phases(1.0), (1.0, 1.0));
     }
 
     #[test]

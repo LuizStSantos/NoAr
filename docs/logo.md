@@ -45,7 +45,11 @@ without restarting the playout.
   it, open **Logo and breaks in this video** for that video (a row action in Storage, or the
   same button in the Player's clip editor). Then mark, while it plays, where the
   logo goes off and where it comes back, or type the times, and drag the
-  handles of each stretch on the bar to adjust it. See
+  handles of each stretch on the bar to adjust it. **Watch stretch**, **Watch
+  it go in** and **Watch it come out** play the picked stretch (or the first)
+  with 3 seconds before and after, as it airs, and stop by themselves; the
+  play button of each row of the list does the same. The same buttons are on
+  the SCTE-35 breaks and L-shape tabs. See
   [commercials](commercials.md#a-break-inside-a-video).
 
 ## Hiding, swapping or moving the logo on air
@@ -55,11 +59,14 @@ from the storage, or moved to another place, until the next command or a
 server restart. A typical case is
 a live whose encoder runs its own commercial break.
 
-- From NoAr: the **Live logo: hide or swap** card in Settings › Logo and
-  subtitles shows what the logo is doing, with **Hide**, **Back to the channel
-  logo**, **Swap for…** and **Position** (a corner, or back to the channel's).
-- From an encoder or a script: create the channel's **logo key** in the same
-  card. It works at once and stays the same until you make a new one there.
+- From NoAr: the **Live graphics: logo and L-shape** card in Settings › Logo
+  and subtitles shows what the logo and the L-shape are doing. Its Logo row
+  has **Hide**, **Back to the channel logo**, **Swap for…** and **Position**
+  (a corner, or back to the channel's); its L-shape row is described
+  [below](#l-shape).
+- From an encoder or a script: create the channel's **graphics key** (logo
+  and L-shape) in the same card. It works at once and stays the same until
+  you make a new one there.
   Calling these addresses (GET or POST) then changes the logo,
   with the channel's logo animation:
 
@@ -88,9 +95,11 @@ commercial still keeps any logo off. The API is described in
 
 In an L-shape the programme picture shrinks into a corner of the screen and a
 full-screen graphic fills the band around it, with news, a sponsor or what is
-on next. It goes in and comes back out in 0.8 s, easing in and out, over the
-picture of clips, lives and ingest alike. The logo goes off as the picture
-goes in, and comes back as it returns to full screen; texts stay on top.
+on next, over the picture of clips, lives and ingest alike; texts stay on
+top. Going in, the logo goes off first (0.4 s) and then the picture shrinks
+(0.8 s, easing in and out); coming out, the picture grows back first and then
+the logo returns. A stretch marked in a video starts this at its first mark
+and ends it at its second.
 
 Set it up in **Settings › Logo › L-shape**:
 
@@ -118,9 +127,11 @@ It goes on air:
   stretches of that part. **This video's L-shape graphic** on that tab gives
   the video a graphic of its own (a sponsor of that programme), used for its
   stretches with the channel's size and corner; empty uses the channel's.
-- **From here**: **Go to L-shape** and **Back to full screen** in the same
-  card. It stays until switched back or the server restarts.
-- **From an encoder or a script**, with the logo key, like the logo:
+- **From NoAr**: the L-shape row of the **Live graphics** card, just below,
+  with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
+  after a swap, **Channel graphic**. It stays until switched back or the
+  server restarts.
+- **From an encoder or a script**, with the graphics key, like the logo:
 
   ```text
   http://<server>:8787/lshape/<channel>/on?key=<KEY>

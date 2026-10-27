@@ -231,7 +231,7 @@ curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
 The picture shrinks into a corner over the channel's L-shape graphic
 ([docs](logo.md#l-shape)). Switched on here, it stays until switched off or
 the server restarts; stretches marked in a video go into it by themselves.
-The keyed route takes the channel's logo key.
+The keyed route takes the channel’s graphics key (the logo key).
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |

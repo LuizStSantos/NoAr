@@ -11,6 +11,26 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-10-27
+
+### Added
+
+- Marks editor: **Watch stretch**, **Watch it go in** and **Watch it come
+  out** on the logo, SCTE-35 breaks and L-shape tabs, like the trim's, and a
+  play button on each stretch of the list. They play with 3 seconds around
+  and stop by themselves.
+
+### Changed
+
+- The L-shape now takes the logo off before the picture shrinks (0.4 s, then
+  0.8 s), and brings it back only after the picture grew back, on air and in
+  the marks editor's preview, which also hid nothing of the logo before.
+- Settings › Logo: the live card is now **Live graphics: logo and L-shape**,
+  right below the L-shape settings. It has a row for the logo (hide, swap,
+  position) and one for the L-shape (in, out, swap the graphic, back to the
+  channel's), one **graphics key** for both, and a tutorial in two parts with
+  every address for each. The L-shape card keeps only its settings.
+
 ## [1.5.0] - 2026-10-27
 
 ### Added
@@ -476,7 +496,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/LuizStSantos/NoAr/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/LuizStSantos/NoAr/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/LuizStSantos/NoAr/compare/v1.4.2...v1.4.4

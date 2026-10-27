@@ -1,39 +1,33 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import SectionCard from '@/components/settings/SectionCard.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
-import { authFetch } from '@/composables/authFetch'
 import { storageImageUrl } from '@/composables/logo'
 import { lshapeTemplate, lshapeTemplateName } from '@/composables/lshapeTemplate'
-import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
 /**
  * The L-shape: a full-screen graphic the picture shrinks into, its size and
- * corner, and switching it on air now. Stretches of a video go into it from
- * its marks in Storage; encoders switch it with the logo key.
+ * corner. It goes on air from the live graphics card below, from encoders
+ * with the graphics key, and for stretches marked in a video.
  */
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
 const CORNERS: Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
 
 const { t } = useI18n()
-const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 
 const picking = ref(false)
 const imageUrl = ref('')
 const imageFailed = ref(false)
-const status = ref<{ on: boolean; ready: boolean; replacement: string | null } | null>(null)
-const busy = ref(false)
 
 const processing = computed(() => configStore.playout.processing)
-const channelId = computed(() => configStore.channels[configStore.i]?.id)
 const frame = computed(() => ({
     width: Math.max(1, configStore.playout.output?.width || 1920),
     height: Math.max(1, configStore.playout.output?.height || 1080),
@@ -56,9 +50,6 @@ const windowStyle = computed(() => {
     return style
 })
 
-/** Saved settings: what the playout uses until the next save. */
-const saved = computed(() => configStore.playoutSaved.processing?.lshape ?? '')
-
 async function loadImage() {
     imageFailed.value = false
     imageUrl.value = ''
@@ -67,34 +58,6 @@ async function loadImage() {
         imageUrl.value = await storageImageUrl(configStore.channels[configStore.i], processing.value?.lshape)
     } catch {
         imageFailed.value = true
-    }
-}
-
-async function loadStatus() {
-    if (!channelId.value) {
-        return
-    }
-
-    try {
-        status.value = await authFetch(`/api/control/${channelId.value}/lshape`, { headers: authStore.authHeader })
-    } catch {
-        status.value = null
-    }
-}
-
-async function send(action: 'on' | 'off') {
-    busy.value = true
-
-    try {
-        status.value = await authFetch(`/api/control/${channelId.value}/lshape`, {
-            method: 'POST',
-            headers: { ...configStore.contentType, ...authStore.authHeader },
-            body: JSON.stringify({ action }),
-        })
-    } catch (error: any) {
-        indexStore.msgAlert('error', error?.data ?? t('lshape.failed'), 4)
-    } finally {
-        busy.value = false
     }
 }
 
@@ -130,9 +93,6 @@ function pick(file: { path: string }) {
 
 watch(() => processing.value?.lshape, loadImage, { immediate: true })
 // A save loads the graphic on air.
-watch(saved, loadStatus)
-watch(channelId, loadStatus)
-onMounted(loadStatus)
 </script>
 <template>
     <SectionCard :title="t('lshape.title')" :description="t('lshape.intro')">
@@ -220,32 +180,9 @@ onMounted(loadStatus)
                     </label>
                 </div>
 
-                <div class="flex flex-col gap-1.5">
-                    <span class="text-xs text-muted">{{ t('lshape.onAir') }}</span>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span
-                            class="inline-flex items-center gap-1.5 text-[13px]"
-                            :class="status?.on ? 'text-accent-text' : 'text-muted'"
-                            role="status"
-                        >
-                            <span
-                                class="size-2 rounded-full"
-                                :class="status?.on ? 'bg-accent' : 'bg-subtle'"
-                                aria-hidden="true"
-                            />{{ status?.on ? t('lshape.stateOn') : t('lshape.stateOff') }}
-                        </span>
-                        <button class="btn-quiet" :disabled="busy || !status?.ready || status?.on" @click="send('on')">
-                            <i class="bi bi-aspect-ratio" aria-hidden="true" />{{ t('lshape.on') }}
-                        </button>
-                        <button class="btn-quiet" :disabled="busy || !status?.on" @click="send('off')">
-                            <i class="bi bi-fullscreen" aria-hidden="true" />{{ t('lshape.off') }}
-                        </button>
-                    </div>
-                    <span v-if="status?.replacement" class="field-hint text-info!">
-                        {{ t('lshape.replaced', { graphic: status.replacement }) }}
-                    </span>
-                    <span class="field-hint">{{ status?.ready ? t('lshape.onAirHint') : t('lshape.notReady') }}</span>
-                </div>
+                <p class="m-0 field-hint">
+                    <i class="bi bi-arrow-down-short" aria-hidden="true" />{{ t('lshape.liveBelow') }}
+                </p>
             </div>
         </div>
 
