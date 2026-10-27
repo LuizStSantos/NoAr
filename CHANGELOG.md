@@ -11,6 +11,24 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-10-27
+
+### Changed
+
+- On phones and tablets (below 1280 px) the main menu sits behind a menu
+  button and opens as a panel: one column on a phone, a grid on a tablet. It
+  closes when a page opens or on Escape. Between 1280 and 1439 px the menu
+  hides its icons so it stays on one line.
+
+### Fixed
+
+- Long names with no spaces (files, folders, lives, scheduled events) wrap
+  inside their card or dialog instead of running past the edge of a phone;
+  table cells and buttons keep whole words.
+- The on-air badges no longer blink: a channel on air shows as stopped only
+  after the status says so for 1.5 s, and nothing is shown until the first
+  status arrives instead of "stopped" for a moment.
+
 ## [1.8.0] - 2026-10-27
 
 ### Added
@@ -588,7 +606,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/LuizStSantos/NoAr/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/LuizStSantos/NoAr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/LuizStSantos/NoAr/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/LuizStSantos/NoAr/compare/v1.5.1...v1.6.0
