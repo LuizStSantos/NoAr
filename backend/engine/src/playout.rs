@@ -12,7 +12,7 @@ use ffmpeg_next::{
     software::{resampling, scaling},
     util::{channel_layout::ChannelLayout, format::pixel::Pixel, format::sample::Sample},
 };
-use log::{debug, trace, warn};
+use log::{debug, info, trace, warn};
 
 use crate::{
     LogoFade, MAX_LOGO_GAPS, PlaybackControl,
@@ -1509,6 +1509,7 @@ fn receive_video_frames<O: FrameOutput>(
             continue;
         }
 
+        video.follow_input_format(&raw, cfg)?;
         let mut scaled = frame::Video::empty();
         benchmark::measure(Stage::Scale, || video.scaler.run(&raw, &mut scaled))?;
         let pristine = if video.needs_padding() {
@@ -2218,7 +2219,8 @@ impl VideoDecoder {
                 input_time_base,
                 cfg.fps,
                 timestamps_reliable,
-            ),
+            )
+            .continuing_over_jumps(is_network_url(label)),
             live_timestamps: LiveTimestampTracker::default(),
             source_frame_duration_us: 1_i64
                 .rescale(
@@ -2238,6 +2240,36 @@ impl VideoDecoder {
             || self.scaled_height != self.output_height
             || self.x_offset != 0
             || self.y_offset != 0
+    }
+
+    /// A source may change size or pixel format midway, as a live encoder
+    /// restarting does; the scaler follows it instead of failing the clip.
+    fn follow_input_format(&mut self, raw: &frame::Video, cfg: &OutputConfig) -> Result<()> {
+        let input = *self.scaler.input();
+        if (input.format, input.width, input.height) == (raw.format(), raw.width(), raw.height()) {
+            return Ok(());
+        }
+
+        let scale = VideoScale::new(raw.width(), raw.height(), cfg);
+        self.scaler = scaling::Context::get(
+            raw.format(),
+            raw.width(),
+            raw.height(),
+            Pixel::YUV420P,
+            scale.scaled_width,
+            scale.scaled_height,
+            scaling::flag::Flags::BILINEAR,
+        )?;
+        self.scaled_width = scale.scaled_width;
+        self.scaled_height = scale.scaled_height;
+        self.x_offset = scale.x_offset;
+        self.y_offset = scale.y_offset;
+        info!(channel = cfg.channel_id.unwrap_or_default();
+            "The picture changed from {}x{} {:?} to {}x{} {:?}; scaling follows it",
+            input.width, input.height, input.format, raw.width(), raw.height(), raw.format()
+        );
+
+        Ok(())
     }
 
     fn normalize_live_timestamp(
@@ -2328,7 +2360,20 @@ pub(crate) struct FrameRateConverter {
     first_timestamp: Option<i64>,
     next_output_frame: i64,
     next_synthetic_timestamp: i64,
+    /// A stream from the network: a timestamp that jumps (a corrupt one after
+    /// packet loss, or the source's encoder starting over) is a break, not a
+    /// gap to fill or time to wait for.
+    continue_over_jumps: bool,
 }
+
+/// How far a network stream's timestamps may jump, in seconds, before the
+/// jump is taken as a break in the stream and the picture goes on from the
+/// next frame. Filling a forward jump would repeat one frame in real time for
+/// as long as the jump (a corrupt timestamp can be hours ahead) without
+/// reading the source, whose receive buffer then overflows; a jump back would
+/// show nothing until the time caught up again. Both froze lives until the
+/// playout restarted.
+const STREAM_JUMP_SECONDS: i64 = 1;
 
 impl FrameRateConverter {
     pub(crate) fn new(
@@ -2343,7 +2388,14 @@ impl FrameRateConverter {
             first_timestamp: None,
             next_output_frame: 0,
             next_synthetic_timestamp: 0,
+            continue_over_jumps: false,
         }
+    }
+
+    /// For a network stream: go on from the next frame over a timestamp jump.
+    pub(crate) fn continuing_over_jumps(mut self, on: bool) -> Self {
+        self.continue_over_jumps = on;
+        self
     }
 
     pub(crate) fn output_frames(&mut self, timestamp: Option<i64>) -> i64 {
@@ -2362,9 +2414,29 @@ impl FrameRateConverter {
 
         let first_timestamp = *self.first_timestamp.get_or_insert(timestamp);
         let relative_timestamp = timestamp.saturating_sub(first_timestamp).max(0);
-        let target_frame = relative_timestamp
+        let mut target_frame = relative_timestamp
             .rescale(self.input_time_base, self.output_time_base)
             .max(0);
+        let max_jump = STREAM_JUMP_SECONDS * i64::from(self.output_time_base.1.max(1));
+
+        if self.continue_over_jumps
+            && self.next_output_frame > 0
+            && (target_frame > self.next_output_frame + max_jump
+                || target_frame + max_jump < self.next_output_frame)
+        {
+            let jump = (target_frame - self.next_output_frame) as f64
+                / f64::from(self.output_time_base.1.max(1));
+            warn!(
+                "Video timestamps jumped {jump:+.1} s in a stream; the picture goes on from the next frame"
+            );
+            // This frame becomes the next one, and the ones after follow it.
+            let elapsed = self
+                .next_output_frame
+                .rescale(self.output_time_base, self.input_time_base);
+            self.first_timestamp = Some(timestamp.saturating_sub(elapsed));
+            target_frame = self.next_output_frame;
+        }
+
         let output_frames = (target_frame + 1 - self.next_output_frame).max(0);
         self.next_output_frame += output_frames;
         output_frames
@@ -4282,6 +4354,43 @@ mod tests {
             .sum::<i64>();
 
         assert_eq!(output_frames, 250);
+    }
+
+    #[test]
+    fn a_stream_goes_on_over_timestamp_jumps() {
+        // 25 fps in, 25 fps out; one second is 25 frames.
+        let stream =
+            || FrameRateConverter::new(Rational(1, 25), 25, true).continuing_over_jumps(true);
+
+        // Four minutes ahead after packet loss: one frame, not 6,000 copies.
+        let mut converter = stream();
+        let before: i64 = (0..100).map(|ts| converter.output_frames(Some(ts))).sum();
+        assert_eq!(before, 100);
+        assert_eq!(converter.output_frames(Some(100 + 6_000)), 1);
+        // The frames after it follow on one by one.
+        assert_eq!(converter.output_frames(Some(100 + 6_001)), 1);
+        assert_eq!(converter.output_frames(Some(100 + 6_002)), 1);
+
+        // The source started over at 0 after ten minutes: frames keep coming.
+        let mut converter = stream();
+        let _: i64 = (0..15_000)
+            .map(|ts| converter.output_frames(Some(ts)))
+            .sum();
+        assert_eq!(converter.output_frames(Some(0)), 1);
+        assert_eq!(converter.output_frames(Some(1)), 1);
+
+        // A short gap (half a second lost) is still filled, to keep the pace.
+        let mut converter = stream();
+        let _: i64 = (0..50).map(|ts| converter.output_frames(Some(ts))).sum();
+        assert_eq!(converter.output_frames(Some(62)), 13);
+    }
+
+    #[test]
+    fn a_file_still_fills_a_long_frame() {
+        // A file may hold one picture for seconds (variable frame rate).
+        let mut converter = FrameRateConverter::new(Rational(1, 25), 25, true);
+        let _: i64 = (0..50).map(|ts| converter.output_frames(Some(ts))).sum();
+        assert_eq!(converter.output_frames(Some(50 + 125)), 126);
     }
 
     #[test]

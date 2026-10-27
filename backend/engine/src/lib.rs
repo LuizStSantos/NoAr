@@ -41,7 +41,7 @@ pub use compositor::logo::{
 };
 pub use compositor::lshape::{
     LSHAPE_LOGO_SECONDS, LSHAPE_MAX_SCALE, LSHAPE_MIN_SCALE, LSHAPE_SECONDS, LSHAPE_SWITCH_SECONDS,
-    LShapeConfig, LShapeControl, LShapeCorner, lshape_phases,
+    LShapeConfig, LShapeControl, LShapeCorner, LShapePlacement, lshape_phases,
 };
 pub use convert::{ConvertTarget, MediaShape, convert_to_output, probe_shape, video_matches};
 use input::live::{LiveEnded, LiveOverrideOutput};

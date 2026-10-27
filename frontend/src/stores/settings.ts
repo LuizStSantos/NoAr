@@ -30,6 +30,8 @@ export interface SettingsSection {
     keys: string[]
     /** Saving these parts restarts the playout. */
     restarts?: boolean
+    /** Edited in another tab (Grafismo), so not listed in Configurações. */
+    elsewhere?: string
 }
 
 const ALL = ['global_admin', 'channel_admin', 'user']
@@ -53,6 +55,7 @@ const PROCESSING_LOGO = [
     'lshape',
     'lshape_scale',
     'lshape_corner',
+    'graphics_scenes',
 ].map((key) => `processing.${key}`)
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
@@ -66,7 +69,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         keys: ['playlist', 'storage', 'processing.mode'],
         restarts: true,
     },
-    { name: 'logo', group: 'channel', roles: ADMINS, keys: PROCESSING_LOGO },
+    { name: 'logo', group: 'channel', roles: ADMINS, keys: PROCESSING_LOGO, elsewhere: '/graphics' },
     { name: 'audio', group: 'channel', roles: ADMINS, keys: ['audio'] },
     { name: 'recording', group: 'channel', roles: ADMINS, keys: ['recording'] },
     { name: 'breaks', group: 'channel', roles: ADMINS, keys: ['scte35'], restarts: true },

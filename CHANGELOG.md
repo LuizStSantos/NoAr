@@ -11,6 +11,55 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-27
+
+### Added
+
+- **Graphics tab** in the main menu. The logo, the L-shape, the subtitles and
+  the remote control left Settings for their own pages: **Live now**,
+  **Logo**, **L-shape**, **Subtitles**, **Quick scenes** and **External
+  control (API)**. Settings › Logo and subtitles links there.
+- **Quick scenes**: named sets of logo and L-shape changes (hide, swap or
+  move the logo; L-shape in or out with a graphic, corner and size), up to 24
+  per channel, applied with one click in Graphics › Live now and in the
+  Player, or by an encoder at `/scene/{channel}/{name}?key=…` (and
+  `POST /api/control/{id}/scene`). Kept in the channel configuration (new
+  migration `00021_graphics_scenes`).
+- **Graphics bar in the Player**, under the preview: the logo on and off and
+  where it is, the L-shape in and out and its corner (each move confirmed
+  first), the quick scenes, and a link to the Graphics tab.
+
+- **Place the logo anywhere.** The logo's `move` takes `x` and `y` from 0
+  to 100 (shares of the room around it, on any output size) or `X%:Y%`,
+  besides the corners, which now include `top`, `bottom`, `left`, `right`
+  and `center`.
+- **Move the L-shape video to another corner on air.** The L-shape has a
+  `move` action (and `on` takes a `position`) with a corner and `scale` for
+  the video's size, for a graphic whose space for the video is in another
+  corner, until moved back.
+- Settings › Logo › Live graphics: a small screen to place the logo (click,
+  drag or arrow keys), and corner buttons and a size slider for the L-shape
+  video, each with a button back to its own place. A new place goes on air
+  only after **Move on air**, and can be cancelled; until then a dashed box
+  shows where it is now.
+
+### Fixed
+
+- A scheduled live from SRT, RTMP, HLS or UDP no longer freezes the channel
+  when the source's timestamps jump, as when its encoder restarts: the
+  picture goes on from the next frame instead of repeating one frame for the
+  length of the jump (while the source piled up unread) or waiting for the
+  time to catch up. Pacing no longer waits more than 2 s for one packet.
+- When a source changes its picture size or pixel format midway (an encoder
+  restarting with other settings), the scaling follows it instead of failing
+  the clip and showing black for the rest of the slot.
+
+### Removed
+
+- The German and Russian interface languages, which were mostly
+  untranslated. Whoever had chosen one gets the browser's language if NoAr
+  has it, else English.
+
 ## [1.5.1] - 2026-10-27
 
 ### Added
@@ -496,7 +545,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/LuizStSantos/NoAr/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/LuizStSantos/NoAr/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/LuizStSantos/NoAr/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/LuizStSantos/NoAr/compare/v1.4.4...v1.4.5

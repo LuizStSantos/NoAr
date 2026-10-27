@@ -169,7 +169,7 @@ the wide image. All of them are also written as
 is used as it is.
 
 The channel icon in the guide is the *Logo in the guide (XMLTV)* image from
-Settings › Logo when one is set, otherwise the logo on the video. A guide logo
+Graphics › Logo when one is set, otherwise the logo on the video. A guide logo
 that goes missing falls back to the video logo.
 
 ## How the guide is built

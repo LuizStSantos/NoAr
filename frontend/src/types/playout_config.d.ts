@@ -4,6 +4,31 @@ export type Audio = { volume: number, loudness_scope: "all" | "live" | "off", co
 
 export type General = { stop_threshold: number, };
 
+/**
+ * A named set of logo and L-shape changes, applied in one go.
+ */
+export type GraphicsScene = { name: string, logo: SceneLogo, 
+/**
+ * Storage path of the image, for `replace`.
+ */
+logo_image: string | null, 
+/**
+ * Where the logo goes (`X%:Y%`, a place or `default`); none leaves it.
+ */
+logo_position: string | null, lshape: SceneLShape, 
+/**
+ * Storage path of the L-shape graphic to use; none leaves the current.
+ */
+lshape_graphic: string | null, 
+/**
+ * The corner the picture goes to (or `default`); none leaves it.
+ */
+lshape_corner: string | null, 
+/**
+ * Size of the picture, in percent of the screen; none keeps it.
+ */
+lshape_scale: number | null, };
+
 export type Ingest = { listeners: Array<LiveInput>, };
 
 export type LiveInput = { id: number, priority: number, enabled: boolean, name: string, backend: string, identifier: string, options: { [key in string]: string }, demuxer_options: { [key in string]: string }, };
@@ -98,11 +123,26 @@ lshape_scale: number,
  * Corner the picture goes to: `top-right`, `top-left`, `bottom-right`
  * or `bottom-left`.
  */
-lshape_corner: string, };
+lshape_corner: string, 
+/**
+ * Quick scenes: named sets of logo and L-shape changes applied in one
+ * go, from NoAr or an encoder.
+ */
+graphics_scenes: Array<GraphicsScene>, };
 
 export type Recording = { enable: boolean, source: RecordingSource, source_output_id: number | null, variant: string, path: string, segment_duration: number, retention_days: number, minimum_free_space_gb: number, width: number, height: number, video_codec: string, video_options: { [key in string]: string }, audio_codec: string, audio_options: { [key in string]: string }, audio_bitrate: number, };
 
 export type RecordingSource = "hls_variant" | "stream" | "encode";
+
+/**
+ * What a scene does to the L-shape.
+ */
+export type SceneLShape = "keep" | "on" | "off";
+
+/**
+ * What a scene does to the logo.
+ */
+export type SceneLogo = "keep" | "hide" | "show" | "replace";
 
 /**
  * SCTE-35 ad break signalling. NoAr marks every break the same way and

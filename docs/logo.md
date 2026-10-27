@@ -2,8 +2,20 @@
 ================
 
 NoAr puts the channel logo over the picture of everything it plays: clips,
-scheduled lives and live ingest. The logo is set in **Settings › Logo and
-subtitles**.
+scheduled lives and live ingest. Everything about it is in the **Graphics**
+tab of the main menu (Settings › Logo and subtitles before 1.6.0), whose pages
+are:
+
+- **Live now**: the logo, the L-shape and the quick scenes on air (every user);
+- **Logo**: the image, its place, how it comes and goes, and the guide logo;
+- **L-shape**: the graphic and where the video goes in it;
+- **Subtitles**: the WebVTT subtitles of the HLS output;
+- **Quick scenes**: sets of changes applied in one go ([below](#quick-scenes));
+- **External control (API)**: the graphics key and a tutorial for encoders.
+
+The Player has the same at hand under its preview: the logo on and off and
+where it is, the L-shape in and out and its corner, the quick scenes, and a
+link to the tab. A move there also waits for **Move on air**.
 
 ## Placing the logo
 
@@ -59,13 +71,13 @@ from the storage, or moved to another place, until the next command or a
 server restart. A typical case is
 a live whose encoder runs its own commercial break.
 
-- From NoAr: the **Live graphics: logo and L-shape** card in Settings › Logo
-  and subtitles shows what the logo and the L-shape are doing. Its Logo row
+- From NoAr: **Graphics › Live now** (or the Player's graphics bar) shows
+  what the logo and the L-shape are doing. Its Logo row
   has **Hide**, **Back to the channel logo**, **Swap for…** and **Position**
   (a corner, or back to the channel's); its L-shape row is described
   [below](#l-shape).
-- From an encoder or a script: create the channel's **graphics key** (logo
-  and L-shape) in the same card. It works at once and stays the same until
+- From an encoder or a script: create the channel's **graphics key** (logo,
+  L-shape and scenes) in **Graphics › External control (API)**. It works at once and stays the same until
   you make a new one there.
   Calling these addresses (GET or POST) then changes the logo,
   with the channel's logo animation:
@@ -74,14 +86,21 @@ a live whose encoder runs its own commercial break.
   http://<server>:8787/logo/<channel>/hide?key=<KEY>
   http://<server>:8787/logo/<channel>/show?key=<KEY>
   http://<server>:8787/logo/<channel>/replace?key=<KEY>&logo=00-assets/other-logo.png
+  http://<server>:8787/logo/<channel>/move?key=<KEY>&x=90&y=5
   http://<server>:8787/logo/<channel>/move?key=<KEY>&position=bottom-left
   http://<server>:8787/logo/<channel>/move?key=<KEY>&position=default
   ```
 
-  `position` is a corner (`top-left`, `top-right`, `bottom-left`,
-  `bottom-right`, 12 pixels from the edges), an `X:Y` expression like the
-  one in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
-  place. A swapped image goes to the same place.
+  `x` and `y` go from 0 to 100: shares of the room around the logo, so
+  `x=0` is the left edge, `x=100` the right one and `50` the middle, on any
+  output size. `position` is also a place 12 pixels from the edges
+  (`top-left`, `top`, `top-right`, `left`, `center`, `right`,
+  `bottom-left`, `bottom`, `bottom-right`), an `X:Y` expression like the one
+  in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
+  place. A swapped image goes to the same place. In the card, the logo's
+  small screen does the same: click or drag the logo where it goes, or move
+  it with the arrow keys, then **Move on air**. Nothing moves before that
+  confirmation; a dashed box shows where the logo is on air meanwhile.
 
   The card has a tutorial with these addresses ready to copy, and examples for
   curl, vMix, OBS (Advanced Scene Switcher) and Bitfocus Companion.
@@ -101,7 +120,7 @@ top. Going in, the logo goes off first (0.4 s) and then the picture shrinks
 the logo returns. A stretch marked in a video starts this at its first mark
 and ends it at its second.
 
-Set it up in **Settings › Logo › L-shape**:
+Set it up in **Graphics › L-shape**:
 
 - **L-shape graphic**: an image in the storage, made for the whole screen
   (1920×1080 for a 1080p output; another size is stretched to the output).
@@ -127,10 +146,15 @@ It goes on air:
   stretches of that part. **This video's L-shape graphic** on that tab gives
   the video a graphic of its own (a sponsor of that programme), used for its
   stretches with the channel's size and corner; empty uses the channel's.
-- **From NoAr**: the L-shape row of the **Live graphics** card, just below,
+- **From NoAr**: the L-shape row of **Graphics › Live now** (or the Player's
+  graphics bar),
   with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
   after a swap, **Channel graphic**. It stays until switched back or the
-  server restarts.
+  server restarts. Its four corner buttons and size slider move the video to
+  where another graphic needs it, after **Move on air** (or **Use this
+  place** while the L-shape is off); **Back to the graphic’s position**
+  undoes that. Use it with a graphic drawn for that corner: the band stays
+  where the graphic has it.
 - **From an encoder or a script**, with the graphics key, like the logo:
 
   ```text
@@ -145,7 +169,40 @@ It goes on air:
   `on` with `graphic` swaps and goes in at once; `reset` goes back to the
   channel's graphic. A swap lasts until `reset` or a server restart.
 
+  For a graphic whose space for the video is in another corner, move it:
+
+  ```text
+  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=bottom-left&scale=70
+  http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/news.png&position=top-left
+  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=default
+  ```
+
+  `position` is `top-left`, `top-right`, `bottom-left` or `bottom-right`;
+  `scale` is the video's size in percent of the screen (30 to 95), the
+  graphic's when left out. It lasts until moved again,
+  `position=default` or a server restart.
+
   The API is described in [api.md](api.md#l-shape).
+
+## Quick scenes
+
+A scene is a named set of changes for a moment that repeats, like a
+commercial break: hide the logo, swap it or move it, and put the L-shape in or
+out with a given graphic, corner and size. Make them in **Graphics › Quick
+scenes** (up to 24 per channel) and save. Each scene changes only what it
+says; anything set to **Leave as it is** stays as it is on air.
+
+A scene is applied with one click in **Graphics › Live now** and in the
+Player's graphics bar, or from an encoder with the graphics key, its name in
+the address in lower case with dashes:
+
+```text
+http://<server>:8787/scene/<channel>/intervalo-comercial?key=<KEY>
+```
+
+**Graphics › External control (API)** lists each saved scene's address ready
+to copy. A scene applies the L-shape graphic and place first, then the logo,
+then the L-shape in or out, so the picture shrinks straight to its corner.
 
 ## Logo in the guide
 

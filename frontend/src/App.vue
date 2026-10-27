@@ -38,7 +38,7 @@ function startLanguage(): string {
         // Storage can be unavailable (private mode); use the browser's.
     }
 
-    if (saved) {
+    if (saved && locales.some((item) => item.code === saved)) {
         return saved
     }
 

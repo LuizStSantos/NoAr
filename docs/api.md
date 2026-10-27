@@ -203,19 +203,30 @@ off.
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
-| `GET` | `/api/control/{id}/logo` | `GA, CA, U` | Read the state: `{ "hidden": false, "replacement": null }`. |
-| `POST` | `/api/control/{id}/logo` | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace" \| "move", "logo": "<storage path>", "position": "bottom-left" }`; `logo` only for `replace`, `position` only for `move`. |
-| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace\|move}` | Logo key | Query `key` (or header `X-Logo-Key`), `logo` for `replace`, `position` for `move`. |
+| `GET` | `/api/control/{id}/logo` | `GA, CA, U` | Read the state: `{ "hidden": false, "replacement": null, "position": null }`. |
+| `POST` | `/api/control/{id}/logo` | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace" \| "move", "logo": "<storage path>", "position": "bottom-left" }`, or `"x": 90, "y": 5` instead of `position`; `logo` only for `replace`, `position` (or `x`/`y`) only for `move`. |
+| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace\|move}` | Logo key | Query `key` (or header `X-Logo-Key`), `logo` for `replace`, `position` or `x` and `y` for `move`. |
 
 `show` brings back the configured logo and drops a replacement. A replacement
 takes the size, position and opacity of the configured logo. `move` puts the
-logo at `position`: `top-left`, `top-right`, `bottom-left` or `bottom-right`
-(12 px from the edges), an `X:Y` expression such as `W-w-40:H-h-40`, or
-`default` for the channel's place; the state then has `"position"`.
+logo anywhere:
+
+- `x` and `y`, from 0 to 100: shares of the room around the logo, so 0 is
+  the left (or top) edge, 100 the right (or bottom) one and 50 the middle.
+  It fits any output size and any logo. `position` takes the same as
+  `X%:Y%`, such as `90%:5%`;
+- `position` as a place, 12 px from the edges: `top-left`, `top`,
+  `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`,
+  `bottom-right`;
+- `position` as an `X:Y` expression in pixels, such as `W-w-40:H-h-40`;
+- `position` `default`, back to the channel's place.
+
+The state then has `"position"`, which a swapped logo uses too.
 
 The `/logo/...` route is for encoders and scripts that cannot log in (vMix,
 OBS, Bitfocus Companion). It needs the channel's logo key, created in
-Settings › Logo, where a tutorial lists the addresses ready to copy. Without
+Graphics › External control (API), where a tutorial lists the addresses ready
+to copy. Without
 a key, or with a wrong one, it answers 403. A key stays the same until it is
 renewed or turned off with `POST /api/playout/config/{id}/keys/{logo|scte35}`;
 saving the configuration never changes it.
@@ -224,6 +235,8 @@ saving the configuration never changes it.
 curl -X POST 'http://127.0.0.1:8787/logo/1/hide?key=<KEY>'
 curl -X POST 'http://127.0.0.1:8787/logo/1/replace?key=<KEY>&logo=00-assets/logo-ao-vivo.png'
 curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
+curl -X POST 'http://127.0.0.1:8787/logo/1/move?key=<KEY>&x=90&y=5'
+curl -X POST 'http://127.0.0.1:8787/logo/1/move?key=<KEY>&position=default'
 ```
 
 ### L-shape
@@ -235,18 +248,48 @@ The keyed route takes the channel’s graphics key (the logo key).
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
-| `GET` | `/api/control/{id}/lshape` | `GA, CA, U` | Read the state: `{ "on": false, "ready": true, "replacement": null }`; `ready` is false without a graphic, `replacement` names a graphic swapped in. |
-| `POST` | `/api/control/{id}/lshape` | `GA, CA, U` | `{ "action": "on" \| "off" \| "replace" \| "reset", "graphic": "<storage path>" }`. `replace` swaps the graphic (needs `graphic`); `on` with `graphic` swaps and goes in; `reset` goes back to the channel's. `on` without any graphic answers 409. |
-| `GET`, `POST` | `/lshape/{id}/{on\|off\|replace\|reset}` | Logo key | Query `key` (or header `X-Logo-Key`), and `graphic`. |
+| `GET` | `/api/control/{id}/lshape` | `GA, CA, U` | Read the state: `{ "on": false, "ready": true, "replacement": null, "position": null, "scale": null }`; `ready` is false without a graphic, `replacement` names a graphic swapped in, `position` and `scale` the corner and size the picture was moved to. |
+| `POST` | `/api/control/{id}/lshape` | `GA, CA, U` | `{ "action": "on" \| "off" \| "replace" \| "reset" \| "move", "graphic": "<storage path>", "position": "bottom-left", "scale": 70 }`. `replace` swaps the graphic (needs `graphic`); `on` with `graphic` swaps and goes in; `reset` goes back to the channel's graphic; `move` puts the picture elsewhere (below). `on` without any graphic answers 409. |
+| `GET`, `POST` | `/lshape/{id}/{on\|off\|replace\|reset\|move}` | Logo key | Query `key` (or header `X-Logo-Key`), `graphic`, `position` and `scale`. |
 
 ```bash
 curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>'
 curl -X POST 'http://127.0.0.1:8787/lshape/1/off?key=<KEY>'
 curl -X POST 'http://127.0.0.1:8787/lshape/1/replace?key=<KEY>&graphic=00-assets/sponsor.png'
 curl -X POST 'http://127.0.0.1:8787/lshape/1/reset?key=<KEY>'
+curl -X POST 'http://127.0.0.1:8787/lshape/1/move?key=<KEY>&position=bottom-left&scale=70'
+curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>&position=top-left'
 ```
 
+`move` (or `on` with a position) puts the picture in another corner, on air
+or not, for a graphic whose space for the video is elsewhere: `position` is
+`top-left`, `top-right`, `bottom-left` or `bottom-right`. `scale` is its size
+in percent of the screen (30 to 95); without it the graphic's size stays. It
+applies to the channel's graphic and to a swapped one, not to a video's own
+graphic for its marked stretches, until moved again, `position` `default`,
+or a server restart.
+
 The logo goes off while the picture is in the L-shape and comes back after.
+
+### Quick scenes
+
+A scene is a named set of logo and L-shape changes saved in the channel
+configuration (`processing.graphics_scenes`, at most 24, unique names) and
+applied in one go ([docs](logo.md#quick-scenes)).
+
+| Method | Endpoint | Access | Request body |
+| --- | --- | --- | --- |
+| `POST` | `/api/control/{id}/scene` | `GA, CA, U` | `{ "name": "Intervalo comercial" }`. Answers `{ "scene", "logo", "lshape" }` with the state after it; 404 for an unknown scene, 409 when it goes to the L-shape without a graphic. |
+| `GET`, `POST` | `/scene/{id}/{name}` | Logo key | `name` in lower case with dashes (`intervalo-comercial`); query `key` or header `X-Logo-Key`. |
+
+A scene in `graphics_scenes` is
+`{ "name", "logo": "keep" | "hide" | "show" | "replace", "logo_image", "logo_position", "lshape": "keep" | "on" | "off", "lshape_graphic", "lshape_corner", "lshape_scale" }`;
+`null` values leave that part as it is on air, `logo_position` and
+`lshape_corner` also take `default`.
+
+```bash
+curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
+```
 
 ### Ad breaks (SCTE-35)
 

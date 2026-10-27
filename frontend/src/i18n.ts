@@ -1,16 +1,9 @@
 import { createI18n } from 'vue-i18n'
 
-import deDE from './locales/de-DE.ts'
 import enUS from './locales/en-US.ts'
 import ptBR from './locales/pt-BR.ts'
-import ruRU from './locales/ru-RU.ts'
 
 export const locales = [
-    {
-        code: 'de',
-        language: 'de-DE',
-        name: 'Deutsch',
-    },
     {
         code: 'en',
         language: 'en-US',
@@ -21,11 +14,6 @@ export const locales = [
         language: 'pt-BR',
         name: 'Português (BR)',
     },
-    {
-        code: 'ru',
-        language: 'ru-RU',
-        name: 'Русский язык (RU)',
-    },
 ]
 
 const instance = createI18n({
@@ -33,10 +21,8 @@ const instance = createI18n({
     locale: 'en-US',
     fallbackLocale: 'en',
     messages: {
-        de: deDE,
         en: enUS,
         'pt-br': ptBR,
-        ru: ruRU,
     },
 })
 

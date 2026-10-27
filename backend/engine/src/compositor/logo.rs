@@ -259,6 +259,19 @@ fn eval_position_expr(expr: &str, main: u32, overlay: u32) -> Result<i64> {
         let value = match part {
             "M" => i64::from(main),
             "O" => i64::from(overlay),
+            // A share of the room the logo can move in: 0% is the left (or
+            // top) edge, 100% the right (or bottom) one.
+            _ if part.ends_with('%') => {
+                let percent = part
+                    .trim_end_matches('%')
+                    .trim()
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|percent| (0.0..=100.0).contains(percent))
+                    .ok_or_else(|| anyhow!("unsupported logo position expression {expr:?}"))?;
+
+                (f64::from(main.saturating_sub(overlay)) * percent / 100.0).round() as i64
+            }
             _ => part
                 .parse::<i64>()
                 .map_err(|_| anyhow!("unsupported logo position expression {expr:?}"))?,
@@ -723,6 +736,16 @@ mod tests {
             (860, 956)
         );
         assert!(logo_position("W/0:12", 1920, 1080, 200, 100).is_err());
+        // Shares of the room left around the logo.
+        assert_eq!(
+            logo_position("50%:100%", 1920, 1080, 200, 100).unwrap(),
+            (860, 980)
+        );
+        assert_eq!(
+            logo_position("25.5%:0%", 1920, 1080, 200, 100).unwrap(),
+            (439, 0)
+        );
+        assert!(logo_position("120%:0%", 1920, 1080, 200, 100).is_err());
     }
 
     #[test]

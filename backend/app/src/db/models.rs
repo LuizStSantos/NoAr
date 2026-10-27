@@ -303,6 +303,8 @@ pub struct Configuration {
     pub processing_lshape_scale: f64,
     #[serde(default = "default_lshape_corner")]
     pub processing_lshape_corner: String,
+    #[serde(default = "default_graphics_scenes")]
+    pub processing_graphics_scenes: String,
 
     pub playlist_day_start: String,
     pub playlist_length: String,
@@ -390,6 +392,8 @@ impl Configuration {
             processing_lshape: config.processing.lshape,
             processing_lshape_scale: config.processing.lshape_scale,
             processing_lshape_corner: config.processing.lshape_corner,
+            processing_graphics_scenes: serde_json::to_string(&config.processing.graphics_scenes)
+                .unwrap_or_else(|_| default_graphics_scenes()),
             playlist_day_start: config.playlist.day_start,
             playlist_length: config.playlist.length,
             playlist_infinit: config.playlist.infinit,
@@ -789,4 +793,8 @@ fn default_lshape_scale() -> f64 {
 
 fn default_lshape_corner() -> String {
     "top-right".to_string()
+}
+
+fn default_graphics_scenes() -> String {
+    "[]".to_string()
 }

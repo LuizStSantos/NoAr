@@ -2,12 +2,14 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import PositionPad, { type Shares } from '@/components/settings/PositionPad.vue'
 import RemoteKeyField from '@/components/settings/RemoteKeyField.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { authFetch } from '@/composables/authFetch'
 import { copyText } from '@/composables/browser'
+import { LOGO_BOX, LSHAPE_CORNERS, sharesOf } from '@/composables/graphics'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -27,9 +29,13 @@ interface LShapeStatus {
     on: boolean
     ready: boolean
     replacement: string | null
+    /** The corner the picture was moved to; null is the graphic's. */
+    position?: string | null
+    scale?: number | null
 }
 
-const CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
+/** `live` is the controls on air; `api` the key and the tutorial. */
+const props = withDefaults(defineProps<{ part?: 'live' | 'api' }>(), { part: 'live' })
 
 const { t } = useI18n()
 const authStore = useAuth()
@@ -43,7 +49,7 @@ const busy = ref(false)
 const picking = ref<'now' | 'example' | 'lshapeNow' | 'lshapeExample' | null>(null)
 const exampleLogo = ref('')
 const exampleGraphic = ref('')
-const showGuide = ref(false)
+const showGuide = ref(props.part === 'api')
 const example = ref<'curl' | 'vmix' | 'obs' | 'companion'>('curl')
 
 const processing = computed(() => configStore.playout.processing)
@@ -76,6 +82,7 @@ const groups = computed(() => [
                 }),
             },
             { action: 'move', url: keyedUrl('logo', 'move', { position: 'bottom-left' }) },
+            { action: 'moveShares', url: keyedUrl('logo', 'move', { x: '90', y: '5' }) },
             { action: 'moveBack', url: keyedUrl('logo', 'move', { position: 'default' }) },
         ],
     },
@@ -90,6 +97,8 @@ const groups = computed(() => [
             { action: 'lshapeOnWith', url: keyedUrl('lshape', 'on', { graphic: graphicExample.value }) },
             { action: 'lshapeReplace', url: keyedUrl('lshape', 'replace', { graphic: graphicExample.value }) },
             { action: 'lshapeReset', url: keyedUrl('lshape', 'reset') },
+            { action: 'lshapeMove', url: keyedUrl('lshape', 'move', { position: 'bottom-left', scale: '70' }) },
+            { action: 'lshapeMoveBack', url: keyedUrl('lshape', 'move', { position: 'default' }) },
         ],
     },
 ])
@@ -119,6 +128,46 @@ const snippet = computed(() => {
             return [hide, show, lshapeOn, lshapeOff].map((url) => `curl -X POST "${url}"`).join('\n')
     }
 })
+
+const logoShares = computed(() => sharesOf(status.value?.position ?? processing.value.logo_position))
+const lshapeCorner = computed(() => lshape.value?.position ?? processing.value.lshape_corner)
+const lshapeScale = computed(() => lshape.value?.scale ?? processing.value.lshape_scale ?? 75)
+
+/**
+ * A new place picked on the pads waits here until it is confirmed, so a
+ * slip of the mouse never moves anything on air.
+ */
+const logoDraft = ref<Shares | null>(null)
+const lshapeDraft = ref<{ position: string; scale: number } | null>(null)
+const lshapeShown = computed(() => lshapeDraft.value ?? { position: lshapeCorner.value, scale: lshapeScale.value })
+
+function sameShares(a: Shares, b: Shares) {
+    return a.x === b.x && a.y === b.y
+}
+
+function draftLogo(shares: Shares) {
+    logoDraft.value = sameShares(shares, logoShares.value) ? null : shares
+}
+
+function draftLShape(change: { position?: string; scale?: number }) {
+    const next = { ...lshapeShown.value, ...change }
+
+    lshapeDraft.value = next.position === lshapeCorner.value && next.scale === lshapeScale.value ? null : next
+}
+
+async function confirmLogo() {
+    if (logoDraft.value) {
+        await send('move', undefined, logoDraft.value)
+        logoDraft.value = null
+    }
+}
+
+async function confirmLShape() {
+    if (lshapeDraft.value) {
+        await sendLShape('move', undefined, lshapeDraft.value)
+        lshapeDraft.value = null
+    }
+}
 
 const stateText = computed(() => {
     if (!status.value) {
@@ -164,14 +213,15 @@ async function load() {
     lshape.value = shape.status === 'fulfilled' ? shape.value : null
 }
 
-async function send(action: 'hide' | 'show' | 'replace' | 'move', logo?: string, position?: string) {
+async function send(action: 'hide' | 'show' | 'replace' | 'move', logo?: string, place?: Shares | 'default') {
     busy.value = true
+    const where = place === 'default' ? { position: 'default' } : place
 
     try {
         status.value = await authFetch<LogoStatus>(`/api/control/${channelId.value}/logo`, {
             method: 'POST',
             headers: headers(),
-            body: JSON.stringify({ action, logo, position }),
+            body: JSON.stringify({ action, logo, ...where }),
         })
     } catch (error) {
         indexStore.msgAlert('error', error instanceof Error ? error.message : String(error), 4)
@@ -180,14 +230,18 @@ async function send(action: 'hide' | 'show' | 'replace' | 'move', logo?: string,
     }
 }
 
-async function sendLShape(action: 'on' | 'off' | 'replace' | 'reset', graphic?: string) {
+async function sendLShape(
+    action: 'on' | 'off' | 'replace' | 'reset' | 'move',
+    graphic?: string,
+    place?: { position: string; scale?: number },
+) {
     busy.value = true
 
     try {
         lshape.value = await authFetch<LShapeStatus>(`/api/control/${channelId.value}/lshape`, {
             method: 'POST',
             headers: headers(),
-            body: JSON.stringify({ action, graphic }),
+            body: JSON.stringify({ action, graphic, ...place }),
         })
     } catch (error: any) {
         indexStore.msgAlert('error', error?.data ?? t('settings.logo.remote.lshapeFailed'), 4)
@@ -224,13 +278,17 @@ async function copy(text: string) {
 }
 
 onMounted(load)
+defineExpose({ load })
 watch(channelId, load)
 // A save loads the channel's graphic on air.
 watch(() => configStore.playoutSaved.processing?.lshape, load)
 </script>
 <template>
-    <SectionCard :title="t('settings.logo.remote.title')" :description="t('settings.logo.remote.intro')">
-        <div class="flex flex-col gap-3">
+    <SectionCard
+        :title="props.part === 'api' ? t('graphics.api.title') : t('settings.logo.remote.title')"
+        :description="props.part === 'api' ? t('graphics.api.intro') : t('settings.logo.remote.intro')"
+    >
+        <div v-if="props.part === 'live'" class="flex flex-col gap-3">
             <!-- The logo, now. -->
             <div class="flex flex-wrap items-center gap-2.5">
                 <span class="w-20 flex-none text-[13px] font-semibold">{{ t('settings.logo.remote.logo') }}</span>
@@ -251,21 +309,53 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
                 <button class="btn-quiet" :disabled="busy" @click="picking = 'now'">
                     <i class="bi bi-arrow-left-right" aria-hidden="true" />{{ t('settings.logo.remote.replace') }}
                 </button>
-                <label class="inline-flex items-center gap-2 text-[13px]">
-                    <span class="text-muted">{{ t('settings.logo.remote.moveTo') }}</span>
-                    <select
-                        class="field-input min-h-9 w-auto"
+            </div>
+            <div class="flex flex-wrap items-start gap-3 sm:ps-[5.625rem]">
+                <PositionPad
+                    class="sm:w-60"
+                    :shares="logoDraft ?? logoShares"
+                    :ghost="logoDraft ? logoShares : null"
+                    :width="LOGO_BOX.width"
+                    :height="LOGO_BOX.height"
+                    :label="t('settings.logo.remote.logoPad')"
+                    :disabled="busy"
+                    @place="draftLogo"
+                />
+                <div class="flex flex-col gap-1.5 text-[13px] max-w-64">
+                    <span class="text-muted">{{ t('settings.logo.remote.padHint') }}</span>
+                    <span>
+                        {{ t('settings.logo.remote.moveTo') }}:
+                        <strong class="font-semibold">{{
+                            status?.position
+                                ? `${logoShares.x}% × ${logoShares.y}%`
+                                : t('settings.logo.remote.moveDefault')
+                        }}</strong>
+                        <template v-if="logoDraft">
+                            →
+                            <strong class="font-semibold text-accent-text"
+                                >{{ logoDraft.x }}% × {{ logoDraft.y }}%</strong
+                            >
+                        </template>
+                    </span>
+                    <div v-if="logoDraft" class="flex flex-wrap gap-2" role="group">
+                        <button class="btn-main min-h-9 px-3" :disabled="busy" @click="confirmLogo">
+                            <i class="bi bi-check2" aria-hidden="true" />{{ t('settings.logo.remote.confirmMove') }}
+                        </button>
+                        <button class="btn-quiet" :disabled="busy" @click="logoDraft = null">
+                            {{ t('settings.logo.remote.cancelMove') }}
+                        </button>
+                    </div>
+                    <button
+                        v-else-if="status?.position"
+                        class="btn-quiet self-start"
                         :disabled="busy"
-                        :value="status?.position ? 'custom' : 'default'"
-                        @change="send('move', undefined, ($event.target as HTMLSelectElement).value)"
+                        @click="send('move', undefined, 'default')"
                     >
-                        <option value="default">{{ t('settings.logo.remote.moveDefault') }}</option>
-                        <option v-for="corner in CORNERS" :key="corner" :value="corner">
-                            {{ t(`lshape.corners.${corner}`) }}
-                        </option>
-                        <option v-if="status?.position" value="custom" disabled>{{ status.position }}</option>
-                    </select>
-                </label>
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />{{
+                            t('settings.logo.remote.moveBack')
+                        }}
+                    </button>
+                </div>
             </div>
 
             <!-- The L-shape, now. -->
@@ -295,100 +385,168 @@ watch(() => configStore.playoutSaved.processing?.lshape, load)
                     t('settings.logo.remote.lshapeNotReady')
                 }}</span>
             </div>
+            <div v-if="lshape?.ready" class="flex flex-wrap items-start gap-3 sm:ps-[5.625rem]">
+                <div
+                    role="group"
+                    :aria-label="t('settings.logo.remote.lshapePad')"
+                    class="grid grid-cols-2 gap-1.5 aspect-video w-40 rounded-md border border-line-strong bg-field p-1.5"
+                >
+                    <button
+                        v-for="corner in LSHAPE_CORNERS"
+                        :key="corner"
+                        type="button"
+                        class="rounded-sm border cursor-pointer disabled:cursor-not-allowed"
+                        :class="
+                            lshapeShown.position === corner
+                                ? lshapeDraft
+                                    ? 'bg-accent/40 border-accent border-dashed border-2'
+                                    : 'bg-accent border-accent'
+                                : lshapeDraft && lshapeCorner === corner
+                                  ? 'bg-base-100 border-muted border-dashed border-2'
+                                  : 'bg-base-100 border-line-strong hover:border-accent'
+                        "
+                        :aria-pressed="lshapeShown.position === corner"
+                        :aria-label="t(`lshape.corners.${corner}`)"
+                        :title="t(`lshape.corners.${corner}`)"
+                        :disabled="busy"
+                        @click="draftLShape({ position: corner })"
+                    />
+                </div>
+                <div class="flex flex-col gap-1.5 text-[13px] max-w-64">
+                    <span class="text-muted">{{ t('settings.logo.remote.lshapePadHint') }}</span>
+                    <label class="flex flex-col gap-1">
+                        <span>{{ t('lshape.size', { n: lshapeShown.scale }) }}</span>
+                        <input
+                            type="range"
+                            class="range range-xs range-accent"
+                            min="30"
+                            max="95"
+                            step="5"
+                            :value="lshapeShown.scale"
+                            :disabled="busy"
+                            @input="draftLShape({ scale: Number(($event.target as HTMLInputElement).value) })"
+                        />
+                    </label>
+                    <div v-if="lshapeDraft" class="flex flex-wrap gap-2" role="group">
+                        <button class="btn-main min-h-9 px-3" :disabled="busy" @click="confirmLShape">
+                            <i class="bi bi-check2" aria-hidden="true" />{{
+                                lshape?.on
+                                    ? t('settings.logo.remote.confirmMove')
+                                    : t('settings.logo.remote.confirmPlace')
+                            }}
+                        </button>
+                        <button class="btn-quiet" :disabled="busy" @click="lshapeDraft = null">
+                            {{ t('settings.logo.remote.cancelMove') }}
+                        </button>
+                    </div>
+                    <button
+                        v-else-if="lshape?.position"
+                        class="btn-quiet self-start"
+                        :disabled="busy"
+                        @click="sendLShape('move', undefined, { position: 'default' })"
+                    >
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true" />{{
+                            t('settings.logo.remote.lshapeMoveBack')
+                        }}
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <RemoteKeyField
-            kind="logo"
-            :label="t('settings.logo.remote.key')"
-            :no-key="t('settings.logo.remote.noKey')"
-            :hint="t('settings.logo.remote.keyHint')"
-        />
+        <template v-if="props.part === 'api'">
+            <RemoteKeyField
+                kind="logo"
+                :label="t('settings.logo.remote.key')"
+                :no-key="t('settings.logo.remote.noKey')"
+                :hint="t('settings.logo.remote.keyHint')"
+            />
 
-        <button
-            class="flex items-center gap-2 bg-transparent border-0 p-0 min-h-8 cursor-pointer text-accent-text text-left font-medium"
-            :aria-expanded="showGuide"
-            @click="showGuide = !showGuide"
-        >
-            <i class="bi text-xs" :class="showGuide ? 'bi-chevron-down' : 'bi-chevron-right'" aria-hidden="true" />
-            {{ t('settings.logo.remote.howTo') }}
-        </button>
+            <button
+                class="flex items-center gap-2 bg-transparent border-0 p-0 min-h-8 cursor-pointer text-accent-text text-left font-medium"
+                :aria-expanded="showGuide"
+                @click="showGuide = !showGuide"
+            >
+                <i class="bi text-xs" :class="showGuide ? 'bi-chevron-down' : 'bi-chevron-right'" aria-hidden="true" />
+                {{ t('settings.logo.remote.howTo') }}
+            </button>
 
-        <ol v-if="showGuide" class="m-0 ps-5 flex flex-col gap-4 text-[13px] leading-relaxed">
-            <li>
-                {{ t('settings.logo.remote.step1') }}
-            </li>
-            <li class="flex flex-col gap-3">
-                <span>{{ t('settings.logo.remote.step2') }}</span>
-                <section v-for="group in groups" :key="group.name" class="flex flex-col gap-2">
-                    <h3 class="m-0 text-[13px] font-semibold flex items-center gap-1.5">
-                        <i
-                            class="bi"
-                            :class="group.name === 'logo' ? 'bi-badge-tm' : 'bi-aspect-ratio'"
-                            aria-hidden="true"
-                        />{{ t(`settings.logo.remote.${group.name}`) }}
-                    </h3>
-                    <div v-for="item in group.urls" :key="item.action" class="flex flex-col gap-1">
-                        <span class="text-xs text-muted">{{ t(`settings.logo.remote.url.${item.action}`) }}</span>
-                        <div class="flex gap-2 items-start">
-                            <code
-                                class="flex-1 min-w-0 break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-1.5"
-                                >{{ item.url }}</code
-                            >
-                            <button
-                                class="btn-icon min-w-8 min-h-8 flex-none"
-                                :aria-label="t('settings.logo.remote.copy')"
-                                @click="copy(item.url)"
-                            >
-                                <i class="bi bi-clipboard" aria-hidden="true" />
-                            </button>
+            <ol v-if="showGuide" class="m-0 ps-5 flex flex-col gap-4 text-[13px] leading-relaxed">
+                <li>
+                    {{ t('settings.logo.remote.step1') }}
+                </li>
+                <li class="flex flex-col gap-3">
+                    <span>{{ t('settings.logo.remote.step2') }}</span>
+                    <section v-for="group in groups" :key="group.name" class="flex flex-col gap-2">
+                        <h3 class="m-0 text-[13px] font-semibold flex items-center gap-1.5">
+                            <i
+                                class="bi"
+                                :class="group.name === 'logo' ? 'bi-badge-tm' : 'bi-aspect-ratio'"
+                                aria-hidden="true"
+                            />{{ t(`settings.logo.remote.${group.name}`) }}
+                        </h3>
+                        <div v-for="item in group.urls" :key="item.action" class="flex flex-col gap-1">
+                            <span class="text-xs text-muted">{{ t(`settings.logo.remote.url.${item.action}`) }}</span>
+                            <div class="flex gap-2 items-start">
+                                <code
+                                    class="flex-1 min-w-0 break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-1.5"
+                                    >{{ item.url }}</code
+                                >
+                                <button
+                                    class="btn-icon min-w-8 min-h-8 flex-none"
+                                    :aria-label="t('settings.logo.remote.copy')"
+                                    @click="copy(item.url)"
+                                >
+                                    <i class="bi bi-clipboard" aria-hidden="true" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <span class="field-hint">
-                        {{ group.hint }}
+                        <span class="field-hint">
+                            {{ group.hint }}
+                            <button
+                                class="bg-transparent border-0 p-0 text-accent-text cursor-pointer hover:underline"
+                                @click="picking = group.choose"
+                            >
+                                {{ group.chooseLabel }}
+                            </button>
+                        </span>
+                    </section>
+                </li>
+                <li class="flex flex-col gap-2">
+                    <span>{{ t('settings.logo.remote.step3') }}</span>
+                    <div role="tablist" class="flex flex-wrap gap-1.5">
                         <button
-                            class="bg-transparent border-0 p-0 text-accent-text cursor-pointer hover:underline"
-                            @click="picking = group.choose"
+                            v-for="tool in ['curl', 'vmix', 'obs', 'companion'] as const"
+                            :key="tool"
+                            role="tab"
+                            :aria-selected="example === tool"
+                            class="px-3 min-h-8 rounded-md border text-xs cursor-pointer"
+                            :class="
+                                example === tool
+                                    ? 'bg-accent/15 border-accent text-accent-text'
+                                    : 'bg-field border-line-strong text-muted hover:text-base-content'
+                            "
+                            @click="example = tool"
                         >
-                            {{ group.chooseLabel }}
+                            {{ t(`settings.logo.remote.tool.${tool}`) }}
                         </button>
-                    </span>
-                </section>
-            </li>
-            <li class="flex flex-col gap-2">
-                <span>{{ t('settings.logo.remote.step3') }}</span>
-                <div role="tablist" class="flex flex-wrap gap-1.5">
-                    <button
-                        v-for="tool in ['curl', 'vmix', 'obs', 'companion'] as const"
-                        :key="tool"
-                        role="tab"
-                        :aria-selected="example === tool"
-                        class="px-3 min-h-8 rounded-md border text-xs cursor-pointer"
-                        :class="
-                            example === tool
-                                ? 'bg-accent/15 border-accent text-accent-text'
-                                : 'bg-field border-line-strong text-muted hover:text-base-content'
-                        "
-                        @click="example = tool"
-                    >
-                        {{ t(`settings.logo.remote.tool.${tool}`) }}
-                    </button>
-                </div>
-                <p class="m-0 text-muted">{{ t(`settings.logo.remote.toolHelp.${example}`) }}</p>
-                <div class="flex gap-2 items-start">
-                    <pre
-                        class="flex-1 min-w-0 m-0 whitespace-pre-wrap break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-2"
-                        >{{ snippet }}</pre>
-                    <button
-                        class="btn-icon min-w-8 min-h-8 flex-none"
-                        :aria-label="t('settings.logo.remote.copy')"
-                        @click="copy(snippet)"
-                    >
-                        <i class="bi bi-clipboard" aria-hidden="true" />
-                    </button>
-                </div>
-            </li>
-            <li>{{ t('settings.logo.remote.step4') }}</li>
-        </ol>
+                    </div>
+                    <p class="m-0 text-muted">{{ t(`settings.logo.remote.toolHelp.${example}`) }}</p>
+                    <div class="flex gap-2 items-start">
+                        <pre
+                            class="flex-1 min-w-0 m-0 whitespace-pre-wrap break-all font-mono text-xs bg-field border border-line rounded-md px-2.5 py-2"
+                            >{{ snippet }}</pre>
+                        <button
+                            class="btn-icon min-w-8 min-h-8 flex-none"
+                            :aria-label="t('settings.logo.remote.copy')"
+                            @click="copy(snippet)"
+                        >
+                            <i class="bi bi-clipboard" aria-hidden="true" />
+                        </button>
+                    </div>
+                </li>
+                <li>{{ t('settings.logo.remote.step4') }}</li>
+            </ol>
+        </template>
 
         <GenericModal
             :show="picking !== null"

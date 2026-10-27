@@ -57,6 +57,54 @@ const router = createRouter({
             meta: { showHeader: true },
         },
         {
+            path: '/graphics',
+            name: 'graphics',
+            component: () => import('@/views/GraphicsView.vue'),
+            meta: { showHeader: true },
+            redirect: (to) => ({ path: '/graphics/live', query: to.query }),
+            children: [
+                {
+                    path: 'live',
+                    name: 'graphics-live',
+                    component: () => import('@/components/graphics/GraphicsLive.vue'),
+                    meta: { showHeader: true, roles: ALL },
+                },
+                {
+                    path: 'logo',
+                    name: 'graphics-logo',
+                    component: () => import('@/components/settings/SettingsLogo.vue'),
+                    props: { part: 'logo' },
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'lshape',
+                    name: 'graphics-lshape',
+                    component: () => import('@/components/settings/SettingsLogo.vue'),
+                    props: { part: 'lshape' },
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'subtitles',
+                    name: 'graphics-subtitles',
+                    component: () => import('@/components/settings/SettingsLogo.vue'),
+                    props: { part: 'subtitles' },
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'scenes',
+                    name: 'graphics-scenes',
+                    component: () => import('@/components/graphics/GraphicsScenes.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'api',
+                    name: 'graphics-api',
+                    component: () => import('@/components/graphics/GraphicsApi.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+            ],
+        },
+        {
             path: '/schedule',
             name: 'schedule',
             component: () => import('@/views/ScheduleView.vue'),
@@ -112,10 +160,10 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {
+                    // Moved to its own tab; old links still land there.
                     path: 'logo',
                     name: 'settings-logo',
-                    component: () => import('@/components/settings/SettingsLogo.vue'),
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({ path: '/graphics/logo', query: to.query }),
                 },
                 {
                     path: 'audio',
@@ -214,7 +262,7 @@ router.beforeEach(async (to) => {
     const allowedRoles = to.meta.roles as string[] | undefined
 
     if (allowedRoles && !allowedRoles.includes(auth.role)) {
-        return { name: 'settings-general', query: to.query }
+        return { name: to.path.startsWith('/graphics') ? 'graphics-live' : 'settings-general', query: to.query }
     }
 
     return

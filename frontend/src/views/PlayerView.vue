@@ -6,6 +6,7 @@ import { useHead } from '@unhead/vue'
 
 import AddProgramDialog from '@/components/player/AddProgramDialog.vue'
 import LibraryPanel from '@/components/player/LibraryPanel.vue'
+import GraphicsQuickBar from '@/components/player/GraphicsQuickBar.vue'
 import LivePreview from '@/components/player/LivePreview.vue'
 import NowPanel from '@/components/player/NowPanel.vue'
 import PlaylistGenerator from '@/components/player/PlaylistGenerator.vue'
@@ -210,7 +211,10 @@ async function openPreview(source: string) {
 
         <template v-if="!building || !playlistMode">
             <div class="flex flex-wrap gap-4">
-                <LivePreview class="flex-[999_1_640px] min-w-0" />
+                <div class="flex-[999_1_640px] min-w-0 flex flex-col gap-3">
+                    <LivePreview />
+                    <GraphicsQuickBar />
+                </div>
                 <NowPanel class="flex-[1_1_380px] min-w-0" />
             </div>
 

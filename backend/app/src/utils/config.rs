@@ -638,6 +638,88 @@ pub struct Processing {
     /// or `bottom-left`.
     #[serde(default = "default_lshape_corner")]
     pub lshape_corner: String,
+    /// Quick scenes: named sets of logo and L-shape changes applied in one
+    /// go, from NoAr or an encoder.
+    #[serde(default)]
+    pub graphics_scenes: Vec<GraphicsScene>,
+}
+
+/// The most scenes a channel keeps.
+pub const MAX_GRAPHICS_SCENES: usize = 24;
+
+/// What a scene does to the logo.
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, Eq, PartialEq, TS)]
+#[ts(export, export_to = "playout_config.d.ts")]
+#[serde(rename_all = "lowercase")]
+pub enum SceneLogo {
+    /// Leaves it as it is.
+    #[default]
+    Keep,
+    Hide,
+    /// Brings back the channel logo.
+    Show,
+    /// Shows `logo_image` in its place.
+    Replace,
+}
+
+/// What a scene does to the L-shape.
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, Eq, PartialEq, TS)]
+#[ts(export, export_to = "playout_config.d.ts")]
+#[serde(rename_all = "lowercase")]
+pub enum SceneLShape {
+    #[default]
+    Keep,
+    On,
+    Off,
+}
+
+/// A named set of logo and L-shape changes, applied in one go.
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export, export_to = "playout_config.d.ts")]
+pub struct GraphicsScene {
+    pub name: String,
+    #[serde(default)]
+    pub logo: SceneLogo,
+    /// Storage path of the image, for `replace`.
+    #[serde(default)]
+    pub logo_image: Option<String>,
+    /// Where the logo goes (`X%:Y%`, a place or `default`); none leaves it.
+    #[serde(default)]
+    pub logo_position: Option<String>,
+    #[serde(default)]
+    pub lshape: SceneLShape,
+    /// Storage path of the L-shape graphic to use; none leaves the current.
+    #[serde(default)]
+    pub lshape_graphic: Option<String>,
+    /// The corner the picture goes to (or `default`); none leaves it.
+    #[serde(default)]
+    pub lshape_corner: Option<String>,
+    /// Size of the picture, in percent of the screen; none keeps it.
+    #[serde(default)]
+    pub lshape_scale: Option<f64>,
+}
+
+impl GraphicsScene {
+    /// How a scene is called from an address: its name, lower case, with
+    /// dashes for anything but letters and digits.
+    pub fn slug(&self) -> String {
+        slug(&self.name)
+    }
+}
+
+/// `name` as it is written in a scene's address.
+pub fn slug(name: &str) -> String {
+    let mut slug = String::new();
+
+    for character in name.trim().to_lowercase().chars() {
+        if character.is_alphanumeric() {
+            slug.push(character);
+        } else if !slug.ends_with('-') {
+            slug.push('-');
+        }
+    }
+
+    slug.trim_matches('-').to_string()
 }
 
 fn default_lshape_scale() -> f64 {
@@ -714,7 +796,64 @@ impl Processing {
             lshape: config.processing_lshape.clone(),
             lshape_scale: config.processing_lshape_scale,
             lshape_corner: config.processing_lshape_corner.clone(),
+            graphics_scenes: serde_json::from_str(&config.processing_graphics_scenes)
+                .unwrap_or_default(),
         }
+    }
+
+    /// Why the scenes are not accepted: names, actions and values.
+    pub fn check_graphics_scenes(&self) -> Result<(), String> {
+        if self.graphics_scenes.len() > MAX_GRAPHICS_SCENES {
+            return Err(format!("at most {MAX_GRAPHICS_SCENES} scenes"));
+        }
+
+        let mut names = std::collections::HashSet::new();
+
+        for scene in &self.graphics_scenes {
+            let slug = scene.slug();
+
+            if slug.is_empty() {
+                return Err("every scene needs a name".to_string());
+            }
+
+            if !names.insert(slug) {
+                return Err(format!("two scenes are called '{}'", scene.name.trim()));
+            }
+
+            let blank = |value: &Option<String>| {
+                value.as_deref().is_none_or(|value| value.trim().is_empty())
+            };
+
+            if scene.logo == SceneLogo::Replace && blank(&scene.logo_image) {
+                return Err(format!(
+                    "scene '{}': choose the image that replaces the logo",
+                    scene.name.trim()
+                ));
+            }
+
+            if let Some(corner) = scene.lshape_corner.as_deref().map(str::trim)
+                && corner != "default"
+                && noar_engine::LShapeCorner::parse(corner).is_none()
+            {
+                return Err(format!(
+                    "scene '{}': unknown L-shape corner '{corner}'",
+                    scene.name.trim()
+                ));
+            }
+
+            if let Some(scale) = scene.lshape_scale
+                && !(noar_engine::LSHAPE_MIN_SCALE..=noar_engine::LSHAPE_MAX_SCALE).contains(&scale)
+            {
+                return Err(format!(
+                    "scene '{}': the picture in the L-shape must be between {} and {}% of the screen",
+                    scene.name.trim(),
+                    noar_engine::LSHAPE_MIN_SCALE,
+                    noar_engine::LSHAPE_MAX_SCALE
+                ));
+            }
+        }
+
+        Ok(())
     }
 
     /// The L-shape for a storage at `storage`, or none when it is off; why
@@ -2136,5 +2275,59 @@ mod recording_tests {
                 .unwrap_err()
                 .contains("unsupported audio option")
         );
+    }
+}
+
+#[cfg(test)]
+mod graphics_scene_tests {
+    use super::{GraphicsScene, Processing, SceneLogo, slug};
+
+    fn scene(name: &str) -> GraphicsScene {
+        GraphicsScene {
+            name: name.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_scene_is_called_by_its_name_in_lower_case_with_dashes() {
+        assert_eq!(slug("  Intervalo Comercial! "), "intervalo-comercial");
+        assert_eq!(slug("Plantão 24h"), "plantão-24h");
+        assert_eq!(scene("A / B").slug(), "a-b");
+    }
+
+    #[test]
+    fn scenes_need_unique_names_and_valid_values() {
+        let mut processing = Processing {
+            graphics_scenes: vec![scene("Intervalo"), scene("Plantão")],
+            ..Default::default()
+        };
+        assert_eq!(processing.check_graphics_scenes(), Ok(()));
+
+        processing.graphics_scenes = vec![scene("Intervalo"), scene("intervalo!")];
+        assert!(processing.check_graphics_scenes().is_err());
+
+        processing.graphics_scenes = vec![scene("  ")];
+        assert!(processing.check_graphics_scenes().is_err());
+
+        let mut replace = scene("Troca");
+        replace.logo = SceneLogo::Replace;
+        processing.graphics_scenes = vec![replace.clone()];
+        assert!(processing.check_graphics_scenes().is_err());
+        replace.logo_image = Some("00-assets/ao-vivo.png".to_string());
+        processing.graphics_scenes = vec![replace];
+        assert_eq!(processing.check_graphics_scenes(), Ok(()));
+
+        let mut corner = scene("Canto");
+        corner.lshape_corner = Some("middle".to_string());
+        processing.graphics_scenes = vec![corner.clone()];
+        assert!(processing.check_graphics_scenes().is_err());
+        corner.lshape_corner = Some("bottom-left".to_string());
+        corner.lshape_scale = Some(20.0);
+        processing.graphics_scenes = vec![corner.clone()];
+        assert!(processing.check_graphics_scenes().is_err());
+        corner.lshape_scale = Some(70.0);
+        processing.graphics_scenes = vec![corner];
+        assert_eq!(processing.check_graphics_scenes(), Ok(()));
     }
 }
