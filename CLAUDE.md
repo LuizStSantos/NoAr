@@ -3,6 +3,12 @@
 NoAr is a 24/7 Rust/Vue television playout application. Reliability, API compatibility,
 on-air continuity, database safety and predictable Docker releases take priority.
 
+## Repository language policy
+
+- Write **all GitHub pull request titles and descriptions, issues, review comments, commit messages, documentation and agent-authored repository text in English**.
+- Users may communicate in Portuguese; respond conversationally in the user's language, but keep text published to GitHub and repository documentation in English.
+- Keep existing code identifiers and externally defined user-facing translations unchanged unless the task explicitly requires a localization change.
+
 ## Standard development workflow
 
 For ordinary natural-language requests to fix, add or refactor NoAr, **without needing a slash command**:
