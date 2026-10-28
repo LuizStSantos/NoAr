@@ -78,6 +78,38 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 - Agent model aliases are requests, not guarantees of plan availability; report when unavailable.
 - The main model is set by the Claude Code selector. This skill cannot force an Opus-to-Sonnet switch.
 
+### FFmpeg Specialist Integration
+
+- `noar-ffmpeg-docs-specialist` (Sonnet) —
+  Official FFmpeg documentation and C API specialist.
+  Read-only and non-voting.
+
+For tasks involving FFmpeg, codecs, filters,
+muxers, SRT, RTMP, HLS, MPEG-TS, SCTE-35,
+PTS/DTS, synchronization, or hardware acceleration:
+
+1. Consult the persistent repository map.
+2. Determine whether specialized research is required.
+3. Delegate focused research to
+   `noar-ffmpeg-docs-specialist` when necessary.
+4. Require official FFmpeg documentation references.
+5. Verify compatibility with NoAr's FFmpeg libraries
+   and ffmpeg-next bindings.
+6. Forward findings to the implementation agent.
+7. Request Integration QA for runtime verification.
+8. Request Documentation Guardian review when needed.
+
+Use the specialist during implementation, technical
+reviews, and backend audits when relevant.
+
+The specialist provides technical evidence but
+does not participate in the five-member council vote.
+
+If nested delegation is unavailable, the parent
+Claude session must invoke the specialist directly.
+
+Avoid repeated documentation searches to save tokens.
+
 ## 5. NoAr safety and targeted checks
 
 - API/auth/DB: `backend/app/src/api/`, `backend/app/src/db/handles/`, `migrations/`.

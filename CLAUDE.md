@@ -37,3 +37,42 @@ on-air continuity, database safety and predictable Docker releases take priority
 - Do not commit, push, merge, tag, publish, deploy or modify production configuration without permission.
 - Never send credentials, media assets or full configuration files to audit reports.
 - A 3-of-5 council verdict is advisory, not permission to deploy. Full backend audits require targeted static and, where feasible, staging tests for engine streams, security, migrations and restart resilience.
+
+## FFmpeg Documentation Specialist
+
+The NoAr project includes a dedicated FFmpeg documentation specialist:
+
+- Agent: `noar-ffmpeg-docs-specialist`
+- Skill: `/noar-ffmpeg`
+- Documentation index: `docs/ai/ffmpeg/`
+- Documentation search utility: `.claude/scripts/ffmpeg_docs.py`
+
+### Automatic delegation
+
+For tasks involving FFmpeg, codecs, filters, muxers, demuxers, SRT, RTMP, HLS, MPEG-TS, SCTE-35, PTS/DTS, audio/video synchronization, hardware acceleration, or media processing:
+
+1. The main Claude session or `noar-orchestrator` must determine whether specialized FFmpeg research is necessary.
+2. When necessary, delegate a focused research task to `noar-ffmpeg-docs-specialist`.
+3. Provide specific questions and relevant NoAr source file paths.
+4. Require references to official FFmpeg documentation, relevant C APIs, and version compatibility.
+5. Verify recommendations against the actual FFmpeg libraries and `ffmpeg-next` version used by NoAr.
+6. Return concise technical findings to the implementation agent or Media Engine Reviewer.
+7. Request runtime testing through `noar-integration-e2e-qa` when applicable.
+8. Request a documentation impact review through `noar-documentation-guardian`.
+
+### Token efficiency
+
+- Consult the persistent repository map before reading media engine source files.
+- Search only relevant FFmpeg documentation sections.
+- Reuse cached documentation and verified findings when still current.
+- Avoid downloading or loading the entire FFmpeg documentation into the model context.
+- Do not invoke the specialist for unrelated or trivial changes.
+
+### Agent boundaries
+
+- The FFmpeg Specialist is read-only and non-voting.
+- The specialist does not replace `noar-media-engine-reviewer`.
+- The Backend Council retains exactly five voting members.
+- The Orchestrator coordinates research and implementation without casting audit votes.
+- If nested agent delegation is unavailable, the main Claude session should invoke the specialist directly.
+- No FFmpeg-related change is considered runtime-verified without actual tests in an isolated environment.
