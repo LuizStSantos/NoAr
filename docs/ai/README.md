@@ -2,7 +2,8 @@
 
 Navigation only. Prefer the project skills and the small files below; do not load the entire `symbol-index.json` or historical audit ballots into model context.
 
-- **Start here:** root `CLAUDE.md` and `docs/ai/INSTALL.md`
+- **Start here:** root `CLAUDE.md` (Claude Code), root `AGENTS.md` (Codex), and `docs/ai/INSTALL.md`
+- **Codex setup:** `CODEX.md` and lightweight `.agents/skills/` adapters sharing canonical references
 - **Development workflow:** `.claude/skills/noar-intelligent-development/SKILL.md`
 - **Technology reference skills:** `tech-references/README.md` (Rust, Vue/TypeScript, Docker, video processing)
 - **FFmpeg research:** `.claude/skills/noar-ffmpeg/SKILL.md`, `ffmpeg/README.md`

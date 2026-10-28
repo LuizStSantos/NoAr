@@ -1,6 +1,42 @@
 {
   "schema": 2,
   "files": {
+    ".agents/skills/noar-docker/SKILL.md": {
+      "sha256": "9b431d71687183c50dabc0c6c437a2b9a06ff2e192154a07963a4f695525745e",
+      "language": "Markdown",
+      "bytes": 758,
+      "symbols": []
+    },
+    ".agents/skills/noar-ffmpeg/SKILL.md": {
+      "sha256": "a5707b3a09d60ee6d5f1df8a9f1378afed7b16c4a10b76f7c57f4491abb28824",
+      "language": "Markdown",
+      "bytes": 745,
+      "symbols": []
+    },
+    ".agents/skills/noar-intelligent-development/SKILL.md": {
+      "sha256": "ba753a131e60300e3b9c245e600cfbca1fce4297e9f8df5a78dd8960112b9d49",
+      "language": "Markdown",
+      "bytes": 1161,
+      "symbols": []
+    },
+    ".agents/skills/noar-rust/SKILL.md": {
+      "sha256": "1614f890b3eba597b2dc4b4918ddf8f3850fc4dee9fe17c19f6959912298ae74",
+      "language": "Markdown",
+      "bytes": 783,
+      "symbols": []
+    },
+    ".agents/skills/noar-video-processing/SKILL.md": {
+      "sha256": "be288afbc2a2e7df313f1a3fb54acd11560574f4aabb4bc2e063d3c85ab54903",
+      "language": "Markdown",
+      "bytes": 791,
+      "symbols": []
+    },
+    ".agents/skills/noar-vue/SKILL.md": {
+      "sha256": "109307f18cc5fe4192cfac8b7a0c51d3c3ea6d64f909c680ff8ffbf51ffc7be7",
+      "language": "Markdown",
+      "bytes": 733,
+      "symbols": []
+    },
     ".cargo/config.toml": {
       "sha256": "69857034f86c528f6ea4f5dd1a19927a107f9d1077f7670b6054db9311745d6b",
       "language": "TOML",
@@ -417,6 +453,25 @@
         }
       ]
     },
+    ".claude/scripts/test_codex_adapters.py": {
+      "sha256": "e2fd48ff2be87eb6b5038d3055918b4b0eb8c2a2085d23ee91fd51b1055255d1",
+      "language": "Python",
+      "bytes": 1617,
+      "symbols": [
+        {
+          "name": "CodexCompatibilityTests",
+          "line": 17
+        },
+        {
+          "name": "test_root_instructions_and_docs_exist",
+          "line": 18
+        },
+        {
+          "name": "test_skill_metadata_and_shared_references",
+          "line": 24
+        }
+      ]
+    },
     ".claude/scripts/test_documentation_impact.py": {
       "sha256": "6a9a2e81c2a384644effc1c095c6ee66c787f3b47ce796fd69dfbb476d43aeb4",
       "language": "Python",
@@ -818,9 +873,9 @@
       "symbols": []
     },
     ".github/workflows/ai-toolkit.yml": {
-      "sha256": "74347e9094c37bd2a8e43fca621bb84387dc9b56239fd13b5c4f15c6bd905886",
+      "sha256": "864170ec93cb7aa93d3b8b9993aa0c6ae862e1a03c713d4ce86910c33cc065db",
       "language": "YAML",
-      "bytes": 1486,
+      "bytes": 1568,
       "symbols": []
     },
     ".github/workflows/docker.yml": {
@@ -887,6 +942,12 @@
       "sha256": "f4ad1bb99116481d0360ac73df2d970cb14bd217c3baaadc90a76260a2a5b37f",
       "language": "JSON",
       "bytes": 3079,
+      "symbols": []
+    },
+    "AGENTS.md": {
+      "sha256": "54f2f8a0e6b87c965c8972e0a08d0c4e5ee68c5b9cc50d02964bd5ea30e472d2",
+      "language": "Markdown",
+      "bytes": 2810,
       "symbols": []
     },
     "CHANGELOG.md": {

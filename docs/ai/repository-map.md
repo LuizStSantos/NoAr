@@ -4,9 +4,10 @@ Machine-generated navigation index; verify behavior against current source code.
 
 ## File counts by top-level directory
 
-- `(root)/`: 16 indexed files
+- `(root)/`: 17 indexed files
+- `.agents/`: 6 indexed files
 - `.cargo/`: 1 indexed files
-- `.claude/`: 48 indexed files
+- `.claude/`: 49 indexed files
 - `.github/`: 7 indexed files
 - `.vscode/`: 2 indexed files
 - `assets/`: 1 indexed files
@@ -21,11 +22,11 @@ Machine-generated navigation index; verify behavior against current source code.
 
 - Rust: 191
 - Vue: 89
-- Markdown: 63
+- Markdown: 70
 - TypeScript: 50
 - JSON: 25
 - SQL: 22
-- Python: 14
+- Python: 15
 - Other: 12
 - YAML: 7
 - TOML: 4
