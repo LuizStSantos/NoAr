@@ -21,7 +21,7 @@ npx playwright install chromium
 NOAR_E2E_STAGING=1 NOAR_E2E_BASE_URL=http://127.0.0.1:8787 npx playwright test
 ```
 
-The smoke suite reads `GET /api/setup`, verifies frontend loading and the login page's password visibility toggle and the protected-route redirect. No test passwords, account creation, database writes, scheduling or media output are performed.
+The smoke suite reads `GET /api/setup`, verifies frontend loading and the login page's password visibility toggle, and verifies unauthenticated redirects for player, playlist, schedule, graphics, media, report and configuration routes. It performs no authenticated writes. No test passwords, account creation, database writes, scheduling or media output are performed.
 
 ## Other staging hosts
 

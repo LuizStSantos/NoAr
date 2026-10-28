@@ -16,6 +16,10 @@ The `noar-rust`, `noar-vue`, `noar-docker` and `noar-video-processing` skills ar
 
 Plain-language requests use the root `CLAUDE.md` workflow without starting a council. `verify_changes.py --files <changed paths>` plans relevant checks; `--run` runs only selected local checks, never production or E2E. Removed explorer/map-maintainer/release-review helpers are covered by deterministic commands and the main session. Responsive layout uses one agent instead of desktop and mobile agents. Five-voter councils remain untouched.
 
+## E2E coverage policy
+
+The Playwright smoke suite covers public setup, login UI and unauthenticated route guards. It does **not** prove playlist save/reload, database transactions, scheduling, SCTE-35 or media output. Those require disposable staging and separate fixtures/test accounts. Add one focused regression for each production bug fixed rather than inventing brittle selectors or using live credentials.
+
 ## Before committing a toolkit edit
 
 ```sh
