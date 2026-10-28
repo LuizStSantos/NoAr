@@ -62,4 +62,4 @@ Do not confuse documented features with available features in the installed FFmp
 
 The tool does not execute media operations. `capabilities` executes read-only `ffmpeg`/`ffprobe` identification commands on the current environment, if installed. Actual SRT/RTMP/HLS/SCTE-35 test traffic requires isolated staging and explicit permission. No real stream credentials should be included in prompts, generated command lines, docs caches or commits.
 
-See `docs/ai/ffmpeg/INSTALL.md` for initial setup, and `INSTALL.md` at repository root for the ongoing NoAr AI toolkit workflow.
+See `docs/ai/ffmpeg/INSTALL.md` for initial setup, and `docs/ai/INSTALL.md` for the ongoing NoAr AI toolkit workflow.

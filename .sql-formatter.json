@@ -1,5 +1,5 @@
 {
-    "language": "postgresql",
+    "language": "sqlite",
     "tabWidth": 4,
     "keywordCase": "upper",
     "linesBetweenQueries": 1,

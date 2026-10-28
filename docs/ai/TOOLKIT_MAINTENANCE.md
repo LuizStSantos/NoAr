@@ -24,7 +24,11 @@ The `ai-toolkit.yml` workflow executes helper tests and warns if the committed m
 
 ## Documentation maintenance
 
-Keep `INSTALL.md` as the permanent project-facing guide. FFmpeg setup/reference stays in `ffmpeg/INSTALL.md` and `ffmpeg/README.md`. Do not retain one-time ZIP instructions in the repository root. Preserve historical audit files as evidence.
+Keep `docs/ai/INSTALL.md` as the permanent toolkit guide. FFmpeg setup/reference stays in `ffmpeg/INSTALL.md` and `ffmpeg/README.md`. Do not retain one-time ZIP instructions in the repository root. Root should only contain files needed by development, builds, releases or GitHub navigation. Preserve historical audit files as evidence.
+
+## Search and formatting configuration
+
+The former root `.ignore` hid `frontend/`, `docs/` and `migrations/` from ripgrep-compatible searches. It was removed so code-search helpers can find project files; generated outputs remain covered by `.gitignore`. Keep `.sql-formatter.json` in the root for editor/CLI discovery, using the `sqlite` dialect to match NoAr migrations. The `.dockerignore` excludes Claude tooling and QA test scripts from the Docker build context, without excluding `backend/`, `frontend/`, `migrations/` or required assets.
 
 ## Not covered by commits
 

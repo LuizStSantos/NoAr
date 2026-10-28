@@ -13,3 +13,7 @@ tests_assets
 *.log
 *.deb
 *.rpm
+
+# Development-only Claude tooling and browser tests
+.claude/
+qa/

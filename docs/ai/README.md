@@ -2,7 +2,7 @@
 
 Navigation only. Prefer the project skills and the small files below; do not load the entire `symbol-index.json` or historical audit ballots into model context.
 
-- **Start here:** root `CLAUDE.md` and `INSTALL.md`
+- **Start here:** root `CLAUDE.md` and `docs/ai/INSTALL.md`
 - **Development workflow:** `.claude/skills/noar-intelligent-development/SKILL.md`
 - **FFmpeg research:** `.claude/skills/noar-ffmpeg/SKILL.md`, `ffmpeg/README.md`
 - **Repository navigation:** `repository-map.md`, then `python3 .claude/scripts/update_repository_map.py --find '<term>'`

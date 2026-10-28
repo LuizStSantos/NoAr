@@ -1,11 +1,11 @@
-# First Run: NoAr Intelligent Development v4
+# First Run: NoAr Intelligent Development
 
-> Read this after `INSTALL.md`. All commands below are examples **for an isolated setup branch**. No action should touch live channels, real credentials or production data.
+> Read this after `docs/ai/INSTALL.md`. All commands below are examples **for an isolated setup branch**. No action should touch live channels, real credentials or production data.
 
 ## Phase 1 — Verify the project skill is available
 
-1. Open `https://claude.ai/code`, select `LuizStSantos/NoAr` and the branch containing this package, and start a fresh session.
-2. Invoke `/noar-intelligent-development first-run` (or paste the fallback prompt in `INSTALL.md` if the slash command is not listed).
+1. Open `https://claude.ai/code`, select `LuizStSantos/NoAr` and the branch containing the toolkit, and start a fresh session.
+2. Invoke `/noar-intelligent-development first-run` (or use the setup commands below if the slash command is not listed).
 3. Verify the expected files in `.claude/skills/`, `.claude/agents/` and `.claude/scripts/`. Read the short `CLAUDE.md` and preserve existing repository instructions.
 
 ## Phase 2 — Build the persistent map and test toolkit
