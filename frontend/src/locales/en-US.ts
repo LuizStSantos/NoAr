@@ -1897,6 +1897,7 @@ export default {
         },
         sections: {
             general: 'General',
+            logging: 'Log',
             output: 'Output',
             ingest: 'Live ingest',
             playlist: 'Playlist and storage',
@@ -1912,6 +1913,7 @@ export default {
         },
         keywords: {
             general: 'name time zone timezone preview folders channels delete extensions',
+            logging: 'log errors warnings ffmpeg download copy',
             output: 'hls stream rtmp srt udp resolution fps codec bitrate encoder variants adaptive quality',
             ingest: 'receiver listener srt rtmp port priority live signal',
             playlist: 'day start length filler folder mode shuffle extensions infinite',

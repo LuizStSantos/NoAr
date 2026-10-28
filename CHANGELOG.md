@@ -11,6 +11,21 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-28
+
+### Changed
+
+- The log moved into **Settings › Log** (`/configure/logging`); the old
+  `/logging` address leads there. The main menu now reads Home, Player,
+  Playlist, Scheduler, Graphics, Storage, Report, Settings.
+- Every screenshot in `docs` was taken again.
+
+### Fixed
+
+- The desktop menu stays on one line whatever the channel name: its icons
+  hide only when they do not fit, instead of "Settings" dropping to a second
+  line.
+
 ## [1.8.2] - 2026-10-28
 
 ### Fixed
@@ -615,7 +630,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.8.2...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/LuizStSantos/NoAr/compare/v1.8.2...v1.9.0
 [1.8.2]: https://github.com/LuizStSantos/NoAr/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/LuizStSantos/NoAr/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/LuizStSantos/NoAr/compare/v1.7.0...v1.8.0

@@ -130,10 +130,10 @@ const router = createRouter({
             meta: { showHeader: true },
         },
         {
+            // The log moved into the settings; old links still land there.
             path: '/logging',
             name: 'logging',
-            component: () => import('@/views/LoggingView.vue'),
-            meta: { showHeader: true },
+            redirect: (to) => ({ path: '/configure/logging', query: to.query }),
         },
         {
             path: '/configure',
@@ -146,6 +146,12 @@ const router = createRouter({
                     path: 'general',
                     name: 'settings-general',
                     component: () => import('@/components/settings/SettingsGeneral.vue'),
+                    meta: { showHeader: true, roles: ALL },
+                },
+                {
+                    path: 'logging',
+                    name: 'settings-logging',
+                    component: () => import('@/views/LoggingView.vue'),
                     meta: { showHeader: true, roles: ALL },
                 },
                 {

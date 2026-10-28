@@ -114,7 +114,8 @@ and the Report for what aired.
 - **Multiple channels**, users with roles, and a **REST API**
   ([docs](docs/api.md)).
 - **Alerts** by mail and HTTP push (ntfy) for log errors
-  ([docs](docs/notifications.md)); a **log** that follows the channel live.
+  ([docs](docs/notifications.md)); a **log** that follows the channel live, in
+  **Settings › Log**.
 - **External tasks**: a script run when a clip starts
   ([docs](docs/external_tasks.md)).
 - **Settings**: a side menu of pages, with search, unsaved-change markers, one
@@ -162,7 +163,8 @@ or typing and confirmed before they move, and the quick scenes.
 
 ![Graphics](docs/images/graphics.png)
 
-**Report**: the day so far with the actual times, and what is still to come
+**Report**: a day with the actual times of what aired and how each item ended; on
+the current day, also what is still to come
 from the playlist and the Scheduler, with totals for commercials and lives.
 
 ![Report](docs/images/report.png)

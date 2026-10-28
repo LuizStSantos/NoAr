@@ -9,6 +9,7 @@ import { useConfig } from '@/stores/config'
 
 export type SettingsSectionName =
     | 'general'
+    | 'logging'
     | 'output'
     | 'ingest'
     | 'playlist'
@@ -60,6 +61,7 @@ const PROCESSING_LOGO = [
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
     { name: 'general', group: 'channel', roles: ALL, keys: [] },
+    { name: 'logging', group: 'channel', roles: ALL, keys: [] },
     { name: 'output', group: 'channel', roles: ADMINS, keys: ['output'], restarts: true },
     { name: 'ingest', group: 'channel', roles: ADMINS, keys: ['ingest'] },
     {

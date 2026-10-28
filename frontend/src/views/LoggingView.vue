@@ -301,10 +301,10 @@ watch([level, search, fold], () => {
 })
 </script>
 <template>
-    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 flex flex-col gap-4">
+    <div class="flex flex-col gap-4">
         <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
             <div class="flex-[1_1_280px] min-w-0">
-                <h1 class="m-0 text-2xl font-semibold">{{ t('log.title') }}</h1>
+                <h1 class="m-0 text-xl font-semibold">{{ t('log.title') }}</h1>
                 <p class="mt-1 mb-0 text-muted">
                     {{ t('log.intro', { channel: channel?.name ?? '', timezone: configStore.timezone }) }}
                 </p>

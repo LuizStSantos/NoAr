@@ -1901,6 +1901,7 @@ export default {
         },
         sections: {
             general: 'Geral',
+            logging: 'Registro',
             output: 'Saída',
             ingest: 'Ingestão ao vivo',
             playlist: 'Playlist e armazenamento',
@@ -1916,6 +1917,7 @@ export default {
         },
         keywords: {
             general: 'nome fuso horário prévia pastas canais excluir extensões',
+            logging: 'registro log erros avisos ffmpeg baixar copiar',
             output: 'hls stream rtmp srt udp resolução fps quadros codificador taxa bits versões qualidade adaptável',
             ingest: 'receptor srt rtmp porta prioridade ao vivo sinal',
             playlist: 'dia começa duração tapa-buraco filler pasta modo embaralhar extensões sem fim',
