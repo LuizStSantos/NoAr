@@ -5,12 +5,16 @@ on:
     branches: [main]
     paths:
       - '.claude/**'
+      - '.agents/**'
+      - 'AGENTS.md'
       - 'docs/ai/**'
       - 'CLAUDE.md'
       - '.github/workflows/ai-toolkit.yml'
   pull_request:
     paths:
       - '.claude/**'
+      - '.agents/**'
+      - 'AGENTS.md'
       - 'docs/ai/**'
       - 'CLAUDE.md'
       - '.github/workflows/ai-toolkit.yml'

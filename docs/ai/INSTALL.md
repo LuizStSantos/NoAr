@@ -2,6 +2,10 @@
 
 The NoAr repository includes six project skills, specialized Claude Code agents, a persistent code map, audit councils and optional FFmpeg documentation research. **The toolkit is already in the repository:** no ZIP or account-skill import is needed when Claude Code loads project files correctly.
 
+## Codex compatibility
+
+Codex uses root `AGENTS.md` plus six lightweight repository-local `.agents/skills/` adapters. They point to the same canonical `.claude/skills/` documentation; Claude-specific agents and councils do not automatically transfer. See `docs/ai/CODEX.md` for setup and examples.
+
 ## Start a fresh Claude Code session
 
 Open the NoAr repository and the intended branch at https://claude.ai/code. The root `CLAUDE.md` gives global guidance. The available skills are:
