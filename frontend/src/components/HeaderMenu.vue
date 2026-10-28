@@ -148,7 +148,7 @@ async function logout() {
             <nav
                 id="main-nav"
                 :aria-label="t('nav.main')"
-                class="gap-0.5 min-w-0 order-last basis-full grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 p-1.5 mb-1 bg-raised border border-line rounded-xl xl:flex xl:gap-1 xl:order-none xl:basis-0 xl:flex-1 xl:flex-wrap xl:p-0 xl:mb-0 xl:bg-transparent xl:border-0 xl:rounded-none"
+                class="gap-0.5 min-w-0 order-last basis-full grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 p-1.5 mb-1 bg-raised border border-line rounded-xl xl:flex xl:gap-1 xl:order-none xl:basis-0 xl:flex-1 xl:flex-nowrap xl:@container xl:p-0 xl:mb-0 xl:bg-transparent xl:border-0 xl:rounded-none"
                 :class="navOpen ? 'grid' : 'hidden'"
             >
                 <RouterLink
@@ -156,7 +156,7 @@ async function logout() {
                     :key="item.name"
                     :to="channelLink(item.path)"
                     :aria-current="isActive(item.path) ? 'page' : undefined"
-                    class="inline-flex items-center gap-2.5 xl:gap-1.5 px-3 xl:px-2.5 2xl:px-3.5 min-h-11 xl:min-h-10 shrink-0 rounded-field whitespace-nowrap text-[15px] font-medium"
+                    class="inline-flex items-center gap-2.5 xl:gap-1.5 px-3 xl:px-2.5 min-h-11 xl:min-h-10 shrink-0 rounded-field whitespace-nowrap text-[15px] font-medium"
                     :class="
                         isActive(item.path)
                             ? 'bg-base-300 text-base-content'
@@ -164,7 +164,7 @@ async function logout() {
                     "
                 >
                     <i
-                        class="bi text-[16px] xl:max-[1439px]:hidden"
+                        class="bi text-[16px] xl:@max-[960px]:hidden"
                         :class="[item.icon, isActive(item.path) ? 'text-accent-text' : '']"
                         aria-hidden="true"
                     />{{ item.label }}
