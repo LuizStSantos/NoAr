@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-28
+
 ### Added
 
 - **A logo of its own for a video**: in a video's marks (Storage, or one
@@ -648,7 +650,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/LuizStSantos/NoAr/compare/v1.8.2...v1.9.0
 [1.8.2]: https://github.com/LuizStSantos/NoAr/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/LuizStSantos/NoAr/compare/v1.8.0...v1.8.1
