@@ -69,11 +69,10 @@ const navItems = computed(() => [
     { name: 'home', label: t('nav.home'), path: '/', icon: 'bi-house' },
     { name: 'player', label: t('nav.player'), path: '/player', icon: 'bi-play-btn' },
     { name: 'playlist', label: t('nav.playlist'), path: '/playlist', icon: 'bi-list-check' },
-    { name: 'graphics', label: t('nav.graphics'), path: '/graphics', icon: 'bi-layers' },
     { name: 'schedule', label: t('nav.schedule'), path: '/schedule', icon: 'bi-calendar-week' },
+    { name: 'graphics', label: t('nav.graphics'), path: '/graphics', icon: 'bi-layers' },
     { name: 'media', label: t('nav.media'), path: '/media', icon: 'bi-folder2' },
     { name: 'report', label: t('nav.report'), path: '/report', icon: 'bi-bar-chart' },
-    { name: 'logging', label: t('nav.logging'), path: '/logging', icon: 'bi-journal-text' },
     { name: 'configure', label: t('nav.configure'), path: '/configure', icon: 'bi-gear' },
 ])
 

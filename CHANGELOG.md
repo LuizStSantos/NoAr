@@ -11,6 +11,19 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- The log moved into **Settings › Log** (`/configure/logging`); the old
+  `/logging` address leads there. The main menu now reads Home, Player,
+  Playlist, Scheduler, Graphics, Storage, Report, Settings.
+- Every screenshot in `docs` was taken again.
+
+### Fixed
+
+- The desktop menu stays on one line whatever the channel name: its icons
+  hide only when they do not fit, instead of "Settings" dropping to a second
+  line.
+
 ## [1.8.2] - 2026-10-28
 
 ### Fixed
