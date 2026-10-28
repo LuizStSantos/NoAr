@@ -7,7 +7,7 @@ import 'dayjs/locale/ru'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
-import { onClickOutside, useEventListener } from '@vueuse/core'
+import { onClickOutside, useElementSize, useEventListener } from '@vueuse/core'
 
 import ClipEditor from '@/components/player/ClipEditor.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
@@ -64,6 +64,12 @@ const MORE = 20
 const WHOLE_GROUP = 40
 
 /** Groups the user opened or closed; others follow `defaultExpanded`. */
+/** The list's scroller: on a phone the table is wider and scrolls sideways. */
+const tableScroller = ref<HTMLElement>()
+const { width: scrollerWidth } = useElementSize(tableScroller)
+/** The table scrolls sideways: the clip editor then keeps to the visible width. */
+const narrowTable = computed(() => scrollerWidth.value > 0 && scrollerWidth.value < 640)
+
 const toggled = reactive(new Map<string, boolean>())
 /** Extra rows revealed above and below the default window of a group. */
 const reveal = reactive(new Map<string, { before: number; after: number }>())
@@ -1577,7 +1583,12 @@ defineExpose({ addFile, addFiles })
             <p class="m-0 max-w-md text-xs">{{ t('onair.buildByHandHint') }}</p>
         </div>
 
-        <div v-else class="relative overflow-x-auto" :class="fill ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto' : ''">
+        <div
+            v-else
+            ref="tableScroller"
+            class="relative overflow-x-auto"
+            :class="fill ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto' : ''"
+        >
             <table class="w-full min-w-[640px] md:min-w-[760px] border-collapse text-[13px]" @dragend="dragEnd">
                 <thead :class="fill ? 'lg:sticky lg:top-0 lg:z-[5] lg:bg-base-100' : ''">
                     <tr class="text-muted text-left text-xs">
@@ -1805,23 +1816,33 @@ defineExpose({ addFile, addFiles })
                         </tr>
 
                         <tr v-else-if="row.type === 'editor' && editing" class="border-t border-raised bg-raised">
-                            <td />
-                            <td class="px-2 pt-3 pb-1 font-mono align-top">
+                            <td v-if="!narrowTable" />
+                            <td v-if="!narrowTable" class="px-2 pt-3 pb-1 font-mono align-top">
                                 {{ clockTime(playlistStore.playlist[row.index]?.begin ?? 0) }}
                             </td>
-                            <td class="px-2 pe-4 pt-3 pb-4" colspan="4">
-                                <ClipEditor
-                                    :item="editing.item"
-                                    :storage="storage"
-                                    :commercial="
-                                        programmes.isCommercial(
-                                            playlistStore.playlist.findIndex((item) => item.uid === editing?.uid),
-                                        )
-                                    "
-                                    @apply="applyEdit"
-                                    @cancel="editing = null"
-                                    @pick="picker = $event"
-                                />
+                            <td
+                                class="pt-3 pb-4"
+                                :class="narrowTable ? 'p-0' : 'px-2 pe-4'"
+                                :colspan="narrowTable ? 6 : 4"
+                            >
+                                <!-- On a phone the editor stays in view while the table scrolls sideways. -->
+                                <div
+                                    :class="narrowTable ? 'sticky left-0 px-4' : ''"
+                                    :style="narrowTable ? { width: `${scrollerWidth}px` } : undefined"
+                                >
+                                    <ClipEditor
+                                        :item="editing.item"
+                                        :storage="storage"
+                                        :commercial="
+                                            programmes.isCommercial(
+                                                playlistStore.playlist.findIndex((item) => item.uid === editing?.uid),
+                                            )
+                                        "
+                                        @apply="applyEdit"
+                                        @cancel="editing = null"
+                                        @pick="picker = $event"
+                                    />
+                                </div>
                             </td>
                         </tr>
 

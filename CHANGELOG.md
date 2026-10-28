@@ -11,6 +11,15 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-10-28
+
+### Fixed
+
+- Dialogs fit the screen of a phone: the Scheduler's "Agendar grafismo" form
+  (and any dialog sized to the screen) no longer runs past the dialog's edge.
+- On a phone, the editor of a playlist item stays in view instead of being
+  cut off by the list that scrolls sideways.
+
 ## [1.8.1] - 2026-10-27
 
 ### Changed
@@ -606,7 +615,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.8.2...HEAD
+[1.8.2]: https://github.com/LuizStSantos/NoAr/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/LuizStSantos/NoAr/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/LuizStSantos/NoAr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/LuizStSantos/NoAr/compare/v1.6.0...v1.7.0
