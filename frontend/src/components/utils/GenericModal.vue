@@ -89,7 +89,7 @@ onBeforeUnmount(() => {
                 </button>
             </div>
 
-            <div class="grow mt-3">
+            <div class="grow mt-3 min-w-0 [&>*]:max-w-full">
                 <slot>
                     <!-- Plain text: the message can carry names typed by users (titles, files). -->
                     <p class="m-0 whitespace-pre-line [overflow-wrap:anywhere]">{{ text }}</p>
