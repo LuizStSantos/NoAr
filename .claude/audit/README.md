@@ -18,7 +18,7 @@ Exactly five BACKEND voting reviewer agents:
 
 Select `--council backend` when tallying the backend ballot files; frontend is the default. Do not mix the councils. Each council is five members, and only the selected council votes on an audit.
 
-The four token-saving helpers (`noar-explorer`, `noar-map-maintainer`, `noar-documentation`, `noar-release-review`) NEVER vote.
+Simple exploration and map updates run via deterministic scripts. Documentation and responsive-layout helpers NEVER vote.
 
 The lead relays peer criticisms between voting reviewers. Direct teammate messaging requires an actual supported Claude Code Agent Teams environment; never assume it works in Code Web. A ballot without a real reviewer result is invalid.
 

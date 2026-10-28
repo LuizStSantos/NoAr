@@ -3,6 +3,18 @@
 NoAr is a 24/7 Rust/Vue television playout application. Reliability, API compatibility,
 on-air continuity, database safety and predictable Docker releases take priority.
 
+## Standard development workflow
+
+For ordinary natural-language requests to fix, add or refactor NoAr, **without needing a slash command**:
+1. Locate the relevant symbols and verify the source contracts using the indexed map. The indexer's `--find` refreshes it before searching.
+2. Consult only relevant official reference skills when a version-dependent API or unfamiliar implementation warrants it.
+3. Implement the smallest maintainable fix consistent with `backend/AGENTS.md` and existing UI/API contracts. Add focused regression tests where practical.
+4. Plan checks with `python3 .claude/scripts/verify_changes.py --files <changed paths>`; run with `--run` when local tests are available and permitted, then fix reported failures.
+5. Test affected behavior in disposable staging if available; never claim UI, persistence or media output PASS based on a static inspection.
+6. Report changed paths, observed check results, missing runtime evidence and documentation impact. Do not commit/push/deploy or touch production without authorization.
+
+Use the parent Claude session for simple changes. Full five-agent councils and releases are only for explicit requests.
+
 ## Efficient navigation
 
 - Read `docs/ai/repository-map.md` first **if it exists**. It is a navigation aid, not verified implementation behavior.
@@ -17,7 +29,7 @@ on-air continuity, database safety and predictable Docker releases take priority
 - Prefer one Haiku helper for substantial narrow exploration/documentation; a helper is not always needed.
 - Sonnet handles routine development. Reserve Opus for difficult media, concurrency and architecture problems.
 - For complex, user-requested multi-stage work, `noar-orchestrator` coordinates; the main Claude session handles simple work directly.
-- At the end of material work, `noar-documentation-guardian` reviews a compact change summary and flags any docs, changelog or map updates. Neither guardian nor orchestrator votes.
+- For material API, operator-facing, migration or release work, `noar-documentation-guardian` reviews a compact change summary and flags any docs, changelog or map updates. Neither guardian nor orchestrator votes.
 - For frontend audits, the five frontend council reviewers vote. For backend audits, the five backend council reviewers vote. Never pool votes across domains. No sixth vote.
 - Release/production readiness requires independent evidence from `.claude/audit/QUALITY_GATES.md`, not merely a 3/5 vote.
 - Never claim UI clicks, media output, tests or release checks were verified unless actually executed.
@@ -28,7 +40,7 @@ on-air continuity, database safety and predictable Docker releases take priority
 - `/noar-intelligent-development test e2e`: browser interactions using the `qa/e2e` Playwright smoke harness, **staging only**.
 - `/noar-intelligent-development test full-system`: include scheduler and synthetic media output when a safe fixture/environment exists.
 - `noar-integration-e2e-qa` is **non-voting**. Its observed results are independent of the five-voter backend and frontend council ballots.
-- `/noar-intelligent-development layout desktop|mobile|all [fix]`: `noar-desktop-layout` (1280–1920 px) and `noar-mobile-layout` (320–1024 px) check pages in a browser against disposable staging with `qa/layout/check-layout.cjs`, and fix frontend layout only when asked. Both are **non-voting**.
+- `/noar-intelligent-development layout desktop|mobile|all [fix]`: `noar-responsive-layout` checks desktop (1280–1920 px) and mobile/tablet (320–1024 px) pages in a browser against disposable staging with `qa/layout/check-layout.cjs`, and fix frontend layout only when asked. Both are **non-voting**.
 - Never declare runtime readiness based solely on static review, successful unit tests or advisory votes. Consult `.claude/audit/INTEGRATION_QUALITY_GATES.md`.
 
 ## Change safety

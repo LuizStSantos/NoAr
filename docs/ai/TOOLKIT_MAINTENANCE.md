@@ -12,6 +12,10 @@ Do not install or update the FFmpeg Specialist by rerunning the old one-time ins
 
 The `noar-rust`, `noar-vue`, `noar-docker` and `noar-video-processing` skills are scoped reference instructions, not agents or voters. Maintain official links in their skill files. Check dependency lockfiles before following documentation; keep FFmpeg C API guidance in the existing specialist. Do not invoke all skills unnecessarily.
 
+## Routine automation
+
+Plain-language requests use the root `CLAUDE.md` workflow without starting a council. `verify_changes.py --files <changed paths>` plans relevant checks; `--run` runs only selected local checks, never production or E2E. Removed explorer/map-maintainer/release-review helpers are covered by deterministic commands and the main session. Responsive layout uses one agent instead of desktop and mobile agents. Five-voter councils remain untouched.
+
 ## Before committing a toolkit edit
 
 ```sh

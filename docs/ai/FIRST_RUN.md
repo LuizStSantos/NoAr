@@ -15,6 +15,7 @@ From repository root, if Bash/Python are available:
 ```sh
 python3 .claude/scripts/update_repository_map.py
 python3 .claude/scripts/update_repository_map.py --find scheduler
+python3 .claude/scripts/verify_changes.py --files backend/app/src/main.rs
 python3 -m unittest discover -s .claude/scripts -p 'test_*.py'
 ```
 

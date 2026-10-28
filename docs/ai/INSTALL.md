@@ -15,7 +15,7 @@ Open the NoAr repository and the intended branch at https://claude.ai/code. The 
 
 The four new skills are **reference playbooks, not agents**. See `docs/ai/tech-references/README.md`.
 
-Use `/noar-intelligent-development first-run` for an initial **non-production** toolkit check. It should not start on-air tests or full council audits unless separately requested.
+Plain-language development requests automatically follow the root `CLAUDE.md` workflow. Use `/noar-intelligent-development first-run` for an initial **non-production** toolkit check. It should not start on-air tests or full council audits unless separately requested.
 
 ## Common commands
 

@@ -9,6 +9,7 @@ Navigation only. Prefer the project skills and the small files below; do not loa
 - **Repository navigation:** `repository-map.md`, then `python3 .claude/scripts/update_repository_map.py --find '<term>'`
 - **Architecture:** `architecture-overview.md`
 - **Saved verified facts:** `file-notes.md`
+- **Deterministic checks:** `.claude/scripts/verify_changes.py` chooses relevant local verification by changed paths
 - **Voting and QA:** `ROLES_AND_VOTING.md`, `INTEGRATION_TEST_PLAN.md`, `.claude/audit/`
 - **Historical audit evidence:** `audits/`
 - **Tool maintenance:** `TOOLKIT_MAINTENANCE.md`

@@ -10,17 +10,21 @@ User request: $ARGUMENTS
 
 Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; reducing tokens must **never** override correctness, security, authorization, or broadcast continuity.
 
+## Ordinary coding requests
+
+Natural-language change requests automatically use the root `CLAUDE.md` workflow: locate → consult scoped references when necessary → implement cleanly → run relevant deterministic checks via `verify_changes.py` → report evidence. Do not demand a slash command or launch full councils for routine changes.
+
 ## 1. Interpret the requested mode
 
 - `map`: update/reuse the indexed file inventory and module map; report changes only.
 - `find <topic>`: refresh the map only if stale, query paths/symbols and confirm in current source.
 - `docs <topic>`: update only relevant documentation, using `noar-documentation` (Haiku) for substantial writing; prefer a direct small edit for trivial changes.
-- `release-review`: inspect SemVer, changelog, migrations, release tags, GitHub Actions and Docker publication with `noar-release-review` (Haiku); **read-only**.
+- `release-review`: inspect SemVer, changelog, migrations, release tags, GitHub Actions and Docker publication directly without mutating anything; consult release-manager instructions only if a complex plan is needed.
 - `release [patch|minor|major|rc.N]`: prepare the next release with `noar-release-manager` (Sonnet): notes against commits, proposed SemVer, gates, and — when asked — the `Release X.Y.Z` pull request. Never tags, merges or publishes; merging that pull request does (see `docs/releasing.md`).
 - `test integration`: verify frontend ↔ Rust API ↔ disposable SQLite in a **user-approved isolated staging environment** with actual evidence; no five-voter council by default.
 - `test e2e`: run focused Playwright browser checks against verified staging only; inspect `qa/e2e/README.md` and never run against production.
 - `test full-system`: coordinate staged browser/API/DB/scheduler/media output testing with synthetic fixtures and explicit user approval; report independently verified and missing checks.
-- `layout desktop [page]` / `layout mobile [page]`: check how pages look at computer widths (1280–1920 px) with `noar-desktop-layout`, or at phone and tablet widths (320–1024 px) with `noar-mobile-layout`, against a disposable staging instance with `qa/layout/check-layout.cjs`; report only, unless `fix` is added (`layout mobile fix`), then fix in `frontend/src/` and check again. Both run for `layout all`. Non-voting.
+- `layout desktop [page]` / `layout mobile [page]`: check how pages look at computer widths (1280–1920 px) with `noar-responsive-layout`, or at phone and tablet widths (320–1024 px) with `noar-responsive-layout`, against a disposable staging instance with `qa/layout/check-layout.cjs`; report only, unless `fix` is added (`layout mobile fix`), then fix in `frontend/src/` and check again. Both run for `layout all`. Non-voting.
 - `first-run`: validate tool files, generate the map, run local unit tests of the audit scripts, review readiness, and prepare staging tests without launching production services.
 - `docs-impact`: ask the read-only Documentation Guardian what needs updating after completed work.
 - `finalize`: gather evidence, run applicable verification gates and the Documentation Guardian; summarize documentation status.
@@ -46,7 +50,7 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 
 - The main Claude session directly coordinates tiny tasks. For complex multi-stage work, use `noar-orchestrator` (Sonnet) as the non-voting coordinator **only if doing so provides value**; it can delegate to smaller subagents if the `Agent` tool is supported. Otherwise the main session coordinates directly. Never spawn both layers redundantly.
 - Define scope, git base/changed paths, who owns each task, how the result will be verified, and token/time budget before delegating. Assign specialists to *different* evidence; avoid five agents re-reading the same file.
-- For nontrivial implementation and audits, the orchestrator **must request** a read-only `noar-documentation-guardian` (Haiku) handoff. Provide a compact change summary, relevant paths, and verified findings. It inspects whether documentation, examples, changelog or repository map must change, but never monitors agents continuously.
+- For material API/operator-facing, migration, release and full-audit work, request a read-only Documentation Guardian handoff; minor edits use direct impact checks. Provide a compact change summary, relevant paths, and verified findings. It inspects whether documentation, examples, changelog or repository map must change, but never monitors agents continuously.
 - A scoped local candidate list is available through `python3 .claude/scripts/analyze_documentation_impact.py --base <ref>` or `--files path1 path2`; these are suggestions only. Use the writing agent `noar-documentation` (Haiku) **only when documentation edits are authorized**.
 - At completion, consult `.claude/audit/QUALITY_GATES.md` for risky tasks and keep `PASS / FAIL / NOT_RUN / NOT_AVAILABLE` evidence. No auditor vote substitutes for browser, stream or migration tests.
 
@@ -61,10 +65,7 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 
 ## 4. Efficient model delegation
 
-- `noar-explorer` (Haiku) — narrow path/symbol lookup, only for meaningful investigation.
-- `noar-map-maintainer` (Haiku) — refresh navigation index, check note freshness.
 - `noar-documentation` (Haiku) — user/developer docs, README, API comments.
-- `noar-release-review` (Haiku) — READ-ONLY changelog/CI/migration/version review.
 - `noar-release-manager` (Sonnet) — prepares releases with `.claude/scripts/prepare_release.py`; opens the release pull request only when asked; never tags or publishes.
 - FRONTEND council for frontend audits only: backend/API integration, frontend, visual design, accessibility and functional reviewers.
 - BACKEND council for backend audits only: backend Rust/API, media engine, security/authorization, persistence/migrations and reliability/testing reviewers.
@@ -72,8 +73,7 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 - `noar-documentation-guardian` (Haiku) — review documentation impact of completed, material changes; NON-VOTING.
 - `noar-orchestrator` (Sonnet) — coordinate multi-stage reviews; NON-VOTING.
 - `noar-integration-e2e-qa` (Sonnet) — frontend/API/database/browser/full-system runtime evidence; NON-VOTING.
-- `noar-desktop-layout` (Sonnet) — pages at 1280–1920 px: one-line main menu, width use, text inside its cards; browser evidence with `qa/layout/check-layout.cjs --profile desktop`; fixes frontend layout when asked; NON-VOTING.
-- `noar-mobile-layout` (Sonnet) — pages and dialogs at 320–1024 px: menu button, nothing wider than the screen, forms that fit, touch sizes; browser evidence with `qa/layout/check-layout.cjs --profile mobile`; fixes frontend layout when asked; NON-VOTING.
+- `noar-responsive-layout` (Sonnet) — one non-voting agent for desktop, tablet and mobile browser layout verification.
 - Do not invoke a subagent for a two-line change or duplicate searches in multiple agents.
 - Agent model aliases are requests, not guarantees of plan availability; report when unavailable.
 - The main model is set by the Claude Code selector. This skill cannot force an Opus-to-Sonnet switch.
