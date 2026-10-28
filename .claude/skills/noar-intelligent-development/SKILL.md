@@ -20,6 +20,7 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 - `test integration`: verify frontend ↔ Rust API ↔ disposable SQLite in a **user-approved isolated staging environment** with actual evidence; no five-voter council by default.
 - `test e2e`: run focused Playwright browser checks against verified staging only; inspect `qa/e2e/README.md` and never run against production.
 - `test full-system`: coordinate staged browser/API/DB/scheduler/media output testing with synthetic fixtures and explicit user approval; report independently verified and missing checks.
+- `layout desktop [page]` / `layout mobile [page]`: check how pages look at computer widths (1280–1920 px) with `noar-desktop-layout`, or at phone and tablet widths (320–1024 px) with `noar-mobile-layout`, against a disposable staging instance with `qa/layout/check-layout.cjs`; report only, unless `fix` is added (`layout mobile fix`), then fix in `frontend/src/` and check again. Both run for `layout all`. Non-voting.
 - `first-run`: validate tool files, generate the map, run local unit tests of the audit scripts, review readiness, and prepare staging tests without launching production services.
 - `docs-impact`: ask the read-only Documentation Guardian what needs updating after completed work.
 - `finalize`: gather evidence, run applicable verification gates and the Documentation Guardian; summarize documentation status.
@@ -71,6 +72,8 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 - `noar-documentation-guardian` (Haiku) — review documentation impact of completed, material changes; NON-VOTING.
 - `noar-orchestrator` (Sonnet) — coordinate multi-stage reviews; NON-VOTING.
 - `noar-integration-e2e-qa` (Sonnet) — frontend/API/database/browser/full-system runtime evidence; NON-VOTING.
+- `noar-desktop-layout` (Sonnet) — pages at 1280–1920 px: one-line main menu, width use, text inside its cards; browser evidence with `qa/layout/check-layout.cjs --profile desktop`; fixes frontend layout when asked; NON-VOTING.
+- `noar-mobile-layout` (Sonnet) — pages and dialogs at 320–1024 px: menu button, nothing wider than the screen, forms that fit, touch sizes; browser evidence with `qa/layout/check-layout.cjs --profile mobile`; fixes frontend layout when asked; NON-VOTING.
 - Do not invoke a subagent for a two-line change or duplicate searches in multiple agents.
 - Agent model aliases are requests, not guarantees of plan availability; report when unavailable.
 - The main model is set by the Claude Code selector. This skill cannot force an Opus-to-Sonnet switch.

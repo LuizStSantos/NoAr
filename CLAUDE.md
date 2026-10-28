@@ -28,6 +28,7 @@ on-air continuity, database safety and predictable Docker releases take priority
 - `/noar-intelligent-development test e2e`: browser interactions using the `qa/e2e` Playwright smoke harness, **staging only**.
 - `/noar-intelligent-development test full-system`: include scheduler and synthetic media output when a safe fixture/environment exists.
 - `noar-integration-e2e-qa` is **non-voting**. Its observed results are independent of the five-voter backend and frontend council ballots.
+- `/noar-intelligent-development layout desktop|mobile|all [fix]`: `noar-desktop-layout` (1280–1920 px) and `noar-mobile-layout` (320–1024 px) check pages in a browser against disposable staging with `qa/layout/check-layout.cjs`, and fix frontend layout only when asked. Both are **non-voting**.
 - Never declare runtime readiness based solely on static review, successful unit tests or advisory votes. Consult `.claude/audit/INTEGRATION_QUALITY_GATES.md`.
 
 ## Change safety
