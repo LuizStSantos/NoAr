@@ -1,6 +1,6 @@
 # NoAr AI Development Toolkit — Setup and Usage
 
-The NoAr repository includes two project skills, specialized Claude Code agents, a persistent code map, audit councils and optional FFmpeg documentation research. **The toolkit is already in the repository:** no ZIP or account-skill import is needed when Claude Code loads project files correctly.
+The NoAr repository includes six project skills, specialized Claude Code agents, a persistent code map, audit councils and optional FFmpeg documentation research. **The toolkit is already in the repository:** no ZIP or account-skill import is needed when Claude Code loads project files correctly.
 
 ## Start a fresh Claude Code session
 
@@ -8,6 +8,12 @@ Open the NoAr repository and the intended branch at https://claude.ai/code. The 
 
 - `/noar-intelligent-development` — mapping, implementation, audits, documentation, releases, and integration QA.
 - `/noar-ffmpeg` — bounded research in official FFmpeg manuals and C APIs.
+- `/noar-rust` — official Rust, Axum, Tokio, SQLx and SQLite.
+- `/noar-vue` — official Vue, TypeScript, Pinia and Vite.
+- `/noar-docker` — official Dockerfile, Compose and BuildKit.
+- `/noar-video-processing` — playout, video/audio processing and synchronization.
+
+The four new skills are **reference playbooks, not agents**. See `docs/ai/tech-references/README.md`.
 
 Use `/noar-intelligent-development first-run` for an initial **non-production** toolkit check. It should not start on-air tests or full council audits unless separately requested.
 

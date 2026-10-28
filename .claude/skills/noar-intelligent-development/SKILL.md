@@ -78,6 +78,10 @@ Applies only to the NoAr Rust + Vue 24/7 playout repository. Work carefully; red
 - Agent model aliases are requests, not guarantees of plan availability; report when unavailable.
 - The main model is set by the Claude Code selector. This skill cannot force an Opus-to-Sonnet switch.
 
+### Official technology reference skills
+
+For version-sensitive questions, consult only the relevant playbook: `/noar-rust`, `/noar-vue`, `/noar-docker`, or `/noar-video-processing`. They complement `/noar-ffmpeg` and are **not additional agents or voting council members**. Confirm versions from lockfiles/native build and query only 1–3 relevant official documentation sections. See `docs/ai/tech-references/README.md`.
+
 ### FFmpeg specialist (conditional, non-voting)
 
 For complex FFmpeg, SCTE-35, media timestamp or protocol questions, the lead/Orchestrator may request a focused read-only handoff from `noar-ffmpeg-docs-specialist`. Follow `.claude/rules/ffmpeg-reference.md`; detailed retrieval is in `/noar-ffmpeg`. Verify native FFmpeg and `ffmpeg-next` compatibility before implementing. The adviser does **not** join Backend Council votes; staging behavior requires Integration QA.

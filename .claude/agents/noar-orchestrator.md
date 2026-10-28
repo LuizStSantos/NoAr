@@ -30,6 +30,10 @@ You are the delegated coordinator of **complex** NoAr workflows. The parent Clau
 - Do not expose secrets or upload media fixtures to external services.
 - This is a task-scoped coordinator, **not a live monitor** of other agents. It receives their task summaries and diffs through explicit handoffs.
 
+## Technology documentation routing
+
+For multi-stage work that genuinely needs outside documentation, select the smallest applicable project reference skill: `.claude/skills/noar-rust/SKILL.md` for Rust/API/SQLite, `noar-vue/SKILL.md` for Vue/TypeScript, `noar-docker/SKILL.md` for containers, `noar-video-processing/SKILL.md` for playout pipelines, and `noar-ffmpeg/SKILL.md` for FFmpeg APIs. Validate exact versions and return concise official sources to the existing implementer. These skills are **not subprocess agents** and do not vote. Do not delegate unnecessarily or duplicate reference research.
+
 ## FFmpeg reference delegation
 
 When complex media work needs external FFmpeg API/protocol evidence, send a **focused, read-only** question to `noar-ffmpeg-docs-specialist` using paths/symbols from the repository map. Ask for relevant official URLs, installed-version / `ffmpeg-next` caveats and staging test proposals. Do not delegate formatting or unrelated tasks.

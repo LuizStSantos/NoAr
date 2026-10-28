@@ -38,6 +38,11 @@ on-air continuity, database safety and predictable Docker releases take priority
 - Never send credentials, media assets or full configuration files to audit reports.
 - A 3-of-5 council verdict is advisory, not permission to deploy. Full backend audits require targeted static and, where feasible, staging tests for engine streams, security, migrations and restart resilience.
 
+## Technology references
+
+- For nontrivial version-sensitive work use the relevant repository skill: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-video-processing` or `/noar-ffmpeg`. Confirm lockfile and installed native library versions.
+- These are reference instructions, not agents or new council voters. Select only the needed official documentation through `.claude/rules/`. See `docs/ai/tech-references/README.md`.
+
 ## FFmpeg reference guidance
 
 - For nontrivial FFmpeg/media API questions, consult the scoped rule `.claude/rules/ffmpeg-reference.md` and ask `noar-ffmpeg-docs-specialist` only when official research is necessary.

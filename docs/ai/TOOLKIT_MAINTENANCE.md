@@ -8,6 +8,10 @@ The `noar-orchestrator` is a task-scoped coordinator, not a permanent monitor. T
 
 Do not install or update the FFmpeg Specialist by rerunning the old one-time installer; integration is already committed and managed as ordinary Markdown files. The live tooling remains `.claude/scripts/ffmpeg_docs.py`.
 
+## Technology reference skills
+
+The `noar-rust`, `noar-vue`, `noar-docker` and `noar-video-processing` skills are scoped reference instructions, not agents or voters. Maintain official links in their skill files. Check dependency lockfiles before following documentation; keep FFmpeg C API guidance in the existing specialist. Do not invoke all skills unnecessarily.
+
 ## Before committing a toolkit edit
 
 ```sh
