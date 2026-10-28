@@ -1,0 +1,45 @@
+name: AI toolkit validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude/**'
+      - 'docs/ai/**'
+      - 'CLAUDE.md'
+      - '.github/workflows/ai-toolkit.yml'
+  pull_request:
+    paths:
+      - '.claude/**'
+      - 'docs/ai/**'
+      - 'CLAUDE.md'
+      - '.github/workflows/ai-toolkit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-toolkit:
+    name: Validate AI toolkit scripts and map
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run Python helper tests
+        run: python3 -m unittest discover -s .claude/scripts -p 'test_*.py' -v
+      - name: Validate scoped check planner
+        run: |
+          python3 .claude/scripts/verify_changes.py --files backend/app/src/main.rs
+          python3 .claude/scripts/verify_changes.py --files frontend/src/App.vue
+      - name: Test FFmpeg topic router (no network)
+        run: python3 .claude/scripts/ffmpeg_docs.py topics 'SCTE-35'
+      - name: Refresh local map (CI workspace only)
+        run: |
+          python3 .claude/scripts/update_repository_map.py
+          python3 .claude/scripts/update_repository_map.py --find scte35
+          if ! git diff --quiet -- docs/ai/repository-map.md docs/ai/symbol-index.json; then
+            echo "::warning::Repository map differs from committed version. Run the indexer and commit refreshed docs/ai files."
+          fi

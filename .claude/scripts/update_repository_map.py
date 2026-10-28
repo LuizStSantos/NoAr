@@ -23,8 +23,8 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / "docs" / "ai"
 INDEX_PATH = OUTPUT_DIR / "symbol-index.json"
 MAP_PATH = OUTPUT_DIR / "repository-map.md"
-SCHEMA_VERSION = 1
-MAX_SYMBOLS = 60
+SCHEMA_VERSION = 2
+MAX_SYMBOLS = 1000
 MAX_PARSE_BYTES = 400_000
 
 SKIP_DIRS = {
@@ -57,7 +57,7 @@ SYMBOL_PATTERNS = {
     ],
     "TypeScript": [
         re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([\w$]+)\b"),
-        re.compile(r"^\s*(?:export\s+)?(?:const|let)\s+([\w$]+)\s*(?::[^=]+)?=\s*(?:(?:async\s+)?(?:\([^)]*\)|[\w$]+)\s*=>|(?:defineStore|computed|ref)\s*\()"),
+        re.compile(r"^\s*(?:export\s+)?(?:const|let)\s+([\w$]+)\s*(?::[^=]+)?=\s*(?:(?:async\s+)?(?:\([^)]*\)|[\w$]+)\s*=>|(?:defineStore|computed|ref|reactive|createRouter|createI18n|createApp|defineComponent|defineConfig)\s*\()"),
     ],
     "JavaScript": [
         re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function|class)\s+([\w$]+)\b"),
@@ -219,6 +219,9 @@ if __name__ == "__main__":
     options.add_argument("--full", action="store_true", help="Discard the previous cache and rebuild")
     args = parser.parse_args()
     if args.find:
+        # Refresh hashes and schema before querying. Reads source files locally and
+        # reuses unchanged metadata; no network or model tokens are required.
+        refresh()
         find(args.find)
     else:
         refresh(force=args.full)

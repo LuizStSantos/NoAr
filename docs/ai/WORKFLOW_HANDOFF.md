@@ -6,6 +6,7 @@ Use this compact format between the main Claude session, the Orchestrator, revie
 - **Changed paths / relevant module:**
 - **Owners / helpers actually used:**
 - **What changed or was investigated:**
+- **Selected check plan:** `.claude/scripts/verify_changes.py --files <changed paths>`, with actual results/NOT_RUN statuses
 - **Verified evidence:** paths:lines, commands with outcomes, browser/runtime proofs
 - **Tests not run or unavailable:**
 - **Council vote:** only when an audit was requested, with five real ballots

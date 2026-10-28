@@ -14,7 +14,7 @@
 | ID | Layer / flow | Observed outcome | Evidence |
 | --- | --- | --- | --- |
 | INT-01 | Public `GET /api/setup` | Status 200; JSON contains boolean `required` | Test report / HTTP status |
-| INT-02 | Login page and navigation | Login form present; password toggle responds; protected route redirects | Playwright trace or report |
+| INT-02 | Login page and navigation | Login form present; password toggle responds; all core protected routes redirect anonymously | Playwright trace or report |
 | INT-03 | Authentication | Test account can login, invalid requests rejected; role boundaries enforced | Scrubbed HTTP assertions |
 | INT-04 | Vue ↔ Rust ↔ SQLite | Create or update safe test object, reload page, verify persisted result | Test ID and API/DB check |
 | INT-05 | Scheduling | UI-created test event is reflected in API/database and executed on staging clock | Scheduler logs and observed state |

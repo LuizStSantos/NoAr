@@ -19,4 +19,4 @@ Other options: `--widths 360,390`, `--routes /,/player,/schedule`. In developmen
 
 It refuses to run without `NOAR_E2E_STAGING=1`, and against anything but a loopback host unless `NOAR_E2E_ALLOW_REMOTE=1` (only for a reviewed disposable host). Use a test-only account, never an on-air instance. It needs Playwright with Chromium (`require('playwright')`).
 
-The agents `noar-desktop-layout` and `noar-mobile-layout` use it; see `.claude/agents/`. Screenshots go to `--out` (default `qa/layout/results/`, ignored by git); do not commit them.
+The unified agent `noar-responsive-layout` uses it; see `.claude/agents/`. Screenshots go to `--out` (default `qa/layout/results/`, ignored by git); do not commit them.

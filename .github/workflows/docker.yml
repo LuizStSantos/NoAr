@@ -4,6 +4,15 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    # Documentation / Claude-only commits should not rebuild and publish the Docker image.
+    # GitHub does not evaluate path filters for tag pushes: releases are unaffected.
+    paths-ignore:
+      - '.claude/**'
+      - 'docs/**'
+      - 'qa/**'
+      - 'CLAUDE.md'
+      - 'README.md'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch:
 
 permissions:
