@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-10-28
+
+### Added
+
+- For development: `qa/layout/check-layout.cjs` checks every page of a
+  disposable staging instance at computer widths or at phone and tablet
+  widths (pages scrolling sideways, text past the screen, split words, the
+  menu), with screenshots; and two layout agents for Claude Code,
+  `noar-desktop-layout` and `noar-mobile-layout`, that use it.
+
 ## [1.10.0] - 2026-10-28
 
 ### Added
@@ -650,7 +660,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/LuizStSantos/NoAr/compare/v1.8.2...v1.9.0
 [1.8.2]: https://github.com/LuizStSantos/NoAr/compare/v1.8.1...v1.8.2
