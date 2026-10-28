@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
+import LShapeCornerPad from '@/components/graphics/LShapeCornerPad.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import PositionPad, { type Shares } from '@/components/settings/PositionPad.vue'
 import SpanBar from '@/components/storage/SpanBar.vue'
@@ -11,7 +12,7 @@ import GenericModal from '@/components/utils/GenericModal.vue'
 import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
-import { LOGO_BOX, LSHAPE_CORNERS, sharesOf } from '@/composables/graphics'
+import { padBox, sharesOf } from '@/composables/graphics'
 import { type Size, logoBox, logoBoxStyle, storageImageUrl } from '@/composables/logo'
 import { type LogoSpan, type VideoMarks, baseName, readLogoMarks, saveLogoMarks } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
@@ -108,6 +109,7 @@ function emptyMarks(): VideoMarks {
         lshape_corner: null,
         lshape_scale: null,
         logo_position: null,
+        logo_image: null,
     }
 }
 
@@ -176,6 +178,7 @@ function normalized(value: VideoMarks): VideoMarks {
         lshape_corner: value.lshape_corner || null,
         lshape_scale: value.lshape_scale ?? null,
         logo_position: value.logo_position || null,
+        logo_image: value.logo_image?.trim() || null,
     }
 }
 
@@ -395,7 +398,7 @@ const logoPadBox = computed(() => {
     const processing = configStore.playout?.processing
     const box = logoImage.value && processing && logoBox(processing.logo_scale, '0:0', logoImage.value, frameSize.value)
 
-    return box ? { width: box.width, height: box.height } : LOGO_BOX
+    return padBox(box || null)
 })
 
 function placeLogo(shares: Shares) {
@@ -523,11 +526,19 @@ async function load() {
         loading.value = false
     }
 
-    const channel = configStore.channels.find((entry) => entry.id === props.channelId)
-
-    logoUrl.value = await storageImageUrl(channel, configStore.playout?.processing?.logo).catch(() => '')
+    await loadLogo()
     await loadLShape()
 }
+
+/** The video's own logo, else the channel's. */
+async function loadLogo() {
+    const channel = configStore.channels.find((entry) => entry.id === props.channelId)
+    const image = marks.value.logo_image?.trim() || configStore.playout?.processing?.logo
+
+    logoUrl.value = await storageImageUrl(channel, image).catch(() => '')
+}
+
+watch(() => marks.value.logo_image, loadLogo)
 
 /** The video's own L-shape graphic, else the channel's. */
 async function loadLShape() {
@@ -539,11 +550,14 @@ async function loadLShape() {
 
 watch(() => marks.value.lshape_graphic, loadLShape)
 
-const pickingGraphic = ref(false)
+/** The image the storage picker is choosing: the L-shape graphic or the logo. */
+const picking = ref<'lshape_graphic' | 'logo_image' | null>(null)
 
-function pickGraphic(file: { path: string }) {
-    marks.value.lshape_graphic = file.path
-    pickingGraphic.value = false
+function pickImage(file: { path: string }) {
+    if (picking.value) {
+        marks.value[picking.value] = file.path
+    }
+    picking.value = null
 }
 
 /** The output picture, which the preview takes the shape of. */
@@ -1179,6 +1193,37 @@ onBeforeUnmount(() => {
                             </p>
                         </section>
 
+                        <!-- Logo: which image this video shows. -->
+                        <section
+                            v-if="kind === 'hide'"
+                            class="flex flex-col gap-3 rounded-field border border-line p-3"
+                            :aria-label="t('storage.marks.logoImage.title')"
+                        >
+                            <h3 class="m-0 text-sm font-semibold">{{ t('storage.marks.logoImage.title') }}</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <input
+                                    :value="marks.logo_image ?? ''"
+                                    class="field-input font-mono text-[13px] flex-[1_1_200px] min-w-0"
+                                    :placeholder="t('storage.marks.logoImage.channel')"
+                                    :aria-label="t('storage.marks.logoImage.title')"
+                                    spellcheck="false"
+                                    @input="marks.logo_image = ($event.target as HTMLInputElement).value || null"
+                                />
+                                <button type="button" class="btn-quiet" @click="picking = 'logo_image'">
+                                    {{ t('settings.choose') }}
+                                </button>
+                                <button
+                                    v-if="marks.logo_image"
+                                    type="button"
+                                    class="btn-quiet"
+                                    @click="marks.logo_image = null"
+                                >
+                                    {{ t('storage.marks.logoImage.reset') }}
+                                </button>
+                            </div>
+                            <p class="m-0 field-hint">{{ t('storage.marks.logoImage.hint') }}</p>
+                        </section>
+
                         <!-- Logo: where it goes in this video. -->
                         <section
                             v-if="kind === 'hide'"
@@ -1241,7 +1286,7 @@ onBeforeUnmount(() => {
                                             marks.lshape_graphic = ($event.target as HTMLInputElement).value || null
                                         "
                                     />
-                                    <button type="button" class="btn-quiet" @click="pickingGraphic = true">
+                                    <button type="button" class="btn-quiet" @click="picking = 'lshape_graphic'">
                                         {{ t('settings.choose') }}
                                     </button>
                                     <button
@@ -1255,38 +1300,13 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                             <div class="flex flex-wrap items-start gap-4">
-                                <div class="flex flex-col gap-1.5">
-                                    <span class="text-xs text-muted">{{ t('storage.marks.lshapeLook.corner') }}</span>
-                                    <div
-                                        role="radiogroup"
-                                        :aria-label="t('storage.marks.lshapeLook.corner')"
-                                        class="grid grid-cols-2 gap-1.5 aspect-video w-36 rounded-md border border-line-strong bg-field p-1.5"
-                                    >
-                                        <button
-                                            v-for="corner in LSHAPE_CORNERS"
-                                            :key="corner"
-                                            type="button"
-                                            role="radio"
-                                            class="rounded-sm border cursor-pointer"
-                                            :class="
-                                                lshapeCorner === corner
-                                                    ? marks.lshape_corner
-                                                        ? 'bg-accent border-accent'
-                                                        : 'bg-accent/40 border-accent'
-                                                    : 'bg-base-100 border-line-strong hover:border-accent'
-                                            "
-                                            :aria-checked="lshapeCorner === corner"
-                                            :aria-label="t(`lshape.corners.${corner}`)"
-                                            :title="t(`lshape.corners.${corner}`)"
-                                            @click="marks.lshape_corner = corner === channelCorner ? null : corner"
-                                        />
-                                    </div>
-                                    <span class="text-xs text-muted">{{
-                                        marks.lshape_corner
-                                            ? t(`lshape.corners.${marks.lshape_corner}`)
-                                            : `${t('storage.marks.lshapeLook.channel')} · ${t(`lshape.corners.${channelCorner}`)}`
-                                    }}</span>
-                                </div>
+                                <LShapeCornerPad
+                                    :corner="marks.lshape_corner"
+                                    :fallback="channelCorner"
+                                    :fallback-label="t('storage.marks.lshapeLook.channel')"
+                                    :label="t('storage.marks.lshapeLook.corner')"
+                                    @choose="marks.lshape_corner = $event === channelCorner ? null : $event"
+                                />
                                 <label class="field-label flex-[1_1_160px]">
                                     {{ t('storage.marks.lshapeLook.size') }}
                                     <select
@@ -1343,13 +1363,13 @@ onBeforeUnmount(() => {
         </section>
 
         <GenericModal
-            :show="pickingGraphic"
-            :title="t('storage.lshapeMarks.graphic')"
+            :show="picking !== null"
+            :title="picking === 'logo_image' ? t('storage.marks.logoImage.title') : t('storage.lshapeMarks.graphic')"
             hide-buttons
-            :modal-action="() => (pickingGraphic = false)"
+            :modal-action="() => (picking = null)"
         >
             <div class="w-[min(520px,90vw)] max-h-[60vh] flex flex-col">
-                <StoragePicker @pick="pickGraphic" />
+                <StoragePicker @pick="pickImage" />
             </div>
         </GenericModal>
     </div>

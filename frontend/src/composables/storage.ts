@@ -112,6 +112,8 @@ export interface VideoMarks {
     lshape_scale: number | null
     /** Where the logo goes while this video plays (`X%:Y%`); null is the channel's place. */
     logo_position: string | null
+    /** The logo shown while this video plays (storage path); null is the channel's. */
+    logo_image: string | null
 }
 
 /** Marks read or saved, with every part present. */
@@ -125,6 +127,7 @@ function completeMarks(marks: Partial<VideoMarks>): VideoMarks {
         lshape_corner: marks.lshape_corner ?? null,
         lshape_scale: marks.lshape_scale ?? null,
         logo_position: marks.logo_position ?? null,
+        logo_image: marks.logo_image ?? null,
     }
 }
 

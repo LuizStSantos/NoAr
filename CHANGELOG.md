@@ -11,6 +11,26 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-28
+
+### Added
+
+- **A logo of its own for a video**: in a video's marks (Storage, or one
+  playlist item), **Logo of this video** shows another image in place of the
+  channel's logo while it plays (`logo_image` in the marks), at the channel's
+  size and opacity. A swap from outside still goes first.
+
+### Changed
+
+- **Schedule graphics** and **Quick scenes** use the same controls as a
+  video's marks: the logo is placed by dragging or typing on a small screen
+  (leave it, the channel's place, or its own), the logo action and the
+  L-shape action are buttons, and the L-shape corner is picked on a small
+  screen.
+- **Graphics › Logo** places the logo anywhere by dragging or typing X % ×
+  Y %, keeping the margin from the edges; **Graphics › L-shape** picks the
+  corner on the same small screen as the marks.
+
 ## [1.9.0] - 2026-10-28
 
 ### Changed
@@ -630,7 +650,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/LuizStSantos/NoAr/compare/v1.8.2...v1.9.0
 [1.8.2]: https://github.com/LuizStSantos/NoAr/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/LuizStSantos/NoAr/compare/v1.8.0...v1.8.1

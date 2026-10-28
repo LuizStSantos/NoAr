@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import LShapeCornerPad from '@/components/graphics/LShapeCornerPad.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
@@ -16,8 +17,6 @@ import { useIndex } from '@/stores/index'
  * with the graphics key, and for stretches marked in a video.
  */
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-
-const CORNERS: Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
 
 const { t } = useI18n()
 const configStore = useConfig()
@@ -145,29 +144,11 @@ watch(() => processing.value?.lshape, loadImage, { immediate: true })
                     <span class="field-hint">{{ t('lshape.template.hint') }}</span>
                 </div>
                 <div class="flex flex-wrap gap-5">
-                    <div class="field-label">
-                        {{ t('lshape.corner') }}
-                        <div
-                            role="radiogroup"
-                            :aria-label="t('lshape.corner')"
-                            class="grid grid-cols-2 gap-1.5 w-[92px]"
-                        >
-                            <button
-                                v-for="corner in CORNERS"
-                                :key="corner"
-                                role="radio"
-                                :aria-checked="(processing.lshape_corner || 'top-right') === corner"
-                                :aria-label="t(`lshape.corners.${corner}`)"
-                                class="h-[38px] rounded-md border cursor-pointer"
-                                :class="
-                                    (processing.lshape_corner || 'top-right') === corner
-                                        ? 'bg-accent border-accent'
-                                        : 'bg-field border-line-strong hover:border-subtle'
-                                "
-                                @click="processing.lshape_corner = corner"
-                            />
-                        </div>
-                    </div>
+                    <LShapeCornerPad
+                        :corner="processing.lshape_corner || 'top-right'"
+                        :label="t('lshape.corner')"
+                        @choose="processing.lshape_corner = $event"
+                    />
                     <label class="field-label flex-[1_1_200px]">
                         {{ t('lshape.size', { n: scale }) }}
                         <input

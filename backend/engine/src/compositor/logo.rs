@@ -354,6 +354,9 @@ struct LogoOverride {
     /// Where the clip playing puts the logo, when it has a place of its own;
     /// a move from outside goes first.
     clip_position: Option<String>,
+    /// The logo of the clip playing, in place of the configured one, and the
+    /// image it was read from; a replacement from outside goes first.
+    clip_image: Option<(String, Arc<LogoOverlay>)>,
 }
 
 struct Outgoing {
@@ -374,6 +377,8 @@ pub(crate) struct LogoFrame {
     pub outgoing: Option<(Option<Arc<LogoOverlay>>, f64)>,
     /// Where the configured logo is moved to, when it is.
     pub position: Option<String>,
+    /// The clip's own logo, drawn in place of the configured one.
+    pub clip_image: Option<Arc<LogoOverlay>>,
 }
 
 impl LogoOverride {
@@ -523,6 +528,42 @@ impl LogoControl {
         Ok(())
     }
 
+    /// The logo of the clip about to play, in place of the configured one
+    /// (`None` for the configured logo), sized and placed like it for an
+    /// output of `width` x `height`. The same image is not read again. A
+    /// replacement from outside still goes first.
+    pub fn set_clip_image(
+        &self,
+        config: Option<&LogoConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        let Some(config) = config else {
+            self.lock().clip_image = None;
+            return Ok(());
+        };
+
+        if self
+            .lock()
+            .clip_image
+            .as_ref()
+            .is_some_and(|(path, _)| path == &config.path)
+        {
+            return Ok(());
+        }
+
+        let overlay = match LogoOverlay::load(config, width, height) {
+            Ok(overlay) => overlay,
+            Err(error) => {
+                self.lock().clip_image = None;
+                return Err(error);
+            }
+        };
+        self.lock().clip_image = Some((config.path.clone(), Arc::new(overlay)));
+
+        Ok(())
+    }
+
     pub fn state(&self) -> LogoState {
         let state = self.lock();
 
@@ -534,7 +575,9 @@ impl LogoControl {
     }
 
     pub(crate) fn has_replacement(&self) -> bool {
-        self.lock().replacement.is_some()
+        let state = self.lock();
+
+        state.replacement.is_some() || state.clip_image.is_some()
     }
 
     /// For the frame being drawn: how visible the logo is, the image
@@ -567,6 +610,10 @@ impl LogoControl {
                 .position
                 .clone()
                 .or_else(|| state.clip_position.clone()),
+            clip_image: state
+                .clip_image
+                .as_ref()
+                .map(|(_, overlay)| overlay.clone()),
         }
     }
 }
@@ -591,6 +638,36 @@ mod tests {
             opacity: 1.0,
             position: "W-w-12:12".to_string(),
         }
+    }
+
+    #[test]
+    fn a_clip_logo_is_drawn_until_the_next_clip_has_none() {
+        let control = LogoControl::default();
+
+        control
+            .set_clip_image(Some(&logo_asset()), 1920, 1080)
+            .unwrap();
+        assert!(control.frame().clip_image.is_some());
+        assert!(control.has_replacement());
+
+        // The same image is kept, not read again.
+        let first = control.frame().clip_image.unwrap();
+        control
+            .set_clip_image(Some(&logo_asset()), 1920, 1080)
+            .unwrap();
+        assert!(std::sync::Arc::ptr_eq(
+            &first,
+            &control.frame().clip_image.unwrap()
+        ));
+
+        control.set_clip_image(None, 1920, 1080).unwrap();
+        assert!(control.frame().clip_image.is_none());
+        assert!(!control.has_replacement());
+
+        let mut missing = logo_asset();
+        missing.path.push_str(".missing");
+        assert!(control.set_clip_image(Some(&missing), 1920, 1080).is_err());
+        assert!(control.frame().clip_image.is_none());
     }
 
     #[test]

@@ -244,6 +244,12 @@ export default {
             lane: 'Edit: {name}',
             summary: 'Marks of this video',
             airs: 'airs',
+            logoImage: {
+                title: 'Logo of this video',
+                channel: 'The channel’s logo',
+                reset: 'Back to the channel’s',
+                hint: 'Shown in place of the channel’s logo while this video plays, at the same size and opacity. A swap from outside (Graphics, API) goes first.',
+            },
             logoPlace: {
                 title: 'Logo position in this video',
                 channel: 'The channel’s',
@@ -1394,17 +1400,28 @@ export default {
             logoPosition: 'Logo position',
             choose: 'Choose…',
             leave: 'Leave as it is',
-            freePosition: 'Free position (X × Y)',
             lshapeAction: 'What happens to the L-shape',
             lshapeActions: {
                 keep: 'Leave it as it is',
                 on: 'Go to the L-shape',
                 off: 'Back to full screen',
             },
+            logoImagePlaceholder: 'An image in the storage',
+            positionModes: {
+                keep: 'Leave as it is',
+                default: 'The channel’s',
+                own: 'Its own',
+            },
+            positionHints: {
+                keep: 'The logo stays where it is. Click or drag on the screen to pick a place.',
+                default: 'The logo goes back to where the channel puts it.',
+                own: 'The logo goes to this place. Drag, click or type X and Y.',
+            },
+            lshapeHint:
+                'An empty graphic, corner or size stays as it is. Click the chosen corner again to leave it as it is. Use the corner where the graphic left room for the picture.',
             lshapeGraphic: 'L-shape graphic',
             graphicKeep: 'The current graphic',
             corner: 'Video corner',
-            cornerDefault: 'The graphic’s',
             size: 'Video size',
             add: 'New scene',
             empty: 'No scenes yet. Create one for each moment you repeat, like a commercial break.',

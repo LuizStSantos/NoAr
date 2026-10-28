@@ -58,9 +58,10 @@ pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     }
 }
 
-/// Before a clip plays: where it puts the logo, and the L-shape of its own
-/// for its marked stretches (its graphic, corner or size, each falling back
-/// to the channel's), or the channel's. A setting that cannot be used is
+/// Before a clip plays: where it puts the logo, which logo it shows (while
+/// the channel has one), and the L-shape of its own for its marked stretches
+/// (its graphic, corner or size, each falling back to the channel's), or the
+/// channel's. A setting that cannot be used is
 /// logged, and the channel's is used.
 async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: &LogoMarks) {
     let (width, height) = (config.output.width, config.output.height);
@@ -74,6 +75,34 @@ async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: 
         let _ = playout
             .logo_control()
             .set_clip_position(None, width, height);
+    }
+
+    let image = marks
+        .logo_image
+        .as_deref()
+        .filter(|_| config.processing.add_logo)
+        .and_then(
+            |image| match norm_abs_path(&config.channel.storage, image) {
+                Ok((path, _, _)) => Some(LogoConfig {
+                    path: path.to_string_lossy().to_string(),
+                    scale: (!config.processing.logo_scale.trim().is_empty())
+                        .then(|| config.processing.logo_scale.clone()),
+                    opacity: config.processing.logo_opacity,
+                    position: config.processing.logo_position.clone(),
+                }),
+                Err(error) => {
+                    warn!(channel = config.general.channel_id; "Logo of the clip: {error}");
+                    None
+                }
+            },
+        );
+    let logo = playout.logo_control();
+    let loaded =
+        tokio::task::spawn_blocking(move || logo.set_clip_image(image.as_ref(), width, height))
+            .await;
+
+    if let Ok(Err(error)) = loaded {
+        warn!(channel = config.general.channel_id; "Logo of the clip, the channel's is shown: {error:#}");
     }
 
     let own = marks.lshape_graphic.is_some()

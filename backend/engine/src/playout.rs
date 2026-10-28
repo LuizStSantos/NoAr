@@ -1701,28 +1701,32 @@ fn apply_overlays(
         * (1.0 - logo_off.clamp(0.0, 1.0));
     let mut incoming = 1.0;
 
-    // Moved from outside: the configured logo drawn at the new place, made
-    // once for each place.
-    match (&logo.position, &video.logo) {
-        (Some(position), Some(configured))
+    // The clip's own logo takes the configured one's place.
+    let base = logo.clip_image.as_deref().or(video.logo.as_ref());
+    let base_id = base.map(|overlay| overlay as *const LogoOverlay as usize);
+
+    // Moved from outside: that logo drawn at the new place, made once for
+    // each place and image.
+    match (&logo.position, base) {
+        (Some(position), Some(base))
             if video
                 .moved_logo
                 .as_ref()
-                .is_none_or(|(at, _)| at != position) =>
+                .is_none_or(|(at, id, _)| at != position || Some(*id) != base_id) =>
         {
-            video.moved_logo = configured
+            video.moved_logo = base
                 .moved_to(position, video.output_width, video.output_height)
                 .ok()
-                .map(|moved| (position.clone(), moved));
+                .map(|moved| (position.clone(), base_id.unwrap_or_default(), moved));
         }
-        (None, _) => video.moved_logo = None,
+        (None, _) | (_, None) => video.moved_logo = None,
         _ => {}
     }
     let configured = video
         .moved_logo
         .as_ref()
-        .map(|(_, moved)| moved)
-        .or(video.logo.as_ref());
+        .map(|(_, _, moved)| moved)
+        .or(base);
 
     // Another image took the logo's place: the old one fades as the new one
     // comes up.
@@ -2130,8 +2134,9 @@ struct VideoDecoder {
     x_offset: u32,
     y_offset: u32,
     logo: Option<LogoOverlay>,
-    /// The configured logo where it was moved to from outside, and where.
-    moved_logo: Option<(String, LogoOverlay)>,
+    /// The logo moved from outside: its place, the image it was made from
+    /// (by address) and the moved copy.
+    moved_logo: Option<(String, usize, LogoOverlay)>,
     logo_control: LogoControl,
     lshape_control: crate::LShapeControl,
     lshape_scaler: crate::compositor::lshape::LShapeScaler,

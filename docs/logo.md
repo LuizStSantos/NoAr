@@ -27,8 +27,12 @@ in percent of the room around the logo (`50 × 1` is the top centre).
 
 - **File**: an image from the storage, PNG with transparency being the usual
   choice.
-- **Position**: one of nine places, and the **margin** from the edges in
-  pixels of the output. **Advanced** takes an FFmpeg-style expression instead,
+- **Position**: drag the logo on the small screen, click where it goes, or
+  type `X %` and `Y %` (0 is the left or top edge, 100 the other; it snaps to
+  the edges and the middle). The **margin** keeps it that many pixels of the
+  output clear of the edges. The edges and the middle are saved as before
+  (`W-w-12:12`); anywhere else as a share with the margin, such as
+  `25%+15:80%-18`. **Advanced** takes any FFmpeg-style expression instead,
   such as `W-w-30:30` (`W`/`H` are the output size, `w`/`h` the logo's).
 - **Size**: a share of the output width, or the image's own size; Advanced
   takes `WIDTH:HEIGHT` in pixels or percent, with `-1` keeping the proportion.
@@ -192,19 +196,24 @@ It goes on air:
 
 ## Logo and L-shape of one video
 
-A video can put the logo somewhere else, and its L-shape in another corner or
-size, for itself alone, wherever it plays: open its marks in the Storage
-(**Cut, logo, breaks and L-shape in this video**).
+A video can show another logo or put it somewhere else, and its L-shape in
+another corner or size, for itself alone, wherever it plays: open its marks in
+the Storage (**Cut, logo, breaks and L-shape in this video**).
 
+- **Logo** tab › **Logo of this video**: an image from the storage shown in
+  place of the channel's logo while the video plays, at the channel's size,
+  place and opacity (or the video's own place). It needs the channel's logo
+  on; commercials still play without a logo.
 - **Logo** tab › **Logo position in this video**: **This video's own**, then
   drag or type it. It applies while the video plays.
 - **L-shape** tab › **This video's L-shape**: its graphic, the video's corner
   and its size, for its L-shape stretches; each left empty uses the channel's.
   Pick the corner where that graphic left the video's space.
 
-They are saved in the video's `<name>.marks.json` (`logo_position`,
-`lshape_graphic`, `lshape_corner`, `lshape_scale`). A move from outside
-(Graphics, the Player, the API) goes before the video's own logo position.
+They are saved in the video's `<name>.marks.json` (`logo_image`,
+`logo_position`, `lshape_graphic`, `lshape_corner`, `lshape_scale`). A swap or
+move from outside (Graphics, the Player, the API) goes before the video's own
+logo and position.
 
 ### Marks of one playlist item
 
