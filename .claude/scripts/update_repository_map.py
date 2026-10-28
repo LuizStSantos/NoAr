@@ -219,6 +219,9 @@ if __name__ == "__main__":
     options.add_argument("--full", action="store_true", help="Discard the previous cache and rebuild")
     args = parser.parse_args()
     if args.find:
+        # Refresh hashes and schema before querying. Reads source files locally and
+        # reuses unchanged metadata; no network or model tokens are required.
+        refresh()
         find(args.find)
     else:
         refresh(force=args.full)
