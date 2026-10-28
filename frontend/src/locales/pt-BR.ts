@@ -244,6 +244,12 @@ export default {
             lane: 'Editar: {name}',
             summary: 'Marcações deste vídeo',
             airs: 'vai ao ar',
+            logoImage: {
+                title: 'Logo deste vídeo',
+                channel: 'A logo do canal',
+                reset: 'Voltar à do canal',
+                hint: 'Aparece no lugar da logo do canal enquanto este vídeo toca, com o mesmo tamanho e opacidade. Uma troca de fora (Grafismo, API) passa na frente.',
+            },
             logoPlace: {
                 title: 'Posição da logo neste vídeo',
                 channel: 'A do canal',
@@ -1398,17 +1404,28 @@ export default {
             logoPosition: 'Posição da logo',
             choose: 'Escolher…',
             leave: 'Deixar como está',
-            freePosition: 'Posição livre (X × Y)',
             lshapeAction: 'O que acontece com o L-shape',
             lshapeActions: {
                 keep: 'Deixar como está',
                 on: 'Entrar no L-shape',
                 off: 'Voltar à tela cheia',
             },
+            logoImagePlaceholder: 'Uma imagem do armazenamento',
+            positionModes: {
+                keep: 'Deixar como está',
+                default: 'A do canal',
+                own: 'Própria',
+            },
+            positionHints: {
+                keep: 'A logo fica onde estiver. Clique ou arraste no quadro para escolher um lugar.',
+                default: 'A logo volta para onde o canal a coloca.',
+                own: 'A logo vai para este lugar. Arraste, clique ou digite X e Y.',
+            },
+            lshapeHint:
+                'Arte, canto e tamanho vazios ficam como estão. Clique de novo no canto escolhido para deixá-lo como está. Use o canto em que a arte deixou o espaço do vídeo.',
             lshapeGraphic: 'Arte do L-shape',
             graphicKeep: 'A arte atual',
             corner: 'Canto do vídeo',
-            cornerDefault: 'O da arte',
             size: 'Tamanho do vídeo',
             add: 'Nova cena',
             empty: 'Nenhuma cena ainda. Crie uma para cada momento que se repete, como o intervalo comercial.',

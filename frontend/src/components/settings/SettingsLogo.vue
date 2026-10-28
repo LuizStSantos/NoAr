@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import LShapeSettings from '@/components/settings/LShapeSettings.vue'
+import PositionPad, { type Shares } from '@/components/settings/PositionPad.vue'
 import SaveBar from '@/components/settings/SaveBar.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import RadioCards from '@/components/settings/RadioCards.vue'
@@ -10,6 +11,7 @@ import ToggleRow from '@/components/settings/ToggleRow.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
+import { padBox, readLogoPlace, sharesOf, writeLogoPlace } from '@/composables/graphics'
 import { type Size, logoBox, logoBoxStyle, storageImageUrl as sharedStorageImageUrl } from '@/composables/logo'
 import { usePlayoutPage } from '@/composables/settingsPage'
 
@@ -19,11 +21,6 @@ const props = withDefaults(defineProps<{ part?: 'logo' | 'lshape' | 'subtitles' 
 const { t } = useI18n()
 const { ready, changes, alsoSaves, saveLabel, save, discard, settings, configStore } = usePlayoutPage('logo')
 
-type Column = 'left' | 'center' | 'right'
-type Row = 'top' | 'middle' | 'bottom'
-
-const COLUMNS: Column[] = ['left', 'center', 'right']
-const ROWS: Row[] = ['top', 'middle', 'bottom']
 const SIZES = ['', '6%:-1', '8%:-1', '10%:-1', '12%:-1', '15%:-1', '20%:-1']
 
 const picking = ref<'logo' | 'guide' | null>(null)
@@ -36,66 +33,29 @@ const logoImage = ref<Size | null>(null)
 const processing = computed(() => configStore.playout.processing)
 const output = computed(() => configStore.playout.output)
 
-interface Placement {
-    column: Column
-    row: Row
-    margin: number
-}
-
-/** Read a corner or center placement back from the position expression. */
-function parsePosition(position: string): Placement | null {
-    const [x = '', y = ''] = position.replace(/\s+/g, '').split(':')
-    const axis = (value: string, big: string, small: string): { side: number; margin: number } | null => {
-        if (/^\d+$/.test(value)) {
-            return { side: 0, margin: Number(value) }
-        }
-
-        if (value === `${big}/2-${small}/2`) {
-            return { side: 1, margin: -1 }
-        }
-
-        const end = new RegExp(`^${big}-${small}-(\\d+)$`).exec(value)
-
-        return end ? { side: 2, margin: Number(end[1]) } : null
-    }
-    const horizontal = axis(x, 'W', 'w')
-    const vertical = axis(y, 'H', 'h')
-
-    if (!horizontal || !vertical) {
-        return null
-    }
-
-    const margins = [horizontal.margin, vertical.margin].filter((value) => value >= 0)
-
-    return {
-        column: COLUMNS[horizontal.side] as Column,
-        row: ROWS[vertical.side] as Row,
-        margin: margins[0] ?? 12,
-    }
-}
-
-function writePosition(placement: Placement) {
-    const m = Math.max(0, Math.round(placement.margin))
-    const x = placement.column === 'left' ? `${m}` : placement.column === 'center' ? 'W/2-w/2' : `W-w-${m}`
-    const y = placement.row === 'top' ? `${m}` : placement.row === 'middle' ? 'H/2-h/2' : `H-h-${m}`
-
-    processing.value.logo_position = `${x}:${y}`
-}
-
-const placement = computed(() => parsePosition(processing.value.logo_position))
+/** Where the logo sits (its place and its margin), when the position is one the pad knows. */
+const placement = computed(() => readLogoPlace(processing.value.logo_position))
 
 const margin = computed({
     get: () => placement.value?.margin ?? 12,
     set: (value: number) => {
         if (placement.value) {
-            writePosition({ ...placement.value, margin: Number(value) || 0 })
+            processing.value.logo_position = writeLogoPlace({ ...placement.value, margin: Number(value) || 0 })
         }
     },
 })
 
-function place(column: Column, row: Row) {
-    writePosition({ column, row, margin: placement.value?.margin ?? 12 })
+/** The pad puts the logo anywhere; the margin keeps it clear of the edges. */
+function placeLogo(shares: Shares) {
+    processing.value.logo_position = writeLogoPlace({ shares, margin: margin.value })
 }
+
+/** The logo's box on the pad, from its real size when known. */
+const logoPadBox = computed(() => {
+    const box = logoImage.value && logoBox(processing.value.logo_scale, '0:0', logoImage.value, frameSize.value)
+
+    return padBox(box || null)
+})
 
 const opacity = computed({
     get: () => Math.round((processing.value.logo_opacity ?? 1) * 100),
@@ -170,27 +130,17 @@ const previewStyle = computed(() => {
     }
 
     const { width, height } = frameSize.value
-    const spot = placement.value ?? { column: 'right', row: 'top', margin: 12 }
+    const spot = placement.value ?? { shares: { x: 100, y: 0 }, margin: 12 }
     const size = /^(\d+(?:\.\d+)?)%/.exec(processing.value.logo_scale.trim())
+    const boxWidth = size ? Number(size[1]) : 12
+    const boxHeight = boxWidth * (width / height)
+    const along = (share: number, room: number, edge: number) =>
+        `${(room * share) / 100 + edge * (1 - (2 * share) / 100)}%`
     const style: Record<string, string> = {
-        width: `${size ? Number(size[1]) : 12}%`,
+        width: `${boxWidth}%`,
         opacity: String(processing.value.logo_opacity ?? 1),
-    }
-    const mx = `${(spot.margin / width) * 100}%`
-    const my = `${(spot.margin / height) * 100}%`
-
-    if (spot.column === 'left') style.left = mx
-    if (spot.column === 'right') style.right = mx
-    if (spot.column === 'center') {
-        style.left = '50%'
-        style.transform = 'translateX(-50%)'
-    }
-
-    if (spot.row === 'top') style.top = my
-    if (spot.row === 'bottom') style.bottom = my
-    if (spot.row === 'middle') {
-        style.top = '50%'
-        style.transform = `${style.transform ?? ''} translateY(-50%)`.trim()
+        left: along(spot.shares.x, 100 - boxWidth, (spot.margin / width) * 100),
+        top: along(spot.shares.y, 100 - boxHeight, (spot.margin / height) * 100),
     }
 
     return style
@@ -415,28 +365,14 @@ function pick(file: { path: string }) {
                     <div class="flex flex-wrap gap-5">
                         <div class="field-label">
                             {{ t('settings.logo.position') }}
-                            <div
-                                role="radiogroup"
-                                :aria-label="t('settings.logo.position')"
-                                class="grid grid-cols-3 gap-1.5 w-[132px]"
-                            >
-                                <template v-for="row in ROWS" :key="row">
-                                    <button
-                                        v-for="column in COLUMNS"
-                                        :key="`${row}-${column}`"
-                                        role="radio"
-                                        :aria-checked="placement?.row === row && placement?.column === column"
-                                        :aria-label="t(`settings.logo.place.${row}-${column}`)"
-                                        class="h-[38px] rounded-md border cursor-pointer"
-                                        :class="
-                                            placement?.row === row && placement?.column === column
-                                                ? 'bg-accent border-accent'
-                                                : 'bg-field border-line-strong hover:border-subtle'
-                                        "
-                                        @click="place(column, row)"
-                                    />
-                                </template>
-                            </div>
+                            <PositionPad
+                                class="w-60"
+                                :shares="placement?.shares ?? sharesOf(processing.logo_position)"
+                                :width="logoPadBox.width"
+                                :height="logoPadBox.height"
+                                :label="t('settings.logo.position')"
+                                @place="placeLogo"
+                            />
                             <span v-if="!placement" class="field-hint">{{ t('settings.logo.customPosition') }}</span>
                         </div>
                         <div class="flex flex-col gap-3.5 flex-[1_1_160px]">

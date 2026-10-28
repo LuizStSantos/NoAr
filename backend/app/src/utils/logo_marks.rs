@@ -69,6 +69,10 @@ pub struct LogoMarks {
     /// still goes first.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logo_position: Option<String>,
+    /// The logo of this video, a storage path, shown while it plays in place
+    /// of the channel's. A swap from outside still goes first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo_image: Option<String>,
 }
 
 impl LogoMarks {
@@ -82,6 +86,10 @@ impl LogoMarks {
             .lshape_graphic
             .map(|graphic| graphic.trim().to_string())
             .filter(|graphic| !graphic.is_empty());
+        self.logo_image = self
+            .logo_image
+            .map(|image| image.trim().to_string())
+            .filter(|image| !image.is_empty());
         self.lshape_corner = self
             .lshape_corner
             .map(|corner| corner.trim().to_string())
@@ -129,6 +137,7 @@ impl LogoMarks {
             && self.lshape_corner.is_none()
             && self.lshape_scale.is_none()
             && self.logo_position.is_none()
+            && self.logo_image.is_none()
             && self.trim.is_none()
     }
 
@@ -403,6 +412,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_logo_of_its_own_is_trimmed_and_an_empty_one_dropped() {
+        let marks = LogoMarks {
+            logo_image: Some("  Logos/sponsor.png ".to_string()),
+            ..LogoMarks::default()
+        }
+        .validated()
+        .unwrap();
+
+        assert_eq!(marks.logo_image.as_deref(), Some("Logos/sponsor.png"));
+        assert!(!marks.is_empty());
+
+        let marks = LogoMarks {
+            logo_image: Some("  ".to_string()),
+            ..LogoMarks::default()
+        }
+        .validated()
+        .unwrap();
+
+        assert!(marks.logo_image.is_none());
+        assert!(marks.is_empty());
+    }
+
+    #[test]
     fn a_video_places_its_logo_and_its_lshape_picture() {
         let marks = LogoMarks {
             logo_position: Some(" 50 × 1 ".to_string()),
@@ -463,6 +495,7 @@ mod tests {
             lshape_corner: None,
             lshape_scale: None,
             logo_position: None,
+            logo_image: None,
         }
         .validated()
         .unwrap();
@@ -478,6 +511,7 @@ mod tests {
                 lshape_corner: None,
                 lshape_scale: None,
                 logo_position: None,
+                logo_image: None,
             }
             .validated()
             .is_err()
@@ -492,6 +526,7 @@ mod tests {
                 lshape_corner: None,
                 lshape_scale: None,
                 logo_position: None,
+                logo_image: None,
             }
             .validated()
             .is_err()
@@ -506,6 +541,7 @@ mod tests {
                 lshape_corner: None,
                 lshape_scale: None,
                 logo_position: None,
+                logo_image: None,
             }
             .validated()
             .is_err()
@@ -523,6 +559,7 @@ mod tests {
             lshape_corner: None,
             lshape_scale: None,
             logo_position: None,
+            logo_image: None,
         };
 
         // The whole video.
@@ -598,6 +635,7 @@ mod tests {
             lshape_corner: None,
             lshape_scale: None,
             logo_position: None,
+            logo_image: None,
         };
 
         assert_eq!(marks_path(&video), dir.join("Programa 01.marks.json"));
@@ -664,6 +702,7 @@ mod tests {
             lshape_corner: None,
             lshape_scale: None,
             logo_position: None,
+            logo_image: None,
         };
         let video = dir.join("A.mp4");
         std::fs::write(&video, b"x").unwrap();
