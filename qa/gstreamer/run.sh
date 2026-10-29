@@ -54,7 +54,10 @@ elif [ "$mode" = watch ]; then
     export NOAR_GST_VERIFY=0
 fi
 compose down --remove-orphans
-rm -f -- artifacts/events.jsonl artifacts/report.json artifacts/fault.json
+rm -f -- artifacts/events.jsonl artifacts/fault.json
+if [ "$mode" != watch ]; then
+    rm -f -- artifacts/report.json
+fi
 fault_pid=""
 trap cleanup EXIT
 trap 'exit 130' INT
@@ -66,6 +69,7 @@ if [ "$mode" = recovery ]; then
 elif [ "$mode" = watch ]; then
     echo "Open VLC: srt://127.0.0.1:${NOAR_GST_SRT_PORT:-19890}?streamid=read:output"
     echo "This bounded demonstration ends automatically. No web UI is provided."
+    echo "Watch mode preserves the previous verification report; it does not generate a new report."
 fi
 compose wait playout || true
 if [ -n "$fault_pid" ]; then

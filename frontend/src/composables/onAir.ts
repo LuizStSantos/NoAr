@@ -64,7 +64,6 @@ export function useOnAir() {
         const item = playlistStore.playlist[playlistStore.currentIndex]
 
         return playlistStore.playoutIsRunning &&
-            !playlistStore.ingestRuns &&
             viewingOnAir.value &&
             item &&
             item.source === playlistStore.current.source

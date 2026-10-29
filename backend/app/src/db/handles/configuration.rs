@@ -1,59 +1,12 @@
 use sqlx::{
-    Executor, Row, Sqlite, SqliteConnection,
+    Row, SqliteConnection,
     sqlite::{SqlitePool, SqliteQueryResult},
 };
 
 use crate::{
-    db::models::{Configuration, LiveInputRecord},
-    utils::{
-        config::{LiveInput, PlayoutConfig, parse_rtmp_ingest_port},
-        errors::ProcessError,
-    },
+    db::models::Configuration,
+    utils::{config::PlayoutConfig, errors::ProcessError},
 };
-
-pub async fn select_rtmp_ingest_urls<'e, E>(executor: E) -> Result<Vec<String>, ProcessError>
-where
-    E: Executor<'e, Database = Sqlite>,
-{
-    let urls = sqlx::query_scalar(
-        "SELECT identifier FROM config_live_input
-         WHERE backend = 'rtmp' AND takeover_mode = 'connection'",
-    )
-    .fetch_all(executor)
-    .await?;
-
-    Ok(urls)
-}
-
-pub async fn select_live_inputs(
-    pool: &SqlitePool,
-    config_id: i32,
-) -> Result<Vec<LiveInput>, ProcessError> {
-    let records = sqlx::query_as::<_, LiveInputRecord>(
-        "SELECT id, priority, enabled, name, backend, identifier, options, demuxer_options FROM config_live_input
-         WHERE config_id = $1 AND backend IN ('rtmp', 'srt') AND takeover_mode = 'connection'
-         ORDER BY priority DESC, id",
-    )
-    .bind(config_id)
-    .fetch_all(pool)
-    .await?;
-
-    records
-        .into_iter()
-        .map(|record| {
-            Ok(LiveInput {
-                id: record.id,
-                priority: record.priority,
-                enabled: record.enabled,
-                name: record.name,
-                backend: record.backend,
-                identifier: record.identifier,
-                options: serde_json::from_str(&record.options)?,
-                demuxer_options: serde_json::from_str(&record.demuxer_options)?,
-            })
-        })
-        .collect()
-}
 
 pub async fn select_configuration(
     pool: &SqlitePool,
@@ -144,7 +97,6 @@ pub async fn select_configuration(
 pub async fn insert_configuration(
     connection: &mut SqliteConnection,
     channel_id: i32,
-    ingest_url: &str,
 ) -> Result<i32, ProcessError> {
     let config_id: i32 = sqlx::query("INSERT INTO config (channel_id) VALUES ($1) RETURNING id")
         .bind(channel_id)
@@ -169,72 +121,7 @@ pub async fn insert_configuration(
             .await?;
     }
 
-    sqlx::query(
-        "INSERT INTO config_live_input
-         (config_id, backend, identifier, takeover_mode)
-         VALUES ($1, 'rtmp', $2, 'connection')",
-    )
-    .bind(config_id)
-    .bind(ingest_url)
-    .execute(&mut *connection)
-    .await?;
-
     Ok(config_id)
-}
-
-pub async fn ingest_port_in_use(
-    pool: &SqlitePool,
-    channel_id: i32,
-    port: u16,
-) -> Result<bool, ProcessError> {
-    live_listener_port_in_use(pool, channel_id, "rtmp", port).await
-}
-
-pub async fn live_listener_port_in_use(
-    pool: &SqlitePool,
-    channel_id: i32,
-    backend: &str,
-    port: u16,
-) -> Result<bool, ProcessError> {
-    let urls = sqlx::query_scalar::<_, String>(LIVE_LISTENER_URLS_QUERY)
-        .bind(channel_id)
-        .bind(backend)
-        .fetch_all(pool)
-        .await?;
-
-    Ok(live_listener_urls_contain_port(&urls, backend, port))
-}
-
-const LIVE_LISTENER_URLS_QUERY: &str = "SELECT ingest.identifier FROM config
-    JOIN config_live_input ingest ON ingest.config_id = config.id
-    WHERE config.channel_id != $1 AND ingest.backend = $2
-        AND ingest.takeover_mode = 'connection' AND ingest.enabled = 1";
-
-pub async fn live_listener_port_in_use_on(
-    connection: &mut SqliteConnection,
-    channel_id: i32,
-    backend: &str,
-    port: u16,
-) -> Result<bool, ProcessError> {
-    let urls = sqlx::query_scalar::<_, String>(LIVE_LISTENER_URLS_QUERY)
-        .bind(channel_id)
-        .bind(backend)
-        .fetch_all(&mut *connection)
-        .await?;
-
-    Ok(live_listener_urls_contain_port(&urls, backend, port))
-}
-
-fn live_listener_urls_contain_port(urls: &[String], backend: &str, port: u16) -> bool {
-    urls.iter()
-        .filter_map(|url| {
-            if backend == "rtmp" {
-                parse_rtmp_ingest_port(url).ok()
-            } else {
-                reqwest::Url::parse(url).ok().and_then(|url| url.port())
-            }
-        })
-        .any(|configured_port| configured_port == port)
 }
 
 pub async fn update_configuration(
@@ -312,72 +199,6 @@ pub async fn update_configuration_on(
         .bind(config.audio.loudness_output_gain_down_db_per_second)
 
         .execute(&mut *connection).await?;
-    {
-        let listeners = &config.ingest.listeners;
-        let existing: Vec<i32> = sqlx::query_scalar(
-            "SELECT id FROM config_live_input WHERE config_id = $1
-             AND backend IN ('rtmp', 'srt') AND takeover_mode = 'connection'",
-        )
-        .bind(id)
-        .fetch_all(&mut *connection)
-        .await?;
-        let mut retained = Vec::new();
-
-        for listener in listeners {
-            let listener_id = if listener.id > 0 {
-                let result = sqlx::query(
-                    "UPDATE config_live_input SET priority = $3, enabled = $4, name = $5,
-                     backend = $6, identifier = $7, options = $8, demuxer_options = $9
-                     WHERE id = $1 AND config_id = $2
-                     AND backend IN ('rtmp', 'srt') AND takeover_mode = 'connection'",
-                )
-                .bind(listener.id)
-                .bind(id)
-                .bind(listener.priority)
-                .bind(listener.enabled)
-                .bind(&listener.name)
-                .bind(&listener.backend)
-                .bind(&listener.identifier)
-                .bind(serde_json::to_string(&listener.options)?)
-                .bind(serde_json::to_string(&listener.demuxer_options)?)
-                .execute(&mut *connection)
-                .await?;
-
-                if result.rows_affected() != 1 {
-                    return Err(ProcessError::Custom("unknown live listener".to_string()));
-                }
-                listener.id
-            } else {
-                sqlx::query_scalar(
-                    "INSERT INTO config_live_input
-                     (config_id, priority, enabled, name, backend, identifier, options, demuxer_options, takeover_mode)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'connection') RETURNING id",
-                )
-                .bind(id)
-                .bind(listener.priority)
-                .bind(listener.enabled)
-                .bind(&listener.name)
-                .bind(&listener.backend)
-                .bind(&listener.identifier)
-                .bind(serde_json::to_string(&listener.options)?)
-                .bind(serde_json::to_string(&listener.demuxer_options)?)
-                .fetch_one(&mut *connection)
-                .await?
-            };
-            retained.push(listener_id);
-        }
-
-        for old_id in existing {
-            if !retained.contains(&old_id) {
-                sqlx::query("DELETE FROM config_live_input WHERE id = $1 AND config_id = $2")
-                    .bind(old_id)
-                    .bind(id)
-                    .execute(&mut *connection)
-                    .await?;
-            }
-        }
-    }
-
     sqlx::query(
         "UPDATE config_playlist SET day_start = $2, length = $3, infinit = $4 WHERE config_id = $1",
     )
@@ -898,7 +719,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn live_listener_configuration_recreates_a_missing_listener_row() {
+    async fn saving_configuration_leaves_legacy_listener_rows_inert_and_unchanged() {
         let pool = pool().await;
         sqlx::raw_sql(
             "UPDATE config_global SET logs = 'assets', playlists = 'assets',
@@ -908,133 +729,46 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        let mut config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
-
-        sqlx::query(
-            "DELETE FROM config_live_input
-             WHERE config_id = 1 AND backend = 'rtmp' AND takeover_mode = 'connection'",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        config.ingest.listeners = vec![crate::utils::config::LiveInput {
-            enabled: true,
-            backend: "rtmp".to_string(),
-            identifier: "rtmp://127.0.0.1:1940/live/recreated".to_string(),
-            ..Default::default()
-        }];
-        update_configuration(&pool, 1, config).await.unwrap();
-
-        let restored = PlayoutConfig::new(&pool, 1, None).await.unwrap();
-        assert!(restored.ingest.listeners[0].enabled);
-        assert_eq!(
-            restored.ingest.listeners[0].identifier,
-            "rtmp://127.0.0.1:1940/live/recreated"
-        );
-    }
-
-    #[tokio::test]
-    async fn multiple_live_listeners_roundtrip_without_changing_the_rtmp_id() {
-        let pool = pool().await;
-        sqlx::raw_sql(
-            "UPDATE config_global SET logs = 'assets', playlists = 'assets',
-                public = 'assets', storage = 'assets';
-             UPDATE channels SET public = 'assets', playlists = 'assets', storage = 'assets';",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        sqlx::query(
-            "INSERT INTO config_live_input (config_id, backend, takeover_mode)
-             VALUES (1, 'ndi', 'manual')",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        let mut config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
-        let listeners = &mut config.ingest.listeners;
-        let rtmp_id = listeners[0].id;
-        listeners[0].enabled = true;
-        listeners[0].priority = 10;
-        listeners[0]
-            .demuxer_options
-            .insert("format".to_string(), "live_flv".to_string());
-        listeners.push(crate::utils::config::LiveInput {
-            enabled: true,
-            backend: "srt".to_string(),
-            identifier: "srt://127.0.0.1:9000".to_string(),
-            priority: 20,
-            options: std::collections::BTreeMap::from([
-                ("passphrase".to_string(), "secret-passphrase".to_string()),
-                ("pbkeylen".to_string(), "16".to_string()),
-            ]),
-            demuxer_options: std::collections::BTreeMap::from([
-                ("format".to_string(), "mpegts".to_string()),
-                ("scan_all_pmts".to_string(), "1".to_string()),
-            ]),
-            ..Default::default()
-        });
-        update_configuration(&pool, 1, config).await.unwrap();
-
-        let mut restored = PlayoutConfig::new(&pool, 1, None).await.unwrap();
-        let listeners = &restored.ingest.listeners;
-        assert_eq!(listeners.len(), 2);
-        assert_eq!(listeners[0].backend, "srt");
-        assert_eq!(listeners[0].options["passphrase"], "secret-passphrase");
-        assert_eq!(listeners[0].demuxer_options["format"], "mpegts");
-        assert_eq!(listeners[0].demuxer_options["scan_all_pmts"], "1");
-        assert_eq!(listeners[1].id, rtmp_id);
-        assert_eq!(listeners[1].priority, 10);
-        assert_eq!(listeners[1].demuxer_options["format"], "live_flv");
-
-        restored
-            .ingest
-            .listeners
-            .retain(|listener| listener.backend == "rtmp");
-        update_configuration(&pool, 1, restored).await.unwrap();
-        let final_config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
-        assert_eq!(final_config.ingest.listeners[0].id, rtmp_id);
-        let ndi_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM config_live_input WHERE config_id = 1 AND backend = 'ndi'",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-        assert_eq!(ndi_count, 1);
-    }
-
-    #[tokio::test]
-    async fn listener_port_check_uses_the_saving_transaction() {
-        let pool = pool().await;
-        sqlx::query("INSERT INTO channels (id, name, preview_url) VALUES (2, 'Other', '')")
-            .execute(&pool)
-            .await
-            .unwrap();
-        let other_config_id: i32 =
-            sqlx::query_scalar("INSERT INTO config (channel_id) VALUES (2) RETURNING id")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
         sqlx::query(
             "INSERT INTO config_live_input (config_id, enabled, backend, identifier, takeover_mode)
-             VALUES ($1, 1, 'srt', 'srt://127.0.0.1:9000', 'connection')",
+             VALUES (1, 1, 'srt', 'srt://127.0.0.1:9000', 'connection')",
         )
-        .bind(other_config_id)
         .execute(&pool)
         .await
         .unwrap();
-        let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+        let before: Vec<(i32, bool, String)> = sqlx::query_as(
+            "SELECT id, enabled, identifier FROM config_live_input WHERE config_id = 1 ORDER BY id",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        let mut config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        assert!(
+            serde_json::to_value(&config)
+                .unwrap()
+                .get("ingest")
+                .is_none()
+        );
+        config.audio.volume = 0.75;
+        update_configuration(&pool, 1, config).await.unwrap();
+        let restored = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        let after: Vec<(i32, bool, String)> = sqlx::query_as(
+            "SELECT id, enabled, identifier FROM config_live_input WHERE config_id = 1 ORDER BY id",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
 
+        assert_eq!(restored.audio.volume, 0.75);
         assert!(
-            live_listener_port_in_use_on(&mut transaction, 1, "srt", 9000)
-                .await
+            serde_json::to_value(restored)
                 .unwrap()
+                .get("ingest")
+                .is_none()
         );
-        assert!(
-            !live_listener_port_in_use_on(&mut transaction, 2, "srt", 9000)
-                .await
-                .unwrap()
+        assert_eq!(
+            before, after,
+            "legacy records are retained only for historical compatibility"
         );
-        transaction.rollback().await.unwrap();
     }
 }

@@ -1,92 +1,69 @@
 ## Build NoAr
 
-NoAr ships as a Docker image (see [docker.md](docker.md)); build from source
-only to work on it. Use the latest stable Rust version from
-[rustup](https://rustup.rs/) on Linux.
+Use Rust 1.99.1 and Node.js 24, matching `Dockerfile` and
+`.github/workflows/validate.yml`. NoAr uses one mandatory GStreamer media
+runtime; no backend selector or FFmpeg playout fallback is provided.
 
-### FFmpeg libraries
+### Native media dependencies
 
-NoAr links against FFmpeg through `ffmpeg-next`, so local builds need the FFmpeg runtime tools and development libraries. FFmpeg 7.0+ is required.
-
-On Debian/Ubuntu based systems install:
+Use Debian trixie or another environment supplying GStreamer 1.26 and the
+compatible codec libraries. On Debian install:
 
 ```bash
 sudo apt install \
-    ffmpeg \
-    libavcodec-dev \
-    libavformat-dev \
-    libavutil-dev \
-    libswresample-dev \
-    libswscale-dev \
-    pkg-config
+    clang libclang-dev pkg-config cmake ffmpeg fonts-dejavu-core \
+    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+    libgstreamer-plugins-bad1.0-dev \
+    gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
+    glib-networking \
+    libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev \
+    libavutil-dev libswresample-dev libswscale-dev
+rustup component add rustfmt clippy
 ```
 
-When compiling against a manually installed FFmpeg, make sure `pkg-config` can find the `.pc` files, for example:
+The MPEG-TS development library is part of the bad-plugin development package.
+Check native core, app, audio, video, pbutils and mpegts libraries with
+`pkg-config --modversion gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0
+gstreamer-video-1.0 gstreamer-pbutils-1.0 gstreamer-mpegts-1.0`.
 
-```bash
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
-```
+FFmpeg frame structures remain a memory interchange for the existing Rust
+compositor and audio processing. GStreamer's libav plugin supplies additional
+native codecs. Neither is an alternative playback engine. The FFmpeg command
+line tools are used to generate and independently inspect synthetic test media.
 
-### Optional SRT logging integration
+### SRT lifecycle dependency
 
-The Docker image and CI build native SRT 1.5.5 with GnuTLS using
-`docker/srt/build.sh`. FFmpeg opens SRT inputs and outputs in the same
-process; SRT 1.5.4 can clean up other active sockets when one session closes.
-The build pins the upstream 1.5.5 archive by SHA-256 and preserves the
-`libsrt-gnutls.so.1.5` ABI. See the corrected lifecycle in
-[SRT 1.5.5](https://github.com/Haivision/srt/blob/v1.5.5/srtcore/api.cpp).
+Docker and CI build GnuTLS SRT 1.5.5 through `docker/srt/build.sh`, preserving
+`libsrt-gnutls.so.1.5`. The archive is pinned by SHA-256. Native GStreamer SRT
+plugins load this corrected library, so closing an input session cannot trigger
+the affected SRT 1.5.4 cleanup of other active sockets in the process.
 
-For a local Debian build with the affected library, install `cmake`, `curl`,
-`g++`, `libgnutls28-dev` and `make`, then run the build script with an
-installation prefix you control. Configure the loader to use that prefix;
-installing headers alone does not change the library FFmpeg loads. CI installs
-under `/usr/local` and runs `ldconfig` before testing. Never replace the
-library of an on-air process.
+For local builds, install `cmake`, `curl`, `g++`, `libgnutls28-dev` and `make`,
+then build into a prefix you control and configure the loader to use that prefix.
+Installing headers does not change the runtime library. Do not replace a live
+process's libraries. Build provenance is recorded in the Docker image at
+`/usr/local/share/noar/srt-build.txt`.
 
-`docker/srt/test-lifecycle.c` sends real data over a loopback SRT connection
-while opening and closing 20 auxiliary sessions. It must fail with the
-affected stock library and pass with the corrected release. The test runs
-during the Docker dependency build and CI; it does not prove MediaMTX/VLC recovery.
+`docker/srt/test-lifecycle.c` checks data transfer while 20 auxiliary sessions
+open and close. It is a dependency regression test; NoAr/MediaMTX/VLC transitions
+still need separate observation. The engine forwards GStreamer diagnostics to
+NoAr's logger. It does not install FFmpeg or libsrt process log callbacks.
 
-Run only the isolated dependency check with:
+NoAr reads external live URLs; input server listeners and automatic encoder
+publication takeover have been removed. See [live_ingest.md](live_ingest.md).
 
-```sh
-docker build --target srt-build -t noar-srt-check .
-docker run --rm --network none noar-srt-check timeout 30 /tmp/test-srt-lifecycle
-```
-
-If a development environment uses a TLS proxy, the Docker build accepts an
-optional `proxy_ca` BuildKit secret. The certificate is mounted only during
-networked build steps; TLS verification remains enabled.
-
-The engine's build script uses `pkg-config` to check whether libsrt is linkable
-for the target build. If `pkg-config --modversion srt` succeeds, NoAr links
-libsrt directly and routes its native messages through its own logger,
-including rate limiting for repeated receive-buffer warnings. Use the
-development files for the same libsrt installation as your FFmpeg build.
-
-If libsrt or its `srt.pc` file is unavailable, NoAr still builds and SRT
-ingest can still work through an FFmpeg build that supports it. In that case,
-libsrt's native messages may appear directly on stderr instead of in the
-NoAr logs.
-
-`libavfilter` and `libavdevice` are optional and disabled by default to reduce
-the runtime and static-build footprint. NoAr uses its own media
-processing pipeline, so FFmpeg filters such as `drawtext` and FFmpeg devices
-such as DeckLink are unavailable in the normal build.
-
-Enable them independently with the `ffmpeg-filter` or `ffmpeg-device` Cargo
-feature. Local builds additionally need `libavfilter-dev` or `libavdevice-dev`.
-
-The engine can also open a local desktop window (`desktop` feature, needs
-`libasound2-dev` and a graphical session). The Docker image is built without
-it, and the web interface does not offer it.
+Desktop presentation remains available through the desktop Cargo features. It
+needs ALSA development files and a graphical session on Linux. The Docker server
+image is built without a desktop window. Legacy `ffmpeg-filter` and
+`ffmpeg-device` features only affect linked library capabilities; they do not
+select a second media engine or restore input listeners.
 
 ## Processing Benchmark
 
 The optional `processing-bench` feature prints periodic wall-clock timings for
-video and audio decode, audio processing and encoding, scale, overlay,
-subtitle, encoded-output, and desktop presentation stages. It is intended for local CPU
+decoded video/audio frame transfers, audio processing, scaling, overlays,
+and desktop presentation stages. It is intended for local CPU
 profiling and is disabled in normal builds.
 
 ```bash
@@ -98,18 +75,16 @@ cargo run -p noar --features processing-bench -- \
 `--processing-bench-interval` is measured in seconds and defaults to `1`.
 The `NOAR_PROCESSING_BENCH_INTERVAL` environment variable provides the
 same setting. The reported times measure the instrumented caller thread; use
-`perf` for CPU time inside FFmpeg worker threads.
+`perf` or GStreamer tracing for work performed asynchronously by native plugins.
 
 ## Hardware Encoding
 
-The output codec list includes hardware encoders only when they accept the
-engine's CPU-backed frames. NVENC accepts `yuv420p` directly. QSV receives a
-CPU-side `nv12` frame produced immediately before the encoder and performs the
-surface upload internally. VAAPI keeps decoding, scaling and overlays on the
-CPU, then uploads the completed `nv12` frame to `/dev/dri/renderD128`
-immediately before encoding. The process therefore needs access to the render
-device, normally through the `render` group, in addition to a matching GPU
-driver.
+The codec list comes from the installed GStreamer registry and checks encoded
+caps against each output muxer. CPU-backed frames pass through native color
+conversion before encoding. Hardware encoders additionally need their matching
+GStreamer plugin, driver and accessible device. Software-only validation does
+not establish that a GPU is available; unsupported encoder settings are rejected
+instead of falling back to FFmpeg.
 
 ## Generate types for Frontend
 The frontend uses TypeScript, to generate types for the rust structs run: `cargo test`.

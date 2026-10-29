@@ -14,7 +14,7 @@ use noar_engine::{
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use tokio::{
-    process::{Child, ChildStdout},
+    process::Child,
     sync::{Mutex, RwLock},
     task::{AbortHandle, JoinHandle},
     time::{Duration, Instant, sleep},
@@ -65,7 +65,6 @@ pub enum ProcessUnit {
     #[default]
     Decoder,
     Encoder,
-    Ingest,
 }
 
 impl fmt::Display for ProcessUnit {
@@ -73,7 +72,6 @@ impl fmt::Display for ProcessUnit {
         match *self {
             Self::Decoder => write!(f, "Decoder"),
             Self::Encoder => write!(f, "Encoder"),
-            Self::Ingest => write!(f, "Ingest"),
         }
     }
 }
@@ -89,8 +87,6 @@ pub struct ChannelManager {
     pub channel: Arc<Mutex<Channel>>,
     pub decoder: Arc<Mutex<Option<Child>>>,
     pub encoder: Arc<Mutex<Option<Child>>>,
-    pub ingest: Arc<Mutex<Option<Child>>>,
-    pub ingest_reader: Arc<Mutex<Option<ChildStdout>>>,
     pub is_alive: Arc<AtomicBool>,
     /// Unix time the playout was started; 0 while it is stopped.
     pub running_since: Arc<AtomicI64>,
@@ -197,8 +193,6 @@ impl ChannelManager {
             filler_index: Arc::new(AtomicUsize::new(0)),
             decoder: Arc::new(Mutex::new(None)),
             encoder: Arc::new(Mutex::new(None)),
-            ingest: Arc::new(Mutex::new(None)),
-            ingest_reader: Arc::new(Mutex::new(None)),
             is_processing: Arc::new(AtomicBool::new(false)),
             filter_chain: None,
             current_date: Arc::new(Mutex::new(String::new())),
@@ -281,17 +275,6 @@ impl ChannelManager {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
-    }
-
-    pub(crate) fn running_listener_label(&self, id: i32) -> Option<(String, String)> {
-        self.running_config().and_then(|config| {
-            config
-                .ingest
-                .listeners
-                .iter()
-                .find(|input| input.id == id)
-                .map(|input| (input.name.clone(), input.backend.clone()))
-        })
     }
 
     pub async fn start(&self) -> Result<(), ServiceError> {
@@ -570,7 +553,6 @@ impl ChannelManager {
         let child = match unit {
             Decoder => &self.decoder,
             Encoder => &self.encoder,
-            Ingest => &self.ingest,
         };
 
         if let Some(p) = child.lock().await.as_mut()
@@ -589,7 +571,6 @@ impl ChannelManager {
         let child = match unit {
             Decoder => &self.decoder,
             Encoder => &self.encoder,
-            Ingest => &self.ingest,
         };
 
         if let Some(proc) = child.lock().await.as_mut() {
@@ -650,7 +631,7 @@ impl ChannelManager {
         )
         .await;
 
-        for unit in [Decoder, Encoder, Ingest] {
+        for unit in [Decoder, Encoder] {
             self.stop(unit).await;
         }
     }

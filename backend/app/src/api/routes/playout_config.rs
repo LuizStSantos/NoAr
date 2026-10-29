@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::Path, sync::Arc};
+use std::path::Path;
 
 use axum::{
     Json,
@@ -127,24 +127,6 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
     }
 
     current != updated
-}
-
-fn running_listener_port_in_use(
-    configs: &[(i32, Arc<PlayoutConfig>)],
-    channel_id: i32,
-    backend: &str,
-    port: u16,
-) -> bool {
-    configs.iter().any(|(running_channel_id, config)| {
-        *running_channel_id != channel_id
-            && config.ingest.listeners.iter().any(|listener| {
-                listener.enabled
-                    && listener.backend == backend
-                    && listener
-                        .listen_port()
-                        .is_ok_and(|used_port| used_port == port)
-            })
-    })
 }
 
 fn codec_option(codec: &noar_engine::FfmpegCodec) -> CodecOption {
@@ -347,87 +329,6 @@ pub async fn update_playout_config(
         .processing
         .logo_transitions()
         .map_err(ServiceError::BadRequest)?;
-    let mut listener_ports = HashSet::new();
-    {
-        let listeners = &data.ingest.listeners;
-
-        if listeners.len() > 8 {
-            return Err(ServiceError::BadRequest(
-                "at most eight live listeners are supported".to_string(),
-            ));
-        }
-        let mut ids = HashSet::new();
-        let known_ids: HashSet<i32> = config
-            .ingest
-            .listeners
-            .iter()
-            .map(|listener| listener.id)
-            .collect();
-
-        for listener in listeners {
-            if !matches!(listener.backend.as_str(), "rtmp" | "srt")
-                || !(0..=100).contains(&listener.priority)
-            {
-                return Err(ServiceError::BadRequest(
-                    "invalid live listener backend or priority (expected 0–100)".to_string(),
-                ));
-            }
-            if listener.id < 0
-                || (listener.id != 0
-                    && (!ids.insert(listener.id) || !known_ids.contains(&listener.id)))
-            {
-                return Err(ServiceError::BadRequest(
-                    "duplicate or invalid live listener ID".to_string(),
-                ));
-            }
-            if listener.name.chars().count() > 128 || listener.identifier.len() > 2048 {
-                return Err(ServiceError::BadRequest(
-                    "live listener name or URL is too long".to_string(),
-                ));
-            }
-            noar_engine::validate_input_protocol_options(&listener.backend, &listener.options)
-                .map_err(ServiceError::BadRequest)?;
-            noar_engine::validate_live_demuxer_options(
-                &listener.backend,
-                &listener.demuxer_options,
-            )
-            .map_err(ServiceError::BadRequest)?;
-            if let Some(name) = listener
-                .demuxer_options
-                .keys()
-                .find(|name| listener.options.contains_key(*name))
-            {
-                return Err(ServiceError::BadRequest(format!(
-                    "live input option {name:?} is configured for both protocol and demuxer"
-                )));
-            }
-
-            if !listener.enabled {
-                continue;
-            }
-
-            let backend = if listener.backend == "srt" {
-                noar_engine::LiveInputBackend::Srt
-            } else {
-                noar_engine::LiveInputBackend::Rtmp
-            };
-
-            if !noar_engine::live_protocol_available(backend) {
-                return Err(ServiceError::BadRequest(format!(
-                    "FFmpeg input protocol {:?} is unavailable in this build",
-                    backend
-                )));
-            }
-
-            let port = listener.listen_port().map_err(ServiceError::BadRequest)?;
-
-            if !listener_ports.insert((listener.backend.clone(), port)) {
-                return Err(ServiceError::BadRequest(format!(
-                    "live listener port {port} is assigned to multiple listeners"
-                )));
-            }
-        }
-    }
     noar_engine::AudioEffectsControl::new(data.audio.volume)
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
     validate_loudness(&data.audio)?;
@@ -489,28 +390,8 @@ pub async fn update_playout_config(
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
     let audio_options = serde_json::to_string(&data.output.audio_options)
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
-    // Reserve the SQLite writer before checking other channels. Concurrent
-    // saves must not both observe the same listener port as available.
+    // Save the output and channel settings atomically.
     let mut transaction = state.pool.begin_with("BEGIN IMMEDIATE").await?;
-    let running_configs = {
-        let controller = state.controller.read().await;
-
-        controller
-            .managers
-            .iter()
-            .filter_map(|manager| manager.running_config().map(|config| (manager.id, config)))
-            .collect::<Vec<_>>()
-    };
-
-    for (backend, port) in listener_ports {
-        if running_listener_port_in_use(&running_configs, id, &backend, port)
-            || handles::live_listener_port_in_use_on(&mut transaction, id, &backend, port).await?
-        {
-            return Err(ServiceError::BadRequest(format!(
-                "live listener port {port} is already assigned to another listener"
-            )));
-        }
-    }
 
     handles::update_output_on(
         &mut transaction,
@@ -859,73 +740,27 @@ pub async fn get_playout_codecs(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use super::{requires_playout_restart, running_listener_port_in_use};
-    use crate::utils::config::{LiveInput, PlayoutConfig};
+    use super::requires_playout_restart;
+    use crate::utils::config::PlayoutConfig;
 
     #[test]
-    fn changing_live_listeners_requires_playout_restart() {
+    fn changing_the_external_output_requires_playout_restart() {
         let current = PlayoutConfig::default();
         let mut updated = current.clone();
-        updated.ingest.listeners = vec![LiveInput {
-            backend: "srt".to_string(),
-            identifier: "srt://127.0.0.1:9000".to_string(),
-            enabled: true,
-            ..LiveInput::default()
-        }];
+        updated.output.stream_url = "srt://mediamtx:8890?streamid=publish:output".to_string();
 
         assert!(requires_playout_restart(&current, &updated));
     }
-
     #[test]
-    fn later_volume_save_still_requires_restart_for_unapplied_listener_change() {
+    fn later_volume_save_still_requires_restart_for_unapplied_output_change() {
         let running = PlayoutConfig::default();
         let mut saved = running.clone();
-        saved.ingest.listeners.push(LiveInput {
-            backend: "srt".to_string(),
-            identifier: "srt://127.0.0.1:9000".to_string(),
-            enabled: true,
-            ..LiveInput::default()
-        });
+        saved.output.stream_url = "srt://mediamtx:8890?streamid=publish:output".to_string();
         let mut second_save = saved.clone();
         second_save.audio.volume = 0.75;
 
         assert!(!requires_playout_restart(&saved, &second_save));
         assert!(requires_playout_restart(&running, &second_save));
-    }
-
-    #[test]
-    fn running_listener_reserves_its_old_port_until_playout_stops() {
-        let mut running = PlayoutConfig::default();
-        running.ingest.listeners.push(LiveInput {
-            enabled: true,
-            backend: "rtmp".to_string(),
-            identifier: "rtmp://127.0.0.1:1936/live/stream".to_string(),
-            ..LiveInput::default()
-        });
-        let configs = vec![(1, Arc::new(running))];
-        let mut saved = (*configs[0].1).clone();
-        saved.ingest.listeners[0].identifier = "rtmp://127.0.0.1:1940/live/stream".to_string();
-
-        assert!(!running_listener_port_in_use(
-            &[(1, Arc::new(saved))],
-            2,
-            "rtmp",
-            1936
-        ));
-        assert!(running_listener_port_in_use(&configs, 2, "rtmp", 1936));
-        assert!(!running_listener_port_in_use(&configs, 1, "rtmp", 1936));
-        assert!(!running_listener_port_in_use(&configs, 2, "srt", 1936));
-
-        let mut stopped = (*configs[0].1).clone();
-        stopped.ingest.listeners[0].enabled = false;
-        assert!(!running_listener_port_in_use(
-            &[(1, Arc::new(stopped))],
-            2,
-            "rtmp",
-            1936
-        ));
     }
 
     #[test]

@@ -8,8 +8,6 @@ use std::{
 
 #[derive(Debug, Default)]
 struct NavigationState {
-    live_active: bool,
-    live_listener_id: Option<i32>,
     reserved: bool,
     requested: bool,
 }
@@ -32,13 +30,12 @@ impl PlaybackControl {
         self.shutdown.load(Ordering::SeqCst)
     }
 
-    /// Unconditionally interrupt playback, including live ingest (e.g. shutdown).
+    /// Interrupt the active file or scheduled live source.
     pub fn skip_current(&self) {
         self.skip_current.store(true, Ordering::SeqCst);
     }
 
-    /// Withdraw a skip that no clip has taken yet, when what it was meant to
-    /// cut ended on its own: it must not cut what comes next.
+    /// Withdraw an unconsumed skip when its intended source already ended.
     pub fn cancel_skip(&self) {
         self.skip_current.store(false, Ordering::SeqCst);
     }
@@ -47,75 +44,21 @@ impl PlaybackControl {
         self.restart.store(true, Ordering::SeqCst);
     }
 
-    pub fn live_active(&self) -> bool {
-        self.live_status().0
-    }
-
-    /// Snapshot the live takeover state without observing an ID from a
-    /// different session. The listener ID is absent when no live source is on
-    /// air or when a caller activates the legacy unlabelled session.
-    pub fn live_status(&self) -> (bool, Option<i32>) {
-        let state = self
-            .navigation
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-
-        (state.live_active, state.live_listener_id)
-    }
-
-    /// Reserve playlist navigation before changing playlist or persisted state.
-    /// Live activation cannot overtake this reservation. Dropping it without
-    /// committing releases it without requesting a skip.
+    /// Reserve navigation until playlist and database changes are committed.
     pub fn begin_navigation(&self) -> Result<PlaylistNavigation, NavigationBlocked> {
         if self.is_shutdown() {
             return Err(NavigationBlocked::Busy);
         }
-
         let mut state = self
             .navigation
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
-
-        if state.live_active {
-            return Err(NavigationBlocked::Live);
-        }
-
         if state.reserved {
             return Err(NavigationBlocked::Busy);
         }
-
         state.reserved = true;
 
         Ok(PlaylistNavigation {
-            control: self.clone(),
-        })
-    }
-
-    /// Mark an actual live takeover. Keep the returned lease for the entire
-    /// session, including across playlist calls; dropping it clears the status.
-    /// A reserved or not-yet-consumed navigation request must finish first.
-    pub fn try_activate_live(&self) -> Option<LiveSession> {
-        self.activate_live(None)
-    }
-
-    pub fn try_activate_live_for_listener(&self, listener_id: i32) -> Option<LiveSession> {
-        self.activate_live(Some(listener_id))
-    }
-
-    fn activate_live(&self, listener_id: Option<i32>) -> Option<LiveSession> {
-        let mut state = self
-            .navigation
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-
-        if state.live_active || state.reserved || state.requested {
-            return None;
-        }
-
-        state.live_active = true;
-        state.live_listener_id = listener_id;
-
-        Some(LiveSession {
             control: self.clone(),
         })
     }
@@ -133,16 +76,16 @@ impl PlaybackControl {
             .navigation
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
-        if state.live_active || state.reserved {
+        if state.reserved {
             return false;
         }
+
         mem::take(&mut state.requested)
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum NavigationBlocked {
-    Live,
     Busy,
 }
 
@@ -158,8 +101,7 @@ impl PlaylistNavigation {
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
         state.requested = true;
-        // Drop releases the reservation after this lock, making the request
-        // visible only after the caller has completed all state updates.
+        // The lease releases the reservation after this lock, once updates finish.
     }
 }
 
@@ -173,58 +115,41 @@ impl Drop for PlaylistNavigation {
     }
 }
 
-pub struct LiveSession {
-    control: PlaybackControl,
-}
-
-impl Drop for LiveSession {
-    fn drop(&mut self) {
-        let mut state = self
-            .control
-            .navigation
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-
-        state.live_active = false;
-        state.live_listener_id = None;
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::sync::Barrier;
-
     use super::*;
 
     #[test]
-    fn live_listener_id_is_visible_only_during_its_session() {
+    fn navigation_becomes_visible_only_after_commit() {
         let control = PlaybackControl::default();
-        assert_eq!(control.live_status(), (false, None));
-
-        let live = control.try_activate_live_for_listener(42).unwrap();
-        assert_eq!(control.live_status(), (true, Some(42)));
-        assert!(control.try_activate_live_for_listener(7).is_none());
-        assert_eq!(control.live_status(), (true, Some(42)));
-
-        drop(live);
-        assert_eq!(control.live_status(), (false, None));
-
-        let unlabelled_live = control.try_activate_live().unwrap();
-        assert_eq!(control.live_status(), (true, None));
-        drop(unlabelled_live);
-        assert_eq!(control.live_status(), (false, None));
+        let navigation = control.begin_navigation().unwrap();
+        assert!(!control.take_navigation());
+        assert!(matches!(
+            control.begin_navigation(),
+            Err(NavigationBlocked::Busy)
+        ));
+        navigation.commit();
+        assert!(control.take_navigation());
+        assert!(!control.take_navigation());
+        assert!(!control.take_skip_current());
     }
 
     #[test]
-    fn shutdown_remains_effective_across_repeated_playback_checks() {
+    fn cancelled_navigation_releases_without_skipping() {
         let control = PlaybackControl::default();
-        let _live = control.try_activate_live().unwrap();
+        drop(control.begin_navigation().unwrap());
+        assert!(!control.take_navigation());
+        assert!(control.begin_navigation().is_ok());
+    }
+
+    #[test]
+    fn shutdown_remains_effective_across_playback_checks() {
+        let control = PlaybackControl::default();
         control.request_shutdown();
         assert!(matches!(
             control.begin_navigation(),
             Err(NavigationBlocked::Busy)
         ));
-
         for _ in 0..3 {
             assert!(
                 crate::playout::check_playback_control(&control)
@@ -235,68 +160,18 @@ mod tests {
     }
 
     #[test]
-    fn live_blocks_navigation_but_not_stop_or_restart() {
+    fn concurrent_navigation_has_one_owner() {
         let control = PlaybackControl::default();
-        let live = control.try_activate_live().unwrap();
-        assert!(control.live_active());
-        assert!(matches!(
-            control.begin_navigation(),
-            Err(NavigationBlocked::Live)
-        ));
-        control.skip_current();
-        control.restart_playout();
-        assert!(control.take_skip_current());
-        assert!(control.take_restart());
-        assert!(!control.take_navigation());
-        drop(live);
-        assert!(!control.live_active());
-        assert!(
-            !control.take_navigation(),
-            "ignored navigation must not be deferred"
-        );
-        assert!(control.begin_navigation().is_ok());
-    }
-
-    #[test]
-    fn live_waits_for_navigation_to_commit_and_be_consumed() {
-        let control = PlaybackControl::default();
-        let navigation = control.begin_navigation().unwrap();
-        assert!(control.try_activate_live().is_none());
-        assert!(!control.take_navigation());
-        navigation.commit();
-        assert!(control.try_activate_live().is_none());
-        assert!(control.take_navigation());
-        assert!(
-            !control.take_skip_current(),
-            "navigation is a separate signal"
-        );
-        assert!(control.try_activate_live().is_some());
-    }
-
-    #[test]
-    fn cancelled_navigation_releases_live_without_skipping() {
-        let control = PlaybackControl::default();
-        drop(control.begin_navigation().unwrap());
-        assert!(!control.take_navigation());
-        assert!(control.try_activate_live().is_some());
-    }
-
-    #[test]
-    fn simultaneous_navigation_and_live_takeover_are_mutually_exclusive() {
-        let control = PlaybackControl::default();
-        let barrier = Arc::new(Barrier::new(2));
         let worker_control = control.clone();
-        let worker_barrier = barrier.clone();
+        let navigation = control.begin_navigation().unwrap();
         let worker = std::thread::spawn(move || {
-            worker_barrier.wait();
-            let live = worker_control.try_activate_live();
-            worker_barrier.wait();
-            live
+            assert!(matches!(
+                worker_control.begin_navigation(),
+                Err(NavigationBlocked::Busy)
+            ));
         });
-        barrier.wait();
-        let navigation = control.begin_navigation();
-        barrier.wait();
-        let live = worker.join().unwrap();
-        assert_ne!(navigation.is_ok(), live.is_some());
+        worker.join().unwrap();
+        navigation.commit();
+        assert!(control.take_navigation());
     }
 }

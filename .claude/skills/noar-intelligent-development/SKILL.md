@@ -80,16 +80,16 @@ Natural-language change requests automatically use the root `CLAUDE.md` workflow
 
 ### Official technology reference skills
 
-For version-sensitive questions, consult only the relevant playbook: `/noar-rust`, `/noar-vue`, `/noar-docker`, or `/noar-video-processing`. They complement `/noar-ffmpeg` and are **not additional agents or voting council members**. Confirm versions from lockfiles/native build and query only 1–3 relevant official documentation sections. See `docs/ai/tech-references/README.md`.
+For version-sensitive questions, consult only the relevant playbook: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-gstreamer`, or `/noar-video-processing`. GStreamer is the sole playout engine on this branch; start native media research with `/noar-gstreamer`. `/noar-ffmpeg` is limited to remaining frame-memory, codec-dependency and fixture interfaces. These references are **not additional agents or voting council members**. Confirm lockfiles, native versions and installed plugin properties/caps, then query only 1–3 relevant official sections. See `docs/ai/tech-references/README.md`.
 
 ### FFmpeg specialist (conditional, non-voting)
 
-For complex FFmpeg, SCTE-35, media timestamp or protocol questions, the lead/Orchestrator may request a focused read-only handoff from `noar-ffmpeg-docs-specialist`. Follow `.claude/rules/ffmpeg-reference.md`; detailed retrieval is in `/noar-ffmpeg`. Verify native FFmpeg and `ffmpeg-next` compatibility before implementing. The adviser does **not** join Backend Council votes; staging behavior requires Integration QA.
+For questions specifically involving a remaining FFmpeg memory/fixture interface, the lead/Orchestrator may request a focused read-only handoff from `noar-ffmpeg-docs-specialist`. Follow `.claude/rules/ffmpeg-reference.md` and verify ABI/binding compatibility. GStreamer timestamps, native plugins, SCTE-35 transport and source transitions use `/noar-gstreamer` and `/noar-video-processing` first. The adviser does **not** join Backend Council votes; staging behavior requires Integration QA.
 
 ## 5. NoAr safety and targeted checks
 
 - API/auth/DB: `backend/app/src/api/`, `backend/app/src/db/handles/`, `migrations/`.
-- Playout: `backend/app/src/player/`, `backend/engine/src/`; protect timing, SCTE-35 markers, FFmpeg output, clock and SRT/RTMP/HLS behavior.
+- Playout: `backend/app/src/player/`, `backend/engine/src/`; protect GStreamer pipeline state, timing, SCTE-35, continuous output, clock and SRT/RTMP/HLS behavior. Live sources are external clients, not input servers.
 - Frontend: `frontend/src/` (Vue/TypeScript/router/stores).
 - Releases: `Cargo.toml`, root `package.json`, `package-lock.json`, `Cargo.lock`, `CHANGELOG.md`, `.github/workflows/`, `docker-compose.yml`.
 - Test focused changes first. For Rust changes use `cargo fmt --all -- --check`, and select feature flags consciously when using clippy/tests. For frontend changes use type-check/build/lint as relevant.
@@ -111,12 +111,12 @@ The lead or orchestrator is a facilitator, NOT a sixth vote. The Documentation G
 For `audit full backend` and `audit changed backend`, use the **BACKEND council instead**:
 
 1. `noar-backend-reviewer` (Sonnet) — Rust API, application, scheduler, playout integration.
-2. `noar-media-engine-reviewer` (Sonnet) — FFmpeg, encoding, clock, SRT/RTMP/HLS, SCTE-35.
+2. `noar-media-engine-reviewer` (Sonnet) — GStreamer, encoding, clock, SRT/RTMP/HLS, SCTE-35.
 3. `noar-security-reviewer` (Sonnet) — API auth, file access, upload, trust boundaries.
 4. `noar-database-reviewer` (Sonnet) — SQLite, migrations, transactions, persistence, recovery.
 5. `noar-reliability-reviewer` (Haiku) — test coverage, CI, observability, restart/update readiness.
 
-Backend audit coverage: `backend/app/`, `backend/engine/`, `migrations/`, Rust workspace, related CI/Docker, and their frontend API contracts. Use `.claude/audit/BACKEND_AUDIT_CHECKLIST.md`; limit repeated reads with separate specialist scopes, and never claim a complete runtime audit from static inspection. A 3/5 majority is advisory; security, data-loss, FFmpeg output and broadcast continuity blockers override approval.
+Backend audit coverage: `backend/app/`, `backend/engine/`, `migrations/`, Rust workspace, related CI/Docker, and their frontend API contracts. Use `.claude/audit/BACKEND_AUDIT_CHECKLIST.md`; limit repeated reads with separate specialist scopes, and never claim a complete runtime audit from static inspection. A 3/5 majority is advisory; security, data-loss, native media output and broadcast continuity blockers override approval.
 
 **Round A: Independent discovery.** Assign bounded scopes; each voter returns up to 8 evidenced findings with `path:line`, severity, consequence, and whether tested. Don't fabricate unknown checks.
 

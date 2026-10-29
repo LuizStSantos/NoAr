@@ -30,8 +30,8 @@ and the Report for what aired.
   reconnects by itself, the preview keeps playing, and the Player says whether
   the output is sending, waiting for a receiver or cannot connect, and why
   ([docs](docs/output.md#when-the-destination-is-down)).
-- **Live ingest**: an encoder publishing to an RTMP or SRT listener takes over
-  the channel and gives it back when it stops, without dropping the output
+- **Scheduled live sources**: NoAr pulls streams from an external ingest server
+  such as MediaMTX and switches between files and live sources through GStreamer
   ([docs](docs/live_ingest.md)).
 - **Recording** of the output, loudness normalization and an audio meter.
 
@@ -199,8 +199,8 @@ Everything NoAr stores lives in `./data` next to `docker-compose.yml`:
 | `data/logs` | Channel logs |
 
 Set your time zone in `docker-compose.yml` (`TZ`, default
-`America/Sao_Paulo`) and open the ports of the live ingest listeners you
-configure. More in [docs/docker.md](docs/docker.md).
+`America/Sao_Paulo`). Live source URLs connect to an external server and need no
+input ports published by NoAr. More in [docs/docker.md](docs/docker.md).
 
 Update from **Settings › Updates** (with the `noar-updater` service on, see
 [docs/docker.md](docs/docker.md#updates)), or on the server:

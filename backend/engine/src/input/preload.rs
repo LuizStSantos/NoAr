@@ -1,43 +1,33 @@
-//! Opens the next source ahead of its turn, so it starts at once.
+//! Opens native GStreamer sources ahead of their turn.
 //!
-//! A file or an HTTP stream is opened and probed, then waits. A live transport
-//! (SRT, RTMP, UDP...) is connected and kept reading at its live edge: only the
-//! packets since its last key frame stay in memory, so the takeover starts
-//! with a picture and adds no delay. An open live preload also tells whether
-//! the source is sending, which makes it the signal check of a scheduled live.
+//! Files remain paused after negotiation. Live sources keep decoding into a
+//! bounded recent-frame window, so their signal and handover stay at the live
+//! edge without keeping an independent FFmpeg input open.
 
 use std::{
-    collections::VecDeque,
+    collections::{BTreeMap, VecDeque},
     fmt,
     sync::{
         Arc, Mutex, PoisonError,
-        atomic::{AtomicU8, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU8, Ordering},
         mpsc::{self, Receiver, SyncSender},
     },
     thread,
     time::{Duration, Instant},
 };
 
-use ffmpeg_next::{Error as FfmpegError, Packet, error::EAGAIN, format, media};
 use log::debug;
 
-use crate::utils::helper::{is_live_input, is_network_url, network_io_options};
+use crate::utils::{config::OutputConfig, helper::is_live_input};
 
-/// Preloads kept at once: the next clip, an upcoming event and one spare.
+use super::gstreamer::{FrameEvent, Source};
+
 const MAX_ENTRIES: usize = 3;
-/// A preload nobody takes is dropped after this long.
 const EXPIRY: Duration = Duration::from_secs(10 * 60);
-/// A live preload keeps the packets since its last key frame, starting over
-/// at the first key frame after its oldest packet is this old.
-const PREROLL_SPAN: Duration = Duration::from_millis(1500);
-const PREROLL_MAX_PACKETS: usize = 4096;
+const PREROLL_SPAN: Duration = Duration::from_millis(300);
+const PREROLL_MAX_FRAMES: usize = 128;
 const PREROLL_MAX_BYTES: usize = 32 * 1024 * 1024;
-/// A live source quiet for this long counts as stalled.
 const STALL_AFTER: Duration = Duration::from_secs(3);
-/// How long a handover waits for a packet boundary before it cuts a blocked
-/// read short.
-const HANDOVER_GRACE: Duration = Duration::from_millis(300);
-/// How often an open file looks for its handover.
 const IDLE_POLL: Duration = Duration::from_millis(20);
 
 const READING: u8 = 0;
@@ -45,15 +35,14 @@ const HANDOVER: u8 = 1;
 const CANCELLED: u8 = 2;
 const HANDED: u8 = 3;
 
-/// An open source and, for a preloaded live one, what it already received.
+/// An open native source and the recent decoded frames of a live source.
 pub(crate) struct OpenedInput {
-    pub(crate) input: format::context::Input,
-    /// Packets to play before reading on, with their stream index.
-    pub(crate) preroll: VecDeque<(usize, Packet)>,
+    pub(crate) input: Source,
+    pub(crate) preroll: VecDeque<FrameEvent>,
 }
 
-impl From<format::context::Input> for OpenedInput {
-    fn from(input: format::context::Input) -> Self {
+impl From<Source> for OpenedInput {
+    fn from(input: Source) -> Self {
         Self {
             input,
             preroll: VecDeque::new(),
@@ -61,13 +50,10 @@ impl From<format::context::Input> for OpenedInput {
     }
 }
 
-/// How a preloaded source is doing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PreloadSignal {
     Opening,
-    /// Open; a live source is also sending.
     Ready,
-    /// A live source that is open but stopped sending.
     Stalled,
     Failed(String),
 }
@@ -75,17 +61,16 @@ pub enum PreloadSignal {
 #[derive(Debug, Clone)]
 enum Status {
     Opening,
-    Open { last_packet: Option<Instant> },
+    Open { last_frame: Option<Instant> },
     Failed(String),
 }
 
 struct Control {
     state: AtomicU8,
     created: Instant,
-    /// Milliseconds after `created` when the handover was asked for.
-    handover_at: AtomicU64,
     live: bool,
     status: Mutex<Status>,
+    cancelled: Arc<AtomicBool>,
 }
 
 impl Control {
@@ -93,9 +78,9 @@ impl Control {
         Self {
             state: AtomicU8::new(READING),
             created: Instant::now(),
-            handover_at: AtomicU64::new(0),
             live,
             status: Mutex::new(Status::Opening),
+            cancelled: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -103,28 +88,17 @@ impl Control {
         self.state.load(Ordering::Acquire)
     }
 
-    /// The FFmpeg interrupt callback: stop opening or reading when cancelled,
-    /// or when a handover waited long enough for a packet boundary.
-    fn interrupted(&self) -> bool {
-        match self.state() {
-            CANCELLED => true,
-            HANDOVER => {
-                self.created.elapsed().as_millis() as u64
-                    >= self.handover_at.load(Ordering::Acquire) + HANDOVER_GRACE.as_millis() as u64
-            }
-            _ => false,
+    fn cancel(&self) {
+        if self
+            .state
+            .compare_exchange(READING, CANCELLED, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+        {
+            self.cancelled.store(true, Ordering::Release);
         }
     }
 
-    fn cancel(&self) {
-        let _ =
-            self.state
-                .compare_exchange(READING, CANCELLED, Ordering::AcqRel, Ordering::Acquire);
-    }
-
     fn request_handover(&self) {
-        self.handover_at
-            .store(self.created.elapsed().as_millis() as u64, Ordering::Release);
         let _ = self
             .state
             .compare_exchange(READING, HANDOVER, Ordering::AcqRel, Ordering::Acquire);
@@ -138,8 +112,8 @@ impl Control {
         match &*self.status.lock().unwrap_or_else(PoisonError::into_inner) {
             Status::Opening => PreloadSignal::Opening,
             Status::Open { .. } if !self.live => PreloadSignal::Ready,
-            Status::Open { last_packet } => {
-                if last_packet.is_some_and(|at| at.elapsed() < STALL_AFTER) {
+            Status::Open { last_frame } => {
+                if last_frame.is_some_and(|at| at.elapsed() < STALL_AFTER) {
                     PreloadSignal::Ready
                 } else {
                     PreloadSignal::Stalled
@@ -171,15 +145,16 @@ impl Drop for Entries {
     }
 }
 
-/// A source opened ahead, taken for its turn.
 pub(crate) struct Preloaded {
     control: Arc<Control>,
     receiver: Receiver<Result<OpenedInput, String>>,
 }
 
 impl Preloaded {
-    /// Ask for the source; it arrives on the receiver, at once when it is
-    /// open, or when it finishes opening.
+    pub(crate) fn cancellation(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.control.cancelled)
+    }
+
     pub(crate) fn hand_over(self) -> Receiver<Result<OpenedInput, String>> {
         self.control.request_handover();
 
@@ -187,10 +162,11 @@ impl Preloaded {
     }
 }
 
-/// The preloads of one playout, shared by the application and the worker.
+/// The application's shared preloads; configuration follows the owning playout.
 #[derive(Clone, Default)]
 pub struct Preloader {
     entries: Arc<Mutex<Entries>>,
+    config: Arc<Mutex<Option<OutputConfig>>>,
 }
 
 impl fmt::Debug for Preloader {
@@ -205,7 +181,11 @@ impl fmt::Debug for Preloader {
 }
 
 impl Preloader {
-    /// Start opening `path`, unless it is already open or opening.
+    pub(crate) fn configure(&self, config: &OutputConfig) {
+        self.clear();
+        *self.config.lock().unwrap_or_else(PoisonError::into_inner) = Some(config.clone());
+    }
+
     pub fn preload(&self, path: &str) {
         let path = path.trim();
 
@@ -214,7 +194,6 @@ impl Preloader {
         }
 
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
-
         expire(&mut entries.0);
 
         if entries
@@ -228,16 +207,19 @@ impl Preloader {
         remove(&mut entries.0, |entry| entry.path == path);
 
         while entries.0.len() >= MAX_ENTRIES {
-            let oldest = entries.0.remove(0);
-
-            oldest.control.cancel();
+            entries.0.remove(0).control.cancel();
         }
 
-        debug!("Preloading {path}");
-        entries.0.push(spawn(path.to_string()));
+        let config = self
+            .config
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+            .unwrap_or_else(|| OutputConfig::new(1280, 720, 25, 48_000));
+        debug!("Preloading {path} with GStreamer");
+        entries.0.push(spawn(path.to_string(), config));
     }
 
-    /// How the preload of `path` is doing, if there is one.
     pub fn signal(&self, path: &str) -> Option<PreloadSignal> {
         let entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
 
@@ -248,22 +230,16 @@ impl Preloader {
             .map(|entry| entry.control.signal())
     }
 
-    /// Drop the preload of `path`: its turn will not come.
     pub fn forget(&self, path: &str) {
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
-
         remove(&mut entries.0, |entry| entry.path == path.trim());
     }
 
-    /// Drop every preload, when the playout ends.
     pub fn clear(&self) {
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
-
         remove(&mut entries.0, |_| true);
     }
 
-    /// The preload of `path`, for its turn; `None` when there is none or it
-    /// failed, so the source opens the usual way.
     pub(crate) fn take(&self, path: &str) -> Option<Preloaded> {
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         let index = entries
@@ -301,14 +277,14 @@ fn expire(entries: &mut Vec<Entry>) {
     remove(entries, |entry| entry.control.created.elapsed() > EXPIRY);
 }
 
-fn spawn(path: String) -> Entry {
+fn spawn(path: String, config: OutputConfig) -> Entry {
     let control = Arc::new(Control::new(is_live_input(&path)));
     let (sender, receiver) = mpsc::sync_channel(1);
-    let worker_control = control.clone();
+    let worker_control = Arc::clone(&control);
     let worker_path = path.clone();
     let spawned = thread::Builder::new()
-        .name("ff-preload".to_string())
-        .spawn(move || run(&worker_path, &worker_control, &sender));
+        .name("gst-preload".to_string())
+        .spawn(move || run(&worker_path, &config, &worker_control, &sender));
 
     if let Err(error) = spawned {
         control.set_status(Status::Failed(format!("cannot start the preload: {error}")));
@@ -321,41 +297,53 @@ fn spawn(path: String) -> Entry {
     }
 }
 
-fn run(path: &str, control: &Arc<Control>, sender: &SyncSender<Result<OpenedInput, String>>) {
-    let input = match open(path, control) {
-        Ok(input) => input,
+fn run(
+    path: &str,
+    config: &OutputConfig,
+    control: &Control,
+    sender: &SyncSender<Result<OpenedInput, String>>,
+) {
+    let mut source = match Source::open_with_options_and_cancel(
+        path,
+        config,
+        &BTreeMap::new(),
+        &BTreeMap::new(),
+        Arc::clone(&control.cancelled),
+    ) {
+        Ok(source) => source,
         Err(error) => {
+            let error = format!("cannot open {path}: {error:#}");
             control.set_status(Status::Failed(error.clone()));
             let _ = sender.send(Err(error));
 
             return;
         }
     };
-
-    control.set_status(Status::Open { last_packet: None });
-
     if control.live {
-        keep_live(path, input, control, sender);
+        if let Err(error) = source.start(None) {
+            let error = format!("cannot start {path}: {error:#}");
+            control.set_status(Status::Failed(error.clone()));
+            let _ = sender.send(Err(error));
+
+            return;
+        }
+
+        keep_live(path, source, control, sender);
     } else {
-        wait_for_turn(input, control, sender);
+        if let Err(error) = source.pause() {
+            let error = format!("cannot pause preloaded source: {error:#}");
+            control.set_status(Status::Failed(error.clone()));
+            let _ = sender.send(Err(error));
+
+            return;
+        }
+        control.set_status(Status::Open { last_frame: None });
+        wait_for_turn(source, control, sender);
     }
 }
 
-fn open(path: &str, control: &Arc<Control>) -> Result<format::context::Input, String> {
-    let interrupt_control = control.clone();
-    let interrupt = move || interrupt_control.interrupted();
-    let opened = if is_network_url(path) {
-        format::input_with_interrupt_and_dictionary(&path, interrupt, network_io_options())
-    } else {
-        format::input_with_interrupt(&path, interrupt)
-    };
-
-    opened.map_err(|error| format!("cannot open {path}: {error}"))
-}
-
-/// A file waits, open, for its turn.
 fn wait_for_turn(
-    input: format::context::Input,
+    source: Source,
     control: &Control,
     sender: &SyncSender<Result<OpenedInput, String>>,
 ) {
@@ -363,7 +351,7 @@ fn wait_for_turn(
         match control.state() {
             HANDOVER => {
                 control.state.store(HANDED, Ordering::Release);
-                let _ = sender.send(Ok(input.into()));
+                let _ = sender.send(Ok(source.into()));
 
                 return;
             }
@@ -373,28 +361,21 @@ fn wait_for_turn(
     }
 }
 
-/// A live source keeps reading at its edge until its turn.
 fn keep_live(
     path: &str,
-    mut input: format::context::Input,
+    mut source: Source,
     control: &Control,
     sender: &SyncSender<Result<OpenedInput, String>>,
 ) {
-    let video = input
-        .streams()
-        .best(media::Type::Video)
-        .map(|stream| stream.index());
-    let mut preroll = Preroll::new(video);
+    let mut preroll = Preroll::default();
 
     loop {
         match control.state() {
             HANDOVER => {
-                // A read cut short leaves an exit code latched in the input.
-                input.clear_interrupt();
                 control.state.store(HANDED, Ordering::Release);
                 let _ = sender.send(Ok(OpenedInput {
-                    input,
-                    preroll: preroll.packets,
+                    input: source,
+                    preroll: preroll.into_frames(),
                 }));
 
                 return;
@@ -403,20 +384,20 @@ fn keep_live(
             _ => {}
         }
 
-        let mut packet = Packet::empty();
-
-        match packet.read(&mut input) {
-            Ok(()) => {
+        match source.next(IDLE_POLL) {
+            Ok(Some(frame)) => {
                 control.set_status(Status::Open {
-                    last_packet: Some(Instant::now()),
+                    last_frame: Some(Instant::now()),
                 });
-                preroll.push(packet.stream(), packet);
+                preroll.push(frame);
             }
-            Err(FfmpegError::Other { errno }) if errno == EAGAIN => {}
-            Err(_) if control.state() != READING => {}
-            Err(error) => {
-                let error = format!("{path} stopped sending: {error}");
-
+            Ok(None) if !source.is_eos() => {}
+            result => {
+                let detail = result
+                    .err()
+                    .map(|error| format!("{error:#}"))
+                    .unwrap_or_else(|| "end of stream".to_string());
+                let error = format!("{path} stopped sending: {detail}");
                 control.set_status(Status::Failed(error.clone()));
                 let _ = sender.send(Err(error));
 
@@ -426,103 +407,106 @@ fn keep_live(
     }
 }
 
-/// The packets of a live source since its last key frame.
+#[derive(Default)]
 struct Preroll {
-    video: Option<usize>,
-    packets: VecDeque<(usize, Packet)>,
+    frames: VecDeque<(Instant, FrameEvent)>,
     bytes: usize,
-    /// When the oldest kept packet arrived.
-    started: Option<Instant>,
 }
 
 impl Preroll {
-    fn new(video: Option<usize>) -> Self {
-        Self {
-            video,
-            packets: VecDeque::new(),
-            bytes: 0,
-            started: None,
+    fn push(&mut self, frame: FrameEvent) {
+        self.bytes = self.bytes.saturating_add(frame_bytes(&frame));
+        self.frames.push_back((Instant::now(), frame));
+
+        while self.frames.len() > 1
+            && (self.frames.len() > PREROLL_MAX_FRAMES
+                || self.bytes > PREROLL_MAX_BYTES
+                || self
+                    .frames
+                    .front()
+                    .is_some_and(|(at, _)| at.elapsed() > PREROLL_SPAN))
+        {
+            if let Some((_, dropped)) = self.frames.pop_front() {
+                self.bytes = self.bytes.saturating_sub(frame_bytes(&dropped));
+            }
         }
     }
 
-    fn push(&mut self, stream: usize, packet: Packet) {
-        let key_frame = Some(stream) == self.video && packet.is_key();
-        let too_big = self.packets.len() >= PREROLL_MAX_PACKETS || self.bytes >= PREROLL_MAX_BYTES;
-        let old = self
-            .started
-            .is_some_and(|started| started.elapsed() >= PREROLL_SPAN);
+    fn into_frames(self) -> VecDeque<FrameEvent> {
+        self.frames.into_iter().map(|(_, frame)| frame).collect()
+    }
+}
 
-        // Start over at a key frame once the kept packets are old enough, so
-        // the takeover begins with a whole picture and little delay.
-        if too_big || (old && (key_frame || self.video.is_none())) {
-            self.packets.clear();
-            self.bytes = 0;
-            self.started = None;
+fn frame_bytes(frame: &FrameEvent) -> usize {
+    match frame {
+        FrameEvent::Video(frame) => {
+            (frame.width() as usize)
+                .saturating_mul(frame.height() as usize)
+                .saturating_mul(3)
+                / 2
         }
-
-        // With video, nothing before the first key frame can be shown.
-        if self.packets.is_empty() && self.video.is_some() && !key_frame {
-            return;
-        }
-
-        self.started.get_or_insert_with(Instant::now);
-        self.bytes += packet.size();
-        self.packets.push_back((stream, packet));
+        FrameEvent::Audio(frame) => frame
+            .samples()
+            .saturating_mul(frame.channels() as usize)
+            .saturating_mul(size_of::<f32>()),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use ffmpeg_next::{frame, util::format::pixel::Pixel};
+
     use super::*;
 
-    fn packet(key: bool) -> Packet {
-        let mut packet = Packet::copy(&[0_u8; 100]);
+    fn video() -> FrameEvent {
+        FrameEvent::Video(frame::Video::new(Pixel::YUV420P, 16, 16))
+    }
 
-        if key {
-            packet.set_flags(ffmpeg_next::packet::Flags::KEY);
+    #[test]
+    fn cancellation_interrupts_a_source_still_opening() {
+        let control = Control::new(false);
+        control.cancel();
+
+        assert_eq!(control.state(), CANCELLED);
+        assert!(control.cancelled.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn cleanup_does_not_cancel_a_source_already_handed_to_playout() {
+        let control = Control::new(true);
+        control.request_handover();
+        control.cancel();
+
+        assert_eq!(control.state(), HANDOVER);
+        assert!(!control.cancelled.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn decoded_preroll_keeps_only_its_recent_window() {
+        let mut preroll = Preroll::default();
+        preroll.push(video());
+        preroll.frames.front_mut().unwrap().0 = Instant::now() - PREROLL_SPAN - IDLE_POLL;
+        preroll.push(video());
+
+        assert_eq!(preroll.frames.len(), 1);
+        assert_eq!(preroll.bytes, 16 * 16 * 3 / 2);
+    }
+
+    #[test]
+    fn decoded_preroll_has_a_hard_frame_bound() {
+        let mut preroll = Preroll::default();
+
+        for _ in 0..PREROLL_MAX_FRAMES + 20 {
+            preroll.push(video());
         }
 
-        packet
-    }
-
-    #[test]
-    fn a_live_preroll_starts_at_a_key_frame() {
-        let mut preroll = Preroll::new(Some(0));
-
-        preroll.push(1, packet(false));
-        preroll.push(0, packet(false));
-        assert!(preroll.packets.is_empty());
-
-        preroll.push(0, packet(true));
-        preroll.push(1, packet(false));
-        preroll.push(0, packet(false));
-        assert_eq!(preroll.packets.len(), 3);
-        assert!(preroll.packets[0].1.is_key());
-    }
-
-    #[test]
-    fn an_old_preroll_starts_over_at_the_next_key_frame() {
-        let mut preroll = Preroll::new(Some(0));
-
-        preroll.push(0, packet(true));
-        preroll.push(0, packet(false));
-        preroll.started = Some(Instant::now() - PREROLL_SPAN);
-
-        // Not a key frame: keep going.
-        preroll.push(0, packet(false));
-        assert_eq!(preroll.packets.len(), 3);
-
-        preroll.push(0, packet(true));
-        assert_eq!(preroll.packets.len(), 1);
-        assert!(preroll.packets[0].1.is_key());
+        assert!(preroll.frames.len() <= PREROLL_MAX_FRAMES);
     }
 
     #[test]
     fn a_missing_file_fails_and_is_not_taken() {
         let preloader = Preloader::default();
-
         preloader.preload("/does/not/exist.mp4");
-
         let deadline = Instant::now() + Duration::from_secs(5);
 
         while preloader.signal("/does/not/exist.mp4") == Some(PreloadSignal::Opening) {
@@ -540,14 +524,12 @@ mod tests {
 
     #[test]
     fn a_file_is_open_before_its_turn() {
-        ffmpeg_next::init().ok();
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests_assets/storage/media_mix/av_sync.mp4");
         let path = path.to_string_lossy();
         let preloader = Preloader::default();
-
+        preloader.configure(&OutputConfig::new(320, 180, 25, 48_000));
         preloader.preload(&path);
-
         let deadline = Instant::now() + Duration::from_secs(10);
 
         while preloader.signal(&path) == Some(PreloadSignal::Opening) {
@@ -556,7 +538,6 @@ mod tests {
         }
 
         assert_eq!(preloader.signal(&path), Some(PreloadSignal::Ready));
-
         let opened = preloader
             .take(&path)
             .expect("a ready preload is taken")
@@ -564,9 +545,60 @@ mod tests {
             .recv_timeout(Duration::from_secs(2))
             .unwrap()
             .unwrap();
-
-        assert!(opened.input.streams().best(media::Type::Video).is_some());
+        assert!(opened.input.info().has_video);
         assert!(opened.preroll.is_empty());
+    }
+
+    #[test]
+    fn a_preloaded_file_seeks_without_blocking_the_next_clip() {
+        let (sent, received) = std::sync::mpsc::channel();
+        thread::spawn(move || {
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests_assets/storage/media_mix/av_sync.mp4");
+            let path = path.to_string_lossy();
+            let preloader = Preloader::default();
+            preloader.configure(&OutputConfig::new(320, 180, 25, 48_000));
+            preloader.preload(&path);
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while preloader.signal(&path) == Some(PreloadSignal::Opening) {
+                assert!(Instant::now() < deadline);
+                thread::sleep(Duration::from_millis(10));
+            }
+            // Let both bounded appsink queues fill before the cross-thread handover.
+            thread::sleep(Duration::from_millis(100));
+            let mut opened = preloader
+                .take(&path)
+                .unwrap()
+                .hand_over()
+                .recv_timeout(Duration::from_secs(1))
+                .unwrap()
+                .unwrap();
+            opened.input.start(Some(7.0)).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(1);
+            let mut video = None;
+            let mut audio = None;
+            while video.is_none() || audio.is_none() {
+                assert!(Instant::now() < deadline);
+                match opened.input.next(Duration::from_millis(10)).unwrap() {
+                    Some(FrameEvent::Video(frame)) => {
+                        video.get_or_insert(frame.pts().unwrap());
+                    }
+                    Some(FrameEvent::Audio(frame)) => {
+                        audio.get_or_insert(frame.pts().unwrap());
+                    }
+                    None => {}
+                }
+            }
+            sent.send((video.unwrap(), audio.unwrap())).unwrap();
+        });
+        let (video, audio) = received
+            .recv_timeout(Duration::from_secs(4))
+            .expect("preloaded file seek must not block the playout worker");
+        assert!((175..=178).contains(&video), "video timestamp {video}");
+        assert!(
+            (336_000..=340_800).contains(&audio),
+            "audio timestamp {audio}"
+        );
     }
 
     #[test]

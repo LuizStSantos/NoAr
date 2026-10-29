@@ -11,6 +11,28 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- Shared GStreamer reference skills for Codex and Claude, with official native
+  and Rust documentation, installed-plugin checks and integrated-media test
+  requirements.
+
+### Changed
+
+- Use GStreamer as the single playout engine for decoding, normalization,
+  encoding, muxing and media transports. FFmpeg frame structures remain the
+  compositor/audio memory interface and FFmpeg tools remain available for tests.
+- Configure live events with read URLs from an external service such as
+  MediaMTX. Clock and Continue scheduling remain available.
+- Install GStreamer development libraries and runtime plugins in the existing
+  Docker image and validation workflow.
+
+### Removed
+
+- Built-in RTMP/SRT input servers, their runtime controls and the input-server
+  settings page. Historical database rows remain stored; current configuration
+  responses omit input-server settings.
+
 ## [1.11.0] - 2026-10-28
 
 ### Added

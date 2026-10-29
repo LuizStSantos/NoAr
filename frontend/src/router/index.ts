@@ -161,12 +161,6 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {
-                    path: 'ingest',
-                    name: 'settings-ingest',
-                    component: () => import('@/components/settings/SettingsIngest.vue'),
-                    meta: { showHeader: true, roles: ADMINS },
-                },
-                {
                     path: 'playlist',
                     name: 'settings-playlist',
                     component: () => import('@/components/settings/SettingsPlaylist.vue'),

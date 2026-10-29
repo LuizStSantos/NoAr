@@ -2,13 +2,11 @@
 //! item starts and closes when it ends, with why it ended early. Recording
 //! never stops the playout: a failed write is only logged.
 
-use std::{sync::atomic::Ordering, time::Duration};
+use std::sync::atomic::Ordering;
 
 use chrono::{NaiveDateTime, TimeZone};
 use log::*;
-use noar_engine::{ClipResult, PlaybackControl};
-use tokio::time::sleep;
-use tokio_util::sync::CancellationToken;
+use noar_engine::ClipResult;
 
 use crate::{
     db::{
@@ -27,9 +25,6 @@ use crate::{
     },
 };
 
-/// How often the ingest watcher looks at the live takeover state.
-const INGEST_POLL: Duration = Duration::from_millis(500);
-
 /// Longest error text kept with an item that failed.
 const MAX_DETAIL_CHARS: usize = 300;
 
@@ -38,8 +33,8 @@ const MAX_DETAIL_CHARS: usize = 300;
 pub enum AiredEnd {
     /// Played to its planned end.
     Completed,
-    /// Ended early: `reason` is `event`, `ingest`, `skipped` or `signal_lost`,
-    /// `detail` names the event or the listener.
+    /// Ended early: `reason` is `event`, `skipped` or `signal_lost`;
+    /// `detail` identifies the scheduled event when applicable.
     Cut {
         reason: &'static str,
         detail: Option<String>,
@@ -245,67 +240,8 @@ fn common_end(manager: &ChannelManager, result: &ClipResult) -> AiredEnd {
             AiredEnd::cut("skipped", None)
         }
         ClipResult::Skipped | ClipResult::Stopped => AiredEnd::Stopped,
-        ClipResult::LiveEnded => AiredEnd::cut("ingest", None),
+        ClipResult::LiveEnded => AiredEnd::cut("signal_lost", None),
         ClipResult::Fallback { reason } => AiredEnd::Failed(reason.clone()),
-    }
-}
-
-/// Record live ingest taking over: the item it cuts ends, an ingest row opens
-/// until the live input ends.
-pub async fn watch_ingest(
-    manager: ChannelManager,
-    control: PlaybackControl,
-    cancel: CancellationToken,
-) {
-    let mut on_air: Option<Option<i64>> = None;
-
-    loop {
-        tokio::select! {
-            _ = cancel.cancelled() => break,
-            _ = sleep(INGEST_POLL) => {}
-        }
-
-        let (active, listener_id) = control.live_status();
-
-        if active && on_air.is_none() {
-            let name = listener_name(&*manager.config.read().await, listener_id);
-            let entry = NewAsRunEntry {
-                source: name.clone(),
-                title: Some(name.clone()),
-                kind: "ingest",
-                origin: "ingest",
-                ..NewAsRunEntry::default()
-            };
-            let cut_by = CutBy {
-                reason: Some("ingest"),
-                detail: Some(&name),
-            };
-
-            info!(channel = manager.id; "Live ingest <span class=\"log-addr\">{name}</span> on air");
-            on_air = Some(insert(&manager, &entry, cut_by).await);
-        } else if !active && let Some(id) = on_air.take() {
-            record_end(&manager, id, AiredEnd::Completed).await;
-        }
-    }
-
-    if let Some(id) = on_air {
-        record_end(&manager, id, AiredEnd::Stopped).await;
-    }
-}
-
-/// The name a listener is known by in the report: its own name, else its
-/// protocol. The address is left out, as it can hold a stream key.
-fn listener_name(config: &PlayoutConfig, listener_id: Option<i32>) -> String {
-    let listener = config
-        .ingest
-        .listeners
-        .iter()
-        .find(|listener| Some(listener.id) == listener_id);
-
-    match listener {
-        Some(listener) if !listener.name.trim().is_empty() => listener.name.trim().to_string(),
-        Some(listener) => format!("{} ingest", listener.backend.to_uppercase()),
-        None => "Live ingest".to_string(),
     }
 }
 
@@ -326,8 +262,6 @@ fn now_millis() -> i64 {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-
-    use crate::utils::config::LiveInput;
 
     use super::*;
 
@@ -417,30 +351,5 @@ mod tests {
         assert_eq!(status, "failed");
         assert_eq!(reason, Some("error"));
         assert_eq!(detail.map(|detail| detail.len()), Some(MAX_DETAIL_CHARS));
-    }
-
-    #[test]
-    fn listeners_are_named_without_their_address() {
-        let mut config = config();
-
-        config.ingest.listeners = vec![
-            LiveInput {
-                id: 1,
-                name: "Estúdio".to_string(),
-                backend: "srt".to_string(),
-                identifier: "srt://0.0.0.0:9000?streamid=secret".to_string(),
-                ..Default::default()
-            },
-            LiveInput {
-                id: 2,
-                backend: "rtmp".to_string(),
-                identifier: "rtmp://0.0.0.0:1936/live/key".to_string(),
-                ..Default::default()
-            },
-        ];
-
-        assert_eq!(listener_name(&config, Some(1)), "Estúdio");
-        assert_eq!(listener_name(&config, Some(2)), "RTMP ingest");
-        assert_eq!(listener_name(&config, None), "Live ingest");
     }
 }

@@ -19,7 +19,7 @@ You prepare NoAr releases. Follow `docs/releasing.md`; it decides what MAJOR, MI
 3. **Plan**: `python3 .claude/scripts/prepare_release.py --check` (add `--bump`/`--pre` when asked). Report the proposed version with its reasons. If your reading of the notes disagrees with the script, say so and recommend a `--bump`.
 4. **Gates** (record PASS / FAIL / NOT_RUN / NOT_AVAILABLE with the command output, never assumed):
    - CI of the last `main` commit, when GitHub access is available;
-   - `cargo fmt --all -- --check`, `cargo clippy --no-default-features --all-targets -- --deny warnings`, `cargo test --no-default-features` (these need the FFmpeg dev libraries the Validate workflow installs; NOT_AVAILABLE if missing);
+   - `cargo fmt --all -- --check`, `cargo clippy --no-default-features --all-targets -- --deny warnings`, `cargo test --no-default-features` (these need the GStreamer and remaining FFmpeg development libraries and native plugins the Validate workflow installs; NOT_AVAILABLE if missing);
    - `npm ci && npm run build` and `npx eslint --config frontend/eslint.config.ts frontend/src`;
    - `python3 -m unittest discover -s .claude/scripts -p 'test_*.py'`;
    - new migrations since the last tag: only added, never an edited released one (`git diff --name-status <last tag>..origin/main -- migrations` shows only `A`).

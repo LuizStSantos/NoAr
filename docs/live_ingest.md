@@ -1,93 +1,39 @@
-**Live ingest**
-================
+# External live sources
 
-With live ingest, an encoder publishing to NoAr takes over the channel from
-the playlist or folder, and gives it back when it stops. For a live that NoAr
-calls itself at a set time, see the [Scheduler](scheduler.md).
+NoAr uses GStreamer as its playback engine. It reads live sources from external
+servers such as MediaMTX; it does not accept encoder publications or start RTMP
+or SRT input listeners. There is no Live ingest settings page.
 
-Configure one or more RTMP or SRT listeners in **Settings › Live ingest**, and
-publish their ports in `docker-compose.yml`.
-For example, an RTMP listen address is:
+Publish the encoder to MediaMTX first, then create a `.live` source in NoAr
+containing the URL that reads that publication. Use that source in a live event
+on the Schedule page. The existing event settings control its start, duration,
+source checks, retries and return to the programme in Clock or Continue mode.
 
-```
-rtmp://0.0.0.0:1936/live/my-secret-streaming-key
-```
+For example, with a MediaMTX path named `studio`:
 
-An SRT listener can use `srt://0.0.0.0:9000`. A sender may publish an MPEG-TS
-stream to `srt://YOUR_SERVER:9000?mode=caller`. Configure FFmpeg input options
-as key/value pairs on the listener, not in the URL. For encrypted SRT, set
-`passphrase` (10–64 bytes) and `pbkeylen` (16, 24, or 32) on both sender and
-listener. Listener mode and timeouts remain managed by NoAr. Passphrases
-are stored and returned unchanged through the authenticated configuration API;
-restrict configuration access accordingly. Do not expose an unauthenticated SRT
-listener directly to an untrusted network; bind it to a trusted interface or
-restrict access with a firewall.
-
-Demuxer options are a separate key/value map. By default FFmpeg detects the
-input format. On an RTMP listener, `format=live_flv` explicitly uses FFmpeg's
-live FLV demuxer; it is not enabled automatically. Other FLV demuxer options
-can be set in the same map. For MPEG-TS-specific options on an SRT listener,
-set `format=mpegts` as well (for example, `scan_all_pmts=1`). Generic input
-probing options such as `probesize` and `analyzeduration` are also supported.
-Reducing probing can prevent delayed tracks from being detected.
-
-Ingest mode **can't** pull from a server: it listens for incoming publishers.
-Up to eight RTMP/SRT listeners may be configured per channel. Enabled listeners
-run at the same time, and each listener of the same protocol needs a distinct
-port. Priorities range from 0 to 100. When sources become ready together,
-higher priority wins, followed by the stable listener ID. An active takeover is
-not pre-empted by another listener. Changing listener settings requires restarting
-the channel playout.
-
-When an incoming stream produces video, NoAr pauses the currently playing
-content and switches to the live source. The output remains continuous.
-
-In rare cases, it may happen that, for a short moment after switching, the image freezes, but then it will continue. Also, a brief frame flicker might occur.
-
-#### Live idle timeout
-
-After live frames have started arriving, the idle timeout defaults to **2000 ms**.
-Set `NOAR_LIVE_IDLE_TIMEOUT_MS` to a positive integer in milliseconds to
-override it for all RTMP/SRT listeners, in the `environment` of the `noar`
-service in `docker-compose.yml`:
-
-```yaml
-    environment:
-      NOAR_LIVE_IDLE_TIMEOUT_MS: "5000"
+```text
+srt://mediamtx:8890?streamid=read:studio
 ```
 
-Apply it with `docker compose up -d`. (The name from before the rename,
-`FFPLAYOUT_LIVE_IDLE_TIMEOUT_MS`, is still read.) It is read once and controls both
-the listener watchdog and the idle fallback to playlist/folder playback. Invalid
-values, including zero, produce a warning and use the 2000 ms default. The initial
-wait for decodable frames remains ten seconds. Longer idle timeouts tolerate longer
-delivery pauses but also delay recovery when a connected publisher stops sending.
+The hostname must resolve from the NoAr container. `localhost` inside that
+container refers to NoAr itself. When MediaMTX is on another machine, use its
+reachable hostname or IP address. SRT requires UDP connectivity to MediaMTX.
+RTMP and RTSP client URLs are also supported when their native plugins exist.
 
-#### Delayed tracks and resource limits
+NoAr's SRT client defaults to caller mode. Do not put `mode=listener`, `listen=1`
+or RTMP listener options in a live source. For saved SRT URL options, legacy
+latency values remain in microseconds and are converted to GStreamer's units.
+Stream IDs and passphrases are URL-encoded when passed to the native plugin.
 
-Live takeover starts with the first decoded video frame. Until then, the playlist
-continues and incoming audio is kept in a rolling buffer of at most ten seconds
-and 512 decoded frames. Older audio is discarded when either limit is reached;
-late video can still trigger takeover without a publisher reconnect.
+The output encoder, muxer and transport stay open while input pipelines change.
+If a live source fails, the scheduler regains control to run its waiting and
+retry policy. An unavailable output reconnects independently of source changes.
 
-If an announced audio track is missing or temporarily stops delivering frames,
-video can lead audio by up to 2.5 seconds before silence is generated. This grace
-period prevents normal transport queueing and millisecond timestamp rounding from
-being mistaken for an audio dropout. Late audio is aligned using its timestamps:
-samples already replaced by silence are discarded, and partially overlapping
-frames are trimmed rather than shifted. Sources without an audio track receive
-silence immediately.
+Existing databases retain historical input settings and aired-report rows.
+Those settings are not returned by the configuration API, changed by ordinary
+settings saves, or activated at startup. Reports can still show historical
+entries identified as ingest. No destructive database migration is required.
 
-If a publisher announces an audio track but sends no audio packets at all during
-startup, FFmpeg may wait for the first audio packet while probing the input. Live
-takeover then starts only after probing has completed. Normal publishers such as
-OBS continuously send audio packets containing digital silence when their audio
-input is muted, so this delay should only affect unusual or malformed streams.
-
-At most two readers may exist for the same channel and input URL, including old
-readers that have not yet responded to cancellation. If both remain blocked, new
-connections wait while playlist playback remains available. While blocked, this
-condition is logged as an error at most once every five minutes per input,
-including across listener restarts. Recovery is logged when a slot becomes
-available. A permanently stuck reader may require restarting the whole of NoAr
-(Settings › Server and e-mail); restarting only the channel cannot forcibly terminate its thread.
+The independent Python experiment in `qa/gstreamer` is useful continuity
+reference evidence. It is not a substitute for testing the integrated NoAr
+scheduler, API, database and frontend with disposable data.

@@ -672,7 +672,7 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
     finish_run(&manager, &occurrence, "failed").await;
 }
 
-/// Cut the clip on air. `false` when a live ingest is on air or another
+/// Cut the clip on air. `false` when another
 /// navigation is in progress; the caller tries again on the next tick.
 async fn request_interrupt(manager: &ChannelManager) -> bool {
     let control = manager.playback_control.lock().await;
@@ -682,7 +682,7 @@ async fn request_interrupt(manager: &ChannelManager) -> bool {
             navigation.commit();
             true
         }
-        Err(NavigationBlocked::Live) | Err(NavigationBlocked::Busy) => false,
+        Err(NavigationBlocked::Busy) => false,
     }
 }
 

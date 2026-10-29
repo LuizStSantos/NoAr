@@ -1,29 +1,21 @@
-//! A lighter copy of the Player preview, for viewers on a slow connection.
-//!
-//! The preview the engine sends is the output itself (the same picture and
-//! bit rate as the air). This re-encodes it to a small picture at a low bit
-//! rate, and only while someone watches it: it reads the preview copy, never
-//! the playout, so a failure here cannot reach the air.
+//! An independently transcoded copy of the program preview for slow clients.
+//! Native GStreamer pipelines own demux, decode, scaling, encoding and muxing;
+//! a failed or cancelled viewer cannot reach the program's output pipeline.
 
 use std::{
-    io,
     sync::{
-        Arc,
+        Arc, Mutex, PoisonError,
         atomic::{AtomicBool, Ordering},
         mpsc::{Receiver, RecvTimeoutError},
     },
     time::Duration,
 };
 
-use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{
-    Dictionary, Packet, Rational, Rescale, codec,
-    format::{self, Pixel, context::StreamIo},
-    frame, media,
-    software::scaling,
-};
+use ::gstreamer as gst;
+use anyhow::{Context, Result, anyhow, ensure};
+use gst::prelude::*;
+use gstreamer_app as gst_app;
 
-/// The size and rate of the light preview.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LightPreview {
     pub width: u32,
@@ -33,8 +25,6 @@ pub struct LightPreview {
 }
 
 impl Default for LightPreview {
-    /// 640×360 at 15 frames per second and 500 kb/s: about a fifth of a
-    /// typical 720p output.
     fn default() -> Self {
         Self {
             width: 640,
@@ -45,312 +35,196 @@ impl Default for LightPreview {
     }
 }
 
-/// Reads MPEG-TS bytes from a channel; ends when it closes or `stop` is set.
-struct Feed {
-    receiver: Receiver<Vec<u8>>,
-    pending: Vec<u8>,
-    offset: usize,
-    stop: Arc<AtomicBool>,
-}
-
-impl io::Read for Feed {
-    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-        while self.offset >= self.pending.len() {
-            if self.stop.load(Ordering::Acquire) {
-                return Ok(0);
-            }
-
-            match self.receiver.recv_timeout(Duration::from_millis(250)) {
-                Ok(bytes) => {
-                    self.pending = bytes;
-                    self.offset = 0;
-                }
-                Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => return Ok(0),
-            }
-        }
-
-        let size = buffer.len().min(self.pending.len() - self.offset);
-        buffer[..size].copy_from_slice(&self.pending[self.offset..self.offset + size]);
-        self.offset += size;
-
-        Ok(size)
-    }
-}
-
-/// Hands the light preview on; `deliver` returns false once nobody watches.
-struct Delivery<F> {
-    deliver: F,
-    stop: Arc<AtomicBool>,
-}
-
-impl<F: FnMut(Vec<u8>) -> bool> io::Write for Delivery<F> {
-    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        if !(self.deliver)(data.to_vec()) {
-            self.stop.store(true, Ordering::Release);
-        }
-
-        Ok(data.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-/// Re-encodes the preview copy that arrives on `input` and passes the light
-/// MPEG-TS to `deliver`, until the input ends, `stop` is set or `deliver`
-/// returns false. Blocks: run it on a thread of its own.
 pub fn transcode_light_preview<F>(
     input: Receiver<Vec<u8>>,
-    deliver: F,
+    mut deliver: F,
     settings: LightPreview,
     stop: Arc<AtomicBool>,
 ) -> Result<()>
 where
     F: FnMut(Vec<u8>) -> bool + Send + 'static,
 {
-    // Joining mid-stream, FFmpeg's stream analysis decodes pictures whose
-    // references it never got; those messages say nothing about the air.
-    crate::utils::logging::quiet_ffmpeg_logs(|| transcode(input, deliver, settings, stop))
-}
+    ensure!(
+        settings.width >= 2
+            && settings.height >= 2
+            && settings.width.is_multiple_of(2)
+            && settings.height.is_multiple_of(2)
+            && settings.fps > 0
+            && settings.video_kbps > 0,
+        "preview dimensions, frame rate and bitrate must be positive; dimensions must be even"
+    );
+    crate::gstreamer::init()?;
+    let pipeline = gst::Pipeline::new();
+    let _shutdown = PipelineShutdown(pipeline.clone());
+    let source = gst_app::AppSrc::builder()
+        .caps(
+            &gst::Caps::builder("video/mpegts")
+                .field("systemstream", true)
+                .field("packetsize", 188_i32)
+                .build(),
+        )
+        .format(gst::Format::Bytes)
+        .max_bytes(1024 * 1024)
+        .build();
+    let decoder = gst::ElementFactory::make("decodebin").build()?;
+    let mux = gst::ElementFactory::make("mpegtsmux")
+        .property("alignment", 7_i32)
+        .build()?;
+    let sink = gst_app::AppSink::builder()
+        .max_buffers(8)
+        .sync(false)
+        .build();
+    pipeline.add_many([source.upcast_ref(), &decoder, &mux, sink.upcast_ref()])?;
+    source.link(&decoder)?;
+    mux.link(&sink)?;
 
-fn transcode<F>(
-    input: Receiver<Vec<u8>>,
-    deliver: F,
-    settings: LightPreview,
-    stop: Arc<AtomicBool>,
-) -> Result<()>
-where
-    F: FnMut(Vec<u8>) -> bool + Send + 'static,
-{
-    let feed = Feed {
-        receiver: input,
-        pending: Vec::new(),
-        offset: 0,
-        stop: stop.clone(),
-    };
-    let mut probe = Dictionary::new();
-    // A viewer joins mid-stream: the codec settings only come with the next
-    // key frame, a GOP away, and a 1080p GOP can pass 2 MB. The analysis
-    // ends as soon as it has them; these are only its limits.
-    probe.set("analyzeduration", "15000000");
-    probe.set("probesize", "33554432");
-    let mut ictx = format::input_from_stream(
-        StreamIo::from_read_with_capacity(feed, 64 * 1024)?,
-        Some("preview.ts"),
-        Some(probe),
-    )
-    .context("reading the preview")?;
+    let source_stop = stop.clone();
+    source.set_callbacks(
+        gst_app::AppSrcCallbacks::builder()
+            .need_data(move |source, _| {
+                while !source_stop.load(Ordering::Acquire) {
+                    match input.recv_timeout(Duration::from_millis(100)) {
+                        Ok(bytes) if bytes.is_empty() => continue,
+                        Ok(bytes) => {
+                            if source
+                                .push_buffer(gst::Buffer::from_mut_slice(bytes))
+                                .is_err()
+                            {
+                                source_stop.store(true, Ordering::Release);
+                            }
+                            return;
+                        }
+                        Err(RecvTimeoutError::Timeout) => {}
+                        Err(RecvTimeoutError::Disconnected) => {
+                            let _ = source.end_of_stream();
+                            return;
+                        }
+                    }
+                }
+                let _ = source.end_of_stream();
+            })
+            .build(),
+    );
 
-    let video_in = ictx
-        .streams()
-        .best(media::Type::Video)
-        .context("the preview has no video")?;
-    let video_index = video_in.index();
-    let video_in_time_base = video_in.time_base();
-    let audio_in = ictx
-        .streams()
-        .best(media::Type::Audio)
-        .map(|stream| (stream.index(), stream.time_base(), stream.parameters()));
-    let mut decoder = codec::context::Context::from_parameters(video_in.parameters())?
-        .decoder()
-        .video()?;
-
-    let encoder_codec = codec::encoder::find_by_name("libx264")
-        .or_else(|| codec::encoder::find(codec::Id::H264))
-        .context("no H.264 encoder for the light preview")?;
-    let mut encoder_ctx = codec::context::Context::new_with_codec(encoder_codec)
-        .encoder()
-        .video()?;
-    encoder_ctx.set_width(settings.width);
-    encoder_ctx.set_height(settings.height);
-    encoder_ctx.set_format(Pixel::YUV420P);
-    encoder_ctx.set_time_base(video_in_time_base);
-    encoder_ctx.set_frame_rate(Some(Rational(settings.fps as i32, 1)));
-    encoder_ctx.set_bit_rate(settings.video_kbps as usize * 1000);
-    encoder_ctx.set_max_bit_rate(settings.video_kbps as usize * 1000);
-    // A key frame every second, so a new viewer starts fast.
-    encoder_ctx.set_gop(settings.fps.max(1));
-    let mut options = Dictionary::new();
-    if encoder_codec.name() == "libx264" {
-        options.set("preset", "veryfast");
-        options.set("tune", "zerolatency");
-    }
-    let mut encoder = encoder_ctx.open_as_with(encoder_codec, options)?;
-
-    let delivery = Delivery {
-        deliver,
-        stop: stop.clone(),
-    };
-    let mut octx = format::output_to_stream(
-        StreamIo::from_write_with_capacity(delivery, 7 * 188)?,
-        Some("light.ts"),
-        Some("mpegts"),
-    )?;
-    let mut video_out = octx.add_stream_with(&encoder)?;
-    video_out.set_time_base(video_in_time_base);
-    let video_out_index = video_out.index();
-    let audio_out = match &audio_in {
-        Some((_, _, parameters)) => {
-            let mut stream = octx.add_stream(codec::encoder::find(codec::Id::None))?;
-            stream.set_parameters(parameters.clone());
-            unsafe { (*(*stream.as_mut_ptr()).codecpar).codec_tag = 0 };
-            Some(stream.index())
+    let link_error = Arc::new(Mutex::new(None));
+    let worker_error = link_error.clone();
+    let continuity = Arc::new(Mutex::new(Continuity::default()));
+    let worker_pipeline = pipeline.downgrade();
+    let video_linked = Arc::new(AtomicBool::new(false));
+    let video_linked_worker = video_linked.clone();
+    let audio_linked = AtomicBool::new(false);
+    decoder.connect_pad_added(move |_, pad| {
+        let caps = pad.current_caps().unwrap_or_else(|| pad.query_caps(None));
+        let name = caps.structure(0).map(|structure| structure.name().to_string()).unwrap_or_default();
+        let branch = if name.starts_with("video/") && !video_linked_worker.swap(true, Ordering::AcqRel) {
+            Some(format!("queue ! identity name=preview-time single-segment=true ! videoconvert ! videoscale add-borders=true ! videorate ! video/x-raw,format=I420,width={},height={},framerate={}/1,pixel-aspect-ratio=1/1 ! x264enc tune=zerolatency speed-preset=veryfast bitrate={} key-int-max={} bframes=0 ! h264parse", settings.width, settings.height, settings.fps, settings.video_kbps, settings.fps))
+        } else if name.starts_with("audio/") && !audio_linked.swap(true, Ordering::AcqRel) {
+            Some("queue ! identity name=preview-time single-segment=true ! audioconvert ! audioresample ! audio/x-raw,rate=48000,channels=2 ! avenc_aac bitrate=96000 ! aacparse".to_owned())
+        } else { None };
+        let Some(branch) = branch else { return; };
+        let result = (|| -> Result<()> {
+            let pipeline = worker_pipeline.upgrade().context("preview pipeline closed")?;
+            let branch = gst::parse::bin_from_description(&branch, true)?;
+            let time = branch.by_name("preview-time").context("preview continuity element")?;
+            let continuity = continuity.clone();
+            time.static_pad("src").context("preview continuity pad")?.add_probe(gst::PadProbeType::BUFFER, move |_, info| {
+                if let Some(buffer) = info.buffer_mut() {
+                    continuity.lock().unwrap_or_else(PoisonError::into_inner).carry_on(buffer.make_mut());
+                }
+                gst::PadProbeReturn::Ok
+            });
+            pipeline.add(&branch)?;
+            branch.link(&mux)?;
+            pad.link(&branch.static_pad("sink").context("preview branch sink")?)?;
+            branch.sync_state_with_parent()?;
+            Ok(())
+        })();
+        if let Err(error) = result {
+            *worker_error.lock().unwrap_or_else(PoisonError::into_inner) = Some(format!("{error:#}"));
         }
-        None => None,
-    };
-    octx.write_header()?;
-    let video_out_time_base = octx
-        .stream(video_out_index)
-        .context("light preview video stream")?
-        .time_base();
-
-    let mut scaler: Option<(scaling::Context, (Pixel, u32, u32))> = None;
-    let frame_step = i64::from(video_in_time_base.1)
-        / i64::from(settings.fps.max(1))
-        / i64::from(video_in_time_base.0.max(1));
-    let mut last_kept: Option<i64> = None;
-    // The copy is joined mid-stream: wait for a key frame rather than
-    // decode pictures whose references never came (and log about each).
-    let mut key_frame_seen = false;
-    let mut last_dts = [i64::MIN; 2];
-    let mut continuity = Continuity::default();
-    let mut decoded = frame::Video::empty();
-    let mut scaled = frame::Video::empty();
-
-    let mut write = |octx: &mut format::context::Output, packet: Packet, slot: usize| {
-        // A restarted playout starts its timestamps over: drop what would
-        // go backwards rather than fail the light preview.
-        let dts = packet.dts().unwrap_or(i64::MIN);
-        if dts != i64::MIN && dts <= last_dts[slot] {
-            return Ok(());
+    });
+    pipeline.set_state(gst::State::Playing)?;
+    let bus = pipeline.bus().context("preview bus")?;
+    while !stop.load(Ordering::Acquire) {
+        if let Some(error) = link_error
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take()
+        {
+            return Err(anyhow!("linking light preview: {error}"));
         }
-        last_dts[slot] = dts;
-        packet.write_interleaved(octx)
-    };
-
-    for (stream, packet) in ictx.packets() {
-        if stop.load(Ordering::Acquire) {
+        if let Some(sample) = sink.try_pull_sample(gst::ClockTime::from_mseconds(100)) {
+            let buffer = sample.buffer().context("preview output buffer")?;
+            let map = buffer.map_readable()?;
+            if !map.as_slice().is_empty() && !deliver(map.as_slice().to_vec()) {
+                stop.store(true, Ordering::Release);
+                break;
+            }
+        } else if sink.is_eos() {
+            ensure!(
+                video_linked.load(Ordering::Acquire),
+                "the preview has no video"
+            );
             break;
         }
-
-        let index = stream.index();
-        let mut packet = packet;
-        continuity.carry_on(&mut packet, stream.time_base());
-
-        if let Some((audio_index, audio_time_base, _)) = audio_in
-            && index == audio_index
-            && let Some(audio_out_index) = audio_out
-        {
-            let out_time_base = octx
-                .stream(audio_out_index)
-                .context("light preview audio stream")?
-                .time_base();
-            let mut packet = packet.clone();
-            packet.set_stream(audio_out_index);
-            packet.rescale_ts(audio_time_base, out_time_base);
-            packet.set_position(-1);
-            write(&mut octx, packet, 1)?;
-            continue;
-        }
-
-        if index != video_index {
-            continue;
-        }
-
-        key_frame_seen |= packet.is_key();
-
-        if !key_frame_seen || decoder.send_packet(&packet).is_err() {
-            continue;
-        }
-
-        while decoder.receive_frame(&mut decoded).is_ok() {
-            let Some(pts) = decoded.timestamp().or(decoded.pts()) else {
-                continue;
-            };
-            // Fewer frames: keep one per 1/fps.
-            if let Some(last) = last_kept
-                && pts > last
-                && pts - last < frame_step
-            {
-                continue;
-            }
-            last_kept = Some(pts);
-
-            let source = (decoded.format(), decoded.width(), decoded.height());
-            if scaler.as_ref().is_none_or(|(_, size)| *size != source) {
-                scaler = Some((
-                    scaling::Context::get(
-                        source.0,
-                        source.1,
-                        source.2,
-                        Pixel::YUV420P,
-                        settings.width,
-                        settings.height,
-                        scaling::flag::Flags::BILINEAR,
-                    )?,
-                    source,
+        for message in bus.iter() {
+            if let gst::MessageView::Error(error) = message.view() {
+                return Err(anyhow!(
+                    "GStreamer preview failed: {} ({:?})",
+                    error.error(),
+                    error.debug()
                 ));
-            }
-            let (context, _) = scaler.as_mut().ok_or_else(|| anyhow!("scaler"))?;
-            context.run(&decoded, &mut scaled)?;
-            scaled.set_pts(Some(pts));
-            encoder.send_frame(&scaled)?;
-
-            let mut encoded = Packet::empty();
-            while encoder.receive_packet(&mut encoded).is_ok() {
-                let mut packet = encoded.clone();
-                packet.set_stream(video_out_index);
-                packet.rescale_ts(video_in_time_base, video_out_time_base);
-                write(&mut octx, packet, 0)?;
             }
         }
     }
-
-    let _ = octx.write_trailer();
-
     Ok(())
 }
 
-/// Keeps the timestamps going forward when the preview's start over (a
-/// restarted playout, or MPEG-TS wrapping after 26 hours): later packets are
-/// moved to follow on from the last ones, so the light preview keeps going
-/// instead of dropping everything until the time catches up.
+struct PipelineShutdown(gst::Pipeline);
+
+impl Drop for PipelineShutdown {
+    fn drop(&mut self) {
+        let _ = self.0.set_state(gst::State::Null);
+    }
+}
+
+/// The shared offset keeps audio and video together across a program restart.
 #[derive(Debug, Default)]
 struct Continuity {
-    /// Added to every timestamp, in microseconds.
-    shift: i64,
-    /// The latest timestamp passed on, in microseconds, shift included.
-    latest: Option<i64>,
+    shift: u64,
+    latest: Option<u64>,
 }
 
 impl Continuity {
-    /// A step back further than this is a new start, not reordering.
-    const JUMP: i64 = 1_000_000;
-    /// The gap left after a new start: about a frame.
-    const GAP: i64 = 40_000;
-    const MICROSECONDS: Rational = Rational(1, 1_000_000);
+    const JUMP: u64 = 1_000_000_000;
+    const GAP: u64 = 40_000_000;
 
-    fn carry_on(&mut self, packet: &mut Packet, time_base: Rational) {
-        let Some(stamp) = packet.dts().or(packet.pts()) else {
+    fn carry_on(&mut self, buffer: &mut gst::BufferRef) {
+        let Some(stamp) = buffer
+            .dts()
+            .or(buffer.pts())
+            .map(gstreamer::ClockTime::nseconds)
+        else {
             return;
         };
-        let at = stamp.rescale(time_base, Self::MICROSECONDS) + self.shift;
-
+        let at = stamp.saturating_add(self.shift);
         if let Some(latest) = self.latest
-            && at < latest - Self::JUMP
+            && at.saturating_add(Self::JUMP) < latest
         {
-            self.shift += latest - at + Self::GAP;
+            self.shift = self
+                .shift
+                .saturating_add(latest - at)
+                .saturating_add(Self::GAP);
         }
-
         if self.shift != 0 {
-            let shift = self.shift.rescale(Self::MICROSECONDS, time_base);
-            packet.set_pts(packet.pts().map(|pts| pts + shift));
-            packet.set_dts(packet.dts().map(|dts| dts + shift));
+            buffer.set_pts(buffer.pts().map(|time| {
+                gst::ClockTime::from_nseconds(time.nseconds().saturating_add(self.shift))
+            }));
+            buffer.set_dts(buffer.dts().map(|time| {
+                gst::ClockTime::from_nseconds(time.nseconds().saturating_add(self.shift))
+            }));
         }
-
-        let at = stamp.rescale(time_base, Self::MICROSECONDS) + self.shift;
+        let at = stamp.saturating_add(self.shift);
         self.latest = Some(self.latest.map_or(at, |latest| latest.max(at)));
     }
 }
@@ -359,37 +233,33 @@ impl Continuity {
 mod tests {
     use super::*;
 
-    fn packet(dts: i64) -> Packet {
-        let mut packet = Packet::empty();
-        packet.set_dts(Some(dts));
-        packet.set_pts(Some(dts));
-        packet
+    fn buffer(milliseconds: u64) -> gst::Buffer {
+        crate::gstreamer::init().unwrap();
+        let mut buffer = gst::Buffer::new();
+        buffer
+            .get_mut()
+            .unwrap()
+            .set_pts(gst::ClockTime::from_mseconds(milliseconds));
+        buffer
     }
 
     #[test]
     fn a_new_start_follows_on_from_the_last_packet() {
-        let video = Rational(1, 90_000);
-        let audio = Rational(1, 48_000);
         let mut continuity = Continuity::default();
-
-        // Ten minutes in.
-        let mut last = packet(54_000_000);
-        continuity.carry_on(&mut last, video);
-        assert_eq!(last.dts(), Some(54_000_000));
-        // Reordered a little: left as it is.
-        let mut early = packet(53_990_000);
-        continuity.carry_on(&mut early, video);
-        assert_eq!(early.dts(), Some(53_990_000));
-
-        // The playout starts again from 0: the sound comes first.
-        let mut sound = packet(0);
-        continuity.carry_on(&mut sound, audio);
-        let sound_at = sound.dts().unwrap() as f64 / 48_000.0;
-        assert!((600.0..600.1).contains(&sound_at), "{sound_at}");
-        // The picture of the new start lands at the same time.
-        let mut picture = packet(0);
-        continuity.carry_on(&mut picture, video);
-        let picture_at = picture.dts().unwrap() as f64 / 90_000.0;
-        assert!((sound_at - picture_at).abs() < 0.001, "{picture_at}");
+        let mut last = buffer(600_000);
+        continuity.carry_on(last.make_mut());
+        assert_eq!(last.pts(), Some(gst::ClockTime::from_seconds(600)));
+        let mut reordered = buffer(599_900);
+        continuity.carry_on(reordered.make_mut());
+        assert_eq!(
+            reordered.pts(),
+            Some(gst::ClockTime::from_mseconds(599_900))
+        );
+        let mut sound = buffer(0);
+        continuity.carry_on(sound.make_mut());
+        let mut picture = buffer(0);
+        continuity.carry_on(picture.make_mut());
+        assert_eq!(sound.pts(), Some(gst::ClockTime::from_mseconds(600_040)));
+        assert_eq!(picture.pts(), sound.pts());
     }
 }

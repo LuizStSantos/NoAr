@@ -11,7 +11,6 @@ export type SettingsSectionName =
     | 'general'
     | 'logging'
     | 'output'
-    | 'ingest'
     | 'playlist'
     | 'logo'
     | 'audio'
@@ -63,7 +62,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     { name: 'general', group: 'channel', roles: ALL, keys: [] },
     { name: 'logging', group: 'channel', roles: ALL, keys: [] },
     { name: 'output', group: 'channel', roles: ADMINS, keys: ['output'], restarts: true },
-    { name: 'ingest', group: 'channel', roles: ADMINS, keys: ['ingest'] },
     {
         name: 'playlist',
         group: 'channel',

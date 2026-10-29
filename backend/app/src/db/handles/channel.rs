@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use sqlx::{
     Executor, Sqlite,
     sqlite::{SqlitePool, SqliteQueryResult},
@@ -11,7 +9,7 @@ use crate::{
         models::{self, Channel},
     },
     utils::{
-        config::{DEFAULT_INGEST_PORT, OutputMode, parse_rtmp_ingest_port},
+        config::OutputMode,
         errors::{ProcessError, ServiceError},
     },
 };
@@ -163,12 +161,8 @@ pub async fn create_channel_records(
     conn: &SqlitePool,
     target_channel: Channel,
 ) -> Result<Channel, ServiceError> {
-    // It reads the ingest ports in use before it writes: an immediate
-    // transaction takes the write lock first, so a concurrent writer makes it
-    // wait (busy timeout) instead of failing on a stale snapshot.
+    // Serialize channel creation so concurrent requests see committed records.
     let mut transaction = conn.begin_with("BEGIN IMMEDIATE").await?;
-    let configured_ingest_urls = handles::select_rtmp_ingest_urls(&mut *transaction).await?;
-    let ingest_url = default_ingest_url(next_available_ingest_port(&configured_ingest_urls)?);
     let channel = handles::insert_channel(&mut *transaction, target_channel).await?;
     let outputs = [
         models::Output::new(channel.id, OutputMode::HLS),
@@ -176,8 +170,7 @@ pub async fn create_channel_records(
         models::Output::new(channel.id, OutputMode::Desktop),
     ];
 
-    let config_id =
-        handles::insert_configuration(&mut transaction, channel.id, &ingest_url).await?;
+    let config_id = handles::insert_configuration(&mut transaction, channel.id).await?;
     handles::insert_source(&mut transaction, config_id).await?;
 
     for (index, output) in outputs.iter().enumerate() {
@@ -190,23 +183,6 @@ pub async fn create_channel_records(
     transaction.commit().await?;
 
     Ok(channel)
-}
-
-fn default_ingest_url(port: u16) -> String {
-    format!("rtmp://127.0.0.1:{port}/live/stream")
-}
-
-fn next_available_ingest_port(configured_urls: &[String]) -> Result<u16, ServiceError> {
-    let used_ports = configured_urls
-        .iter()
-        .filter_map(|url| parse_rtmp_ingest_port(url).ok())
-        .collect::<HashSet<_>>();
-
-    (DEFAULT_INGEST_PORT..=u16::MAX)
-        .find(|port| !used_ports.contains(port))
-        .ok_or_else(|| {
-            ServiceError::BadRequest("no free unprivileged ingest port available".to_string())
-        })
 }
 
 #[cfg(test)]
@@ -301,7 +277,7 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-    async fn channels_created_at_the_same_time_all_succeed_with_their_own_port() {
+    async fn concurrent_channel_creation_is_atomic_without_allocating_listener_ports() {
         use std::str::FromStr;
 
         use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode};
@@ -318,6 +294,11 @@ mod tests {
             .await
             .unwrap();
         handles::db_migrate(&pool).await.unwrap();
+
+        let original_listeners: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM config_live_input")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
         let tasks = (0..6)
             .map(|n| {
@@ -339,16 +320,19 @@ mod tests {
             task.await.unwrap().unwrap();
         }
 
-        let urls: Vec<String> = sqlx::query_scalar(
-            "SELECT identifier FROM config_live_input
-                WHERE backend = 'rtmp' AND takeover_mode = 'connection'",
-        )
-        .fetch_all(&pool)
-        .await
-        .unwrap();
-        let unique = urls.iter().collect::<HashSet<_>>();
-        assert_eq!(urls.len(), 7);
-        assert_eq!(unique.len(), 7);
+        let listener_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM config_live_input")
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+            .into_iter()
+            .next()
+            .unwrap();
+        let channel_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM channels")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(listener_count, original_listeners);
+        assert_eq!(channel_count, 7);
 
         pool.close().await;
         for suffix in ["", "-wal", "-shm"] {
@@ -357,82 +341,46 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn channel_creation_assigns_the_next_free_ingest_port() {
+    async fn channel_creation_does_not_create_input_servers_or_reserve_ports() {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
             .unwrap();
         handles::db_migrate(&pool).await.unwrap();
+        let before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM config_live_input")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
-        let second = create_channel_records(
-            &pool,
-            Channel {
-                name: "second-channel".to_string(),
-                ..Channel::default()
-            },
-        )
-        .await
-        .unwrap();
-        let third = create_channel_records(
-            &pool,
-            Channel {
-                name: "third-channel".to_string(),
-                ..Channel::default()
-            },
-        )
-        .await
-        .unwrap();
+        for name in ["second-channel", "third-channel"] {
+            let channel = create_channel_records(
+                &pool,
+                Channel {
+                    name: name.to_string(),
+                    ..Channel::default()
+                },
+            )
+            .await
+            .unwrap();
+            let count: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM config_live_input
+                 WHERE config_id IN (SELECT id FROM config WHERE channel_id = $1)",
+            )
+            .bind(channel.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
-        let second_url: String = sqlx::query_scalar(
-            "SELECT ingest.identifier FROM config
-                JOIN config_live_input ingest ON ingest.config_id = config.id
-                WHERE ingest.backend = 'rtmp' AND ingest.takeover_mode = 'connection'
-                  AND config.channel_id = $1",
-        )
-        .bind(second.id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-        let third_url: String = sqlx::query_scalar(
-            "SELECT ingest.identifier FROM config
-                JOIN config_live_input ingest ON ingest.config_id = config.id
-                WHERE ingest.backend = 'rtmp' AND ingest.takeover_mode = 'connection'
-                  AND config.channel_id = $1",
-        )
-        .bind(third.id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+            assert_eq!(count, 0);
+        }
 
-        assert_eq!(second_url, "rtmp://127.0.0.1:1937/live/stream");
-        assert_eq!(third_url, "rtmp://127.0.0.1:1938/live/stream");
-        sqlx::query(
-            "UPDATE config_live_input SET enabled = 1 WHERE backend = 'rtmp'
-             AND takeover_mode = 'connection'
-             AND config_id IN (SELECT id FROM config WHERE channel_id IN (1, $1))",
-        )
-        .bind(second.id)
-        .execute(&pool)
-        .await
-        .unwrap();
-        assert!(
-            handles::ingest_port_in_use(&pool, third.id, 1936)
-                .await
-                .unwrap()
-        );
-        assert!(
-            handles::ingest_port_in_use(&pool, third.id, 1937)
-                .await
-                .unwrap()
-        );
-        assert!(
-            !handles::ingest_port_in_use(&pool, third.id, 1938)
-                .await
-                .unwrap()
-        );
+        let after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM config_live_input")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(before, after, "historical listener rows remain untouched");
     }
-
     #[tokio::test]
     async fn deleting_a_channel_cascades_to_every_config_table() {
         let pool = SqlitePoolOptions::new()

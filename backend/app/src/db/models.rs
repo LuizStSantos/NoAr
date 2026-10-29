@@ -519,18 +519,6 @@ fn default_vtt_language() -> String {
     "und".to_string()
 }
 
-#[derive(Debug, sqlx::FromRow)]
-pub struct LiveInputRecord {
-    pub id: i32,
-    pub priority: i32,
-    pub enabled: bool,
-    pub name: String,
-    pub backend: String,
-    pub identifier: String,
-    pub options: String,
-    pub demuxer_options: String,
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SetupSettings {
     pub logs: String,

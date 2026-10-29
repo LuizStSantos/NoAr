@@ -275,12 +275,12 @@ impl DesktopRecording {
                         }
                         DesktopRecordingMessage::Audio(frame) => {
                             worker_queue_depth.fetch_sub(1, Ordering::AcqRel);
-                            output.encode_audio(&frame)
+                            output.encode_processed_audio(&frame)
                         }
                         DesktopRecordingMessage::AudioPadding { pts, samples } => {
                             worker_queue_depth.fetch_sub(1, Ordering::AcqRel);
                             recording_silence(pts, samples, cfg.sample_rate)
-                                .try_for_each(|frame| output.encode_audio(&frame))
+                                .try_for_each(|frame| output.encode_processed_audio(&frame))
                         }
                         DesktopRecordingMessage::Finish => break,
                     };
@@ -606,33 +606,6 @@ impl FrameOutput for DesktopFrameSender {
         }
 
         Ok(())
-    }
-
-    fn try_encode_video(&mut self, frame: &frame::Video) -> Result<bool> {
-        match self.video_sender.try_send(DesktopVideoMessage {
-            frame: reference_video_frame(frame)?,
-            logo_opacity: self.current_logo_opacity,
-        }) {
-            Ok(()) => {}
-            Err(TrySendError::Full(_)) => return Ok(false),
-            Err(TrySendError::Disconnected(_)) => return Err(PlaybackStopped.into()),
-        }
-
-        if self.reserve_recording_slot() {
-            match reference_video_frame(frame) {
-                Ok(frame) => self.send_reserved_recording(DesktopRecordingMessage::Video {
-                    frame,
-                    logo: self.recording_logo.clone(),
-                    logo_opacity: self.current_logo_opacity,
-                }),
-                Err(error) => {
-                    self.release_recording_slot();
-                    log::warn!(channel = self.channel_id; "Skipping desktop recording frame: {error}");
-                }
-            }
-        }
-
-        Ok(true)
     }
 
     fn apply_logo_overlay(

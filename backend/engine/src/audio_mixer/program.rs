@@ -231,10 +231,6 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
             .or_else(|| self.output.held_video_frame())
     }
 
-    fn handles_loudness(&self) -> bool {
-        true
-    }
-
     fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
         self.queue_audio(frame, false, false)
     }
@@ -599,7 +595,6 @@ mod tests {
                 let result = crate::play_program_clip(
                     &mut capture,
                     &mut state,
-                    &mut None,
                     path.to_str().unwrap(),
                     &config,
                     &mut timeline,

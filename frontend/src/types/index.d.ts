@@ -314,10 +314,6 @@ declare global {
         index: number
         audio?: AudioLevel
         loudness?: LiveLoudnessMetrics
-        ingest: boolean
-        ingest_listener_id?: number | null
-        ingest_listener_name?: string | null
-        ingest_listener_backend?: string | null
         mode: string
         elapsed: number
         shift: number

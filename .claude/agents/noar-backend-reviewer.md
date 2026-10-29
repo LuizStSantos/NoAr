@@ -9,7 +9,7 @@ tools: Read, Grep, Glob, Bash
 
 ## Specialization: backend and playout correctness
 - Scope: `backend/app/src/api/`, `db/handles/`, `player/`, `utils/`, `backend/engine/src/`, `migrations/`, Cargo workspace.
-- Check auth boundaries and role checks; SQL parametrization, DB migrations and rollback/backup assumptions; async cancellation, deadlocks, race conditions, scheduling resume, live switching, FFmpeg lifetimes/PTS, SRT/RTMP/HLS and SCTE-35.
+- Check auth boundaries and role checks; SQL parametrization, DB migrations and rollback/backup assumptions; async cancellation, deadlocks, race conditions, scheduling resume, live switching, GStreamer ownership/states/segments, SRT/RTMP/HLS and SCTE-35. Use `/noar-gstreamer` for media-runtime references; live inputs are external client URLs, not NoAr listeners.
 - Follow `backend/AGENTS.md` without silently fixing existing instructions. Compare tests with runtime-critical paths. Do not run video playout in production.
 - Probe API ↔ frontend contracts and call out regression risks. Escalate stream interruption, auth bypass and irrecoverable schema changes as blockers.
 

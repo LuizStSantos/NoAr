@@ -9,6 +9,12 @@ User command: `$ARGUMENTS`
 
 This skill is **separate** from `/noar-intelligent-development`. It may be invoked directly or be consulted by that workflow. It never votes in the existing five-agent audit councils and does not replace `noar-media-engine-reviewer`.
 
+GStreamer is NoAr's sole playout engine on this integration branch. Use
+`/noar-gstreamer` first for pipeline control, native encoders/transports, clocks,
+states, seeking and caps. This skill covers remaining FFmpeg frame-memory
+compatibility, codec dependencies and fixture/inspection tools; do not treat its
+CLI options as GStreamer properties or revive removed input listeners.
+
 ## Supported requests
 
 - `reference <topic>`: route to relevant official FFmpeg manuals, extract short passages, and connect findings to NoAr code.

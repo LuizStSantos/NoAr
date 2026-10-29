@@ -11,8 +11,7 @@
 
 use std::{
     collections::BTreeMap,
-    ffi::{CString, c_int, c_void},
-    fmt, io, ptr,
+    fmt, io,
     sync::{
         Arc, Mutex, PoisonError,
         atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -22,13 +21,11 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 
+use ::gstreamer as gst;
 use anyhow::{Context, Result};
-use ffmpeg_next::{
-    Dictionary, ffi,
-    format::{self, context::StreamIo},
-};
-
-use crate::utils::helper::network_output_options;
+use gst::prelude::*;
+use gstreamer_app as gst_app;
+use url::Url;
 
 const TS_PACKET: usize = 188;
 /// What waits for the network at most; past it, data is dropped and the
@@ -156,6 +153,8 @@ struct Shared {
     /// What a new connection receives first (FLV header, metadata and
     /// codec headers).
     preamble: Mutex<Preamble>,
+    /// Allows shutdown to cancel a native connect/write that is waiting.
+    pipeline: Mutex<Option<gst::Pipeline>>,
 }
 
 #[derive(Default)]
@@ -181,24 +180,6 @@ impl Preamble {
     }
 }
 
-/// Opens a muxer of `muxer` whose output goes to `url` through a
-/// [`NetworkSink`].
-pub(crate) fn open_output(
-    url: &str,
-    muxer: &str,
-    format: LinkFormat,
-    protocol_options: &BTreeMap<String, String>,
-    link: OutputLink,
-    channel_id: Option<i32>,
-) -> Result<format::context::Output> {
-    let sink = NetworkSink::start(url, format, protocol_options, link, channel_id)?;
-    // Seven transport packets, the size SRT and UDP send at a time.
-    let io = StreamIo::from_write_with_capacity(sink, 7 * TS_PACKET)?;
-
-    format::output_to_stream(io, Some(url), Some(muxer))
-        .with_context(|| format!("failed to open {muxer} output"))
-}
-
 /// Where the muxer writes a network output. Writing only queues the data for
 /// the connection thread.
 pub(crate) struct NetworkSink {
@@ -218,21 +199,23 @@ impl NetworkSink {
         link: OutputLink,
         channel_id: Option<i32>,
     ) -> Result<Self> {
-        let address = CString::new(url)?;
-        for (key, value) in protocol_options {
-            CString::new(key.as_str())?;
-            CString::new(value.as_str())?;
-        }
+        crate::gstreamer::init()?;
+        let settings =
+            TransportSettings::parse(url, protocol_options).map_err(anyhow::Error::msg)?;
+        settings
+            .validate_format(format)
+            .map_err(anyhow::Error::msg)?;
 
         let shared = Arc::new(Shared {
             stop: AtomicBool::new(false),
             queued_bytes: AtomicUsize::new(0),
             gap: AtomicBool::new(false),
             preamble: Mutex::new(Preamble::default()),
+            pipeline: Mutex::new(None),
         });
         let (sender, receiver) = mpsc::channel();
         let (done_sender, done) = mpsc::channel();
-        let listener = is_listener(url);
+        let listener = settings.listener;
         link.update(|status| {
             status.state = LinkState::Connecting;
             status.destination = Some(public_address(url));
@@ -241,8 +224,8 @@ impl NetworkSink {
         });
 
         let connection = Connection {
-            address,
-            options: protocol_options.clone(),
+            settings,
+            format,
             listener,
             shared: shared.clone(),
             link: link.clone(),
@@ -302,6 +285,17 @@ impl io::Write for NetworkSink {
     }
 }
 
+impl NetworkSink {
+    fn cancel_native_pipeline(&self) {
+        let pipeline = lock(&self.shared.pipeline).clone();
+
+        if let Some(pipeline) = pipeline {
+            let _ = pipeline.send_event(gst::event::FlushStart::new());
+            let _ = pipeline.set_state(gst::State::Null);
+        }
+    }
+}
+
 impl Drop for NetworkSink {
     fn drop(&mut self) {
         // Closing the queue lets the thread send what is left (the trailer
@@ -312,12 +306,14 @@ impl Drop for NetworkSink {
             // Nothing is going out: stop waiting for a receiver now, so a
             // restarted playout can take the port again.
             self.shared.stop.store(true, Ordering::Release);
+            self.cancel_native_pipeline();
         }
 
         if let Some(done) = self.done.take()
             && done.recv_timeout(CLOSE_GRACE).is_err()
         {
             self.shared.stop.store(true, Ordering::Release);
+            self.cancel_native_pipeline();
             let _ = done.recv_timeout(CLOSE_GRACE);
         }
 
@@ -479,8 +475,8 @@ impl FlvFramer {
 
 /// The connection thread.
 struct Connection {
-    address: CString,
-    options: BTreeMap<String, String>,
+    settings: TransportSettings,
+    format: LinkFormat,
     listener: bool,
     shared: Arc<Shared>,
     link: OutputLink,
@@ -539,8 +535,6 @@ impl Connection {
                 }
             };
 
-            log::info!(channel = self.channel; "Output connected to {}", self.destination);
-            self.link.set(LinkState::Connected, None);
             retry = FIRST_RETRY;
             warned = false;
 
@@ -565,47 +559,13 @@ impl Connection {
         self.shared.stop.load(Ordering::Acquire)
     }
 
-    /// Opens the connection; an SRT listener waits here for a caller.
-    fn connect(&self) -> std::result::Result<Avio, String> {
-        let mut io = ptr::null_mut();
-        let callback = ffi::AVIOInterruptCB {
-            callback: Some(interrupted),
-            opaque: Arc::as_ptr(&self.shared).cast_mut().cast::<c_void>(),
-        };
-        let (result, unused) = unsafe {
-            let mut dictionary = network_output_options(&self.options).disown();
-            let result = ffi::avio_open2(
-                &mut io,
-                self.address.as_ptr(),
-                ffi::AVIO_FLAG_WRITE,
-                &callback,
-                &mut dictionary,
-            );
-            let remaining = Dictionary::own(dictionary);
-            let unused: Vec<String> = remaining
-                .iter()
-                .filter(|(key, _)| self.options.contains_key(*key))
-                .map(|(key, _)| key.to_string())
-                .collect();
-
-            (result, unused)
-        };
-
-        if result < 0 {
-            return Err(ffmpeg_next::Error::from(result).to_string());
-        }
-
-        if !unused.is_empty() {
-            log::warn!(channel = self.channel;
-                "Unused output protocol options: {}", unused.join(", ")
-            );
-        }
-
-        Ok(Avio(io))
+    fn connect(&self) -> std::result::Result<NativeTransport, String> {
+        NativeTransport::open(&self.settings, self.format, self.shared.clone())
+            .map_err(|error| error.to_string())
     }
 
     /// Sends until the muxer closes the output or the connection fails.
-    fn send(&self, mut io: Avio) -> Ended {
+    fn send(&self, mut io: NativeTransport) -> Ended {
         // What waited while connecting is stale: start from now.
         let mut need_resume = true;
         loop {
@@ -623,7 +583,20 @@ impl Connection {
         }
 
         loop {
-            match self.receiver.recv_timeout(Duration::from_millis(250)) {
+            if self.stopped() {
+                return Ended::Closed;
+            }
+
+            if let Err(error) = io.poll() {
+                return Ended::Lost(error);
+            }
+
+            if io.connected() && self.link.status().state != LinkState::Connected {
+                log::info!(channel = self.channel; "Output connected to {}", self.destination);
+                self.link.set(LinkState::Connected, None);
+            }
+
+            match self.receiver.recv_timeout(Duration::from_millis(25)) {
                 Ok(unit) => {
                     self.release(unit.data.len());
 
@@ -677,48 +650,508 @@ impl Connection {
     }
 }
 
-/// An open AVIO connection, closed when dropped.
-struct Avio(*mut ffi::AVIOContext);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TransportKind {
+    Srt,
+    Udp,
+    Rtmp,
+    Tcp,
+}
 
-impl Avio {
-    fn write(&mut self, data: &[u8]) -> std::result::Result<(), String> {
+struct TransportSettings {
+    kind: TransportKind,
+    uri: Url,
+    properties: BTreeMap<String, String>,
+    listener: bool,
+    timeout: Duration,
+    packet_size: usize,
+}
+
+impl TransportSettings {
+    fn parse(address: &str, configured: &BTreeMap<String, String>) -> Result<Self, String> {
+        if address.chars().any(char::is_control) {
+            return Err("output address contains control characters".to_string());
+        }
+
+        let address = address.replacen("srt://:", "srt://0.0.0.0:", 1);
+        let mut uri = Url::parse(&address).map_err(|_| "invalid output URL".to_string())?;
+        let kind = match uri.scheme() {
+            "srt" => TransportKind::Srt,
+            "udp" => TransportKind::Udp,
+            "rtmp" | "rtmps" => TransportKind::Rtmp,
+            "tcp" => TransportKind::Tcp,
+            _ => return Err("GStreamer output requires SRT, UDP, RTMP(S) or TCP".to_string()),
+        };
+        let mut options = BTreeMap::new();
+        let mut timeout = Duration::from_secs(5);
+        let pairs = if kind == TransportKind::Rtmp {
+            // An RTMP URL query is part of its stream key/authentication, not
+            // an FFmpeg/GStreamer transport-options dictionary.
+            Vec::new()
+        } else {
+            uri.query_pairs()
+                .map(|(key, value)| (key.into_owned(), value.into_owned()))
+                .collect()
+        };
+
+        for (key, value) in pairs.into_iter().chain(
+            configured
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone())),
+        ) {
+            if key.chars().any(char::is_control) || value.chars().any(char::is_control) {
+                return Err(format!(
+                    "protocol option {key:?} contains control characters"
+                ));
+            }
+
+            if matches!(key.as_str(), "rw_timeout" | "timeout") {
+                let micros = parse_u64(&key, &value)?;
+                if !(1..=60_000_000).contains(&micros) {
+                    return Err(format!(
+                        "protocol option {key:?} must be between 1 and 60000000 microseconds"
+                    ));
+                }
+                timeout = Duration::from_micros(micros);
+                continue;
+            }
+
+            let (name, value) = normalize_option(kind, &key, &value)?;
+            if options
+                .insert(name.clone(), value.clone())
+                .is_some_and(|old| old != value)
+            {
+                return Err(format!(
+                    "protocol option {name:?} conflicts with the output URL or another configured alias"
+                ));
+            }
+        }
+
+        let listener = options.get("mode").is_some_and(|mode| mode == "listener")
+            || options.get("listen").is_some_and(|listen| listen == "true");
+        let packet_size = options
+            .get("packet-size")
+            .map(|value| value.parse::<usize>())
+            .transpose()
+            .map_err(|_| "invalid output packet size".to_string())?
+            .unwrap_or(7 * TS_PACKET);
+
+        if kind == TransportKind::Srt {
+            options
+                .entry("conntimeo".to_string())
+                .or_insert_with(|| "3000".to_string());
+            options
+                .entry("poll-timeout".to_string())
+                .or_insert_with(|| "100".to_string());
+            options
+                .entry("peeridletimeo".to_string())
+                .or_insert_with(|| timeout.as_millis().max(1).to_string());
+            uri.set_query(None);
+            uri.query_pairs_mut().extend_pairs(options.iter());
+        } else if kind != TransportKind::Rtmp {
+            uri.set_query(None);
+        }
+
+        Ok(Self {
+            kind,
+            uri,
+            properties: options,
+            listener,
+            timeout,
+            packet_size,
+        })
+    }
+
+    fn validate_format(&self, format: LinkFormat) -> Result<(), String> {
+        match (self.kind, format) {
+            (TransportKind::Rtmp, LinkFormat::Flv)
+            | (TransportKind::Srt | TransportKind::Udp, LinkFormat::TransportStream)
+            | (TransportKind::Tcp, _) => Ok(()),
+            _ => Err("RTMP requires FLV; SRT and UDP require MPEG-TS".to_string()),
+        }
+    }
+}
+
+/// Normalizes legacy SRT option names/units before GStreamer opens a socket.
+/// Used by ingest too, so preloaded and directly played sources agree.
+pub(crate) fn normalize_srt_uri(
+    address: &str,
+    options: &BTreeMap<String, String>,
+) -> Result<String, String> {
+    let settings = TransportSettings::parse(address, options)?;
+    if settings.kind != TransportKind::Srt {
+        return Err("expected an SRT address".to_string());
+    }
+
+    Ok(settings.uri.into())
+}
+
+/// Validates configuration without connecting to the destination.
+pub(crate) fn validate_transport_options(
+    address: &str,
+    options: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    TransportSettings::parse(address, options).map(|_| ())
+}
+
+fn parse_u64(name: &str, value: &str) -> Result<u64, String> {
+    value
+        .parse()
+        .map_err(|_| format!("protocol option {name:?} requires a nonnegative integer"))
+}
+
+fn parse_i32(name: &str, value: &str) -> Result<i32, String> {
+    value
+        .parse()
+        .map_err(|_| format!("protocol option {name:?} requires a 32-bit integer"))
+}
+
+fn bool_string(name: &str, value: &str) -> Result<String, String> {
+    match value {
+        "1" | "true" | "yes" | "on" => Ok("true".to_string()),
+        "0" | "false" | "no" | "off" => Ok("false".to_string()),
+        _ => Err(format!("protocol option {name:?} requires a boolean")),
+    }
+}
+
+fn normalize_option(
+    kind: TransportKind,
+    name: &str,
+    value: &str,
+) -> Result<(String, String), String> {
+    let mut value = value.to_string();
+    let mapped = match kind {
+        TransportKind::Srt => match name {
+            "srt_streamid" => "streamid",
+            "connect_timeout" => "conntimeo",
+            "pkt_size" => "payloadsize",
+            "enforced_encryption" => "enforcedencryption",
+            "latency" | "rcvlatency" | "peerlatency" => {
+                // Existing NoAr/FFmpeg configuration uses microseconds.
+                let micros = parse_u64(name, &value)?;
+                let millis = micros.div_ceil(1000);
+                i32::try_from(millis)
+                    .map_err(|_| format!("protocol option {name:?} is too large"))?;
+                return Ok((name.to_string(), millis.to_string()));
+            }
+            "mode" => {
+                value = match value.as_str() {
+                    "caller" | "0" => "caller",
+                    "listener" | "1" => "listener",
+                    "rendezvous" | "rendez-vous" | "2" => "rendezvous",
+                    _ => return Err("invalid SRT connection mode".to_string()),
+                }
+                .to_string();
+                "mode"
+            }
+            "mss" | "fc" | "sndbuf" | "rcvbuf" | "maxbw" | "tsbpdmode" | "inputbw" | "oheadbw"
+            | "passphrase" | "pbkeylen" | "ipttl" | "iptos" | "tlpktdrop" | "snddropdelay"
+            | "nakreport" | "conntimeo" | "drifttracer" | "lossmaxttl" | "minversion"
+            | "streamid" | "congestion" | "messageapi" | "payloadsize" | "transtype"
+            | "kmrefreshrate" | "kmpreannounce" | "enforcedencryption" | "ipv6only"
+            | "peeridletimeo" | "bindtodevice" | "packetfilter" | "retransmitalgo"
+            | "localaddress" | "localport" | "poll-timeout" => name,
+            "linger" if value == "0" => return Ok(("conntimeo".to_string(), "3000".to_string())),
+            _ => return Err(format!("unsupported GStreamer SRT option {name:?}")),
+        },
+        TransportKind::Udp => match name {
+            "ttl" | "ttl-mc" | "qos-dscp" => name,
+            "buffer_size" | "buffer-size" => "buffer-size",
+            "localaddr" | "bind-address" => "bind-address",
+            "localport" | "bind-port" => "bind-port",
+            "pkt_size" | "packet-size" => "packet-size",
+            "broadcast" | "auto-multicast" | "loop" | "multicast-iface" => name,
+            _ => return Err(format!("unsupported GStreamer UDP option {name:?}")),
+        },
+        TransportKind::Rtmp => match name {
+            "rtmp_app" | "application" => "application",
+            "rtmp_playpath" | "stream" => "stream",
+            "rtmp_conn" | "extra-connect-args" => "extra-connect-args",
+            "rtmp_flashver" | "flash-version" => "flash-version",
+            "username" | "password" | "secure-token" | "chunk-size" | "peak-kbps" => name,
+            "rtmp_live" if value == "live" => {
+                return Ok(("async-connect".to_string(), "true".to_string()));
+            }
+            _ => return Err(format!("unsupported GStreamer RTMP option {name:?}")),
+        },
+        TransportKind::Tcp => match name {
+            "listen" => name,
+            _ => return Err(format!("unsupported GStreamer TCP option {name:?}")),
+        },
+    };
+
+    match mapped {
+        "mode" | "streamid" | "passphrase" | "congestion" | "localaddress" | "bindtodevice"
+        | "packetfilter" | "bind-address" | "multicast-iface" | "application" | "stream"
+        | "extra-connect-args" | "flash-version" | "username" | "password" | "secure-token" => {}
+        "tsbpdmode" | "tlpktdrop" | "nakreport" | "drifttracer" | "messageapi"
+        | "enforcedencryption" | "broadcast" | "auto-multicast" | "loop" | "listen" => {
+            value = bool_string(name, &value)?;
+        }
+        "maxbw" | "inputbw" => {
+            value
+                .parse::<i64>()
+                .map_err(|_| format!("protocol option {name:?} requires a 64-bit integer"))?;
+        }
+        "localport" | "bind-port" => {
+            u16::try_from(parse_u64(name, &value)?)
+                .map_err(|_| format!("invalid port in option {name:?}"))?;
+        }
+        "packet-size" => {
+            let size = parse_u64(name, &value)?;
+            if !(188..=65507).contains(&size) {
+                return Err("UDP packet size must be between 188 and 65507 bytes".to_string());
+            }
+        }
+        "chunk-size" | "peak-kbps" => {
+            u32::try_from(parse_u64(name, &value)?)
+                .map_err(|_| format!("protocol option {name:?} is too large"))?;
+        }
+        "pbkeylen" => {
+            if !matches!(parse_i32(name, &value)?, 0 | 16 | 24 | 32) {
+                return Err("SRT pbkeylen must be 0, 16, 24 or 32".to_string());
+            }
+        }
+        "transtype" => {
+            value = match value.as_str() {
+                "live" | "0" => "0",
+                "file" | "1" => "1",
+                _ => return Err("invalid SRT transport type".to_string()),
+            }
+            .to_string();
+        }
+        _ => {
+            parse_i32(name, &value)?;
+        }
+    }
+
+    Ok((mapped.to_string(), value))
+}
+
+/// A GStreamer transport only: muxed payload is already produced upstream.
+struct NativeTransport {
+    pipeline: gst::Pipeline,
+    source: gst_app::AppSrc,
+    sink: gst::Element,
+    bus: gst::Bus,
+    shared: Arc<Shared>,
+    kind: TransportKind,
+    listener: bool,
+    timeout: Duration,
+    last_progress: Instant,
+    last_sent: u64,
+    wrote: bool,
+    packet_size: usize,
+}
+
+impl NativeTransport {
+    fn open(settings: &TransportSettings, format: LinkFormat, shared: Arc<Shared>) -> Result<Self> {
+        let pipeline = gst::Pipeline::new();
+        let caps = match format {
+            LinkFormat::TransportStream => gst::Caps::builder("video/mpegts")
+                .field("systemstream", true)
+                .field("packetsize", 188_i32)
+                .build(),
+            LinkFormat::Flv => gst::Caps::builder("video/x-flv").build(),
+        };
+        let source = gst_app::AppSrc::builder()
+            .caps(&caps)
+            .is_live(true)
+            .format(gst::Format::Bytes)
+            .block(false)
+            .max_bytes(MAX_QUEUED_BYTES as u64)
+            .build();
+        let factory = match settings.kind {
+            TransportKind::Srt => "srtsink",
+            TransportKind::Udp => "udpsink",
+            TransportKind::Rtmp => "rtmp2sink",
+            TransportKind::Tcp if settings.listener => "tcpserversink",
+            TransportKind::Tcp => "tcpclientsink",
+        };
+        let sink = gst::ElementFactory::make(factory)
+            .build()
+            .with_context(|| format!("required GStreamer transport {factory} is unavailable"))?;
+        sink.set_property("sync", false);
+        sink.set_property("async", false);
+
+        match settings.kind {
+            TransportKind::Srt => {
+                sink.set_property("uri", settings.uri.as_str());
+                sink.set_property("auto-reconnect", false);
+                sink.set_property("wait-for-connection", true);
+            }
+            TransportKind::Rtmp => {
+                sink.set_property("location", settings.uri.as_str());
+                sink.set_property("timeout", u32::try_from(settings.timeout.as_secs().max(1))?);
+                for (name, value) in &settings.properties {
+                    match name.as_str() {
+                        "chunk-size" | "peak-kbps" => {
+                            sink.set_property(name, value.parse::<u32>()?);
+                        }
+                        "async-connect" => sink.set_property(name, value == "true"),
+                        _ => sink.set_property(name, value.as_str()),
+                    }
+                }
+            }
+            TransportKind::Udp | TransportKind::Tcp => {
+                sink.set_property(
+                    "host",
+                    settings
+                        .uri
+                        .host_str()
+                        .context("output URL requires a host")?,
+                );
+                sink.set_property(
+                    "port",
+                    i32::from(settings.uri.port().context("output URL requires a port")?),
+                );
+                for (name, value) in &settings.properties {
+                    match name.as_str() {
+                        "listen" | "packet-size" => {}
+                        "bind-address" | "multicast-iface" => {
+                            sink.set_property(name, value.as_str());
+                        }
+                        "broadcast" | "auto-multicast" | "loop" => {
+                            anyhow::ensure!(
+                                sink.find_property(name).is_some(),
+                                "GStreamer transport does not support option {name:?}"
+                            );
+                            sink.set_property(name, value == "true");
+                        }
+                        _ => sink.set_property(name, value.parse::<i32>()?),
+                    }
+                }
+            }
+        }
+
+        pipeline.add_many([source.upcast_ref::<gst::Element>(), &sink])?;
+        source.link(&sink)?;
+        let bus = pipeline.bus().context("transport pipeline has no bus")?;
+        let transport = Self {
+            pipeline,
+            source,
+            sink,
+            bus,
+            shared,
+            kind: settings.kind,
+            listener: settings.listener,
+            timeout: settings.timeout,
+            last_progress: Instant::now(),
+            last_sent: 0,
+            wrote: false,
+            packet_size: settings.packet_size,
+        };
+        *lock(&transport.shared.pipeline) = Some(transport.pipeline.clone());
+        transport
+            .pipeline
+            .set_state(gst::State::Playing)
+            .context("could not start GStreamer transport")?;
+
+        Ok(transport)
+    }
+
+    fn poll(&mut self) -> Result<(), String> {
+        for message in self.bus.iter() {
+            match message.view() {
+                gst::MessageView::Error(error) => return Err(error.error().message().to_string()),
+                gst::MessageView::Eos(_) => {
+                    return Err("GStreamer transport ended unexpectedly".to_string());
+                }
+                _ => {}
+            }
+        }
+
+        let sent = self.sent_bytes();
+        if sent > self.last_sent || self.source.current_level_bytes() == 0 {
+            self.last_sent = sent;
+            self.last_progress = Instant::now();
+        }
+
+        if self.wrote
+            && self.last_progress.elapsed() > self.timeout
+            && (self.source.current_level_bytes() > 0 || !self.connected())
+        {
+            return Err("GStreamer transport exceeded its output timeout".to_string());
+        }
+
+        Ok(())
+    }
+
+    fn sent_bytes(&self) -> u64 {
+        match self.kind {
+            TransportKind::Srt | TransportKind::Rtmp => {
+                let stats = self.sink.property::<gst::Structure>("stats");
+                stats
+                    .get::<u64>(if self.kind == TransportKind::Srt {
+                        "bytes-sent-total"
+                    } else {
+                        "out-bytes-total"
+                    })
+                    .unwrap_or(0)
+            }
+            TransportKind::Udp | TransportKind::Tcp => self.last_sent,
+        }
+    }
+
+    fn connected(&self) -> bool {
+        match self.kind {
+            TransportKind::Srt | TransportKind::Rtmp => self.sent_bytes() > 0,
+            TransportKind::Tcp if self.listener => self.sink.property::<u32>("num-handles") > 0,
+            TransportKind::Tcp | TransportKind::Udp => {
+                self.pipeline.current_state() == gst::State::Playing
+            }
+        }
+    }
+
+    fn write(&mut self, data: &[u8]) -> Result<(), String> {
         if data.is_empty() {
             return Ok(());
         }
 
-        let size = c_int::try_from(data.len()).map_err(|error| error.to_string())?;
-        unsafe {
-            ffi::avio_write(self.0, data.as_ptr(), size);
-            ffi::avio_flush(self.0);
+        while self.source.current_level_bytes() >= MAX_QUEUED_BYTES as u64 {
+            if self.shared.stop.load(Ordering::Acquire) {
+                return Err("output closed".to_string());
+            }
+            self.poll()?;
+            thread::sleep(Duration::from_millis(10));
         }
-        let error = unsafe { (*self.0).error };
 
-        if error < 0 {
-            Err(ffmpeg_next::Error::from(error).to_string())
+        if !self.wrote {
+            self.last_progress = Instant::now();
+            self.wrote = true;
+        }
+
+        let chunk_size = if self.kind == TransportKind::Udp {
+            self.packet_size
         } else {
-            Ok(())
+            data.len()
+        };
+        for chunk in data.chunks(chunk_size) {
+            self.source
+                .push_buffer(gst::Buffer::from_slice(chunk.to_vec()))
+                .map_err(|_| "GStreamer transport rejected output data".to_string())?;
         }
+
+        if matches!(self.kind, TransportKind::Udp | TransportKind::Tcp) {
+            self.last_progress = Instant::now();
+        }
+
+        self.poll()
     }
 }
 
-impl Drop for Avio {
+impl Drop for NativeTransport {
     fn drop(&mut self) {
-        unsafe { ffi::avio_closep(&mut self.0) };
+        let _ = self.pipeline.set_state(gst::State::Null);
+        lock(&self.shared.pipeline).take();
     }
-}
-
-unsafe extern "C" fn interrupted(opaque: *mut c_void) -> c_int {
-    // SAFETY: `opaque` points into the `Arc<Shared>` the connection thread
-    // holds for as long as any AVIO context it opened is alive.
-    let shared = unsafe { &*opaque.cast::<Shared>() };
-
-    c_int::from(shared.stop.load(Ordering::Acquire))
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+#[cfg(test)]
 fn is_listener(url: &str) -> bool {
     url.split_once('?').is_some_and(|(_, query)| {
         query
@@ -761,6 +1194,7 @@ mod tests {
             queued_bytes: AtomicUsize::new(0),
             gap: AtomicBool::new(false),
             preamble: Mutex::new(Preamble::default()),
+            pipeline: Mutex::new(None),
         }
     }
 

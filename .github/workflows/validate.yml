@@ -22,17 +22,17 @@ jobs:
   # NoAr runs in Docker on Linux, so this checks the same build the image uses.
   build:
     runs-on: ubuntu-24.04
-    # Debian trixie, like the image: its own FFmpeg 7.1 comes from the Debian
-    # mirrors, so the job no longer waits on a Launchpad PPA.
-    container: rust:1-trixie
+    # Match the image's toolchain and native GStreamer 1.26 / codec packages.
+    container: rust:1.99.1-trixie
 
     env:
       CARGO_INCREMENTAL: 0
       CARGO_BUILD_JOBS: 2
 
     steps:
-      - name: Install FFmpeg libraries
+      - name: Install native media build and runtime dependencies
         run: |
+          set -eu
           apt-get update
           apt-get install -y --no-install-recommends \
             clang \
@@ -41,6 +41,13 @@ jobs:
             ffmpeg \
             fonts-dejavu-core \
             g++ \
+            glib-networking \
+            gstreamer1.0-tools \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly \
+            gstreamer1.0-libav \
             libavcodec-dev \
             libavdevice-dev \
             libavfilter-dev \
@@ -48,12 +55,20 @@ jobs:
             libavutil-dev \
             libclang-dev \
             libgnutls28-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            libgstreamer-plugins-bad1.0-dev \
             libswresample-dev \
             libswscale-dev \
             make \
             pkg-config
           ffmpeg -version
           test "$(pkg-config --modversion libavformat | cut -d. -f1)" -ge 61
+          for library in gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0 \
+            gstreamer-video-1.0 gstreamer-pbutils-1.0 gstreamer-mpegts-1.0; do
+            pkg-config --atleast-version=1.26 "$library"
+            pkg-config --modversion "$library"
+          done
 
       - uses: actions/checkout@v6
       - name: Build and test the corrected SRT lifecycle
@@ -65,15 +80,26 @@ jobs:
             -Wl,-rpath,/usr/local/lib -lsrt-gnutls -o /tmp/test-srt-lifecycle
           timeout 30 /tmp/test-srt-lifecycle
 
+      - name: Verify required native GStreamer plugins
+        run: |
+          set -eu
+          for factory in appsrc appsink uridecodebin videoconvert videoscale videorate \
+            audioconvert audioresample x264enc avenc_aac h264parse aacparse \
+            mpegtsmux tsdemux srtsrc srtsink rtmp2src rtmp2sink flvmux \
+            qtdemux qtmux matroskamux splitmuxsink; do
+            gst-inspect-1.0 "$factory" >/dev/null
+          done
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
 
-      - name: Set Build Tools and update Rust
+      - name: Set build tools for the pinned Rust toolchain
         run: |
-          rustup update stable
           rustup component add rustfmt clippy
+          rustc --version
+          cargo --version
 
       - uses: Swatinem/rust-cache@v2
 

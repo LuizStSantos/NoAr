@@ -1,15 +1,29 @@
-use anyhow::Result;
-use ffmpeg_next::{
-    Rational, Rescale, codec, format, frame, media,
-    software::resampling,
-    util::{channel_layout::ChannelLayout, format::sample::Sample},
+use std::{
+    collections::VecDeque,
+    path::{Path, PathBuf},
+    sync::{Mutex, PoisonError},
+    time::{Duration, Instant, SystemTime},
 };
+
+use ::gstreamer as gst;
+use anyhow::{Context, Result, anyhow, bail, ensure};
+use gst::prelude::*;
+use gst_pbutils::prelude::*;
+use gstreamer_app as gst_app;
+use gstreamer_pbutils as gst_pbutils;
 use log::{error, info};
 
-use crate::utils::helper::open_media_input;
-
 const SILENCE_SAMPLE_RATE: u32 = 48_000;
-const SILENCE_CHANNEL_LAYOUT: ChannelLayout = ChannelLayout::STEREO;
+const DISCOVERY_CACHE_LIMIT: usize = 128;
+
+struct CachedDiscovery {
+    path: PathBuf,
+    size: u64,
+    modified: SystemTime,
+    info: gst_pbutils::DiscovererInfo,
+}
+
+static DISCOVERY_CACHE: Mutex<VecDeque<CachedDiscovery>> = Mutex::new(VecDeque::new());
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SilenceDetection {
@@ -59,6 +73,114 @@ pub struct VideoStream {
     pub width: Option<i64>,
 }
 
+/// Convert an existing local path to a URI without interpolating it into a pipeline DSL.
+pub(crate) fn media_uri(path: &str) -> Result<String> {
+    if path.contains("://") {
+        return Ok(path.to_owned());
+    }
+
+    let absolute = std::fs::canonicalize(path).with_context(|| format!("cannot open {path}"))?;
+    Ok(gst::glib::filename_to_uri(absolute, None)?.to_string())
+}
+
+pub(crate) fn discover_media(path: &str) -> Result<gst_pbutils::DiscovererInfo> {
+    crate::gstreamer::init()?;
+    // Folder playout and day generation inspect the same files repeatedly.
+    // Reuse immutable metadata, with bounded storage and file-change invalidation.
+    // Network sources always require a fresh signal check.
+    let file = (!path.contains("://"))
+        .then(|| {
+            let canonical = std::fs::canonicalize(path).ok()?;
+            let metadata = std::fs::metadata(&canonical).ok()?;
+            metadata
+                .is_file()
+                .then_some((canonical, metadata.len(), metadata.modified().ok()?))
+        })
+        .flatten();
+    if let Some((canonical, size, modified)) = &file {
+        let cache = DISCOVERY_CACHE
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if let Some(cached) = cache.iter().find(|entry| {
+            entry.path == *canonical && entry.size == *size && entry.modified == *modified
+        }) {
+            return Ok(cached.info.clone());
+        }
+    }
+    let discoverer = gst_pbutils::Discoverer::new(gst::ClockTime::from_seconds(15))?;
+    let info = discoverer
+        .discover_uri(&media_uri(path)?)
+        .with_context(|| format!("discovering {path}"))?;
+    ensure!(
+        info.result() == gst_pbutils::DiscovererResult::Ok,
+        "GStreamer could not discover {path}: {:?}",
+        info.result()
+    );
+    if let Some((path, size, modified)) = file {
+        let mut cache = DISCOVERY_CACHE
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        cache.retain(|entry| entry.path != path);
+        if cache.len() >= DISCOVERY_CACHE_LIMIT {
+            cache.pop_front();
+        }
+        cache.push_back(CachedDiscovery {
+            path,
+            size,
+            modified,
+            info: info.clone(),
+        });
+    }
+    Ok(info)
+}
+
+/// Keep the public probe's codec identifiers stable across media runtimes.
+pub(crate) fn codec_name(caps: Option<&gst::CapsRef>) -> Option<String> {
+    let structure = caps?.structure(0)?;
+    let name = structure.name();
+    let codec = match name.as_str() {
+        "video/x-h264" => "h264",
+        "video/x-h265" => "hevc",
+        "video/x-vp8" => "vp8",
+        "video/x-vp9" => "vp9",
+        "video/x-av1" => "av1",
+        "video/x-theora" => "theora",
+        "video/x-prores" => "prores",
+        "video/mpeg" => match structure.get::<i32>("mpegversion").ok() {
+            Some(1) => "mpeg1video",
+            Some(2) => "mpeg2video",
+            Some(4) => "mpeg4",
+            _ => "mpeg",
+        },
+        "image/jpeg" => "mjpeg",
+        "image/png" => "png",
+        "image/webp" => "webp",
+        "audio/mpeg" => match structure.get::<i32>("mpegversion").ok() {
+            Some(2 | 4) => "aac",
+            _ => match structure.get::<i32>("layer").ok() {
+                Some(1) => "mp1",
+                Some(2) => "mp2",
+                _ => "mp3",
+            },
+        },
+        "audio/x-opus" => "opus",
+        "audio/x-vorbis" => "vorbis",
+        "audio/x-flac" => "flac",
+        "audio/x-ac3" => "ac3",
+        "audio/x-eac3" => "eac3",
+        "audio/x-alaw" => "pcm_alaw",
+        "audio/x-mulaw" => "pcm_mulaw",
+        "audio/x-raw" => {
+            return structure
+                .get::<String>("format")
+                .ok()
+                .map(|format| format!("pcm_{}", format.to_ascii_lowercase()));
+        }
+        _ => return Some(name.to_string()),
+    };
+    Some(codec.to_owned())
+}
+
 pub fn print_media_info(path: &str) {
     match probe_media_info(path) {
         Ok(info) => info!(
@@ -72,56 +194,74 @@ pub fn print_media_info(path: &str) {
 }
 
 pub fn probe_media_info(path: &str) -> Result<MediaInfo> {
-    let ictx = open_media_input(path)?;
-    let duration_seconds = if ictx.duration() > 0 {
-        Some(ictx.duration() as f64 / 1_000_000.0)
-    } else {
-        ictx.streams()
-            .best(media::Type::Video)
-            .and_then(|stream| stream_duration_seconds(&stream))
-    };
-
-    let Some(video_stream) = ictx.streams().best(media::Type::Video) else {
-        return Ok(MediaInfo {
-            duration_seconds,
-            fps: None,
-            resolution: None,
-        });
-    };
-
-    let fps = rational_to_f64(video_stream.avg_frame_rate())
-        .or_else(|| rational_to_f64(video_stream.rate()));
-    let resolution = codec::context::Context::from_parameters(video_stream.parameters())
-        .ok()
-        .and_then(|context| context.decoder().video().ok())
-        .map(|decoder| (decoder.width(), decoder.height()));
-
+    let info = discover_media(path)?;
+    let video = info.video_streams().into_iter().next();
     Ok(MediaInfo {
-        duration_seconds,
-        fps,
-        resolution,
+        duration_seconds: info
+            .duration()
+            .filter(|duration| !duration.is_zero())
+            .map(gstreamer::ClockTime::seconds_f64),
+        fps: video.as_ref().and_then(|stream| {
+            let rate = stream.framerate();
+            (rate.numer() > 0).then(|| f64::from(rate.numer()) / f64::from(rate.denom()))
+        }),
+        resolution: video.map(|stream| (stream.width(), stream.height())),
     })
 }
 
 pub fn probe_media(path: &str) -> Result<MediaProbe> {
-    let ictx = open_media_input(path)?;
+    let info = discover_media(path)?;
+    let duration = info
+        .duration()
+        .filter(|duration| !duration.is_zero())
+        .map(gstreamer::ClockTime::seconds_f64);
+    let size = std::fs::metadata(Path::new(path))
+        .ok()
+        .map(|metadata| metadata.len() as i64);
     let format = ProbeFormat {
-        duration: (ictx.duration() > 0).then_some(ictx.duration() as f64 / 1_000_000.0),
-        nb_streams: ictx.nb_streams() as i64,
-        size: None,
-        bit_rate: (ictx.bit_rate() > 0).then_some(ictx.bit_rate()),
+        duration,
+        nb_streams: info.stream_list().len() as i64,
+        size,
+        bit_rate: size
+            .zip(duration)
+            .filter(|(_, seconds)| *seconds > 0.0)
+            .map(|(bytes, seconds)| (bytes as f64 * 8.0 / seconds) as i64),
     };
-    let mut audio = Vec::new();
-    let mut video = Vec::new();
-
-    for stream in ictx.streams() {
-        match stream.parameters().medium() {
-            media::Type::Audio => audio.push(probe_audio_stream(&stream)),
-            media::Type::Video => video.push(probe_video_stream(&stream)),
-            _ => {}
-        }
-    }
-
+    let audio = info
+        .audio_streams()
+        .into_iter()
+        .map(|stream| AudioStream {
+            channels: (stream.channels() > 0).then_some(i64::from(stream.channels())),
+            codec_name: codec_name(stream.caps().as_deref()),
+            duration,
+            sample_rate: (stream.sample_rate() > 0).then_some(i64::from(stream.sample_rate())),
+        })
+        .collect();
+    let video = info
+        .video_streams()
+        .into_iter()
+        .map(|stream| {
+            let rate = stream.framerate();
+            VideoStream {
+                aspect_ratio: Some(format!("{}:{}", stream.width(), stream.height())),
+                bit_rate: (stream.bitrate() > 0).then_some(i64::from(stream.bitrate())),
+                codec_name: codec_name(stream.caps().as_deref()),
+                duration,
+                field_order: Some(
+                    if stream.is_interlaced() {
+                        "tt"
+                    } else {
+                        "progressive"
+                    }
+                    .to_owned(),
+                ),
+                frame_rate: format!("{}/{}", rate.numer(), rate.denom()),
+                height: Some(i64::from(stream.height())),
+                nb_frames: None,
+                width: Some(i64::from(stream.width())),
+            }
+        })
+        .collect();
     Ok(MediaProbe {
         format,
         audio,
@@ -136,222 +276,113 @@ pub fn detect_audio_silence(
     threshold_db: f32,
     min_silence_seconds: f64,
 ) -> Result<SilenceDetection> {
-    let mut ictx = open_media_input(path)?;
-    let stream = ictx
-        .streams()
-        .best(media::Type::Audio)
-        .ok_or_else(|| anyhow::anyhow!("input has no audio stream"))?;
-    let stream_index = stream.index();
-    let context = codec::context::Context::from_parameters(stream.parameters())?;
-    let mut decoder = context.decoder().audio()?;
-    let input_layout = audio_channel_layout(&decoder);
-    let mut resampler = resampling::Context::get(
-        decoder.format(),
-        input_layout,
-        decoder.rate(),
-        Sample::F32(format::sample::Type::Planar),
-        SILENCE_CHANNEL_LAYOUT,
-        SILENCE_SAMPLE_RATE,
-    )?;
-
-    if seek_seconds.is_finite() && seek_seconds > 0.0 {
-        let seek_ts = (seek_seconds * 1_000_000.0).round().max(0.0) as i64;
-        ictx.seek(seek_ts, ..seek_ts)
-            .or_else(|_| ictx.seek(seek_ts, ..))?;
+    ensure!(
+        seek_seconds.is_finite()
+            && duration_seconds.is_finite()
+            && threshold_db.is_finite()
+            && min_silence_seconds.is_finite(),
+        "silence detection settings must be finite"
+    );
+    ensure!(
+        duration_seconds >= 0.0 && min_silence_seconds >= 0.0,
+        "silence detection durations must not be negative"
+    );
+    ensure!(
+        !probe_media(path)?.audio.is_empty(),
+        "input has no audio stream"
+    );
+    let pipeline = gst::Pipeline::new();
+    let _shutdown = PipelineShutdown(pipeline.clone());
+    let source = gst::ElementFactory::make("uridecodebin")
+        .property("uri", media_uri(path)?)
+        .build()?;
+    let queue = gst::ElementFactory::make("queue").build()?;
+    let convert = gst::ElementFactory::make("audioconvert").build()?;
+    let resample = gst::ElementFactory::make("audioresample").build()?;
+    let sink = gst_app::AppSink::builder()
+        .caps(
+            &gst::Caps::builder("audio/x-raw")
+                .field("format", "F32LE")
+                .field("layout", "interleaved")
+                .field("rate", SILENCE_SAMPLE_RATE as i32)
+                .field("channels", 2_i32)
+                .build(),
+        )
+        .max_buffers(4)
+        .sync(false)
+        .build();
+    pipeline.add_many([&source, &queue, &convert, &resample, sink.upcast_ref()])?;
+    gst::Element::link_many([&queue, &convert, &resample, sink.upcast_ref()])?;
+    let audio_pad = queue.static_pad("sink").context("silence audio sink pad")?;
+    source.connect_pad_added(move |_, pad| {
+        let caps = pad.current_caps().unwrap_or_else(|| pad.query_caps(None));
+        if caps
+            .structure(0)
+            .is_some_and(|structure| structure.name().starts_with("audio/"))
+            && !audio_pad.is_linked()
+        {
+            let _ = pad.link(&audio_pad);
+        }
+    });
+    pipeline.set_state(gst::State::Paused)?;
+    let (state, _, _) = pipeline.state(gst::ClockTime::from_seconds(10));
+    state.context("waiting for silence detector preroll")?;
+    if seek_seconds > 0.0 {
+        pipeline.seek_simple(
+            gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE,
+            gst::ClockTime::from_nseconds(
+                (seek_seconds * gst::ClockTime::SECOND.nseconds() as f64) as u64,
+            ),
+        )?;
     }
-
-    let max_seconds = duration_seconds.min(min_silence_seconds).max(0.0);
+    pipeline.set_state(gst::State::Playing)?;
+    let bus = pipeline.bus().context("silence detector bus")?;
+    let max_seconds = duration_seconds.min(min_silence_seconds);
     let max_samples = (max_seconds * f64::from(SILENCE_SAMPLE_RATE)).ceil() as usize;
     let threshold = 10.0_f32.powf(threshold_db / 20.0).abs();
-    let mut analyzed_samples = 0_usize;
-    let mut has_loud_sample = false;
-
-    for (stream, packet) in ictx.packets() {
-        if stream.index() != stream_index {
-            continue;
-        }
-
-        decoder.send_packet(&packet)?;
-        receive_silence_frames(
-            &mut decoder,
-            &mut resampler,
-            input_layout,
-            threshold,
-            max_samples,
-            &mut analyzed_samples,
-            &mut has_loud_sample,
-        )?;
-
-        if has_loud_sample || analyzed_samples >= max_samples {
+    let mut analyzed_samples = 0;
+    let mut loud = false;
+    let mut last_sample = Instant::now();
+    while analyzed_samples < max_samples && !loud {
+        if let Some(sample) = sink.try_pull_sample(gst::ClockTime::from_mseconds(100)) {
+            let buffer = sample.buffer().context("silence detector buffer")?;
+            let map = buffer.map_readable()?;
+            let remaining = max_samples.saturating_sub(analyzed_samples);
+            for frame in map.as_slice().as_chunks::<8>().0.iter().take(remaining) {
+                analyzed_samples += 1;
+                loud = frame.as_chunks::<4>().0.iter().any(|bytes| {
+                    let value = f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+                    !value.is_finite() || value.abs() > threshold
+                });
+                if loud {
+                    break;
+                }
+            }
+            last_sample = Instant::now();
+        } else if sink.is_eos() {
             break;
+        } else if last_sample.elapsed() > Duration::from_secs(15) {
+            bail!("audio source stopped producing samples during silence detection");
+        }
+        for message in bus.iter() {
+            if let gst::MessageView::Error(error) = message.view() {
+                return Err(anyhow!("silence detection failed: {}", error.error()));
+            }
         }
     }
-
-    decoder.send_eof()?;
-    receive_silence_frames(
-        &mut decoder,
-        &mut resampler,
-        input_layout,
-        threshold,
-        max_samples,
-        &mut analyzed_samples,
-        &mut has_loud_sample,
-    )?;
-
     let analyzed_seconds = analyzed_samples as f64 / f64::from(SILENCE_SAMPLE_RATE);
-
     Ok(SilenceDetection {
-        silent: !has_loud_sample && analyzed_seconds >= min_silence_seconds,
+        silent: !loud && analyzed_seconds >= min_silence_seconds,
         analyzed_seconds,
     })
 }
 
-fn receive_silence_frames(
-    decoder: &mut codec::decoder::Audio,
-    resampler: &mut resampling::Context,
-    input_layout: ChannelLayout,
-    threshold: f32,
-    max_samples: usize,
-    analyzed_samples: &mut usize,
-    has_loud_sample: &mut bool,
-) -> Result<()> {
-    let mut raw = frame::Audio::empty();
+struct PipelineShutdown(gst::Pipeline);
 
-    while decoder.receive_frame(&mut raw).is_ok() {
-        if raw.channel_layout().is_empty() {
-            raw.set_channel_layout(input_layout);
-        }
-
-        let mut converted = frame::Audio::empty();
-        resampler.run(&raw, &mut converted)?;
-        let remaining = max_samples.saturating_sub(*analyzed_samples);
-
-        if remaining == 0 {
-            return Ok(());
-        }
-
-        let samples = converted.samples().min(remaining);
-
-        for channel in 0..converted.planes() {
-            if converted.plane::<f32>(channel)[..samples]
-                .iter()
-                .any(|sample| sample.abs() > threshold)
-            {
-                *has_loud_sample = true;
-                break;
-            }
-        }
-        *analyzed_samples += samples;
-
-        if *has_loud_sample || *analyzed_samples >= max_samples {
-            return Ok(());
-        }
+impl Drop for PipelineShutdown {
+    fn drop(&mut self) {
+        let _ = self.0.set_state(gst::State::Null);
     }
-
-    Ok(())
-}
-
-fn probe_audio_stream(stream: &format::stream::Stream) -> AudioStream {
-    let parameters = stream.parameters();
-    let codec_name = codec::decoder::find(parameters.id()).map(|codec| codec.name().to_string());
-    let mut result = AudioStream {
-        channels: None,
-        codec_name,
-        duration: stream_duration_seconds(stream),
-        sample_rate: None,
-    };
-
-    if let Ok(context) = codec::context::Context::from_parameters(parameters)
-        && let Ok(decoder) = context.decoder().audio()
-    {
-        result.sample_rate = Some(i64::from(decoder.rate()));
-        result.channels = Some(i64::from(decoder.channels()));
-    }
-
-    result
-}
-
-fn audio_channel_layout(decoder: &codec::decoder::Audio) -> ChannelLayout {
-    let channel_layout = decoder.channel_layout();
-
-    if channel_layout.is_empty() {
-        ChannelLayout::default(i32::from(decoder.channels()).max(1))
-    } else {
-        channel_layout
-    }
-}
-
-fn probe_video_stream(stream: &format::stream::Stream) -> VideoStream {
-    let parameters = stream.parameters();
-    let codec_name = codec::decoder::find(parameters.id()).map(|codec| codec.name().to_string());
-    let mut result = VideoStream {
-        aspect_ratio: None,
-        bit_rate: None,
-        codec_name,
-        duration: stream_duration_seconds(stream),
-        field_order: None,
-        frame_rate: rational_string(stream.rate()),
-        height: None,
-        nb_frames: (stream.frames() > 0).then_some(stream.frames()),
-        width: None,
-    };
-
-    if let Ok(context) = codec::context::Context::from_parameters(parameters)
-        && let Ok(decoder) = context.decoder().video()
-    {
-        let width = decoder.width();
-        let height = decoder.height();
-        result.width = Some(i64::from(width));
-        result.height = Some(i64::from(height));
-        result.aspect_ratio = Some(format!("{width}:{height}"));
-    }
-
-    result
-}
-
-fn rational_string(value: Rational) -> String {
-    if value.denominator() == 0 {
-        "0/0".to_string()
-    } else {
-        format!("{}/{}", value.numerator(), value.denominator())
-    }
-}
-
-fn stream_duration_seconds(stream: &format::stream::Stream) -> Option<f64> {
-    if stream.duration() > 0 {
-        let duration_us = stream
-            .duration()
-            .rescale(stream.time_base(), Rational(1, 1_000_000));
-        return Some(duration_us as f64 / 1_000_000.0);
-    }
-
-    let metadata = stream.metadata();
-    metadata
-        .get("DURATION")
-        .or_else(|| metadata.get("duration"))
-        .and_then(parse_duration_seconds)
-}
-
-fn parse_duration_seconds(duration: &str) -> Option<f64> {
-    let mut parts = duration.split(':');
-    let hours = parts.next()?.parse::<f64>().ok()?;
-    let minutes = parts.next()?.parse::<f64>().ok()?;
-    let seconds = parts.next()?.parse::<f64>().ok()?;
-
-    if parts.next().is_some() {
-        return None;
-    }
-
-    let duration = hours * 3_600.0 + minutes * 60.0 + seconds;
-    (duration > 0.0).then_some(duration)
-}
-
-fn rational_to_f64(value: Rational) -> Option<f64> {
-    if value.denominator() == 0 || value.numerator() <= 0 {
-        return None;
-    }
-
-    Some(f64::from(value.numerator()) / f64::from(value.denominator()))
 }
 
 fn format_duration(duration_seconds: Option<f64>) -> String {
@@ -389,6 +420,23 @@ mod tests {
 
     use super::detect_audio_silence;
 
+    #[test]
+    fn repeated_probing_observes_replacement_media_at_the_same_path() {
+        let directory =
+            std::env::temp_dir().join(format!("noar-discovery-cache-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("clip.mp4");
+        std::fs::copy(media_mix_asset("ad.mp4"), &path).unwrap();
+        for _ in 0..3 {
+            let probe = super::probe_media(path.to_str().unwrap()).unwrap();
+            assert!((probe.format.duration.unwrap() - 25.0).abs() < 0.1);
+        }
+        std::fs::copy(media_mix_asset("av_sync.mp4"), &path).unwrap();
+        let probe = super::probe_media(path.to_str().unwrap()).unwrap();
+        assert!((probe.format.duration.unwrap() - 30.0).abs() < 0.1);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
     fn media_mix_asset(name: &str) -> String {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests_assets/storage/media_mix")
@@ -399,7 +447,6 @@ mod tests {
 
     #[test]
     fn silence_detection_rejects_media_without_audio_stream() {
-        ffmpeg_next::init().ok();
         let error = detect_audio_silence(&media_mix_asset("no_audio.mp4"), 0.0, 15.0, -30.0, 15.0)
             .expect_err("no_audio.mp4 must not be analyzed as silent audio");
 

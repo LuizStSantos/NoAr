@@ -68,10 +68,6 @@ export const usePlaylist = defineStore('playlist', {
         progressValue: 0,
         current: {} as PlaylistItem,
         currentIndex: 0,
-        ingestRuns: false,
-        ingestListenerId: null as number | null,
-        ingestListenerName: null as string | null,
-        ingestListenerBackend: null as string | null,
         audioLevel: null as AudioLevel | null,
         loudness: null as LiveLoudnessMetrics | null,
         uptime: null as number | null,
@@ -194,10 +190,6 @@ export const usePlaylist = defineStore('playlist', {
             this.current = item.media
             this.currentIndex = item.index
             this.elapsedSec = item.elapsed
-            this.ingestRuns = item.ingest
-            this.ingestListenerId = item.ingest ? (item.ingest_listener_id ?? null) : null
-            this.ingestListenerName = item.ingest ? (item.ingest_listener_name ?? null) : null
-            this.ingestListenerBackend = item.ingest ? (item.ingest_listener_backend ?? null) : null
             this.audioLevel = item.audio ?? null
             this.loudness = item.loudness ?? null
             this.uptime = item.uptime ?? null
@@ -208,10 +200,6 @@ export const usePlaylist = defineStore('playlist', {
         },
 
         resetStatus() {
-            this.ingestRuns = false
-            this.ingestListenerId = null
-            this.ingestListenerName = null
-            this.ingestListenerBackend = null
             this.elapsedSec = 0
             this.shift = 0
             this.audioLevel = null

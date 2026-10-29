@@ -7,7 +7,9 @@ use std::{
 use anyhow::{Result, anyhow};
 #[cfg(feature = "desktop-gpu")]
 use ffmpeg_next::util::color;
-use ffmpeg_next::{frame, software::scaling, util::format::pixel::Pixel};
+use ffmpeg_next::{frame, util::format::pixel::Pixel};
+
+use crate::gstreamer::FrameConverter;
 
 const VIDEO_BUFFER_POOL_CAPACITY: usize = 6;
 
@@ -100,7 +102,7 @@ pub(super) struct VideoSurface {
 }
 
 pub(super) struct DesktopFrameConverter {
-    scaler: Option<scaling::Context>,
+    scaler: Option<FrameConverter>,
     converted: frame::Video,
     #[cfg(feature = "desktop-gpu")]
     buffer_pool: Arc<Mutex<Vec<Vec<u8>>>>,
@@ -127,40 +129,24 @@ impl DesktopFrameConverter {
             return Err(anyhow!("desktop video frame has zero dimensions"));
         }
 
-        let reconfigure = self.scaler.as_ref().is_none_or(|scaler| {
-            let input = scaler.input();
-            input.format != frame.format() || input.width != width || input.height != height
-        });
+        let reconfigure = self
+            .scaler
+            .as_ref()
+            .is_none_or(|scaler| !scaler.accepts(frame));
 
         if reconfigure {
-            if let Some(scaler) = &mut self.scaler {
-                scaler.cached(
-                    frame.format(),
-                    width,
-                    height,
-                    output_pixel_format(),
-                    width,
-                    height,
-                    scaling::flag::Flags::FAST_BILINEAR,
-                );
-            } else {
-                self.scaler = Some(scaling::Context::get(
-                    frame.format(),
-                    width,
-                    height,
-                    output_pixel_format(),
-                    width,
-                    height,
-                    scaling::flag::Flags::FAST_BILINEAR,
-                )?);
-            }
-
-            self.converted = frame::Video::empty();
+            self.scaler = Some(FrameConverter::new(
+                frame,
+                output_pixel_format(),
+                width,
+                height,
+            )?);
         }
-        self.scaler
-            .as_mut()
-            .expect("desktop scaler must be initialized")
-            .run(frame, &mut self.converted)?;
+        self.converted = self
+            .scaler
+            .as_ref()
+            .ok_or_else(|| anyhow!("desktop converter missing"))?
+            .run(frame)?;
 
         #[cfg(all(feature = "desktop-cpu", not(feature = "desktop-gpu")))]
         {

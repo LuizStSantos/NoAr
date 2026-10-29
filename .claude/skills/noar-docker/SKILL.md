@@ -21,7 +21,7 @@ Applies to `Dockerfile`, `docker-compose.yml`, `.dockerignore`, image release wo
 
 ## Research procedure
 
-Verify base images, BuildKit syntax and `COPY` paths. NoAr builds a Vue frontend with Node, a Rust/FFmpeg server on Debian and a slim runtime image. Check that `.dockerignore` does not exclude required build inputs. Analyze ports (HTTP/RTMP/SRT), volumes, image tags, update container, secrets, permissions, BuildKit caching and release publication. Treat updater settings and mount paths as high-risk. Recommend `docker compose config` and disposable build tests; never build/push/deploy/prune without authorization.
+Verify base images, BuildKit syntax and `COPY` paths. NoAr builds a Vue frontend with Node, a Rust/GStreamer server on Debian and a slim runtime image. Check native GStreamer development libraries, runtime plugin factories and the remaining FFmpeg frame-memory dependency against `Dockerfile` and the Validate workflow. Use `/noar-gstreamer` for media-plugin details. Check that `.dockerignore` does not exclude required build inputs. Analyze HTTP access, outbound media connections, volumes, image tags, update container, secrets, permissions, BuildKit caching and release publication. NoAr consumes external live URLs; it does not expose embedded RTMP/SRT input servers. Treat updater settings and mount paths as high-risk. Recommend `docker compose config` and disposable build tests; never build/push/deploy/prune without authorization.
 
 ## Research and safety rules
 

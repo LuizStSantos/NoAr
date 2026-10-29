@@ -7,9 +7,8 @@ use std::{
 
 use log::*;
 use noar_engine::{
-    AsyncPlayout, AudioLevelCallback, ClipBreaks, ClipResult, HlsHealth, LiveInputBackend,
-    LiveListenerConfig, LogLevel, LogoConfig, LogoFade, OutputConfig, Preloader, RecordingConfig,
-    RecordingEncodeConfig,
+    AsyncPlayout, AudioLevelCallback, ClipBreaks, ClipResult, HlsHealth, LogLevel, LogoConfig,
+    LogoFade, OutputConfig, Preloader, RecordingConfig, RecordingEncodeConfig,
 };
 use tokio::{task::JoinHandle, time::sleep};
 use tokio_util::sync::CancellationToken;
@@ -189,49 +188,12 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         );
     }
 
-    let listeners: Vec<_> = config
-        .ingest
-        .listeners
-        .iter()
-        .filter(|input| input.enabled)
-        .filter_map(|input| {
-            let backend = match input.backend.as_str() {
-                "rtmp" => LiveInputBackend::Rtmp,
-                "srt" => LiveInputBackend::Srt,
-                _ => return None,
-            };
-
-            Some(LiveListenerConfig {
-                id: input.id,
-                priority: input.priority,
-                backend,
-                url: input.identifier.clone(),
-                options: input.options.clone(),
-                demuxer_options: input.demuxer_options.clone(),
-            })
-        })
-        .collect();
-    let count = listeners.len();
     // Background work that ends with the play loop, also when the stop gives
     // up waiting and drops this run.
     let ticker_cancel = CancellationToken::new();
     let _ticker_guard = ticker_cancel.clone().drop_guard();
-    let mut ingest_watcher = None;
 
     as_run::close_unfinished(&manager).await;
-
-    if count > 0 {
-        playout
-            .start_live_listeners(listeners, output_config)
-            .await
-            .map_err(engine_error)?;
-        info!(channel = config.general.channel_id; "Started {count} live listener(s)");
-        ingest_watcher = Some(tokio::spawn(as_run::watch_ingest(
-            manager.clone(),
-            playout.playback_control(),
-            ticker_cancel.clone(),
-        )));
-    }
 
     // Scheduled events: the ticker queues them, the play loop airs them. An
     // event cut by the stop goes back on air first.
@@ -252,10 +214,6 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     ticker_cancel.cancel();
     let _ = ticker.await;
     let _ = graphics_ticker.await;
-
-    if let Some(watcher) = ingest_watcher {
-        let _ = watcher.await;
-    }
 
     let finish_result = playout.finish().await.map_err(engine_error);
     result?;
@@ -570,13 +528,6 @@ async fn playlist_breaks(
     announced: &mut bool,
 ) -> ClipBreaks {
     if !config.scte35.enable {
-        return ClipBreaks::default();
-    }
-
-    // A live that took the channel over hides the playlist's commercials.
-    if manager.playback_control.lock().await.live_status().0 {
-        *announced = false;
-
         return ClipBreaks::default();
     }
 

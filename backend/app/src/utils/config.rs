@@ -181,7 +181,6 @@ pub struct PlayoutConfig {
     pub logging: Logging,
     pub processing: Processing,
     pub audio: Audio,
-    pub ingest: Ingest,
     pub playlist: Playlist,
     pub storage: Storage,
     pub task: Task,
@@ -1005,100 +1004,6 @@ impl Audio {
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
 #[ts(export, export_to = "playout_config.d.ts")]
-pub struct Ingest {
-    pub listeners: Vec<LiveInput>,
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize, TS)]
-#[ts(export, export_to = "playout_config.d.ts")]
-pub struct LiveInput {
-    pub id: i32,
-    pub priority: i32,
-    pub enabled: bool,
-    pub name: String,
-    pub backend: String,
-    pub identifier: String,
-    pub options: BTreeMap<String, String>,
-    pub demuxer_options: BTreeMap<String, String>,
-}
-
-impl LiveInput {
-    pub fn listen_port(&self) -> Result<u16, String> {
-        match self.backend.as_str() {
-            "rtmp" => parse_rtmp_ingest_port(&self.identifier),
-            "srt" => {
-                let url = reqwest::Url::parse(&self.identifier)
-                    .map_err(|_| "invalid SRT listener URL".to_string())?;
-
-                if url.scheme() != "srt"
-                    || url.host_str().is_none()
-                    || !url.username().is_empty()
-                    || url.password().is_some()
-                    || url.query().is_some()
-                    || url.fragment().is_some()
-                    || !matches!(url.path(), "" | "/")
-                {
-                    return Err("SRT listener must use srt://host:port".to_string());
-                }
-
-                let port = url.port().ok_or("SRT listener must include a port")?;
-
-                if port < MIN_INGEST_PORT {
-                    return Err(format!("listener port must be at least {MIN_INGEST_PORT}"));
-                }
-
-                Ok(port)
-            }
-            _ => Err("unsupported live input backend".to_string()),
-        }
-    }
-}
-
-pub const MIN_INGEST_PORT: u16 = 1024;
-pub const DEFAULT_INGEST_PORT: u16 = 1936;
-
-/// Extract the explicit listen port from an RTMP ingest URL.
-///
-/// The RTMP listener must use an unprivileged port so every channel can be
-/// started by the regular service user.
-pub fn parse_rtmp_ingest_port(url: &str) -> Result<u16, String> {
-    let authority_and_path = url
-        .strip_prefix("rtmp://")
-        .ok_or_else(|| "ingest URL must use the rtmp:// scheme".to_string())?;
-    let authority = authority_and_path
-        .split_once('/')
-        .map(|(authority, _)| authority)
-        .ok_or_else(|| "ingest URL must include a stream path".to_string())?;
-
-    let (host, port) = if let Some(rest) = authority.strip_prefix('[') {
-        let (host, port) = rest
-            .split_once("]:")
-            .ok_or_else(|| "ingest URL must include a port".to_string())?;
-        (host, port)
-    } else {
-        authority
-            .rsplit_once(':')
-            .ok_or_else(|| "ingest URL must include a port".to_string())?
-    };
-
-    if host.is_empty() {
-        return Err("ingest URL must include a host".to_string());
-    }
-
-    let port = port
-        .parse::<u16>()
-        .map_err(|_| "ingest URL port must be between 1024 and 65535".to_string())?;
-    if port < MIN_INGEST_PORT {
-        return Err(format!(
-            "ingest URL port must be between {MIN_INGEST_PORT} and 65535"
-        ));
-    }
-
-    Ok(port)
-}
-
-#[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
-#[ts(export, export_to = "playout_config.d.ts")]
 pub struct Playlist {
     pub day_start: String,
     #[ts(skip)]
@@ -1286,10 +1191,10 @@ pub struct Output {
     pub video_codec: String,
     #[serde(default)]
     pub video_options: BTreeMap<String, String>,
-    /// FFmpeg AVIO/protocol options used while opening a network stream.
+    /// GStreamer transport options used while opening a network stream.
     #[serde(default)]
     pub protocol_options: BTreeMap<String, String>,
-    /// FFmpeg muxer options for this output, such as HLS `hls_flags`.
+    /// GStreamer muxer options and supported legacy HLS options for this output.
     #[serde(default)]
     pub muxer_options: BTreeMap<String, String>,
     /// Global container metadata. Availability depends on the output muxer.
@@ -1297,7 +1202,7 @@ pub struct Output {
     pub metadata_options: BTreeMap<String, String>,
     #[serde(default = "default_audio_codec")]
     pub audio_codec: String,
-    /// FFmpeg AVOptions for the selected audio encoder.
+    /// GStreamer properties and supported legacy options for the selected audio encoder.
     #[serde(default)]
     pub audio_options: BTreeMap<String, String>,
     #[serde(default = "default_audio_bitrate")]
@@ -1492,7 +1397,7 @@ impl Output {
                 }
                 if !capabilities.has_muxer_named(custom_format) {
                     return Err(format!(
-                        "FFmpeg output format {custom_format:?} is not available"
+                        "GStreamer output format {custom_format:?} is not available"
                     ));
                 }
             }
@@ -1633,8 +1538,6 @@ impl PlayoutConfig {
         let logging = Logging::new(&config);
         let mut processing = Processing::new(&config);
         let audio = Audio::new(&config);
-        let listeners = handles::select_live_inputs(pool, config.id).await?;
-        let ingest = Ingest { listeners };
         let mut playlist = Playlist::new(&config);
         let task = Task::new(&config);
         let recording = Recording::new(&recording_config);
@@ -1679,7 +1582,6 @@ impl PlayoutConfig {
             logging,
             processing,
             audio,
-            ingest,
             playlist,
             storage,
             task,
@@ -2121,67 +2023,30 @@ mod output_tests {
 }
 
 #[cfg(test)]
-mod ingest_tests {
-    use super::{Ingest, LiveInput, MIN_INGEST_PORT, parse_rtmp_ingest_port};
+mod external_live_source_tests {
+    use super::PlayoutConfig;
 
     #[test]
-    fn ingest_api_uses_only_the_listener_list() {
-        let json = serde_json::to_value(Ingest::default()).unwrap();
+    fn configuration_api_has_no_input_server_settings() {
+        let config = serde_json::to_value(PlayoutConfig::default()).unwrap();
 
-        assert_eq!(json, serde_json::json!({ "listeners": [] }));
+        assert!(config.get("ingest").is_none());
+    }
+
+    #[test]
+    fn legacy_input_server_payload_cannot_restore_listener_settings() {
+        let mut payload = serde_json::to_value(PlayoutConfig::default()).unwrap();
+        payload["ingest"] = serde_json::json!({
+            "listeners": [{"enabled": true, "backend": "srt", "identifier": "srt://0.0.0.0:9000"}]
+        });
+        let config: PlayoutConfig = serde_json::from_value(payload).unwrap();
+
         assert!(
-            serde_json::from_value::<Ingest>(serde_json::json!({
-                "enable": true,
-                "ingest_url": "rtmp://127.0.0.1:1936/live/stream"
-            }))
-            .is_err()
+            serde_json::to_value(config)
+                .unwrap()
+                .get("ingest")
+                .is_none()
         );
-    }
-
-    fn srt_input(url: &str) -> LiveInput {
-        LiveInput {
-            backend: "srt".to_string(),
-            identifier: url.to_string(),
-            ..LiveInput::default()
-        }
-    }
-
-    #[test]
-    fn validates_srt_listener_addresses_without_url_options() {
-        assert_eq!(srt_input("srt://127.0.0.1:9000").listen_port(), Ok(9000));
-        assert_eq!(srt_input("srt://[::1]:9001").listen_port(), Ok(9001));
-
-        for url in [
-            "srt://127.0.0.1:80",
-            "srt://127.0.0.1",
-            "srt://127.0.0.1:9000?mode=caller",
-            "srt://127.0.0.1:9000/live",
-            "srt://user@127.0.0.1:9000",
-            "http://127.0.0.1:9000",
-        ] {
-            assert!(srt_input(url).listen_port().is_err(), "accepted {url}");
-        }
-    }
-
-    #[test]
-    fn parses_unprivileged_rtmp_ingest_ports() {
-        assert_eq!(
-            parse_rtmp_ingest_port("rtmp://127.0.0.1:1936/live/stream"),
-            Ok(1936)
-        );
-        assert_eq!(
-            parse_rtmp_ingest_port("rtmp://[::1]:1940/live/stream"),
-            Ok(1940)
-        );
-    }
-
-    #[test]
-    fn rejects_privileged_or_invalid_rtmp_ingest_urls() {
-        assert!(parse_rtmp_ingest_port("rtmp://127.0.0.1:1023/live/stream").is_err());
-        assert!(parse_rtmp_ingest_port("rtmp://127.0.0.1/live/stream").is_err());
-        assert!(parse_rtmp_ingest_port("http://127.0.0.1:1936/live/stream").is_err());
-        assert!(parse_rtmp_ingest_port("rtmp://:1936/live/stream").is_err());
-        const { assert!(MIN_INGEST_PORT > 0) };
     }
 }
 

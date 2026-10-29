@@ -31,9 +31,10 @@ closing a scheduled live input does not destroy the channel's existing SRT
 output connection.
 The loader selects `/usr/local/lib/libsrt-gnutls.so.1.5`; the distribution
 package version can still report 1.5.4. Build provenance is recorded in
-`/usr/local/share/noar/srt-build.txt`. FFmpeg's ABI and channel configuration
-are unchanged. See [developer.md](developer.md#optional-srt-logging-integration)
-for the regression check.
+`/usr/local/share/noar/srt-build.txt`. Native GStreamer SRT plugins use this
+library. The image includes GStreamer 1.26, codec/container plugins and TLS
+support. The FFmpeg libraries remain available for the frame-memory adapter
+and GStreamer's libav codec plugins; they are not a second playout engine.
 
 Before deploying a candidate image, test repeated playlist/live/playlist
 transitions with synthetic sources and disposable MediaMTX and VLC instances.
@@ -59,13 +60,10 @@ server, mount it inside the storage, for example:
 | Port | Use |
 | --- | --- |
 | `8787/tcp` | Web interface, API, HLS (`/public/...`) and XMLTV (`/xmltv/...`) |
-| `1936/tcp` | Example RTMP ingest listener |
-| `9000/udp` | Example SRT ingest listener |
 
-Ingest listeners are created in the channel settings. Publish each listener's
-port in `docker-compose.yml`, using the same number inside and outside. Lives
-that NoAr pulls itself (scheduled SRT caller, RTMP or HLS sources) need no
-published port.
+NoAr does not host RTMP/SRT input listeners. Publish sources to MediaMTX or
+another ingest server, then configure their client URLs as scheduled lives in
+NoAr. These outgoing connections need no published input port on NoAr.
 
 ## Restarting
 

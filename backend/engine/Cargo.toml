@@ -1,6 +1,6 @@
 [package]
 name = "noar-engine"
-description = "FFmpeg-based real-time playout library"
+description = "GStreamer-based real-time playout library"
 version.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -39,9 +39,16 @@ ffmpeg-next = { version = "9", default-features = false, features = [
     "software-resampling",
     "software-scaling",
 ] }
+gstreamer = { version = "0.24", features = ["v1_26"] }
+gstreamer-app = { version = "0.24", features = ["v1_26"] }
+gstreamer-audio = { version = "0.24", features = ["v1_26"] }
+gstreamer-video = { version = "0.24", features = ["v1_26"] }
+gstreamer-pbutils = { version = "0.24", features = ["v1_26"] }
+gstreamer-mpegts = { version = "0.24", features = ["v1_26"] }
 log = { version = "0.4", features = ["kv"] }
 pollster = { version = "1.0", optional = true }
 regex = "1"
+url = "2"
 rten-simd = "0.27"
 sysinfo = { version = "0.39", default-features = false, features = ["disk"] }
 softbuffer = { version = "0.4", optional = true, default-features = false, features = [
@@ -71,9 +78,6 @@ clap = { version = "4", features = ["derive"] }
 env_logger = "0.11"
 glob = "0.3"
 naga = { version = "30.0", features = ["wgsl-in"] }
-
-[build-dependencies]
-pkg-config = "0.3"
 
 [[example]]
 name = "wav_cpal"

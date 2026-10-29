@@ -5,14 +5,11 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{codec, frame, media, software::scaling, util::format::pixel::Pixel};
+use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
 use crate::{
     compositor::overlay::{OverlayRef, blend_overlay, chroma_alpha},
-    utils::{
-        config::LogoConfig,
-        helper::{even, open_media_input},
-    },
+    utils::{config::LogoConfig, helper::even},
 };
 
 #[derive(Clone)]
@@ -32,73 +29,18 @@ impl LogoOverlay {
             return Err(anyhow!("logo opacity must be between 0.0 and 1.0"));
         }
 
-        let mut ictx = open_media_input(&config.path)
-            .with_context(|| format!("failed to open logo {}", config.path))?;
-
-        let stream = ictx
-            .streams()
-            .best(media::Type::Video)
-            .ok_or_else(|| anyhow!("logo {} contains no video/image stream", config.path))?;
-
-        let stream_index = stream.index();
-        let ctx = codec::context::Context::from_parameters(stream.parameters())?;
-        let mut decoder = ctx.decoder().video()?;
-
-        let input_width = decoder.width();
-        let input_height = decoder.height();
-
+        let decoded = crate::gstreamer::load_image(&config.path)
+            .with_context(|| format!("failed to load logo {}", config.path))?;
         let (width, height) = logo_dimensions(
             config.scale.as_deref(),
-            input_width,
-            input_height,
+            decoded.width(),
+            decoded.height(),
             output_width,
             output_height,
         )?;
-
-        // Convert the logo directly to YUVA420P.
-        // Plane 0 = Y
-        // Plane 1 = U
-        // Plane 2 = V
-        // Plane 3 = Alpha
-        let mut scaler = scaling::Context::get(
-            decoder.format(),
-            input_width,
-            input_height,
-            Pixel::YUVA420P,
-            width,
-            height,
-            scaling::flag::Flags::BILINEAR,
-        )?;
-
-        let mut decoded = frame::Video::empty();
-        let mut yuva = None;
-
-        for (packet_stream, packet) in ictx.packets() {
-            if packet_stream.index() != stream_index {
-                continue;
-            }
-
-            decoder.send_packet(&packet)?;
-
-            if decoder.receive_frame(&mut decoded).is_ok() {
-                let mut scaled = frame::Video::empty();
-                scaler.run(&decoded, &mut scaled)?;
-                yuva = Some(scaled);
-                break;
-            }
-        }
-
-        if yuva.is_none() {
-            decoder.send_eof()?;
-
-            if decoder.receive_frame(&mut decoded).is_ok() {
-                let mut scaled = frame::Video::empty();
-                scaler.run(&decoded, &mut scaled)?;
-                yuva = Some(scaled);
-            }
-        }
-
-        let frame = yuva.ok_or_else(|| anyhow!("logo {} produced no frame", config.path))?;
+        let frame =
+            crate::gstreamer::FrameConverter::new(&decoded, Pixel::YUVA420P, width, height)?
+                .run(&decoded)?;
         let (x, y) = logo_position(&config.position, output_width, output_height, width, height)?;
 
         Ok(Self {

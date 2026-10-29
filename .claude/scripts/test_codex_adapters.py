@@ -11,6 +11,7 @@ NAMES = (
     "noar-docker",
     "noar-ffmpeg",
     "noar-video-processing",
+    "noar-gstreamer",
 )
 
 

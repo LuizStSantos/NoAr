@@ -178,12 +178,6 @@ const sourceLabel = computed(() => {
         return active.kind === 'live' ? t('onair.sourceScheduledLive') : t('onair.sourceScheduled')
     }
 
-    if (playlistStore.ingestRuns) {
-        return playlistStore.ingestListenerName
-            ? t('onair.sourceIngestNamed', { name: playlistStore.ingestListenerName })
-            : t('onair.sourceIngest')
-    }
-
     return configStore.playout.processing?.mode === 'folder' ? t('onair.sourceFolder') : t('onair.sourcePlaylist')
 })
 
@@ -217,16 +211,12 @@ const outputLabel = computed(() => {
 const clipLabel = computed(() => {
     const source = scheduleStore.status.active?.item || playlistStore.current.source || ''
 
-    return playlistStore.ingestRuns ? '' : storageLabel(source, channel.value?.storage ?? '')
+    return storageLabel(source, channel.value?.storage ?? '')
 })
 
 const title = computed(() => {
     if (scheduleStore.status.active) {
         return scheduleStore.status.active.title
-    }
-
-    if (playlistStore.ingestRuns) {
-        return playlistStore.ingestListenerName || t('onair.sourceIngest')
     }
 
     return playlistStore.playoutIsRunning ? currentTitle.value : t('onair.notRunning')
@@ -254,7 +244,6 @@ const outputLinkLabel = computed(() => {
     }
 })
 
-const listeners = computed(() => configStore.playout.ingest?.listeners?.filter((input) => input.enabled) ?? [])
 const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/guide.xml` : ''))
 </script>
 <template>
@@ -383,15 +372,6 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
             <span v-else class="inline-flex items-center gap-1.5">
                 <span class="dot bg-subtle" aria-hidden="true" />{{ t('onair.notRunning') }}
             </span>
-            <span v-if="playlistStore.ingestRuns" class="text-on-air-text">
-                {{
-                    t('onair.ingestOnAir', {
-                        name: playlistStore.ingestListenerName || playlistStore.ingestListenerBackend || '',
-                    })
-                }}
-            </span>
-            <span v-else-if="listeners.length">{{ t('onair.ingestWaiting', listeners.length) }}</span>
-            <span v-else>{{ t('onair.ingestNone') }}</span>
             <span
                 v-if="outputLinkLabel"
                 class="inline-flex items-center gap-1.5"

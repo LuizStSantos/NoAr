@@ -1,19 +1,11 @@
 use std::{
     collections::BTreeMap,
-    ffi::CString,
-    fmt, ptr,
+    fmt,
     str::FromStr,
     sync::{Arc, PoisonError, RwLock},
 };
 
-use ffmpeg_next::{
-    Rational, codec,
-    util::{
-        channel_layout::ChannelLayout,
-        format::{Sample, sample::Type as SampleType},
-        log::Level as FfmpegLevel,
-    },
-};
+use ffmpeg_next::Rational;
 
 use crate::{
     AudioEffectsControl, AudioFrameCallback, AudioLevelCallback, LiveLoudnessConfig,
@@ -405,10 +397,7 @@ impl StreamType {
         }
     }
 }
-pub use super::protocol::{
-    validate_input_protocol_options, validate_live_demuxer_options,
-    validate_output_protocol_options,
-};
+pub use super::protocol::validate_output_protocol_options;
 
 pub type VideoOptions = BTreeMap<String, String>;
 pub type AudioOptions = BTreeMap<String, String>;
@@ -957,151 +946,49 @@ const MANAGED_AUDIO_OPTIONS: &[&str] = &[
     "time_base",
 ];
 
-/// Applies FFmpeg AVOptions directly to an audio encoder context.
-/// Setting options this way makes it impossible for an unrecognised entry to
-/// be silently left behind in a dictionary by `avcodec_open2`.
-pub(crate) fn apply_audio_encoder_options(
-    context: &mut codec::encoder::audio::Audio,
-    codec: codec::codec::Codec,
-    options: &AudioOptions,
-) -> Result<(), String> {
-    for (key, value) in options {
-        if key.trim().is_empty() || value.trim().is_empty() {
-            return Err("audio option names and values must not be empty".to_string());
-        }
-
-        if MANAGED_AUDIO_OPTIONS.contains(&key.as_str()) {
-            return Err(format!(
-                "audio option {key:?} is managed by NoAr and cannot be overridden"
-            ));
-        }
-
-        let key_c = CString::new(key.as_str())
-            .map_err(|_| format!("audio option name {key:?} contains a NUL byte"))?;
-        let value_c = CString::new(value.as_str())
-            .map_err(|_| format!("audio option {key:?} contains a NUL byte"))?;
-
-        let result = unsafe {
-            let context_ptr = context.as_mut_ptr().cast();
-            let option_flags = ffmpeg_next::ffi::AV_OPT_FLAG_ENCODING_PARAM
-                | ffmpeg_next::ffi::AV_OPT_FLAG_AUDIO_PARAM;
-            if ffmpeg_next::ffi::av_opt_find(
-                context_ptr,
-                key_c.as_ptr(),
-                ptr::null(),
-                option_flags,
-                ffmpeg_next::ffi::AV_OPT_SEARCH_CHILDREN,
-            )
-            .is_null()
-            {
-                return Err(format!(
-                    "unsupported audio option {key:?} for codec {:?}",
-                    codec.name()
-                ));
-            }
-            ffmpeg_next::ffi::av_opt_set(
-                context_ptr,
-                key_c.as_ptr(),
-                value_c.as_ptr(),
-                ffmpeg_next::ffi::AV_OPT_SEARCH_CHILDREN,
-            )
-        };
-
-        if result < 0 {
-            return Err(format!(
-                "invalid value {value:?} for audio option {key:?}: {}",
-                ffmpeg_next::Error::from(result)
-            ));
-        }
-    }
-
-    Ok(())
-}
-
 pub fn validate_audio_options(
     codec_name: &str,
     options: &AudioOptions,
     sample_rate: u32,
     bit_rate: u64,
 ) -> Result<(), String> {
-    if options.is_empty() {
-        return Ok(());
-    }
+    use ::gstreamer::{self as gst, prelude::*};
 
-    let codec = codec::encoder::find_by_name(codec_name)
-        .ok_or_else(|| format!("audio encoder {codec_name:?} not found"))?;
-    if codec.medium() != ffmpeg_next::media::Type::Audio {
-        return Err(format!("encoder {codec_name:?} is not an audio encoder"));
-    }
-
-    let context = audio_encoder_context(
-        codec,
-        options,
-        sample_rate,
-        bit_rate,
-        Rational(1, sample_rate as i32),
-        false,
-    )?;
-    context
-        .open_as(codec)
-        .map_err(|error| format!("invalid audio encoder options for {codec_name:?}: {error}"))?;
-    Ok(())
-}
-
-/// Shared by validation and output creation, including sample-format selection.
-pub(crate) fn audio_encoder_context(
-    codec: codec::codec::Codec,
-    options: &AudioOptions,
-    sample_rate: u32,
-    bit_rate: u64,
-    time_base: Rational,
-    global_header: bool,
-) -> Result<codec::encoder::audio::Audio, String> {
+    crate::gstreamer::init().map_err(|error| error.to_string())?;
     if sample_rate == 0 || sample_rate > i32::MAX as u32 {
-        return Err("audio sample rate must be a positive FFmpeg sample rate".to_string());
+        return Err("audio sample rate must be positive and fit a native rate".to_string());
     }
-
-    let mut context = codec::context::Context::new_with_codec(codec)
-        .encoder()
-        .audio()
-        .map_err(|error| error.to_string())?;
-    let input_format = engine_audio_sample_format();
-    let sample_format = match codec.audio().map_err(|error| error.to_string())?.formats() {
-        Some(formats) => {
-            let formats: Vec<_> = formats.collect();
-            formats
-                .iter()
-                .copied()
-                .find(|format| *format == input_format)
-                .or_else(|| formats.first().copied())
-                .ok_or_else(|| {
-                    format!("audio encoder {:?} reports no sample formats", codec.name())
-                })?
+    if audio_codec_uses_bitrate(codec_name) && bit_rate == 0 {
+        return Err("audio bitrate must be positive".to_string());
+    }
+    for (key, value) in options {
+        if key.trim() != key || key.is_empty() || value.trim().is_empty() {
+            return Err("audio option names and values must not be empty".to_string());
         }
-        None => input_format,
-    };
-    context.set_rate(sample_rate as i32);
-    context.set_channel_layout(ChannelLayout::STEREO);
-    context.set_format(sample_format);
-    context.set_time_base(time_base);
-
-    if audio_codec_uses_bitrate(codec.name()) {
-        context.set_bit_rate(
-            usize::try_from(bit_rate)
-                .map_err(|_| "audio bitrate exceeds platform limits".to_string())?,
-        );
+        if MANAGED_AUDIO_OPTIONS.contains(&key.as_str()) {
+            return Err(format!(
+                "audio option {key:?} is managed by NoAr and cannot be overridden"
+            ));
+        }
+    }
+    let encoder =
+        crate::output::pipeline::audio_encoder(codec_name, options, bit_rate).map_err(|error| {
+            format!("unsupported audio option or invalid native audio encoder options: {error:#}")
+        })?;
+    let required = gst::Caps::builder("audio/x-raw")
+        .field("rate", sample_rate as i32)
+        .field("channels", 2_i32)
+        .build();
+    let sink = encoder
+        .static_pad("sink")
+        .ok_or("audio encoder has no sink pad")?;
+    if !sink.query_caps(None).can_intersect(&required) {
+        return Err(format!(
+            "audio encoder {codec_name:?} does not support stereo at {sample_rate} Hz"
+        ));
     }
 
-    if global_header {
-        context.set_flags(codec::flag::Flags::GLOBAL_HEADER);
-    }
-    apply_audio_encoder_options(&mut context, codec, options)?;
-
-    Ok(context)
-}
-
-pub(crate) fn engine_audio_sample_format() -> Sample {
-    Sample::F32(SampleType::Planar)
+    Ok(())
 }
 
 pub fn video_option_defaults(codec: &str) -> VideoOptions {
@@ -1178,22 +1065,6 @@ pub enum LogLevel {
     Verbose,
     Debug,
     Trace,
-}
-
-impl LogLevel {
-    pub(crate) fn as_ffmpeg_level(self) -> FfmpegLevel {
-        match self {
-            Self::Quiet => FfmpegLevel::Quiet,
-            Self::Panic => FfmpegLevel::Panic,
-            Self::Fatal => FfmpegLevel::Fatal,
-            Self::Error => FfmpegLevel::Error,
-            Self::Warning => FfmpegLevel::Warning,
-            Self::Info => FfmpegLevel::Info,
-            Self::Verbose => FfmpegLevel::Verbose,
-            Self::Debug => FfmpegLevel::Debug,
-            Self::Trace => FfmpegLevel::Trace,
-        }
-    }
 }
 
 impl FromStr for LogLevel {
@@ -1776,37 +1647,18 @@ mod tests {
     }
 
     #[test]
-    fn audio_validation_uses_actual_sample_rate_and_bitrate() {
-        let options = [("cutoff".to_string(), "0".to_string())]
-            .into_iter()
-            .collect();
-        assert!(validate_audio_options("adpcm_swf", &options, 44_100, 128_000).is_ok());
-        assert!(validate_audio_options("adpcm_swf", &options, 48_000, 128_000).is_err());
-        assert!(validate_audio_options("mp2", &options, 48_000, 128_000).is_ok());
-        assert!(validate_audio_options("mp2", &options, 48_000, 129_000).is_err());
+    fn audio_validation_checks_native_rate_and_bitrate_even_without_options() {
+        let options = Default::default();
+        assert!(validate_audio_options("aac", &options, 48_000, 128_000).is_ok());
+        assert!(validate_audio_options("aac", &options, 0, 128_000).is_err());
+        assert!(validate_audio_options("aac", &options, 48_000, 0).is_err());
+        assert!(validate_audio_options("missing_encoder", &options, 48_000, 128_000).is_err());
     }
 
     #[test]
-    fn audio_context_prefers_the_engine_sample_format() {
-        let codec = ffmpeg_next::codec::encoder::find_by_name("libmp3lame").unwrap();
-        let context = super::audio_encoder_context(
-            codec,
-            &Default::default(),
-            44_100,
-            192_000,
-            ffmpeg_next::Rational(1, 44_100),
-            true,
-        )
-        .unwrap();
-        assert_eq!(context.format(), super::engine_audio_sample_format());
-        assert_eq!(context.rate(), 44_100);
-        assert_eq!(unsafe { (*context.as_ptr()).bit_rate }, 192_000);
-        assert_eq!(context.time_base(), ffmpeg_next::Rational(1, 44_100));
-        assert_ne!(
-            unsafe { (*context.as_ptr()).flags }
-                & ffmpeg_next::codec::flag::Flags::GLOBAL_HEADER.bits() as i32,
-            0
-        );
+    fn native_audio_rejects_a_rate_outside_encoder_caps() {
+        assert!(validate_audio_options("libopus", &Default::default(), 44_100, 128_000).is_err());
+        assert!(validate_audio_options("libopus", &Default::default(), 48_000, 128_000).is_ok());
     }
 
     #[test]
@@ -1865,7 +1717,7 @@ mod tests {
                 128_000,
             )
             .unwrap_err()
-            .contains("unsupported audio option")
+            .contains("audio encoder options")
         );
         assert!(
             validate_audio_options(

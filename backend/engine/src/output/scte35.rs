@@ -1,6 +1,6 @@
 //! SCTE-35 ad break signalling on MPEG-TS outputs.
 //!
-//! FFmpeg's `mpegts` muxer cannot write SCTE-35, so NoAr adds it between the
+//! NoAr adds scheduled SCTE-35 messages between the native MPEG-TS
 //! muxer and the network. [`TsInjector`] lists an SCTE-35 stream in the PMT
 //! and inserts `splice_info_section`s on that PID ahead of each break.
 //!
@@ -13,20 +13,12 @@
 
 use std::{
     collections::VecDeque,
-    ffi::CString,
-    fmt, io, ptr,
+    fmt,
     sync::{Arc, Mutex, MutexGuard, PoisonError},
     time::{Duration, SystemTime},
 };
 
 use anyhow::Result;
-use ffmpeg_next::{
-    self as ffmpeg, Dictionary, ffi,
-    format::{self, context::StreamIo},
-};
-
-use super::link::{LinkFormat, NetworkSink, OutputLink};
-use crate::utils::helper::is_network_url;
 
 /// The PID NoAr carries SCTE-35 on unless set otherwise.
 pub const DEFAULT_SCTE35_PID: u16 = 500;
@@ -1124,155 +1116,6 @@ fn pes_pts(packet: &[u8; TS_PACKET]) -> Option<(i64, bool)> {
         | i64::from(pes[13] >> 1);
 
     Some((pts, key_frame))
-}
-
-/// Opens a stream output whose transport stream gains SCTE-35 on its way to
-/// `path`, a network address or a file.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn open_output(
-    path: &str,
-    muxer: &str,
-    protocol_options: &std::collections::BTreeMap<String, String>,
-    control: SpliceControl,
-    pid: u16,
-    link: &OutputLink,
-    channel_id: Option<i32>,
-) -> Result<format::context::Output> {
-    let sink = if is_network_url(path) {
-        // The connection runs on its own thread, like any stream output.
-        let network = NetworkSink::start(
-            path,
-            LinkFormat::TransportStream,
-            protocol_options,
-            link.clone(),
-            channel_id,
-        )?;
-
-        Scte35Sink::network(network, control, pid)
-    } else {
-        Scte35Sink::open(path, Dictionary::new(), control, pid)?.0
-    };
-
-    // Seven transport packets, the size SRT and UDP send at a time.
-    let io = StreamIo::from_write_with_capacity(sink, 7 * TS_PACKET)?;
-
-    Ok(format::output_to_stream(io, Some(path), Some(muxer))?)
-}
-
-/// The network or file end of a stream output with SCTE-35. The muxer
-/// writes here; the transport stream gains its SCTE-35 and goes on through
-/// an AVIO context NoAr opened.
-pub(crate) struct Scte35Sink {
-    io: *mut ffi::AVIOContext,
-    /// A network destination, written through instead of `io`.
-    network: Option<NetworkSink>,
-    injector: TsInjector,
-}
-
-// SAFETY: the AVIO context is owned by the sink alone and only used by the
-// thread that drives the muxer, through `&mut self`.
-unsafe impl Send for Scte35Sink {}
-
-impl Scte35Sink {
-    pub(crate) fn open(
-        url: &str,
-        options: Dictionary<'_>,
-        control: SpliceControl,
-        pid: u16,
-    ) -> Result<(Self, Dictionary<'static>)> {
-        let url = CString::new(url)?;
-        let mut io = ptr::null_mut();
-        let (result, remaining) = unsafe {
-            let mut dictionary = options.disown();
-            let result = ffi::avio_open2(
-                &mut io,
-                url.as_ptr(),
-                ffi::AVIO_FLAG_WRITE,
-                ptr::null(),
-                &mut dictionary,
-            );
-
-            (result, Dictionary::own(dictionary))
-        };
-
-        if result < 0 {
-            return Err(ffmpeg::Error::from(result).into());
-        }
-
-        Ok((
-            Self {
-                io,
-                network: None,
-                injector: TsInjector::new(control, pid),
-            },
-            remaining,
-        ))
-    }
-
-    fn network(network: NetworkSink, control: SpliceControl, pid: u16) -> Self {
-        Self {
-            io: ptr::null_mut(),
-            network: Some(network),
-            injector: TsInjector::new(control, pid),
-        }
-    }
-
-    fn check(&self) -> io::Result<()> {
-        if self.io.is_null() {
-            return Ok(());
-        }
-
-        let error = unsafe { (*self.io).error };
-
-        if error < 0 {
-            Err(io::Error::other(ffmpeg::Error::from(error)))
-        } else {
-            Ok(())
-        }
-    }
-}
-
-impl io::Write for Scte35Sink {
-    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        let out = self.injector.process(data);
-
-        if let Some(network) = &mut self.network {
-            io::Write::write_all(network, &out)?;
-
-            return Ok(data.len());
-        }
-
-        if !out.is_empty() {
-            let size = i32::try_from(out.len()).map_err(io::Error::other)?;
-            unsafe { ffi::avio_write(self.io, out.as_ptr(), size) };
-            self.check()?;
-        }
-
-        // The muxer flushes after each packet; so does the network.
-        unsafe { ffi::avio_flush(self.io) };
-        self.check()?;
-
-        Ok(data.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        if self.io.is_null() {
-            return Ok(());
-        }
-
-        unsafe { ffi::avio_flush(self.io) };
-        self.check()
-    }
-}
-
-impl Drop for Scte35Sink {
-    fn drop(&mut self) {
-        self.network.take();
-        if !self.io.is_null() {
-            unsafe { ffi::avio_closep(&mut self.io) };
-        }
-        self.injector.control.close_output();
-    }
 }
 
 #[cfg(test)]

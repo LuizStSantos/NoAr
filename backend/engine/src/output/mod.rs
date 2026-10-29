@@ -7,13 +7,16 @@ use ffmpeg_next::frame;
 
 #[cfg(feature = "desktop-base")]
 pub(crate) mod desktop;
+#[path = "gstreamer_output.rs"]
 mod encoded;
+mod gst_hls;
+mod gst_metadata;
 mod hls;
 pub(crate) mod link;
-mod preview;
-mod recording;
+pub(crate) mod pipeline;
+mod recording_native;
+mod recording_retention;
 pub(crate) mod scte35;
-mod timestamps;
 mod vtt;
 
 #[cfg(feature = "desktop-base")]
@@ -21,7 +24,6 @@ use crate::benchmark::BenchHandle;
 use crate::{
     HlsHealth,
     compositor::logo::{LogoOverlay, blend_logo},
-    input::diagnostics::LiveInputDiagnostics,
     utils::config::{HlsSubtitle, HlsVariant, OutputConfig},
 };
 
@@ -42,10 +44,6 @@ impl fmt::Display for PlaybackStopped {
 impl Error for PlaybackStopped {}
 
 pub(crate) trait FrameOutput {
-    fn input_diagnostics(&self) -> Option<&LiveInputDiagnostics> {
-        None
-    }
-
     fn audio_frame_size(&self) -> usize;
 
     fn encode_video(&mut self, frame: &frame::Video) -> Result<()>;
@@ -56,23 +54,11 @@ pub(crate) trait FrameOutput {
         None
     }
 
-    /// Realtime outputs can decline a full queue so live ingest can pad audio
-    /// and observe cancellation before retrying the same video frame.
-    fn try_encode_video(&mut self, frame: &frame::Video) -> Result<bool> {
-        self.encode_video(frame)?;
-
-        Ok(true)
-    }
-
     fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()>;
 
     /// Volume has already been applied; meters and encoding still run normally.
     fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
         self.encode_audio(frame)
-    }
-
-    fn handles_loudness(&self) -> bool {
-        false
     }
 
     fn encode_live_audio(&mut self, frame: &frame::Audio) -> Result<()> {

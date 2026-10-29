@@ -27,10 +27,6 @@ services:
     ports:
       # Web interface, API, HLS and XMLTV guide.
       - "8787:8787"
-      # Live ingest listeners. Match these to the listeners you configure
-      # in the channel settings (RTMP over TCP, SRT over UDP).
-      - "1936:1936"
-      - "9000:9000/udp"
 
   # Pulls a newer NoAr image and restarts NoAr with it when Settings ›
   # Updates asks. Only it talks to Docker; NoAr gets no access to the server.
