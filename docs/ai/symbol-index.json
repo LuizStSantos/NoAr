@@ -903,9 +903,9 @@
       "symbols": []
     },
     ".github/workflows/validate.yml": {
-      "sha256": "88b80612e36dfc8d2b29f75114ab9c9ba2387614916c0ca795c0596e7bec098c",
+      "sha256": "4ea10db20a4cea99c8d035fdb3a53e14d864efafcb1c659225e388d6ceb54eca",
       "language": "YAML",
-      "bytes": 2750,
+      "bytes": 3232,
       "symbols": []
     },
     ".gitignore": {
@@ -951,9 +951,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "dc9adc2d5ab22847d03bcc14d4d71ae9ba06acf5b191305075f6b328f06774b4",
+      "sha256": "d8bead6ce3349dee4537276ef4ab5b1dc00620e9fdbc21e212354b27e6c1ea7a",
       "language": "Markdown",
-      "bytes": 33853,
+      "bytes": 34081,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -969,9 +969,9 @@
       "symbols": []
     },
     "Dockerfile": {
-      "sha256": "8f112bb922d997c2ab2160df23929efbf80474ad87b52150770a524d7479be73",
+      "sha256": "24cec42ef7e8cfcce36d6545f047738ec454d70827a59478ed825c10c98ed4fb",
       "language": "Build",
-      "bytes": 3684,
+      "bytes": 5548,
       "symbols": []
     },
     "LICENSE": {
@@ -20627,6 +20627,18 @@
       "bytes": 2256,
       "symbols": []
     },
+    "docker/srt/build.sh": {
+      "sha256": "5561970b2e3a0ab03d20b1b5e514bbba4d510c8c363d14a7f2494f1db6ba1bcd",
+      "language": "Shell",
+      "bytes": 1212,
+      "symbols": []
+    },
+    "docker/srt/test-lifecycle.c": {
+      "sha256": "c6b29febfc7de1a32c6a360b61c7999ffafc8ab423df626c161189015f1ec873",
+      "language": "Other",
+      "bytes": 2438,
+      "symbols": []
+    },
     "docs/README.md": {
       "sha256": "4448b4176bd60bc37d9534a46634dfdd17588517e84bc62149dcbdb2f58ce918",
       "language": "Markdown",
@@ -20658,15 +20670,15 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "5b4db3f1a72d138bc26507b6714003c7167da32b9bcc479159b188406d47508c",
+      "sha256": "2ec0986ce281a53fb0bdc30d7465e8a8a1fc4af0a55b6043b2cdeb5dbbbe2fb5",
       "language": "Markdown",
-      "bytes": 5279,
+      "bytes": 6810,
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "7102f8c955b0a9eb4f01ebd7407d4e2d9699f118c8438bdd6806a17028041602",
+      "sha256": "d1188b4321e989c00b8c223d5a968878fe0ab329099580fba595b55804d74cb8",
       "language": "Markdown",
-      "bytes": 8013,
+      "bytes": 8946,
       "symbols": []
     },
     "docs/external_tasks.md": {
