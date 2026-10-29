@@ -951,9 +951,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "d8bead6ce3349dee4537276ef4ab5b1dc00620e9fdbc21e212354b27e6c1ea7a",
+      "sha256": "5f89790e817643709da720d5de2bd9225f864b4951917a2f44849193d21e02e2",
       "language": "Markdown",
-      "bytes": 34081,
+      "bytes": 35232,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -963,7 +963,7 @@
       "symbols": []
     },
     "Cargo.toml": {
-      "sha256": "948a88569948c17bf97bd87515c0774d8236285d27cacd9b1c4eb076f5ebb308",
+      "sha256": "24dedb222b98d9d58c8d946e33641163ff668ddf029ee8160a3f0396faaae1b0",
       "language": "TOML",
       "bytes": 1219,
       "symbols": []
@@ -32892,13 +32892,13 @@
       "symbols": []
     },
     "package-lock.json": {
-      "sha256": "1576f7b365a6ffeff513766a13a1302b5f0c9e4999f248c0c7d56c445b99e8fe",
+      "sha256": "3fbcb7fa190417dfbadcdc67a15c318eea6b1beeeda7d98000be103e32c5e982",
       "language": "JSON",
       "bytes": 215134,
       "symbols": []
     },
     "package.json": {
-      "sha256": "8b75b48e10389db6f2f6d84f9bbbafc72eecc9fda30e9ba30415ab80760bf942",
+      "sha256": "fe01c24db51956f3244a1560171d1960e7c4b85a19f24a6bc53986c9b01ab9ba",
       "language": "JSON",
       "bytes": 1527,
       "symbols": []
@@ -32944,6 +32944,298 @@
       "language": "TypeScript",
       "bytes": 478,
       "symbols": []
+    },
+    "qa/gstreamer/.gitignore": {
+      "sha256": "11f681d10856a600de2e1d06a7d299992a64b3c3945a21494a37c75da104e430",
+      "language": "Other",
+      "bytes": 23,
+      "symbols": []
+    },
+    "qa/gstreamer/Dockerfile": {
+      "sha256": "acd90df5002c15b8300ee30f21f71170c71fce0af8bab5716cf05e33d86f8fc9",
+      "language": "Build",
+      "bytes": 851,
+      "symbols": []
+    },
+    "qa/gstreamer/README.md": {
+      "sha256": "51f5822ee50b2c7033607b8e9d0378d16151bd44a2dbd6f4c2e6df39af2f5518",
+      "language": "Markdown",
+      "bytes": 7767,
+      "symbols": []
+    },
+    "qa/gstreamer/VALIDATION.md": {
+      "sha256": "8be2bf7457f2b2ae877b728b054a224c8ea1b0f6685cde2fd798a98c12dfed5d",
+      "language": "Markdown",
+      "bytes": 4882,
+      "symbols": []
+    },
+    "qa/gstreamer/compose.yaml": {
+      "sha256": "1c4d0aba47e24d3e140fcf582f93e60592be0f8de2a350ea094cc9fc592c64d0",
+      "language": "YAML",
+      "bytes": 1229,
+      "symbols": []
+    },
+    "qa/gstreamer/fault.py": {
+      "sha256": "7e20087756fc6debccfcb4647844bfcf6d94b2c7d98aa8dd18f9400e7467979c",
+      "language": "Python",
+      "bytes": 1543,
+      "symbols": [
+        {
+          "name": "compose",
+          "line": 10
+        },
+        {
+          "name": "main",
+          "line": 15
+        }
+      ]
+    },
+    "qa/gstreamer/fixtures.py": {
+      "sha256": "63b8cf48e9bc6b7cc6df54423b25b2f2f91d3c8c288d509a09934f4ea83f9c8c",
+      "language": "Python",
+      "bytes": 1024,
+      "symbols": [
+        {
+          "name": "main",
+          "line": 8
+        }
+      ]
+    },
+    "qa/gstreamer/mediamtx.yml": {
+      "sha256": "26b18b35a8969844b5d4c945c5f9de61a74fe643d3d61e045d18fb9d7c9540d8",
+      "language": "YAML",
+      "bytes": 486,
+      "symbols": []
+    },
+    "qa/gstreamer/playout.py": {
+      "sha256": "765e3a61c1a2adef93f9c77417d7a262d4c7e8f11c4e8702a737db1755421e8b",
+      "language": "Python",
+      "bytes": 14310,
+      "symbols": [
+        {
+          "name": "element",
+          "line": 26
+        },
+        {
+          "name": "chain",
+          "line": 35
+        },
+        {
+          "name": "Source",
+          "line": 41
+        },
+        {
+          "name": "__init__",
+          "line": 44
+        },
+        {
+          "name": "on_pad",
+          "line": 99
+        },
+        {
+          "name": "observe",
+          "line": 109
+        },
+        {
+          "name": "ready",
+          "line": 122
+        },
+        {
+          "name": "close",
+          "line": 126
+        },
+        {
+          "name": "Demo",
+          "line": 134
+        },
+        {
+          "name": "__init__",
+          "line": 135
+        },
+        {
+          "name": "log",
+          "line": 189
+        },
+        {
+          "name": "observe_output",
+          "line": 196
+        },
+        {
+          "name": "switch",
+          "line": 200
+        },
+        {
+          "name": "open_live",
+          "line": 211
+        },
+        {
+          "name": "enter_live",
+          "line": 215
+        },
+        {
+          "name": "leave_live",
+          "line": 219
+        },
+        {
+          "name": "close_live",
+          "line": 224
+        },
+        {
+          "name": "watchdog",
+          "line": 232
+        },
+        {
+          "name": "cancel",
+          "line": 240
+        },
+        {
+          "name": "on_message",
+          "line": 245
+        },
+        {
+          "name": "schedule",
+          "line": 268
+        },
+        {
+          "name": "invoke",
+          "line": 269
+        },
+        {
+          "name": "run",
+          "line": 274
+        },
+        {
+          "name": "run_source",
+          "line": 296
+        },
+        {
+          "name": "message",
+          "line": 310
+        },
+        {
+          "name": "main",
+          "line": 330
+        }
+      ]
+    },
+    "qa/gstreamer/run.sh": {
+      "sha256": "544c1fdd701e000266c1354178118fbd39b0e7a18de1eb7840892737098a18df",
+      "language": "Shell",
+      "bytes": 2415,
+      "symbols": []
+    },
+    "qa/gstreamer/session.py": {
+      "sha256": "fb53bc52a7e2e431396a3f10c7c80c806eef3e17581c6479fffcbbfde5d87de0",
+      "language": "Python",
+      "bytes": 1584,
+      "symbols": [
+        {
+          "name": "main",
+          "line": 12
+        },
+        {
+          "name": "stop",
+          "line": 20
+        }
+      ]
+    },
+    "qa/gstreamer/test_verify.py": {
+      "sha256": "1b1454d6e40c44745154e544d64a946aec7a2f5f8e6b4e24b34845118faba623",
+      "language": "Python",
+      "bytes": 3970,
+      "symbols": [
+        {
+          "name": "EvidenceTests",
+          "line": 9
+        },
+        {
+          "name": "setUp",
+          "line": 10
+        },
+        {
+          "name": "checks",
+          "line": 31
+        },
+        {
+          "name": "test_complete_evidence_passes",
+          "line": 34
+        },
+        {
+          "name": "test_dts_reversal_is_detected",
+          "line": 37
+        },
+        {
+          "name": "test_gap_and_av_drift_fail",
+          "line": 45
+        },
+        {
+          "name": "test_reconnected_publisher_fails",
+          "line": 51
+        },
+        {
+          "name": "test_video_only_live_is_rejected",
+          "line": 55
+        },
+        {
+          "name": "test_packet_drops_or_missing_statistics_fail",
+          "line": 61
+        },
+        {
+          "name": "test_later_cycle_without_decoded_live_fails",
+          "line": 68
+        },
+        {
+          "name": "test_unscheduled_fallback_fails_normal_run",
+          "line": 75
+        },
+        {
+          "name": "test_unclosed_input_and_missing_completion_fail",
+          "line": 79
+        }
+      ]
+    },
+    "qa/gstreamer/verify.py": {
+      "sha256": "8789106286b001d7d345c739b5e9543e89b81ba3e2e24cbee1da811199f2ce57",
+      "language": "Python",
+      "bytes": 13781,
+      "symbols": [
+        {
+          "name": "api",
+          "line": 23
+        },
+        {
+          "name": "read_events",
+          "line": 28
+        },
+        {
+          "name": "packet_metrics",
+          "line": 42
+        },
+        {
+          "name": "connection_metrics",
+          "line": 60
+        },
+        {
+          "name": "decode_markers",
+          "line": 77
+        },
+        {
+          "name": "contains_sequence",
+          "line": 122
+        },
+        {
+          "name": "evaluate",
+          "line": 127
+        },
+        {
+          "name": "main",
+          "line": 171
+        },
+        {
+          "name": "observe_progress",
+          "line": 202
+        }
+      ]
     },
     "qa/layout/.gitignore": {
       "sha256": "f370ad043ec0c98a166fd98646c3b94280ed78bc996223b6cca2ba936f7c6781",

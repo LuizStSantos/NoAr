@@ -16,23 +16,23 @@ Machine-generated navigation index; verify behavior against current source code.
 - `docs/`: 23 indexed files
 - `frontend/`: 141 indexed files
 - `migrations/`: 22 indexed files
-- `qa/`: 11 indexed files
+- `qa/`: 24 indexed files
 - `tests_assets/`: 13 indexed files
 
 ## Languages and formats
 
 - Rust: 191
 - Vue: 89
-- Markdown: 70
+- Markdown: 72
 - TypeScript: 50
 - JSON: 25
 - SQL: 22
-- Python: 15
-- Other: 13
-- YAML: 7
+- Python: 21
+- Other: 14
+- YAML: 9
 - TOML: 4
-- Build: 1
-- Shell: 1
+- Build: 2
+- Shell: 2
 - HTML: 1
 - CSS: 1
 
