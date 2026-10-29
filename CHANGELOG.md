@@ -11,11 +11,34 @@ one is tagged.
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-10-28
+
+### Added
+
+- Repository-local Codex instructions and six skill adapters share NoAr's
+  existing development, Rust, Vue, Docker, FFmpeg and video-processing
+  references with Claude Code.
+- A scoped FFmpeg documentation helper provides official-reference topic
+  routing, bounded excerpts, a local cache and native capability checks.
+- Scoped Rust, Vue, Docker and video-processing reference playbooks, plus a
+  deterministic check planner for changed files, support focused development
+  and verification.
+
+### Changed
+
+- Consolidate AI navigation and responsive-layout review workflows, reduce
+  default context loading, and validate toolkit scripts and adapters in CI.
+- Move AI toolkit installation and maintenance guidance into `docs/ai` and
+  exclude development-only Claude tooling and browser tests from Docker builds.
+- Skip Docker image publication for documentation, QA and Claude-tooling-only
+  pushes to `main`; stable image tags still change only on release tags.
+
 ### Fixed
 
 - Docker SRT output stays connected when a scheduled SRT live input closes.
   Use native GnuTLS SRT 1.5.5 with corrected session lifecycle and test that
   closing auxiliary sessions preserves an existing connection.
+- Use the SQLite dialect in the repository's SQL formatter configuration.
 
 ## [1.10.1] - 2026-10-28
 
@@ -666,7 +689,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/LuizStSantos/NoAr/compare/v1.8.2...v1.9.0
