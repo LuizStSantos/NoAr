@@ -24,6 +24,24 @@ the data paths, already pointing at the `/data` volume:
 Keep them unless you mount other volumes. With *shared storage* enabled, each
 channel gets its own subfolder (`/data/media/1`, `/data/media/2`, ...).
 
+## SRT continuity
+
+The image includes GnuTLS SRT 1.5.5 with corrected session lifecycle so
+closing a scheduled live input does not destroy the channel's existing SRT
+output connection.
+The loader selects `/usr/local/lib/libsrt-gnutls.so.1.5`; the distribution
+package version can still report 1.5.4. Build provenance is recorded in
+`/usr/local/share/noar/srt-build.txt`. FFmpeg's ABI and channel configuration
+are unchanged. See [developer.md](developer.md#optional-srt-logging-integration)
+for the regression check.
+
+Before deploying a candidate image, test repeated playlist/live/playlist
+transitions with synthetic sources and disposable MediaMTX and VLC instances.
+Confirm that the publisher and reader connections remain active and frames
+continue arriving. A successful library test is not a complete playout test.
+Keep the previous image digest available for rollback; do not update an
+on-air container's libraries in place.
+
 ## Data
 
 The container keeps everything under `/data`, mounted from `./data`. Back up

@@ -11,6 +11,12 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- Docker SRT output stays connected when a scheduled SRT live input closes.
+  Use native GnuTLS SRT 1.5.5 with corrected session lifecycle and test that
+  closing auxiliary sessions preserves an existing connection.
+
 ## [1.10.1] - 2026-10-28
 
 ### Added

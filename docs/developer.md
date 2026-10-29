@@ -29,6 +29,36 @@ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 
 ### Optional SRT logging integration
 
+The Docker image and CI build native SRT 1.5.5 with GnuTLS using
+`docker/srt/build.sh`. FFmpeg opens SRT inputs and outputs in the same
+process; SRT 1.5.4 can clean up other active sockets when one session closes.
+The build pins the upstream 1.5.5 archive by SHA-256 and preserves the
+`libsrt-gnutls.so.1.5` ABI. See the corrected lifecycle in
+[SRT 1.5.5](https://github.com/Haivision/srt/blob/v1.5.5/srtcore/api.cpp).
+
+For a local Debian build with the affected library, install `cmake`, `curl`,
+`g++`, `libgnutls28-dev` and `make`, then run the build script with an
+installation prefix you control. Configure the loader to use that prefix;
+installing headers alone does not change the library FFmpeg loads. CI installs
+under `/usr/local` and runs `ldconfig` before testing. Never replace the
+library of an on-air process.
+
+`docker/srt/test-lifecycle.c` sends real data over a loopback SRT connection
+while opening and closing 20 auxiliary sessions. It must fail with the
+affected stock library and pass with the corrected release. The test runs
+during the Docker dependency build and CI; it does not prove MediaMTX/VLC recovery.
+
+Run only the isolated dependency check with:
+
+```sh
+docker build --target srt-build -t noar-srt-check .
+docker run --rm --network none noar-srt-check timeout 30 /tmp/test-srt-lifecycle
+```
+
+If a development environment uses a TLS proxy, the Docker build accepts an
+optional `proxy_ca` BuildKit secret. The certificate is mounted only during
+networked build steps; TLS verification remains enabled.
+
 The engine's build script uses `pkg-config` to check whether libsrt is linkable
 for the target build. If `pkg-config --modversion srt` succeeds, NoAr links
 libsrt directly and routes its native messages through its own logger,

@@ -9,12 +9,40 @@ ARG NODE_IMAGE=node:24-trixie-slim
 ARG RUST_IMAGE=rust:1-slim-trixie
 ARG RUNTIME_IMAGE=debian:trixie-slim
 
+# FFmpeg opens and closes SRT inputs in the same process as the output.
+# Debian's SRT 1.5.4 misses a startup reference, so closing an input can
+# destroy the output socket. Use the corrected release with the same GnuTLS ABI.
+FROM ${RUNTIME_IMAGE} AS srt-build
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export APT_CONFIG=/tmp/noar-apt.conf; \
+        printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+    fi; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates cmake curl g++ libgnutls28-dev make pkg-config && \
+    rm -rf /var/lib/apt/lists/* /tmp/noar-apt.conf
+COPY docker/srt /src/srt
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export CURL_CA_BUNDLE=/run/secrets/proxy_ca; \
+    fi; \
+    sh /src/srt/build.sh /opt/noar-srt && \
+    cc -Wall -Wextra -Werror /src/srt/test-lifecycle.c \
+        -I/opt/noar-srt/include -L/opt/noar-srt/lib \
+        -Wl,-rpath,/opt/noar-srt/lib -lsrt-gnutls -o /tmp/test-srt-lifecycle && \
+    timeout 30 /tmp/test-srt-lifecycle
+
 # --- Web interface -----------------------------------------------------------
 FROM ${NODE_IMAGE} AS frontend
 WORKDIR /src
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; \
+    fi; \
+    npm ci --no-audit --no-fund
 
 COPY tsconfig.json vite.config.ts ./
 COPY frontend ./frontend
@@ -50,6 +78,10 @@ ENV NOAR_FRONTEND_PREBUILT=1
 ARG NOAR_COMMIT=""
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
+    --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export CARGO_HTTP_CAINFO=/run/secrets/proxy_ca; \
+    fi; \
     cargo build --release --locked --package noar --no-default-features --features embed_frontend && \
     install -m 755 target/release/noar /usr/local/bin/noar
 
@@ -76,6 +108,13 @@ RUN apt-get update && \
         tzdata \
         $(cat /tmp/runtime-packages.txt) && \
     rm -rf /var/lib/apt/lists/* /tmp/runtime-packages.txt
+
+# Prefer the corrected GnuTLS library over Debian's affected build.
+# Keep the package-provided dependencies installed and record its provenance.
+COPY --from=srt-build /opt/noar-srt/lib/libsrt-gnutls.so* /usr/local/lib/
+COPY --from=srt-build /opt/noar-srt/share/noar/srt-build.txt /usr/local/share/noar/srt-build.txt
+COPY --from=srt-build /opt/noar-srt/share/licenses/noar-srt /usr/local/share/licenses/noar-srt
+RUN ldconfig
 
 COPY --from=backend /usr/local/bin/noar /usr/local/bin/noar
 

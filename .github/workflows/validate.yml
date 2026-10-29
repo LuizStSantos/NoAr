@@ -36,21 +36,35 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             clang \
+            cmake \
+            curl \
             ffmpeg \
             fonts-dejavu-core \
+            g++ \
             libavcodec-dev \
             libavdevice-dev \
             libavfilter-dev \
             libavformat-dev \
             libavutil-dev \
             libclang-dev \
+            libgnutls28-dev \
             libswresample-dev \
             libswscale-dev \
+            make \
             pkg-config
           ffmpeg -version
           test "$(pkg-config --modversion libavformat | cut -d. -f1)" -ge 61
 
       - uses: actions/checkout@v6
+      - name: Build and test the corrected SRT lifecycle
+        run: |
+          sh docker/srt/build.sh /usr/local
+          ldconfig
+          cc -Wall -Wextra -Werror docker/srt/test-lifecycle.c \
+            -I/usr/local/include -L/usr/local/lib \
+            -Wl,-rpath,/usr/local/lib -lsrt-gnutls -o /tmp/test-srt-lifecycle
+          timeout 30 /tmp/test-srt-lifecycle
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
