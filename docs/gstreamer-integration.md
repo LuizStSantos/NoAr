@@ -40,7 +40,9 @@ The standalone Python prototype is separate from integrated NoAr evidence.
 | Formatting and embedded frontend build | PASS | Latest `cargo fmt --all -- --check` and no-default-features embedded frontend build. |
 | Integrated normal transitions, earlier build | PASS | Three triggered Clock/Continue events; decoded A/B/live transitions; one publisher and one reader; zero reported SRT drops; no DTS regressions; maximum observed receiver progress gap 576 ms over a 60-second run. |
 | Integrated source-loss continuity, earlier build | FAIL | Fault injection preserved SRT sessions and the source returned, but one run stalled about 10.5 seconds on the return to a trimmed file. Zero packet drops alone does not establish continuity. |
-| Latest continuity fixes | NOT_RUN | Opening local files in PAUSED and retaining the pacing anchor for unchanged rates need another integrated fault/recovery run. |
+| Latest integrated source-loss smoke run | PASS | All 13 smoke checks passed on the checkpoint binary: three live entries, A/B/live decoded markers, one publisher and one reader, zero reported SRT drops, monotonic timestamps, captured audio duration 59.8 seconds and maximum receiver progress gap 410.5 ms. |
+| Repeated source-loss stability | FAIL | An earlier run of the same follow-up changes observed an 811 ms receiver progress gap, above the 750 ms smoke threshold. The latest PASS does not establish repeatability or long-soak readiness. |
+| Latest normal-run retry | NOT_AVAILABLE | The executor became unavailable during the run; its final result was not retrieved. Do not infer PASS. |
 | Complete Rust suite/lints after the latest follow-up fixes | NOT_RUN | Repeat after the latest source-state, clock and option changes. |
 | Dockerfile build checks | PASS | `docker build --check .` reports no warnings. |
 | Complete Docker image | NOT_AVAILABLE | This executor's 32 GB filesystem and Docker `vfs` driver exhausted disk while copying backend layers, before the Rust image build. Task-local build cache was removed; do not treat the image as built. |
@@ -51,7 +53,8 @@ The standalone Python prototype is separate from integrated NoAr evidence.
 
 1. Repeat the normal and source-loss tests against the latest actual NoAr
    binary, measuring receiver progress independently of API polling.
-2. Resolve the intermittent trimmed-file stall before any readiness claim.
+2. Verify the trimmed-file stall does not recur and investigate the occasional
+   receiver gap above 750 ms before any readiness claim.
 3. Repeat the Rust workspace tests, no-default-features Clippy, all-features
    Clippy where native dependencies permit it, and the embedded frontend build.
 4. Build the existing root Dockerfile on an isolated machine with sufficient
@@ -62,3 +65,18 @@ The standalone Python prototype is separate from integrated NoAr evidence.
 Do not restore the removed input servers or add a second playback backend to
 work around a failing test. Keep new findings and fixes on this development
 branch until the relevant gates pass.
+
+## Executor interruption after the checkpoint
+
+The complete code and AI-reference checkpoint was pushed as `53999ae4` before
+execution access was lost. The later reusable QA files
+`qa/gstreamer/integrated_smoke.py` and `qa/gstreamer/INTEGRATED.md` were created
+locally but were not committed or pushed before the executor became unavailable.
+The recovery run using that local harness passed all 13 smoke checks; its
+normal-run retry had no retrievable final result. The harness itself still needs
+review and publication after workspace recovery.
+
+Resume by fetching this branch and inspecting local changes. Preserve those QA
+files while bringing the local branch forward: this status document was updated
+through the GitHub connector after execution access failed. Re-run the remaining
+checks instead of inferring their outcome from earlier builds.
