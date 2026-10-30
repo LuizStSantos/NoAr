@@ -654,11 +654,14 @@ pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<fram
             *value = f32::from_le_bytes(mapped[start..start + 4].try_into()?);
         }
     }
-    frame.set_pts(
-        sample_timestamp(sample).map(|pts| {
-            (u128::from(pts.nseconds()) * u128::from(sample_rate) / 1_000_000_000) as i64
-        }),
-    );
+    frame.set_pts(sample_timestamp(sample).map(|pts| {
+        // Nanosecond timestamps cannot represent every sample boundary.
+        // Flooring an already-rounded 1024-sample AAC timestamp moves it
+        // back one sample and can make playout trim or insert otherwise
+        // continuous PCM.
+        ((u128::from(pts.nseconds()) * u128::from(sample_rate) + 500_000_000) / 1_000_000_000)
+            as i64
+    }));
 
     Ok(frame)
 }
@@ -969,6 +972,12 @@ mod tests {
             let pts = buffer.pts().unwrap().nseconds();
             let next = 1_000_000_000 + actual.len() as u64 / 8 * 1_000_000_000 / 48_000;
             assert!(pts.abs_diff(next) <= 1);
+            let frame = audio_frame(&sample, 48_000).unwrap();
+            assert_eq!(
+                frame.pts(),
+                Some(48_000 + actual.len() as i64 / 8),
+                "the Rust adapter must not introduce sample gaps after native normalization"
+            );
             actual.extend_from_slice(buffer.map_readable().unwrap().as_slice());
         }
         pipeline.set_state(gst::State::Null).unwrap();

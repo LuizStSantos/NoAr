@@ -12976,9 +12976,9 @@
       ]
     },
     "backend/engine/src/input/gstreamer.rs": {
-      "sha256": "12ae3e837e713209a9760ad4899c32ac1a792dc15fb4776f6c68c68da9797fb9",
+      "sha256": "1f20f4a318b1e8dd34ed4c6652fdbd746e67ffef34a8bb94dd8d24eb6c8b9b39",
       "language": "Rust",
-      "bytes": 40623,
+      "bytes": 41155,
       "symbols": [
         {
           "name": "SourceInfo",
@@ -13090,47 +13090,47 @@
         },
         {
           "name": "configure_source",
-          "line": 666
+          "line": 669
         },
         {
           "name": "loopback_proxy_exception",
-          "line": 717
+          "line": 720
         },
         {
           "name": "set_property",
-          "line": 741
+          "line": 744
         },
         {
           "name": "tests",
-          "line": 753
+          "line": 756
         },
         {
           "name": "asynchronous_tracks_are_ordered_before_advancing_the_playout",
-          "line": 759
+          "line": 762
         },
         {
           "name": "hls_transport_rollover_uses_the_current_segment_cycle",
-          "line": 831
+          "line": 834
         },
         {
           "name": "hls_rollover_preserves_payload_duration_and_composition_offset",
-          "line": 853
+          "line": 856
         },
         {
           "name": "decoded_frames_use_stream_time_across_adaptive_timestamp_origins_and_file_seeks",
-          "line": 871
+          "line": 874
         },
         {
           "name": "native_audio_normalization_preserves_samples_through_timestamp_jitter",
-          "line": 913
+          "line": 916
         },
         {
           "name": "stream_selection_opens_sources_with_only_one_track",
-          "line": 984
+          "line": 993
         },
         {
           "name": "explicit_proxy_exceptions_are_limited_to_exact_loopback_hosts",
-          "line": 1046
+          "line": 1055
         }
       ]
     },
@@ -18711,9 +18711,9 @@
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
-      "sha256": "0323be1452b6db5edd950f7dc4711737e205b88abed1bb54b282b43d16a84434",
+      "sha256": "c06c646f506d5396126b713b1f169d120c8b68f11017bb1ef81898ab9cb42a3d",
       "language": "Markdown",
-      "bytes": 10828,
+      "bytes": 12290,
       "symbols": []
     },
     "docs/gstreamer-testing.md": {
@@ -30925,6 +30925,12 @@
       "sha256": "1fc1bdaa166b17d018b31b8717bf341ea79d65338aaf6e6eb428cb7e3064bc17",
       "language": "Other",
       "bytes": 1490,
+      "symbols": []
+    },
+    "qa/gstreamer/evidence/audio-quality-summary.json": {
+      "sha256": "29db336a4718d0d394983fc486141a274e957ec3fe10a54e21c6f61b80497e3b",
+      "language": "JSON",
+      "bytes": 5361,
       "symbols": []
     },
     "qa/gstreamer/evidence/integration-summary.json": {

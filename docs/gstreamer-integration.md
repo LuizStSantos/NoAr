@@ -9,6 +9,30 @@ main-branch merge is part of this checkpoint.
 To build this GitHub branch on a separate Docker test server and open the real
 NoAr interface, follow [Test the GStreamer branch from GitHub](gstreamer-testing.md).
 
+## Open audio-quality investigation
+
+An operator reports background hiss on checkout `08186625`, including playlist
+files with loudness processing disabled, using AAC at 128 kbit/s. This report
+is **unresolved**; the continuity matrix below is not an audio-quality verdict.
+
+A focused native-to-Rust regression exposed a separate sample-clock defect:
+flooring a nanosecond timestamp mapped sample 49,024 to 49,023. Conversion now
+rounds to the nearest sample. The regression fails before this change and
+passes afterward. The input still uses `audioconvert`, `audioresample` and
+explicit stereo 48 kHz caps; the managed `ar` restriction remains intentional.
+
+Controlled 44.1/48 kHz AAC stereo files with silence and distinct left/right
+tones produce 48 kHz output. Their measured middle windows match the decoded
+PCM from an independent native GStreamer reference exactly, and their silence
+windows contain no added noise. These static-file measurements did not show
+an audible-noise improvement from the clock fix. The real noisy source/output
+pair is needed to identify the reported hiss; do not call it fixed yet.
+
+The follow-up passes 590 Rust tests, formatting, both Clippy configurations,
+the embedded frontend build and a fresh actual-NoAr SRT/SRT Scheduler smoke.
+The seven-output matrix below belongs to its recorded source/binary, not this
+new rounding change. See the [audio diagnostic evidence](../qa/gstreamer/evidence/audio-quality-summary.json).
+
 ## Latest protocol validation
 
 **PASS:** the complete bounded matrix at source commit `c64932e8` passes all

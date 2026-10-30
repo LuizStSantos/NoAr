@@ -24,6 +24,10 @@ Live/file playback uses `uridecodebin3` so adaptive HLS uses `hlsdemux2`.
 Selected-stream messages also identify audio-only and video-only inputs.
 Native `audiorate` preserves the sample clock across MPEG-TS PCR adjustments
 and millisecond FLV timestamps before frames enter the playout timeline.
+When converting its nanosecond PTS to integer audio samples, round to the
+nearest sample. Flooring a quantized 1024-sample timestamp can put it one
+sample behind, causing unnecessary PCM trimming or padding. The native audio
+normalization regression also checks the Rust adapter's resulting sample PTS.
 Graphics/discovery helpers can still use older native GStreamer elements;
 they do not select another playback engine. Relevant official references:
 [uridecodebin3](https://gstreamer.freedesktop.org/documentation/playback/uridecodebin3.html),

@@ -1,0 +1,155 @@
+{
+  "scope": "Sample-clock regression and controlled synthetic audio diagnostics, not confirmation of the reported background hiss",
+  "recorded_utc": "2026-10-30T15:07:31.113174+00:00",
+  "source_base": "c37f54879b97e92c7fc96edd624efeaf1182d005",
+  "source_sha256": {
+    "backend/engine/src/input/gstreamer.rs": "1f20f4a318b1e8dd34ed4c6652fdbd746e67ffef34a8bb94dd8d24eb6c8b9b39"
+  },
+  "reported_configuration": {
+    "checkout_commit": "08186625",
+    "codec": "AAC",
+    "bitrate_kbps": 128,
+    "playlist_hiss": true,
+    "hiss_persists_with_loudness_disabled": true
+  },
+  "reported_hiss_case": {
+    "status": "NOT_RUN",
+    "reason": "Actual source file and noisy output capture have not been provided; controlled signals did not reproduce persistent hiss"
+  },
+  "sample_clock_regression": {
+    "before": "FAIL",
+    "after": "PASS",
+    "expected_sample_position": 49024,
+    "previous_position": 49023,
+    "cause": "Flooring nanosecond-to-sample conversion",
+    "fix": "Round to the nearest sample; leave input resampling and managed sample-rate policy intact"
+  },
+  "controlled_cases": [
+    {
+      "status": "PASS",
+      "input_rate_hz": 44100,
+      "input_codec": "AAC",
+      "input_bitrate_bps": 192000,
+      "output_bitrate_bps": 128000,
+      "output_stream": {
+        "codec_name": "aac",
+        "sample_rate": "48000",
+        "channels": 2
+      },
+      "input_sha256": "55fef43c2acd8f7d01c0541cf3c90a344e34065295cdd890a465af0c06b1a16d",
+      "capture_sha256": "b09b76c72921e604a394225fd8e8d788426589f2ed04746811df99a39d89c412",
+      "waveform": "Synthetic stereo 997 Hz left / 1499 Hz right, with three silence intervals",
+      "finite_pcm": true,
+      "silence_window_peak_amplitudes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tone_window_start_seconds": 2,
+      "tone_window_frames": 48000,
+      "native_reference_identical_decoded_pcm_window": true,
+      "maximum_reference_sample_error": 0.0,
+      "tone_signal_to_residual_db_by_channel": [
+        45.1893,
+        51.4027
+      ]
+    },
+    {
+      "status": "PASS",
+      "input_rate_hz": 48000,
+      "input_codec": "AAC",
+      "input_bitrate_bps": 192000,
+      "output_bitrate_bps": 128000,
+      "output_stream": {
+        "codec_name": "aac",
+        "sample_rate": "48000",
+        "channels": 2
+      },
+      "input_sha256": "7739c3d4dbcb8954bbc6f473f5db5b4ad25591801e4b4bb7cdaf4bf10760cf69",
+      "capture_sha256": "74fd1e2c857630ad3d6f83191da9fbb874b627d15cef771c73f3d4b6f466ac3c",
+      "waveform": "Synthetic stereo 997 Hz left / 1499 Hz right, with three silence intervals",
+      "finite_pcm": true,
+      "silence_window_peak_amplitudes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tone_window_start_seconds": 2,
+      "tone_window_frames": 48000,
+      "native_reference_identical_decoded_pcm_window": true,
+      "maximum_reference_sample_error": 0.0,
+      "tone_signal_to_residual_db_by_channel": [
+        36.659,
+        37.0297
+      ]
+    }
+  ],
+  "quality_caveat": "The before/after static-file measurements did not demonstrate audible-noise improvement. The clock defect is verified separately; it is not established as the cause of the reported hiss.",
+  "rust": {
+    "workspace_tests": "PASS",
+    "tests_passed": 590,
+    "tests_ignored": 13,
+    "format": "PASS",
+    "clippy_no_default_features": "PASS",
+    "clippy_all_features_static": "PASS",
+    "embed_frontend_build": "PASS",
+    "all_features_caveat": "ORT_SKIP_DOWNLOAD=1; optional ONNX linking/runtime not verified"
+  },
+  "application_srt_smoke": {
+    "status": "PASS",
+    "checks": {
+      "video_timestamps": "PASS",
+      "audio_timestamps": "PASS",
+      "av_end_alignment": "PASS",
+      "receiver_progress": "PASS",
+      "captured_duration": "PASS",
+      "three_video_sources": "PASS",
+      "three_audio_sources": "PASS",
+      "all_scheduled_live_entries": "PASS",
+      "recording_created": "PASS",
+      "fault_was_injected": "PASS",
+      "decode": "PASS",
+      "single_output_publisher": "PASS",
+      "single_output_reader": "PASS",
+      "no_srt_packet_drops": "PASS",
+      "srt_transport_continuity": "PASS",
+      "srt_scte35_disabled": "PASS"
+    },
+    "engine": "gstreamer",
+    "output": "srt",
+    "live_input": "srt",
+    "scenario": "normal",
+    "schedule_admission": "automatic",
+    "binary_sha256": "370f35537a8e944027a2b8039403f99297c2f047cc0be3ddafe3820b048200c7",
+    "packets": {
+      "video": {
+        "packets": 1464,
+        "dts_regressions": 0,
+        "maximum_gap_seconds": 0.04,
+        "first_dts": 2.0,
+        "last_dts": 60.52,
+        "duration_seconds": 58.52
+      },
+      "audio": {
+        "packets": 2806,
+        "dts_regressions": 0,
+        "maximum_gap_seconds": 0.021356,
+        "first_dts": 0.682644,
+        "last_dts": 60.522644,
+        "duration_seconds": 59.84
+      }
+    },
+    "receiver_progress": {
+      "samples": 1119,
+      "maximum_gap_seconds": 0.25169541200011736,
+      "limit_seconds": 0.75,
+      "measurement": "Native SRT payload bytes",
+      "shutdown_drain_seconds": 0.352090700998815
+    }
+  },
+  "limitations": [
+    "Synthetic engine file tests and one actual-NoAr SRT smoke; no new seven-output matrix after this rounding change",
+    "No real operator media or noisy capture available",
+    "No complete Docker image build in this executor"
+  ]
+}
