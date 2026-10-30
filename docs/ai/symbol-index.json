@@ -11643,9 +11643,9 @@
       ]
     },
     "backend/engine/src/audio_mixer/program.rs": {
-      "sha256": "9f09292e1dff11f2621a527de82b9e98a417e6fdce1621fe616dd16b5aa8aa10",
+      "sha256": "f85e4d8ce5dc311d0da085ede7d13402693fcaefd8140650f09b86490087aef8",
       "language": "Rust",
-      "bytes": 23046,
+      "bytes": 24844,
       "symbols": [
         {
           "name": "ProgramAudioState",
@@ -11713,99 +11713,107 @@
         },
         {
           "name": "apply_logo_overlay",
-          "line": 275
+          "line": 285
         },
         {
           "name": "benchmarks_logo_overlay",
-          "line": 279
+          "line": 289
         },
         {
           "name": "set_video_end",
-          "line": 283
+          "line": 293
         },
         {
           "name": "video_decoded",
-          "line": 287
-        },
-        {
-          "name": "video_finished",
-          "line": 292
-        },
-        {
-          "name": "pad_audio",
           "line": 297
         },
         {
-          "name": "write_vtt_subtitles",
-          "line": 303
+          "name": "video_finished",
+          "line": 302
         },
         {
-          "name": "clear_vtt_subtitles",
+          "name": "pad_audio",
           "line": 307
         },
         {
-          "name": "advance_vtt_subtitles",
-          "line": 311
+          "name": "write_vtt_subtitles",
+          "line": 313
         },
         {
-          "name": "tests",
+          "name": "clear_vtt_subtitles",
           "line": 317
         },
         {
-          "name": "Capture",
+          "name": "advance_vtt_subtitles",
+          "line": 321
+        },
+        {
+          "name": "tests",
           "line": 327
         },
         {
+          "name": "Capture",
+          "line": 337
+        },
+        {
           "name": "FrameOutput",
-          "line": 333
+          "line": 344
         },
         {
           "name": "audio_frame_size",
-          "line": 334
+          "line": 345
         },
         {
           "name": "encode_video",
-          "line": 338
-        },
-        {
-          "name": "encode_audio",
-          "line": 343
-        },
-        {
-          "name": "video_finished",
           "line": 349
         },
         {
+          "name": "encode_audio",
+          "line": 354
+        },
+        {
+          "name": "video_finished",
+          "line": 360
+        },
+        {
+          "name": "reset_after_skip",
+          "line": 365
+        },
+        {
           "name": "audio",
-          "line": 355
+          "line": 370
         },
         {
           "name": "config",
-          "line": 371
+          "line": 386
+        },
+        {
+          "name": "skipping_preserves_lookahead_unless_output_can_reset_its_timeline",
+          "line": 399
         },
         {
           "name": "short_burst_at_clip_and_live_transitions_is_compressed",
-          "line": 384
-        },
-        {
-          "name": "volume_is_applied_once_and_final_peaks_stay_below_ceiling",
           "line": 434
         },
         {
+          "name": "volume_is_applied_once_and_final_peaks_stay_below_ceiling",
+          "line": 484
+        },
+        {
           "name": "scope_selects_file_and_live_without_double_processing_or_changing_pts",
-          "line": 498
+          "line": 548
         },
         {
           "name": "processor_history_survives_clip_boundaries_and_updates",
-          "line": 534
+          "line": 584
         },
         {
           "name": "decoded_playlist_clips_keep_the_same_audio_video_timeline_with_processing",
-          "line": 574
+          "line": 624
         },
         {
           "name": "missing_audio_releases_video_with_bounded_preview_and_finishes",
-          "line": 647
+          "line": 697
         }
       ]
     },
@@ -18679,9 +18687,9 @@
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
-      "sha256": "53c624d41036ad50d743436e86363c8ec7a26c710be911d634f558224bd1dc2f",
+      "sha256": "61e0bc5ec510dbf31b2a4ff49fa156c187e1c2c7eaa35b82f9796beee72c2f50",
       "language": "Markdown",
-      "bytes": 9622,
+      "bytes": 10210,
       "symbols": []
     },
     "docs/gstreamer-testing.md": {
@@ -30860,9 +30868,9 @@
       "symbols": []
     },
     "qa/gstreamer/INTEGRATED.md": {
-      "sha256": "8f9ad944280fa57fde65c6f3a93e4840498e0bdfc312e46ce5645e9922517814",
+      "sha256": "0a605905244a7771446f335725c98f27b2e8e407cbbb3ad83786eeff4f13e1e5",
       "language": "Markdown",
-      "bytes": 10355,
+      "bytes": 10490,
       "symbols": []
     },
     "qa/gstreamer/README.md": {

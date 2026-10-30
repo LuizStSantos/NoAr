@@ -39,10 +39,18 @@ do not establish ad-platform interoperability or long-run readiness.
 - Playback uses `uridecodebin3`/`hlsdemux2` and converts sample timestamps through
   their segments. The Scheduler explicitly preserves live context for HTTP
   sources through preload handover and reopening; ordinary HTTP VOD retains
-  file behavior. **NOT_RUN:** fresh HLS live-input matrix after this context fix.
+  file behavior. The first retest restored all three live audio/video transitions without a
+  muxer restart; timestamp gaps remained, so its overall status was **FAIL**.
+- The remaining HLS/RTMP timestamp gaps were traced to program loudness
+  lookahead being discarded on source skips. Encoded outputs now drain this
+  already-counted media; outputs that can reset retain their discard behavior.
+  A regression test verifies both paths. A fresh automatic RTMP-input/RTMP-output
+  run passes all gates: video gap 40 ms, audio gap 21.5 ms, receiver progress
+  503.4 ms, three live transitions and one persistent publisher/reader.
 - RTMP caches its complete FLV preamble at the first usable keyframe. A split
   metadata/config regression test passes. **FAIL:** the latest bounded RTMP
-  output run still has timestamp gaps above the harness limits; retest pending.
+  output run before the lookahead fix had timestamp gaps above the harness
+  limits; the subsequent retest above passes.
 - **PASS:** 14 earlier Chromium checks cover live-source save/reload for four
   protocols, HLS SCTE-35 settings and navigation. They do not verify streaming.
 - **PASS:** the isolated Docker test Compose configuration and Dockerfile static

@@ -260,16 +260,26 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
     }
 
     fn reset_after_skip(&mut self, video_pts: i64, audio_pts: i64) -> Result<bool> {
+        let reset = self.output.reset_after_skip(video_pts, audio_pts)?;
+
+        if reset {
+            self.pending.clear();
+            self.buffered_samples = 0;
+        } else {
+            // Encoded outputs cannot retract their timeline. Deliver the
+            // lookahead already counted by playout before padding the skip.
+            self.drain(true)?;
+        }
+
         if let Some(processor) = self.state.processor.as_mut() {
             processor.begin_segment();
         }
 
         self.last_audio_source = None;
-        self.pending.clear();
-        self.buffered_samples = 0;
         self.latest_video_sample =
             video_pts.rescale(self.video_time_base, Rational(1, self.sample_rate as i32));
-        self.output.reset_after_skip(video_pts, audio_pts)
+
+        Ok(reset)
     }
 
     fn apply_logo_overlay(&mut self, frame: &mut frame::Video, logo: &LogoOverlay, opacity: f64) {
@@ -328,6 +338,7 @@ mod tests {
         audio: Vec<(i64, Vec<f32>)>,
         video: Vec<i64>,
         finished: bool,
+        discard_on_skip: bool,
     }
 
     impl FrameOutput for Capture {
@@ -349,6 +360,10 @@ mod tests {
         fn video_finished(&mut self) -> Result<()> {
             self.finished = true;
             Ok(())
+        }
+
+        fn reset_after_skip(&mut self, _video_pts: i64, _audio_pts: i64) -> Result<bool> {
+            Ok(self.discard_on_skip)
         }
     }
 
@@ -378,6 +393,41 @@ mod tests {
                     ..LiveLoudnessConfig::default()
                 },
             ))
+    }
+
+    #[test]
+    fn skipping_preserves_lookahead_unless_output_can_reset_its_timeline() {
+        for discard in [false, true] {
+            let mut capture = Capture {
+                discard_on_skip: discard,
+                ..Capture::default()
+            };
+            let mut state = ProgramAudioState::default();
+            let config = config(LoudnessScope::All);
+            let mut output = ProgramAudioOutput::new(&mut capture, &mut state, &config).unwrap();
+
+            output.encode_audio(&audio(0, 0.1)).unwrap();
+            for pts in 0..3 {
+                let mut video = frame::Video::new(ffmpeg_next::format::Pixel::YUV420P, 16, 16);
+                video.set_pts(Some(pts));
+                output.encode_video(&video).unwrap();
+            }
+
+            assert!(!output.pending.is_empty());
+            assert_eq!(output.reset_after_skip(3, 4800).unwrap(), discard);
+            output.finish().unwrap();
+            drop(output);
+
+            if discard {
+                assert!(capture.video.is_empty());
+                assert!(capture.audio.is_empty());
+            } else {
+                assert_eq!(capture.video, vec![0, 1, 2]);
+                assert_eq!(capture.audio.len(), 1);
+                assert_eq!(capture.audio[0].0, 0);
+                assert_eq!(capture.audio[0].1.len(), 4800);
+            }
+        }
     }
 
     #[test]

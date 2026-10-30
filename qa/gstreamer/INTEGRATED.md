@@ -153,7 +153,9 @@ SCTE-35 individually. HLS live-input tests then exposed HTTP sources being
 treated as seekable media; the Scheduler now explicitly carries live context
 through preloading and playback. RTMP startup tests exposed codec headers
 arriving after metadata; output now snapshots the cached preamble at its first
-usable keyframe. These latest fixes require fresh protocol and recovery runs.
+usable keyframe. The remaining timestamp gaps were traced to lookahead being discarded on
+source skips; encoded outputs now drain it before the switch. These latest
+fixes require fresh protocol and recovery runs.
 Do not use this checkpoint as on-air readiness evidence.
 
 | Mode | Actual output and checks |
