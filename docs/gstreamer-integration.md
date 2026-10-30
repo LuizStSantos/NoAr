@@ -9,66 +9,77 @@ main-branch merge is part of this checkpoint.
 To build this GitHub branch on a separate Docker test server and open the real
 NoAr interface, follow [Test the GStreamer branch from GitHub](gstreamer-testing.md).
 
-## Protocol matrix development checkpoint
+## Latest protocol validation
 
-The current follow-up adds RTMP/HLS/UDP protocol observers, an independent
-SCTE-35 decoder, an original-byte SRT receiver, and selectable external live
-inputs (RTMP, SRT, HLS, UDP) with optional automatic Scheduler admission.
-The live editor now exposes UDP explicitly. Fixes cover native RTMP FLV tag
-boundaries/header availability, HLS buffer-list health, SCTE-35 command length
-and PMT stuffing, and initial real audio preservation.
+**PASS:** the complete bounded matrix at source commit `c64932e8` passes all
+seven selected pairings in normal operation and again with a four-second
+publisher interruption: **14/14 cases**. All runs use the same compiled binary,
+three automatically admitted Scheduler events, decoded synthetic A/B/live
+markers, Clock/Continue return modes and independent receiver observations.
 
-Native HLS SCTE-35 remains **experimental and NOT_READY** until the latest
-protocol and source-loss matrix finishes. Subsequent isolated runs passed its
-in-band cues, independent decoding, cancellation, shared date-range IDs,
-legacy tags and segment/IDR boundaries in both renditions. These bounded runs
-do not establish ad-platform interoperability or long-run readiness.
+| Output | Scheduler live input | Normal | Publisher interruption |
+| --- | --- | --- | --- |
+| UDP normal | SRT | PASS | PASS |
+| UDP SCTE-35 | UDP | PASS | PASS |
+| SRT normal | RTMP | PASS | PASS |
+| SRT SCTE-35 | SRT | PASS | PASS |
+| HLS normal | HLS | PASS | PASS |
+| HLS SCTE-35 | SRT | PASS | PASS |
+| RTMP normal | RTMP | PASS | PASS |
 
-### Current fixes and evidence
+See the [sanitized protocol evidence](../qa/gstreamer/evidence/protocol-matrix-summary.json)
+for source/binary hashes, all gate statuses, timing metrics and fault times,
+and [the harness instructions](../qa/gstreamer/INTEGRATED.md) to reproduce it.
+This covers seven selected pairings, not all 28 combinations. The publisher
+pause can be partly absorbed by input buffering; it does not prove every
+Scheduler retry/waiting policy. HLS receiver progress is evaluated against its
+segment target duration plus one second; UDP/SRT/RTMP retain the 750 ms gate.
 
-The first complete automatic Scheduler matrix at `bf278673` passed UDP normal,
-UDP SCTE-35, SRT normal, SRT SCTE-35 and RTMP normal. HLS normal failed its first
-live admission; HLS SCTE-35 failed decoded live-audio transition coverage. These
-failures remain recorded and are not replaced by source review.
+SCTE-35 checks independently decode original MPEG-TS for UDP/direct SRT and
+both native HLS renditions. They verify CRCs, repeated out/in cues, pre-roll,
+splice/IDR boundaries, cancellation and HLS date ranges/legacy markers. Stock
+MediaMTX strips SCTE-35, so direct SRT capture deliberately avoids that relay.
+Downstream ad insertion and third-party cue interoperability remain untested;
+native HLS SCTE-35 remains experimental.
 
-Follow-up fixes and targeted evidence:
+### Fixes included in the tested binary
 
-- Native `audiorate` preserves the sample clock through FLV/PCR timestamp jitter;
-  its regression test checks exact PCM preservation.
-- SRT capture uses original payload bytes in both modes. Bounded output shutdown
-  drains AppSrc and waits for native SRT wire activity to settle. A loopback
-  test verifies final-message delivery.
-- Encoded outputs drain program loudness lookahead before source switches.
-  Discarding those already-counted frames caused 120 ms timestamp gaps. The
-  post-fix RTMP run passes all gates with 40 ms video gaps, 21.5 ms audio gaps,
-  three automatic live events and one publisher/reader.
-- The Scheduler preserves explicit live context for HTTP events through
-  preloading and reopening. Ordinary HTTP VOD retains file behavior. Playback
-  uses `uridecodebin3`/`hlsdemux2` and segment-to-stream-time conversion.
-- Native adaptive HLS assigned initial AAC timestamps to an extra 33-bit TS
-  cycle, inserting a roughly 26-hour gap. A guard on its internal compressed
-  TS pads unwraps timestamps against the current segment. A subsequent full
-  HLS-input/HLS-output test passes every gate in both renditions, including
-  all three scheduled events and decoded audio/video transitions.
-- The sample reader now waits within its existing read timeout for the other
-  negotiated decoder track before selecting timestamp order. A native
-  asynchronous audio/video regression test passes; full matrix retest pending.
-- **PASS:** 590 Rust tests with no default features (13 opt-in tests ignored),
-  58 AI toolkit tests and 13 Python QA tests. Formatting, no-default-features
-  Clippy, static all-features Clippy and the embedded frontend build pass.
-  Static all-features analysis uses `ORT_SKIP_DOWNLOAD=1` and does not validate
-  optional ONNX linking or runtime.
-- **PASS:** 14 earlier Chromium checks cover live-source save/reload for four
-  protocols, HLS SCTE-35 settings and navigation. They do not verify streaming.
-- **PASS:** the isolated Docker Compose configuration, required native factories
-  and Dockerfile static build check. **NOT_AVAILABLE:** full image build due to
-  executor disk limits; optional ONNX binary download denied by the proxy.
+- Incoming audio uses native `audiorate` to preserve samples through FLV/PCR
+  timestamp jitter. The decoder read loop waits within its existing timeout
+  for separately decoded tracks before choosing timestamp order.
+- Encoded output drains program loudness lookahead before source skips, keeping
+  already-counted media on the persistent output timeline.
+- RTMP reads complete cached FLV/codec headers at its first usable keyframe.
+  SRT shutdown drains AppSrc and bounds its wait for final native wire activity.
+- The Scheduler explicitly preserves live context for HTTP events through
+  preloading and reopening. Ordinary HTTP VOD retains file behavior.
+- Playback uses `uridecodebin3`/`hlsdemux2` and segment-to-stream-time conversion.
+  A scoped guard on adaptive HLS's internal compressed TS pads unwraps an
+  observed extra 33-bit timestamp cycle that otherwise inserted a 26-hour gap.
 
-The reusable `integrated_matrix.py` runs seven selected input/output pairings,
-not all 28 combinations. Fresh complete-matrix and recovery results are pending.
-See [the current harness instructions](../qa/gstreamer/INTEGRATED.md).
-Earlier checkpoint evidence below applies only to those recorded runs.
-The overall protocol expansion remains **NOT_READY**.
+The first matrix at `bf278673` failed HLS admission/audio coverage; those
+failures drove the HLS guard and read-order fixes. The fresh complete results
+above supersede those earlier failures for this binary.
+
+### Current local checks and limits
+
+- **PASS:** 590 Rust tests with no default features; 13 existing opt-in tests
+  ignored. Formatting, no-default-features Clippy, static all-features Clippy
+  and the embedded frontend build pass. All-features analysis uses
+  `ORT_SKIP_DOWNLOAD=1`, without optional ONNX linking or runtime verification.
+- **PASS:** 58 AI toolkit tests, 13 Python QA tests, required native factories,
+  Dockerfile static checks and the isolated Compose configuration.
+- **PASS (earlier scoped browser evidence):** 14 Chromium checks cover saving
+  and reloading four live protocols, HLS SCTE-35 settings and navigation.
+- **NOT_AVAILABLE:** complete Docker image build in this executor, due to its
+  32 GB filesystem and Docker `vfs` copy-layer exhaustion; optional ONNX binary
+  download, denied by the proxy. No full image build is claimed.
+- **NOT_RUN:** extended soak, GPU/multicast, browser signal-test validation in
+  this matrix and downstream ad insertion. Recording presence is checked;
+  current recording decode/retention needs separate evidence.
+
+These are bounded development results, not release or on-air readiness
+approval. Earlier baseline evidence below applies only to its recorded runs.
 
 ## Implementation
 
@@ -87,7 +98,7 @@ The overall protocol expansion remains **NOT_READY**.
   [GStreamer reference navigation](ai/tech-references/gstreamer.md),
   [developer setup](developer.md) and [external live sources](live_ingest.md).
 
-## Validation at the checkpoint
+## Historical baseline before the protocol expansion
 
 All media tests use disposable databases, synthetic files and a local MediaMTX.
 The standalone Python prototype is separate from integrated NoAr evidence.
@@ -127,8 +138,8 @@ limits of each check.
 
 ## Next validation
 
-1. Repeat the normal and source-loss tests against the latest actual NoAr
-   binary, measuring receiver progress independently of API polling.
+1. Reproduce the validated normal and source-interruption matrix on the
+   isolated company test server; record its commit, image and native versions.
 2. Run an extended soak and repeat the strict 750 ms receiver gate under
    representative channel load. Investigate any regression before a readiness
    claim.

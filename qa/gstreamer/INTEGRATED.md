@@ -147,23 +147,20 @@ listener on loopback UDP 29911: it preserves cues without MediaMTX or FFmpeg
 remuxing. This receiver needs the installed GStreamer library and SRT plugin.
 UDP output uses port 29910; UDP live input uses port 29912.
 
-**The complete seven-output/four-input matrix is not yet validated.** Follow-up
-automatic Scheduler runs passed UDP normal/SCTE-35, SRT normal/SCTE-35 and HLS
-SCTE-35 individually. HLS live-input tests then exposed HTTP sources being
-treated as seekable media; the Scheduler now explicitly carries live context
-through preloading and playback. RTMP startup tests exposed codec headers
-arriving after metadata; output now snapshots the cached preamble at its first
-usable keyframe. The remaining timestamp gaps were traced to lookahead being discarded on
-source skips; encoded outputs now drain it before the switch. These latest
-fixes require fresh protocol and recovery runs.
-Do not use this checkpoint as on-air readiness evidence.
+The normal matrix at `c64932e8` and its four-second source-interruption repeat
+both pass all seven selected pairings: **14/14 cases**, with three automatic
+Clock/Continue live admissions in each case and one tested binary. See the
+[sanitized protocol summary](evidence/protocol-matrix-summary.json). This
+coverage is not all 28 input/output combinations and is not on-air readiness
+evidence. Input buffering can absorb part of the publisher pause; this does
+not validate every retry/waiting policy.
 
-A subsequent HLS-input test reproduced an extra MPEG-TS timestamp cycle in
-the adaptive demuxer's compressed audio queue. Its scoped rollover guard then
-passed a full three-event HLS-input/HLS-output run in both renditions. The
-decoder read loop also waits within its existing timeout for the other
-negotiated track before ordering samples. Fresh matrix evidence must identify
-the binary containing both fixes; earlier individual passes do not cover it.
+The current binary includes native audio normalization, complete RTMP startup
+headers, SRT final-message draining, preserved program lookahead on switches,
+explicit Scheduler live context for HTTP sources, segment timestamp conversion,
+a scoped adaptive-HLS MPEG-TS rollover guard and bounded ordering of separately
+decoded audio/video tracks. Earlier failures and individual passes apply to
+their recorded binaries; use the current matrix evidence for current claims.
 
 | Mode | Actual output and checks |
 | --- | --- |

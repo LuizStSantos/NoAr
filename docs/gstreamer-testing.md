@@ -77,6 +77,21 @@ This guide does not change firewall rules. Only the test paths in this
 dedicated MediaMTX instance accept unauthenticated publication/reading; do not
 use it as a production media server.
 
+To preserve this binding across new SSH sessions, create `.env` in the root
+of the fresh **test checkout**, which is ignored by Git:
+
+```sh
+cd ~/NoAr-gstreamer-test
+printf '%s\n' 'NOAR_GST_BIND_IP=0.0.0.0' > .env
+```
+
+Use this creation command only in a fresh checkout without an existing `.env`.
+If one already contains custom test settings, edit its binding instead of
+overwriting it. Compose reads this file when commands run from the checkout
+root. Before starting, inspect `docker ps --format 'table {{.Names}}\t{{.Ports}}'`;
+if a test port is already occupied, choose a free `NOAR_GST_*_PORT` value in
+this file and use that same port in the browser, encoder and VLC URLs.
+
 The default ports below can be changed using the variables in
 `compose.integrated.yaml`. Keep the same variable values when recreating the
 project, and replace the port in the browser/VLC/encoder URL accordingly.

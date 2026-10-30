@@ -1,0 +1,1844 @@
+{
+  "scope": "Bounded isolated actual-NoAr protocol tests; no broadcast readiness or deployment approval",
+  "recorded_utc": "2026-10-30T11:50:27.918880+00:00",
+  "source_commit": "c64932e881432b859997cd9c6c09f3140346a56a",
+  "coverage": "Seven selected input/output pairings, not all 28 combinations",
+  "rust": {
+    "status": "PASS",
+    "tests_passed": 590,
+    "tests_ignored": 13,
+    "features": "no-default-features",
+    "format": "PASS",
+    "clippy_no_default_features": "PASS",
+    "clippy_all_features_static": "PASS",
+    "all_features_caveat": "ORT_SKIP_DOWNLOAD=1; optional ONNX native runtime is not linked or exercised",
+    "embed_frontend_build": "PASS"
+  },
+  "python_qa": {
+    "status": "PASS",
+    "tests_passed": 13
+  },
+  "toolkit": {
+    "status": "PASS",
+    "tests_passed": 58
+  },
+  "source_sha256": {
+    ".github/workflows/validate.yml": "784c5e5a885c58a39c3194a23c3d26d7950292c0e126553fddc792cec15d1f4d",
+    "Dockerfile": "da3171a8beb6f406f1cb7d6e0cb63ae8d948c9ecd6e0689ea440e509e2cc03db",
+    "backend/app/src/player/schedule.rs": "63f1a572b8b655e249e0420356a491486f7ba2a053af38afe0ae473103c6ccd3",
+    "backend/engine/src/audio_mixer/program.rs": "f85e4d8ce5dc311d0da085ede7d13402693fcaefd8140650f09b86490087aef8",
+    "backend/engine/src/input/gstreamer.rs": "12ae3e837e713209a9760ad4899c32ac1a792dc15fb4776f6c68c68da9797fb9",
+    "backend/engine/src/input/preload.rs": "3b5baf69985563461a39cadc0c1552ed036639ee6361bd2d03b156a8dd71615f",
+    "backend/engine/src/output/link.rs": "ab84f7adc60fb68660868c51cc9cce91c25f0d67f749a0644c71a6d99f6bd4e5",
+    "backend/engine/src/playout.rs": "df16a93bebb7cdadff40648bf4a7395ea4c6046467267cef89ec535280814132",
+    "qa/gstreamer/integrated_smoke.py": "41ea3c21f651f718291f5d854985b59d24826dc34fe0ffacb71fac07eca5e387",
+    "qa/gstreamer/srt_capture.py": "517b995b8866543ae8d49826c7529270d007ebb1b053f572983406b8b5212545"
+  },
+  "suites": [
+    {
+      "scenario": "normal",
+      "status": "PASS",
+      "cases": [
+        {
+          "case": "udp-normal",
+          "input": "srt",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T113204555718Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "udp_capture": "PASS",
+            "udp_transport_continuity": "PASS",
+            "udp_scte35_disabled": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "udp",
+          "scte35_enabled": false,
+          "scenario": "normal",
+          "schedule_admission": "automatic",
+          "fault_injected": false,
+          "fault_timing": {
+            "first_live_active": 12.912090635999448,
+            "source_stopped": null
+          },
+          "packets": {
+            "video": {
+              "packets": 1507,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3600.0,
+              "last_dts": 3660.24,
+              "duration_seconds": 60.24
+            },
+            "audio": {
+              "packets": 2827,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 3600.0,
+              "last_dts": 3660.288,
+              "duration_seconds": 60.288
+            }
+          },
+          "receiver_progress": {
+            "samples": 7369,
+            "maximum_gap_seconds": 0.2047806379996473,
+            "limit_seconds": 0.75,
+            "measurement": "UDP datagram arrival",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 96,
+              "b": 56,
+              "live": 86
+            },
+            "audio_quarter_seconds": {
+              "a": 95,
+              "b": 55,
+              "live": 46
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "b",
+              "live",
+              "b",
+              "a",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 12.912090635999448,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 31.212421747999542,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 49.05509324800005,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "udp-scte35",
+          "input": "udp",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T113309799265Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "udp_capture": "PASS",
+            "udp_transport_continuity": "PASS",
+            "scte35_pid_and_registration": "PASS",
+            "scte35_pmt_crc": "PASS",
+            "scte35_section_crc": "PASS",
+            "scte35_command_length": "PASS",
+            "scte35_independent_decode": "PASS",
+            "scte35_continuity": "PASS",
+            "scte35_1793359991_copies": "PASS",
+            "scte35_1793359991_duration": "PASS",
+            "scte35_1793359991_pts_and_idr": "PASS",
+            "scte35_1793359991_preroll": "PASS",
+            "scte35_1793359991_preroll_seconds": "PASS",
+            "scte35_1793359992_copies": "PASS",
+            "scte35_1793359992_duration": "PASS",
+            "scte35_1793359992_pts_and_idr": "PASS",
+            "scte35_1793359992_preroll": "PASS",
+            "scte35_1793359992_preroll_seconds": "PASS",
+            "scte35_cancel": "PASS",
+            "scte35_requests_executed": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "udp",
+          "scte35_enabled": true,
+          "scenario": "normal",
+          "schedule_admission": "automatic",
+          "fault_injected": false,
+          "fault_timing": {
+            "first_live_active": 13.018456883999534,
+            "source_stopped": null
+          },
+          "packets": {
+            "video": {
+              "packets": 1508,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3600.0,
+              "last_dts": 3660.28,
+              "duration_seconds": 60.28
+            },
+            "audio": {
+              "packets": 2829,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 3600.0,
+              "last_dts": 3660.330656,
+              "duration_seconds": 60.330656
+            }
+          },
+          "receiver_progress": {
+            "samples": 7432,
+            "maximum_gap_seconds": 0.19965088199933234,
+            "limit_seconds": 0.75,
+            "measurement": "UDP datagram arrival",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 96,
+              "b": 57,
+              "live": 86
+            },
+            "audio_quarter_seconds": {
+              "a": 92,
+              "b": 56,
+              "live": 85
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 13.018456883999534,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 30.966178271999524,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 49.36730799799989,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "srt-normal",
+          "input": "rtmp",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T113415104571Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "single_output_publisher": "PASS",
+            "single_output_reader": "PASS",
+            "no_srt_packet_drops": "PASS",
+            "srt_transport_continuity": "PASS",
+            "srt_scte35_disabled": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "srt",
+          "scte35_enabled": false,
+          "scenario": "normal",
+          "schedule_admission": "automatic",
+          "fault_injected": false,
+          "fault_timing": {
+            "first_live_active": 13.80299449300037,
+            "source_stopped": null
+          },
+          "packets": {
+            "video": {
+              "packets": 1463,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 2.0,
+              "last_dts": 60.48,
+              "duration_seconds": 58.48
+            },
+            "audio": {
+              "packets": 2812,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021356,
+              "first_dts": 0.512,
+              "last_dts": 60.48,
+              "duration_seconds": 59.968
+            }
+          },
+          "receiver_progress": {
+            "samples": 1158,
+            "maximum_gap_seconds": 0.30335589999958756,
+            "limit_seconds": 0.75,
+            "measurement": "Native SRT payload bytes",
+            "shutdown_drain_seconds": 0.35169177599982504
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 87,
+              "b": 58,
+              "live": 87
+            },
+            "audio_quarter_seconds": {
+              "a": 93,
+              "b": 56,
+              "live": 86
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "b",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 13.80299449300037,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 31.33652558600079,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 49.52899453500049,
+              "after": "clock"
+            }
+          ],
+          "connections": {
+            "publish": {
+              "count": 1,
+              "drop_statistics_available": true,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            },
+            "read": {
+              "count": 1,
+              "drop_statistics_available": true,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            }
+          }
+        },
+        {
+          "case": "srt-scte35",
+          "input": "srt",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T113521848923Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "srt_transport_continuity": "PASS",
+            "scte35_pid_and_registration": "PASS",
+            "scte35_pmt_crc": "PASS",
+            "scte35_section_crc": "PASS",
+            "scte35_command_length": "PASS",
+            "scte35_independent_decode": "PASS",
+            "scte35_continuity": "PASS",
+            "scte35_1793360124_copies": "PASS",
+            "scte35_1793360124_duration": "PASS",
+            "scte35_1793360124_pts_and_idr": "PASS",
+            "scte35_1793360124_preroll": "PASS",
+            "scte35_1793360124_preroll_seconds": "PASS",
+            "scte35_1793360125_copies": "PASS",
+            "scte35_1793360125_duration": "PASS",
+            "scte35_1793360125_pts_and_idr": "PASS",
+            "scte35_1793360125_preroll": "PASS",
+            "scte35_1793360125_preroll_seconds": "PASS",
+            "scte35_cancel": "PASS",
+            "scte35_requests_executed": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "srt",
+          "scte35_enabled": true,
+          "scenario": "normal",
+          "schedule_admission": "automatic",
+          "fault_injected": false,
+          "fault_timing": {
+            "first_live_active": 13.394140215999869,
+            "source_stopped": null
+          },
+          "packets": {
+            "video": {
+              "packets": 1519,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3600.0,
+              "last_dts": 3660.72,
+              "duration_seconds": 60.72
+            },
+            "audio": {
+              "packets": 2850,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 3600.0,
+              "last_dts": 3660.778656,
+              "duration_seconds": 60.778656
+            }
+          },
+          "receiver_progress": {
+            "samples": 1088,
+            "maximum_gap_seconds": 0.25420480399952794,
+            "limit_seconds": 0.75,
+            "measurement": "Native SRT payload bytes",
+            "shutdown_drain_seconds": 0.35220173000016075
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 96,
+              "b": 58,
+              "live": 86
+            },
+            "audio_quarter_seconds": {
+              "a": 98,
+              "b": 56,
+              "live": 21
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 13.394140215999869,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 31.558233963999555,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 49.50148618499952,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "hls-normal",
+          "input": "hls",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T113628674178Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "hls_http_references": "PASS",
+            "hls_master_renditions": "PASS",
+            "stream_rolling_window": "PASS",
+            "stream_no_missing_segments": "PASS",
+            "stream_resolution": "PASS",
+            "stream_timestamps": "PASS",
+            "stream_decode": "PASS",
+            "stream_live_transitions": "PASS",
+            "low_rolling_window": "PASS",
+            "low_no_missing_segments": "PASS",
+            "low_resolution": "PASS",
+            "low_timestamps": "PASS",
+            "low_decode": "PASS",
+            "low_live_transitions": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "hls",
+          "scte35_enabled": false,
+          "scenario": "normal",
+          "schedule_admission": "automatic",
+          "fault_injected": false,
+          "fault_timing": {
+            "first_live_active": 9.4450567089998,
+            "source_stopped": null
+          },
+          "packets": {
+            "video": {
+              "packets": 1507,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 1.4,
+              "last_dts": 61.64,
+              "duration_seconds": 60.24
+            },
+            "audio": {
+              "packets": 2828,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 1.4,
+              "last_dts": 61.709333,
+              "duration_seconds": 60.309333
+            }
+          },
+          "receiver_progress": {
+            "samples": 38,
+            "maximum_gap_seconds": 2.3433203759996104,
+            "limit_seconds": 3,
+            "measurement": "FFmpeg media progress",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 95,
+              "b": 59,
+              "live": 85
+            },
+            "audio_quarter_seconds": {
+              "a": 95,
+              "b": 58,
+              "live": 81
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 9.4450567089998,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 27.267078355000194,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 45.30875369499972,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "hls-scte35",
+          "input": "srt",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T113744206293Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "hls_http_references": "PASS",
+            "hls_master_renditions": "PASS",
+            "stream_rolling_window": "PASS",
+            "stream_no_missing_segments": "PASS",
+            "stream_resolution": "PASS",
+            "stream_timestamps": "PASS",
+            "stream_decode": "PASS",
+            "stream_live_transitions": "PASS",
+            "low_rolling_window": "PASS",
+            "low_no_missing_segments": "PASS",
+            "low_resolution": "PASS",
+            "low_timestamps": "PASS",
+            "low_decode": "PASS",
+            "low_live_transitions": "PASS",
+            "stream_scte35_pid_and_registration": "PASS",
+            "stream_scte35_pmt_crc": "PASS",
+            "stream_scte35_section_crc": "PASS",
+            "stream_scte35_command_length": "PASS",
+            "stream_scte35_independent_decode": "PASS",
+            "stream_scte35_continuity": "PASS",
+            "stream_scte35_1793360265_copies": "PASS",
+            "stream_scte35_1793360265_duration": "PASS",
+            "stream_scte35_1793360265_pts_and_idr": "PASS",
+            "stream_scte35_1793360265_preroll": "PASS",
+            "stream_scte35_1793360265_preroll_seconds": "PASS",
+            "stream_scte35_1793360266_copies": "PASS",
+            "stream_scte35_1793360266_duration": "PASS",
+            "stream_scte35_1793360266_pts_and_idr": "PASS",
+            "stream_scte35_1793360266_preroll": "PASS",
+            "stream_scte35_1793360266_preroll_seconds": "PASS",
+            "stream_scte35_cancel": "PASS",
+            "stream_daterange_payloads": "PASS",
+            "stream_daterange_pairs": "PASS",
+            "stream_cancel_not_in_playlist": "PASS",
+            "stream_splice_segment_boundaries": "PASS",
+            "stream_legacy_out_in": "PASS",
+            "low_scte35_pid_and_registration": "PASS",
+            "low_scte35_pmt_crc": "PASS",
+            "low_scte35_section_crc": "PASS",
+            "low_scte35_command_length": "PASS",
+            "low_scte35_independent_decode": "PASS",
+            "low_scte35_continuity": "PASS",
+            "low_scte35_1793360265_copies": "PASS",
+            "low_scte35_1793360265_duration": "PASS",
+            "low_scte35_1793360265_pts_and_idr": "PASS",
+            "low_scte35_1793360265_preroll": "PASS",
+            "low_scte35_1793360265_preroll_seconds": "PASS",
+            "low_scte35_1793360266_copies": "PASS",
+            "low_scte35_1793360266_duration": "PASS",
+            "low_scte35_1793360266_pts_and_idr": "PASS",
+            "low_scte35_1793360266_preroll": "PASS",
+            "low_scte35_1793360266_preroll_seconds": "PASS",
+            "low_scte35_cancel": "PASS",
+            "low_daterange_payloads": "PASS",
+            "low_daterange_pairs": "PASS",
+            "low_cancel_not_in_playlist": "PASS",
+            "low_splice_segment_boundaries": "PASS",
+            "low_legacy_out_in": "PASS",
+            "hls_shared_splice_ids": "PASS",
+            "scte35_requests_executed": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "hls",
+          "scte35_enabled": true,
+          "scenario": "normal",
+          "schedule_admission": "automatic",
+          "fault_injected": false,
+          "fault_timing": {
+            "first_live_active": 9.52800943300008,
+            "source_stopped": null
+          },
+          "packets": {
+            "video": {
+              "packets": 1512,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 1.4,
+              "last_dts": 61.84,
+              "duration_seconds": 60.44
+            },
+            "audio": {
+              "packets": 2837,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 1.4,
+              "last_dts": 61.901333,
+              "duration_seconds": 60.501333
+            }
+          },
+          "receiver_progress": {
+            "samples": 48,
+            "maximum_gap_seconds": 2.1320662409998477,
+            "limit_seconds": 3,
+            "measurement": "FFmpeg media progress",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 98,
+              "b": 60,
+              "live": 81
+            },
+            "audio_quarter_seconds": {
+              "b": 59,
+              "a": 96,
+              "live": 72
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "b",
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 9.52800943300008,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 28.403705483000522,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 45.76183980100086,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "rtmp-normal",
+          "input": "rtmp",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T113905621138Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "single_output_publisher": "PASS",
+            "single_output_reader": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "rtmp",
+          "scte35_enabled": false,
+          "scenario": "normal",
+          "schedule_admission": "automatic",
+          "fault_injected": false,
+          "fault_timing": {
+            "first_live_active": 11.338817629000005,
+            "source_stopped": null
+          },
+          "packets": {
+            "video": {
+              "packets": 1462,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3.075,
+              "last_dts": 61.515,
+              "duration_seconds": 58.44
+            },
+            "audio": {
+              "packets": 2821,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021334,
+              "first_dts": 1.4,
+              "last_dts": 61.56,
+              "duration_seconds": 60.16
+            }
+          },
+          "receiver_progress": {
+            "samples": 579,
+            "maximum_gap_seconds": 0.6045384829994873,
+            "limit_seconds": 0.75,
+            "measurement": "FFmpeg media progress",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 86,
+              "b": 64,
+              "live": 83
+            },
+            "audio_quarter_seconds": {
+              "a": 91,
+              "b": 62,
+              "live": 80
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 11.338817629000005,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 29.501356628000394,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 47.614358888000424,
+              "after": "clock"
+            }
+          ],
+          "connections": {
+            "publish": {
+              "count": 1,
+              "drop_statistics_available": false,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            },
+            "read": {
+              "count": 1,
+              "drop_statistics_available": false,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "source_loss",
+      "status": "PASS",
+      "cases": [
+        {
+          "case": "udp-normal",
+          "input": "srt",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T114055088649Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "udp_capture": "PASS",
+            "udp_transport_continuity": "PASS",
+            "udp_scte35_disabled": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "udp",
+          "scte35_enabled": false,
+          "scenario": "source_loss",
+          "schedule_admission": "automatic",
+          "fault_injected": true,
+          "fault_timing": {
+            "first_live_active": 14.082615897999858,
+            "source_stopped": 17.10528995200002
+          },
+          "packets": {
+            "video": {
+              "packets": 1510,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3600.0,
+              "last_dts": 3660.36,
+              "duration_seconds": 60.36
+            },
+            "audio": {
+              "packets": 2833,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 3600.0,
+              "last_dts": 3660.416,
+              "duration_seconds": 60.416
+            }
+          },
+          "receiver_progress": {
+            "samples": 7066,
+            "maximum_gap_seconds": 0.45068842499949824,
+            "limit_seconds": 0.75,
+            "measurement": "UDP datagram arrival",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 97,
+              "b": 63,
+              "live": 74
+            },
+            "audio_quarter_seconds": {
+              "a": 95,
+              "b": 62,
+              "live": 35
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "b",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 14.082615897999858,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 32.116657399999895,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 50.28882237000016,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "udp-scte35",
+          "input": "udp",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T114159927505Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "udp_capture": "PASS",
+            "udp_transport_continuity": "PASS",
+            "scte35_pid_and_registration": "PASS",
+            "scte35_pmt_crc": "PASS",
+            "scte35_section_crc": "PASS",
+            "scte35_command_length": "PASS",
+            "scte35_independent_decode": "PASS",
+            "scte35_continuity": "PASS",
+            "scte35_1793360521_copies": "PASS",
+            "scte35_1793360521_duration": "PASS",
+            "scte35_1793360521_pts_and_idr": "PASS",
+            "scte35_1793360521_preroll": "PASS",
+            "scte35_1793360521_preroll_seconds": "PASS",
+            "scte35_1793360522_copies": "PASS",
+            "scte35_1793360522_duration": "PASS",
+            "scte35_1793360522_pts_and_idr": "PASS",
+            "scte35_1793360522_preroll": "PASS",
+            "scte35_1793360522_preroll_seconds": "PASS",
+            "scte35_cancel": "PASS",
+            "scte35_requests_executed": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "udp",
+          "scte35_enabled": true,
+          "scenario": "source_loss",
+          "schedule_admission": "automatic",
+          "fault_injected": true,
+          "fault_timing": {
+            "first_live_active": 13.974153627000305,
+            "source_stopped": 16.97435430800033
+          },
+          "packets": {
+            "video": {
+              "packets": 1516,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3600.0,
+              "last_dts": 3660.6,
+              "duration_seconds": 60.6
+            },
+            "audio": {
+              "packets": 2844,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 3600.0,
+              "last_dts": 3660.650656,
+              "duration_seconds": 60.650656
+            }
+          },
+          "receiver_progress": {
+            "samples": 7130,
+            "maximum_gap_seconds": 0.2270306990003519,
+            "limit_seconds": 0.75,
+            "measurement": "UDP datagram arrival",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 98,
+              "b": 59,
+              "live": 79
+            },
+            "audio_quarter_seconds": {
+              "a": 98,
+              "b": 56,
+              "live": 68
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 13.974153627000305,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 31.968923946999894,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 50.4306550729998,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "srt-normal",
+          "input": "rtmp",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T114305428066Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "single_output_publisher": "PASS",
+            "single_output_reader": "PASS",
+            "no_srt_packet_drops": "PASS",
+            "srt_transport_continuity": "PASS",
+            "srt_scte35_disabled": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "srt",
+          "scte35_enabled": false,
+          "scenario": "source_loss",
+          "schedule_admission": "automatic",
+          "fault_injected": true,
+          "fault_timing": {
+            "first_live_active": 13.38613744200029,
+            "source_stopped": 16.425272462000066
+          },
+          "packets": {
+            "video": {
+              "packets": 1465,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 2.0,
+              "last_dts": 60.56,
+              "duration_seconds": 58.56
+            },
+            "audio": {
+              "packets": 2817,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021356,
+              "first_dts": 0.490644,
+              "last_dts": 60.565311,
+              "duration_seconds": 60.074667
+            }
+          },
+          "receiver_progress": {
+            "samples": 1146,
+            "maximum_gap_seconds": 0.20133350300056918,
+            "limit_seconds": 0.75,
+            "measurement": "Native SRT payload bytes",
+            "shutdown_drain_seconds": 0.35155825299989374
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 84,
+              "b": 63,
+              "live": 72
+            },
+            "audio_quarter_seconds": {
+              "a": 91,
+              "b": 61,
+              "live": 69
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 13.38613744200029,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 31.461559970000053,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 49.67542579400015,
+              "after": "clock"
+            }
+          ],
+          "connections": {
+            "publish": {
+              "count": 1,
+              "drop_statistics_available": true,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            },
+            "read": {
+              "count": 1,
+              "drop_statistics_available": true,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            }
+          }
+        },
+        {
+          "case": "srt-scte35",
+          "input": "srt",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T114411563019Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "srt_transport_continuity": "PASS",
+            "scte35_pid_and_registration": "PASS",
+            "scte35_pmt_crc": "PASS",
+            "scte35_section_crc": "PASS",
+            "scte35_command_length": "PASS",
+            "scte35_independent_decode": "PASS",
+            "scte35_continuity": "PASS",
+            "scte35_1793360653_copies": "PASS",
+            "scte35_1793360653_duration": "PASS",
+            "scte35_1793360653_pts_and_idr": "PASS",
+            "scte35_1793360653_preroll": "PASS",
+            "scte35_1793360653_preroll_seconds": "PASS",
+            "scte35_1793360654_copies": "PASS",
+            "scte35_1793360654_duration": "PASS",
+            "scte35_1793360654_pts_and_idr": "PASS",
+            "scte35_1793360654_preroll": "PASS",
+            "scte35_1793360654_preroll_seconds": "PASS",
+            "scte35_cancel": "PASS",
+            "scte35_requests_executed": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "srt",
+          "scte35_enabled": true,
+          "scenario": "source_loss",
+          "schedule_admission": "automatic",
+          "fault_injected": true,
+          "fault_timing": {
+            "first_live_active": 13.019364896000297,
+            "source_stopped": 16.0671374930007
+          },
+          "packets": {
+            "video": {
+              "packets": 1521,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3600.0,
+              "last_dts": 3660.8,
+              "duration_seconds": 60.8
+            },
+            "audio": {
+              "packets": 2853,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 3600.0,
+              "last_dts": 3660.842656,
+              "duration_seconds": 60.842656
+            }
+          },
+          "receiver_progress": {
+            "samples": 1098,
+            "maximum_gap_seconds": 0.2013629180000862,
+            "limit_seconds": 0.75,
+            "measurement": "Native SRT payload bytes",
+            "shutdown_drain_seconds": 0.35156545100016956
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 101,
+              "b": 59,
+              "live": 78
+            },
+            "audio_quarter_seconds": {
+              "a": 103,
+              "b": 56,
+              "live": 29
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "a",
+              "b",
+              "a",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 13.019364896000297,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 30.542467233000025,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 48.962236469000345,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "hls-normal",
+          "input": "hls",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T114518044895Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "hls_http_references": "PASS",
+            "hls_master_renditions": "PASS",
+            "stream_rolling_window": "PASS",
+            "stream_no_missing_segments": "PASS",
+            "stream_resolution": "PASS",
+            "stream_timestamps": "PASS",
+            "stream_decode": "PASS",
+            "stream_live_transitions": "PASS",
+            "low_rolling_window": "PASS",
+            "low_no_missing_segments": "PASS",
+            "low_resolution": "PASS",
+            "low_timestamps": "PASS",
+            "low_decode": "PASS",
+            "low_live_transitions": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "hls",
+          "scte35_enabled": false,
+          "scenario": "source_loss",
+          "schedule_admission": "automatic",
+          "fault_injected": true,
+          "fault_timing": {
+            "first_live_active": 10.033833287999187,
+            "source_stopped": 13.23216711799978
+          },
+          "packets": {
+            "video": {
+              "packets": 1462,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 1.4,
+              "last_dts": 59.84,
+              "duration_seconds": 58.44
+            },
+            "audio": {
+              "packets": 2744,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 1.4,
+              "last_dts": 59.917322,
+              "duration_seconds": 58.517322
+            }
+          },
+          "receiver_progress": {
+            "samples": 39,
+            "maximum_gap_seconds": 2.129637250000087,
+            "limit_seconds": 3,
+            "measurement": "FFmpeg media progress",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 88,
+              "b": 62,
+              "live": 73
+            },
+            "audio_quarter_seconds": {
+              "a": 86,
+              "b": 60,
+              "live": 69
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 10.033833287999187,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 28.281359634999717,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 45.99892992899913,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "hls-scte35",
+          "input": "srt",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T114632258034Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "hls_http_references": "PASS",
+            "hls_master_renditions": "PASS",
+            "stream_rolling_window": "PASS",
+            "stream_no_missing_segments": "PASS",
+            "stream_resolution": "PASS",
+            "stream_timestamps": "PASS",
+            "stream_decode": "PASS",
+            "stream_live_transitions": "PASS",
+            "low_rolling_window": "PASS",
+            "low_no_missing_segments": "PASS",
+            "low_resolution": "PASS",
+            "low_timestamps": "PASS",
+            "low_decode": "PASS",
+            "low_live_transitions": "PASS",
+            "stream_scte35_pid_and_registration": "PASS",
+            "stream_scte35_pmt_crc": "PASS",
+            "stream_scte35_section_crc": "PASS",
+            "stream_scte35_command_length": "PASS",
+            "stream_scte35_independent_decode": "PASS",
+            "stream_scte35_continuity": "PASS",
+            "stream_scte35_1793360794_copies": "PASS",
+            "stream_scte35_1793360794_duration": "PASS",
+            "stream_scte35_1793360794_pts_and_idr": "PASS",
+            "stream_scte35_1793360794_preroll": "PASS",
+            "stream_scte35_1793360794_preroll_seconds": "PASS",
+            "stream_scte35_1793360795_copies": "PASS",
+            "stream_scte35_1793360795_duration": "PASS",
+            "stream_scte35_1793360795_pts_and_idr": "PASS",
+            "stream_scte35_1793360795_preroll": "PASS",
+            "stream_scte35_1793360795_preroll_seconds": "PASS",
+            "stream_scte35_cancel": "PASS",
+            "stream_daterange_payloads": "PASS",
+            "stream_daterange_pairs": "PASS",
+            "stream_cancel_not_in_playlist": "PASS",
+            "stream_splice_segment_boundaries": "PASS",
+            "stream_legacy_out_in": "PASS",
+            "low_scte35_pid_and_registration": "PASS",
+            "low_scte35_pmt_crc": "PASS",
+            "low_scte35_section_crc": "PASS",
+            "low_scte35_command_length": "PASS",
+            "low_scte35_independent_decode": "PASS",
+            "low_scte35_continuity": "PASS",
+            "low_scte35_1793360794_copies": "PASS",
+            "low_scte35_1793360794_duration": "PASS",
+            "low_scte35_1793360794_pts_and_idr": "PASS",
+            "low_scte35_1793360794_preroll": "PASS",
+            "low_scte35_1793360794_preroll_seconds": "PASS",
+            "low_scte35_1793360795_copies": "PASS",
+            "low_scte35_1793360795_duration": "PASS",
+            "low_scte35_1793360795_pts_and_idr": "PASS",
+            "low_scte35_1793360795_preroll": "PASS",
+            "low_scte35_1793360795_preroll_seconds": "PASS",
+            "low_scte35_cancel": "PASS",
+            "low_daterange_payloads": "PASS",
+            "low_daterange_pairs": "PASS",
+            "low_cancel_not_in_playlist": "PASS",
+            "low_splice_segment_boundaries": "PASS",
+            "low_legacy_out_in": "PASS",
+            "hls_shared_splice_ids": "PASS",
+            "scte35_requests_executed": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "hls",
+          "scte35_enabled": true,
+          "scenario": "source_loss",
+          "schedule_admission": "automatic",
+          "fault_injected": true,
+          "fault_timing": {
+            "first_live_active": 9.4340651779994,
+            "source_stopped": 12.73047577699981
+          },
+          "packets": {
+            "video": {
+              "packets": 1446,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 1.4,
+              "last_dts": 59.2,
+              "duration_seconds": 57.8
+            },
+            "audio": {
+              "packets": 2714,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021344,
+              "first_dts": 1.4,
+              "last_dts": 59.277333,
+              "duration_seconds": 57.877333
+            }
+          },
+          "receiver_progress": {
+            "samples": 37,
+            "maximum_gap_seconds": 2.59616380999978,
+            "limit_seconds": 3,
+            "measurement": "FFmpeg media progress",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 91,
+              "b": 61,
+              "live": 75
+            },
+            "audio_quarter_seconds": {
+              "a": 91,
+              "b": 59,
+              "live": 55
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 9.4340651779994,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 27.541830465999737,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 45.61437264899996,
+              "after": "clock"
+            }
+          ],
+          "connections": {}
+        },
+        {
+          "case": "rtmp-normal",
+          "input": "rtmp",
+          "status": "PASS",
+          "artifact_id": "integrated-20261030T114752813315Z",
+          "checks": {
+            "video_timestamps": "PASS",
+            "audio_timestamps": "PASS",
+            "av_end_alignment": "PASS",
+            "receiver_progress": "PASS",
+            "captured_duration": "PASS",
+            "three_video_sources": "PASS",
+            "three_audio_sources": "PASS",
+            "all_scheduled_live_entries": "PASS",
+            "recording_created": "PASS",
+            "fault_was_injected": "PASS",
+            "decode": "PASS",
+            "single_output_publisher": "PASS",
+            "single_output_reader": "PASS"
+          },
+          "binary_sha256": "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308",
+          "output": "rtmp",
+          "scte35_enabled": false,
+          "scenario": "source_loss",
+          "schedule_admission": "automatic",
+          "fault_injected": true,
+          "fault_timing": {
+            "first_live_active": 11.007010805999926,
+            "source_stopped": 14.034248628000569
+          },
+          "packets": {
+            "video": {
+              "packets": 1461,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.04,
+              "first_dts": 3.075,
+              "last_dts": 61.475,
+              "duration_seconds": 58.4
+            },
+            "audio": {
+              "packets": 2819,
+              "dts_regressions": 0,
+              "maximum_gap_seconds": 0.021334,
+              "first_dts": 1.4,
+              "last_dts": 61.517333,
+              "duration_seconds": 60.117333
+            }
+          },
+          "receiver_progress": {
+            "samples": 578,
+            "maximum_gap_seconds": 0.6060049260004234,
+            "limit_seconds": 0.75,
+            "measurement": "FFmpeg media progress",
+            "shutdown_drain_seconds": 0
+          },
+          "markers": {
+            "video_quarter_seconds": {
+              "a": 89,
+              "b": 57,
+              "live": 72
+            },
+            "audio_quarter_seconds": {
+              "a": 94,
+              "b": 54,
+              "live": 72
+            },
+            "video_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ],
+            "audio_sequence": [
+              "a",
+              "b",
+              "live",
+              "a",
+              "live",
+              "a",
+              "b",
+              "live",
+              "a"
+            ]
+          },
+          "admitted_events": [
+            {
+              "event_id": 1,
+              "elapsed": 11.007010805999926,
+              "after": "clock"
+            },
+            {
+              "event_id": 2,
+              "elapsed": 29.11514268600058,
+              "after": "continue"
+            },
+            {
+              "event_id": 3,
+              "elapsed": 47.26539278400014,
+              "after": "clock"
+            }
+          ],
+          "connections": {
+            "publish": {
+              "count": 1,
+              "drop_statistics_available": false,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            },
+            "read": {
+              "count": 1,
+              "drop_statistics_available": false,
+              "maximum_send_drops": 0,
+              "maximum_receive_drops": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Synthetic loopback streams and disposable API/database data only",
+    "Normal SRT uses MediaMTX; SCTE-35 SRT uses a direct native listener because MediaMTX strips cues",
+    "HLS transport and manifest cues are independently decoded; downstream ad insertion is not tested",
+    "A four-second publisher interruption can be partly absorbed by upstream buffering",
+    "No long soak, multicast, GPU or browser signal-test validation in this matrix",
+    "Recording presence is checked; recording decode and retention are separate",
+    "Complete Docker image build is NOT_AVAILABLE due to executor disk limits",
+    "Optional ONNX runtime download is NOT_AVAILABLE due to proxy policy"
+  ],
+  "status": "PASS",
+  "binary_sha256": [
+    "f81668e62e7bbc94a9a7c1d032f1c8b4e9f84d1d9012355fa4c7857fb698c308"
+  ]
+}
