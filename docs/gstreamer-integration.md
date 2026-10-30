@@ -26,36 +26,43 @@ do not establish ad-platform interoperability or long-run readiness.
 
 ### Current fixes and evidence
 
-- **PASS (individual bounded runs before the latest HLS/RTMP fixes):** UDP
-  normal with SRT input, UDP SCTE-35 with UDP input, SRT normal with RTMP input,
-  SRT SCTE-35 with SRT input, and HLS SCTE-35 with SRT input. Each run observes
-  three automatically admitted Scheduler events and decoded A/B/live markers.
-- Incoming audio now passes through native `audiorate`. A regression test checks
-  exact PCM preservation under FLV/PCR timestamp jitter; subsequent RTMP-input
-  media runs passed the previously failing decoded audio gates.
-- SRT capture now uses original payload bytes for both modes. Output shutdown
-  drains AppSrc and bounds the wait for native SRT wire activity to settle;
-  a native loopback regression test verifies final-message delivery.
-- Playback uses `uridecodebin3`/`hlsdemux2` and converts sample timestamps through
-  their segments. The Scheduler explicitly preserves live context for HTTP
-  sources through preload handover and reopening; ordinary HTTP VOD retains
-  file behavior. The first retest restored all three live audio/video transitions without a
-  muxer restart; timestamp gaps remained, so its overall status was **FAIL**.
-- The remaining HLS/RTMP timestamp gaps were traced to program loudness
-  lookahead being discarded on source skips. Encoded outputs now drain this
-  already-counted media; outputs that can reset retain their discard behavior.
-  A regression test verifies both paths. A fresh automatic RTMP-input/RTMP-output
-  run passes all gates: video gap 40 ms, audio gap 21.5 ms, receiver progress
-  503.4 ms, three live transitions and one persistent publisher/reader.
-- RTMP caches its complete FLV preamble at the first usable keyframe. A split
-  metadata/config regression test passes. **FAIL:** the latest bounded RTMP
-  output run before the lookahead fix had timestamp gaps above the harness
-  limits; the subsequent retest above passes.
+The first complete automatic Scheduler matrix at `bf278673` passed UDP normal,
+UDP SCTE-35, SRT normal, SRT SCTE-35 and RTMP normal. HLS normal failed its first
+live admission; HLS SCTE-35 failed decoded live-audio transition coverage. These
+failures remain recorded and are not replaced by source review.
+
+Follow-up fixes and targeted evidence:
+
+- Native `audiorate` preserves the sample clock through FLV/PCR timestamp jitter;
+  its regression test checks exact PCM preservation.
+- SRT capture uses original payload bytes in both modes. Bounded output shutdown
+  drains AppSrc and waits for native SRT wire activity to settle. A loopback
+  test verifies final-message delivery.
+- Encoded outputs drain program loudness lookahead before source switches.
+  Discarding those already-counted frames caused 120 ms timestamp gaps. The
+  post-fix RTMP run passes all gates with 40 ms video gaps, 21.5 ms audio gaps,
+  three automatic live events and one publisher/reader.
+- The Scheduler preserves explicit live context for HTTP events through
+  preloading and reopening. Ordinary HTTP VOD retains file behavior. Playback
+  uses `uridecodebin3`/`hlsdemux2` and segment-to-stream-time conversion.
+- Native adaptive HLS assigned initial AAC timestamps to an extra 33-bit TS
+  cycle, inserting a roughly 26-hour gap. A guard on its internal compressed
+  TS pads unwraps timestamps against the current segment. A subsequent full
+  HLS-input/HLS-output test passes every gate in both renditions, including
+  all three scheduled events and decoded audio/video transitions.
+- The sample reader now waits within its existing read timeout for the other
+  negotiated decoder track before selecting timestamp order. A native
+  asynchronous audio/video regression test passes; full matrix retest pending.
+- **PASS:** 590 Rust tests with no default features (13 opt-in tests ignored),
+  58 AI toolkit tests and 13 Python QA tests. Formatting, no-default-features
+  Clippy, static all-features Clippy and the embedded frontend build pass.
+  Static all-features analysis uses `ORT_SKIP_DOWNLOAD=1` and does not validate
+  optional ONNX linking or runtime.
 - **PASS:** 14 earlier Chromium checks cover live-source save/reload for four
   protocols, HLS SCTE-35 settings and navigation. They do not verify streaming.
-- **PASS:** the isolated Docker test Compose configuration and Dockerfile static
-  build check. **NOT_AVAILABLE:** full image build, due to executor disk limits;
-  optional ONNX binary download, denied by the configured proxy.
+- **PASS:** the isolated Docker Compose configuration, required native factories
+  and Dockerfile static build check. **NOT_AVAILABLE:** full image build due to
+  executor disk limits; optional ONNX binary download denied by the proxy.
 
 The reusable `integrated_matrix.py` runs seven selected input/output pairings,
 not all 28 combinations. Fresh complete-matrix and recovery results are pending.

@@ -158,6 +158,13 @@ source skips; encoded outputs now drain it before the switch. These latest
 fixes require fresh protocol and recovery runs.
 Do not use this checkpoint as on-air readiness evidence.
 
+A subsequent HLS-input test reproduced an extra MPEG-TS timestamp cycle in
+the adaptive demuxer's compressed audio queue. Its scoped rollover guard then
+passed a full three-event HLS-input/HLS-output run in both renditions. The
+decoder read loop also waits within its existing timeout for the other
+negotiated track before ordering samples. Fresh matrix evidence must identify
+the binary containing both fixes; earlier individual passes do not cover it.
+
 | Mode | Actual output and checks |
 | --- | --- |
 | `srt` (default) | NoAr publishes to MediaMTX `output`; one publisher/reader, SRT drop counters, original-byte native SRT capture, independent FFmpeg decode and a 750 ms payload progress limit. |

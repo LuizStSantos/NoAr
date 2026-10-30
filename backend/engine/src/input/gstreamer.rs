@@ -107,6 +107,7 @@ impl Source {
             .property("uri", &uri)
             .build()
             .context("GStreamer uridecodebin3 is unavailable")?;
+        guard_hls_transport_rollover(&decoder);
         let video_bin = gst::parse::bin_from_description(
             &format!(
                 "queue max-size-buffers=4 max-size-bytes=0 max-size-time=0 ! \
@@ -313,6 +314,24 @@ impl Source {
                     *pending = None;
                 }
             }
+            let info = self.info();
+            let waiting_video = self.pending_audio.is_some()
+                && self.pending_video.is_none()
+                && info.has_video
+                && !self.video.is_eos();
+            let waiting_audio = self.pending_video.is_some()
+                && self.pending_audio.is_none()
+                && info.has_audio
+                && !self.audio.is_eos();
+
+            if (waiting_video || waiting_audio) && Instant::now() < deadline {
+                // Separate decoder threads can finish a few milliseconds
+                // apart. Give the other negotiated track this read budget
+                // before advancing one track and synthesizing missing media.
+                thread::sleep(POLL_INTERVAL);
+                continue;
+            }
+
             let video_first = match (&self.pending_video, &self.pending_audio) {
                 (Some(video), Some(audio)) => sample_pts(video) <= sample_pts(audio),
                 (Some(_), None) => true,
@@ -475,6 +494,81 @@ fn normalized_audio_bin(sample_rate: u32) -> Result<gst::Bin> {
         ),
         true,
     )?)
+}
+
+fn guard_hls_transport_rollover(decoder: &gst::Element) {
+    let Some(bin) = decoder.downcast_ref::<gst::Bin>() else {
+        return;
+    };
+    bin.connect_deep_element_added(|_, _, element| {
+        if element.factory().is_none_or(|f| f.name() != "tsdemux") {
+            return;
+        }
+        let mut parent = element.parent();
+        let mut adaptive_hls = false;
+        while let Some(object) = parent {
+            adaptive_hls |= object
+                .downcast_ref::<gst::Element>()
+                .and_then(gst::Element::factory)
+                .is_some_and(|f| f.name() == "hlsdemux2");
+            parent = object.parent();
+        }
+        if !adaptive_hls {
+            return;
+        }
+        element.connect_pad_added(|_, pad| {
+            pad.add_probe(
+                gst::PadProbeType::BUFFER | gst::PadProbeType::BUFFER_LIST,
+                |pad, info| {
+                    let Some(event) = pad.sticky_event::<gst::event::Segment>(0) else {
+                        return gst::PadProbeReturn::Ok;
+                    };
+                    let Some(start) = event
+                        .segment()
+                        .downcast_ref::<gst::ClockTime>()
+                        .and_then(gst::FormattedSegment::start)
+                    else {
+                        return gst::PadProbeReturn::Ok;
+                    };
+                    // In ignore-PCR mode, tsdemux 1.26 can assign an AAC frame
+                    // just before the segment boundary to the next 33-bit cycle.
+                    // Adaptive demux would then insert a 26-hour gap. Unwrap at
+                    // the compressed pad, before that gap can enter its queue.
+                    if let Some(buffer) = info.buffer_mut() {
+                        unwrap_hls_buffer(buffer.make_mut(), start);
+                    } else if let Some(list) = info.buffer_list_mut() {
+                        let list = list.make_mut();
+                        for index in 0..list.len() {
+                            if let Some(buffer) = list.get_mut(index) {
+                                unwrap_hls_buffer(buffer, start);
+                            }
+                        }
+                    }
+                    gst::PadProbeReturn::Ok
+                },
+            );
+        });
+    });
+}
+
+fn unwrap_hls_buffer(buffer: &mut gst::BufferRef, start: gst::ClockTime) {
+    buffer.set_pts(unwrap_hls_timestamp(buffer.pts(), start));
+    buffer.set_dts(unwrap_hls_timestamp(buffer.dts(), start));
+}
+
+fn unwrap_hls_timestamp(
+    timestamp: Option<gst::ClockTime>,
+    start: gst::ClockTime,
+) -> Option<gst::ClockTime> {
+    const WRAP: u64 = ((1_u128 << 33) * 1_000_000_000 / 90_000) as u64;
+    let timestamp = timestamp?;
+    let delta = timestamp.nseconds().saturating_sub(start.nseconds());
+    let cycles = (u128::from(delta) + u128::from(WRAP / 2)) / u128::from(WRAP);
+    let correction = u64::try_from(cycles * u128::from(WRAP)).ok()?;
+
+    Some(gst::ClockTime::from_nseconds(
+        timestamp.nseconds().checked_sub(correction)?,
+    ))
 }
 
 fn sample_pts(sample: &gst::Sample) -> u64 {
@@ -660,6 +754,118 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
+
+    #[test]
+    fn asynchronous_tracks_are_ordered_before_advancing_the_playout() {
+        crate::gstreamer::init().unwrap();
+        let pipeline = gst::parse::launch(
+            "appsrc name=vsrc format=time caps=\"video/x-raw,format=I420,width=64,height=64,framerate=25/1\" ! appsink name=video sync=false async=false \
+             appsrc name=asrc format=time caps=\"audio/x-raw,format=F32LE,layout=interleaved,channels=2,rate=48000\" ! appsink name=audio sync=false async=false"
+        ).unwrap().downcast::<gst::Pipeline>().unwrap();
+        let video = pipeline
+            .by_name("video")
+            .unwrap()
+            .downcast::<AppSink>()
+            .unwrap();
+        let audio = pipeline
+            .by_name("audio")
+            .unwrap()
+            .downcast::<AppSink>()
+            .unwrap();
+        let video_source = pipeline
+            .by_name("vsrc")
+            .unwrap()
+            .downcast::<gstreamer_app::AppSrc>()
+            .unwrap();
+        let audio_source = pipeline
+            .by_name("asrc")
+            .unwrap()
+            .downcast::<gstreamer_app::AppSrc>()
+            .unwrap();
+        pipeline.set_state(gst::State::Playing).unwrap();
+        let mut buffer = gst::Buffer::with_size(64 * 64 * 3 / 2).unwrap();
+        buffer
+            .get_mut()
+            .unwrap()
+            .set_pts(gst::ClockTime::from_mseconds(40));
+        video_source.push_buffer(buffer).unwrap();
+        let pending_video = video.try_pull_sample(gst::ClockTime::from_seconds(1));
+        assert!(pending_video.is_some());
+        let mut source = Source {
+            pipeline,
+            video,
+            audio,
+            metadata: Arc::new(Mutex::new(SourceInfo {
+                has_video: true,
+                has_audio: true,
+                ..SourceInfo::default()
+            })),
+            error: Arc::new(Mutex::new(None)),
+            abort: Arc::new(AtomicBool::new(false)),
+            pending_video,
+            pending_audio: None,
+            fps: 25,
+            sample_rate: 48_000,
+            eos: false,
+            first_samples: [false; 2],
+            selected_streams: Some((true, true)),
+        };
+        let worker = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(10));
+            let mut buffer = gst::Buffer::from_mut_slice(vec![0_u8; 8 * 1024]);
+            buffer.get_mut().unwrap().set_pts(gst::ClockTime::ZERO);
+            audio_source.push_buffer(buffer).unwrap();
+            audio_source.end_of_stream().unwrap();
+        });
+
+        assert!(
+            matches!(source.next(Duration::from_millis(500)).unwrap(), Some(FrameEvent::Audio(frame)) if frame.pts() == Some(0))
+        );
+        assert!(
+            matches!(source.next(Duration::ZERO).unwrap(), Some(FrameEvent::Video(frame)) if frame.pts() == Some(1))
+        );
+        worker.join().unwrap();
+    }
+
+    #[test]
+    fn hls_transport_rollover_uses_the_current_segment_cycle() {
+        let start = gst::ClockTime::from_seconds(62);
+        let before_start = gst::ClockTime::from_nseconds(61_978_666_666);
+        let cycle = gst::ClockTime::from_nseconds(((1_u128 << 33) * 1_000_000_000 / 90_000) as u64);
+
+        assert_eq!(
+            unwrap_hls_timestamp(Some(before_start + cycle), start),
+            Some(before_start)
+        );
+        assert_eq!(
+            unwrap_hls_timestamp(Some(before_start), start),
+            Some(before_start)
+        );
+        assert_eq!(unwrap_hls_timestamp(Some(start), start), Some(start));
+        assert_eq!(unwrap_hls_timestamp(None, start), None);
+        assert_eq!(
+            unwrap_hls_timestamp(Some(start + cycle), start + cycle),
+            Some(start + cycle)
+        );
+    }
+
+    #[test]
+    fn hls_rollover_preserves_payload_duration_and_composition_offset() {
+        crate::gstreamer::init().unwrap();
+        let cycle = gst::ClockTime::from_nseconds(((1_u128 << 33) * 1_000_000_000 / 90_000) as u64);
+        let mut buffer = gst::Buffer::from_slice(vec![1, 2, 3]);
+        let writable = buffer.get_mut().unwrap();
+        writable.set_pts(cycle + gst::ClockTime::from_mseconds(61_980));
+        writable.set_dts(cycle + gst::ClockTime::from_mseconds(61_960));
+        writable.set_duration(gst::ClockTime::from_mseconds(40));
+
+        unwrap_hls_buffer(writable, gst::ClockTime::from_seconds(62));
+
+        assert_eq!(buffer.pts(), Some(gst::ClockTime::from_mseconds(61_980)));
+        assert_eq!(buffer.dts(), Some(gst::ClockTime::from_mseconds(61_960)));
+        assert_eq!(buffer.duration(), Some(gst::ClockTime::from_mseconds(40)));
+        assert_eq!(buffer.map_readable().unwrap().as_slice(), &[1, 2, 3]);
+    }
 
     #[test]
     fn decoded_frames_use_stream_time_across_adaptive_timestamp_origins_and_file_seeks() {

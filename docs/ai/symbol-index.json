@@ -12976,9 +12976,9 @@
       ]
     },
     "backend/engine/src/input/gstreamer.rs": {
-      "sha256": "924c1fa7603b9568c633b222c25033899232c18ce1f8c3141fa25d96ed1608c5",
+      "sha256": "12ae3e837e713209a9760ad4899c32ac1a792dc15fb4776f6c68c68da9797fb9",
       "language": "Rust",
-      "bytes": 32036,
+      "bytes": 40623,
       "symbols": [
         {
           "name": "SourceInfo",
@@ -13010,103 +13010,127 @@
         },
         {
           "name": "info",
-          "line": 256
+          "line": 257
         },
         {
           "name": "start",
-          "line": 263
+          "line": 264
         },
         {
           "name": "pause",
-          "line": 285
+          "line": 286
         },
         {
           "name": "next",
-          "line": 291
+          "line": 292
         },
         {
           "name": "video_ended",
-          "line": 345
-        },
-        {
-          "name": "log_first_sample",
-          "line": 349
-        },
-        {
-          "name": "audio_ended",
-          "line": 360
-        },
-        {
-          "name": "is_eos",
           "line": 364
         },
         {
+          "name": "log_first_sample",
+          "line": 368
+        },
+        {
+          "name": "audio_ended",
+          "line": 379
+        },
+        {
+          "name": "is_eos",
+          "line": 383
+        },
+        {
           "name": "check_bus",
-          "line": 373
+          "line": 392
         },
         {
           "name": "source_uri",
-          "line": 411
+          "line": 430
         },
         {
           "name": "Drop",
-          "line": 458
+          "line": 477
         },
         {
           "name": "drop",
-          "line": 459
+          "line": 478
         },
         {
           "name": "normalized_audio_bin",
-          "line": 464
+          "line": 483
+        },
+        {
+          "name": "guard_hls_transport_rollover",
+          "line": 499
+        },
+        {
+          "name": "unwrap_hls_buffer",
+          "line": 554
+        },
+        {
+          "name": "unwrap_hls_timestamp",
+          "line": 559
         },
         {
           "name": "sample_pts",
-          "line": 480
+          "line": 574
         },
         {
           "name": "sample_timestamp",
-          "line": 484
+          "line": 578
         },
         {
           "name": "video_frame",
-          "line": 498
+          "line": 592
         },
         {
           "name": "audio_frame",
-          "line": 540
+          "line": 634
         },
         {
           "name": "configure_source",
-          "line": 572
+          "line": 666
         },
         {
           "name": "loopback_proxy_exception",
-          "line": 623
+          "line": 717
         },
         {
           "name": "set_property",
-          "line": 647
+          "line": 741
         },
         {
           "name": "tests",
-          "line": 659
+          "line": 753
+        },
+        {
+          "name": "asynchronous_tracks_are_ordered_before_advancing_the_playout",
+          "line": 759
+        },
+        {
+          "name": "hls_transport_rollover_uses_the_current_segment_cycle",
+          "line": 831
+        },
+        {
+          "name": "hls_rollover_preserves_payload_duration_and_composition_offset",
+          "line": 853
         },
         {
           "name": "decoded_frames_use_stream_time_across_adaptive_timestamp_origins_and_file_seeks",
-          "line": 665
+          "line": 871
         },
         {
           "name": "native_audio_normalization_preserves_samples_through_timestamp_jitter",
-          "line": 707
+          "line": 913
         },
         {
           "name": "stream_selection_opens_sources_with_only_one_track",
-          "line": 778
+          "line": 984
         },
         {
           "name": "explicit_proxy_exceptions_are_limited_to_exact_loopback_hosts",
-          "line": 840
+          "line": 1046
         }
       ]
     },
@@ -17202,9 +17226,9 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "9b8f611b3a38d2e25d414c00bd8e893af3958ba1f471c86d85dd06e53a9ca168",
+      "sha256": "df16a93bebb7cdadff40648bf4a7395ea4c6046467267cef89ec535280814132",
       "language": "Rust",
-      "bytes": 61011,
+      "bytes": 61926,
       "symbols": [
         {
           "name": "PlaybackSkipped",
@@ -17356,211 +17380,211 @@
         },
         {
           "name": "seconds_to_microseconds",
-          "line": 768
+          "line": 792
         },
         {
           "name": "send_audio",
-          "line": 773
+          "line": 797
         },
         {
           "name": "ExternalAudioInput",
-          "line": 821
+          "line": 845
         },
         {
           "name": "ExternalAudioInput",
-          "line": 829
+          "line": 853
         },
         {
           "name": "open",
-          "line": 830
+          "line": 854
         },
         {
           "name": "until_video",
-          "line": 859
+          "line": 883
         },
         {
           "name": "VideoCompositor",
-          "line": 909
+          "line": 933
         },
         {
           "name": "VideoCompositor",
-          "line": 923
+          "line": 947
         },
         {
           "name": "new",
-          "line": 924
+          "line": 948
         },
         {
           "name": "open_input",
-          "line": 967
+          "line": 991
         },
         {
           "name": "OpeningCancellation",
-          "line": 1019
+          "line": 1043
         },
         {
           "name": "Drop",
-          "line": 1021
+          "line": 1045
         },
         {
           "name": "drop",
-          "line": 1022
+          "line": 1046
         },
         {
           "name": "hold_until_open",
-          "line": 1030
+          "line": 1054
         },
         {
           "name": "RuntimeTextOverlay",
-          "line": 1079
+          "line": 1103
         },
         {
           "name": "RuntimeTextOverlay",
-          "line": 1091
+          "line": 1115
         },
         {
           "name": "new",
-          "line": 1092
+          "line": 1116
         },
         {
           "name": "update",
-          "line": 1131
+          "line": 1155
         },
         {
           "name": "encode_composited_frame",
-          "line": 1161
+          "line": 1185
         },
         {
           "name": "video_frame_needs_write",
-          "line": 1228
+          "line": 1252
         },
         {
           "name": "apply_overlays",
-          "line": 1237
+          "line": 1261
         },
         {
           "name": "draw_logo",
-          "line": 1316
+          "line": 1340
         },
         {
           "name": "apply_video_fade",
-          "line": 1333
+          "line": 1357
         },
         {
           "name": "apply_audio_fade",
-          "line": 1361
+          "line": 1385
         },
         {
           "name": "write_fallback",
-          "line": 1373
+          "line": 1397
         },
         {
           "name": "synchronize_timeline",
-          "line": 1410
+          "line": 1434
         },
         {
           "name": "synchronize_silence_to_video",
-          "line": 1445
+          "line": 1469
         },
         {
           "name": "synchronize_live_tracks",
-          "line": 1467
+          "line": 1491
         },
         {
           "name": "synchronize_after_skip",
-          "line": 1493
+          "line": 1517
         },
         {
           "name": "padding_to_sync",
-          "line": 1518
+          "line": 1542
         },
         {
           "name": "div_ceil",
-          "line": 1554
+          "line": 1578
         },
         {
           "name": "write_black_frames",
-          "line": 1558
+          "line": 1582
         },
         {
           "name": "FallbackOverlays",
-          "line": 1579
+          "line": 1603
         },
         {
           "name": "FallbackOverlays",
-          "line": 1584
+          "line": 1608
         },
         {
           "name": "new",
-          "line": 1585
+          "line": 1609
         },
         {
           "name": "apply",
-          "line": 1622
+          "line": 1646
         },
         {
           "name": "write_padding_video_frames",
-          "line": 1636
+          "line": 1660
         },
         {
           "name": "black_video_frame_for_config",
-          "line": 1659
+          "line": 1683
         },
         {
           "name": "black_video_frame",
-          "line": 1663
+          "line": 1687
         },
         {
           "name": "fill_plane",
-          "line": 1671
+          "line": 1695
         },
         {
           "name": "write_silence_frame",
-          "line": 1691
+          "line": 1715
         },
         {
           "name": "write_silence",
-          "line": 1714
-        },
-        {
-          "name": "live_interleave_tests",
           "line": 1738
         },
         {
+          "name": "live_interleave_tests",
+          "line": 1762
+        },
+        {
           "name": "live_source_failures_preserve_playback_control_signals",
-          "line": 1742
-        },
-        {
-          "name": "Capture",
-          "line": 1750
-        },
-        {
-          "name": "FrameOutput",
-          "line": 1755
-        },
-        {
-          "name": "audio_frame_size",
-          "line": 1756
-        },
-        {
-          "name": "encode_video",
-          "line": 1760
-        },
-        {
-          "name": "encode_audio",
           "line": 1766
         },
         {
+          "name": "Capture",
+          "line": 1774
+        },
+        {
+          "name": "FrameOutput",
+          "line": 1779
+        },
+        {
+          "name": "audio_frame_size",
+          "line": 1780
+        },
+        {
+          "name": "encode_video",
+          "line": 1784
+        },
+        {
+          "name": "encode_audio",
+          "line": 1790
+        },
+        {
           "name": "missing_live_video_holds_a_picture_while_audio_continues",
-          "line": 1775
+          "line": 1799
         },
         {
           "name": "missing_live_audio_inserts_silence_without_exceeding_the_event_end",
-          "line": 1788
+          "line": 1812
         },
         {
           "name": "healthy_live_tracks_are_not_padded",
-          "line": 1822
+          "line": 1846
         }
       ]
     },
@@ -18687,9 +18711,9 @@
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
-      "sha256": "61e0bc5ec510dbf31b2a4ff49fa156c187e1c2c7eaa35b82f9796beee72c2f50",
+      "sha256": "eb1d6ba5bd957c8e2f946d0375648c529202a2652847fcb14710536a0c24619f",
       "language": "Markdown",
-      "bytes": 10210,
+      "bytes": 10324,
       "symbols": []
     },
     "docs/gstreamer-testing.md": {
@@ -30868,9 +30892,9 @@
       "symbols": []
     },
     "qa/gstreamer/INTEGRATED.md": {
-      "sha256": "0a605905244a7771446f335725c98f27b2e8e407cbbb3ad83786eeff4f13e1e5",
+      "sha256": "dc296fc780680f31110030bd8e60a71c0a5099b3e6c75cef8655fe9b719b9805",
       "language": "Markdown",
-      "bytes": 10490,
+      "bytes": 10945,
       "symbols": []
     },
     "qa/gstreamer/README.md": {

@@ -441,6 +441,30 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
     let opening_started = Instant::now();
     let mut opened = open_input(path, cfg, timeline, output, playback_control, preloaded)
         .map_err(|error| source_error(error, live))?;
+    if live && log::log_enabled!(log::Level::Debug) {
+        for video in [true, false] {
+            let times = opened
+                .preroll
+                .iter()
+                .filter_map(|event| match event {
+                    FrameEvent::Video(frame) if video => {
+                        frame.pts().map(|pts| pts as f64 / f64::from(cfg.fps))
+                    }
+                    FrameEvent::Audio(frame) if !video => frame
+                        .pts()
+                        .map(|pts| pts as f64 / f64::from(cfg.sample_rate)),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+            debug!(
+                "GStreamer live preroll {}: first={:?}, last={:?}, frames={}",
+                if video { "video" } else { "audio" },
+                times.first(),
+                times.last(),
+                times.len()
+            );
+        }
+    }
     debug!(channel = cfg.channel_id.unwrap_or_default();
         "GStreamer source opened in {:?}; output video={}, audio={}", opening_started.elapsed(), timeline.video_pts, timeline.audio_pts);
     let info = opened.input.info();

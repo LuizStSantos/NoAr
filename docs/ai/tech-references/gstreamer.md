@@ -30,6 +30,17 @@ they do not select another playback engine. Relevant official references:
 [hlsdemux2](https://gstreamer.freedesktop.org/documentation/adaptivedemux2/hlsdemux2.html),
 [audiorate](https://gstreamer.freedesktop.org/documentation/audiorate/index.html).
 
+For MPEG-TS HLS startup, inspect `guard_hls_transport_rollover` before changing
+clock offsets. Native 1.26.2 adaptive HLS forces its internal TS demuxer to
+ignore PCR; an audio timestamp assigned to an extra 33-bit cycle can make the
+adaptive track insert a 26-hour gap. NoAr unwraps those compressed timestamps
+against their current segment, only inside `hlsdemux2`. Relevant versioned
+sources are the [adaptive parser setup](https://github.com/GStreamer/gstreamer/blob/1.26.2/subprojects/gst-plugins-good/ext/adaptivedemux2/gstadaptivedemux-stream.c)
+and [adaptive track gap handling](https://github.com/GStreamer/gstreamer/blob/1.26.2/subprojects/gst-plugins-good/ext/adaptivedemux2/gstadaptivedemux-track.c).
+The sample reader also uses its bounded read timeout to let both negotiated
+decoder tracks arrive before choosing their timestamp order. Single-track
+sources and stalled tracks still make progress without an unlimited wait.
+
 Check the native version with `pkg-config` and each factory with
 `gst-inspect-1.0`. Pin Rust documentation to the version in Cargo.lock. Some
 official web pages describe newer native releases; compare every property with
