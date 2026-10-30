@@ -6,6 +6,9 @@ This branch is for development and isolated tests. It is not a release or an
 on-air readiness approval. No version bump, release, production deployment or
 main-branch merge is part of this checkpoint.
 
+To build this GitHub branch on a separate Docker test server and open the real
+NoAr interface, follow [Test the GStreamer branch from GitHub](gstreamer-testing.md).
+
 ## Protocol matrix development checkpoint
 
 The current follow-up adds RTMP/HLS/UDP protocol observers, an independent
@@ -30,6 +33,34 @@ uses `ORT_SKIP_DOWNLOAD=1` and does not validate native ONNX linking/runtime.
 See [the current harness instructions](../qa/gstreamer/INTEGRATED.md).
 Earlier checkpoint evidence below applies to those recorded runs, not to
 the unfinished HLS SCTE-35 expansion.
+
+### Subsequent bounded protocol results
+
+- **PASS:** native HLS SCTE-35 in two subsequent 60-second runs, including
+  automatic Scheduler admission. Both renditions pass in-band cue decoding,
+  CRCs, out/in copies, shared date-range IDs, cancellation, legacy markers,
+  segment/IDR boundaries, media decoding and receiver progress.
+- **PASS:** UDP normal with external SRT input, and UDP SCTE-35 with direct UDP
+  live input, both using three automatically admitted Scheduler events.
+- **PASS:** 14 Chromium checks, including save/reload of RTMP, SRT, HLS and UDP
+  live sources, HLS SCTE-35 settings, login/navigation and no page errors.
+- **FAIL:** automatic RTMP live-input runs have missing or insufficient decoded
+  live audio. A stream can show live video while this gate fails.
+- **FAIL:** the first SRT SCTE-35 retry after correcting the test receiver's
+  native latency units still fails the media decode gate. Cue checks pass,
+  but this is not an overall PASS.
+- **NOT_RUN:** HLS live-input retest after restricting GLib's lowercase
+  `no_proxy` exception to the authorized loopback test endpoints. The prior
+  attempt was sent through the proxy and supplied no live media.
+- **PASS:** the separate Docker test Compose configuration resolves the expected
+  build context, isolated data directory, local image, project name and disabled
+  updater labels. The complete image and actual Docker UI remain unverified.
+
+Input diagnostics now log stream metadata and each track's first timestamp
+and segment once per opened source, to investigate the unresolved RTMP audio
+issue. The reusable `integrated_matrix.py` runs seven selected pairings with
+four input protocols; it does not claim coverage of all 28 combinations.
+The overall protocol expansion remains **NOT_READY**.
 
 ## Implementation
 

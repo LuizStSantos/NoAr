@@ -12968,9 +12968,9 @@
       ]
     },
     "backend/engine/src/input/gstreamer.rs": {
-      "sha256": "6cad66b6647e3d7cde05fe1ee323312017371a8dc59ef6817fd46c2a09e19fff",
+      "sha256": "2c896c404060b5c4dbde21df5d582f1ce3604c2dafd630353b0566cee4990d82",
       "language": "Rust",
-      "bytes": 19950,
+      "bytes": 20606,
       "symbols": [
         {
           "name": "SourceInfo",
@@ -12986,83 +12986,87 @@
         },
         {
           "name": "Source",
-          "line": 65
-        },
-        {
-          "name": "open",
           "line": 66
         },
         {
+          "name": "open",
+          "line": 67
+        },
+        {
           "name": "open_with_options",
-          "line": 70
+          "line": 71
         },
         {
           "name": "open_with_options_and_cancel",
-          "line": 85
+          "line": 86
         },
         {
           "name": "info",
-          "line": 251
+          "line": 254
         },
         {
           "name": "start",
-          "line": 258
+          "line": 261
         },
         {
           "name": "pause",
-          "line": 280
+          "line": 283
         },
         {
           "name": "next",
-          "line": 286
+          "line": 289
         },
         {
           "name": "video_ended",
-          "line": 328
+          "line": 333
+        },
+        {
+          "name": "log_first_sample",
+          "line": 337
         },
         {
           "name": "audio_ended",
-          "line": 332
+          "line": 348
         },
         {
           "name": "is_eos",
-          "line": 336
+          "line": 352
         },
         {
           "name": "check_bus",
-          "line": 345
+          "line": 361
         },
         {
           "name": "source_uri",
-          "line": 374
+          "line": 390
         },
         {
           "name": "Drop",
-          "line": 421
+          "line": 437
         },
         {
           "name": "drop",
-          "line": 422
+          "line": 438
         },
         {
           "name": "sample_pts",
-          "line": 427
+          "line": 443
         },
         {
           "name": "video_frame",
-          "line": 434
+          "line": 450
         },
         {
           "name": "audio_frame",
-          "line": 477
+          "line": 493
         },
         {
           "name": "configure_source",
-          "line": 509
+          "line": 525
         },
         {
           "name": "set_property",
-          "line": 548
+          "line": 564
         }
       ]
     },
@@ -18583,9 +18587,9 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "8631f959df35b58a3393ed778a79289add8eac19555c9ff33ab63996a8965bb1",
+      "sha256": "536a43c7d5f7125d3a11c6a64cd1f2913c0c877f7e464a3fbafe05f384fa5243",
       "language": "Markdown",
-      "bytes": 6164,
+      "bytes": 6309,
       "symbols": []
     },
     "docs/docker.md": {
@@ -18607,9 +18611,15 @@
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
-      "sha256": "f75250ca6c40de2d2d064e038732f65daf4e8b52827d83b83e9be9962f1d07c8",
+      "sha256": "351e9bc8a990d480fa91e64043c6e90a6a85c908fd1e66796e6e714e9a893bcc",
       "language": "Markdown",
-      "bytes": 7996,
+      "bytes": 9944,
+      "symbols": []
+    },
+    "docs/gstreamer-testing.md": {
+      "sha256": "c8a6bbfccc4a6f9956a21909b313898b420c511477354cd96fc7ef6aa740c9e5",
+      "language": "Markdown",
+      "bytes": 7784,
       "symbols": []
     },
     "docs/ingest_error.md": {
@@ -30782,9 +30792,9 @@
       "symbols": []
     },
     "qa/gstreamer/INTEGRATED.md": {
-      "sha256": "9529b6cc2f6d3a7ad53d324bcc1e591659a46e3186fefd872e25ccf24b1c95e2",
+      "sha256": "2fac0dd78570345f397ef0953453836993c40e609c268c7ef0b0b664e2e5f566",
       "language": "Markdown",
-      "bytes": 8596,
+      "bytes": 9542,
       "symbols": []
     },
     "qa/gstreamer/README.md": {
@@ -30797,6 +30807,12 @@
       "sha256": "8be2bf7457f2b2ae877b728b054a224c8ea1b0f6685cde2fd798a98c12dfed5d",
       "language": "Markdown",
       "bytes": 4882,
+      "symbols": []
+    },
+    "qa/gstreamer/compose.integrated.yaml": {
+      "sha256": "b55356b01e56aa671c4683d57137f79446c3050b21d0c7248167a79dee8be9f1",
+      "language": "YAML",
+      "bytes": 1016,
       "symbols": []
     },
     "qa/gstreamer/compose.yaml": {
@@ -30924,10 +30940,21 @@
         }
       ]
     },
-    "qa/gstreamer/integrated_smoke.py": {
-      "sha256": "9600c11aa043b44de429805c6715a673d4638e812b17708322d0b9d4d6ba1898",
+    "qa/gstreamer/integrated_matrix.py": {
+      "sha256": "175696765d452f29189aae2d802eef5b782c3fc8b6727f35166b6caa94944a3e",
       "language": "Python",
-      "bytes": 23568,
+      "bytes": 2945,
+      "symbols": [
+        {
+          "name": "main",
+          "line": 17
+        }
+      ]
+    },
+    "qa/gstreamer/integrated_smoke.py": {
+      "sha256": "61e311e35a148a6855c15dc7299c161ff0469e95f188a013d8975a331762551d",
+      "language": "Python",
+      "bytes": 23809,
       "symbols": [
         {
           "name": "output_connections",
@@ -30955,7 +30982,7 @@
         },
         {
           "name": "observe_progress",
-          "line": 260
+          "line": 263
         }
       ]
     },

@@ -1,5 +1,10 @@
 # Actual NoAr integration smoke test
 
+For a separate Docker installation with the real web UI on a company/test
+server, use [the GitHub branch testing guide](../../docs/gstreamer-testing.md)
+and `compose.integrated.yaml`. The script below is a different, disposable
+host-binary/API smoke harness; it does not use that Compose project.
+
 `integrated_smoke.py` tests the compiled NoAr application and its authenticated
 HTTP API, scheduler, native media engine and recording output. It is separate
 from the standalone Python prototype operated by `run.sh`.
@@ -22,7 +27,8 @@ already active MediaMTX media path. All media endpoints are loopback-only.
   `docker compose --project-name noar-gstreamer-prototype --file compose.yaml run --rm --no-deps fixtures`
   from `qa/gstreamer` if the files do not already exist.
 - Free loopback ports: HTTP 19787, SRT/UDP 29890, RTMP/TCP 21935,
-  raw MPEG-TS/UDP 29910 and MediaMTX API/TCP 29997.
+  HLS input/TCP 21988, raw MPEG-TS/UDP 29910, SRT capture/UDP 29911,
+  live input/UDP 29912 and MediaMTX API/TCP 29997.
 - SCTE-35 mode additionally requires the independent `threefive` decoder pinned
   in `requirements.txt`. The other modes use the Python standard library.
 
@@ -41,6 +47,7 @@ docker run --detach --rm --name noar-gstreamer-integrated-mediamtx \
   --publish 127.0.0.1:29890:8890/udp \
   --publish 127.0.0.1:29997:9997/tcp \
   --publish 127.0.0.1:21935:1935/tcp \
+  --publish 127.0.0.1:21988:8888/tcp \
   --mount "type=bind,src=$PWD/qa/gstreamer/integrated-mediamtx.yml,dst=/mediamtx.yml,readonly" \
   bluenviron/mediamtx:1.15.3
 ```
@@ -75,8 +82,21 @@ NOAR_GST_STAGING=1 NOAR_GST_BINARY="$PWD/target/debug/noar" \
 ```
 
 Add `NOAR_GST_TEST_RECOVERY=1` to RTMP, HLS or SCTE-35 mode to repeat the
-source-loss scenario for that output. Each run uses the same external synthetic
-SRT input; selecting RTMP changes the output, not the input server architecture.
+source-loss scenario for that output. The default input is external SRT; set
+`NOAR_GST_TEST_INPUT=rtmp|srt|hls|udp` to select another live input protocol.
+NoAr does not host an RTMP/SRT ingest server.
+
+Run the seven-output smoke matrix with all four Scheduler input protocols:
+
+```sh
+NOAR_GST_STAGING=1 NOAR_GST_BINARY="$PWD/target/debug/noar" \
+  python3 qa/gstreamer/integrated_matrix.py
+```
+
+Add `--recovery` for four-second source interruptions. The matrix uses automatic
+wall-time admission for three Clock/Continue events per case. It covers seven
+selected input/output pairings, not all 28 possible combinations. Each case
+records its input, output, cue setting, admission mode and binary hash.
 
 Each run lasts approximately 60 seconds plus setup and capture analysis. The
 test triggers three eight-second live events, with Clock, Continue and Clock

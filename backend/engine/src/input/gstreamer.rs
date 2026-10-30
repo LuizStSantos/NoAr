@@ -60,6 +60,7 @@ pub(crate) struct Source {
     fps: u32,
     sample_rate: u32,
     eos: bool,
+    first_samples: [bool; 2],
 }
 
 impl Source {
@@ -208,6 +209,7 @@ impl Source {
             fps: config.fps,
             sample_rate: config.sample_rate,
             eos: false,
+            first_samples: [true; 2],
         };
         // Negotiate seekable files while paused. Starting them in PLAYING and
         // immediately pausing a full appsink can race the first flushing seek.
@@ -244,6 +246,7 @@ impl Source {
                 .duration =
                 Some(duration.nseconds() as f64 / gst::ClockTime::SECOND.nseconds() as f64);
         }
+        log::debug!("GStreamer decoded streams: {:?}", source.info());
 
         Ok(source)
     }
@@ -306,6 +309,7 @@ impl Source {
 
             if video_first {
                 let sample = self.pending_video.take().context("video sample missing")?;
+                self.log_first_sample(&sample, 0);
 
                 return Ok(Some(FrameEvent::Video(benchmark::measure_success(
                     Stage::InputVideo,
@@ -313,6 +317,7 @@ impl Source {
                 )?)));
             }
             if let Some(sample) = self.pending_audio.take() {
+                self.log_first_sample(&sample, 1);
                 return Ok(Some(FrameEvent::Audio(benchmark::measure_success(
                     Stage::InputAudio,
                     || audio_frame(&sample, self.sample_rate),
@@ -327,6 +332,17 @@ impl Source {
 
     pub(crate) fn video_ended(&self) -> bool {
         self.pending_video.is_none() && self.video.is_eos()
+    }
+
+    fn log_first_sample(&mut self, sample: &gst::Sample, track: usize) {
+        if std::mem::take(&mut self.first_samples[track]) {
+            log::debug!(
+                "GStreamer first {} sample: PTS {:?}, segment {:?}",
+                if track == 0 { "video" } else { "audio" },
+                sample.buffer().and_then(gst::BufferRef::pts),
+                sample.segment()
+            );
+        }
     }
 
     pub(crate) fn audio_ended(&self) -> bool {

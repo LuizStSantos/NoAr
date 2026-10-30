@@ -1,0 +1,34 @@
+name: noar-gstreamer-staging
+
+services:
+  noar:
+    image: noar-gstreamer-staging:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        NOAR_COMMIT: ${NOAR_COMMIT:-}
+    restart: "no"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    environment:
+      TZ: America/Sao_Paulo
+    volumes:
+      - ./artifacts/server-data:/data
+    ports:
+      - "${NOAR_GST_BIND_IP:-127.0.0.1}:${NOAR_GST_UI_PORT:-18787}:8787"
+      - "${NOAR_GST_BIND_IP:-127.0.0.1}:${NOAR_GST_UDP_INPUT_PORT:-19912}:15000/udp"
+    depends_on:
+      - mediamtx
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.15.3
+    restart: "no"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    volumes:
+      - ./integrated-mediamtx.yml:/mediamtx.yml:ro
+    ports:
+      - "${NOAR_GST_BIND_IP:-127.0.0.1}:${NOAR_GST_SRT_PORT:-19890}:8890/udp"
+      - "${NOAR_GST_BIND_IP:-127.0.0.1}:${NOAR_GST_RTMP_PORT:-11935}:1935"
+      - "${NOAR_GST_BIND_IP:-127.0.0.1}:${NOAR_GST_HLS_PORT:-19888}:8888"

@@ -131,6 +131,9 @@ try:
         check_port.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         check_port.bind(('127.0.0.1', 19787))
     env = os.environ.copy()
+    # GLib's HTTP proxy resolver reads lowercase no_proxy. Restrict this
+    # exception to the explicitly authorized loopback staging endpoints.
+    env['no_proxy'] = ','.join(filter(None, [env.get('no_proxy', ''), '127.0.0.1', 'localhost']))
     env.update({'XDG_CACHE_HOME': str(ROOT / 'cache'), 'TZ': 'UTC',
         'DB': str(ROOT / 'noar.db'), 'NOAR_SETUP_LOGS': str(ROOT / 'logs'),
         'NOAR_SETUP_STORAGE': str(ROOT / 'storage'), 'NOAR_SETUP_PLAYLISTS': str(ROOT / 'playlists'),
@@ -212,7 +215,7 @@ try:
         raw_capture = UdpCapture(ROOT/'capture.ts')
     if RAW_SRT:
         capture = start('receiver', ['python3', str(REPO/'qa/gstreamer/srt_capture.py'),
-            str(ROOT/'capture.ts'), 'srt://127.0.0.1:29911?mode=listener&latency=200000'])
+            str(ROOT/'capture.ts'), 'srt://127.0.0.1:29911?mode=listener&latency=200'])
         time.sleep(0.5)
     api('/api/control/1/process', {'command': 'start'}, 'POST')
     for _ in range(150):
