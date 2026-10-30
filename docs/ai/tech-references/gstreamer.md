@@ -8,7 +8,7 @@ canonical research workflow lives in
 | Question | Project entry point | Official reference |
 | --- | --- | --- |
 | Runtime setup and CPU frame conversion | `backend/engine/src/gstreamer.rs` | Application development, VideoInfo/VideoConverter Rust APIs |
-| Client inputs, caps, seeking and timestamps | `input/gstreamer.rs`, `input/preload.rs`, `playout.rs` | AppSink, state changes, seeking and synchronization |
+| Client inputs, caps, seeking and timestamps | `input/gstreamer.rs`, `input/preload.rs`, `playout.rs` | uridecodebin3, hlsdemux2, audiorate, AppSink, state changes and synchronization |
 | Persistent encoding and separate destinations | `output/gstreamer_output.rs`, `output/pipeline.rs` | AppSrc, segments, encoder/parser/muxer pad caps |
 | SRT/RTMP/UDP reconnects | `output/link.rs` | Installed srtsink/rtmp2sink/udpsink properties and units |
 | HLS, WebVTT and recording | `output/gst_hls.rs`, `output/recording_native.rs` | splitmuxsink, MPEG-TS and HLS RFC 8216 |
@@ -19,6 +19,16 @@ Paths in the engine column after the first row are relative to
 `backend/engine/src/`. Confirm them in current source and use the repository map
 for symbols. `backend/engine/src/utils/media_capabilities.rs` detects native
 plugins; legacy public `Ffmpeg*` names preserve API compatibility.
+
+Live/file playback uses `uridecodebin3` so adaptive HLS uses `hlsdemux2`.
+Selected-stream messages also identify audio-only and video-only inputs.
+Native `audiorate` preserves the sample clock across MPEG-TS PCR adjustments
+and millisecond FLV timestamps before frames enter the playout timeline.
+Graphics/discovery helpers can still use older native GStreamer elements;
+they do not select another playback engine. Relevant official references:
+[uridecodebin3](https://gstreamer.freedesktop.org/documentation/playback/uridecodebin3.html),
+[hlsdemux2](https://gstreamer.freedesktop.org/documentation/adaptivedemux2/hlsdemux2.html),
+[audiorate](https://gstreamer.freedesktop.org/documentation/audiorate/index.html).
 
 Check the native version with `pkg-config` and each factory with
 `gst-inspect-1.0`. Pin Rust documentation to the version in Cargo.lock. Some

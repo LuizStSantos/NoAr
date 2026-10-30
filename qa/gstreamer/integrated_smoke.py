@@ -15,6 +15,7 @@ import secrets
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -33,7 +34,8 @@ if SCTE_TEST and OUTPUT == 'rtmp':
 INPUT = os.environ.get('NOAR_GST_TEST_INPUT', 'srt')
 if INPUT not in ['srt', 'rtmp', 'hls', 'udp']:
     raise SystemExit('NOAR_GST_TEST_INPUT must be srt, rtmp, hls or udp')
-RAW_SRT = OUTPUT == 'srt' and SCTE_TEST
+RAW_SRT = OUTPUT == 'srt'
+DIRECT_SRT = RAW_SRT and SCTE_TEST
 PREROLL = 6 if OUTPUT == 'hls' else 2
 AUTOMATIC = os.environ.get('NOAR_GST_TEST_SCHEDULE') == 'automatic'
 if os.environ.get('NOAR_GST_STAGING') != '1':
@@ -182,7 +184,7 @@ try:
     if SCTE_TEST:
         config['scte35'].update({'enable': True, 'pid': 500, 'preroll': PREROLL,
                                 'min_break': 1, 'max_break': 60})
-    if RAW_SRT:
+    if DIRECT_SRT:
         config['output']['stream_url'] = 'srt://127.0.0.1:29911?mode=caller&latency=200000'
     config['processing']['add_logo'] = False
     config['playlist'].update({'day_start': (now-dt.timedelta(seconds=2)).strftime('%H:%M:%S'), 'length': '24:00:00', 'infinit': True})
@@ -213,13 +215,13 @@ try:
     publisher = source()
     if OUTPUT == 'udp':
         raw_capture = UdpCapture(ROOT/'capture.ts')
-    if RAW_SRT:
-        capture = start('receiver', ['python3', str(REPO/'qa/gstreamer/srt_capture.py'),
+    if DIRECT_SRT:
+        capture = start('receiver', [sys.executable, str(REPO/'qa/gstreamer/srt_capture.py'),
             str(ROOT/'capture.ts'), 'srt://127.0.0.1:29911?mode=listener&latency=200'])
         time.sleep(0.5)
     api('/api/control/1/process', {'command': 'start'}, 'POST')
     for _ in range(150):
-        if RAW_SRT:
+        if DIRECT_SRT:
             ready = (ROOT/'capture.ts').exists() and (ROOT/'capture.ts').stat().st_size > 0
         elif OUTPUT == 'udp':
             ready = bool(raw_capture.observations)
@@ -240,7 +242,10 @@ try:
             break
         time.sleep(0.2)
     else: raise RuntimeError('NoAr did not publish output')
-    if OUTPUT != 'udp' and not RAW_SRT:
+    if RAW_SRT and not DIRECT_SRT:
+        capture = start('receiver', [sys.executable, str(REPO/'qa/gstreamer/srt_capture.py'),
+            str(ROOT/'capture.ts'), 'srt://127.0.0.1:29890?streamid=read:output&latency=200'])
+    elif OUTPUT != 'udp' and not RAW_SRT:
         receiver_url = {'srt': 'srt://127.0.0.1:29890?streamid=read:output&latency=200000',
             'rtmp': 'rtmp://127.0.0.1:21935/live/output', 'hls': BASE + '/public/1/live/stream.m3u8'}[OUTPUT]
         capture = start('receiver', ['ffmpeg', '-hide_banner', '-loglevel', 'warning',
@@ -254,6 +259,9 @@ try:
     next_event = 0
     fault_stopped = False
     fault_restarted = False
+    first_live_active = None
+    fault_stopped_at = None
+    admitted_events = {}
     recovery = os.environ.get('NOAR_GST_TEST_RECOVERY') == '1'
     cue_requests = []
     cancel_requested = False
@@ -287,10 +295,11 @@ try:
         elapsed = time.monotonic() - begin
         if capture is not None and capture.poll() is not None:
             raise RuntimeError('Output receiver exited early; inspect receiver.log')
-        if recovery and elapsed >= 11 and not fault_stopped:
+        if recovery and first_live_active is not None and elapsed >= first_live_active + 3 and not fault_stopped:
             stop(publisher)
             fault_stopped = True
-        if recovery and elapsed >= 15 and not fault_restarted:
+            fault_stopped_at = elapsed
+        if recovery and fault_stopped_at is not None and elapsed >= fault_stopped_at + 4 and not fault_restarted:
             publisher = source()
             fault_restarted = True
         if not AUTOMATIC and next_event < len(events) and elapsed >= 8 + next_event*18:
@@ -313,13 +322,36 @@ try:
         snapshots.append(output_connections())
         if hls_observer is not None:
             hls_observer.poll()
-        statuses.append({'elapsed': elapsed, 'schedule': api('/api/schedule/1/status'),
+        schedule = api('/api/schedule/1/status')
+        if schedule.get('active'):
+            active = schedule['active']
+            admitted_events.setdefault(active['event_id'], {'event_id': active['event_id'],
+                'elapsed': elapsed, 'after': active['after_mode']})
+            if events and active['event_id'] == events[0]['id'] and first_live_active is None:
+                first_live_active = elapsed
+        statuses.append({'elapsed': elapsed, 'schedule': schedule,
             'media': api('/api/control/1/media/current')})
         time.sleep(0.35)
     ended = time.monotonic() - begin
     progress_stop.set()
     progress_thread.join()
     api('/api/control/1/process', {'command': 'stop'}, 'POST')
+    receiver_drain = 0
+    if RAW_SRT:
+        # Timestamp-based SRT delivery can outlive the publisher's stop reply.
+        # Preserve its final payload instead of cutting the capture mid-PES.
+        drain_started = time.monotonic()
+        idle_since = drain_started
+        previous_size = (ROOT/'capture.ts').stat().st_size
+        while time.monotonic() - drain_started < 2:
+            size = (ROOT/'capture.ts').stat().st_size
+            if size != previous_size:
+                previous_size = size
+                idle_since = time.monotonic()
+            if time.monotonic() - idle_since >= 0.35:
+                break
+            time.sleep(0.05)
+        receiver_drain = time.monotonic() - drain_started
     if raw_capture is not None:
         raw_capture.stop()
         progress_samples = [at - begin for at in raw_capture.observations if begin <= at <= begin + ended]
@@ -355,16 +387,17 @@ try:
         'three_video_sources': all(markers['video_quarter_seconds'].get(name, 0) > 0 for name in ['a','b','live']),
         'three_audio_sources': all(markers['audio_quarter_seconds'].get(name, 0) > 0 for name in ['a','b','live']),
         'all_scheduled_live_entries': len(events) == 3 and (AUTOMATIC or len(trigger_times) == len(events))
+            and {event['id'] for event in events}.issubset(admitted_events)
             and markers['video_sequence'].count('live') >= len(events)
             and markers['audio_sequence'].count('live') >= len(events),
         'recording_created': any((ROOT/'recordings').glob('*.mkv')),
         'fault_was_injected': not recovery or (fault_stopped and fault_restarted),
         'decode': decodes(ROOT/'capture.ts'),
     }
-    if OUTPUT in ['srt', 'rtmp'] and not RAW_SRT:
+    if OUTPUT in ['srt', 'rtmp'] and not DIRECT_SRT:
         checks.update({'single_output_publisher': connections['publish']['count'] == 1,
                        'single_output_reader': connections['read']['count'] == 1})
-    if OUTPUT == 'srt' and not RAW_SRT:
+    if OUTPUT == 'srt' and not DIRECT_SRT:
         checks['no_srt_packet_drops'] = all(connections[key]['drop_statistics_available']
             and connections[key]['maximum_send_drops'] == 0 and connections[key]['maximum_receive_drops'] == 0
             for key in ['publish', 'read'])
@@ -376,12 +409,13 @@ try:
             cue_checks, cue_metrics = hls_observer.scte35(cue_requests)
             checks.update(cue_checks)
             extra_metrics['scte35'] = cue_metrics
-    if OUTPUT == 'udp':
+    if OUTPUT == 'udp' or RAW_SRT:
         transport = transport_metrics(ROOT/'capture.ts')
-        checks['udp_capture'] = bool(raw_capture.observations) and not raw_capture.errors
-        checks['udp_transport_continuity'] = not transport['continuity_errors'] and not transport['transport_errors']
+        if OUTPUT == 'udp':
+            checks['udp_capture'] = bool(raw_capture.observations) and not raw_capture.errors
+        checks[OUTPUT + '_transport_continuity'] = not transport['continuity_errors'] and not transport['transport_errors']
         if not SCTE_TEST:
-            checks['udp_scte35_disabled'] = 500 not in transport['pids']
+            checks[OUTPUT + '_scte35_disabled'] = 500 not in transport['pids']
         extra_metrics['transport'] = transport
     if SCTE_TEST and OUTPUT != 'hls':
         extra_checks, scte_metrics = scte35_metrics(ROOT/'capture.ts', cue_requests, preroll=PREROLL)
@@ -397,10 +431,15 @@ try:
         'schedule_admission': 'automatic' if AUTOMATIC else 'trigger_api',
         'binary_sha256': BINARY_SHA256,
         'fault_injected': fault_stopped and fault_restarted, 'packets': packets,
-        'connections': connections if OUTPUT in ['srt', 'rtmp'] else {'note': 'MediaMTX is used for input only'}, 'markers': markers,
-        'triggered_events': trigger_times, 'receiver_progress': {
+        'connections': connections if OUTPUT in ['srt', 'rtmp'] and not DIRECT_SRT
+            else {'note': 'MediaMTX is used for input only'}, 'markers': markers,
+        'triggered_events': trigger_times, 'admitted_events': list(admitted_events.values()),
+        'fault_timing': {'first_live_active': first_live_active, 'source_stopped': fault_stopped_at},
+        'receiver_progress': {
             'samples': len(progress_samples), 'maximum_gap_seconds': max(gaps, default=None),
-            'limit_seconds': progress_limit, 'measurement': 'UDP datagram arrival' if raw_capture else 'FFmpeg media progress'},
+            'limit_seconds': progress_limit, 'measurement': 'UDP datagram arrival' if raw_capture
+                else 'Native SRT payload bytes' if RAW_SRT else 'FFmpeg media progress',
+            'shutdown_drain_seconds': receiver_drain},
         'protocol_checks': extra_metrics,
         'recordings': [path.name for path in (ROOT/'recordings').glob('*.mkv')],
         'limitations': ['No browser interaction or hardware validation',

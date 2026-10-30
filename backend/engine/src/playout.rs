@@ -27,7 +27,7 @@ use crate::{
         gstreamer::{FrameEvent, Source},
         preload::{OpenedInput, Preloaded},
     },
-    output::FrameOutput,
+    output::{FrameOutput, PlaybackStopped},
     utils::{
         config::{OutputConfig, TextOverlayState},
         ffmpeg::{make_video_frame_writable, reference_video_frame},
@@ -72,7 +72,12 @@ impl fmt::Display for LiveSourceLost {
 impl Error for LiveSourceLost {}
 
 fn source_error(error: anyhow::Error, live: bool) -> anyhow::Error {
-    if live {
+    if live
+        && !error.is::<PlaybackRestart>()
+        && !error.is::<PlaybackSkipped>()
+        && !error.is::<PlaybackStopped>()
+        && !error.is::<LiveSourceLost>()
+    {
         LiveSourceLost(format!("{error:#}")).into()
     } else {
         error
@@ -428,13 +433,14 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
         duration_seconds.is_none_or(|v| v.is_finite() && v > 0.0),
         "duration must be finite and positive"
     );
-    let live = is_live_input(path);
+    let live = is_live_input(path) || preloaded.as_ref().is_some_and(Preloaded::is_live);
     let seek = if live { None } else { seek_seconds };
     let clip_start = *timeline;
     let origin_video = timeline.video_pts;
     let origin_audio = timeline.audio_pts;
     let opening_started = Instant::now();
-    let mut opened = open_input(path, cfg, timeline, output, playback_control, preloaded)?;
+    let mut opened = open_input(path, cfg, timeline, output, playback_control, preloaded)
+        .map_err(|error| source_error(error, live))?;
     debug!(channel = cfg.channel_id.unwrap_or_default();
         "GStreamer source opened in {:?}; output video={}, audio={}", opening_started.elapsed(), timeline.video_pts, timeline.audio_pts);
     let info = opened.input.info();
@@ -1731,6 +1737,14 @@ fn write_silence<O: FrameOutput>(
 #[cfg(test)]
 mod live_interleave_tests {
     use super::*;
+
+    #[test]
+    fn live_source_failures_preserve_playback_control_signals() {
+        assert!(source_error(PlaybackRestart.into(), true).is::<PlaybackRestart>());
+        assert!(source_error(PlaybackSkipped.into(), true).is::<PlaybackSkipped>());
+        assert!(source_error(PlaybackStopped.into(), true).is::<PlaybackStopped>());
+        assert!(source_error(anyhow!("disconnected"), true).is::<LiveSourceLost>());
+    }
 
     #[derive(Default)]
     struct Capture {

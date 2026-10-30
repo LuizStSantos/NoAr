@@ -601,18 +601,19 @@ impl Connection {
                         need_resume = true;
                     }
 
-                    // The connection can open before the muxer supplies its
-                    // header. Read the cache when its first tags arrive, once
-                    // per connection, so RTMP receives FLV/codec headers.
+                    if need_resume && !unit.resume_point {
+                        continue;
+                    }
+
+                    // Codec headers can arrive in separate writes after the
+                    // first metadata tag. Snapshot the cache at the first
+                    // usable keyframe, once per connection.
                     if !preamble_sent {
                         let preamble = lock(&self.shared.preamble).bytes();
                         if let Err(error) = io.write(&preamble) {
                             return Ended::Lost(error);
                         }
                         preamble_sent = true;
-                    }
-                    if need_resume && !unit.resume_point {
-                        continue;
                     }
                     need_resume = false;
 
@@ -622,7 +623,14 @@ impl Connection {
                 }
                 Err(RecvTimeoutError::Timeout) if self.stopped() => return Ended::Closed,
                 Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => return Ended::Closed,
+                Err(RecvTimeoutError::Disconnected) => {
+                    // AppSrc accepts buffers asynchronously. Let the native
+                    // sink consume the final access unit before setting NULL.
+                    if let Err(error) = io.finish() {
+                        log::debug!(channel = self.channel; "Output finalization: {error}");
+                    }
+                    return Ended::Closed;
+                }
             }
         }
     }
@@ -952,6 +960,68 @@ struct NativeTransport {
 }
 
 impl NativeTransport {
+    fn finish(&mut self) -> Result<(), String> {
+        self.source
+            .end_of_stream()
+            .map_err(|error| error.to_string())?;
+        let deadline = Instant::now() + Duration::from_secs(1);
+
+        while Instant::now() < deadline {
+            if let Some(message) = self.bus.timed_pop_filtered(
+                gst::ClockTime::from_mseconds(10),
+                &[gst::MessageType::Eos, gst::MessageType::Error],
+            ) {
+                return match message.view() {
+                    gst::MessageView::Eos(_) => self.wait_for_srt_delivery(),
+                    gst::MessageView::Error(error) => Err(error.error().to_string()),
+                    _ => Ok(()),
+                };
+            }
+            if self.shared.stop.load(Ordering::Acquire) {
+                return Err("output finalization cancelled".to_owned());
+            }
+        }
+
+        Err("native output did not finish within one second".to_owned())
+    }
+
+    fn wait_for_srt_delivery(&self) -> Result<(), String> {
+        if self.kind != TransportKind::Srt {
+            return Ok(());
+        }
+        // The native plugin uses SRTO_LINGER=0. EOS drains AppSrc, but SRT
+        // can still be sending accepted packets. Wait for wire activity to
+        // settle for its latency, within the bounded close deadline.
+        let stats = self.sink.property::<gst::Structure>("stats");
+        let latency = stats
+            .get::<i32>("negotiated-latency-ms")
+            .unwrap_or(0)
+            .max(self.sink.property::<i32>("latency"))
+            .clamp(0, 1000);
+        let quiet = Duration::from_millis(latency.max(20) as u64);
+        let deadline = Instant::now() + Duration::from_secs(1);
+        let mut idle_since = Instant::now();
+        let mut sent = stats.get::<u64>("bytes-sent").unwrap_or(0);
+
+        while Instant::now() < deadline {
+            if self.shared.stop.load(Ordering::Acquire) {
+                return Err("SRT finalization cancelled".to_owned());
+            }
+            let stats = self.sink.property::<gst::Structure>("stats");
+            let current = stats.get::<u64>("bytes-sent").unwrap_or(sent);
+            if current != sent {
+                sent = current;
+                idle_since = Instant::now();
+            }
+            if idle_since.elapsed() >= quiet {
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
+
+        Err("SRT sender did not settle within one second".to_owned())
+    }
+
     fn open(settings: &TransportSettings, format: LinkFormat, shared: Arc<Shared>) -> Result<Self> {
         let pipeline = gst::Pipeline::new();
         let caps = match format {
@@ -1345,6 +1415,90 @@ mod tests {
     }
 
     #[test]
+    fn native_transport_eos_drains_all_queued_bytes_before_close() {
+        crate::gstreamer::init().unwrap();
+        let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = server.local_addr().unwrap().port();
+        let received = thread::spawn(move || {
+            let (mut socket, _) = server.accept().unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(3)))
+                .unwrap();
+            let mut bytes = Vec::new();
+            std::io::Read::read_to_end(&mut socket, &mut bytes).unwrap();
+            bytes
+        });
+        let settings =
+            TransportSettings::parse(&format!("tcp://127.0.0.1:{port}"), &BTreeMap::new()).unwrap();
+        let shared = Arc::new(shared());
+        let mut transport =
+            NativeTransport::open(&settings, LinkFormat::TransportStream, shared).unwrap();
+        let expected = (0..1024 * 1024)
+            .map(|index| (index % 251) as u8)
+            .collect::<Vec<_>>();
+        for chunk in expected.chunks(1316) {
+            transport.write(chunk).unwrap();
+        }
+        transport.finish().unwrap();
+        drop(transport);
+
+        let bytes = received.join().unwrap();
+        assert_eq!(bytes.len(), expected.len());
+        assert!(bytes == expected, "native TCP payload differs");
+    }
+
+    #[test]
+    fn native_srt_eos_delivers_the_final_message_before_socket_close() {
+        crate::gstreamer::init().unwrap();
+        let port = UdpSocket::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let pipeline = gst::parse::launch(&format!(
+            "srtsrc uri=\"srt://127.0.0.1:{port}?mode=listener&latency=50\" ! appsink name=capture sync=false async=false"
+        )).unwrap().downcast::<gst::Pipeline>().unwrap();
+        let capture = pipeline
+            .by_name("capture")
+            .unwrap()
+            .downcast::<gst_app::AppSink>()
+            .unwrap();
+        pipeline.set_state(gst::State::Playing).unwrap();
+        let expected = (0..256 * 1024)
+            .map(|index| (index % 251) as u8)
+            .collect::<Vec<_>>();
+        let length = expected.len();
+        let received = thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(4);
+            let mut bytes = Vec::new();
+            while bytes.len() < length && Instant::now() < deadline {
+                if let Some(sample) = capture.try_pull_sample(gst::ClockTime::from_mseconds(50)) {
+                    bytes.extend_from_slice(
+                        sample.buffer().unwrap().map_readable().unwrap().as_slice(),
+                    );
+                }
+            }
+            bytes
+        });
+        let settings = TransportSettings::parse(
+            &format!("srt://127.0.0.1:{port}?latency=50000"),
+            &BTreeMap::new(),
+        )
+        .unwrap();
+        let mut transport =
+            NativeTransport::open(&settings, LinkFormat::TransportStream, Arc::new(shared()))
+                .unwrap();
+        transport.write(&expected).unwrap();
+        transport.finish().unwrap();
+        drop(transport);
+        let bytes = received.join().unwrap();
+        pipeline.set_state(gst::State::Null).unwrap();
+
+        assert_eq!(bytes.len(), expected.len());
+        assert!(bytes == expected, "native SRT payload differs");
+    }
+
+    #[test]
     fn a_connection_opened_before_the_muxer_still_receives_flv_headers() {
         let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let port = server.local_addr().unwrap().port();
@@ -1364,6 +1518,9 @@ mod tests {
             let mut first = [0];
             assert!(std::io::Read::read(&mut socket, &mut first).is_err());
             ready.send(()).unwrap();
+            // Metadata alone must not send an incomplete cached preamble.
+            assert!(std::io::Read::read(&mut socket, &mut first).is_err());
+            ready.send(()).unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(3)))
                 .unwrap();
@@ -1381,7 +1538,11 @@ mod tests {
         )
         .unwrap();
         connected.recv_timeout(Duration::from_secs(3)).unwrap();
-        sink.write_all(&expected).unwrap();
+        sink.write_all(&[header.as_slice(), &metadata].concat())
+            .unwrap();
+        connected.recv_timeout(Duration::from_secs(3)).unwrap();
+        sink.write_all(&[video.as_slice(), &audio, &key].concat())
+            .unwrap();
 
         assert_eq!(receiver.join().unwrap(), expected);
     }

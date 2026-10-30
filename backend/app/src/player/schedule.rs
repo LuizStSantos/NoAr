@@ -1261,7 +1261,7 @@ async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
     let preloader = manager.preloader.lock().await.clone();
     let deadline = Instant::now() + SIGNAL_WAIT;
 
-    preloader.preload(url);
+    preloader.preload_live(url);
 
     loop {
         match preloader.signal(url) {
@@ -1290,7 +1290,12 @@ async fn preload_event(manager: &ChannelManager, occurrence: &Occurrence) {
         },
     };
 
-    manager.preloader.lock().await.clone().preload(&target);
+    let preloader = manager.preloader.lock().await.clone();
+    if occurrence.event.kind == ScheduleKind::Live {
+        preloader.preload_live(&target);
+    } else {
+        preloader.preload(&target);
+    }
 }
 
 /// Open the clip the programme goes back to shortly before the event ends,

@@ -100,8 +100,11 @@ records its input, output, cue setting, admission mode and binary hash.
 
 Each run lasts approximately 60 seconds plus setup and capture analysis. The
 test triggers three eight-second live events, with Clock, Continue and Clock
-return policies. Recovery mode stops the synthetic publisher for four seconds
-during the first live event and verifies subsequent live admissions. The NoAr
+return policies. Recovery mode waits until the first event is observed active,
+then stops the synthetic publisher three seconds later for four seconds.
+It verifies subsequent live admissions. Reports retain the admitted event IDs
+and fault times, so automatic scheduling is checked against actual API state
+as well as decoded source transitions. The NoAr
 process, input publisher and receiver stop in a `finally` block. The dedicated
 MediaMTX container remains available for another run.
 
@@ -116,6 +119,15 @@ is excluded; duration and transition gates still apply. The terminal interval
 after the last progress update is included so a stall at the end cannot pass
 merely because no later progress sample arrived. Reports record the binary
 SHA-256 at startup.
+
+SRT progress measures original payload bytes received by a native
+`srtsrc ! filesink` observer with unbuffered file writes. Normal SRT still
+travels through the dedicated MediaMTX publisher/reader; SCTE-35 SRT uses
+the direct listener to preserve cues. FFmpeg independently probes and decodes
+the captured bytes. This separates transport progress from FFmpeg's probing,
+remuxing and progress-report buffering while keeping the 750 ms gate.
+Capture shutdown allows up to two seconds for final SRT delivery to settle;
+the original capture is retained without trimming terminal access units.
 
 ## Output-specific checks
 
@@ -135,18 +147,18 @@ listener on loopback UDP 29911: it preserves cues without MediaMTX or FFmpeg
 remuxing. This receiver needs the installed GStreamer library and SRT plugin.
 UDP output uses port 29910; UDP live input uses port 29912.
 
-**The complete seven-output/four-input matrix is not yet validated.** Initial
-normal RTMP/HLS and native UDP SCTE-35 runs passed before the HLS expansion.
-Later recovery runs exposed receiver progress failures; the fixed-size marker
-crop also misclassified the low HLS rendition and now scales with resolution.
-Native HLS SCTE-35 implementation and its tests are still being developed.
-Current HLS follow-up failures include cancellation visibility across
-renditions, an IDR check and one receiver decode error. Do not use this
-checkpoint as on-air readiness evidence.
+**The complete seven-output/four-input matrix is not yet validated.** Follow-up
+automatic Scheduler runs passed UDP normal/SCTE-35, SRT normal/SCTE-35 and HLS
+SCTE-35 individually. HLS live-input tests then exposed HTTP sources being
+treated as seekable media; the Scheduler now explicitly carries live context
+through preloading and playback. RTMP startup tests exposed codec headers
+arriving after metadata; output now snapshots the cached preamble at its first
+usable keyframe. These latest fixes require fresh protocol and recovery runs.
+Do not use this checkpoint as on-air readiness evidence.
 
 | Mode | Actual output and checks |
 | --- | --- |
-| `srt` (default) | NoAr publishes to MediaMTX `output`; one publisher/reader, SRT drop counters, independent FFmpeg capture/decode and a 750 ms receiver progress limit. |
+| `srt` (default) | NoAr publishes to MediaMTX `output`; one publisher/reader, SRT drop counters, original-byte native SRT capture, independent FFmpeg decode and a 750 ms payload progress limit. |
 | `rtmp` | NoAr publishes H.264/AAC to `rtmp://127.0.0.1:21935/live/output`; MediaMTX tracks one publisher/reader and an RTMP receiver is decoded and timestamp-checked. The 750 ms progress limit still applies. SRT drop counters do not apply to this TCP output. |
 | `hls` | NoAr serves its own master/media playlists through `/public/1/live/`. The test fetches every referenced segment while the four-entry window rolls, archives both 640x360 and 320x180 renditions, and checks their timestamps, decoding and live transitions. The progress limit is the maximum advertised target duration plus one second, because segment downloads arrive in bursts. |
 | `scte35` | NoAr sends original MPEG-TS directly to UDP 29910. The test captures bytes before any relay or remuxer can remove signaling, requests two six-second breaks and one announced cancellation, and verifies PMT registration, repeated PMT CRCs, SCTE-35 CRCs/continuity, independent decoding, command lengths, three out/in copies, duration/auto-return, actual two-second pre-roll and exact splice-PTS keyframes. |
@@ -159,7 +171,7 @@ UDP/SRT tests use two seconds. RTMP SCTE-35 is unsupported. No test proves that
 MediaMTX or a downstream ad platform preserves or acts on these cues.
 
 Recording presence does not prove recording decode or retention. This test
-does not exercise browser clicks, automatic wall-time admission, GPU playback,
+does not exercise browser clicks, GPU playback,
 ad insertion or a long soak. Input protocols and automatic admission only count
 as verified when an actual corresponding run passes. Each run covers only its
 selected output. A smoke PASS is not a release approval.

@@ -23,7 +23,7 @@ use ffmpeg_next::{
 };
 use gstreamer_app::AppSink;
 use gstreamer_video::{VideoFrameExt, VideoFrameRef, VideoInfo};
-use url::Url;
+use url::{Host, Url};
 
 use crate::{
     benchmark::{self, Stage},
@@ -61,6 +61,7 @@ pub(crate) struct Source {
     sample_rate: u32,
     eos: bool,
     first_samples: [bool; 2],
+    selected_streams: Option<(bool, bool)>,
 }
 
 impl Source {
@@ -102,10 +103,10 @@ impl Source {
 
         let (uri, protocol_options) = source_uri(path, protocol_options)?;
         let pipeline = gst::Pipeline::new();
-        let decoder = gst::ElementFactory::make("uridecodebin")
+        let decoder = gst::ElementFactory::make("uridecodebin3")
             .property("uri", &uri)
             .build()
-            .context("GStreamer uridecodebin is unavailable")?;
+            .context("GStreamer uridecodebin3 is unavailable")?;
         let video_bin = gst::parse::bin_from_description(
             &format!(
                 "queue max-size-buffers=4 max-size-bytes=0 max-size-time=0 ! \
@@ -117,16 +118,7 @@ impl Source {
             ),
             true,
         )?;
-        let audio_bin = gst::parse::bin_from_description(
-            &format!(
-                "queue max-size-buffers=8 max-size-bytes=0 max-size-time=0 ! \
-                 audioconvert ! audioresample ! \
-                 audio/x-raw,format=F32LE,layout=interleaved,rate={},channels=2 ! \
-                 appsink name=audio-samples sync=false async=false max-buffers=4 wait-on-eos=false",
-                config.sample_rate,
-            ),
-            true,
-        )?;
+        let audio_bin = normalized_audio_bin(config.sample_rate)?;
         let video = video_bin
             .by_name("video-samples")
             .context("video sample sink is missing")?
@@ -210,6 +202,7 @@ impl Source {
             sample_rate: config.sample_rate,
             eos: false,
             first_samples: [true; 2],
+            selected_streams: None,
         };
         // Negotiate seekable files while paused. Starting them in PLAYING and
         // immediately pausing a full appsink can race the first flushing seek.
@@ -228,12 +221,21 @@ impl Source {
                 "source opening cancelled"
             );
             let info = source.info();
-            if complete.load(Ordering::Acquire) && (info.has_video || info.has_audio) {
+            let selected_ready = source.selected_streams.is_some_and(|(video, audio)| {
+                (video || audio) && (!video || info.has_video) && (!audio || info.has_audio)
+            });
+            if (info.has_video && info.has_audio)
+                || selected_ready
+                || (complete.load(Ordering::Acquire) && (info.has_video || info.has_audio))
+            {
                 break;
             }
             ensure!(
                 Instant::now() < deadline,
-                "GStreamer source did not expose an audio or video stream before its opening deadline"
+                "GStreamer source opening deadline: video={}, audio={}, discovery_complete={}",
+                info.has_video,
+                info.has_audio,
+                complete.load(Ordering::Acquire)
             );
             thread::sleep(Duration::from_millis(10));
         }
@@ -300,6 +302,16 @@ impl Source {
             }
             if self.pending_audio.is_none() {
                 self.pending_audio = self.audio.try_pull_sample(gst::ClockTime::ZERO);
+            }
+            for pending in [&mut self.pending_video, &mut self.pending_audio] {
+                if pending.as_ref().is_some_and(|sample| {
+                    sample.buffer().and_then(gst::BufferRef::pts).is_some()
+                        && sample_timestamp(sample).is_none()
+                }) {
+                    // Decoder preroll outside the selected segment has no
+                    // stream timestamp and must not reset the media origin.
+                    *pending = None;
+                }
             }
             let video_first = match (&self.pending_video, &self.pending_audio) {
                 (Some(video), Some(audio)) => sample_pts(video) <= sample_pts(audio),
@@ -379,6 +391,15 @@ impl Source {
                 gst::MessageView::Latency(_) => {
                     self.pipeline.recalculate_latency()?;
                 }
+                gst::MessageView::StreamsSelected(selected) => {
+                    let mut video = false;
+                    let mut audio = false;
+                    for stream in selected.streams() {
+                        video |= stream.stream_type().contains(gst::StreamType::VIDEO);
+                        audio |= stream.stream_type().contains(gst::StreamType::AUDIO);
+                    }
+                    self.selected_streams = Some((video, audio));
+                }
                 _ => {}
             }
         }
@@ -440,11 +461,38 @@ impl Drop for Source {
     }
 }
 
+fn normalized_audio_bin(sample_rate: u32) -> Result<gst::Bin> {
+    // MPEG-TS PCR adjustment and millisecond FLV timestamps can jitter while
+    // the audio samples themselves remain continuous. Normalize their clock
+    // natively before the playout compares them with the output timeline.
+    Ok(gst::parse::bin_from_description(
+        &format!(
+            "queue max-size-buffers=8 max-size-bytes=0 max-size-time=0 ! \
+             audioconvert ! audioresample ! \
+             audio/x-raw,format=F32LE,layout=interleaved,rate={sample_rate},channels=2 ! \
+             audiorate skip-to-first=true tolerance=40000000 ! \
+             appsink name=audio-samples sync=false async=false max-buffers=4 wait-on-eos=false"
+        ),
+        true,
+    )?)
+}
+
 fn sample_pts(sample: &gst::Sample) -> u64 {
-    sample
-        .buffer()
-        .and_then(gstreamer::BufferRef::pts)
-        .map_or(0, gstreamer::ClockTime::nseconds)
+    sample_timestamp(sample).map_or(0, gst::ClockTime::nseconds)
+}
+
+fn sample_timestamp(sample: &gst::Sample) -> Option<gst::ClockTime> {
+    let pts = sample.buffer()?.pts()?;
+    // Adaptive inputs can change the raw timestamp origin per segment. Use
+    // stream time to keep those segments on one media clock. Unlike running
+    // time, stream time also preserves the position of a seeked file.
+    match sample
+        .segment()
+        .and_then(|s| s.downcast_ref::<gst::ClockTime>())
+    {
+        Some(segment) => segment.to_stream_time(pts),
+        None => Some(pts),
+    }
 }
 
 pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video> {
@@ -482,8 +530,7 @@ pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video
         }
     }
     frame.set_pts(
-        buffer
-            .pts()
+        sample_timestamp(sample)
             .map(|pts| (u128::from(pts.nseconds()) * u128::from(fps) / 1_000_000_000) as i64),
     );
 
@@ -514,7 +561,7 @@ pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<fram
         }
     }
     frame.set_pts(
-        buffer.pts().map(|pts| {
+        sample_timestamp(sample).map(|pts| {
             (u128::from(pts.nseconds()) * u128::from(sample_rate) / 1_000_000_000) as i64
         }),
     );
@@ -527,6 +574,18 @@ fn configure_source(source: &gst::Element, options: &BTreeMap<String, String>) -
         .factory()
         .map(|factory| factory.name().to_string())
         .unwrap_or_default();
+    if factory == "souphttpsrc" {
+        let location = source.property::<String>("location");
+        let exclusions = std::env::var("no_proxy")
+            .or_else(|_| std::env::var("NO_PROXY"))
+            .unwrap_or_default();
+        if loopback_proxy_exception(&location, &exclusions) {
+            // souphttpsrc copies http_proxy into a resolver with no ignore
+            // list. Clearing that override restores GIO's system resolver,
+            // which honors the explicit loopback no_proxy exception.
+            source.set_property("proxy", "");
+        }
+    }
     if factory == "rtspsrc" {
         set_property(source, "protocols", "tcp")?;
         set_property(source, "latency", "120")?;
@@ -561,6 +620,30 @@ fn configure_source(source: &gst::Element, options: &BTreeMap<String, String>) -
     Ok(())
 }
 
+fn loopback_proxy_exception(location: &str, exclusions: &str) -> bool {
+    let Ok(uri) = Url::parse(location) else {
+        return false;
+    };
+    let loopback = match uri.host() {
+        Some(Host::Ipv4(address)) => address.is_loopback(),
+        Some(Host::Ipv6(address)) => address.is_loopback(),
+        Some(Host::Domain(name)) => name.eq_ignore_ascii_case("localhost"),
+        None => false,
+    };
+    if !loopback {
+        return false;
+    }
+    let host = uri.host_str().unwrap_or_default();
+
+    exclusions.split(',').any(|entry| {
+        let entry = entry.trim();
+        entry == "*"
+            || entry
+                .trim_matches(['[', ']'])
+                .eq_ignore_ascii_case(host.trim_matches(['[', ']']))
+    })
+}
+
 fn set_property(element: &gst::Element, name: &str, text: &str) -> Result<()> {
     let specification = element
         .find_property(name)
@@ -570,4 +653,209 @@ fn set_property(element: &gst::Element, name: &str, text: &str) -> Result<()> {
     element.set_property_from_value(name, &value);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use super::*;
+
+    #[test]
+    fn decoded_frames_use_stream_time_across_adaptive_timestamp_origins_and_file_seeks() {
+        crate::gstreamer::init().unwrap();
+        let info = VideoInfo::builder(gstreamer_video::VideoFormat::I420, 64, 64)
+            .build()
+            .unwrap();
+        let caps = info.to_caps().unwrap();
+        for (start, time, raw, expected) in [(66, 4, 66, 4), (3, 6, 3, 6), (9, 9, 10, 10)] {
+            let mut segment = gst::FormattedSegment::<gst::ClockTime>::new();
+            segment.set_start(gst::ClockTime::from_seconds(start));
+            segment.set_time(gst::ClockTime::from_seconds(time));
+            let mut buffer = gst::Buffer::with_size(info.size()).unwrap();
+            buffer
+                .get_mut()
+                .unwrap()
+                .set_pts(gst::ClockTime::from_seconds(raw));
+            let video = gst::Sample::builder()
+                .buffer(&buffer)
+                .caps(&caps)
+                .segment(&segment)
+                .build();
+            assert_eq!(
+                video_frame(&video, 25).unwrap().pts(),
+                Some(expected as i64 * 25)
+            );
+            let mut buffer = gst::Buffer::with_size(8 * 1024).unwrap();
+            buffer
+                .get_mut()
+                .unwrap()
+                .set_pts(gst::ClockTime::from_seconds(raw));
+            let audio = gst::Sample::builder()
+                .buffer(&buffer)
+                .segment(&segment)
+                .build();
+            assert_eq!(
+                audio_frame(&audio, 48_000).unwrap().pts(),
+                Some(expected as i64 * 48_000)
+            );
+            assert_eq!(sample_pts(&audio), expected * 1_000_000_000);
+        }
+    }
+
+    #[test]
+    fn native_audio_normalization_preserves_samples_through_timestamp_jitter() {
+        crate::gstreamer::init().unwrap();
+        let pipeline = gst::Pipeline::new();
+        let source = gstreamer_app::AppSrc::builder()
+            .format(gst::Format::Time)
+            .caps(
+                &gst::Caps::builder("audio/x-raw")
+                    .field("format", "F32LE")
+                    .field("layout", "interleaved")
+                    .field("rate", 48_000_i32)
+                    .field("channels", 2_i32)
+                    .build(),
+            )
+            .build();
+        let normalization = normalized_audio_bin(48_000).unwrap();
+        let sink = normalization
+            .by_name("audio-samples")
+            .unwrap()
+            .downcast::<AppSink>()
+            .unwrap();
+        pipeline
+            .add_many([
+                source.upcast_ref::<gst::Element>(),
+                normalization.upcast_ref(),
+            ])
+            .unwrap();
+        source.link(&normalization).unwrap();
+        pipeline.set_state(gst::State::Playing).unwrap();
+        let mut expected = Vec::new();
+        for packet in 0..48_u64 {
+            let mut bytes = Vec::new();
+            for sample in packet * 1024..(packet + 1) * 1024 {
+                let value = ((sample % 251) as f32 / 251.0).to_le_bytes();
+                bytes.extend_from_slice(&value);
+                bytes.extend_from_slice(&value);
+            }
+            expected.extend_from_slice(&bytes);
+            let mut buffer = gst::Buffer::from_mut_slice(bytes);
+            let jitter = if packet % 3 == 0 {
+                -5_000_000_i64
+            } else {
+                5_000_000
+            };
+            let rounded = packet * 1024 * 1000 / 48_000 * 1_000_000;
+            buffer
+                .get_mut()
+                .unwrap()
+                .set_pts(gst::ClockTime::from_nseconds(
+                    (1_000_000_000 + rounded as i64 + if packet == 0 { 0 } else { jitter }) as u64,
+                ));
+            source.push_buffer(buffer).unwrap();
+        }
+        source.end_of_stream().unwrap();
+        let mut actual = Vec::new();
+        while let Some(sample) = sink.try_pull_sample(gst::ClockTime::from_seconds(1)) {
+            let buffer = sample.buffer().unwrap();
+            let pts = buffer.pts().unwrap().nseconds();
+            let next = 1_000_000_000 + actual.len() as u64 / 8 * 1_000_000_000 / 48_000;
+            assert!(pts.abs_diff(next) <= 1);
+            actual.extend_from_slice(buffer.map_readable().unwrap().as_slice());
+        }
+        pipeline.set_state(gst::State::Null).unwrap();
+
+        assert_eq!(actual.len(), expected.len());
+        assert!(
+            actual == expected,
+            "audio samples changed while normalizing timestamp jitter"
+        );
+    }
+
+    #[test]
+    fn stream_selection_opens_sources_with_only_one_track() {
+        crate::gstreamer::init().unwrap();
+        let directory = std::env::temp_dir().join(format!(
+            "noar-selected-streams-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        for (name, description, video) in [
+            (
+                "video.mp4",
+                "videotestsrc num-buffers=5 ! video/x-raw,width=64,height=64,framerate=25/1 ! x264enc tune=zerolatency ! h264parse ! qtmux",
+                true,
+            ),
+            (
+                "audio.wav",
+                "audiotestsrc num-buffers=5 ! audio/x-raw,rate=48000 ! wavenc",
+                false,
+            ),
+        ] {
+            let path = directory.join(name);
+            let pipeline = gst::parse::launch(&format!(
+                "{description} ! filesink location=\"{}\"",
+                path.display()
+            ))
+            .unwrap();
+            pipeline.set_state(gst::State::Playing).unwrap();
+            let message = pipeline
+                .bus()
+                .unwrap()
+                .timed_pop_filtered(
+                    gst::ClockTime::from_seconds(5),
+                    &[gst::MessageType::Eos, gst::MessageType::Error],
+                )
+                .unwrap();
+            pipeline.set_state(gst::State::Null).unwrap();
+            assert!(
+                matches!(message.view(), gst::MessageView::Eos(_)),
+                "{message:?}"
+            );
+            let config = OutputConfig {
+                width: 64,
+                height: 64,
+                fps: 25,
+                ..OutputConfig::default()
+            };
+            let mut source = Source::open(path.to_str().unwrap(), &config).unwrap();
+            assert_eq!(
+                (source.info().has_video, source.info().has_audio),
+                (video, !video)
+            );
+            source.start(None).unwrap();
+            let first = source.next(Duration::from_secs(1)).unwrap().unwrap();
+            assert_eq!(matches!(first, FrameEvent::Video(_)), video);
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn explicit_proxy_exceptions_are_limited_to_exact_loopback_hosts() {
+        assert!(loopback_proxy_exception(
+            "http://127.0.0.1:21988/input/index.m3u8",
+            "localhost, 127.0.0.1"
+        ));
+        assert!(loopback_proxy_exception(
+            "http://localhost:8080/",
+            "LOCALHOST"
+        ));
+        assert!(loopback_proxy_exception("http://[::1]:8080/", "::1"));
+        assert!(!loopback_proxy_exception(
+            "http://127.0.0.1:8080/",
+            "localhost"
+        ));
+        assert!(!loopback_proxy_exception("http://127.0.0.1:8080/", ""));
+        assert!(!loopback_proxy_exception(
+            "https://localhost.example.org/",
+            "localhost"
+        ));
+        assert!(!loopback_proxy_exception("https://example.org/", "*"));
+    }
 }

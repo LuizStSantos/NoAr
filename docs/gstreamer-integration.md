@@ -18,48 +18,41 @@ The live editor now exposes UDP explicitly. Fixes cover native RTMP FLV tag
 boundaries/header availability, HLS buffer-list health, SCTE-35 command length
 and PMT stuffing, and initial real audio preservation.
 
-Native HLS SCTE-35 is **experimental and NOT_READY**: MPEG-TS injection,
-RFC 8216 date ranges, legacy cue tags, shared variant IDs and segment/keyframe
-requests are implemented, but runtime follow-up still has failures. In the
-latest completed HLS run these include cancellation differences between
-renditions, an IDR assertion and a receiver decode error. Receiver progress
-limits have also failed in SRT/HLS follow-up runs. The seven output modes
-(UDP/SRT/HLS with and without SCTE-35, RTMP normal) and all four Scheduler
-input protocols must be rerun before any complete-matrix claim.
+Native HLS SCTE-35 remains **experimental and NOT_READY** until the latest
+protocol and source-loss matrix finishes. Subsequent isolated runs passed its
+in-band cues, independent decoding, cancellation, shared date-range IDs,
+legacy tags and segment/IDR boundaries in both renditions. These bounded runs
+do not establish ad-platform interoperability or long-run readiness.
 
-At this checkpoint 578 Rust tests and 13 Python QA tests pass. Formatting,
-no-default-features Clippy and all-features static Clippy pass; the latter
-uses `ORT_SKIP_DOWNLOAD=1` and does not validate native ONNX linking/runtime.
+### Current fixes and evidence
+
+- **PASS (individual bounded runs before the latest HLS/RTMP fixes):** UDP
+  normal with SRT input, UDP SCTE-35 with UDP input, SRT normal with RTMP input,
+  SRT SCTE-35 with SRT input, and HLS SCTE-35 with SRT input. Each run observes
+  three automatically admitted Scheduler events and decoded A/B/live markers.
+- Incoming audio now passes through native `audiorate`. A regression test checks
+  exact PCM preservation under FLV/PCR timestamp jitter; subsequent RTMP-input
+  media runs passed the previously failing decoded audio gates.
+- SRT capture now uses original payload bytes for both modes. Output shutdown
+  drains AppSrc and bounds the wait for native SRT wire activity to settle;
+  a native loopback regression test verifies final-message delivery.
+- Playback uses `uridecodebin3`/`hlsdemux2` and converts sample timestamps through
+  their segments. The Scheduler explicitly preserves live context for HTTP
+  sources through preload handover and reopening; ordinary HTTP VOD retains
+  file behavior. **NOT_RUN:** fresh HLS live-input matrix after this context fix.
+- RTMP caches its complete FLV preamble at the first usable keyframe. A split
+  metadata/config regression test passes. **FAIL:** the latest bounded RTMP
+  output run still has timestamp gaps above the harness limits; retest pending.
+- **PASS:** 14 earlier Chromium checks cover live-source save/reload for four
+  protocols, HLS SCTE-35 settings and navigation. They do not verify streaming.
+- **PASS:** the isolated Docker test Compose configuration and Dockerfile static
+  build check. **NOT_AVAILABLE:** full image build, due to executor disk limits;
+  optional ONNX binary download, denied by the configured proxy.
+
+The reusable `integrated_matrix.py` runs seven selected input/output pairings,
+not all 28 combinations. Fresh complete-matrix and recovery results are pending.
 See [the current harness instructions](../qa/gstreamer/INTEGRATED.md).
-Earlier checkpoint evidence below applies to those recorded runs, not to
-the unfinished HLS SCTE-35 expansion.
-
-### Subsequent bounded protocol results
-
-- **PASS:** native HLS SCTE-35 in two subsequent 60-second runs, including
-  automatic Scheduler admission. Both renditions pass in-band cue decoding,
-  CRCs, out/in copies, shared date-range IDs, cancellation, legacy markers,
-  segment/IDR boundaries, media decoding and receiver progress.
-- **PASS:** UDP normal with external SRT input, and UDP SCTE-35 with direct UDP
-  live input, both using three automatically admitted Scheduler events.
-- **PASS:** 14 Chromium checks, including save/reload of RTMP, SRT, HLS and UDP
-  live sources, HLS SCTE-35 settings, login/navigation and no page errors.
-- **FAIL:** automatic RTMP live-input runs have missing or insufficient decoded
-  live audio. A stream can show live video while this gate fails.
-- **FAIL:** the first SRT SCTE-35 retry after correcting the test receiver's
-  native latency units still fails the media decode gate. Cue checks pass,
-  but this is not an overall PASS.
-- **NOT_RUN:** HLS live-input retest after restricting GLib's lowercase
-  `no_proxy` exception to the authorized loopback test endpoints. The prior
-  attempt was sent through the proxy and supplied no live media.
-- **PASS:** the separate Docker test Compose configuration resolves the expected
-  build context, isolated data directory, local image, project name and disabled
-  updater labels. The complete image and actual Docker UI remain unverified.
-
-Input diagnostics now log stream metadata and each track's first timestamp
-and segment once per opened source, to investigate the unresolved RTMP audio
-issue. The reusable `integrated_matrix.py` runs seven selected pairings with
-four input protocols; it does not claim coverage of all 28 combinations.
+Earlier checkpoint evidence below applies only to those recorded runs.
 The overall protocol expansion remains **NOT_READY**.
 
 ## Implementation

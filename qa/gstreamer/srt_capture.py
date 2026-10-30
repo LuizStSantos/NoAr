@@ -12,8 +12,9 @@ import threading
 
 def main():
     path, uri = Path(sys.argv[1]).resolve(), sys.argv[2]
-    if not uri.startswith('srt://127.0.0.1:29911?mode=listener'):
-        raise SystemExit('Only the disposable loopback SRT listener is supported')
+    if uri not in ['srt://127.0.0.1:29911?mode=listener&latency=200',
+                   'srt://127.0.0.1:29890?streamid=read:output&latency=200']:
+        raise SystemExit('Only the dedicated loopback SRT test endpoints are supported')
     gst = ctypes.CDLL(ctypes.util.find_library('gstreamer-1.0'))
     gst.gst_init.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
     gst.gst_parse_launch.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_void_p)]
@@ -29,7 +30,7 @@ def main():
     gst.gst_init(None, None)
     error = ctypes.c_void_p()
     pipeline = gst.gst_parse_launch(
-        f'srtsrc uri={json.dumps(uri)} ! filesink location={json.dumps(str(path))} sync=false'.encode(),
+        f'srtsrc uri={json.dumps(uri)} ! filesink location={json.dumps(str(path))} sync=false buffer-mode=unbuffered'.encode(),
         ctypes.byref(error))
     if error.value or not pipeline:
         raise SystemExit('Cannot create native SRT capture pipeline; inspect installed srtsrc/filesink plugins')

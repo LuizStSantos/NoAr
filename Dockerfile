@@ -142,8 +142,8 @@ COPY --from=srt-build /opt/noar-srt/share/noar/srt-build.txt /usr/local/share/no
 COPY --from=srt-build /opt/noar-srt/share/licenses/noar-srt /usr/local/share/licenses/noar-srt
 RUN ldconfig && \
     export GST_REGISTRY=/tmp/noar-gstreamer-registry.bin && \
-    for factory in appsrc appsink uridecodebin videoconvert videoscale videorate \
-        audioconvert audioresample x264enc avenc_aac h264parse aacparse \
+    for factory in appsrc appsink uridecodebin uridecodebin3 hlsdemux2 videoconvert videoscale videorate \
+        audioconvert audioresample audiorate x264enc avenc_aac h264parse aacparse \
         mpegtsmux tsdemux srtsrc srtsink rtmp2src rtmp2sink flvmux \
         qtdemux qtmux matroskamux splitmuxsink; do \
         gst-inspect-1.0 "$factory" >/dev/null || exit 1; \

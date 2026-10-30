@@ -19,6 +19,14 @@ The hostname must resolve from the NoAr container. `localhost` inside that
 container refers to NoAr itself. When MediaMTX is on another machine, use its
 reachable hostname or IP address. SRT requires UDP connectivity to MediaMTX.
 RTMP and RTSP client URLs are also supported when their native plugins exist.
+The Scheduler also accepts HLS HTTP(S) and UDP MPEG-TS URLs. Playback uses
+GStreamer's `uridecodebin3` and adaptive `hlsdemux2`; `audiorate` normalizes
+incoming audio timestamps before the common playout timeline. It preserves
+continuous samples through small FLV/PCR timestamp differences while normal
+source-loss and output continuity handling remain active.
+The Scheduler explicitly marks live events during preloading, including HTTP
+URLs. This keeps HLS at the live edge without treating ordinary HTTP video
+files as live or losing the event's live context when an input is reopened.
 
 NoAr's SRT client defaults to caller mode. Do not put `mode=listener`, `listen=1`
 or RTMP listener options in a live source. For saved SRT URL options, legacy

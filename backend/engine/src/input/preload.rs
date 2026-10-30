@@ -151,6 +151,10 @@ pub(crate) struct Preloaded {
 }
 
 impl Preloaded {
+    pub(crate) fn is_live(&self) -> bool {
+        self.control.live
+    }
+
     pub(crate) fn cancellation(&self) -> Arc<AtomicBool> {
         Arc::clone(&self.control.cancelled)
     }
@@ -187,6 +191,16 @@ impl Preloader {
     }
 
     pub fn preload(&self, path: &str) {
+        self.preload_kind(path, is_live_input(path));
+    }
+
+    /// Keep a known live event at its live edge, including HTTP URLs that
+    /// could otherwise describe seekable VOD.
+    pub fn preload_live(&self, path: &str) {
+        self.preload_kind(path, true);
+    }
+
+    fn preload_kind(&self, path: &str, live: bool) {
         let path = path.trim();
 
         if path.is_empty() {
@@ -196,11 +210,9 @@ impl Preloader {
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         expire(&mut entries.0);
 
-        if entries
-            .0
-            .iter()
-            .any(|entry| entry.path == path && !entry.control.failed())
-        {
+        if entries.0.iter().any(|entry| {
+            entry.path == path && entry.control.live == live && !entry.control.failed()
+        }) {
             return;
         }
 
@@ -217,7 +229,7 @@ impl Preloader {
             .clone()
             .unwrap_or_else(|| OutputConfig::new(1280, 720, 25, 48_000));
         debug!("Preloading {path} with GStreamer");
-        entries.0.push(spawn(path.to_string(), config));
+        entries.0.push(spawn(path.to_string(), config, live));
     }
 
     pub fn signal(&self, path: &str) -> Option<PreloadSignal> {
@@ -248,7 +260,7 @@ impl Preloader {
             .position(|entry| entry.path == path.trim())?;
         let entry = entries.0.remove(index);
 
-        if entry.control.failed() {
+        if entry.control.failed() && !entry.control.live {
             entry.control.cancel();
 
             return None;
@@ -277,8 +289,8 @@ fn expire(entries: &mut Vec<Entry>) {
     remove(entries, |entry| entry.control.created.elapsed() > EXPIRY);
 }
 
-fn spawn(path: String, config: OutputConfig) -> Entry {
-    let control = Arc::new(Control::new(is_live_input(&path)));
+fn spawn(path: String, config: OutputConfig, live: bool) -> Entry {
+    let control = Arc::new(Control::new(live));
     let (sender, receiver) = mpsc::sync_channel(1);
     let worker_control = Arc::clone(&control);
     let worker_path = path.clone();
@@ -479,6 +491,30 @@ mod tests {
 
         assert_eq!(control.state(), HANDOVER);
         assert!(!control.cancelled.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn failed_http_live_preload_preserves_live_context_for_reopening() {
+        let path = "http://127.0.0.1/live/index.m3u8";
+        assert!(
+            !is_live_input(path),
+            "HTTP alone does not distinguish live from VOD"
+        );
+        let preloader = Preloader::default();
+        let control = Arc::new(Control::new(true));
+        control.set_status(Status::Open { last_frame: None });
+        assert_eq!(control.signal(), PreloadSignal::Stalled);
+        control.set_status(Status::Failed("synthetic disconnect".to_owned()));
+        let (sender, receiver) = mpsc::sync_channel(1);
+        sender.send(Err("synthetic disconnect".to_owned())).unwrap();
+        preloader.entries.lock().unwrap().0.push(Entry {
+            path: path.to_owned(),
+            control,
+            receiver,
+        });
+        let loaded = preloader.take(path).unwrap();
+        assert!(loaded.is_live());
+        assert!(loaded.hand_over().recv().unwrap().is_err());
     }
 
     #[test]
