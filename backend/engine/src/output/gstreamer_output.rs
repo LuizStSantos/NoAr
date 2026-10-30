@@ -703,11 +703,11 @@ impl EncodedOutput {
             }
         }
         #[cfg(feature = "desktop-base")]
-        if let EncodedFormat::Recording(recording) = &format {
-            if let Some(settings) = &recording.encode {
-                primary_config.width = settings.width;
-                primary_config.height = settings.height;
-            }
+        if let EncodedFormat::Recording(recording) = &format
+            && let Some(settings) = &recording.encode
+        {
+            primary_config.width = settings.width;
+            primary_config.height = settings.height;
         }
         let hls_keyframes = match &format {
             EncodedFormat::Hls {

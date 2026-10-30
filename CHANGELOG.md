@@ -13,6 +13,9 @@ one is tagged.
 
 ### Added
 
+- A disposable actual-NoAr smoke harness verifies scheduled live transitions,
+  source-loss recovery, decoded markers, timestamps, receiver progress and
+  persistent SRT sessions independently of the standalone Python prototype.
 - Shared GStreamer reference skills for Codex and Claude, with official native
   and Rust documentation, installed-plugin checks and integrated-media test
   requirements.
@@ -32,6 +35,12 @@ one is tagged.
 - Built-in RTMP/SRT input servers, their runtime controls and the input-server
   settings page. Historical database rows remain stored; current configuration
   responses omit input-server settings.
+
+### Fixed
+
+- Keep live audio/video interleaved when only one source track stalls; hold the
+  picture or insert silence instead of allowing the output muxer to wait for
+  the missing track. Preserve the pacing anchor across unchanged clip rates.
 
 ## [1.11.0] - 2026-10-28
 

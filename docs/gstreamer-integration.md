@@ -32,31 +32,43 @@ The standalone Python prototype is separate from integrated NoAr evidence.
 | --- | --- | --- |
 | AI toolkit | PASS | 58 unit tests; new canonical reference and Codex adapter resolve through the repository map. |
 | Frontend build and lint | PASS | `npm run build`; ESLint for `frontend/src`. |
-| Rust workspace tests before the latest follow-up fixes | PASS | 567 tests passed; existing opt-in tests remained ignored. |
-| Rust lint before the latest follow-up fixes | PASS | No-default-features Clippy and static all-features Clippy with warnings denied. |
+| Rust workspace tests | PASS | 573 tests passed with no default features; 13 existing opt-in tests remained ignored. Includes regression tests for missing live tracks and unchanged pacing rates. |
+| Rust lint | PASS | No-default-features Clippy and static all-features Clippy with warnings denied. All-features analysis uses `ORT_SKIP_DOWNLOAD=1`; optional ONNX runtime is not validated. |
 | Latest file preload/seek regression tests | PASS | Two focused tests pass after opening local files in PAUSED. |
 | Recording dimensions | PASS | Desktop CPU-feature test encodes 320x180 input into a 160x90 Matroska recording and probes its dimensions and audio. No display or sound hardware is exercised. |
 | SVT-AV1 option mapping | PASS | Native property test verifies persisted quality and kbit/s units. |
 | Formatting and embedded frontend build | PASS | Latest `cargo fmt --all -- --check` and no-default-features embedded frontend build. |
-| Integrated normal transitions, earlier build | PASS | Three triggered Clock/Continue events; decoded A/B/live transitions; one publisher and one reader; zero reported SRT drops; no DTS regressions; maximum observed receiver progress gap 576 ms over a 60-second run. |
-| Integrated source-loss continuity, earlier build | FAIL | Fault injection preserved SRT sessions and the source returned, but one run stalled about 10.5 seconds on the return to a trimmed file. Zero packet drops alone does not establish continuity. |
-| Latest integrated source-loss smoke run | PASS | All 13 smoke checks passed on the checkpoint binary: three live entries, A/B/live decoded markers, one publisher and one reader, zero reported SRT drops, monotonic timestamps, captured audio duration 59.8 seconds and maximum receiver progress gap 410.5 ms. |
-| Repeated source-loss stability | FAIL | An earlier run of the same follow-up changes observed an 811 ms receiver progress gap, above the 750 ms smoke threshold. The latest PASS does not establish repeatability or long-soak readiness. |
-| Latest normal-run retry | NOT_AVAILABLE | The executor became unavailable during the run; its final result was not retrieved. Do not infer PASS. |
-| Complete Rust suite/lints after the latest follow-up fixes | NOT_RUN | Repeat after the latest source-state, clock and option changes. |
+| Integrated normal transitions | PASS | All 13 smoke gates pass in two 60-second runs after bounding live A/V separation. Three Clock/Continue admissions per run, decoded A/B/live transitions, one publisher and reader, zero reported SRT drops and no DTS regressions. Maximum receiver progress gaps 206.7 ms and 204.3 ms. |
+| Integrated source-loss recovery | PASS | All 13 smoke gates pass after a four-second synthetic publisher interruption. Later live admissions return; output sessions persist. Maximum receiver progress gap 406.4 ms in the recorded 60-second run. |
+| Recording decode | PASS | All six Matroska segments from those normal/recovery runs decode both audio and video with FFmpeg `-xerror`. Retention and power-loss recovery are separate checks. |
 | Dockerfile build checks | PASS | `docker build --check .` reports no warnings. |
 | Complete Docker image | NOT_AVAILABLE | This executor's 32 GB filesystem and Docker `vfs` driver exhausted disk while copying backend layers, before the Rust image build. Task-local build cache was removed; do not treat the image as built. |
 | Optional ONNX runtime | NOT_AVAILABLE | The configured network proxy denies the ONNX binary CDN with HTTP 403. `ORT_SKIP_DOWNLOAD=1` permits static Clippy only, not runtime/link verification. |
-| Authenticated browser interaction and GPU playback | NOT_RUN | Frontend compilation and API tests do not replace browser or hardware evidence. |
+| Scoped Chromium interaction | PASS | Nine checks cover anonymous redirect, password visibility, real browser login, authenticated output/audio/recording/schedule/player navigation and no page errors. The built frontend uses a test-only loopback proxy to the debug backend. Removed input-server settings links are absent. |
+| Extended soak, GPU and complete scheduler UI flow | NOT_RUN | Bounded smoke runs and page navigation do not establish long-run stability, hardware behavior, schedule form persistence or automatic wall-time admission. |
+
+The previous checkpoint exposed a trimmed-file stall and receiver gaps above
+750 ms. Follow-up fixes open local files in PAUSED, retain the pacing anchor
+when the rate is unchanged, and bound live track separation when only audio or
+video continues arriving. Missing video holds the last composited picture;
+missing audio receives silence after a 100 ms grace. Late source samples are
+trimmed against the timeline already emitted. Three new regression tests cover
+the interleaving behavior. Do not infer a 24/7 guarantee from the bounded runs.
+
+The reusable [actual-NoAr harness](../qa/gstreamer/INTEGRATED.md) and a
+[sanitized evidence summary](../qa/gstreamer/evidence/integration-summary.json)
+are stored on this branch. Raw captures, credentials and temporary databases
+remain excluded from Git. The summary records source/binary hashes and the
+limits of each check.
 
 ## Next validation
 
 1. Repeat the normal and source-loss tests against the latest actual NoAr
    binary, measuring receiver progress independently of API polling.
-2. Verify the trimmed-file stall does not recur and investigate the occasional
-   receiver gap above 750 ms before any readiness claim.
-3. Repeat the Rust workspace tests, no-default-features Clippy, all-features
-   Clippy where native dependencies permit it, and the embedded frontend build.
+2. Run an extended soak and repeat the strict 750 ms receiver gate under
+   representative channel load. Investigate any regression before a readiness
+   claim.
+3. Re-run the recorded Rust and frontend checks after further code changes.
 4. Build the existing root Dockerfile on an isolated machine with sufficient
    disk and a suitable Docker storage driver. Do not publish an image yet.
 5. Exercise the changed frontend and scheduler controls in a disposable
@@ -66,17 +78,6 @@ Do not restore the removed input servers or add a second playback backend to
 work around a failing test. Keep new findings and fixes on this development
 branch until the relevant gates pass.
 
-## Executor interruption after the checkpoint
-
-The complete code and AI-reference checkpoint was pushed as `53999ae4` before
-execution access was lost. The later reusable QA files
-`qa/gstreamer/integrated_smoke.py` and `qa/gstreamer/INTEGRATED.md` were created
-locally but were not committed or pushed before the executor became unavailable.
-The recovery run using that local harness passed all 13 smoke checks; its
-normal-run retry had no retrievable final result. The harness itself still needs
-review and publication after workspace recovery.
-
-Resume by fetching this branch and inspecting local changes. Preserve those QA
-files while bringing the local branch forward: this status document was updated
-through the GitHub connector after execution access failed. Re-run the remaining
-checks instead of inferring their outcome from earlier builds.
+The original code checkpoint is `53999ae4`; `18e4af51` preserved its status when
+the executor became unavailable. The workspace was subsequently recovered and
+the follow-up evidence above supersedes those earlier pending results.

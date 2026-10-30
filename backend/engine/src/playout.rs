@@ -562,7 +562,8 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                             )?;
                             synchronize_silence_to_video(cfg, timeline, output, playback_control)?;
                         }
-                        if target + 1 < timeline.video_pts {
+                        if target + 1 < timeline.video_pts || (live && target < timeline.video_pts)
+                        {
                             continue;
                         }
                         last_picture = Some(reference_video_frame(&picture)?);
@@ -640,6 +641,16 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                             }
                         }
                     }
+                }
+                if live && external.is_none() {
+                    synchronize_live_tracks(
+                        cfg,
+                        timeline,
+                        output,
+                        end_video,
+                        end_audio,
+                        compositor.last_composited_frame.as_ref(),
+                    )?;
                 }
             }
 
@@ -1433,6 +1444,35 @@ fn synchronize_silence_to_video<O: FrameOutput>(
     check_playback_control(playback_control)
 }
 
+/// A live input may keep one track active while the other waits for data.
+/// Bound their separation so the persistent muxer can continue interleaving.
+/// Late source frames are trimmed against the timeline already sent.
+fn synchronize_live_tracks<O: FrameOutput>(
+    cfg: &OutputConfig,
+    timeline: &mut Timeline,
+    output: &mut O,
+    end_video: Option<i64>,
+    end_audio: Option<i64>,
+    picture: Option<&frame::Video>,
+) -> Result<()> {
+    // Allow one video frame and 100 ms of audio jitter before synthesizing
+    // missing media. Healthy, interleaved source tracks need no padding.
+    let video_target = (i128::from(timeline.audio_pts) * i128::from(cfg.fps)
+        / i128::from(cfg.sample_rate)) as i64
+        - 1;
+    let video_target = end_video.map_or(video_target, |end| video_target.min(end));
+    let video_frames = video_target.saturating_sub(timeline.video_pts).max(0);
+    write_padding_video_frames(cfg, timeline, output, video_frames, picture)?;
+
+    let audio_target = (i128::from(timeline.video_pts) * i128::from(cfg.sample_rate)
+        / i128::from(cfg.fps)) as i64
+        - i64::from(cfg.sample_rate / 10);
+    let audio_target = end_audio.map_or(audio_target, |end| audio_target.min(end));
+    let samples = audio_target.saturating_sub(timeline.audio_pts).max(0);
+
+    write_silence(cfg, timeline, output, samples)
+}
+
 fn synchronize_after_skip<O: FrameOutput>(
     cfg: &OutputConfig,
     timeline: &mut Timeline,
@@ -1675,4 +1715,92 @@ fn write_silence<O: FrameOutput>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod live_interleave_tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct Capture {
+        video: Vec<i64>,
+        audio: Vec<(i64, usize)>,
+    }
+
+    impl FrameOutput for Capture {
+        fn audio_frame_size(&self) -> usize {
+            1024
+        }
+
+        fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+            self.video.push(frame.pts().unwrap());
+
+            Ok(())
+        }
+
+        fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+            assert!(frame.plane::<f32>(0).iter().all(|sample| *sample == 0.0));
+            self.audio.push((frame.pts().unwrap(), frame.samples()));
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn missing_live_video_holds_a_picture_while_audio_continues() {
+        let config = OutputConfig::new(64, 48, 25, 48_000);
+        let mut timeline = Timeline::at(0, 9600);
+        let mut output = Capture::default();
+        synchronize_live_tracks(&config, &mut timeline, &mut output, None, None, None).unwrap();
+
+        assert_eq!(output.video, [0, 1, 2, 3]);
+        assert_eq!(timeline.video_pts, 4);
+        assert_eq!(timeline.audio_pts, 9600);
+        assert!(output.audio.is_empty());
+    }
+
+    #[test]
+    fn missing_live_audio_inserts_silence_without_exceeding_the_event_end() {
+        let config = OutputConfig::new(64, 48, 25, 48_000);
+        let mut timeline = Timeline::at(25, 0);
+        let mut output = Capture::default();
+        synchronize_live_tracks(
+            &config,
+            &mut timeline,
+            &mut output,
+            Some(25),
+            Some(20_000),
+            None,
+        )
+        .unwrap();
+
+        assert!(output.video.is_empty());
+        assert_eq!(timeline.audio_pts, 20_000);
+        assert_eq!(output.audio.first().unwrap().0, 0);
+        assert_eq!(
+            output
+                .audio
+                .iter()
+                .map(|(_, samples)| samples)
+                .sum::<usize>(),
+            20_000
+        );
+        assert!(
+            output
+                .audio
+                .windows(2)
+                .all(|frames| frames[0].0 + frames[0].1 as i64 == frames[1].0)
+        );
+    }
+
+    #[test]
+    fn healthy_live_tracks_are_not_padded() {
+        let config = OutputConfig::new(64, 48, 25, 48_000);
+        let mut timeline = Timeline::at(25, 48_000);
+        let mut output = Capture::default();
+        synchronize_live_tracks(&config, &mut timeline, &mut output, None, None, None).unwrap();
+
+        assert!(output.video.is_empty());
+        assert!(output.audio.is_empty());
+    }
 }
