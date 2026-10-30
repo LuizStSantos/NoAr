@@ -9,13 +9,16 @@ main-branch merge is part of this checkpoint.
 To build this GitHub branch on a separate Docker test server and open the real
 NoAr interface, follow [Test the GStreamer branch from GitHub](gstreamer-testing.md).
 
-## Open audio-quality investigation
+## Audio-quality fix: operator confirmation
 
-An operator reports background hiss on checkout `08186625`, including playlist
-files with loudness processing disabled, using AAC at 128 kbit/s. This report
-is **unresolved**; the continuity matrix below is not an audio-quality verdict.
+An operator reported background hiss on checkout `08186625`, including playlist
+files with loudness processing disabled, using AAC at 128 kbit/s. After the
+update to `29349c99`, the operator explicitly confirmed that the hiss disappeared.
+**PASS (operator listening retest):** the reported symptom cleared. No real
+source/output capture was supplied for independent measurement, and the
+retested protocols and duration were not specified.
 
-A focused native-to-Rust regression exposed a separate sample-clock defect:
+A focused native-to-Rust regression exposed a sample-clock defect:
 flooring a nanosecond timestamp mapped sample 49,024 to 49,023. Conversion now
 rounds to the nearest sample. The regression fails before this change and
 passes afterward. The input still uses `audioconvert`, `audioresample` and
@@ -24,9 +27,10 @@ explicit stereo 48 kHz caps; the managed `ar` restriction remains intentional.
 Controlled 44.1/48 kHz AAC stereo files with silence and distinct left/right
 tones produce 48 kHz output. Their measured middle windows match the decoded
 PCM from an independent native GStreamer reference exactly, and their silence
-windows contain no added noise. These static-file measurements did not show
-an audible-noise improvement from the clock fix. The real noisy source/output
-pair is needed to identify the reported hiss; do not call it fixed yet.
+windows contain no added noise. These static-file measurements did not
+reproduce the hiss or show an audible-noise improvement from the clock fix.
+The operator confirmation records the real-server result separately; it does
+not establish a fresh four-protocol quality matrix or long-run validation.
 
 The follow-up passes 590 Rust tests, formatting, both Clippy configurations,
 the embedded frontend build and a fresh actual-NoAr SRT/SRT Scheduler smoke.

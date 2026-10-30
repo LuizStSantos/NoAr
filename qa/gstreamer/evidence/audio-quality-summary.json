@@ -1,5 +1,5 @@
 {
-  "scope": "Sample-clock regression and controlled synthetic audio diagnostics, not confirmation of the reported background hiss",
+  "scope": "Sample-clock regression, controlled synthetic audio diagnostics and subsequent operator listening confirmation",
   "recorded_utc": "2026-10-30T15:07:31.113174+00:00",
   "source_base": "c37f54879b97e92c7fc96edd624efeaf1182d005",
   "source_sha256": {
@@ -13,8 +13,12 @@
     "hiss_persists_with_loudness_disabled": true
   },
   "reported_hiss_case": {
-    "status": "NOT_RUN",
-    "reason": "Actual source file and noisy output capture have not been provided; controlled signals did not reproduce persistent hiss"
+    "status": "PASS",
+    "evidence_kind": "Operator-reported listening retest",
+    "updated_commit": "29349c99",
+    "result": "Operator explicitly confirmed that the background hiss disappeared after updating",
+    "recorded_utc": "2026-10-30T15:24:04.415733+00:00",
+    "limits": "No real source/output capture was supplied for independent measurement; retested protocols and duration were not specified"
   },
   "sample_clock_regression": {
     "before": "FAIL",
@@ -84,7 +88,7 @@
       ]
     }
   ],
-  "quality_caveat": "The before/after static-file measurements did not demonstrate audible-noise improvement. The clock defect is verified separately; it is not established as the cause of the reported hiss.",
+  "quality_caveat": "The operator confirmed the hiss disappeared after the update. Controlled static-file measurements did not reproduce it or demonstrate audible-noise improvement; the sample-clock regression is independently verified.",
   "rust": {
     "workspace_tests": "PASS",
     "tests_passed": 590,
@@ -149,7 +153,7 @@
   },
   "limitations": [
     "Synthetic engine file tests and one actual-NoAr SRT smoke; no new seven-output matrix after this rounding change",
-    "No real operator media or noisy capture available",
+    "Operator confirms the hiss is gone; real-media captures, retested protocols and test duration are unavailable",
     "No complete Docker image build in this executor"
   ]
 }

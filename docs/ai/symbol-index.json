@@ -18711,9 +18711,9 @@
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
-      "sha256": "c06c646f506d5396126b713b1f169d120c8b68f11017bb1ef81898ab9cb42a3d",
+      "sha256": "f6c67b4110a3d61d38d314925143e10333cb3b6d45dcef83076343901f6095ef",
       "language": "Markdown",
-      "bytes": 12290,
+      "bytes": 12564,
       "symbols": []
     },
     "docs/gstreamer-testing.md": {
@@ -30928,9 +30928,9 @@
       "symbols": []
     },
     "qa/gstreamer/evidence/audio-quality-summary.json": {
-      "sha256": "29db336a4718d0d394983fc486141a274e957ec3fe10a54e21c6f61b80497e3b",
+      "sha256": "4c29ecef93f7665d121ab7c996149e55c66a725108d7a68d3a8904e580ccaa30",
       "language": "JSON",
-      "bytes": 5361,
+      "bytes": 5691,
       "symbols": []
     },
     "qa/gstreamer/evidence/integration-summary.json": {
