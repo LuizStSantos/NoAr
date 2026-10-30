@@ -26,11 +26,12 @@ git rev-parse --short HEAD
 df -h .
 docker system df
 mkdir -p qa/gstreamer/artifacts/server-data
+touch .env
 export NOAR_COMMIT="$(git rev-parse HEAD)"
-docker compose -f qa/gstreamer/compose.integrated.yaml config --quiet
-docker compose -f qa/gstreamer/compose.integrated.yaml build --pull noar
-docker compose -f qa/gstreamer/compose.integrated.yaml up -d --no-build
-docker compose -f qa/gstreamer/compose.integrated.yaml ps
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml config --quiet
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml build --pull noar
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml up -d --no-build
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml ps
 ```
 
 The first build can take considerable time and disk space. Wait for it to
@@ -40,8 +41,9 @@ its 32 GB disk and Docker `vfs` storage exhausted space. Native local compilatio
 and Dockerfile checks do not establish that the complete image was built.
 Do not prune the server's unrelated Docker images or production volumes.
 
-Always include `-f qa/gstreamer/compose.integrated.yaml` in commands for this
-test. The root Compose file belongs to the normal installation architecture.
+Always include `--env-file .env -f qa/gstreamer/compose.integrated.yaml`
+in commands for this test. The root Compose file belongs to the normal
+installation architecture.
 The test uses `noar-gstreamer-staging:local`, never `ghcr.io/...:latest`, has no
 updater service, and excludes both test containers from Watchtower updates.
 Its data is under this checkout's `qa/gstreamer/artifacts/server-data`.
@@ -68,7 +70,7 @@ ports to the server interfaces and recreate only this Compose project:
 ```sh
 cd ~/NoAr-gstreamer-test
 export NOAR_GST_BIND_IP=0.0.0.0
-docker compose -f qa/gstreamer/compose.integrated.yaml up -d --no-build
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml up -d --no-build
 ```
 
 Open `http://SERVER_IP:18787` and finish setup before exposing access more
@@ -87,10 +89,11 @@ printf '%s\n' 'NOAR_GST_BIND_IP=0.0.0.0' > .env
 
 Use this creation command only in a fresh checkout without an existing `.env`.
 If one already contains custom test settings, edit its binding instead of
-overwriting it. Compose reads this file when commands run from the checkout
-root. Before starting, inspect `docker ps --format 'table {{.Names}}\t{{.Ports}}'`;
-if a test port is already occupied, choose a free `NOAR_GST_*_PORT` value in
-this file and use that same port in the browser, encoder and VLC URLs.
+overwriting it. All Compose commands in this guide pass `--env-file .env`
+explicitly and run from the checkout root. Before starting, inspect
+`docker ps --format 'table {{.Names}}\t{{.Ports}}'`. If a test port is already
+occupied, choose a free `NOAR_GST_*_PORT` value in this file and use that same
+port in the browser, encoder and VLC URLs.
 
 The default ports below can be changed using the variables in
 `compose.integrated.yaml`. Keep the same variable values when recreating the
@@ -165,10 +168,11 @@ git status --short
 git fetch origin prototype/gstreamer-continuity
 git pull --ff-only origin prototype/gstreamer-continuity
 git rev-parse --short HEAD
+touch .env
 export NOAR_COMMIT="$(git rev-parse HEAD)"
-docker compose -f qa/gstreamer/compose.integrated.yaml build noar
-docker compose -f qa/gstreamer/compose.integrated.yaml up -d --no-build
-docker compose -f qa/gstreamer/compose.integrated.yaml ps
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml build noar
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml up -d --no-build
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml ps
 ```
 
 Keep `NOAR_GST_BIND_IP` and any custom port variables consistent with the first
@@ -178,8 +182,8 @@ force an update. Pulling a published `latest` image does not install this branch
 Read logs and check the native runtime inside the actual test service:
 
 ```sh
-docker compose -f qa/gstreamer/compose.integrated.yaml logs --tail 100 noar mediamtx
-docker compose -f qa/gstreamer/compose.integrated.yaml exec -T noar \
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml logs --tail 100 noar mediamtx
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml exec -T noar \
   sh -c 'noar --version; gst-inspect-1.0 --version; cat /usr/local/share/noar/srt-build.txt'
 ```
 
@@ -190,7 +194,7 @@ observed failures. Remove credentials/private URLs before sharing logs.
 
 ```sh
 cd ~/NoAr-gstreamer-test
-docker compose -f qa/gstreamer/compose.integrated.yaml down
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml down
 ```
 
 This stops only the `noar-gstreamer-staging` project and retains its data for
