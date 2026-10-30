@@ -339,7 +339,7 @@ export default {
             hint: 'Times of the video itself (h:mm:ss.d). Going in and out takes less than a second. Without an L-shape graphic in the settings, the video stays full screen.',
         },
         breakMarks: {
-            intro: 'Mark where the programme leaves for a break and where it comes back, like a break edited into the video. On SRT and UDP outputs with Settings › Ad breaks (SCTE-35) on, NoAr signals each one with SCTE-35 (announced ahead, with a key frame on the way out and back), for the platform to replace the commercials. It applies wherever the video plays.',
+            intro: 'Mark where the programme leaves for a break and where it comes back, like a break edited into the video. On HLS, SRT and UDP outputs with Settings › Ad breaks (SCTE-35) on, NoAr signals each one with SCTE-35 (announced ahead, with a key frame on the way out and back), for the platform to replace the commercials. It applies wherever the video plays.',
             onHere: 'Programme at this point',
             offHere: 'Ad break at this point',
             markOff: 'Break starts here',
@@ -1774,7 +1774,7 @@ export default {
                 'The key works as soon as it is created and stays the same until you make a new one. Whoever has it can mark breaks on this channel; make a new one if it leaks.',
             keyPlaceholder: 'YOUR_KEY',
             howTo: 'How to mark a break from your encoder or automation (tutorial)',
-            step1: 'Create the key above. Breaks go out on SRT and UDP outputs with SCTE-35 on.',
+            step1: 'Create the key above. Breaks go out on HLS, SRT and UDP outputs with SCTE-35 on.',
             step2: 'Each action is an address; call it (POST or GET). The break starts after the pre-roll and lasts "duration", between {min} and {max} s:',
             exampleDuration: 'Example length',
             url: {
@@ -1813,7 +1813,7 @@ export default {
         },
         summary: 'Announced {preroll} s ahead · breaks of {min} to {max} s',
         outputMismatch:
-            'SCTE-35 goes out with the video on an SRT or UDP output (MPEG-TS). With the current output nothing is marked. Change it under Output.',
+            'SCTE-35 goes out with the video on HLS, SRT or UDP outputs (MPEG-TS). With the current output nothing is marked. Change it under Output.',
         how: {
             title: 'How NoAr marks a break',
             intro: 'Always the same way, in the form platforms and ad servers accept most: a splice_insert. Adapting it to each platform is left to whoever receives the stream.',

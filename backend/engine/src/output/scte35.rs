@@ -172,7 +172,7 @@ impl std::error::Error for SpliceError {}
 /// The ad breaks a channel signals. Clones share the same state, which
 /// outlasts a playout restart, like the logo control.
 #[derive(Clone, Default)]
-pub struct SpliceControl(Arc<Mutex<SpliceState>>);
+pub struct SpliceControl(Arc<Mutex<SpliceState>>, Option<Arc<SpliceControl>>);
 
 impl fmt::Debug for SpliceControl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -205,6 +205,17 @@ struct SpliceState {
     within: Vec<u32>,
     breaks: Vec<Break>,
     recent: VecDeque<BreakInfo>,
+    history: VecDeque<Break>,
+    origin: Option<SystemTime>,
+}
+
+/// One shared break plan, expressed on the HLS running-time clock.
+pub(super) struct HlsSplice {
+    pub event_id: u32,
+    pub start_ns: u64,
+    pub end_ns: u64,
+    pub out: Vec<u8>,
+    pub incoming: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]
@@ -228,6 +239,109 @@ struct Break {
 impl SpliceControl {
     fn lock(&self) -> MutexGuard<'_, SpliceState> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Renditions share the plan, but each muxer measures its own timestamp
+    /// offset and emits all copies independently of the other encoders.
+    pub(super) fn rendition(&self) -> Self {
+        let parent = self.lock();
+        let state = SpliceState {
+            active: parent.active,
+            config: parent.config,
+            fps: parent.fps,
+            time_base: parent.time_base,
+            ..SpliceState::default()
+        };
+
+        Self(Arc::new(Mutex::new(state)), Some(Arc::new(self.clone())))
+    }
+
+    fn sync_plan(&self) {
+        let Some(parent) = &self.1 else {
+            return;
+        };
+        let plan = {
+            let parent = parent.lock();
+            parent
+                .breaks
+                .iter()
+                .chain(parent.history.iter())
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        let mut state = self.lock();
+        let finished = state.history.iter().map(|b| b.event_id).collect::<Vec<_>>();
+        let previous = state
+            .breaks
+            .iter()
+            .chain(state.history.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+        state.breaks = plan
+            .into_iter()
+            .filter(|b| !finished.contains(&b.event_id))
+            .map(|mut planned| {
+                if let Some(sent) = previous.iter().find(|b| b.event_id == planned.event_id) {
+                    planned.out_sent = sent.out_sent;
+                    planned.in_sent = sent.in_sent;
+                    planned.cancel_sent = sent.cancel_sent;
+                } else {
+                    planned.out_sent = 0;
+                    planned.in_sent = 0;
+                    planned.cancel_sent = false;
+                }
+                planned
+            })
+            .collect();
+    }
+
+    pub(super) fn hls_origin(&self) -> SystemTime {
+        self.lock().origin.unwrap_or_else(SystemTime::now)
+    }
+
+    pub(super) fn hls_splices(&self) -> Vec<HlsSplice> {
+        let state = self.lock();
+        let ns = |frame: i64| {
+            (i128::from(frame.max(0)) * 1_000_000_000 * i128::from(state.time_base.0)
+                / i128::from(state.time_base.1.max(1))) as u64
+        };
+
+        state
+            .breaks
+            .iter()
+            .chain(state.history.iter())
+            .filter(|b| !b.cancelled && b.out_sent > 0)
+            .map(|b| HlsSplice {
+                event_id: b.event_id,
+                start_ns: ns(b.start),
+                end_ns: ns(b.end),
+                out: splice_insert(&SpliceInsert {
+                    event_id: b.event_id,
+                    out_of_network: true,
+                    splice_time: state.pts(b.start),
+                    duration: Some(pts_diff(state.pts(b.end), state.pts(b.start))),
+                }),
+                incoming: b.in_key_frame.map(|_| {
+                    splice_insert(&SpliceInsert {
+                        event_id: b.event_id,
+                        out_of_network: false,
+                        splice_time: state.pts(b.end),
+                        duration: None,
+                    })
+                }),
+            })
+            .collect()
+    }
+
+    pub(super) fn is_splice_time(&self, running_ns: u64) -> bool {
+        let state = self.lock();
+        let frame = (u128::from(running_ns) * u128::from(state.fps) / 1_000_000_000) as i64;
+
+        state
+            .breaks
+            .iter()
+            .chain(state.history.iter())
+            .any(|b| !b.cancelled && (b.start == frame || b.end == frame))
     }
 
     pub fn status(&self) -> SpliceStatus {
@@ -300,6 +414,8 @@ impl SpliceControl {
         state.time_base = time_base;
         state.mux_delay = 0;
         state.muxed_video.clear();
+        state.history.clear();
+        state.origin = Some(SystemTime::now());
         state.last_frame = None;
         state.plan = ClipBreaks::default();
 
@@ -322,6 +438,9 @@ impl SpliceControl {
     }
 
     pub(crate) fn fail(&self, error: String) {
+        if let Some(parent) = &self.1 {
+            parent.fail(error.clone());
+        }
         let mut state = self.lock();
 
         if state.error.is_none() {
@@ -444,6 +563,7 @@ impl SpliceControl {
     /// The muxer wrote a video PES with this timestamp. Returns the messages
     /// due before it.
     pub(crate) fn messages_due(&self, now: i64, key_frame: bool) -> Vec<Vec<u8>> {
+        self.sync_plan();
         let mut state = self.lock();
         let mut messages = Vec::new();
 
@@ -645,6 +765,9 @@ impl SpliceState {
         };
         self.recent.push_front(info);
         self.recent.truncate(HISTORY);
+        self.history.retain(|old| old.event_id != b.event_id);
+        self.history.push_front(b.clone());
+        self.history.truncate(HISTORY);
     }
 
     fn info(&self, b: &Break) -> BreakInfo {
@@ -756,7 +879,8 @@ fn splice_info_section(command_type: u8, command: &[u8]) -> Vec<u8> {
     // From protocol_version to the end of the CRC: ten bytes of header, the
     // command type and command, the descriptor loop length and the CRC.
     let section_length = 10 + 1 + command.len() + 2 + 4;
-    let command_length = command.len() + 1;
+    // splice_command_length excludes the preceding splice_command_type byte.
+    let command_length = command.len();
     let mut section = Vec::with_capacity(3 + section_length);
 
     section.push(0xFC);
@@ -937,7 +1061,7 @@ impl TsInjector {
             && original[..3] == packet[..3]
         {
             let mut rewritten = *rewritten;
-            rewritten[3] = packet[3];
+            rewritten[3] = (rewritten[3] & 0xF0) | (packet[3] & 0x0F);
             return rewritten;
         }
 
@@ -1087,13 +1211,25 @@ fn add_scte35_to_pmt(
     let crc = crc32_mpeg2(&rewritten);
     rewritten.extend_from_slice(&crc.to_be_bytes());
 
-    if section_start + rewritten.len() > TS_PACKET {
+    // GStreamer's PMT packets can put all stuffing in an adaptation field,
+    // leaving no trailing payload space even for a short section. Reclaim
+    // a field containing only stuffing; preserve meaningful adaptation data.
+    let padding_only = packet[3] & 0x30 == 0x30 && (packet[4] == 0 || packet[5] == 0);
+    let target_start = if padding_only { 5 } else { section_start };
+
+    if target_start + rewritten.len() > TS_PACKET {
         return Err("the PMT with SCTE-35 does not fit in one packet".to_string());
     }
 
     let mut out = [0xFF_u8; TS_PACKET];
-    out[..section_start].copy_from_slice(&packet[..section_start]);
-    out[section_start..section_start + rewritten.len()].copy_from_slice(&rewritten);
+    if padding_only {
+        out[..4].copy_from_slice(&packet[..4]);
+        out[3] = (out[3] & 0xCF) | 0x10;
+        out[4] = 0;
+    } else {
+        out[..section_start].copy_from_slice(&packet[..section_start]);
+    }
+    out[target_start..target_start + rewritten.len()].copy_from_slice(&rewritten);
 
     Ok((out, video_pid))
 }
@@ -1141,6 +1277,12 @@ mod tests {
         assert_eq!(&section[4..9], &[0, 0, 0, 0, 0], "no pts_adjustment");
         assert_eq!(section[10], 0xFF, "tier");
         assert_eq!(section[13], 0x05, "splice_insert");
+        let command_length = (usize::from(section[11] & 0x0F) << 8) | usize::from(section[12]);
+        assert_eq!(
+            14 + command_length + 2 + 4,
+            section.len(),
+            "command length excludes its type byte"
+        );
         let command = &section[14..];
         let event_id = u32::from_be_bytes(command[..4].try_into().unwrap());
         let cancel = command[4] & 0x80 != 0;
@@ -1313,6 +1455,35 @@ mod tests {
             &[0x86, 0xE1, 0xF4, 0xF0, 0x03, 0x8A, 0x01, 0x00]
         );
         assert!(add_scte35_to_pmt(&pmt, 0x101).is_err(), "PID in use");
+    }
+
+    #[test]
+    fn native_pmt_adaptation_stuffing_is_reclaimed_and_cached_correctly() {
+        let (pat, pmt) = pat_and_pmt();
+        let section = psi_section(&pmt).unwrap().1;
+        let mut native = [0xFF; TS_PACKET];
+        native[..4].copy_from_slice(&pmt[..4]);
+        native[3] = 0x37;
+        native[4] = (TS_PACKET - section.len() - 6) as u8;
+        native[5] = 0;
+        let payload = 5 + usize::from(native[4]);
+        native[payload] = 0;
+        native[payload + 1..].copy_from_slice(section);
+        let control = active_control(2.0);
+        let mut injector = TsInjector::new(control.clone(), 500);
+        injector.process(&pat);
+
+        for continuity in [7, 8] {
+            native[3] = 0x30 | continuity;
+            let result = injector.process(&native);
+            let packet: &[u8; TS_PACKET] = result.as_slice().try_into().unwrap();
+            let (_, rewritten) = psi_section(packet).unwrap();
+
+            assert_eq!(packet[3], 0x10 | continuity);
+            assert_eq!(crc32_mpeg2(rewritten), 0);
+            assert!(rewritten.windows(4).any(|bytes| bytes == b"CUEI"));
+            assert!(control.status().error.is_none());
+        }
     }
 
     fn active_control(preroll_seconds: f64) -> SpliceControl {
@@ -1511,5 +1682,31 @@ mod tests {
             SpliceControl::default().insert_break(30.0),
             Err(SpliceError::Inactive)
         ));
+    }
+
+    #[test]
+    fn a_lagging_rendition_emits_its_own_copies_after_the_primary_retires_a_break() {
+        let control = active_control(2.0);
+        let follower = control.rendition();
+        control.frame_needs_key_frame(0);
+        let event = control.insert_break(6.0).unwrap();
+        let mut primary = Vec::new();
+        for frame in 1..260 {
+            control.video_packet_muxed(frame * 3600);
+            let key = control.frame_needs_key_frame(frame);
+            primary.extend(control.messages_due(324_000_000 + frame * 3600, key));
+        }
+        assert_eq!(control.status().recent[0].event_id, event.event_id);
+        let mut secondary = Vec::new();
+        for frame in 1..260 {
+            follower.video_packet_muxed(frame * 3600);
+            secondary.extend(follower.messages_due(324_000_000 + frame * 3600, true));
+        }
+        assert_eq!(primary.len(), 6);
+        assert_eq!(primary, secondary);
+        let splices = control.hls_splices();
+        assert_eq!(splices.len(), 1);
+        assert_eq!(splices[0].end_ns - splices[0].start_ns, 6_000_000_000);
+        assert!(splices[0].incoming.is_some());
     }
 }

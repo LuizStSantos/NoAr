@@ -6,6 +6,31 @@ This branch is for development and isolated tests. It is not a release or an
 on-air readiness approval. No version bump, release, production deployment or
 main-branch merge is part of this checkpoint.
 
+## Protocol matrix development checkpoint
+
+The current follow-up adds RTMP/HLS/UDP protocol observers, an independent
+SCTE-35 decoder, an original-byte SRT receiver, and selectable external live
+inputs (RTMP, SRT, HLS, UDP) with optional automatic Scheduler admission.
+The live editor now exposes UDP explicitly. Fixes cover native RTMP FLV tag
+boundaries/header availability, HLS buffer-list health, SCTE-35 command length
+and PMT stuffing, and initial real audio preservation.
+
+Native HLS SCTE-35 is **experimental and NOT_READY**: MPEG-TS injection,
+RFC 8216 date ranges, legacy cue tags, shared variant IDs and segment/keyframe
+requests are implemented, but runtime follow-up still has failures. In the
+latest completed HLS run these include cancellation differences between
+renditions, an IDR assertion and a receiver decode error. Receiver progress
+limits have also failed in SRT/HLS follow-up runs. The seven output modes
+(UDP/SRT/HLS with and without SCTE-35, RTMP normal) and all four Scheduler
+input protocols must be rerun before any complete-matrix claim.
+
+At this checkpoint 578 Rust tests and 13 Python QA tests pass. Formatting,
+no-default-features Clippy and all-features static Clippy pass; the latter
+uses `ORT_SKIP_DOWNLOAD=1` and does not validate native ONNX linking/runtime.
+See [the current harness instructions](../qa/gstreamer/INTEGRATED.md).
+Earlier checkpoint evidence below applies to those recorded runs, not to
+the unfinished HLS SCTE-35 expansion.
+
 ## Implementation
 
 - GStreamer is the single media engine. Native input decoding, normalization,

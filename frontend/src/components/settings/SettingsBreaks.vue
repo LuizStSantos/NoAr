@@ -25,9 +25,10 @@ const { status, now, busy, insertBreak, cancelBreak } = useScte35(channelId)
 
 const manualDuration = ref(120)
 
-/** SCTE-35 goes out on an MPEG-TS stream: SRT or UDP. */
+/** SCTE-35 is carried by MPEG-TS over SRT/UDP and native HLS. */
 const outputCarries = computed(
-    () => output.value.mode === 'stream' && ['srt', 'udp'].includes(output.value.stream_type),
+    () => output.value.mode === 'hls'
+        || (output.value.mode === 'stream' && ['srt', 'udp'].includes(output.value.stream_type)),
 )
 
 const state = computed(() => {

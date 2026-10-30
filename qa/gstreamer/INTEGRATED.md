@@ -8,7 +8,7 @@ Use a disposable development machine. Do not point this test at an on-air
 installation. It creates its own database, account, storage and playlists under
 ignored `qa/gstreamer/artifacts/integrated-*`. Credentials are generated in
 memory and are not printed. It refuses a configured NoAr installation or an
-already active MediaMTX SRT session.
+already active MediaMTX media path. All media endpoints are loopback-only.
 
 ## Prerequisites
 
@@ -21,7 +21,10 @@ already active MediaMTX SRT session.
   fixture service. Build its tools with `./run.sh build`, then run
   `docker compose --project-name noar-gstreamer-prototype --file compose.yaml run --rm --no-deps fixtures`
   from `qa/gstreamer` if the files do not already exist.
-- Free loopback ports: HTTP 19787, SRT/UDP 29890 and MediaMTX API/TCP 29997.
+- Free loopback ports: HTTP 19787, SRT/UDP 29890, RTMP/TCP 21935,
+  raw MPEG-TS/UDP 29910 and MediaMTX API/TCP 29997.
+- SCTE-35 mode additionally requires the independent `threefive` decoder pinned
+  in `requirements.txt`. The other modes use the Python standard library.
 
 From the repository root, compile the application:
 
@@ -37,7 +40,8 @@ Start only the dedicated MediaMTX test container:
 docker run --detach --rm --name noar-gstreamer-integrated-mediamtx \
   --publish 127.0.0.1:29890:8890/udp \
   --publish 127.0.0.1:29997:9997/tcp \
-  --mount "type=bind,src=$PWD/qa/gstreamer/mediamtx.yml,dst=/mediamtx.yml,readonly" \
+  --publish 127.0.0.1:21935:1935/tcp \
+  --mount "type=bind,src=$PWD/qa/gstreamer/integrated-mediamtx.yml,dst=/mediamtx.yml,readonly" \
   bluenviron/mediamtx:1.15.3
 ```
 
@@ -49,7 +53,30 @@ NOAR_GST_STAGING=1 NOAR_GST_BINARY="$PWD/target/debug/noar" \
 
 NOAR_GST_STAGING=1 NOAR_GST_BINARY="$PWD/target/debug/noar" \
   NOAR_GST_TEST_RECOVERY=1 python3 qa/gstreamer/integrated_smoke.py
+
+NOAR_GST_STAGING=1 NOAR_GST_BINARY="$PWD/target/debug/noar" \
+  NOAR_GST_TEST_OUTPUT=rtmp python3 qa/gstreamer/integrated_smoke.py
+
+NOAR_GST_STAGING=1 NOAR_GST_BINARY="$PWD/target/debug/noar" \
+  NOAR_GST_TEST_OUTPUT=hls python3 qa/gstreamer/integrated_smoke.py
 ```
+
+For SCTE-35, install only the test dependency into a disposable virtual
+environment and run the direct MPEG-TS capture:
+
+```sh
+python3 -m venv /tmp/noar-smoke-venv
+/tmp/noar-smoke-venv/bin/pip install -r qa/gstreamer/requirements.txt
+NOAR_GST_STAGING=1 NOAR_GST_BINARY="$PWD/target/debug/noar" \
+  NOAR_GST_TEST_OUTPUT=scte35 /tmp/noar-smoke-venv/bin/python \
+  qa/gstreamer/integrated_smoke.py
+
+/tmp/noar-smoke-venv/bin/python -m unittest discover -s qa/gstreamer -p 'test_*.py'
+```
+
+Add `NOAR_GST_TEST_RECOVERY=1` to RTMP, HLS or SCTE-35 mode to repeat the
+source-loss scenario for that output. Each run uses the same external synthetic
+SRT input; selecting RTMP changes the output, not the input server architecture.
 
 Each run lasts approximately 60 seconds plus setup and capture analysis. The
 test triggers three eight-second live events, with Clock, Continue and Clock
@@ -67,11 +94,55 @@ A/V ending alignment, persistent output sessions, reported SRT drops and
 recording file presence. The receiver warm-up before its first progress report
 is excluded; duration and transition gates still apply. The terminal interval
 after the last progress update is included so a stall at the end cannot pass
-merely because no later progress sample arrived.
+merely because no later progress sample arrived. Reports record the binary
+SHA-256 at startup.
+
+## Output-specific checks
+
+### Protocol matrix checkpoint (work in progress)
+
+The harness now selects live input independently with `NOAR_GST_TEST_INPUT`
+(`srt`, `rtmp`, `hls`, `udp`). `NOAR_GST_TEST_SCHEDULE=automatic` uses real
+wall-time Scheduler admission instead of the trigger API. The dedicated
+MediaMTX configuration is `integrated-mediamtx.yml`; it also requires loopback
+TCP port `21988:8888` for HLS input and `21935:1935` for RTMP input.
+
+Use `NOAR_GST_TEST_OUTPUT=udp|srt|hls` with
+`NOAR_GST_TEST_SCTE35=0|1` for the six MPEG-TS modes, plus
+`NOAR_GST_TEST_OUTPUT=rtmp` without SCTE-35. `scte35` remains an alias for
+UDP with SCTE-35. SRT with SCTE-35 uses a dedicated native `srtsrc ! filesink`
+listener on loopback UDP 29911: it preserves cues without MediaMTX or FFmpeg
+remuxing. This receiver needs the installed GStreamer library and SRT plugin.
+UDP output uses port 29910; UDP live input uses port 29912.
+
+**The complete seven-output/four-input matrix is not yet validated.** Initial
+normal RTMP/HLS and native UDP SCTE-35 runs passed before the HLS expansion.
+Later recovery runs exposed receiver progress failures; the fixed-size marker
+crop also misclassified the low HLS rendition and now scales with resolution.
+Native HLS SCTE-35 implementation and its tests are still being developed.
+Current HLS follow-up failures include cancellation visibility across
+renditions, an IDR check and one receiver decode error. Do not use this
+checkpoint as on-air readiness evidence.
+
+| Mode | Actual output and checks |
+| --- | --- |
+| `srt` (default) | NoAr publishes to MediaMTX `output`; one publisher/reader, SRT drop counters, independent FFmpeg capture/decode and a 750 ms receiver progress limit. |
+| `rtmp` | NoAr publishes H.264/AAC to `rtmp://127.0.0.1:21935/live/output`; MediaMTX tracks one publisher/reader and an RTMP receiver is decoded and timestamp-checked. The 750 ms progress limit still applies. SRT drop counters do not apply to this TCP output. |
+| `hls` | NoAr serves its own master/media playlists through `/public/1/live/`. The test fetches every referenced segment while the four-entry window rolls, archives both 640x360 and 320x180 renditions, and checks their timestamps, decoding and live transitions. The progress limit is the maximum advertised target duration plus one second, because segment downloads arrive in bursts. |
+| `scte35` | NoAr sends original MPEG-TS directly to UDP 29910. The test captures bytes before any relay or remuxer can remove signaling, requests two six-second breaks and one announced cancellation, and verifies PMT registration, repeated PMT CRCs, SCTE-35 CRCs/continuity, independent decoding, command lengths, three out/in copies, duration/auto-return, actual two-second pre-roll and exact splice-PTS keyframes. |
+
+Native HLS now has an experimental SCTE-35 implementation: in-band MPEG-TS,
+RFC 8216 `EXT-X-DATERANGE` with hexadecimal `SCTE35-OUT/IN`, program date/time,
+and legacy `CUE-OUT`, `CUE-OUT-CONT`, `CUE-IN`. The test checks both renditions
+and splice segment/IDR boundaries. It uses six seconds of HLS pre-roll; direct
+UDP/SRT tests use two seconds. RTMP SCTE-35 is unsupported. No test proves that
+MediaMTX or a downstream ad platform preserves or acts on these cues.
 
 Recording presence does not prove recording decode or retention. This test
-does not exercise browser clicks, automatic wall-time admission, HLS, RTMP,
-SCTE-35, GPU playback or a long soak. A smoke PASS is not a release approval.
+does not exercise browser clicks, automatic wall-time admission, GPU playback,
+ad insertion or a long soak. Input protocols and automatic admission only count
+as verified when an actual corresponding run passes. Each run covers only its
+selected output. A smoke PASS is not a release approval.
 See `docs/gstreamer-integration.md` for the current integration status.
 
 Stop only the dedicated test MediaMTX when finished:

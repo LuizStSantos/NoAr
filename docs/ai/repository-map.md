@@ -16,7 +16,7 @@ Machine-generated navigation index; verify behavior against current source code.
 - `docs/`: 24 indexed files
 - `frontend/`: 140 indexed files
 - `migrations/`: 22 indexed files
-- `qa/`: 28 indexed files
+- `qa/`: 33 indexed files
 - `tests_assets/`: 13 indexed files
 
 ## Languages and formats
@@ -26,10 +26,10 @@ Machine-generated navigation index; verify behavior against current source code.
 - Markdown: 77
 - TypeScript: 50
 - JSON: 26
-- Python: 22
+- Python: 25
 - SQL: 22
-- Other: 15
-- YAML: 9
+- Other: 16
+- YAML: 10
 - TOML: 4
 - Build: 2
 - Shell: 2

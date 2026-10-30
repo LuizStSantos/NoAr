@@ -577,10 +577,7 @@ impl Connection {
         }
 
         self.shared.gap.store(false, Ordering::Release);
-        let preamble = lock(&self.shared.preamble).bytes();
-        if let Err(error) = io.write(&preamble) {
-            return Ended::Lost(error);
-        }
+        let mut preamble_sent = false;
 
         loop {
             if self.stopped() {
@@ -604,6 +601,16 @@ impl Connection {
                         need_resume = true;
                     }
 
+                    // The connection can open before the muxer supplies its
+                    // header. Read the cache when its first tags arrive, once
+                    // per connection, so RTMP receives FLV/codec headers.
+                    if !preamble_sent {
+                        let preamble = lock(&self.shared.preamble).bytes();
+                        if let Err(error) = io.write(&preamble) {
+                            return Ended::Lost(error);
+                        }
+                        preamble_sent = true;
+                    }
                     if need_resume && !unit.resume_point {
                         continue;
                     }
@@ -1126,7 +1133,12 @@ impl NativeTransport {
         } else {
             data.len()
         };
-        for chunk in data.chunks(chunk_size) {
+        let chunks: Vec<&[u8]> = if self.kind == TransportKind::Rtmp {
+            rtmp_buffers(data)?
+        } else {
+            data.chunks(chunk_size).collect()
+        };
+        for chunk in chunks {
             self.source
                 .push_buffer(gst::Buffer::from_slice(chunk.to_vec()))
                 .map_err(|_| "GStreamer transport rejected output data".to_string())?;
@@ -1145,6 +1157,37 @@ impl Drop for NativeTransport {
         let _ = self.pipeline.set_state(gst::State::Null);
         lock(&self.shared.pipeline).take();
     }
+}
+
+/// rtmp2sink consumes one FLV tag per GstBuffer and discards any buffer
+/// beginning with the file header. Never combine cached codec headers with
+/// that file header, or the native sink will discard all of them together.
+fn rtmp_buffers(data: &[u8]) -> Result<Vec<&[u8]>, String> {
+    let mut chunks = Vec::new();
+    let mut cursor = 0;
+    if data.starts_with(b"FLV") {
+        if data.len() < FLV_FILE_HEADER {
+            return Err("incomplete FLV file header".to_owned());
+        }
+        chunks.push(&data[..FLV_FILE_HEADER]);
+        cursor = FLV_FILE_HEADER;
+    }
+    while cursor < data.len() {
+        if data.len() - cursor < FLV_TAG_HEADER + 4 {
+            return Err("incomplete FLV tag header".to_owned());
+        }
+        let size = (usize::from(data[cursor + 1]) << 16)
+            | (usize::from(data[cursor + 2]) << 8)
+            | usize::from(data[cursor + 3]);
+        let end = cursor + FLV_TAG_HEADER + size + 4;
+        if end > data.len() {
+            return Err("incomplete FLV tag body".to_owned());
+        }
+        chunks.push(&data[cursor..end]);
+        cursor = end;
+    }
+
+    Ok(chunks)
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -1284,6 +1327,63 @@ mod tests {
         // 24 bytes were left over; 164 more complete the next packet.
         let units = framer.push(&[0x47; 164], &shared);
         assert_eq!(units[0].data.len(), TS_PACKET);
+    }
+
+    #[test]
+    fn native_rtmp_buffers_keep_codec_tags_separate_from_the_file_header() {
+        let header = b"FLV\x01\x05\x00\x00\x00\x09\x00\x00\x00\x00";
+        let video = flv_tag(FLV_VIDEO, &[0x17, 0x00, 0, 0, 0, 1, 2]);
+        let audio = flv_tag(FLV_AUDIO, &[0xAF, 0x00, 0x12, 0x10]);
+        let data = [header.as_slice(), &video, &audio].concat();
+        let chunks = rtmp_buffers(&data).unwrap();
+
+        assert_eq!(
+            chunks,
+            [header.as_slice(), video.as_slice(), audio.as_slice()]
+        );
+        assert!(rtmp_buffers(&data[..data.len() - 1]).is_err());
+    }
+
+    #[test]
+    fn a_connection_opened_before_the_muxer_still_receives_flv_headers() {
+        let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = server.local_addr().unwrap().port();
+        let header = b"FLV\x01\x05\x00\x00\x00\x09\x00\x00\x00\x00";
+        let metadata = flv_tag(FLV_SCRIPT, b"\x02\x00\x0aonMetaData");
+        let video = flv_tag(FLV_VIDEO, &[0x17, 0x00, 0, 0, 0, 1, 2]);
+        let audio = flv_tag(FLV_AUDIO, &[0xAF, 0x00, 0x12, 0x10]);
+        let key = flv_tag(FLV_VIDEO, &[0x17, 0x01, 0, 0, 0, 9, 9, 9]);
+        let expected = [header.as_slice(), &metadata, &video, &audio, &key].concat();
+        let length = expected.len();
+        let (ready, connected) = mpsc::channel();
+        let receiver = thread::spawn(move || {
+            let (mut socket, _) = server.accept().unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_millis(200)))
+                .unwrap();
+            let mut first = [0];
+            assert!(std::io::Read::read(&mut socket, &mut first).is_err());
+            ready.send(()).unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(3)))
+                .unwrap();
+            let mut bytes = vec![0; length];
+            std::io::Read::read_exact(&mut socket, &mut bytes).unwrap();
+
+            bytes
+        });
+        let mut sink = NetworkSink::start(
+            &format!("tcp://127.0.0.1:{port}"),
+            LinkFormat::Flv,
+            &BTreeMap::new(),
+            OutputLink::default(),
+            None,
+        )
+        .unwrap();
+        connected.recv_timeout(Duration::from_secs(3)).unwrap();
+        sink.write_all(&expected).unwrap();
+
+        assert_eq!(receiver.join().unwrap(), expected);
     }
 
     #[test]

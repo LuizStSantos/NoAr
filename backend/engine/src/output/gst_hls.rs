@@ -1,6 +1,6 @@
 //! HLS manifests for MPEG-TS segments finalized by native splitmuxsink.
 
-use super::vtt::VttCue;
+use super::{scte35::SpliceControl, vtt::VttCue};
 use crate::HlsSubtitle;
 use anyhow::{Context, Result, ensure};
 use chrono::{DateTime, Utc};
@@ -34,6 +34,7 @@ pub(super) struct HlsPlaylist {
     cues: VecDeque<VttCue>,
     program_date_time: bool,
     started_at: SystemTime,
+    splice: Option<SpliceControl>,
 }
 
 impl HlsPlaylist {
@@ -118,6 +119,7 @@ impl HlsPlaylist {
             cues: VecDeque::new(),
             program_date_time,
             started_at: now,
+            splice: None,
         })
     }
 
@@ -139,6 +141,12 @@ impl HlsPlaylist {
             end_ms: cue.end_ms,
             text: cue.text.clone(),
         });
+    }
+
+    pub(super) fn set_splice(&mut self, control: SpliceControl) {
+        self.started_at = control.hls_origin();
+        self.program_date_time = true;
+        self.splice = Some(control);
     }
 
     pub(super) fn closed(&mut self, location: &str, end_ns: u64) -> Result<()> {
@@ -216,6 +224,40 @@ impl HlsPlaylist {
     fn publish(&self) -> Result<()> {
         let mut text = self.header();
         let mut subtitles = self.header();
+        let splices = self
+            .splice
+            .as_ref()
+            .map(SpliceControl::hls_splices)
+            .unwrap_or_default();
+        let oldest = self.segments.front().map_or(0, |s| s.start_ns);
+        for splice in &splices {
+            if splice.end_ns < oldest {
+                continue;
+            }
+            let start: DateTime<Utc> =
+                (self.started_at + std::time::Duration::from_nanos(splice.start_ns)).into();
+            let duration = (splice.end_ns - splice.start_ns) as f64 / 1_000_000_000.0;
+            let hex = |bytes: &[u8]| {
+                bytes
+                    .iter()
+                    .map(|byte| format!("{byte:02X}"))
+                    .collect::<String>()
+            };
+            text.push_str(&format!(
+                "#EXT-X-DATERANGE:ID=\"splice-{}-{}\",START-DATE=\"{}\",PLANNED-DURATION={duration:.6},SCTE35-OUT=0x{}",
+                self.started_at.duration_since(UNIX_EPOCH)?.as_nanos(), splice.event_id, start.to_rfc3339(), hex(&splice.out)
+            ));
+            if let Some(incoming) = &splice.incoming {
+                let end: DateTime<Utc> =
+                    (self.started_at + std::time::Duration::from_nanos(splice.end_ns)).into();
+                text.push_str(&format!(
+                    ",END-DATE=\"{}\",DURATION={duration:.6},SCTE35-IN=0x{}",
+                    end.to_rfc3339(),
+                    hex(incoming)
+                ));
+            }
+            text.push('\n');
+        }
         for segment in &self.segments {
             if segment.discontinuity {
                 text.push_str("#EXT-X-DISCONTINUITY\n");
@@ -225,6 +267,22 @@ impl HlsPlaylist {
                 let at: DateTime<Utc> =
                     (self.started_at + std::time::Duration::from_nanos(segment.start_ns)).into();
                 text.push_str(&format!("#EXT-X-PROGRAM-DATE-TIME:{}\n", at.to_rfc3339()));
+            }
+            for splice in &splices {
+                if segment.start_ns == splice.start_ns {
+                    text.push_str(&format!(
+                        "#EXT-X-CUE-OUT:{:.6}\n",
+                        (splice.end_ns - splice.start_ns) as f64 / 1_000_000_000.0
+                    ));
+                } else if segment.start_ns > splice.start_ns && segment.start_ns < splice.end_ns {
+                    text.push_str(&format!(
+                        "#EXT-X-CUE-OUT-CONT:ElapsedTime={:.6},Duration={:.6}\n",
+                        (segment.start_ns - splice.start_ns) as f64 / 1_000_000_000.0,
+                        (splice.end_ns - splice.start_ns) as f64 / 1_000_000_000.0
+                    ));
+                } else if segment.start_ns == splice.end_ns {
+                    text.push_str("#EXT-X-CUE-IN\n");
+                }
             }
             text.push_str(&format!(
                 "#EXTINF:{:.6},\n{}\n",
@@ -351,4 +409,72 @@ fn first_video_pts(path: &Path) -> Result<Option<i64>> {
         ));
     }
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Scte35Config;
+
+    #[test]
+    fn dateranges_share_the_media_clock_and_gain_an_actual_end_only_after_the_splice() {
+        let directory = std::env::temp_dir().join(format!(
+            "noar-hls-cues-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("stream.m3u8");
+        let control = SpliceControl::default();
+        control.open_output(
+            Scte35Config {
+                pid: 500,
+                preroll_seconds: 2.0,
+            },
+            25,
+            (1, 25),
+        );
+        control.frame_needs_key_frame(0);
+        control.insert_break(6.0).unwrap();
+        control.video_packet_muxed(3600);
+        control.messages_due(324_003_600, true);
+        let start = control.hls_splices()[0].start_ns;
+        let end = control.hls_splices()[0].end_ns;
+        let mut playlist = HlsPlaylist::new(path.to_str().unwrap(), 2, 4, None, false).unwrap();
+        playlist.set_splice(control.clone());
+        let close = |playlist: &mut HlsPlaylist, index, at| {
+            let location = playlist.segment_path(index);
+            fs::write(&location, []).unwrap();
+            playlist.closed(&location, at).unwrap();
+        };
+        close(&mut playlist, 0, start);
+        let announcement = fs::read_to_string(&path).unwrap();
+        assert!(announcement.contains("#EXT-X-DATERANGE:"));
+        assert!(announcement.contains("SCTE35-OUT=0xFC"));
+        assert!(announcement.contains("#EXT-X-PROGRAM-DATE-TIME:"));
+        assert!(!announcement.contains("SCTE35-IN="));
+        assert!(!announcement.contains(",DURATION="));
+        close(&mut playlist, 1, start + 2_000_000_000);
+        assert!(
+            fs::read_to_string(&path)
+                .unwrap()
+                .contains("#EXT-X-CUE-OUT:6.000000")
+        );
+        for frame in 2..=202 {
+            control.video_packet_muxed(frame * 3600);
+            control.frame_needs_key_frame(frame);
+            control.messages_due(324_000_000 + frame * 3600, true);
+        }
+        close(&mut playlist, 2, end);
+        close(&mut playlist, 3, end + 2_000_000_000);
+        let returned = fs::read_to_string(&path).unwrap();
+        assert!(returned.contains("SCTE35-IN=0xFC"));
+        assert!(returned.contains(",DURATION=6.000000"));
+        assert!(returned.contains("#EXT-X-CUE-IN\n"));
+        assert!(returned.contains("#EXT-X-CUE-OUT-CONT:"));
+        fs::remove_dir_all(directory).unwrap();
+    }
 }

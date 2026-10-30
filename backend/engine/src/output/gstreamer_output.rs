@@ -25,7 +25,7 @@ use super::{
     link::{LinkFormat, NetworkSink},
     pipeline::{self, configure_muxer, make, muxer_factory},
     recording_native::{self, RecordingMonitor},
-    scte35::TsInjector,
+    scte35::{SpliceControl, TsInjector},
     vtt,
 };
 use crate::{
@@ -40,6 +40,14 @@ use crate::{
 };
 
 const MAX_ENCODED_QUEUE: u64 = 8 * 1024 * 1024;
+
+fn inject_hls_buffer(buffer: &mut gst::BufferRef, injector: &mut TsInjector) -> Result<()> {
+    let bytes = injector.process(buffer.map_readable()?.as_slice());
+    buffer.remove_all_memory();
+    buffer.append_memory(gst::Memory::from_mut_slice(bytes));
+
+    Ok(())
+}
 
 #[derive(Clone)]
 pub(super) enum EncodedFormat {
@@ -67,6 +75,8 @@ struct Destination {
     label: &'static str,
     disabled: Mutex<Option<String>>,
     hls: Option<Arc<Mutex<HlsPlaylist>>>,
+    hls_split: Option<(gst::Element, SpliceControl)>,
+    splice_input: Option<SpliceControl>,
     recording: Mutex<Option<RecordingMonitor>>,
     eos: AtomicBool,
 }
@@ -110,6 +120,8 @@ impl Destination {
             label,
             disabled: Mutex::new(None),
             hls: None,
+            hls_split: None,
+            splice_input: None,
             recording: Mutex::new(None),
             eos: AtomicBool::new(false),
         })
@@ -134,6 +146,25 @@ impl Destination {
             return Ok(());
         }
         let source = if video { &self.video } else { &self.audio };
+        if video
+            && let Some(buffer) = sample.buffer()
+            && let Some(pts) = buffer.pts()
+            && let Some(segment) = sample
+                .segment()
+                .and_then(|s| s.downcast_ref::<gst::ClockTime>())
+            && let Some(running) = segment.to_running_time(pts)
+        {
+            if let Some(control) = &self.splice_input {
+                control.video_packet_muxed((running.nseconds() / 100_000 * 9) as i64);
+            }
+            if let Some((split, control)) = &self.hls_split
+                && control.is_splice_time(running.nseconds())
+            {
+                // This sample has not entered splitmuxsink yet, so the cut is
+                // queued before the requested IDR can pass the splitter.
+                split.emit_by_name::<()>("split-at-running-time", &[&running.nseconds()]);
+            }
+        }
         ensure!(
             source.current_level_bytes() < MAX_ENCODED_QUEUE,
             "{} muxer stopped consuming encoded data",
@@ -297,6 +328,7 @@ impl Destination {
         list_size: u32,
         subtitle: Option<HlsSubtitle>,
         health: Option<HlsHealth>,
+        splice: Option<(SpliceControl, bool)>,
     ) -> Result<Arc<Self>> {
         let mut destination = Self::new(false, "HLS output", cfg)?;
         let playlist = Arc::new(Mutex::new(HlsPlaylist::new(
@@ -311,13 +343,54 @@ impl Destination {
         let split = make("splitmuxsink")?;
         let mux = make("mpegtsmux")?;
         apply_metadata(&mux, "mpegts", &cfg.metadata_options)?;
+        if let Some((control, follower)) = splice {
+            let pid = cfg.scte35.context("HLS SCTE-35 settings missing")?.pid;
+            let injector = Mutex::new(TsInjector::new(control.clone(), pid));
+            let errors = control.clone();
+            mux.static_pad("src")
+                .context("HLS muxer has no output")?
+                .add_probe(
+                    gst::PadProbeType::BUFFER | gst::PadProbeType::BUFFER_LIST,
+                    move |_, info| {
+                        let mut injector = injector.lock().unwrap_or_else(PoisonError::into_inner);
+                        let result = if let Some(buffer) = info.buffer_mut() {
+                            inject_hls_buffer(buffer.make_mut(), &mut injector)
+                        } else if let Some(list) = info.buffer_list_mut() {
+                            let list = list.make_mut();
+                            (0..list.len()).try_for_each(|index| {
+                                inject_hls_buffer(
+                                    list.get_mut(index).context("missing HLS mux buffer")?,
+                                    &mut injector,
+                                )
+                            })
+                        } else {
+                            Ok(())
+                        };
+                        if let Err(error) = result {
+                            errors.fail(format!("HLS transport injection: {error:#}"));
+                        }
+                        gst::PadProbeReturn::Ok
+                    },
+                );
+            if follower {
+                destination.splice_input = Some(control);
+            }
+            playlist
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .set_splice(cfg.splice_control.clone());
+            destination.hls_split = Some((split.clone(), cfg.splice_control.clone()));
+        }
         if let Some(health) = health {
             mux.static_pad("src")
                 .context("HLS muxer has no output")?
-                .add_probe(gst::PadProbeType::BUFFER, move |_, _| {
-                    health.mark_muxed();
-                    gst::PadProbeReturn::Ok
-                });
+                .add_probe(
+                    gst::PadProbeType::BUFFER | gst::PadProbeType::BUFFER_LIST,
+                    move |_, _| {
+                        health.mark_muxed();
+                        gst::PadProbeReturn::Ok
+                    },
+                );
         }
         split.set_property("muxer", &mux);
         split.set_property("max-size-time", u64::from(segment_seconds) * 1_000_000_000);
@@ -720,7 +793,8 @@ impl EncodedOutput {
         };
         let encoder = Encoder::new(&primary_config, cfg.width, cfg.height, false, hls_keyframes)?;
         let splice = cfg.scte35.is_some()
-            && matches!(&format, EncodedFormat::Stream { muxer } if muxer == "mpegts");
+            && (matches!(&format, EncodedFormat::Hls { .. })
+                || matches!(&format, EncodedFormat::Stream { muxer } if muxer == "mpegts"));
         if splice {
             cfg.splice_control.open_output(
                 cfg.scte35.context("SCTE settings missing")?,
@@ -732,7 +806,7 @@ impl EncodedOutput {
             );
         } else {
             cfg.splice_control
-                .unavailable("SCTE-35 requires an MPEG-TS stream output".to_owned());
+                .unavailable("SCTE-35 requires MPEG-TS over SRT/UDP or native HLS".to_owned());
         }
         let mut variants = Vec::new();
         match format {
@@ -758,6 +832,7 @@ impl EncodedOutput {
                     list_size,
                     subtitle.clone(),
                     health.clone(),
+                    splice.then(|| (cfg.splice_control.clone(), false)),
                 )?);
                 let mut manifest = Vec::new();
                 if let Some(primary) = renditions.first() {
@@ -782,6 +857,7 @@ impl EncodedOutput {
                         list_size,
                         subtitle.clone(),
                         health.clone(),
+                        splice.then(|| (cfg.splice_control.rendition(), true)),
                     )?);
                     manifest.push((
                         rendition.name,
@@ -940,11 +1016,14 @@ impl EncodedOutput {
                 .splice_control
                 .video_packet_muxed(pts.saturating_mul(90_000) / i64::from(self.config.fps));
             if self.config.splice_control.frame_needs_key_frame(pts) {
-                let event = gstreamer_video::UpstreamForceKeyUnitEvent::builder()
-                    .all_headers(true)
-                    .build();
-                if let Some(pad) = self.encoders[0].video_encoder.static_pad("src") {
-                    pad.send_event(event);
+                for encoder in &self.encoders {
+                    let event = gstreamer_video::UpstreamForceKeyUnitEvent::builder()
+                        .running_time(clock_time(pts, self.config.video_time_base))
+                        .all_headers(true)
+                        .build();
+                    if let Some(pad) = encoder.video_encoder.static_pad("src") {
+                        pad.send_event(event);
+                    }
                 }
             }
         }
@@ -1178,7 +1257,7 @@ fn apply_metadata(
 
 #[cfg(test)]
 mod tests {
-    use std::{env, path::PathBuf, process::Command, sync::atomic::AtomicU64};
+    use std::{env, path::PathBuf, process::Command, sync::atomic::AtomicU64, time::Instant};
 
     use ffmpeg_next::{
         ChannelLayout,
@@ -1323,7 +1402,9 @@ mod tests {
             language: "en".into(),
             default: true,
         };
-        let mut output = EncodedOutput::open(
+        let health = HlsHealth::new();
+        *health.last_muxed_at.lock().unwrap() = Instant::now() - Duration::from_secs(60);
+        let mut output = EncodedOutput::open_with_hls_health(
             path.to_str().unwrap(),
             &cfg,
             EncodedFormat::Hls {
@@ -1332,6 +1413,7 @@ mod tests {
                 segment_seconds: 1,
                 list_size: 5,
             },
+            Some(health.clone()),
         )
         .unwrap();
         output.pace = false;
@@ -1347,6 +1429,7 @@ mod tests {
         output.advance_vtt_subtitles(100).unwrap();
         encode_seconds(&mut output, 64, 48, 3);
         output.finish().unwrap();
+        assert!(health.last_muxed_age() < Duration::from_secs(1));
         let playlist = fs::read_to_string(&path).unwrap();
         let segments: Vec<_> = playlist
             .lines()

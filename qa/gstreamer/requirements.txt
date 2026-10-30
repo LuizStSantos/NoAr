@@ -1,0 +1,2 @@
+# Independent SCTE-35 decoder for the optional SCTE-35 smoke mode only.
+threefive==3.1.5

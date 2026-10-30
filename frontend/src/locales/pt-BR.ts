@@ -339,7 +339,7 @@ export default {
             hint: 'Tempos do próprio vídeo (h:mm:ss.d). A entrada e a saída levam menos de um segundo. Sem arte do L-shape nas configurações, o vídeo segue em tela cheia.',
         },
         breakMarks: {
-            intro: 'Marque onde o programa sai para o break e onde volta, como um intervalo editado dentro do vídeo. Nas saídas SRT e UDP com Configurações › Breaks comerciais (SCTE-35) ligado, o NoAr sinaliza cada break com SCTE-35 (anunciado antes, com quadro-chave na saída e na volta), para a plataforma trocar os comerciais. Vale em todo lugar onde o vídeo tocar.',
+            intro: 'Marque onde o programa sai para o break e onde volta, como um intervalo editado dentro do vídeo. Nas saídas HLS, SRT e UDP com Configurações › Breaks comerciais (SCTE-35) ligado, o NoAr sinaliza cada break com SCTE-35 (anunciado antes, com quadro-chave na saída e na volta), para a plataforma trocar os comerciais. Vale em todo lugar onde o vídeo tocar.',
             onHere: 'Programa neste ponto',
             offHere: 'Break comercial neste ponto',
             markOff: 'Sai para o break aqui',
@@ -1776,7 +1776,7 @@ export default {
                 'A chave vale assim que é criada e fica a mesma até você gerar uma nova. Quem tem a chave pode marcar breaks neste canal; gere uma nova se ela vazar.',
             keyPlaceholder: 'SUA_CHAVE',
             howTo: 'Como marcar um break do seu encoder ou automação (tutorial)',
-            step1: 'Crie a chave acima. Os breaks saem nas saídas SRT e UDP com SCTE-35 ligado.',
+            step1: 'Crie a chave acima. Os breaks saem nas saídas HLS, SRT e UDP com SCTE-35 ligado.',
             step2: 'Cada ação é um endereço; chame-o (POST ou GET). O break começa depois do pré-roll e dura o "duration", entre {min} e {max} s:',
             exampleDuration: 'Duração do exemplo',
             url: {
@@ -1815,7 +1815,7 @@ export default {
         },
         summary: 'Aviso {preroll} s antes · breaks de {min} a {max} s',
         outputMismatch:
-            'O SCTE-35 sai junto com o vídeo numa saída SRT ou UDP (MPEG-TS). Com a saída atual, nada é marcado. Troque a saída em Saída.',
+            'O SCTE-35 sai junto com o vídeo nas saídas HLS, SRT ou UDP (MPEG-TS). Com a saída atual, nada é marcado. Troque a saída em Saída.',
         how: {
             title: 'Como o NoAr marca um break',
             intro: 'Sempre do mesmo jeito, no formato que plataformas e servidores de anúncio mais aceitam: um splice_insert. Adaptar a cada plataforma fica para quem recebe o sinal.',

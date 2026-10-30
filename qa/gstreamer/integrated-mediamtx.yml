@@ -1,0 +1,43 @@
+logLevel: info
+api: yes
+apiAddress: :9997
+authInternalUsers:
+  - user: any
+    permissions:
+      - action: api
+      - action: publish
+        path: input
+      - action: publish
+        path: output
+      - action: read
+        path: input
+      - action: read
+        path: output
+      - action: publish
+        path: live/output
+      - action: read
+        path: live/output
+      - action: publish
+        path: live/input
+      - action: read
+        path: live/input
+rtsp: no
+rtmp: yes
+rtmpAddress: :1935
+hls: yes
+hlsAddress: :8888
+hlsVariant: mpegts
+hlsSegmentDuration: 1s
+hlsAlwaysRemux: yes
+webrtc: no
+srt: yes
+srtAddress: :8890
+paths:
+  input:
+    source: publisher
+  output:
+    source: publisher
+  live/output:
+    source: publisher
+  live/input:
+    source: publisher

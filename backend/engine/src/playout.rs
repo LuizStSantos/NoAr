@@ -560,7 +560,18 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                                 count,
                                 compositor.last_composited_frame.as_ref(),
                             )?;
-                            synchronize_silence_to_video(cfg, timeline, output, playback_control)?;
+                            // A missing video frame does not imply missing
+                            // audio. Let the source's pending audio arrive
+                            // instead of replacing its opening samples.
+                            if external.is_none() && (!info.has_audio || opened.input.audio_ended())
+                            {
+                                synchronize_silence_to_video(
+                                    cfg,
+                                    timeline,
+                                    output,
+                                    playback_control,
+                                )?;
+                            }
                         }
                         if target + 1 < timeline.video_pts || (live && target < timeline.video_pts)
                         {

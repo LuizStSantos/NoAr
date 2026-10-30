@@ -57,13 +57,13 @@ def packet_metrics(probe):
     return result
 
 
-def connection_metrics(snapshots):
+def connection_metrics(snapshots, path="output"):
     result = {}
     for state in ("publish", "read"):
         identities = {item["id"] for snapshot in snapshots for item in snapshot["items"]
-                      if item.get("path") == "output" and item.get("state") == state}
+                      if item.get("path") == path and item.get("state") == state}
         records = [item for snapshot in snapshots for item in snapshot["items"]
-                   if item.get("path") == "output" and item.get("state") == state]
+                   if item.get("path") == path and item.get("state") == state]
         result[state] = {
             "unique_ids": sorted(identities), "count": len(identities),
             "drop_statistics_available": bool(records) and all(
@@ -77,7 +77,7 @@ def connection_metrics(snapshots):
 def decode_markers(capture):
     pixels = subprocess.run([
         "ffmpeg", "-v", "error", "-i", str(capture), "-an", "-vf",
-        "fps=4:start_time=0,crop=64:64:0:0,scale=1:1", "-pix_fmt", "rgb24", "-f", "rawvideo", "-",
+        "fps=4:start_time=0,crop=iw/10:ih/10:0:0,scale=1:1", "-pix_fmt", "rgb24", "-f", "rawvideo", "-",
     ], check=True, capture_output=True).stdout
     colors = Counter()
     video_sequence = []
