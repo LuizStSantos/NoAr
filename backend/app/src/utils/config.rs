@@ -625,6 +625,10 @@ pub struct Processing {
     /// turns that off.
     #[serde(default)]
     pub logo_key: String,
+    /// Key that lets an encoder or a script extend or end the live on air;
+    /// empty turns that off.
+    #[serde(default)]
+    pub live_key: String,
     /// How the logo comes up.
     #[serde(default)]
     pub logo_transition_in: LogoTransition,
@@ -841,6 +845,7 @@ impl Processing {
             vtt_default: config.processing_vtt_default,
             guide_logo: config.processing_guide_logo.clone(),
             logo_key: config.processing_logo_key.clone(),
+            live_key: config.processing_live_key.clone(),
             logo_transition_in: LogoTransition::new(&config.processing_logo_transition_in),
             logo_transition_out: LogoTransition::new(&config.processing_logo_transition_out),
             logo_transition_seconds: config.processing_logo_transition_seconds,

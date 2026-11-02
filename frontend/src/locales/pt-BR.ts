@@ -1144,6 +1144,13 @@ export default {
         returnsTo: 'Depois volta para “{title}” em {position}, o ponto exato onde parou.',
         returnsWhereStopped: 'Depois a grade continua de onde parou.',
         returnsOnClock: 'Depois a grade volta no horário.',
+        liveRemote: {
+            title: 'Controle remoto da live (API)',
+            intro: 'Um encoder, Stream Deck ou script pode estender a live no ar ou encerrá-la, sem login, com a chave abaixo. Vale só para a exibição em curso.',
+            key: 'Chave da live',
+            noKey: 'Sem chave: o controle remoto da live está desligado.',
+            keyHint: 'Envie como ?key= ou no cabeçalho X-Live-Key. Renovar invalida a chave anterior.',
+        },
         endLiveNow: 'Encerrar live e voltar à grade',
         extendLive: 'Estender a live',
         liveEndsAt: 'Termina às {end}',

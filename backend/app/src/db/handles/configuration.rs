@@ -62,6 +62,7 @@ pub async fn select_configuration(
         processing.vtt_default AS processing_vtt_default,
         processing.guide_logo AS processing_guide_logo,
         processing.logo_key AS processing_logo_key,
+        processing.live_key AS processing_live_key,
         processing.logo_transition_in AS processing_logo_transition_in,
         processing.logo_transition_out AS processing_logo_transition_out,
         processing.logo_transition_seconds AS processing_logo_transition_seconds,

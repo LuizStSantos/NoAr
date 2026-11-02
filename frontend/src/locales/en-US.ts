@@ -1143,6 +1143,13 @@ export default {
         returnsTo: 'Then back to “{title}” at {position}, the exact point where it stopped.',
         returnsWhereStopped: 'Then the programme continues where it stopped.',
         returnsOnClock: 'Then the programme returns on time.',
+        liveRemote: {
+            title: 'Live remote control (API)',
+            intro: 'An encoder, Stream Deck or script can extend the live on air or end it, without logging in, with the key below. It applies to the current airing only.',
+            key: 'Live key',
+            noKey: 'No key: remote control of the live is off.',
+            keyHint: 'Send it as ?key= or in the X-Live-Key header. Renewing invalidates the previous key.',
+        },
         endLiveNow: 'End the live and go back to the programme',
         extendLive: 'Extend the live',
         liveEndsAt: 'Ends at {end}',

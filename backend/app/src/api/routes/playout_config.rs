@@ -126,6 +126,7 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
         {
             processing.remove("guide_logo");
             processing.remove("logo_key");
+            processing.remove("live_key");
             // The channel logo is put on air right away when saved.
             for key in [
                 "add_logo",
@@ -306,6 +307,7 @@ pub async fn update_playout_config(
     // The remote-control keys change only with `/keys/{kind}`: a page that
     // saves an older copy of the settings must not bring back an old key.
     data.processing.logo_key = config.processing.logo_key.clone();
+    data.processing.live_key = config.processing.live_key.clone();
     data.scte35.key = config.scte35.key.clone();
 
     let (logo_path, _, logo) = norm_abs_path(storage, &data.processing.logo)?;
@@ -582,6 +584,7 @@ pub async fn update_remote_key(
     let kind = match kind.as_str() {
         "logo" => handles::RemoteKey::Logo,
         "scte35" => handles::RemoteKey::Scte35,
+        "live" => handles::RemoteKey::Live,
         _ => return Err(ServiceError::BadRequest(format!("unknown key '{kind}'"))),
     };
     let key = match request.action.as_str() {
@@ -605,6 +608,7 @@ pub async fn update_remote_key(
     match kind {
         handles::RemoteKey::Logo => config.processing.logo_key.clone_from(&key),
         handles::RemoteKey::Scte35 => config.scte35.key.clone_from(&key),
+        handles::RemoteKey::Live => config.processing.live_key.clone_from(&key),
     }
     manager.update_config(config).await;
 

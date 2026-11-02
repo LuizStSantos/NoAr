@@ -586,3 +586,79 @@ async fn extending_a_live_needs_one_on_air_and_a_clear_request() {
         assert!(body.to_string().contains("no live"), "{body}");
     }
 }
+
+#[tokio::test]
+#[serial]
+async fn the_live_can_be_controlled_with_the_channel_live_key() {
+    let fixture = security_fixture().await;
+    // Keys are set by administrators.
+    let token = access_token(&fixture.state, 2).await;
+
+    // Without a key the route is off.
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/live/1/end?key=anything",
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, created) = send(
+        &fixture,
+        "POST",
+        "/api/playout/config/1/keys/live",
+        Some(&token),
+        json!({"action": "renew"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    let key = created["key"].as_str().unwrap().to_string();
+    assert_eq!(key.len(), 32);
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/live/1/extend?key=wrong&minutes=30",
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    // The right key, by query or header, reaches the live: none is on air.
+    let extend = format!("/live/1/extend?key={key}&minutes=30");
+    let (status, body) = send(&fixture, "POST", &extend, None, json!(null)).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(
+            axum::http::Request::builder()
+                .method("POST")
+                .uri("/live/1/end")
+                .header("x-live-key", &key)
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+
+    let (status, _) = send(&fixture, "POST", "/live/1/rewind?key=x", None, json!(null)).await;
+    assert!(status.is_client_error());
+
+    // Clearing the key turns the route off again.
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/playout/config/1/keys/live",
+        Some(&token),
+        json!({"action": "clear"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = send(&fixture, "POST", &extend, None, json!(null)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}

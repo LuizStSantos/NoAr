@@ -336,6 +336,17 @@ pub async fn extend_live(
     Json(request): Json<ExtendLive>,
 ) -> Result<Json<ActiveEvent>, ServiceError> {
     let manager = authorized_manager(&state, id, &user, &details).await?;
+
+    Ok(Json(extend_on_air(&state, &manager, id, &request).await?))
+}
+
+/// Move the end of the live on air of channel `id` as `request` says.
+async fn extend_on_air(
+    state: &AppState,
+    manager: &ChannelManager,
+    id: i32,
+    request: &ExtendLive,
+) -> Result<ActiveEvent, ServiceError> {
     let (timezone, storage) = {
         let config = manager.config.read().await;
         (config.channel.timezone, config.channel.storage.clone())
@@ -381,7 +392,92 @@ pub async fn extend_live(
         manager.preloader.lock().await.clone().preload_live(&url);
     }
 
-    Ok(Json(active))
+    Ok(active)
+}
+
+/// What an encoder or a script can do with the live on air.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum LiveAction {
+    /// Push its end later: `minutes=` or `until=HH:MM`.
+    Extend,
+    /// End it now; the programme comes back as the event says.
+    End,
+}
+
+/// The query of `/live/{id}/{action}`.
+#[derive(Debug, Default, Deserialize)]
+pub struct LiveKeyQuery {
+    #[serde(default)]
+    pub key: Option<String>,
+    #[serde(default)]
+    pub minutes: Option<f64>,
+    #[serde(default)]
+    pub until: Option<String>,
+}
+
+/// Header an encoder can send the key in, instead of the `key` query.
+const LIVE_KEY_HEADER: &str = "x-live-key";
+
+/// **Extend or end the live on air, with the channel's live key**
+///
+/// For encoders, Stream Decks and scripts that cannot log in. The key is set
+/// in the Scheduler (Lives › Remote control); without one this answers 403.
+/// Answers the event on air after the change (`null` after `end`).
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/live/1/extend?key=<KEY>&minutes=30'
+/// curl -X POST 'http://127.0.0.1:8787/live/1/extend?key=<KEY>&until=13:30'
+/// curl -X POST 'http://127.0.0.1:8787/live/1/end?key=<KEY>'
+/// ```
+pub async fn control_live_with_key(
+    State(state): State<AppState>,
+    Path((id, action)): Path<(i32, LiveAction)>,
+    Query(query): Query<LiveKeyQuery>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<Option<ActiveEvent>>, ServiceError> {
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
+    let expected = manager.config.read().await.processing.live_key.clone();
+    let given = headers
+        .get(LIVE_KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .or(query.key.as_deref())
+        .unwrap_or_default();
+
+    if !crate::api::routes::logo::key_matches(&expected, given) {
+        return Err(ServiceError::Forbidden(
+            "Wrong or missing live key".to_string(),
+        ));
+    }
+
+    match action {
+        LiveAction::Extend => {
+            let request = ExtendLive {
+                minutes: query.minutes,
+                until: query.until,
+            };
+
+            Ok(Json(Some(
+                extend_on_air(&state, &manager, id, &request).await?,
+            )))
+        }
+        LiveAction::End => {
+            if manager
+                .schedule
+                .active()
+                .is_none_or(|active| active.kind != ScheduleKind::Live)
+            {
+                return Err(ServiceError::Conflict("no live is on air".to_string()));
+            }
+            return_to_programme(&manager).await;
+
+            Ok(Json(None))
+        }
+    }
 }
 
 /// **Scheduler state**

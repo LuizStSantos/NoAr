@@ -102,6 +102,11 @@ guide_logo: string,
  */
 logo_key: string, 
 /**
+ * Key that lets an encoder or a script extend or end the live on air;
+ * empty turns that off.
+ */
+live_key: string, 
+/**
  * How the logo comes up.
  */
 logo_transition_in: LogoTransition, 

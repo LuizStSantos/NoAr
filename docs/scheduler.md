@@ -191,3 +191,21 @@ signal is kept connected), and the programme comes back at the new end, where
 it stopped or on the clock, as the event says. **End the live and go back to
 the programme** ends it at once. Encoders and automation can do the same with
 `POST /api/schedule/{id}/extend` and `POST /api/schedule/{id}/stop`.
+
+### Without logging in: the live key
+
+Encoders, Stream Decks and scripts that cannot log in use the channel's
+**live key**, created under *Scheduler › Lives › Live remote control*, like
+the logo and SCTE-35 keys. Without a key these routes answer `403`; renewing
+it invalidates the previous one. Send it as `?key=` or in the `X-Live-Key`
+header; `GET` works too, for devices that only open URLs.
+
+```sh
+curl -X POST 'http://SERVER:8787/live/1/extend?key=KEY&minutes=30'
+curl -X POST 'http://SERVER:8787/live/1/extend?key=KEY&until=13:30'
+curl -X POST 'http://SERVER:8787/live/1/end?key=KEY'
+curl -X POST -H 'X-Live-Key: KEY' 'http://SERVER:8787/live/1/end'
+```
+
+`extend` answers the live on air with its new `ends_at`; `end` answers
+`null`. Both answer `409` when no live is on air.

@@ -47,6 +47,7 @@ pub async fn update_scte35_on(
 pub enum RemoteKey {
     Logo,
     Scte35,
+    Live,
 }
 
 /// Store `key` as the channel's `kind` key, alone: saving the rest of the
@@ -63,6 +64,9 @@ pub async fn update_remote_key(
         }
         RemoteKey::Scte35 => {
             "UPDATE config_scte35 SET api_key = $2 WHERE config_id = (SELECT id FROM config WHERE channel_id = $1)"
+        }
+        RemoteKey::Live => {
+            "UPDATE config_processing SET live_key = $2 WHERE config_id = (SELECT id FROM config WHERE channel_id = $1)"
         }
     };
 

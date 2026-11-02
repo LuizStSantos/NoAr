@@ -291,6 +291,8 @@ pub struct Configuration {
     pub processing_guide_logo: String,
     #[serde(default)]
     pub processing_logo_key: String,
+    #[serde(default)]
+    pub processing_live_key: String,
     #[serde(default = "default_logo_transition")]
     pub processing_logo_transition_in: String,
     #[serde(default = "default_logo_transition")]
@@ -386,6 +388,7 @@ impl Configuration {
             processing_vtt_default: config.processing.vtt_default,
             processing_guide_logo: config.processing.guide_logo,
             processing_logo_key: config.processing.logo_key,
+            processing_live_key: config.processing.live_key,
             processing_logo_transition_in: config.processing.logo_transition_in.to_string(),
             processing_logo_transition_out: config.processing.logo_transition_out.to_string(),
             processing_logo_transition_seconds: config.processing.logo_transition_seconds,

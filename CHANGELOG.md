@@ -51,6 +51,10 @@ one is tagged.
   a time) or with `POST /api/schedule/{id}/extend`, for this airing only; it
   goes on without reconnecting. The panel names the end and ends the live at
   once with its button (`/stop`).
+- A channel **live key** (migration `00026`) lets encoders and scripts extend
+  or end the live on air without logging in:
+  `/live/{id}/extend?key=…&minutes=30|until=13:30` and `/live/{id}/end?key=…`,
+  set under *Scheduler › Lives › Live remote control*.
 - Lives go into playlists (dragged from the Player library for their default
   length) and into assembled programs as a **Live** part with its own length;
   both air the live's current address. A program's clips follow trims made
