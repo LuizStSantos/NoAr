@@ -1,5 +1,6 @@
 //! GStreamer decoding on the continuous NoAr scheduling timeline.
 
+use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     error::Error,
     fmt,
@@ -15,7 +16,7 @@ use std::{
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use ffmpeg_next::{
     format, frame,
-    util::{channel_layout::ChannelLayout, format::pixel::Pixel, format::sample::Sample},
+    util::{channel_layout::ChannelLayout, format::sample::Sample},
 };
 use log::{debug, trace};
 
@@ -30,7 +31,6 @@ use crate::{
     output::{FrameOutput, PlaybackStopped},
     utils::{
         config::{OutputConfig, TextOverlayState},
-        ffmpeg::{make_video_frame_writable, reference_video_frame},
         helper::{is_live_input, is_network_url},
     },
 };
@@ -607,7 +607,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                         {
                             continue;
                         }
-                        last_picture = Some(reference_video_frame(&picture)?);
+                        last_picture = Some(picture.clone());
                         picture.set_pts(Some(timeline.video_pts));
                         encode_composited_frame(
                             picture,
@@ -667,8 +667,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                             {
                                 let frame = last_picture
                                     .as_ref()
-                                    .map(reference_video_frame)
-                                    .transpose()?
+                                    .cloned()
                                     .unwrap_or_else(|| black_video_frame_for_config(cfg));
                                 encode_composited_frame(
                                     frame,
@@ -707,9 +706,10 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             if video_frames <= 1 && last_picture.is_some() {
                 while end_video.is_some_and(|end| timeline.video_pts < end) {
                     check_playback_control(playback_control)?;
-                    let picture = reference_video_frame(
-                        last_picture.as_ref().context("still picture missing")?,
-                    )?;
+                    let picture = last_picture
+                        .as_ref()
+                        .context("still picture missing")?
+                        .clone();
                     encode_composited_frame(
                         picture,
                         &mut compositor,
@@ -941,7 +941,7 @@ struct VideoCompositor {
     lshape_scaler: crate::compositor::lshape::LShapeScaler,
     text: Option<TextOverlay>,
     runtime_text: RuntimeTextOverlay,
-    last_composited_frame: Option<frame::Video>,
+    last_composited_frame: Option<VideoFrame>,
 }
 
 impl VideoCompositor {
@@ -1085,7 +1085,7 @@ fn hold_until_open<O: FrameOutput>(
                         .held_video_frame()
                         .unwrap_or_else(|| black_video_frame_for_config(cfg))
                 });
-                let mut frame = reference_video_frame(picture)?;
+                let mut frame = picture.clone();
 
                 frame.set_pts(Some(timeline.video_pts));
                 output.encode_video(&frame)?;
@@ -1183,7 +1183,7 @@ impl RuntimeTextOverlay {
 
 #[allow(clippy::too_many_arguments)]
 fn encode_composited_frame<O: FrameOutput>(
-    mut frame: frame::Video,
+    mut frame: VideoFrame,
     video: &mut VideoCompositor,
     timeline: &mut Timeline,
     media_fade_plan: MediaFadePlan,
@@ -1216,16 +1216,7 @@ fn encode_composited_frame<O: FrameOutput>(
     }
 
     let video_opacity = media_fade_plan.video_opacity_at(timeline.video_pts);
-    let changes_pixels = video_frame_needs_write(
-        video_opacity,
-        video.logo.is_some() || video.logo_control.has_replacement(),
-        video.text.is_some(),
-        video.runtime_text.overlay.is_some(),
-    );
 
-    if changes_pixels {
-        make_video_frame_writable(&mut frame)?;
-    }
     apply_video_fade(&mut frame, video_opacity);
     apply_overlays(
         &mut frame,
@@ -1249,17 +1240,8 @@ fn encode_composited_frame<O: FrameOutput>(
     Ok(())
 }
 
-fn video_frame_needs_write(
-    opacity: f32,
-    has_logo: bool,
-    has_static_text: bool,
-    has_runtime_text: bool,
-) -> bool {
-    opacity < 1.0 || has_logo || has_static_text || has_runtime_text
-}
-
 fn apply_overlays(
-    frame: &mut frame::Video,
+    frame: &mut VideoFrame,
     video: &mut VideoCompositor,
     timeline: &mut Timeline,
     logo_fade_plan: LogoFadePlan,
@@ -1343,7 +1325,7 @@ fn apply_overlays(
 }
 
 fn draw_logo(
-    frame: &mut frame::Video,
+    frame: &mut VideoFrame,
     logo: &LogoOverlay,
     opacity: f64,
     output: &mut impl FrameOutput,
@@ -1359,7 +1341,7 @@ fn draw_logo(
 
 /// Fades the decoded video toward limited-range YUV black before overlays are
 /// blended, so logos and text remain fully visible during a clipped end.
-fn apply_video_fade(frame: &mut frame::Video, opacity: f32) {
+fn apply_video_fade(frame: &mut VideoFrame, opacity: f32) {
     if opacity >= 1.0 {
         return;
     }
@@ -1440,7 +1422,7 @@ fn synchronize_timeline<O: FrameOutput>(
     cfg: &OutputConfig,
     timeline: &mut Timeline,
     output: &mut O,
-    last_video_frame: Option<&frame::Video>,
+    last_video_frame: Option<&VideoFrame>,
 ) -> Result<()> {
     let (video_frames, audio_samples) = padding_to_sync(
         timeline.video_pts,
@@ -1499,7 +1481,7 @@ fn synchronize_live_tracks<O: FrameOutput>(
     output: &mut O,
     end_video: Option<i64>,
     end_audio: Option<i64>,
-    picture: Option<&frame::Video>,
+    picture: Option<&VideoFrame>,
 ) -> Result<()> {
     // Allow one video frame and 100 ms of audio jitter before synthesizing
     // missing media. Healthy, interleaved source tracks need no padding.
@@ -1523,7 +1505,7 @@ fn synchronize_after_skip<O: FrameOutput>(
     cfg: &OutputConfig,
     timeline: &mut Timeline,
     output: &mut O,
-    last_video_frame: Option<&frame::Video>,
+    last_video_frame: Option<&VideoFrame>,
 ) -> Result<()> {
     let (video_frames, audio_samples) = padding_to_sync(
         timeline.video_pts,
@@ -1648,7 +1630,7 @@ impl FallbackOverlays {
         })
     }
 
-    fn apply(&mut self, frame: &mut frame::Video, timeline: &mut Timeline) {
+    fn apply(&mut self, frame: &mut VideoFrame, timeline: &mut Timeline) {
         if let Some(text) = &mut self.text {
             text.blend(frame, timeline.video_pts, timeline.text_pts);
         }
@@ -1667,13 +1649,13 @@ fn write_padding_video_frames<O: FrameOutput>(
     timeline: &mut Timeline,
     output: &mut O,
     frames: i64,
-    last_video_frame: Option<&frame::Video>,
+    last_video_frame: Option<&VideoFrame>,
 ) -> Result<()> {
     if let Some(last_video_frame) = last_video_frame {
         for _ in 0..frames {
             // The frame is already fully composited. Padding only changes its
             // header PTS, so all duplicates can safely share the pixel buffer.
-            let mut frame = reference_video_frame(last_video_frame)?;
+            let mut frame = last_video_frame.clone();
             frame.set_pts(Some(timeline.video_pts));
             output.encode_video(&frame)?;
             timeline.video_pts += 1;
@@ -1685,19 +1667,19 @@ fn write_padding_video_frames<O: FrameOutput>(
     }
 }
 
-fn black_video_frame_for_config(cfg: &OutputConfig) -> frame::Video {
+fn black_video_frame_for_config(cfg: &OutputConfig) -> VideoFrame {
     black_video_frame(cfg.width, cfg.height)
 }
 
-pub(crate) fn black_video_frame(width: u32, height: u32) -> frame::Video {
-    let mut frame = frame::Video::new(Pixel::YUV420P, width, height);
+pub(crate) fn black_video_frame(width: u32, height: u32) -> VideoFrame {
+    let mut frame = VideoFrame::new(PixelFormat::Yuv420p, width, height);
     fill_plane(&mut frame, 0, 16);
     fill_plane(&mut frame, 1, 128);
     fill_plane(&mut frame, 2, 128);
     frame
 }
 
-fn fill_plane(frame: &mut frame::Video, plane: usize, value: u8) {
+fn fill_plane(frame: &mut VideoFrame, plane: usize, value: u8) {
     let height = if plane == 0 {
         frame.height()
     } else {
@@ -1786,7 +1768,7 @@ mod live_interleave_tests {
             1024
         }
 
-        fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+        fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
             self.video.push(frame.pts().unwrap());
 
             Ok(())

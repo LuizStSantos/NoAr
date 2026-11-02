@@ -1,3 +1,4 @@
+use crate::frame::VideoFrame;
 use std::collections::VecDeque;
 
 use anyhow::Result;
@@ -9,7 +10,7 @@ use crate::{
     output::FrameOutput,
     utils::{
         config::OutputConfig,
-        ffmpeg::{make_audio_frame_writable, reference_audio_frame, reference_video_frame},
+        ffmpeg::{make_audio_frame_writable, reference_audio_frame},
     },
 };
 
@@ -26,7 +27,7 @@ pub(crate) struct ProgramAudioState {
 }
 
 enum PendingFrame {
-    Video(frame::Video),
+    Video(VideoFrame),
     Audio {
         frame: frame::Audio,
         live: bool,
@@ -219,13 +220,13 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
         self.output.audio_frame_size()
     }
 
-    fn held_video_frame(&self) -> Option<frame::Video> {
+    fn held_video_frame(&self) -> Option<VideoFrame> {
         // Frames held back for the lookahead are newer than the output's.
         self.pending
             .iter()
             .rev()
             .find_map(|pending| match pending {
-                PendingFrame::Video(frame) => reference_video_frame(frame).ok(),
+                PendingFrame::Video(frame) => Some(frame.clone()),
                 PendingFrame::Audio { .. } => None,
             })
             .or_else(|| self.output.held_video_frame())
@@ -243,7 +244,7 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
         self.queue_audio(frame, false, hold)
     }
 
-    fn encode_video(&mut self, video: &frame::Video) -> Result<()> {
+    fn encode_video(&mut self, video: &VideoFrame) -> Result<()> {
         if self.scope == LoudnessScope::Off {
             return self.output.encode_video(video);
         }
@@ -254,8 +255,7 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
                 .unwrap_or_default()
                 .rescale(self.video_time_base, Rational(1, self.sample_rate as i32)),
         );
-        self.pending
-            .push_back(PendingFrame::Video(reference_video_frame(video)?));
+        self.pending.push_back(PendingFrame::Video(video.clone()));
         self.drain(false)
     }
 
@@ -282,7 +282,7 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
         Ok(reset)
     }
 
-    fn apply_logo_overlay(&mut self, frame: &mut frame::Video, logo: &LogoOverlay, opacity: f64) {
+    fn apply_logo_overlay(&mut self, frame: &mut VideoFrame, logo: &LogoOverlay, opacity: f64) {
         self.output.apply_logo_overlay(frame, logo, opacity);
     }
 
@@ -325,6 +325,7 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
 
 #[cfg(test)]
 mod tests {
+    use crate::frame::PixelFormat;
     use ffmpeg_next::{
         ChannelLayout,
         format::sample::{Sample, Type},
@@ -346,7 +347,7 @@ mod tests {
             4800
         }
 
-        fn encode_video(&mut self, video: &frame::Video) -> Result<()> {
+        fn encode_video(&mut self, video: &VideoFrame) -> Result<()> {
             self.video.push(video.pts().unwrap());
             Ok(())
         }
@@ -408,7 +409,7 @@ mod tests {
 
             output.encode_audio(&audio(0, 0.1)).unwrap();
             for pts in 0..3 {
-                let mut video = frame::Video::new(ffmpeg_next::format::Pixel::YUV420P, 16, 16);
+                let mut video = VideoFrame::new(PixelFormat::Yuv420p, 16, 16);
                 video.set_pts(Some(pts));
                 output.encode_video(&video).unwrap();
             }
@@ -701,7 +702,7 @@ mod tests {
         let mut output = ProgramAudioOutput::new(&mut capture, &mut state, &config).unwrap();
 
         for pts in 0..100 {
-            let mut video = frame::Video::new(ffmpeg_next::format::Pixel::YUV420P, 16, 16);
+            let mut video = VideoFrame::new(PixelFormat::Yuv420p, 16, 16);
             video.set_pts(Some(pts));
             output.encode_video(&video).unwrap();
             assert!(output.pending.len() <= 3);

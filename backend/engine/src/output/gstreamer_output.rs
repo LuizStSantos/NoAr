@@ -3,6 +3,7 @@
 //! Encoded samples are shared with preview and copy recording. Each muxer owns
 //! a pipeline, so an optional recording or viewer cannot interrupt the air.
 
+use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     collections::{BTreeMap, VecDeque},
     fs,
@@ -35,7 +36,7 @@ use crate::{
     utils::{
         clock::PlayoutClock,
         config::{HlsSubtitle, HlsVariant, OutputConfig},
-        ffmpeg::{make_audio_frame_writable, reference_audio_frame, reference_video_frame},
+        ffmpeg::{make_audio_frame_writable, reference_audio_frame},
     },
 };
 
@@ -738,7 +739,7 @@ pub(super) struct EncodedOutput {
     loudness: LoudnessMeter,
     clock: PlayoutClock,
     pace: bool,
-    last_video: Option<frame::Video>,
+    last_video: Option<VideoFrame>,
     last_audio_end: Option<i64>,
     pending_vtt: VecDeque<vtt::VttCue>,
     splice: bool,
@@ -1038,13 +1039,13 @@ impl EncodedOutput {
         Ok(())
     }
 
-    pub(super) fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+    pub(super) fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
         self.poll()?;
         let pts = frame.pts().unwrap_or(0);
         if self
             .last_video
             .as_ref()
-            .and_then(|v| v.pts())
+            .and_then(VideoFrame::pts)
             .is_some_and(|previous| pts <= previous)
         {
             return Ok(());
@@ -1090,14 +1091,12 @@ impl EncodedOutput {
         if let Some(ndi) = &self.ndi {
             ndi.push_video(buffer)?;
         }
-        self.last_video = Some(reference_video_frame(frame)?);
+        self.last_video = Some(frame.clone());
         Ok(())
     }
 
-    pub(super) fn held_video_frame(&self) -> Option<frame::Video> {
-        self.last_video
-            .as_ref()
-            .and_then(|frame| reference_video_frame(frame).ok())
+    pub(super) fn held_video_frame(&self) -> Option<VideoFrame> {
+        self.last_video.clone()
     }
 
     pub(super) fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
@@ -1251,9 +1250,9 @@ fn clock_time(pts: i64, time_base: Rational) -> gst::ClockTime {
 
 /// AVFrame rows can have different padding from GStreamer's default I420
 /// layout. Pack into the exact layout advertised by the appsrc caps.
-fn packed_video_buffer(frame: &frame::Video) -> Result<gst::Buffer> {
+fn packed_video_buffer(frame: &VideoFrame) -> Result<gst::Buffer> {
     ensure!(
-        frame.format() == ffmpeg_next::format::Pixel::YUV420P,
+        frame.format() == PixelFormat::Yuv420p,
         "GStreamer output expects a normalized I420 frame"
     );
     let info = gstreamer_video::VideoInfo::builder(
@@ -1331,7 +1330,7 @@ mod tests {
 
     use ffmpeg_next::{
         ChannelLayout,
-        format::{Pixel, Sample, sample::Type},
+        format::{Sample, sample::Type},
     };
 
     #[cfg(feature = "desktop-base")]
@@ -1350,8 +1349,8 @@ mod tests {
         path
     }
 
-    fn video(width: u32, height: u32, pts: i64) -> frame::Video {
-        let mut frame = frame::Video::new(Pixel::YUV420P, width, height);
+    fn video(width: u32, height: u32, pts: i64) -> VideoFrame {
+        let mut frame = VideoFrame::new(PixelFormat::Yuv420p, width, height);
         frame.set_pts(Some(pts));
         for plane in 0..3 {
             let stride = frame.stride(plane);

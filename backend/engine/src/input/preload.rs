@@ -466,12 +466,12 @@ fn frame_bytes(frame: &FrameEvent) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
     use super::*;
+    use crate::frame::{PixelFormat, VideoFrame};
 
     fn video() -> FrameEvent {
-        FrameEvent::Video(frame::Video::new(Pixel::YUV420P, 16, 16))
+        FrameEvent::Video(VideoFrame::new(PixelFormat::Yuv420p, 16, 16))
     }
 
     #[test]

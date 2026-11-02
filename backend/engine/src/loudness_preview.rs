@@ -1,3 +1,4 @@
+use crate::frame::VideoFrame;
 use std::{collections::VecDeque, time::Duration};
 
 use anyhow::Result;
@@ -12,11 +13,11 @@ use crate::{
     LiveLoudnessProcessor,
     audio_mixer::collect_audio_preview,
     output::FrameOutput,
-    utils::ffmpeg::{make_audio_frame_writable, reference_audio_frame, reference_video_frame},
+    utils::ffmpeg::{make_audio_frame_writable, reference_audio_frame},
 };
 
 enum PendingFrame {
-    Video(frame::Video),
+    Video(VideoFrame),
     Audio(frame::Audio, Option<BufferedLoudnessAnalysis>),
 }
 
@@ -183,15 +184,14 @@ impl<O: FrameOutput> FrameOutput for LoudnessPreview<'_, O> {
         self.output.audio_frame_size()
     }
 
-    fn encode_video(&mut self, video: &frame::Video) -> Result<()> {
+    fn encode_video(&mut self, video: &VideoFrame) -> Result<()> {
         self.latest_video_sample = self.latest_video_sample.max(
             video
                 .pts()
                 .unwrap_or_default()
                 .rescale(self.video_time_base, Rational(1, self.sample_rate as i32)),
         );
-        self.pending
-            .push_back(PendingFrame::Video(reference_video_frame(video)?));
+        self.pending.push_back(PendingFrame::Video(video.clone()));
         self.drain(false)
     }
 
@@ -225,6 +225,7 @@ impl<O: FrameOutput> FrameOutput for LoudnessPreview<'_, O> {
 
 #[cfg(test)]
 mod tests {
+    use crate::frame::PixelFormat;
     use ffmpeg_next::{
         ChannelLayout,
         format::{Sample, sample::Type},
@@ -248,7 +249,7 @@ mod tests {
             4800
         }
 
-        fn encode_video(&mut self, video: &frame::Video) -> Result<()> {
+        fn encode_video(&mut self, video: &VideoFrame) -> Result<()> {
             self.video_pts.push(video.pts().unwrap());
             Ok(())
         }
@@ -277,8 +278,8 @@ mod tests {
         }
     }
 
-    fn video(pts: i64) -> frame::Video {
-        let mut video = frame::Video::new(ffmpeg_next::format::Pixel::YUV420P, 16, 16);
+    fn video(pts: i64) -> VideoFrame {
+        let mut video = VideoFrame::new(PixelFormat::Yuv420p, 16, 16);
         video.set_pts(Some(pts));
         video
     }

@@ -83,6 +83,31 @@ pub enum ColorSpace {
     Other,
 }
 
+/// The colour primaries a picture was made with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ColorPrimaries {
+    #[default]
+    Unspecified,
+    Bt709,
+    Bt2020,
+    Other,
+}
+
+/// The transfer function a picture was made with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ColorTransfer {
+    #[default]
+    Unspecified,
+    /// SMPTE ST 2084 (PQ), HDR10.
+    Pq,
+    /// ARIB STD-B67 (HLG).
+    Hlg,
+    Linear,
+    /// IEC 61966-2-1 (sRGB).
+    Srgb,
+    Other,
+}
+
 /// Limited (TV) or full (PC) range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ColorRange {
@@ -111,6 +136,48 @@ impl ColorSpace {
             Self::Bt709 => color::Space::BT709,
             Self::Bt2020Ncl => color::Space::BT2020NCL,
             Self::Bt2020Cl => color::Space::BT2020CL,
+        }
+    }
+}
+
+impl ColorPrimaries {
+    fn from_ffmpeg(primaries: color::Primaries) -> Self {
+        match primaries {
+            color::Primaries::Unspecified => Self::Unspecified,
+            color::Primaries::BT709 => Self::Bt709,
+            color::Primaries::BT2020 => Self::Bt2020,
+            _ => Self::Other,
+        }
+    }
+
+    fn to_ffmpeg(self) -> color::Primaries {
+        match self {
+            Self::Unspecified | Self::Other => color::Primaries::Unspecified,
+            Self::Bt709 => color::Primaries::BT709,
+            Self::Bt2020 => color::Primaries::BT2020,
+        }
+    }
+}
+
+impl ColorTransfer {
+    fn from_ffmpeg(transfer: color::TransferCharacteristic) -> Self {
+        match transfer {
+            color::TransferCharacteristic::Unspecified => Self::Unspecified,
+            color::TransferCharacteristic::SMPTE2084 => Self::Pq,
+            color::TransferCharacteristic::ARIB_STD_B67 => Self::Hlg,
+            color::TransferCharacteristic::Linear => Self::Linear,
+            color::TransferCharacteristic::IEC61966_2_1 => Self::Srgb,
+            _ => Self::Other,
+        }
+    }
+
+    fn to_ffmpeg(self) -> color::TransferCharacteristic {
+        match self {
+            Self::Unspecified | Self::Other => color::TransferCharacteristic::Unspecified,
+            Self::Pq => color::TransferCharacteristic::SMPTE2084,
+            Self::Hlg => color::TransferCharacteristic::ARIB_STD_B67,
+            Self::Linear => color::TransferCharacteristic::Linear,
+            Self::Srgb => color::TransferCharacteristic::IEC61966_2_1,
         }
     }
 }
@@ -150,6 +217,8 @@ pub struct VideoFrame {
     pts: Option<i64>,
     color_space: ColorSpace,
     color_range: ColorRange,
+    color_primaries: ColorPrimaries,
+    color_transfer: ColorTransfer,
 }
 
 impl VideoFrame {
@@ -175,6 +244,8 @@ impl VideoFrame {
             pts: None,
             color_space: ColorSpace::default(),
             color_range: ColorRange::default(),
+            color_primaries: ColorPrimaries::default(),
+            color_transfer: ColorTransfer::default(),
         }
     }
 
@@ -208,9 +279,21 @@ impl VideoFrame {
         self.format.plane_size(plane, self.width, self.height).0
     }
 
+    /// Pixels across `plane` (half the width for chroma planes).
+    pub fn plane_width(&self, plane: usize) -> u32 {
+        let row_bytes = self.plane_row_bytes(plane);
+        let pixels = if self.format == PixelFormat::Bgrx {
+            row_bytes / 4
+        } else {
+            row_bytes
+        };
+
+        pixels as u32
+    }
+
     /// Rows in `plane`.
-    pub fn plane_height(&self, plane: usize) -> usize {
-        self.format.plane_size(plane, self.width, self.height).1
+    pub fn plane_height(&self, plane: usize) -> u32 {
+        self.format.plane_size(plane, self.width, self.height).1 as u32
     }
 
     /// All rows of `plane`, `stride` bytes each.
@@ -248,6 +331,22 @@ impl VideoFrame {
         self.color_range = range;
     }
 
+    pub fn color_primaries(&self) -> ColorPrimaries {
+        self.color_primaries
+    }
+
+    pub fn set_color_primaries(&mut self, primaries: ColorPrimaries) {
+        self.color_primaries = primaries;
+    }
+
+    pub fn color_transfer(&self) -> ColorTransfer {
+        self.color_transfer
+    }
+
+    pub fn set_color_transfer(&mut self, transfer: ColorTransfer) {
+        self.color_transfer = transfer;
+    }
+
     /// Whether `plane` is shared with another frame (no copy made yet).
     pub fn is_shared(&self, plane: usize) -> bool {
         Arc::strong_count(&self.planes[plane].data) > 1
@@ -264,7 +363,7 @@ impl VideoFrame {
             let source = self.data(plane);
             let destination = target.data_mut(plane);
 
-            for row in 0..self.plane_height(plane) {
+            for row in 0..self.plane_height(plane) as usize {
                 destination[row * target_stride..row * target_stride + row_bytes]
                     .copy_from_slice(&source[row * source_stride..row * source_stride + row_bytes]);
             }
@@ -273,6 +372,8 @@ impl VideoFrame {
         target.set_pts(self.pts);
         target.set_color_space(self.color_space.to_ffmpeg());
         target.set_color_range(self.color_range.to_ffmpeg());
+        target.set_color_primaries(self.color_primaries.to_ffmpeg());
+        target.set_color_transfer_characteristic(self.color_transfer.to_ffmpeg());
 
         target
     }
@@ -287,7 +388,7 @@ impl TryFrom<&frame::Video> for VideoFrame {
 
         for plane in 0..target.planes() {
             let row_bytes = target.plane_row_bytes(plane);
-            let rows = target.plane_height(plane);
+            let rows = target.plane_height(plane) as usize;
             let source_stride = source.stride(plane);
             let target_stride = target.stride(plane);
             let pixels = source.data(plane);
@@ -302,6 +403,8 @@ impl TryFrom<&frame::Video> for VideoFrame {
         target.pts = source.pts();
         target.color_space = ColorSpace::from_ffmpeg(source.color_space());
         target.color_range = ColorRange::from_ffmpeg(source.color_range());
+        target.color_primaries = ColorPrimaries::from_ffmpeg(source.color_primaries());
+        target.color_transfer = ColorTransfer::from_ffmpeg(source.color_transfer_characteristic());
 
         Ok(target)
     }
@@ -440,7 +543,7 @@ mod tests {
             let stride = frame.stride(plane);
             let row_bytes = frame.plane_row_bytes(plane);
 
-            for row in 0..frame.plane_height(plane) {
+            for row in 0..frame.plane_height(plane) as usize {
                 for column in 0..row_bytes {
                     frame.data_mut(plane)[row * stride + column] =
                         (plane * 61 + row * 7 + column * 3) as u8;
@@ -457,7 +560,7 @@ mod tests {
         let stride = frame.stride(plane);
         let row_bytes = frame.plane_row_bytes(plane);
 
-        (0..frame.plane_height(plane))
+        (0..frame.plane_height(plane) as usize)
             .map(|row| frame.data(plane)[row * stride..row * stride + row_bytes].to_vec())
             .collect()
     }
@@ -479,14 +582,14 @@ mod tests {
 
                 for plane in 0..ours.planes() {
                     assert_eq!(
-                        ours.plane_height(plane),
-                        theirs.plane_height(plane) as usize,
+                        (ours.plane_width(plane), ours.plane_height(plane)),
+                        (theirs.plane_width(plane), theirs.plane_height(plane)),
                         "{format:?} {width}x{height} plane {plane} rows"
                     );
                     assert!(ours.stride(plane) >= ours.plane_row_bytes(plane));
                     assert_eq!(
                         ours.data(plane).len(),
-                        ours.stride(plane) * ours.plane_height(plane)
+                        ours.stride(plane) * ours.plane_height(plane) as usize
                     );
                 }
             }
@@ -505,6 +608,8 @@ mod tests {
             let mut original = patterned(format, 7, 5);
             original.set_color_space(ColorSpace::Bt709);
             original.set_color_range(ColorRange::Limited);
+            original.set_color_primaries(ColorPrimaries::Bt2020);
+            original.set_color_transfer(ColorTransfer::Pq);
 
             let back = VideoFrame::try_from(&original.to_ffmpeg()).unwrap();
 
@@ -513,6 +618,8 @@ mod tests {
             assert_eq!(back.pts(), Some(1234));
             assert_eq!(back.color_space(), ColorSpace::Bt709);
             assert_eq!(back.color_range(), ColorRange::Limited);
+            assert_eq!(back.color_primaries(), ColorPrimaries::Bt2020);
+            assert_eq!(back.color_transfer(), ColorTransfer::Pq);
 
             for plane in 0..original.planes() {
                 assert_eq!(visible_rows(&back, plane), visible_rows(&original, plane));

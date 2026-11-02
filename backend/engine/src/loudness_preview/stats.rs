@@ -1,3 +1,4 @@
+use crate::frame::VideoFrame;
 use std::{
     collections::VecDeque,
     sync::mpsc::{self, Receiver, SyncSender, TrySendError},
@@ -11,10 +12,7 @@ use crate::{
     LiveLoudnessMetrics,
     analysis::loudness::{LoudnessAnalyzer, LoudnessMetrics},
     compositor::text::TextOverlay,
-    utils::{
-        config::{RgbaColor, TextBackgroundConfig, TextConfig, TextPosition},
-        ffmpeg::make_video_frame_writable,
-    },
+    utils::config::{RgbaColor, TextBackgroundConfig, TextConfig, TextPosition},
 };
 
 const MAX_PENDING_SNAPSHOTS: usize = 64;
@@ -263,7 +261,7 @@ impl AudioStatsOverlay {
         changed
     }
 
-    pub(crate) fn blend(&mut self, video: &mut frame::Video, time_base: Rational) -> Result<()> {
+    pub(crate) fn blend(&mut self, video: &mut VideoFrame, time_base: Rational) -> Result<()> {
         let pts = video.pts().unwrap_or_default();
         let sample_position = pts.rescale(time_base, Rational(1, self.sample_rate as i32));
         let changed = self.select_text(sample_position);
@@ -288,7 +286,6 @@ impl AudioStatsOverlay {
         }
 
         if let Some(overlay) = self.overlay.as_mut() {
-            make_video_frame_writable(video)?;
             overlay.blend(video, pts, pts);
         }
 
@@ -377,9 +374,7 @@ mod tests {
     }
     #[test]
     fn rendered_statistics_are_visible_and_preserve_shared_video_buffers() {
-        use ffmpeg_next::format::Pixel;
-
-        use crate::utils::ffmpeg::reference_video_frame;
+        use crate::frame::PixelFormat;
 
         ffmpeg_next::init().unwrap();
         let mut stats = AudioStatsOverlay::new(48000).unwrap();
@@ -400,12 +395,12 @@ mod tests {
                 Some("PAUSE / HOLD"),
             );
         }
-        let mut original = frame::Video::new(Pixel::YUV420P, 1280, 720);
+        let mut original = VideoFrame::new(PixelFormat::Yuv420p, 1280, 720);
         original.data_mut(0).fill(16);
         original.data_mut(1).fill(128);
         original.data_mut(2).fill(128);
         original.set_pts(Some(8));
-        let mut video = reference_video_frame(&original).unwrap();
+        let mut video = original.clone();
         stats.blend(&mut video, Rational(1, 25)).unwrap();
         stats.overlay = stats
             .renderer

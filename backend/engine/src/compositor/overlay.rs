@@ -1,9 +1,9 @@
-use ffmpeg_next::frame;
+use crate::frame::VideoFrame;
 
 use crate::compositor::blend::{Plane, PlaneMut, blend_plane};
 
 pub struct OverlayFrame {
-    pub frame: frame::Video, // YUVA420P
+    pub frame: VideoFrame, // YUVA420P
     pub chroma_alpha: Vec<u8>,
     pub x: i32,
     pub y: i32,
@@ -14,7 +14,7 @@ pub struct OverlayFrame {
 
 #[derive(Clone, Copy)]
 pub struct OverlayRef<'a> {
-    pub frame: &'a frame::Video, // YUVA420P
+    pub frame: &'a VideoFrame, // YUVA420P
     pub chroma_alpha: &'a [u8],
     pub chroma_alpha_stride: usize,
     pub x: i32,
@@ -40,7 +40,7 @@ impl OverlayFrame {
 }
 
 /// Downsample a YUVA alpha plane once for the 4:2:0 chroma planes.
-pub(crate) fn chroma_alpha(frame: &frame::Video, width: u32, height: u32) -> Vec<u8> {
+pub(crate) fn chroma_alpha(frame: &VideoFrame, width: u32, height: u32) -> Vec<u8> {
     let width = width as usize;
     let height = height as usize;
     let alpha = frame.data(3);
@@ -64,7 +64,7 @@ pub(crate) fn chroma_alpha(frame: &frame::Video, width: u32, height: u32) -> Vec
     downsampled
 }
 
-pub fn blend_overlay(target: &mut frame::Video, overlay: OverlayRef<'_>, opacity_factor: f64) {
+pub fn blend_overlay(target: &mut VideoFrame, overlay: OverlayRef<'_>, opacity_factor: f64) {
     // Expected formats:
     // target: YUV420P
     // overlay.frame: YUVA420P
@@ -186,7 +186,7 @@ struct ClipRect {
 }
 
 impl ClipRect {
-    fn new(target: &frame::Video, overlay: OverlayRef<'_>) -> Option<Self> {
+    fn new(target: &VideoFrame, overlay: OverlayRef<'_>) -> Option<Self> {
         let target_width = target.width() as i32;
         let target_height = target.height() as i32;
         let overlay_width = overlay.width as i32;
@@ -225,13 +225,13 @@ fn even_usize(value: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
     use super::chroma_alpha;
+    use crate::frame::{PixelFormat, VideoFrame};
 
     #[test]
     fn chroma_alpha_averages_each_luma_block() {
-        let mut frame = frame::Video::new(Pixel::YUVA420P, 4, 2);
+        let mut frame = VideoFrame::new(PixelFormat::Yuva420p, 4, 2);
         let stride = frame.stride(3);
         let alpha = frame.data_mut(3);
         alpha[0] = 0;

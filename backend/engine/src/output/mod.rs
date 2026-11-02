@@ -1,3 +1,4 @@
+use crate::frame::VideoFrame;
 use std::{error::Error, fmt};
 
 use anyhow::Result;
@@ -48,11 +49,11 @@ impl Error for PlaybackStopped {}
 pub(crate) trait FrameOutput {
     fn audio_frame_size(&self) -> usize;
 
-    fn encode_video(&mut self, frame: &frame::Video) -> Result<()>;
+    fn encode_video(&mut self, frame: &VideoFrame) -> Result<()>;
 
     /// The newest picture on its way out, to hold on screen while a source
     /// connects. `None` holds black.
-    fn held_video_frame(&self) -> Option<frame::Video> {
+    fn held_video_frame(&self) -> Option<VideoFrame> {
         None
     }
 
@@ -80,7 +81,7 @@ pub(crate) trait FrameOutput {
 
     fn apply_logo_overlay(
         &mut self,
-        frame: &mut frame::Video,
+        frame: &mut VideoFrame,
         logo: &LogoOverlay,
         opacity_factor: f64,
     ) {
@@ -231,7 +232,7 @@ impl Output {
         }
     }
 
-    pub(crate) fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+    pub(crate) fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
         match &mut self.kind {
             OutputKind::Encoded(output) => output.encode_video(frame),
             #[cfg(feature = "desktop-base")]
@@ -286,7 +287,7 @@ impl FrameOutput for Output {
         Self::audio_frame_size(self)
     }
 
-    fn held_video_frame(&self) -> Option<frame::Video> {
+    fn held_video_frame(&self) -> Option<VideoFrame> {
         match &self.kind {
             OutputKind::Encoded(output) => output.held_video_frame(),
             #[cfg(feature = "desktop-base")]
@@ -294,7 +295,7 @@ impl FrameOutput for Output {
         }
     }
 
-    fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+    fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
         Self::encode_video(self, frame)
     }
 
@@ -312,7 +313,7 @@ impl FrameOutput for Output {
 
     fn apply_logo_overlay(
         &mut self,
-        frame: &mut frame::Video,
+        frame: &mut VideoFrame,
         logo: &LogoOverlay,
         opacity_factor: f64,
     ) {

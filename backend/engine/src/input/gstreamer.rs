@@ -4,6 +4,7 @@
 //! format. All input, decoding, scaling, frame-rate conversion and resampling
 //! happen in GStreamer before a sample crosses this boundary.
 
+use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     collections::BTreeMap,
     path::Path,
@@ -19,7 +20,7 @@ use ::gstreamer::{self as gst, prelude::*};
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use ffmpeg_next::{
     frame,
-    util::{channel_layout::ChannelLayout, format::pixel::Pixel, format::sample::Sample},
+    util::{channel_layout::ChannelLayout, format::sample::Sample},
 };
 use gstreamer_app::AppSink;
 use gstreamer_video::{VideoFrameExt, VideoFrameRef, VideoInfo};
@@ -50,7 +51,7 @@ pub(crate) struct SourceInfo {
 }
 
 pub(crate) enum FrameEvent {
-    Video(frame::Video),
+    Video(VideoFrame),
     Audio(frame::Audio),
 }
 
@@ -805,7 +806,7 @@ fn sample_timestamp(sample: &gst::Sample) -> Option<gst::ClockTime> {
     }
 }
 
-pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video> {
+pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<VideoFrame> {
     let buffer = sample
         .buffer()
         .context("decoded video sample has no buffer")?;
@@ -816,7 +817,7 @@ pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video
         "decoded video is not I420"
     );
     let mapped = VideoFrameRef::from_buffer_ref_readable(buffer, &info)?;
-    let mut frame = frame::Video::new(Pixel::YUV420P, info.width(), info.height());
+    let mut frame = VideoFrame::new(PixelFormat::Yuv420p, info.width(), info.height());
 
     for plane in 0..3 {
         let source = mapped.plane_data(plane as u32)?;
