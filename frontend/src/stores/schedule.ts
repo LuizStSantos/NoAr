@@ -129,6 +129,15 @@ export const useSchedule = defineStore('schedule', {
             })
         },
 
+        /** Push the live on air later: by `minutes`, or `until` a time (HH:MM), this airing only. */
+        async extendLive(change: { minutes: number } | { until: string }): Promise<ActiveScheduleEvent> {
+            return authFetch<ActiveScheduleEvent>(`/api/schedule/${channelId()}/extend`, {
+                method: 'POST',
+                headers: headers(true),
+                body: JSON.stringify(change),
+            })
+        },
+
         async stop(): Promise<boolean> {
             return authFetch<boolean>(`/api/schedule/${channelId()}/stop`, {
                 method: 'POST',

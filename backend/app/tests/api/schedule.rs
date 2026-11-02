@@ -556,3 +556,33 @@ async fn lives_go_into_programs_and_list_with_their_usual_length() {
     assert_eq!(saved["segments"][1]["kind"], "live");
     assert_eq!(saved["segments"][1]["out"], 1200.0);
 }
+
+#[tokio::test]
+#[serial]
+async fn extending_a_live_needs_one_on_air_and_a_clear_request() {
+    let fixture = security_fixture().await;
+    let token = access_token(&fixture.state, 1).await;
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/schedule/1/extend",
+        None,
+        json!({"minutes": 30}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    for request in [json!({"minutes": 30}), json!({"until": "13:30"})] {
+        let (status, body) = send(
+            &fixture,
+            "POST",
+            "/api/schedule/1/extend",
+            Some(&token),
+            request,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT, "nothing on air: {body}");
+        assert!(body.to_string().contains("no live"), "{body}");
+    }
+}

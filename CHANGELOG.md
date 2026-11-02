@@ -47,6 +47,10 @@ one is tagged.
 
 ### Changed
 
+- Extend the live on air from the Player's Now panel (+5/+15/+30 min, or until
+  a time) or with `POST /api/schedule/{id}/extend`, for this airing only; it
+  goes on without reconnecting. The panel names the end and ends the live at
+  once with its button (`/stop`).
 - Lives go into playlists (dragged from the Player library for their default
   length) and into assembled programs as a **Live** part with its own length;
   both air the live's current address. A program's clips follow trims made

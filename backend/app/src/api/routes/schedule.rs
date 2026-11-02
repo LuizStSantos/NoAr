@@ -26,7 +26,7 @@ use crate::{
         schedule::{
             OccurrenceView, ScheduleEventInput,
             live::{
-                LiveSource, NewLive, SignalTest, list_lives, save_live, test_signal,
+                LiveSource, NewLive, SignalTest, list_lives, read_live_url, save_live, test_signal,
                 update_live_address,
             },
             occurrence_now, occurrence_views, parse_date, prepare_event, timing_changed,
@@ -305,6 +305,83 @@ pub async fn stop_schedule_event(
     let manager = authorized_manager(&state, id, &user, &details).await?;
 
     Ok(Json(return_to_programme(&manager).await))
+}
+
+/// How to extend the live on air: by `minutes` from its current end, or
+/// `until` a time of day (`HH:MM` or `HH:MM:SS`, channel time; a time earlier
+/// than the current end means the next day).
+#[derive(Debug, Deserialize)]
+pub struct ExtendLive {
+    #[serde(default)]
+    pub minutes: Option<f64>,
+    #[serde(default)]
+    pub until: Option<String>,
+}
+
+/// **Extend the live on air**
+///
+/// Pushes the end of the live on air later, for this airing only: it goes on
+/// without a break and the programme comes back at the new end, as the event
+/// says (where it stopped, or on the clock). Use `/stop` to end it now.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/schedule/1/extend -H 'Content-Type: application/json' \
+/// -d '{"until": "13:30"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn extend_live(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<ExtendLive>,
+) -> Result<Json<ActiveEvent>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let (timezone, storage) = {
+        let config = manager.config.read().await;
+        (config.channel.timezone, config.channel.storage.clone())
+    };
+    let now = time_now(&timezone).naive_local();
+    let current_end = manager
+        .schedule
+        .live_end()
+        .ok_or_else(|| ServiceError::Conflict("no live is on air".to_string()))?;
+    let new_end = match (request.minutes, request.until.as_deref()) {
+        (Some(minutes), None) if minutes.is_finite() && minutes > 0.0 => {
+            current_end
+                + TimeDelta::try_milliseconds((minutes * 60_000.0) as i64).unwrap_or_default()
+        }
+        (None, Some(until)) => {
+            let time =
+                crate::utils::schedule::parse_time(until).map_err(ServiceError::BadRequest)?;
+            let mut end = current_end.date().and_time(time);
+            if end <= current_end - TimeDelta::try_hours(12).unwrap_or_default() {
+                end += TimeDelta::try_days(1).unwrap_or_default();
+            }
+            end
+        }
+        _ => {
+            return Err(ServiceError::BadRequest(
+                "give either minutes (more than 0) or until (HH:MM)".to_string(),
+            ));
+        }
+    };
+
+    let active = manager
+        .schedule
+        .extend_live(new_end, now)
+        .map_err(ServiceError::Conflict)?;
+
+    // Keep the signal connected at its live edge, so the live goes on at
+    // its old end without reconnecting.
+    if let Some(source) = handles::select_schedule_event(&state.pool, id, active.event_id)
+        .await?
+        .and_then(|event| event.sources.into_iter().next())
+        && let Ok(url) = read_live_url(&storage.join(source)).await
+    {
+        manager.preloader.lock().await.clone().preload_live(&url);
+    }
+
+    Ok(Json(active))
 }
 
 /// **Scheduler state**

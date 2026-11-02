@@ -70,6 +70,10 @@ declare global {
         elapsed_seconds: number
         item: string | null
         interrupted: InterruptedClip | null
+        /** A live's end, channel time (`YYYY-MM-DDTHH:MM:SS`), extensions included. */
+        ends_at?: string | null
+        /** Seconds a live was extended by while on air (this airing only). */
+        extended_seconds?: number
     }
 
     interface ScheduleStatus {
