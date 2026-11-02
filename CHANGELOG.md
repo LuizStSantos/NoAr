@@ -47,6 +47,11 @@ one is tagged.
 
 ### Changed
 
+- The live key's tutorial is a section of its own at the bottom of the
+  Scheduler, **Live by API**, like the SCTE-35 one: this channel's addresses to
+  extend by minutes, until a time or end the live, ready to copy, with curl,
+  vMix, Stream Deck and authenticated-API examples. **By API…** in the
+  Player's live controls opens it.
 - The sign-in page lists what NoAr does now: lives and outputs over NDI and
   video cards, assembled programs, lives that can be extended, SCTE-35 breaks,
   logo and L-shape. The README screenshots show the English interface with a

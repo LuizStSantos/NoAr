@@ -14,7 +14,7 @@ import { useHead } from '@unhead/vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import GenericModal from '@/components/utils/GenericModal.vue'
-import RemoteKeyField from '@/components/settings/RemoteKeyField.vue'
+import LiveRemote from '@/components/settings/LiveRemote.vue'
 import GraphicsEventDialog from '@/components/schedule/GraphicsEventDialog.vue'
 import LiveDialog from '@/components/schedule/LiveDialog.vue'
 import ScheduleDialog from '@/components/schedule/ScheduleDialog.vue'
@@ -70,20 +70,6 @@ const { width: scrollerWidth } = useElementSize(scroller)
 const ghost = ref<{ lane: 'grade' | 'events'; seconds: number; label: string } | null>(null)
 const mediaDraft = ref<MediaDraft | null>(null)
 const liveDraft = ref<LiveDraft | null>(null)
-/** The keyed live control's commands are shown. */
-const showLiveRemote = ref(false)
-/** Commands an encoder or a script sends to extend or end the live on air. */
-const liveRemoteCommands = computed(() => {
-    const id = configStore.channels[configStore.i]?.id ?? 1
-    const key = configStore.playout.processing?.live_key || '<KEY>'
-    const base = `${window.location.origin}/live/${id}`
-
-    return [
-        `curl -X POST '${base}/extend?key=${key}&minutes=30'`,
-        `curl -X POST '${base}/extend?key=${key}&until=13:30'`,
-        `curl -X POST '${base}/end?key=${key}'`,
-    ]
-})
 const deleting = ref<ScheduleEvent | null>(null)
 const graphicsDraft = ref<{ event: GraphicsEvent | null; date: string; time: string } | null>(null)
 const deletingGraphics = ref<GraphicsEvent | null>(null)
@@ -632,6 +618,11 @@ onMounted(async () => {
     await Promise.all([refresh(), scheduleStore.loadLives().catch(() => undefined)])
     openLinkedLive()
     scrollToFocus()
+    if (route.hash === '#live-api') {
+        // From the Player's live controls: straight to the API tutorial.
+        await nextTick()
+        document.getElementById('live-api')?.scrollIntoView({ block: 'start' })
+    }
     refreshTimer = setInterval(refresh, 5000)
     clockTimer = setInterval(() => (nowSeconds.value = secondsOfDay()), 1000)
 })
@@ -781,34 +772,6 @@ watch(zoom, scrollToFocus)
                         <button class="btn-quiet" @click="newLive">
                             <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('schedule.newLive') }}
                         </button>
-                        <div class="border-t border-line pt-3 flex flex-col gap-2.5">
-                            <button
-                                class="flex items-center gap-2 bg-transparent border-0 p-0 min-h-8 cursor-pointer text-accent-text text-left font-medium"
-                                :aria-expanded="showLiveRemote"
-                                @click="showLiveRemote = !showLiveRemote"
-                            >
-                                <i
-                                    class="bi text-xs"
-                                    :class="showLiveRemote ? 'bi-chevron-down' : 'bi-chevron-right'"
-                                    aria-hidden="true"
-                                />
-                                {{ t('schedule.liveRemote.title') }}
-                            </button>
-                            <template v-if="showLiveRemote">
-                                <p class="m-0 text-[13px] text-muted leading-relaxed">
-                                    {{ t('schedule.liveRemote.intro') }}
-                                </p>
-                                <RemoteKeyField
-                                    kind="live"
-                                    :label="t('schedule.liveRemote.key')"
-                                    :no-key="t('schedule.liveRemote.noKey')"
-                                    :hint="t('schedule.liveRemote.keyHint')"
-                                />
-                                <pre
-                                    class="m-0 bg-base-200 rounded-md px-2.5 py-2 text-[11.5px] leading-relaxed whitespace-pre-wrap break-all font-mono"
-                                    >{{ liveRemoteCommands.join('\n') }}</pre>
-                            </template>
-                        </div>
                     </template>
                     <p class="m-0 text-[13px] text-subtle leading-relaxed">{{ t('schedule.dragHint') }}</p>
                 </div>
@@ -1220,6 +1183,10 @@ watch(zoom, scrollToFocus)
                         </li>
                     </ul>
                 </section>
+
+                <div id="live-api" class="scroll-mt-20">
+                    <LiveRemote :open="route.hash === '#live-api'" />
+                </div>
             </main>
         </div>
 
