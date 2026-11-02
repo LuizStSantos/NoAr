@@ -84,6 +84,8 @@ declare global {
         url: string
         protocol: string
         title: string | null
+        /** Usual length in minutes: the end proposed when it is scheduled. */
+        runtime?: number | null
     }
 
     interface LiveGuide {

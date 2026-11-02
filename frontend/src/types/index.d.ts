@@ -282,6 +282,8 @@ declare global {
         credits: Credit[]
         season: number | null
         episode: number | null
+        /** Usual length in minutes (`<runtime>`); a live's default airtime. */
+        runtime: number | null
     }
 
     /** The `.nfo` sheet of a program folder or a clip, with its artwork. */

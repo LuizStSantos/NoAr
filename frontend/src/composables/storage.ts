@@ -305,5 +305,6 @@ export function emptyFields(): SheetFields {
         credits: [],
         season: null,
         episode: null,
+        runtime: null,
     }
 }

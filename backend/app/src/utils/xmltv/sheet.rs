@@ -34,7 +34,7 @@ const MAX_SHEET_BYTES: usize = 512 * 1024;
 
 /// Elements the form fills in. Other elements of an existing file (ids,
 /// ratings of other sites, thumbs, ...) are kept as they are.
-const FORM_ELEMENTS: [&str; 17] = [
+const FORM_ELEMENTS: [&str; 18] = [
     "title",
     "plot",
     "genre",
@@ -52,6 +52,7 @@ const FORM_ELEMENTS: [&str; 17] = [
     "season",
     "episode",
     "showtitle",
+    "runtime",
 ];
 
 /// What a sheet describes, which sets the root element of the `.nfo`.
@@ -115,6 +116,8 @@ pub struct SheetFields {
     pub credits: Vec<Credit>,
     pub season: Option<u32>,
     pub episode: Option<u32>,
+    /// Usual length in minutes (`<runtime>`); a live's default airtime.
+    pub runtime: Option<u32>,
 }
 
 /// The sheet of a folder or clip, as shown in the web interface.
@@ -293,6 +296,7 @@ pub async fn read_sheet(storage: &Path, path: &Path) -> Result<MediaSheet, Servi
             credits: nfo.credits,
             season: nfo.season,
             episode: nfo.episode,
+            runtime: nfo.runtime,
         },
         raw,
         poster: target.artwork(&listing, ArtworkKind::Poster).map(relative),
@@ -630,6 +634,7 @@ fn write_document(
     write_text(&mut writer, "mpaa", &fields.rating)?;
     write_text(&mut writer, "year", &fields.year)?;
     write_text(&mut writer, date_element, &fields.premiered)?;
+    write_number(&mut writer, "runtime", fields.runtime)?;
 
     for country in &fields.countries {
         write_text(&mut writer, "country", country)?;
@@ -836,6 +841,31 @@ mod tests {
         assert_eq!(nfo.genres, ["Variedades", "Entrevistas"]);
         assert_eq!(nfo.rating.as_deref(), Some("Livre"));
         assert_eq!(nfo.credits, [person(CreditRole::Actor, "Ana")]);
+    }
+
+    #[test]
+    fn a_sheet_keeps_the_usual_length_in_minutes() {
+        let sheet = SheetFields {
+            runtime: Some(60),
+            ..fields()
+        };
+        let text = sheet_document(None, SheetKind::Program, &sheet);
+        assert!(text.contains("<runtime>60</runtime>"), "{text}");
+        assert_eq!(parse_nfo(&text).runtime, Some(60));
+
+        // Kodi files sometimes write the unit; an empty or zero length is none.
+        assert_eq!(
+            parse_nfo("<tvshow><runtime>45 min</runtime></tvshow>").runtime,
+            Some(45)
+        );
+        assert_eq!(
+            parse_nfo("<tvshow><runtime>0</runtime></tvshow>").runtime,
+            None
+        );
+
+        // Saved again without it, the element goes.
+        let cleared = sheet_document(Some(&text), SheetKind::Program, &fields());
+        assert!(!cleared.contains("runtime"), "{cleared}");
     }
 
     #[test]

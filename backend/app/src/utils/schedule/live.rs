@@ -149,6 +149,9 @@ pub struct LiveSource {
     pub protocol: String,
     /// Title from the folder's `.nfo`, if any.
     pub title: Option<String>,
+    /// Usual length in minutes from the `.nfo` (`<runtime>`): the end the
+    /// Scheduler proposes when the live is scheduled.
+    pub runtime: Option<u32>,
 }
 
 /// Every `.live` file in the storage, by path.
@@ -194,7 +197,7 @@ async fn describe_live(storage: &Path, path: &Path) -> Option<LiveSource> {
         .or_else(|| path.file_stem())?
         .to_string_lossy()
         .to_string();
-    let title = folder_title(folder).await;
+    let (title, runtime) = folder_guide(folder).await;
 
     Some(LiveSource {
         path: relative,
@@ -202,13 +205,17 @@ async fn describe_live(storage: &Path, path: &Path) -> Option<LiveSource> {
         protocol: live_protocol(&url).to_string(),
         url,
         title,
+        runtime,
     })
 }
 
-async fn folder_title(folder: &Path) -> Option<String> {
-    let bytes = fs::read(folder.join("tvshow.nfo")).await.ok()?;
+async fn folder_guide(folder: &Path) -> (Option<String>, Option<u32>) {
+    let Ok(bytes) = fs::read(folder.join("tvshow.nfo")).await else {
+        return (None, None);
+    };
+    let nfo = parse_nfo(&String::from_utf8_lossy(&bytes));
 
-    parse_nfo(&String::from_utf8_lossy(&bytes)).title
+    (nfo.title, nfo.runtime)
 }
 
 /// Guide data written to the live's `tvshow.nfo`.

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import CreditsEditor from '@/components/storage/CreditsEditor.vue'
 import { LIVES_FOLDER, emptyFields, imageUrl, saveSheet, storageJoin, uploadArtwork } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -53,6 +54,11 @@ const guideTitle = ref(fields?.title ?? '')
 const plot = ref(fields?.plot ?? '')
 const genre = ref(fields?.genres.join(', ') ?? '')
 const rating = ref(fields?.rating || 'Livre')
+/** How long the live usually lasts, in minutes: the Scheduler proposes its end. */
+const runtime = ref<number | null>(fields?.runtime ?? null)
+const year = ref(fields?.year ?? '')
+const countries = ref(fields?.countries.join(', ') ?? '')
+const credits = ref<Credit[]>(fields?.credits ? [...fields.credits] : [])
 const chosen = reactive<Record<GuideImage, File | null>>({ poster: null, backdrop: null })
 const previews = reactive<Record<GuideImage, string>>({ poster: '', backdrop: '' })
 const saved = reactive<Record<GuideImage, string>>({ poster: '', backdrop: '' })
@@ -245,18 +251,6 @@ async function submit(): Promise<LiveSource> {
             url.value.trim() === props.live.url
                 ? props.live
                 : await scheduleStore.updateLive(props.live.path, url.value.trim())
-
-        // Through the sheet, so fields this form does not show are kept.
-        await saveSheet(props.channelId, folderOf(live.path), {
-            kind: 'program',
-            fields: {
-                ...(fields ?? emptyFields()),
-                title: guideTitle.value.trim() || props.live.name,
-                plot: plot.value.trim(),
-                genres: genres(),
-                rating: rating.value,
-            },
-        })
     } else {
         live = await scheduleStore.saveLive(safeName.value, url.value.trim(), {
             title: guideTitle.value.trim(),
@@ -265,6 +259,25 @@ async function submit(): Promise<LiveSource> {
             rating: rating.value,
         })
     }
+
+    // Through the sheet, so fields this form does not show are kept.
+    await saveSheet(props.channelId, folderOf(live.path), {
+        kind: 'program',
+        fields: {
+            ...(fields ?? emptyFields()),
+            title: guideTitle.value.trim() || live.name,
+            plot: plot.value.trim(),
+            genres: genres(),
+            rating: rating.value,
+            year: year.value.trim(),
+            countries: countries.value
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean),
+            credits: credits.value,
+            runtime: runtime.value && runtime.value > 0 ? Math.round(runtime.value) : null,
+        },
+    })
 
     for (const kind of GUIDE_IMAGES) {
         const file = chosen[kind]
@@ -283,7 +296,7 @@ async function submit(): Promise<LiveSource> {
     return live
 }
 
-defineExpose({ check, submit })
+defineExpose({ check, submit, runtime })
 </script>
 
 <template>
@@ -454,6 +467,44 @@ defineExpose({ check, submit })
                     </select>
                 </label>
             </div>
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+                <label class="field-label">
+                    {{ t('storage.live.runtime') }}
+                    <span class="flex items-center gap-2 min-w-0">
+                        <input
+                            v-model.number="runtime"
+                            type="number"
+                            min="1"
+                            max="1440"
+                            step="1"
+                            class="field-input font-mono min-w-0 flex-1"
+                            :placeholder="t('storage.live.runtimePlaceholder')"
+                        />
+                        <span class="text-[13px] text-muted shrink-0">min</span>
+                    </span>
+                </label>
+                <label class="field-label">
+                    {{ t('storage.sheet.year') }}
+                    <input v-model="year" class="field-input font-mono" inputmode="numeric" maxlength="4" />
+                </label>
+                <label class="field-label">
+                    {{ t('storage.sheet.country') }}
+                    <input v-model="countries" class="field-input" />
+                </label>
+            </div>
+            <span class="field-hint -mt-1">{{ t('storage.live.runtimeHint') }}</span>
+            <CreditsEditor
+                v-if="editing && props.sheet"
+                v-model="credits"
+                class="border-t border-line pt-4"
+                :channel-id="channelId"
+                :path="folderOf(props.live?.path ?? '')"
+                :episode="false"
+                :photos="props.sheet.photos"
+                :program-credits="[]"
+                :program="null"
+            />
+            <p v-else class="m-0 text-[13px] text-muted">{{ t('storage.live.creditsLater') }}</p>
         </div>
     </div>
 

@@ -403,6 +403,10 @@ export default {
             emptyBreak: 'Há um break sem comerciais: adicione comerciais ou remova o break.',
         },
         live: {
+            runtime: 'Duração padrão',
+            runtimePlaceholder: 'ex.: 60',
+            runtimeHint: 'Ao agendar a live, o fim é proposto com esta duração (começa 12:00 com 60 min, termina 13:00); dá para mudar no agendamento.',
+            creditsLater: 'Os créditos (apresentadores, elenco e equipe) podem ser editados depois de salvar a live.',
             new: 'Nova live',
             newTitle: 'Nova live',
             editTitle: 'Editar live',

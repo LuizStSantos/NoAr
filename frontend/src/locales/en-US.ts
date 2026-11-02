@@ -403,6 +403,10 @@ export default {
             emptyBreak: 'A break has no commercials: add some or remove it.',
         },
         live: {
+            runtime: 'Default length',
+            runtimePlaceholder: 'e.g. 60',
+            runtimeHint: 'When the live is scheduled, its end is proposed with this length (12:00 with 60 min ends at 13:00); it can be changed when scheduling.',
+            creditsLater: 'Credits (hosts, cast and crew) can be edited once the live is saved.',
             new: 'New live',
             newTitle: 'New live',
             editTitle: 'Edit live',

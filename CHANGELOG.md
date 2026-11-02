@@ -47,6 +47,11 @@ one is tagged.
 
 ### Changed
 
+- A live's guide data also takes its year, countries and credits (hosts, cast
+  and crew, once saved), like a clip's sheet, and a **default length**
+  (`<runtime>` in its `tvshow.nfo`, minutes). Scheduling the live proposes its
+  end from that length (12:00 with 60 min ends at 13:00) and follows changes
+  of the start until the end is edited by hand.
 - Encoded outputs can select a 32, 44.1 or 48 kHz audio sample rate
   (migration `00023`, default 48 kHz). The engine keeps processing at 48 kHz
   and resamples just before the audio encoder; recordings with their own

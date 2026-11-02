@@ -42,6 +42,40 @@ const formKey = ref(0)
 const form = ref<InstanceType<typeof LiveFields>>()
 
 const existing = computed(() => props.draft?.live)
+
+/** `HH:MM` plus `minutes`, wrapping past midnight. */
+function addMinutes(time: string, minutes: number): string {
+    const [hours, mins] = time.split(':').map(Number)
+    const total = ((((hours ?? 0) * 60 + (mins ?? 0) + minutes) % 1440) + 1440) % 1440
+
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
+/** The live's usual length in minutes: of an existing live, or as typed in the form. */
+const runtime = computed(() => existing.value?.runtime ?? form.value?.runtime ?? null)
+/** The end follows the start and the usual length until it is changed by hand. */
+const endFollows = ref(false)
+
+function proposedEnd(): string | null {
+    return runtime.value && start.value ? addMinutes(start.value.slice(0, 5), runtime.value) : null
+}
+
+function followEnd() {
+    const proposed = proposedEnd()
+
+    if (endFollows.value && proposed) {
+        end.value = proposed
+    }
+}
+
+watch([start, runtime], followEnd)
+watch(end, (value) => {
+    const proposed = proposedEnd()
+
+    if (proposed && value.slice(0, 5) !== proposed) {
+        endFollows.value = false
+    }
+})
 const channelId = computed(() => configStore.channels[configStore.i]?.id ?? 0)
 /** The folder of an existing live, whose sheet and poster the guide shows. */
 const liveFolder = computed(() => existing.value?.path.split('/').slice(0, -1).join('/') ?? '')
@@ -90,6 +124,9 @@ watch(
         error.value = ''
         editingSheet.value = false
         formKey.value++
+        // A new event takes the live's usual length; a saved one keeps its end.
+        endFollows.value = !event
+        followEnd()
     },
     { immediate: true },
 )
