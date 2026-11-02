@@ -20,6 +20,8 @@ const features = [
     { icon: 'bi-list-ul', key: 'login.featurePlaylist' },
     { icon: 'bi-calendar-event', key: 'login.featureSchedule' },
     { icon: 'bi-broadcast', key: 'login.featureLive' },
+    { icon: 'bi-send', key: 'login.featureOutput' },
+    { icon: 'bi-badge-ad', key: 'login.featureBreaks' },
     { icon: 'bi-card-text', key: 'login.featureGuide' },
 ]
 

@@ -132,16 +132,16 @@ and the Report for what aired.
   the browser.
 - **Docker-only install**: one command, then a setup page in the browser.
 
-The interface is in Brazilian Portuguese and English; the screenshots show the
-Portuguese one.
+The interface is in English and Brazilian Portuguese; the screenshots show the
+English one, with a demo channel (`qa/screenshots/` rebuilds them).
 
 ![Player](docs/images/player.png)
 
 ## Screens
 
-**Scheduler**: the day's grade, the scheduled breaks and a scheduled
-graphics event (the L-shape in a corner with the logo moved) on their own
-lanes, with the lists below.
+**Scheduler**: the day's programme with each clip at its real length, a
+scheduled break and a live on the events lane, and a scheduled graphics event
+(the L-shape with the logo hidden) on its own lane, with the lists below.
 
 ![Scheduler](docs/images/scheduler.png)
 
@@ -155,6 +155,12 @@ the list header stay put while the list scrolls. Two clips selected, with
 what can be done to them, and how far the day runs over.
 
 ![Building a playlist](docs/images/builder.png)
+
+**Assembled program**: the blocks of a programme and its commercial break in
+one `.program` file, built from the storage pane by dragging or with +; the
+playlist and the Scheduler play it as one programme.
+
+![Editing an assembled program](docs/images/program-editor.png)
 
 **Adding a program to the playlist**: the next episode, the whole folder or
 the videos you pick, at the end, after the selection or at a time.
@@ -178,10 +184,15 @@ from the playlist and the Scheduler, with totals for commercials and lives.
 
 ![Report](docs/images/report.png)
 
-**Graphics › Logo**: the logo, where and how large it goes on air, and how
-it comes up and goes off.
+**Settings › Output**: HLS, a stream (RTMP, SRT or UDP), NDI or an SDI/HDMI
+card as the destination, with the video encoder and the output audio sample
+rate.
 
 ![Settings](docs/images/settings.png)
+
+**Sign in**: what NoAr does, next to the sign-in form.
+
+![Sign in](docs/images/login.png)
 
 ## Install with Docker
 

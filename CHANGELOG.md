@@ -47,6 +47,10 @@ one is tagged.
 
 ### Changed
 
+- The sign-in page lists what NoAr does now: lives and outputs over NDI and
+  video cards, assembled programs, lives that can be extended, SCTE-35 breaks,
+  logo and L-shape. The README screenshots show the English interface with a
+  demo channel, rebuilt by `qa/screenshots/`.
 - Extend the live on air from the Player's Now panel (+5/+15/+30 min, or until
   a time) or with `POST /api/schedule/{id}/extend`, for this airing only; it
   goes on without reconnecting. The panel names the end and ends the live at
