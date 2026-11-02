@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-02
+
 ### Added
 
 - Assembled programs: a `.program` file in Storage holds a program's blocks in
@@ -92,10 +94,17 @@ one is tagged.
 
 - Built-in RTMP/SRT input servers, their runtime controls and the input-server
   settings page. Historical database rows remain stored; current configuration
-  responses omit input-server settings.
+  responses omit input-server settings. **Breaking**: encoders can no longer
+  push to NoAr on ports 1936 (RTMP) or 9000/udp (SRT); `docker-compose.yml` no
+  longer publishes them, so remove those two port lines from your own copy and
+  send streams to an external service such as MediaMTX, then schedule its read
+  URL as a live.
 
 ### Fixed
 
+- Building the image no longer fails when a slow link cuts the SRT source
+  download: it uses HTTP/1.1 and retries on any transfer error (the SHA-256
+  check still applies).
 - A playout that cannot go on air (a DeckLink card missing, an output that
   does not open) no longer looks on air or stopped while NoAr retries it: the
   Player and the header show OFF AIR with the reason and the next attempt, and
@@ -813,7 +822,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...v2.0.0
 [1.11.0]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...v1.10.0
