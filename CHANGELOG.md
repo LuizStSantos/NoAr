@@ -67,6 +67,12 @@ one is tagged.
 
 ### Fixed
 
+- Clips without sound (common in stock footage), or without picture, can be
+  resumed in their middle again. Their unused audio or video branch stayed in
+  the pipeline unlinked and made every seek fail ("Failed to seek; fallback
+  generated", black on air), for example when the programme continued after
+  a scheduled event. The missing branch now leaves once the file has
+  announced its tracks.
 - Resuming a clip in its middle (for example when the programme continues
   after a scheduled event) no longer fails with "Failed to seek" when the
   clip has not finished prerolling, as with large 4K files: the seek waits

@@ -243,6 +243,59 @@ mod tests {
         buffer
     }
 
+    /// The program preview (H.264/AAC in MPEG-TS) comes out re-encoded small.
+    #[test]
+    fn the_program_preview_is_transcoded_to_the_light_copy() {
+        use std::sync::mpsc;
+
+        crate::gstreamer::init().unwrap();
+        let program = gst::parse::launch(
+            "videotestsrc num-buffers=75 ! video/x-raw,width=1280,height=720,framerate=25/1 ! \
+             x264enc tune=zerolatency speed-preset=ultrafast key-int-max=25 ! h264parse ! mpegtsmux name=mux alignment=7 ! \
+             appsink name=out sync=false \
+             audiotestsrc num-buffers=141 ! audio/x-raw,rate=48000,channels=2 ! avenc_aac ! aacparse ! mux.",
+        )
+        .unwrap()
+        .downcast::<gst::Pipeline>()
+        .unwrap();
+        let out = program
+            .by_name("out")
+            .unwrap()
+            .downcast::<gst_app::AppSink>()
+            .unwrap();
+        let (sender, receiver) = mpsc::channel();
+        program.set_state(gst::State::Playing).unwrap();
+        while let Ok(sample) = out.pull_sample() {
+            let buffer = sample.buffer().unwrap();
+            sender
+                .send(buffer.map_readable().unwrap().to_vec())
+                .unwrap();
+        }
+        program.set_state(gst::State::Null).unwrap();
+        drop(sender);
+
+        let delivered = Arc::new(Mutex::new(Vec::<u8>::new()));
+        let sink = delivered.clone();
+        transcode_light_preview(
+            receiver,
+            move |bytes| {
+                sink.lock().unwrap().extend_from_slice(&bytes);
+                true
+            },
+            LightPreview::default(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .unwrap_or_else(|error| panic!("{error:#}"));
+
+        let bytes = delivered.lock().unwrap().clone();
+        assert!(
+            bytes.len() > 10_000,
+            "only {} bytes of light preview",
+            bytes.len()
+        );
+        assert_eq!(bytes[0], 0x47, "not MPEG-TS");
+    }
+
     #[test]
     fn a_new_start_follows_on_from_the_last_packet() {
         let mut continuity = Continuity::default();

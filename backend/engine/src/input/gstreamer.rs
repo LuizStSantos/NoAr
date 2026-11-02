@@ -302,6 +302,32 @@ impl Source {
             thread::sleep(Duration::from_millis(10));
         }
 
+        // A file without sound (stock footage often has none) or without
+        // picture leaves that branch unlinked. A seek must reach every sink of
+        // the pipeline, and an unlinked one refuses it, so resuming such a
+        // clip in its middle failed. Once the file has announced all its
+        // tracks, the missing branch leaves. NDI and cards keep theirs: their
+        // sound can still come.
+        if ndi.is_none() && card.is_none() {
+            let info = source.info();
+            let all_announced = complete.load(Ordering::Acquire);
+            // The selected streams tell which tracks the file has, even before
+            // every pad has been announced.
+            let (video_selected, audio_selected) = source.selected_streams.unwrap_or((
+                !all_announced || info.has_video,
+                !all_announced || info.has_audio,
+            ));
+            for (present, selected, branch) in [
+                (info.has_video, video_selected, &video_bin),
+                (info.has_audio, audio_selected, &audio_bin),
+            ] {
+                if !present && !selected {
+                    let _ = branch.set_state(gst::State::Null);
+                    let _ = source.pipeline.remove(branch);
+                }
+            }
+        }
+
         if let Some(duration) = source.pipeline.query_duration::<gst::ClockTime>() {
             source
                 .metadata
@@ -947,6 +973,31 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
+
+    /// Stock clips often have no sound: resuming one in its middle must seek
+    /// even though the audio branch stays unlinked.
+    #[test]
+    fn a_clip_without_audio_seeks() {
+        crate::gstreamer::init().unwrap();
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/media_mix/no_audio.mp4");
+        let config = OutputConfig::new(320, 180, 25, 48_000);
+        let mut source = Source::open(path.to_str().unwrap(), &config).unwrap();
+        assert!(source.info().has_video && !source.info().has_audio);
+
+        source
+            .start(Some(3.0))
+            .unwrap_or_else(|error| panic!("{error:#}"));
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let first = loop {
+            assert!(Instant::now() < deadline, "no frame after the seek");
+            if let Some(FrameEvent::Video(frame)) = source.next(Duration::from_millis(50)).unwrap()
+            {
+                break frame.pts().unwrap();
+            }
+        };
+        assert!((70..=80).contains(&first), "first frame {first}");
+    }
 
     /// A clip that is not prerolled yet (here held back in READY) refuses a
     /// seek; resuming it in its middle waits until it can seek.
