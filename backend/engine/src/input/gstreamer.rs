@@ -488,18 +488,18 @@ impl Source {
 
 /// A baseband video card input: DeckLink or V4L2 capture.
 enum CardSource {
-    DeckLink(crate::output::sdi::DeckLinkAddress),
-    V4l2(crate::output::sdi::V4l2Address),
+    DeckLink(crate::output::video_card::DeckLinkAddress),
+    V4l2(crate::output::video_card::V4l2Address),
 }
 
 impl CardSource {
     fn parse(path: &str) -> Result<Option<Self>> {
         if let Some(address) =
-            crate::output::sdi::parse_decklink(path, false).map_err(anyhow::Error::msg)?
+            crate::output::video_card::parse_decklink(path, false).map_err(anyhow::Error::msg)?
         {
             return Ok(Some(Self::DeckLink(address)));
         }
-        Ok(crate::output::sdi::parse_v4l2(path)
+        Ok(crate::output::video_card::parse_v4l2(path)
             .map_err(anyhow::Error::msg)?
             .map(Self::V4l2))
     }
@@ -507,7 +507,7 @@ impl CardSource {
     /// Builds the capture elements in `bin` and exposes a `video` and, when
     /// the card has audio, an `audio` pad.
     fn build(&self, bin: &gst::Bin) -> Result<()> {
-        use crate::output::sdi::make;
+        use crate::output::video_card::make;
 
         let (video_out, audio_out) = match self {
             Self::DeckLink(address) => {

@@ -18,7 +18,7 @@ pub(crate) mod pipeline;
 mod recording_native;
 mod recording_retention;
 pub(crate) mod scte35;
-pub(crate) mod sdi;
+pub(crate) mod video_card;
 mod vtt;
 
 #[cfg(feature = "desktop-base")]
@@ -204,12 +204,12 @@ impl Output {
     }
 
     /// Plays the program on a DeckLink card (`decklink://N?mode=…`).
-    pub(crate) fn open_sdi(address: &str, cfg: &OutputConfig) -> Result<Self> {
+    pub(crate) fn open_decklink(address: &str, cfg: &OutputConfig) -> Result<Self> {
         Ok(Self {
             kind: OutputKind::Encoded(Box::new(EncodedOutput::open(
                 address,
                 cfg,
-                EncodedFormat::Sdi {
+                EncodedFormat::DeckLink {
                     address: address.to_owned(),
                 },
             )?)),

@@ -259,10 +259,10 @@ fn raw_codec(path: &str) -> &'static str {
 
 pub fn probe_media(path: &str) -> Result<MediaProbe> {
     if crate::input::gstreamer::ndi_source_name(path)?.is_some()
-        || crate::output::sdi::parse_decklink(path, false)
+        || crate::output::video_card::parse_decklink(path, false)
             .map_err(anyhow::Error::msg)?
             .is_some()
-        || crate::output::sdi::parse_v4l2(path)
+        || crate::output::video_card::parse_v4l2(path)
             .map_err(anyhow::Error::msg)?
             .is_some()
     {

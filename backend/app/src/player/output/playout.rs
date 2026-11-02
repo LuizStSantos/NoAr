@@ -723,7 +723,7 @@ async fn open_playout(
                 .await
                 .map_err(engine_error)
         }
-        OutputMode::Sdi => AsyncPlayout::open_sdi(
+        OutputMode::Sdi => AsyncPlayout::open_decklink(
             config.output.stream_url.trim(),
             output_config,
             fallback_duration,

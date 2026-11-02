@@ -1,4 +1,4 @@
-//! Baseband video I/O cards: Blackmagic DeckLink/UltraStudio output and
+//! Video cards: Blackmagic DeckLink/UltraStudio output (SDI or HDMI) and
 //! input, and V4L2 capture cards (Magewell, Epiphan and others) as input.
 //!
 //! The GStreamer `decklink` and `v4l2` plugins ship with NoAr; the card
@@ -277,14 +277,14 @@ pub(crate) fn make(factory: &str) -> Result<gst::Element> {
 }
 
 /// The DeckLink program output.
-pub(super) struct SdiSink {
+pub(super) struct DeckLinkSink {
     pipeline: gst::Pipeline,
     video: AppSrc,
     audio: AppSrc,
     bus: gst::Bus,
 }
 
-impl SdiSink {
+impl DeckLinkSink {
     pub(super) fn open(address: &str, cfg: &OutputConfig) -> Result<Self> {
         crate::gstreamer::init()?;
         let target = parse_decklink(address, true)
@@ -491,7 +491,7 @@ impl SdiSink {
     }
 }
 
-impl Drop for SdiSink {
+impl Drop for DeckLinkSink {
     fn drop(&mut self) {
         let _ = self.pipeline.set_state(gst::State::Null);
     }
@@ -578,7 +578,7 @@ mod tests {
         {
             return;
         }
-        let error = SdiSink::open("decklink://0?mode=1080i5994", &cfg)
+        let error = DeckLinkSink::open("decklink://0?mode=1080i5994", &cfg)
             .err()
             .unwrap();
         assert!(format!("{error:#}").contains("DeckLink"), "{error:#}");

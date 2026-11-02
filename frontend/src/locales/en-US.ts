@@ -2034,7 +2034,7 @@ export default {
                 stream: 'Stream',
                 desktop: 'Desktop',
                 ndi: 'NDI',
-                sdi: 'SDI',
+                sdi: 'SDI / HDMI',
             },
             modeHint: {
                 hls: 'Writes .m3u8 files served by NoAr or a web server.',

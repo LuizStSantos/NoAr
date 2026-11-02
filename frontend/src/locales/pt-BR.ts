@@ -2037,7 +2037,7 @@ export default {
                 stream: 'Stream',
                 desktop: 'Desktop',
                 ndi: 'NDI',
-                sdi: 'SDI',
+                sdi: 'SDI / HDMI',
             },
             modeHint: {
                 hls: 'Gera .m3u8 servidos pelo NoAr ou por um servidor web.',
