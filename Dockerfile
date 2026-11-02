@@ -13,17 +13,18 @@ ARG RUNTIME_IMAGE=debian:trixie-slim
 # initialized and released. Debian's SRT 1.5.4 misses a startup reference; use
 # the corrected release with the same GnuTLS ABI.
 FROM ${RUNTIME_IMAGE} AS srt-build
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export APT_CONFIG=/tmp/noar-apt.conf; \
         printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
     fi; \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates cmake curl g++ libgnutls28-dev make pkg-config && \
     rm -rf /var/lib/apt/lists/* /tmp/noar-apt.conf
 COPY docker/srt /src/srt
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export CURL_CA_BUNDLE=/run/secrets/proxy_ca; \
     fi; \
@@ -38,7 +39,7 @@ FROM ${NODE_IMAGE} AS frontend
 WORKDIR /src
 
 COPY package.json package-lock.json ./
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; \
     fi; \
@@ -52,10 +53,11 @@ RUN npm run build
 FROM ${RUST_IMAGE} AS backend
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export APT_CONFIG=/tmp/noar-apt.conf; \
         printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
     fi; \
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -92,7 +94,7 @@ ENV NOAR_FRONTEND_PREBUILT=1
 ARG NOAR_COMMIT=""
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
-    --mount=type=secret,id=proxy_ca \
+    --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export CARGO_HTTP_CAINFO=/run/secrets/proxy_ca; \
     fi; \
@@ -114,10 +116,11 @@ FROM ${RUNTIME_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY --from=backend /runtime-packages.txt /tmp/runtime-packages.txt
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export APT_CONFIG=/tmp/noar-apt.conf; \
         printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
     fi; \
     apt-get update && \
     apt-get install -y --no-install-recommends \

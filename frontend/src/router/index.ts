@@ -222,6 +222,12 @@ const router = createRouter({
                 },
             ],
         },
+        // An unknown address (an old bookmark, a page that was removed) opens
+        // the home page instead of a blank screen without the menu.
+        {
+            path: '/:pathMatch(.*)*',
+            redirect: '/',
+        },
     ],
 })
 

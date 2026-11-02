@@ -1493,7 +1493,7 @@ defineExpose({ addFile, addFiles })
                 <span
                     v-for="live in dayMap.liveBlocks"
                     :key="live.key"
-                    class="absolute top-0 bottom-0 bg-live text-base-100 text-[10px] font-semibold px-1 flex items-center overflow-hidden pointer-events-none"
+                    class="absolute top-0 bottom-0 bg-live text-base-100 text-[10px] font-semibold px-1 flex items-center overflow-hidden whitespace-nowrap pointer-events-none"
                     :style="{ left: `${live.left}%`, width: `${live.width}%` }"
                     :title="`${live.title} · ${live.range}`"
                     >LIVE</span

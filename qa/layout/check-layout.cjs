@@ -39,7 +39,6 @@ const ROUTES = [
     '/configure/general',
     '/configure/logging',
     '/configure/output',
-    '/configure/ingest',
     '/configure/playlist',
     '/configure/audio',
     '/configure/recording',

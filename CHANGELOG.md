@@ -96,6 +96,13 @@ one is tagged.
 
 ### Fixed
 
+- The LIVE mark on the playlist's day bar no longer breaks letter by letter
+  when the live is short or the screen narrow.
+- An unknown address (an old bookmark, a page that was removed) opens the home
+  page instead of a blank screen without the menu.
+- Building the image behind a proxy with the `proxy_ca` secret: apt can read
+  the certificate, and Debian packages come over HTTPS for proxies that refuse
+  plain HTTP. Builds without the secret are unchanged.
 - Ending a live twice in quick succession (a double press on a Stream Deck,
   or the Player and the API at once) no longer leaves a pending skip that
   could cut the programme clip coming back after the live.
