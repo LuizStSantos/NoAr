@@ -67,6 +67,11 @@ one is tagged.
 
 ### Fixed
 
+- Resuming a clip in its middle (for example when the programme continues
+  after a scheduled event) no longer fails with "Failed to seek" when the
+  clip has not finished prerolling, as with large 4K files: the seek waits
+  for the clip to become seekable, up to five seconds, and a failure names the
+  position and the clip length.
 - Saving the channel logo (image, on/off, size, opacity or position) in the
   Graphics tab puts it on air at once, cross-fading from the previous image,
   instead of requiring a playout restart. An image that cannot be read is

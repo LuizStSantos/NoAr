@@ -31,6 +31,8 @@ use crate::{
 };
 
 const OPEN_TIMEOUT: Duration = Duration::from_secs(12);
+/// How long a clip may take to become seekable (its first frame decoded).
+const SEEK_READY_TIMEOUT: Duration = Duration::from_secs(5);
 /// How long an NDI source with a picture may take to announce its audio.
 const NDI_AUDIO_GRACE: Duration = Duration::from_millis(1500);
 /// URL scheme of NDI sources: `ndi://SERVER (Source name)`.
@@ -329,10 +331,7 @@ impl Source {
 
         if let Some(seconds) = seek_seconds.filter(|seconds| *seconds > 0.0) {
             ensure!(seconds.is_finite(), "seek position must be finite");
-            self.pipeline.seek_simple(
-                gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE,
-                gst::ClockTime::from_nseconds((seconds * 1_000_000_000.0).round() as u64),
-            )?;
+            self.seek_when_ready(seconds)?;
             self.pending_video = None;
             self.pending_audio = None;
             self.eos = false;
@@ -340,6 +339,48 @@ impl Source {
         self.pipeline.set_state(gst::State::Playing)?;
 
         Ok(())
+    }
+
+    /// Seeks once the source can: a file opened paused may still be
+    /// prerolling (the first frame of a large 4K clip takes a while to
+    /// decode), and a pipeline refuses a seek until then. Bounded, so a source
+    /// that never gets ready still fails with the position and length.
+    fn seek_when_ready(&mut self, seconds: f64) -> Result<()> {
+        let position = gst::ClockTime::from_nseconds((seconds * 1_000_000_000.0).round() as u64);
+        let deadline = Instant::now() + SEEK_READY_TIMEOUT;
+
+        let refused = loop {
+            self.check_bus()?;
+            let (_, current, pending) = self.pipeline.state(gst::ClockTime::ZERO);
+            if current < gst::State::Paused && pending < gst::State::Paused {
+                self.pipeline.set_state(gst::State::Paused)?;
+            }
+            // Wait for preroll to complete, in short steps so errors and
+            // cancellation are still noticed.
+            let _ = self.pipeline.state(gst::ClockTime::from_mseconds(100));
+
+            let error = match self
+                .pipeline
+                .seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE, position)
+            {
+                Ok(()) => return Ok(()),
+                Err(error) => error,
+            };
+            ensure!(
+                !self.abort.load(Ordering::Acquire),
+                "source seeking cancelled"
+            );
+            if Instant::now() >= deadline {
+                break error;
+            }
+            thread::sleep(Duration::from_millis(25));
+        };
+
+        let length = self.info().duration.map_or_else(
+            || "unknown length".to_owned(),
+            |length| format!("{length:.3} s long"),
+        );
+        bail!("cannot seek to {seconds:.3} s (clip {length}): {refused}")
     }
 
     pub(crate) fn pause(&self) -> Result<()> {
@@ -906,6 +947,31 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
+
+    /// A clip that is not prerolled yet (here held back in READY) refuses a
+    /// seek; resuming it in its middle waits until it can seek.
+    #[test]
+    fn a_seek_on_a_source_that_is_not_ready_yet_waits_for_it() {
+        crate::gstreamer::init().unwrap();
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/media_mix/av_sync.mp4");
+        let config = OutputConfig::new(320, 180, 25, 48_000);
+        let mut source = Source::open(path.to_str().unwrap(), &config).unwrap();
+        source.pipeline.set_state(gst::State::Ready).unwrap();
+
+        source
+            .start(Some(3.0))
+            .unwrap_or_else(|error| panic!("{error:#}"));
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let first = loop {
+            assert!(Instant::now() < deadline, "no frame after the seek");
+            if let Some(FrameEvent::Video(frame)) = source.next(Duration::from_millis(50)).unwrap()
+            {
+                break frame.pts().unwrap();
+            }
+        };
+        assert!((70..=80).contains(&first), "first frame {first}");
+    }
 
     #[test]
     fn ndi_addresses_name_the_source_as_receivers_list_it() {
