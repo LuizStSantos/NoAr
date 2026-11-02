@@ -35,7 +35,7 @@ export default {
         featurePlaylist: 'Daily playlist with drag and drop, and programs assembled in blocks',
         featureSchedule: 'A scheduler that takes over anything on air, and lives you can extend',
         featureLive: 'Lives from SRT, RTMP, HLS, UDP, NDI and video cards',
-        featureOutput: 'Output to HLS, SRT, RTMP, UDP, NDI and SDI',
+        featureOutput: 'Output to HLS, SRT, RTMP, UDP, NDI and video cards',
         featureBreaks: 'SCTE-35 ad breaks, logo and L-shape on air',
         featureGuide: 'XMLTV guide with poster and synopsis',
         source: 'Source code (GPL-3.0)',

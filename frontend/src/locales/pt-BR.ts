@@ -35,7 +35,7 @@ export default {
         featurePlaylist: 'Playlist do dia com arrastar e soltar, e programas montados em blocos',
         featureSchedule: 'Agendador que entra por cima de tudo, e lives que dá para estender',
         featureLive: 'Lives por SRT, RTMP, HLS, UDP, NDI e placas de vídeo',
-        featureOutput: 'Saída em HLS, SRT, RTMP, UDP, NDI e SDI',
+        featureOutput: 'Saída em HLS, SRT, RTMP, UDP, NDI e placas de vídeo',
         featureBreaks: 'Breaks SCTE-35, logo e L-shape no ar',
         featureGuide: 'Guia XMLTV com pôster e sinopse',
         source: 'Código-fonte (GPL-3.0)',
