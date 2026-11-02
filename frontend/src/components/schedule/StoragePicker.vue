@@ -16,10 +16,13 @@ const props = defineProps({
     draggable: { type: Boolean, default: false },
     /** Leave the lives out: they have a list of their own. */
     hideLives: { type: Boolean, default: false },
+    /** Keep the add button on draggable items, to add with a click too. */
+    addable: { type: Boolean, default: false },
 })
 
 const emit = defineEmits<{
-    pick: [item: { path: string; name: string; duration: number }]
+    /** `commercial`: the clip lies in a commercials folder. */
+    pick: [item: { path: string; name: string; duration: number; commercial: boolean }]
     /** A live's folder was chosen, to schedule the live. */
     live: [folder: string]
 }>()
@@ -157,7 +160,7 @@ async function loadGuide(id: number) {
 }
 
 function item(name: string, duration: number) {
-    return { path: joinPath(source.value, name), name, duration }
+    return { path: joinPath(source.value, name), name, duration, commercial: inCommercials.value }
 }
 
 function dragStart(event: DragEvent, name: string, duration: number) {
@@ -165,6 +168,10 @@ function dragStart(event: DragEvent, name: string, duration: number) {
 
     event.dataTransfer?.setData('application/x-noar-schedule', JSON.stringify(payload))
     event.dataTransfer?.setData('text/plain', payload.path)
+    // Readable while dragging over a target, where the data itself is not.
+    if (inCommercials.value) {
+        event.dataTransfer?.setData('application/x-noar-commercial', '1')
+    }
 
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'copy'
@@ -265,7 +272,7 @@ watch(i, () => open(''))
                 </span>
                 <span class="font-mono text-xs text-muted">{{ formatLength(file.duration) }}</span>
                 <button
-                    v-if="!props.draggable"
+                    v-if="!props.draggable || props.addable"
                     class="btn-icon min-w-8 min-h-8"
                     :aria-label="t('schedule.addFile', { name: file.name })"
                     @click="emit('pick', item(file.name, file.duration))"

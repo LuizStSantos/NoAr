@@ -69,9 +69,7 @@ function protocolOf(value?: string): Protocol {
         return 'SDI'
     }
 
-    return value === 'RTMP' || value === 'HLS' || value === 'UDP' || value === 'NDI' || value === 'SDI'
-        ? value
-        : 'SRT'
+    return value === 'RTMP' || value === 'HLS' || value === 'UDP' || value === 'NDI' || value === 'SDI' ? value : 'SRT'
 }
 
 /** Video card inputs on the server, to pick from instead of typing. */

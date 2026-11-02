@@ -149,7 +149,7 @@ declare global {
 
     /** What is dragged onto the timeline. */
     type ScheduleDragItem =
-        | { type: 'media'; path: string; name: string; duration: number }
+        | { type: 'media'; path: string; name: string; duration: number; commercial?: boolean }
         | { type: 'live'; path: string; name: string; protocol: string }
         | { type: 'event'; id: number }
 }

@@ -10,8 +10,11 @@ import { useSchedule } from '@/stores/schedule'
 
 /**
  * Create or change an assembled program: a title, its blocks in order and
- * breaks of commercials between them. Playlists and the Scheduler point to
- * the file, so a change applies to every airing still to come.
+ * breaks of commercials between them. The storage stays open beside the
+ * program: drag a clip to where it goes, or press + to add it at the end (a
+ * clip becomes the next block, a commercial goes into the break at the end).
+ * Playlists and the Scheduler point to the file, so a change applies to every
+ * airing still to come.
  */
 const props = defineProps<{
     /** The program file to change; a new one is made in `folder`. */
@@ -31,11 +34,21 @@ const scheduleStore = useSchedule()
 
 interface Clip {
     source: string
-    /** Seconds that air; `null` until the server reads it on save. */
-    length: number | null
+    /** Seconds that air, as listed or read by the server on save. */
+    length: number
 }
 
 type Part = { kind: 'block'; clip: Clip } | { kind: 'break'; clips: Clip[] }
+
+/** Where a dragged clip or part lands. */
+interface DropTarget {
+    index: number
+    where: 'before' | 'after' | 'inside'
+}
+
+const STORAGE_TYPE = 'application/x-noar-schedule'
+const COMMERCIAL_TYPE = 'application/x-noar-commercial'
+const PART_TYPE = 'application/x-noar-program-part'
 
 const fileName = ref('')
 const title = ref('')
@@ -43,24 +56,24 @@ const parts = ref<Part[]>([])
 const loading = ref(Boolean(props.path))
 const saving = ref(false)
 const error = ref('')
-/** Where a clip picked in the storage goes. */
-const picking = ref<{ kind: 'block'; at: number } | { kind: 'commercial'; part: number } | null>(null)
+const dropTarget = ref<DropTarget | null>(null)
+/** The end of the list is the target. */
+const dropAtEnd = ref(false)
 const dialog = ref<HTMLElement>()
 
-useDialogFocus(dialog, { onEscape: () => (picking.value ? (picking.value = null) : emit('close')) })
+useDialogFocus(dialog, { onEscape: () => emit('close') })
 
+const total = computed(() => parts.value.reduce((sum, part) => sum + partLength(part), 0))
 const blockCount = computed(() => parts.value.filter((part) => part.kind === 'block').length)
-const total = computed(() =>
-    parts.value.reduce(
-        (sum, part) =>
-            sum +
-            (part.kind === 'block'
-                ? (part.clip.length ?? 0)
-                : part.clips.reduce((inner, clip) => inner + (clip.length ?? 0), 0)),
-        0,
-    ),
-)
-const breakLength = (clips: Clip[]) => clips.reduce((sum, clip) => sum + (clip.length ?? 0), 0)
+
+function partLength(part: Part): number {
+    return part.kind === 'block' ? part.clip.length : part.clips.reduce((sum, clip) => sum + clip.length, 0)
+}
+
+/** Number of block `index` among the blocks. */
+function blockNumber(index: number): number {
+    return parts.value.slice(0, index + 1).filter((part) => part.kind === 'block').length
+}
 
 function clipName(source: string): string {
     return source.split('/').pop() ?? source
@@ -94,35 +107,36 @@ onMounted(async () => {
     }
 })
 
-function addBlock() {
-    picking.value = { kind: 'block', at: parts.value.length }
-}
-
-/** A break goes after block `index`, before the next one. */
-function addBreak(index: number) {
-    parts.value.splice(index + 1, 0, { kind: 'break', clips: [] })
-    picking.value = { kind: 'commercial', part: index + 1 }
-}
-
-function pick(item: { path: string; duration: number }) {
-    const target = picking.value
-
-    if (!target) {
+/**
+ * Put a clip at `position` in the list: a commercial joins a break next to
+ * that place, or starts one there; any other clip becomes a block there.
+ */
+function insertClip(clip: Clip, commercial: boolean, position: number) {
+    if (!commercial) {
+        parts.value.splice(position, 0, { kind: 'block', clip })
         return
     }
 
-    const clip = { source: item.path, length: item.duration || null }
+    const before = parts.value[position - 1]
+    const after = parts.value[position]
 
-    if (target.kind === 'block') {
-        parts.value.splice(target.at, 0, { kind: 'block', clip })
-        picking.value = null
+    if (before?.kind === 'break') {
+        before.clips.push(clip)
+    } else if (after?.kind === 'break') {
+        after.clips.unshift(clip)
     } else {
-        const part = parts.value[target.part]
-
-        if (part?.kind === 'break') {
-            part.clips.push(clip)
-        }
+        parts.value.splice(position, 0, { kind: 'break', clips: [clip] })
     }
+}
+
+/** The + of the storage: at the end of the program. */
+function add(item: { path: string; duration: number; commercial: boolean }) {
+    insertClip({ source: item.path, length: item.duration }, item.commercial, parts.value.length)
+}
+
+/** A break right after block `index`, to drop commercials into. */
+function addBreak(index: number) {
+    parts.value.splice(index + 1, 0, { kind: 'break', clips: [] })
 }
 
 function move(index: number, step: number) {
@@ -148,11 +162,127 @@ function removeCommercial(part: number, clip: number) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Dragging: clips from the storage, and the parts themselves to reorder.
+
+function accepts(event: DragEvent): boolean {
+    const types = event.dataTransfer?.types ?? []
+
+    return types.includes(STORAGE_TYPE) || types.includes(PART_TYPE)
+}
+
+function partDragStart(event: DragEvent, index: number) {
+    event.dataTransfer?.setData(PART_TYPE, String(index))
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+    }
+}
+
+/** Upper part of a row: before it; lower part: after it; the middle of a break: into it. */
+function overPart(event: DragEvent, index: number) {
+    if (!accepts(event)) {
+        return
+    }
+
+    event.preventDefault()
+    dropAtEnd.value = false
+
+    const row = event.currentTarget as HTMLElement
+    const box = row.getBoundingClientRect()
+    const ratio = (event.clientY - box.top) / Math.max(box.height, 1)
+    const commercial = event.dataTransfer?.types.includes(COMMERCIAL_TYPE) ?? false
+    const intoBreak = parts.value[index]?.kind === 'break' && commercial && ratio > 0.25 && ratio < 0.75
+
+    dropTarget.value = { index, where: intoBreak ? 'inside' : ratio < 0.5 ? 'before' : 'after' }
+}
+
+function overEnd(event: DragEvent) {
+    if (!accepts(event)) {
+        return
+    }
+
+    event.preventDefault()
+    dropTarget.value = null
+    dropAtEnd.value = true
+}
+
+function leaveList(event: DragEvent) {
+    const list = event.currentTarget as HTMLElement
+
+    if (!list.contains(event.relatedTarget as Node | null)) {
+        dropTarget.value = null
+        dropAtEnd.value = false
+    }
+}
+
+function drop(event: DragEvent) {
+    event.preventDefault()
+
+    const target = dropTarget.value
+    const position =
+        dropAtEnd.value || !target ? parts.value.length : target.where === 'before' ? target.index : target.index + 1
+
+    dropTarget.value = null
+    dropAtEnd.value = false
+
+    const moved = event.dataTransfer?.getData(PART_TYPE)
+
+    if (moved) {
+        const from = Number(moved)
+        const [part] = parts.value.splice(from, 1)
+
+        if (part) {
+            parts.value.splice(from < position ? position - 1 : position, 0, part)
+        }
+        return
+    }
+
+    const raw = event.dataTransfer?.getData(STORAGE_TYPE)
+
+    if (!raw) {
+        return
+    }
+
+    const item = JSON.parse(raw) as ScheduleDragItem
+
+    if (item.type !== 'media') {
+        return
+    }
+
+    const clip = { source: item.path, length: item.duration }
+    const commercial = Boolean(item.commercial)
+    const into = target?.where === 'inside' ? parts.value[target.index] : undefined
+
+    if (into?.kind === 'break') {
+        into.clips.push(clip)
+    } else {
+        insertClip(clip, commercial, position)
+    }
+}
+
+function rowClass(index: number): string {
+    const target = dropTarget.value
+
+    if (target?.index !== index) {
+        return ''
+    }
+
+    return target.where === 'inside'
+        ? 'outline-2 outline-accent'
+        : target.where === 'before'
+          ? 'shadow-[0_-3px_0_0_var(--color-accent)]'
+          : 'shadow-[0_3px_0_0_var(--color-accent)]'
+}
+
+// ---------------------------------------------------------------------------
+// Saving
+
 function check(): string {
     if (!title.value.trim()) {
         return t('storage.program.needTitle')
     }
-    if (!props.path && !fileName.value.trim().replace(/[\\/:*?"<>|]/g, '')) {
+    if (!props.path && !safeName(fileName.value || title.value)) {
         return t('storage.program.needName')
     }
     if (!blockCount.value) {
@@ -165,6 +295,10 @@ function check(): string {
     return ''
 }
 
+function safeName(name: string): string {
+    return name.trim().replace(/[\\/:*?"<>|]/g, '')
+}
+
 async function save() {
     error.value = check()
 
@@ -173,8 +307,7 @@ async function save() {
     }
 
     const path =
-        props.path ??
-        [props.folder, `${fileName.value.trim().replace(/[\\/:*?"<>|]/g, '')}.program`].filter(Boolean).join('/')
+        props.path ?? [props.folder, `${safeName(fileName.value || title.value)}.program`].filter(Boolean).join('/')
 
     saving.value = true
 
@@ -201,14 +334,14 @@ async function save() {
 </script>
 
 <template>
-    <div class="z-50 fixed inset-0 bg-black/50 overflow-auto flex justify-center items-start py-8 px-3">
+    <div class="z-50 fixed inset-0 bg-black/50 overflow-auto flex justify-center items-start py-6 px-3">
         <div
             ref="dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="program-editor-title"
             tabindex="-1"
-            class="outline-none w-full max-w-240 bg-base-100 border border-base-content/20 rounded-lg shadow-xl flex flex-col"
+            class="outline-none w-full max-w-300 bg-base-100 border border-base-content/20 rounded-lg shadow-xl flex flex-col"
         >
             <div class="flex items-center justify-between px-5 py-3 border-b border-base-300">
                 <h2 id="program-editor-title" class="text-lg font-semibold flex items-center gap-2 m-0">
@@ -224,8 +357,18 @@ async function save() {
                 <span class="loading loading-spinner" />
             </div>
 
-            <div v-else class="flex flex-col lg:flex-row gap-4 px-5 py-4">
-                <div class="flex flex-col gap-4 flex-1 min-w-0">
+            <div v-else class="grid grid-cols-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-4 px-5 py-4">
+                <!-- The storage, always open: drag a clip or press + -->
+                <aside
+                    class="border border-line-strong rounded-lg p-3 flex flex-col gap-2 min-h-0 lg:max-h-[70vh]"
+                    :aria-label="t('storage.program.storage')"
+                >
+                    <span class="font-semibold text-sm">{{ t('storage.program.storage') }}</span>
+                    <p class="m-0 text-xs text-muted">{{ t('storage.program.storageHint') }}</p>
+                    <StoragePicker hide-lives draggable addable class="min-h-0 overflow-hidden" @pick="add" />
+                </aside>
+
+                <div class="flex flex-col gap-4 min-w-0">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <label class="field-label">
                             {{ t('storage.program.title') }}
@@ -242,43 +385,48 @@ async function save() {
                             />
                         </label>
                     </div>
-                    <p class="m-0 field-hint">{{ t('storage.program.hint') }}</p>
 
-                    <ol class="list-none m-0 p-0 flex flex-col gap-2" :aria-label="t('storage.program.parts')">
+                    <ol
+                        class="list-none m-0 p-0 flex flex-col gap-2 min-h-24"
+                        :aria-label="t('storage.program.parts')"
+                        @dragleave="leaveList"
+                        @drop="drop"
+                    >
                         <li
                             v-for="(part, index) in parts"
                             :key="index"
-                            class="border rounded-lg px-3 py-2 flex flex-col gap-1.5"
-                            :class="part.kind === 'break' ? 'border-warning/60 bg-warning/5' : 'border-line-strong'"
+                            class="border rounded-lg px-3 py-2 flex flex-col gap-1.5 bg-base-100"
+                            :class="[
+                                part.kind === 'break' ? 'border-warning/60 bg-warning/5' : 'border-line-strong',
+                                rowClass(index),
+                            ]"
+                            @dragover="overPart($event, index)"
                         >
                             <div class="flex items-center gap-2">
+                                <span
+                                    class="cursor-grab text-subtle"
+                                    draggable="true"
+                                    :title="t('storage.program.dragToMove')"
+                                    @dragstart="partDragStart($event, index)"
+                                >
+                                    <i class="bi bi-grip-vertical" aria-hidden="true" />
+                                </span>
                                 <i
                                     class="bi"
                                     :class="part.kind === 'block' ? 'bi-film' : 'bi-megaphone'"
                                     aria-hidden="true"
                                 />
-                                <span class="font-semibold">
+                                <span class="font-semibold whitespace-nowrap">
                                     {{
                                         part.kind === 'block'
-                                            ? t('storage.program.block', {
-                                                  n: parts.slice(0, index + 1).filter((p) => p.kind === 'block')
-                                                      .length,
-                                              })
+                                            ? t('storage.program.block', { n: blockNumber(index) })
                                             : t('storage.program.break')
                                     }}
                                 </span>
                                 <span v-if="part.kind === 'block'" class="truncate text-[13px] font-mono text-muted">
                                     {{ clipName(part.clip.source) }}
                                 </span>
-                                <span class="ms-auto text-[13px] font-mono">
-                                    {{
-                                        part.kind === 'block'
-                                            ? part.clip.length !== null
-                                                ? formatLength(part.clip.length)
-                                                : '—'
-                                            : formatLength(breakLength(part.clips))
-                                    }}
-                                </span>
+                                <span class="ms-auto text-[13px] font-mono">{{ formatLength(partLength(part)) }}</span>
                                 <button
                                     type="button"
                                     class="btn-icon"
@@ -308,16 +456,16 @@ async function save() {
                             </div>
 
                             <template v-if="part.kind === 'break'">
-                                <ul class="list-none m-0 p-0 flex flex-col gap-1 ps-6">
+                                <ul v-if="part.clips.length" class="list-none m-0 p-0 flex flex-col gap-1 ps-7">
                                     <li
                                         v-for="(clip, clipIndex) in part.clips"
                                         :key="clipIndex"
                                         class="flex items-center gap-2 text-[13px]"
                                     >
                                         <span class="truncate font-mono">{{ clipName(clip.source) }}</span>
-                                        <span class="ms-auto font-mono text-muted">
-                                            {{ clip.length !== null ? formatLength(clip.length) : '—' }}
-                                        </span>
+                                        <span class="ms-auto font-mono text-muted">{{
+                                            formatLength(clip.length)
+                                        }}</span>
                                         <button
                                             type="button"
                                             class="btn-icon"
@@ -328,56 +476,42 @@ async function save() {
                                         </button>
                                     </li>
                                 </ul>
-                                <button
-                                    type="button"
-                                    class="link-accent self-start min-h-8 ps-6"
-                                    @click="picking = { kind: 'commercial', part: index }"
-                                >
-                                    + {{ t('storage.program.addCommercial') }}
-                                </button>
+                                <p v-else class="m-0 ps-7 text-[13px] text-muted">
+                                    {{ t('storage.program.emptyBreakHint') }}
+                                </p>
                             </template>
                             <button
-                                v-else-if="parts[index + 1]?.kind !== 'break' && index < parts.length - 1"
+                                v-else-if="index < parts.length - 1 && parts[index + 1]?.kind !== 'break'"
                                 type="button"
-                                class="link-accent self-start min-h-8 ps-6 text-[13px]"
+                                class="link-accent self-start min-h-7 ps-7 text-[13px]"
                                 @click="addBreak(index)"
                             >
                                 + {{ t('storage.program.addBreak') }}
                             </button>
                         </li>
+
+                        <li
+                            class="border-2 border-dashed rounded-lg px-3 py-5 text-center text-sm text-muted"
+                            :class="dropAtEnd ? 'border-accent text-base-content' : 'border-line-strong'"
+                            @dragover="overEnd"
+                        >
+                            <i class="bi bi-box-arrow-in-down me-1" aria-hidden="true" />
+                            {{ parts.length ? t('storage.program.dropHere') : t('storage.program.dropFirst') }}
+                        </li>
                     </ol>
 
-                    <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" class="btn-quiet" @click="addBlock">
-                            <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('storage.program.addBlock') }}
-                        </button>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-muted">
+                            {{ t('storage.program.counts', { blocks: blockCount, breaks: parts.length - blockCount }) }}
+                        </span>
                         <span class="ms-auto text-sm">
                             {{ t('storage.program.total') }}
                             <strong class="font-mono">{{ formatLength(total) }}</strong>
                         </span>
                     </div>
+                    <p class="m-0 field-hint">{{ t('storage.program.hint') }}</p>
                     <p v-if="error" class="m-0 text-error text-sm" role="alert">{{ error }}</p>
                 </div>
-
-                <aside
-                    v-if="picking"
-                    class="lg:w-90 shrink-0 border border-line-strong rounded-lg p-3 flex flex-col gap-2"
-                    :aria-label="t('storage.program.pickTitle')"
-                >
-                    <div class="flex items-center justify-between">
-                        <span class="font-semibold text-sm">
-                            {{
-                                picking.kind === 'block'
-                                    ? t('storage.program.pickBlock')
-                                    : t('storage.program.pickCommercial')
-                            }}
-                        </span>
-                        <button type="button" class="btn-icon" :aria-label="t('schedule.close')" @click="picking = null">
-                            <i class="bi bi-x-lg" aria-hidden="true" />
-                        </button>
-                    </div>
-                    <StoragePicker hide-lives @pick="pick" />
-                </aside>
             </div>
 
             <div class="flex flex-wrap justify-end gap-2 px-5 py-3 border-t border-base-300">
