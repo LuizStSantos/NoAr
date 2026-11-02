@@ -88,7 +88,11 @@ declare global {
         out: number
     }
 
-    type ProgramSegment = ({ kind: 'block' } & ProgramClip) | { kind: 'break'; clips: ProgramClip[] }
+    type ProgramSegment =
+        | ({ kind: 'block' } & ProgramClip)
+        | { kind: 'break'; clips: ProgramClip[] }
+        /** A live of the storage (its `.live` file) for `out` seconds. */
+        | ({ kind: 'live' } & ProgramClip)
 
     /** An assembled program: blocks in order and commercial breaks between them. */
     interface AssembledProgram {
@@ -218,6 +222,8 @@ declare global {
         trim?: { from: number; to: number } | null
         /** An assembled program (`.program`): blocks and breaks under one title. */
         program?: boolean
+        /** A live's address file (`.live`); its length is the live's usual one. */
+        live?: boolean
     }
 
     interface Folder {

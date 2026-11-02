@@ -406,7 +406,9 @@ pub async fn get_assembled_program(
         )));
     }
 
-    Ok(Json(crate::utils::assembled::read_program(&path).await?))
+    Ok(Json(
+        crate::utils::assembled::read_current_program(&storage, &path).await?,
+    ))
 }
 
 /// **Create or change an assembled program**

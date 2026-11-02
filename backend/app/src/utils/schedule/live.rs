@@ -129,13 +129,51 @@ pub async fn read_live_url(path: &Path) -> Result<String, ServiceError> {
     let content = fs::read_to_string(path)
         .await
         .map_err(|e| ServiceError::BadRequest(format!("cannot read {}: {e}", path.display())))?;
+    live_url_in(&content)
+        .map_err(|error| ServiceError::BadRequest(format!("{}: {error}", path.display())))
+}
+
+/// The first address line of a `.live` file's text.
+fn live_url_in(content: &str) -> Result<String, String> {
     let line = content
         .lines()
         .map(str::trim)
         .find(|line| !line.is_empty() && !line.starts_with('#'))
-        .ok_or_else(|| ServiceError::BadRequest(format!("{} is empty", path.display())))?;
+        .ok_or_else(|| "the live file is empty".to_string())?;
 
-    validate_live_url(line).map_err(ServiceError::BadRequest)
+    validate_live_url(line)
+}
+
+/// [`read_live_url`] for code that prepares a playlist outside async code.
+pub fn read_live_url_sync(path: &Path) -> Result<String, String> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+
+    live_url_in(&content)
+}
+
+/// The guide title and usual length (seconds) of the live whose `.live`
+/// file is `path`, from its folder's `tvshow.nfo`.
+pub fn live_guide_sync(path: &Path) -> (Option<String>, Option<f64>) {
+    let Some(text) = path
+        .parent()
+        .and_then(|folder| std::fs::read(folder.join("tvshow.nfo")).ok())
+    else {
+        return (None, None);
+    };
+    let nfo = parse_nfo(&String::from_utf8_lossy(&text));
+
+    (
+        nfo.title,
+        nfo.runtime.map(|minutes| f64::from(minutes) * 60.0),
+    )
+}
+
+/// Whether a source is a live's `.live` file in the storage.
+pub fn is_live_file(source: &str) -> bool {
+    Path::new(source)
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case(LIVE_EXTENSION))
 }
 
 /// A live as listed in the web interface.

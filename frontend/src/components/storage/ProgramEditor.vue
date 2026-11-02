@@ -38,7 +38,11 @@ interface Clip {
     length: number
 }
 
-type Part = { kind: 'block'; clip: Clip } | { kind: 'break'; clips: Clip[] }
+type Part =
+    | { kind: 'block'; clip: Clip }
+    | { kind: 'break'; clips: Clip[] }
+    /** A live of the storage for `clip.length` seconds; `clip.source` is its `.live` file. */
+    | { kind: 'live'; clip: Clip }
 
 /** Where a dragged clip or part lands. */
 interface DropTarget {
@@ -65,9 +69,11 @@ useDialogFocus(dialog, { onEscape: () => emit('close') })
 
 const total = computed(() => parts.value.reduce((sum, part) => sum + partLength(part), 0))
 const blockCount = computed(() => parts.value.filter((part) => part.kind === 'block').length)
+const liveCount = computed(() => parts.value.filter((part) => part.kind === 'live').length)
+const breakCount = computed(() => parts.value.filter((part) => part.kind === 'break').length)
 
 function partLength(part: Part): number {
-    return part.kind === 'block' ? part.clip.length : part.clips.reduce((sum, clip) => sum + clip.length, 0)
+    return part.kind === 'break' ? part.clips.reduce((sum, clip) => sum + clip.length, 0) : part.clip.length
 }
 
 /** Number of block `index` among the blocks. */
@@ -82,13 +88,40 @@ function clipName(source: string): string {
 function fromProgram(program: AssembledProgram) {
     title.value = program.title
     parts.value = program.segments.map((segment) =>
-        segment.kind === 'block'
-            ? { kind: 'block', clip: { source: segment.source, length: segment.out - segment.in } }
-            : {
+        segment.kind === 'break'
+            ? {
                   kind: 'break',
                   clips: segment.clips.map((clip) => ({ source: clip.source, length: clip.out - clip.in })),
-              },
+              }
+            : { kind: segment.kind, clip: { source: segment.source, length: segment.out - segment.in } },
     )
+}
+
+/** A live is named by its folder. */
+function liveName(source: string): string {
+    return source.split('/').slice(-2, -1)[0] ?? source
+}
+
+/** A live chosen in the storage (its folder): at the end, for its usual length or an hour. */
+async function addLive(folder: string) {
+    if (!scheduleStore.lives.length) {
+        await scheduleStore.loadLives()
+    }
+
+    const live = scheduleStore.lives.find((item) => item.path.split('/').slice(0, -1).join('/') === folder)
+
+    if (!live) {
+        error.value = t('storage.program.liveMissing')
+        return
+    }
+
+    parts.value.push({ kind: 'live', clip: { source: live.path, length: (live.runtime || 60) * 60 } })
+}
+
+function setLiveMinutes(part: Part, minutes: number) {
+    if (part.kind === 'live' && Number.isFinite(minutes) && minutes > 0) {
+        part.clip.length = Math.round(minutes * 60)
+    }
 }
 
 onMounted(async () => {
@@ -285,7 +318,7 @@ function check(): string {
     if (!props.path && !safeName(fileName.value || title.value)) {
         return t('storage.program.needName')
     }
-    if (!blockCount.value) {
+    if (!blockCount.value && !liveCount.value) {
         return t('storage.program.needBlock')
     }
     if (parts.value.some((part) => part.kind === 'break' && !part.clips.length)) {
@@ -318,7 +351,9 @@ async function save() {
             parts.value.map((part) =>
                 part.kind === 'block'
                     ? { kind: 'block', source: part.clip.source }
-                    : { kind: 'break', clips: part.clips.map((clip) => clip.source) },
+                    : part.kind === 'live'
+                      ? { kind: 'live', source: part.clip.source, duration: part.clip.length }
+                      : { kind: 'break', clips: part.clips.map((clip) => clip.source) },
             ),
         )
 
@@ -365,7 +400,7 @@ async function save() {
                 >
                     <span class="font-semibold text-sm">{{ t('storage.program.storage') }}</span>
                     <p class="m-0 text-xs text-muted">{{ t('storage.program.storageHint') }}</p>
-                    <StoragePicker hide-lives draggable addable class="min-h-0 overflow-hidden" @pick="add" />
+                    <StoragePicker draggable addable class="min-h-0 overflow-hidden" @pick="add" @live="addLive" />
                 </aside>
 
                 <div class="flex flex-col gap-4 min-w-0">
@@ -413,19 +448,46 @@ async function save() {
                                 </span>
                                 <i
                                     class="bi"
-                                    :class="part.kind === 'block' ? 'bi-film' : 'bi-megaphone'"
+                                    :class="
+                                        part.kind === 'block'
+                                            ? 'bi-film'
+                                            : part.kind === 'live'
+                                              ? 'bi-broadcast text-live'
+                                              : 'bi-megaphone'
+                                    "
                                     aria-hidden="true"
                                 />
                                 <span class="font-semibold whitespace-nowrap">
                                     {{
                                         part.kind === 'block'
                                             ? t('storage.program.block', { n: blockNumber(index) })
-                                            : t('storage.program.break')
+                                            : part.kind === 'live'
+                                              ? t('storage.program.live')
+                                              : t('storage.program.break')
                                     }}
                                 </span>
                                 <span v-if="part.kind === 'block'" class="truncate text-[13px] font-mono text-muted">
                                     {{ clipName(part.clip.source) }}
                                 </span>
+                                <template v-else-if="part.kind === 'live'">
+                                    <span class="truncate text-[13px] text-muted">{{
+                                        liveName(part.clip.source)
+                                    }}</span>
+                                    <label class="flex items-center gap-1 text-[13px] text-muted ms-2 shrink-0">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="1440"
+                                            class="field-input font-mono w-20 min-h-8 py-0"
+                                            :aria-label="t('storage.program.liveMinutes')"
+                                            :value="Math.round(part.clip.length / 60)"
+                                            @change="
+                                                setLiveMinutes(part, Number(($event.target as HTMLInputElement).value))
+                                            "
+                                        />
+                                        min
+                                    </label>
+                                </template>
                                 <span class="ms-auto text-[13px] font-mono">{{ formatLength(partLength(part)) }}</span>
                                 <button
                                     type="button"
@@ -502,7 +564,7 @@ async function save() {
 
                     <div class="flex items-center gap-3">
                         <span class="text-sm text-muted">
-                            {{ t('storage.program.counts', { blocks: blockCount, breaks: parts.length - blockCount }) }}
+                            {{ t('storage.program.counts', { blocks: blockCount + liveCount, breaks: breakCount }) }}
                         </span>
                         <span class="ms-auto text-sm">
                             {{ t('storage.program.total') }}

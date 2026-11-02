@@ -373,6 +373,9 @@ export default {
             notInGuide: 'not in the guide',
         },
         program: {
+            live: 'Live',
+            liveMinutes: 'Live length in minutes',
+            liveMissing: 'This live was not found; reload the page and try again.',
             new: 'New program',
             newTitle: 'New program',
             editTitle: 'Edit program',
@@ -380,7 +383,7 @@ export default {
             title: 'Title (guide and playlist)',
             fileName: 'File name',
             storage: 'Storage',
-            storageHint: 'Drag a clip to where it goes in the program, or press + to add it at the end: a clip becomes the next block, a commercial goes into the break at the end.',
+            storageHint: 'Drag a clip to where it goes in the program, or press + to add it at the end: a clip becomes the next block, a commercial goes into the break at the end. Click a live (folder with the broadcast icon) to add it for its usual length.',
             dragToMove: 'Drag to move',
             emptyBreakHint: 'Drag commercials here.',
             dropHere: 'Drop here to add at the end',

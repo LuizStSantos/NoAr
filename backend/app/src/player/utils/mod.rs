@@ -732,7 +732,8 @@ pub fn get_delta(config: &PlayoutConfig, begin: &f64) -> (f64, f64) {
 }
 
 pub fn is_remote(path: &str) -> bool {
-    Regex::new(r"^(https?|rtmps?|rts?p|udp|tcp|srt|rist)://.*")
+    // Network streams, NDI sources and video cards: never storage paths.
+    Regex::new(r"^(https?|rtmps?|rts?p|udp|tcp|srt|rist|ndi|decklink|v4l2)://.*")
         .unwrap()
         .is_match(&path.to_lowercase())
 }

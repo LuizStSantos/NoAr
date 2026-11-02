@@ -165,7 +165,11 @@ export const useSchedule = defineStore('schedule', {
         async saveProgram(
             path: string,
             title: string,
-            segments: ({ kind: 'block'; source: string } | { kind: 'break'; clips: string[] })[],
+            segments: (
+                | { kind: 'block'; source: string }
+                | { kind: 'break'; clips: string[] }
+                | { kind: 'live'; source: string; duration: number }
+            )[],
         ): Promise<AssembledProgram> {
             return authFetch<AssembledProgram>(`/api/schedule/${channelId()}/programs`, {
                 method: 'PUT',

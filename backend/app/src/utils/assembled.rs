@@ -47,6 +47,10 @@ pub struct ProgramClip {
     pub seek: f64,
     #[serde(default)]
     pub out: f64,
+    /// Length of the whole file, so the part that airs follows a trim made
+    /// in Storage after the program was saved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<f64>,
 }
 
 impl ProgramClip {
@@ -65,6 +69,12 @@ pub enum Segment {
     },
     /// Commercials between blocks.
     Break { clips: Vec<ProgramClip> },
+    /// A live of the storage (its `.live` file) for `out` seconds, read at
+    /// its current address when it airs.
+    Live {
+        #[serde(flatten)]
+        clip: ProgramClip,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -79,7 +89,7 @@ impl ProgramFile {
         self.segments
             .iter()
             .flat_map(|segment| match segment {
-                Segment::Block { clip } => vec![(clip, false)],
+                Segment::Block { clip } | Segment::Live { clip } => vec![(clip, false)],
                 Segment::Break { clips } => clips.iter().map(|clip| (clip, true)).collect(),
             })
             .collect()
@@ -88,6 +98,26 @@ impl ProgramFile {
     /// How long it airs, breaks included.
     pub fn duration(&self) -> f64 {
         self.clips().iter().map(|(clip, _)| clip.length()).sum()
+    }
+
+    /// Takes each clip's trim as it is now in Storage. Clips of programs
+    /// saved before their file length was kept stay as saved.
+    fn follow_trims(&mut self, storage: &Path) {
+        for segment in &mut self.segments {
+            let clips: Vec<&mut ProgramClip> = match segment {
+                Segment::Block { clip } => vec![clip],
+                Segment::Break { clips } => clips.iter_mut().collect(),
+                Segment::Live { .. } => vec![],
+            };
+            for clip in clips {
+                let Some(file) = clip.file else { continue };
+                let (seek, length) =
+                    crate::utils::logo_marks::read_marks_sync(&absolute(storage, &clip.source))
+                        .trimmed(file);
+                clip.seek = seek;
+                clip.out = seek + length;
+            }
+        }
     }
 }
 
@@ -119,6 +149,26 @@ pub fn read_program_sync(path: &Path) -> Result<ProgramFile, String> {
     parse(&contents)
 }
 
+/// A program as it airs now: its file, with each clip's current trim.
+pub fn read_current_program_sync(storage: &Path, path: &Path) -> Result<ProgramFile, String> {
+    let mut program = read_program_sync(path)?;
+    program.follow_trims(storage);
+    Ok(program)
+}
+
+/// [`read_current_program_sync`] off the async workers.
+pub async fn read_current_program(
+    storage: &Path,
+    path: &Path,
+) -> Result<ProgramFile, ServiceError> {
+    let storage = storage.to_path_buf();
+    let path = path.to_path_buf();
+    tokio::task::spawn_blocking(move || read_current_program_sync(&storage, &path))
+        .await
+        .map_err(|error| ServiceError::Conflict(error.to_string()))?
+        .map_err(ServiceError::BadRequest)
+}
+
 pub async fn read_program(path: &Path) -> Result<ProgramFile, ServiceError> {
     let path = path.to_path_buf();
     tokio::task::spawn_blocking(move || read_program_sync(&path))
@@ -148,7 +198,7 @@ pub fn expand_playlist(storage: &Path, entries: Vec<Media>) -> Vec<Media> {
             expanded.push(entry);
             continue;
         }
-        let program = match read_program_sync(&absolute(storage, &entry.source)) {
+        let program = match read_current_program_sync(storage, &absolute(storage, &entry.source)) {
             Ok(program) => program,
             Err(error) => {
                 log::error!("Program {} cannot be aired: {error}", entry.source);
@@ -180,7 +230,7 @@ pub fn expand_playlist(storage: &Path, entries: Vec<Media>) -> Vec<Media> {
 /// title, so an edit shows in the playlist editor and the guide.
 pub fn refresh_entries(storage: &Path, entries: &mut [Media]) {
     for entry in entries.iter_mut().filter(|entry| is_program(&entry.source)) {
-        match read_program_sync(&absolute(storage, &entry.source)) {
+        match read_current_program_sync(storage, &absolute(storage, &entry.source)) {
             Ok(program) => {
                 let length = program.duration();
                 entry.seek = 0.0;
@@ -197,20 +247,37 @@ pub fn refresh_entries(storage: &Path, entries: &mut [Media]) {
 /// The clips a scheduled event plays: its sources, with each program file
 /// replaced by its clips (relative to the storage).
 pub async fn expand_sources(storage: &Path, sources: &[String]) -> Vec<String> {
+    expand_sources_with_lengths(storage, sources)
+        .await
+        .into_iter()
+        .map(|(source, _)| source)
+        .collect()
+}
+
+/// [`expand_sources`], with how long each live of a program airs (a clip's
+/// length comes from the clip itself).
+pub async fn expand_sources_with_lengths(
+    storage: &Path,
+    sources: &[String],
+) -> Vec<(String, Option<f64>)> {
     let mut expanded = Vec::with_capacity(sources.len());
 
     for source in sources {
         if !is_program(source) {
-            expanded.push(source.clone());
+            expanded.push((source.clone(), None));
             continue;
         }
-        match read_program(&absolute(storage, source)).await {
-            Ok(program) => expanded.extend(
-                program
-                    .clips()
-                    .into_iter()
-                    .map(|(clip, _)| clip.source.clone()),
-            ),
+        match read_current_program(storage, &absolute(storage, source)).await {
+            Ok(program) => expanded.extend(program.segments.iter().flat_map(|segment| {
+                match segment {
+                    Segment::Block { clip } => vec![(clip.source.clone(), None)],
+                    Segment::Live { clip } => vec![(clip.source.clone(), Some(clip.length()))],
+                    Segment::Break { clips } => clips
+                        .iter()
+                        .map(|clip| (clip.source.clone(), None))
+                        .collect(),
+                }
+            })),
             Err(error) => log::error!("Scheduled program {source} cannot be aired: {error:?}"),
         }
     }
@@ -229,8 +296,17 @@ pub struct ProgramInput {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SegmentInput {
-    Block { source: String },
-    Break { clips: Vec<String> },
+    Block {
+        source: String,
+    },
+    Break {
+        clips: Vec<String>,
+    },
+    /// A live's `.live` file and how many seconds it airs.
+    Live {
+        source: String,
+        duration: f64,
+    },
 }
 
 fn bad(message: impl Into<String>) -> ServiceError {
@@ -250,18 +326,19 @@ pub async fn prepare_program(
             "a program needs a title of 1 to {MAX_TITLE_CHARS} characters"
         )));
     }
-    if !input
-        .segments
-        .iter()
-        .any(|segment| matches!(segment, SegmentInput::Block { .. }))
-    {
-        return Err(bad("a program needs at least one block"));
+    if !input.segments.iter().any(|segment| {
+        matches!(
+            segment,
+            SegmentInput::Block { .. } | SegmentInput::Live { .. }
+        )
+    }) {
+        return Err(bad("a program needs at least one block or live"));
     }
     let clip_count: usize = input
         .segments
         .iter()
         .map(|segment| match segment {
-            SegmentInput::Block { .. } => 1,
+            SegmentInput::Block { .. } | SegmentInput::Live { .. } => 1,
             SegmentInput::Break { clips } => clips.len(),
         })
         .sum();
@@ -299,6 +376,26 @@ pub async fn prepare_program(
                 }
                 segments.push(Segment::Break { clips: read });
             }
+            SegmentInput::Live { source, duration } => {
+                if !duration.is_finite() || !(1.0..=MAX_SECONDS).contains(&duration) {
+                    return Err(bad(format!(
+                        "the live '{source}' needs a length of 1 s to 24 h"
+                    )));
+                }
+                let (path, _, relative) = norm_abs_path(storage, &source)?;
+                if !crate::utils::schedule::live::is_live_file(&relative) || !path.is_file() {
+                    return Err(bad(format!("'{source}' is not a live of the storage")));
+                }
+                crate::utils::schedule::live::read_live_url(&path).await?;
+                segments.push(Segment::Live {
+                    clip: ProgramClip {
+                        source: relative,
+                        seek: 0.0,
+                        out: duration,
+                        file: None,
+                    },
+                });
+            }
         }
     }
 
@@ -317,13 +414,17 @@ async fn read_clip(storage: &Path, source: &str) -> Result<ProgramClip, ServiceE
     if !path.is_file() {
         return Err(bad(format!("'{source}' is not a file in the storage")));
     }
-    let (seek, length) = crate::utils::schedule::trimmed_clip(&path)
+    let file = crate::utils::schedule::clip_duration(&path)
         .await
         .ok_or_else(|| bad(format!("cannot read the length of '{relative}'")))?;
+    let (seek, length) = crate::utils::logo_marks::read_marks(&path)
+        .await
+        .trimmed(file);
     Ok(ProgramClip {
         source: relative,
         seek,
         out: seek + length,
+        file: Some(file),
     })
 }
 
@@ -369,6 +470,7 @@ mod tests {
             source: source.to_string(),
             seek,
             out,
+            file: None,
         };
         ProgramFile {
             title: "Jornal".to_string(),
@@ -384,6 +486,60 @@ mod tests {
                 },
             ],
         }
+    }
+
+    #[test]
+    fn a_trim_made_after_saving_applies_to_the_program() {
+        let storage =
+            std::env::temp_dir().join(format!("noar-program-trim-{}", std::process::id()));
+        std::fs::create_dir_all(storage.join("show")).unwrap();
+        let program = ProgramFile {
+            title: "Jornal".to_string(),
+            segments: vec![Segment::Block {
+                clip: ProgramClip {
+                    source: "show/b1.mp4".to_string(),
+                    seek: 0.0,
+                    out: 600.0,
+                    file: Some(600.0),
+                },
+            }],
+        };
+        let path = storage.join("Jornal.program");
+        std::fs::write(&path, serde_json::to_string(&program).unwrap()).unwrap();
+        assert_eq!(
+            read_current_program_sync(&storage, &path)
+                .unwrap()
+                .duration(),
+            600.0
+        );
+
+        // Trimmed in Storage afterwards: the program airs the new part.
+        std::fs::write(
+            storage.join("show/b1.marks.json"),
+            r#"{"hide": [], "trim": {"from": 10.0, "to": 550.0}}"#,
+        )
+        .unwrap();
+        let current = read_current_program_sync(&storage, &path).unwrap();
+        assert_eq!(current.duration(), 540.0);
+        let aired = expand_playlist(
+            &storage,
+            vec![Media {
+                source: "Jornal.program".to_string(),
+                ..Media::default()
+            }],
+        );
+        assert_eq!((aired[0].seek, aired[0].out), (10.0, 550.0));
+
+        // The trim removed again: the whole file.
+        std::fs::remove_file(storage.join("show/b1.marks.json")).unwrap();
+        assert_eq!(
+            read_current_program_sync(&storage, &path)
+                .unwrap()
+                .duration(),
+            600.0
+        );
+
+        std::fs::remove_dir_all(storage).unwrap();
     }
 
     #[test]
@@ -446,6 +602,44 @@ mod tests {
         assert!(expanded[1].ad && expanded[2].ad && !expanded[3].ad);
         assert_eq!(expanded[0].title.as_deref(), Some("Jornal"));
         assert_eq!(expanded[1].title, None);
+
+        // A live part goes into the playlist as the live's file, for its length.
+        let with_live = ProgramFile {
+            title: "Jornal".to_string(),
+            segments: vec![
+                Segment::Block {
+                    clip: ProgramClip {
+                        source: "show/b1.mp4".to_string(),
+                        seek: 0.0,
+                        out: 600.0,
+                        file: None,
+                    },
+                },
+                Segment::Live {
+                    clip: ProgramClip {
+                        source: "Lives/Jornal/signal.live".to_string(),
+                        seek: 0.0,
+                        out: 1800.0,
+                        file: None,
+                    },
+                },
+            ],
+        };
+        let json = serde_json::to_string(&with_live).unwrap();
+        assert!(json.contains("\"kind\":\"live\""), "{json}");
+        assert_eq!(parse(&json).unwrap(), with_live);
+        assert_eq!(with_live.duration(), 2400.0);
+        std::fs::write(storage.join("Programas/Live.program"), &json).unwrap();
+        let aired = expand_playlist(
+            &storage,
+            vec![Media {
+                source: "Programas/Live.program".to_string(),
+                ..Media::default()
+            }],
+        );
+        assert_eq!(aired[1].source, "Lives/Jornal/signal.live");
+        assert_eq!((aired[1].seek, aired[1].out), (0.0, 1800.0));
+        assert!(!aired[1].ad);
 
         // A missing program stays as it was, keeping its slot.
         let missing = Media {

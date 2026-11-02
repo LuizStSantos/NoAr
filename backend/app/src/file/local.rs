@@ -143,9 +143,10 @@ impl LocalStorage {
                 logo_stems.insert(stem.to_string());
             }
 
-            // Assembled programs play like a clip.
+            // Assembled programs and lives go into playlists like a clip.
             let media = extensions.contains(&extension)
-                || extension == crate::utils::assembled::PROGRAM_EXTENSION;
+                || extension == crate::utils::assembled::PROGRAM_EXTENSION
+                || extension == LIVE_EXTENSION;
 
             if media || path_obj.all_files {
                 files.push((child.path(), f_meta, media));
@@ -170,8 +171,15 @@ impl LocalStorage {
                 .to_string_lossy()
                 .to_lowercase();
             let program = crate::utils::assembled::is_program(&name);
-            let duration = if program {
-                match crate::utils::assembled::read_program(&file).await {
+            let live = crate::utils::schedule::live::is_live_file(&name);
+            let duration = if live {
+                // Its usual length, or an hour: the slot a playlist gives it.
+                crate::utils::schedule::live::live_guide_sync(&file)
+                    .1
+                    .unwrap_or(3600.0)
+            } else if program {
+                let storage = self.root.read().await.clone();
+                match crate::utils::assembled::read_current_program(&storage, &file).await {
                     Ok(program) => program.duration(),
                     Err(e) => {
                         error!("{e:?}");
@@ -205,6 +213,7 @@ impl LocalStorage {
 
             media_files.push(VideoFile {
                 program,
+                live,
                 sheet: media && sheet_stems.contains(&stem),
                 logo_marks,
                 trim,

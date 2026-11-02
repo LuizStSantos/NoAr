@@ -472,3 +472,87 @@ async fn assembled_programs_are_saved_listed_scheduled_and_updated_everywhere() 
         "{updated}"
     );
 }
+
+#[tokio::test]
+#[serial]
+async fn lives_go_into_programs_and_list_with_their_usual_length() {
+    let fixture = security_fixture().await;
+    let token = access_token(&fixture.state, 1).await;
+    let storage = fixture.root.join("storage");
+    let media = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests_assets/storage/media_mix");
+    for folder in ["Shows", "Programs", "Lives/Jornal"] {
+        tokio::fs::create_dir_all(storage.join(folder))
+            .await
+            .unwrap();
+    }
+    tokio::fs::copy(media.join("av_sync.mp4"), storage.join("Shows/b1.mp4"))
+        .await
+        .unwrap();
+    tokio::fs::write(
+        storage.join("Lives/Jornal/signal.live"),
+        "srt://10.0.0.5:9000?mode=caller\n",
+    )
+    .await
+    .unwrap();
+    tokio::fs::write(
+        storage.join("Lives/Jornal/tvshow.nfo"),
+        "<tvshow><title>Jornal</title><runtime>30</runtime></tvshow>",
+    )
+    .await
+    .unwrap();
+
+    // Storage lists the live with its usual length.
+    let (_, folder) = send(
+        &fixture,
+        "POST",
+        "/api/file/1/browse",
+        Some(&token),
+        json!({"source": "/Lives/Jornal"}),
+    )
+    .await;
+    let live = folder["files"]
+        .as_array()
+        .and_then(|files| files.iter().find(|file| file["name"] == "signal.live"))
+        .cloned()
+        .unwrap_or_else(|| panic!("{folder}"));
+    assert_eq!(live["live"], true);
+    assert_eq!(live["duration"], 1800.0);
+
+    let program = |segments: serde_json::Value| json!({"path": "Programs/Com live.program", "title": "Com live", "segments": segments});
+    for (refused, why) in [
+        (
+            json!([{"kind": "live", "source": "Lives/Jornal/signal.live", "duration": 0}]),
+            "no length",
+        ),
+        (
+            json!([{"kind": "live", "source": "Shows/b1.mp4", "duration": 60}]),
+            "not a live",
+        ),
+    ] {
+        let (status, body) = send(
+            &fixture,
+            "PUT",
+            "/api/schedule/1/programs",
+            Some(&token),
+            program(refused),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{why}: {body}");
+    }
+
+    let (status, saved) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        program(json!([
+            {"kind": "block", "source": "Shows/b1.mp4"},
+            {"kind": "live", "source": "Lives/Jornal/signal.live", "duration": 1200}
+        ])),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["segments"][1]["kind"], "live");
+    assert_eq!(saved["segments"][1]["out"], 1200.0);
+}

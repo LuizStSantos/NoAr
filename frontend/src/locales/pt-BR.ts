@@ -373,6 +373,9 @@ export default {
             notInGuide: 'não aparece',
         },
         program: {
+            live: 'Live',
+            liveMinutes: 'Duração da live em minutos',
+            liveMissing: 'Esta live não foi encontrada; atualize a página e tente de novo.',
             new: 'Novo programa',
             newTitle: 'Novo programa',
             editTitle: 'Editar programa',
@@ -380,7 +383,7 @@ export default {
             title: 'Título (guia e playlist)',
             fileName: 'Nome do arquivo',
             storage: 'Armazenamento',
-            storageHint: 'Arraste um clipe para o lugar dele no programa, ou clique no + para adicionar no fim: um clipe vira o próximo bloco, um comercial entra no break do fim.',
+            storageHint: 'Arraste um clipe para o lugar dele no programa, ou clique no + para adicionar no fim: um clipe vira o próximo bloco, um comercial entra no break do fim. Clique numa live (pasta com ícone de transmissão) para adicioná-la com a duração padrão dela.',
             dragToMove: 'Arraste para mover',
             emptyBreakHint: 'Arraste os comerciais para cá.',
             dropHere: 'Solte aqui para adicionar no fim',

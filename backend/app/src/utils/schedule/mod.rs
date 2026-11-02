@@ -316,7 +316,7 @@ pub async fn prepare_event(
 
             for (path, relative) in &sources {
                 total += if crate::utils::assembled::is_program(relative) {
-                    crate::utils::assembled::read_program(path)
+                    crate::utils::assembled::read_current_program(storage, path)
                         .await?
                         .duration()
                 } else {

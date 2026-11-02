@@ -47,6 +47,13 @@ one is tagged.
 
 ### Changed
 
+- Lives go into playlists (dragged from the Player library for their default
+  length) and into assembled programs as a **Live** part with its own length;
+  both air the live's current address. A program's clips follow trims made
+  in Storage after it was saved (programs keep each file's length), and keep
+  their own logo, L-shape and break marks.
+- NDI, DeckLink and V4L2 addresses are no longer taken for storage paths in
+  playlists.
 - A live's guide data also takes its year, countries and credits (hosts, cast
   and crew, once saved), like a clip's sheet, and a **default length**
   (`<runtime>` in its `tvshow.nfo`, minutes). Scheduling the live proposes its

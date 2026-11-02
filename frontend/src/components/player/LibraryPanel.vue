@@ -43,6 +43,10 @@ interface LibraryEntry {
     name: string
     duration: number
     trim?: { from: number; to: number } | null
+    /** A live's address file: it airs for its usual length. */
+    live?: boolean
+    /** An assembled program. */
+    program?: boolean
 }
 
 const source = ref('')
@@ -67,7 +71,7 @@ const shownFiles = computed(() =>
         .map((file) => ({
             ...file,
             guide: isGuideAsset(file.name),
-            kind: mediaType(file.name) ?? 'other',
+            kind: file.live ? 'livefile' : file.program ? 'program' : (mediaType(file.name) ?? 'other'),
         })),
 )
 
@@ -172,7 +176,15 @@ async function createFolder() {
 }
 
 function iconOf(kind: string) {
-    return kind === 'audio' ? 'bi-music-note-beamed' : kind === 'image' ? 'bi-image' : 'bi-film'
+    return kind === 'audio'
+        ? 'bi-music-note-beamed'
+        : kind === 'image'
+          ? 'bi-image'
+          : kind === 'livefile'
+            ? 'bi-broadcast'
+            : kind === 'program'
+              ? 'bi-collection-play'
+              : 'bi-film'
 }
 
 onMounted(() => open(''))

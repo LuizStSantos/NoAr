@@ -9,6 +9,7 @@
 
 use std::{
     collections::{HashSet, VecDeque},
+    path::PathBuf,
     sync::{Mutex, MutexGuard, PoisonError, atomic::Ordering},
     time::{Duration, Instant},
 };
@@ -894,19 +895,25 @@ async fn play_clips(
     let mut commercials = CommercialFolders::new(&config.channel.storage);
     // The run of commercials on air or next has had its SCTE-35 break.
     let mut break_announced = false;
-    // Assembled programs play as their blocks and breaks, as they are now.
+    // Assembled programs play as their blocks, breaks and lives, as they
+    // are now. A live in a program airs for the length the program gives it.
     let expanded;
+    let mut live_lengths: Vec<Option<f64>> = vec![];
     let event = if event
         .sources
         .iter()
         .any(|source| crate::utils::assembled::is_program(source))
     {
+        let (sources, lengths) = crate::utils::assembled::expand_sources_with_lengths(
+            &config.channel.storage,
+            &event.sources,
+        )
+        .await
+        .into_iter()
+        .unzip();
+        live_lengths = lengths;
         expanded = ScheduleEvent {
-            sources: crate::utils::assembled::expand_sources(
-                &config.channel.storage,
-                &event.sources,
-            )
-            .await,
+            sources,
             ..event.clone()
         };
         &expanded
@@ -919,9 +926,23 @@ async fn play_clips(
             break;
         }
 
-        let path = config.channel.storage.join(source);
-        // The part the trim saved with the clip keeps.
-        let Some((start, duration)) = trimmed_clip(&path).await else {
+        let mut path = config.channel.storage.join(source);
+        let live_length = live_lengths.get(index).copied().flatten();
+        // A live airs at its current address; a clip keeps its saved trim.
+        let timing = match live_length {
+            Some(length) => match read_live_url(&path).await {
+                Ok(url) => {
+                    path = PathBuf::from(url);
+                    Some((0.0, length))
+                }
+                Err(error) => {
+                    error!(channel = id; "Live <span class=\"log-addr\">{source}</span> of the program: {error}");
+                    None
+                }
+            },
+            None => trimmed_clip(&path).await,
+        };
+        let Some((start, duration)) = timing else {
             error!(channel = id; "Scheduled clip <span class=\"log-addr\">{source}</span> cannot be read; skipped");
             completed = false;
             continue;
@@ -946,7 +967,9 @@ async fn play_clips(
         let commercial = commercials.contains(source);
         let entry = as_run::event_clip_entry(event, scheduled_at, source, seek, length, commercial);
         let aired = as_run::record_start(manager, entry).await;
-        let next_preload = match event.sources.get(index + 1) {
+        // A live of a program connects when its turn comes.
+        let next_is_live = live_lengths.get(index + 1).copied().flatten().is_some();
+        let next_preload = match event.sources.get(index + 1).filter(|_| !next_is_live) {
             Some(next) => {
                 let next = config.channel.storage.join(next);
 

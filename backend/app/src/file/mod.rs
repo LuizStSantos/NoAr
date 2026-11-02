@@ -97,6 +97,9 @@ pub struct VideoFile {
     /// An assembled program (`.program`): blocks and breaks under one title.
     #[serde(default)]
     program: bool,
+    /// A live's address file (`.live`); its length is the live's usual one.
+    #[serde(default)]
+    live: bool,
 }
 
 fn default_true() -> bool {
