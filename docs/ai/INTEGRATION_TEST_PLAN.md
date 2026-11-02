@@ -1,6 +1,6 @@
 # NoAr Cross-Layer Integration & End-to-End Test Plan
 
-**Goal:** provide evidence that Vue frontend, Rust backend, SQLite database, scheduler and FFmpeg-based media output actually work together. This document is a plan, not an assertion that tests were executed.
+**Goal:** provide evidence that Vue frontend, Rust backend, SQLite database, scheduler and GStreamer media output actually work together. This document is a plan, not an assertion that tests were executed. Use `/noar-gstreamer` for native references; require actual NoAr source transitions and receiver progress in addition to packet timing and connection counts.
 
 ## A. Environment setup and access control
 

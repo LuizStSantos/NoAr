@@ -10,8 +10,9 @@ import SectionCard from '@/components/settings/SectionCard.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import { useCodecLabels } from '@/composables/codecs'
 import { usePlayoutPage } from '@/composables/settingsPage'
+import { parseDeckLink, videoModeInfo, videoModeLabel } from '@/composables/videoModes'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { ready, changes, alsoSaves, restarts, saveLabel, save, discard, settings, configStore } =
     usePlayoutPage('output')
 const { copy, copied } = useClipboard()
@@ -34,19 +35,86 @@ const RESOLUTIONS = [
 ]
 const FRAME_RATES = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60]
 
-function modeOf(name: string | undefined): 'desktop' | 'hls' | 'stream' {
-    return name === 'desktop' || name === 'hls' ? name : 'stream'
+function modeOf(name: string | undefined): 'desktop' | 'hls' | 'stream' | 'ndi' | 'sdi' {
+    return name === 'desktop' || name === 'hls' || name === 'ndi' || name === 'sdi' ? name : 'stream'
 }
+
+/** Why NDI cannot be used on this server; null when it can. */
+const ndiUnavailable = computed(() => configStore.outputCodecs.ndi_unavailable)
+
+/** Video cards on the server, looked up when the SDI destination is shown. */
+const videoDevices = ref<VideoDevices | null>(null)
+const devicesError = ref('')
+const loadingDevices = ref(false)
+
+async function loadVideoDevices() {
+    loadingDevices.value = true
+    devicesError.value = ''
+
+    try {
+        videoDevices.value = await configStore.getVideoDevices()
+    } catch (err) {
+        devicesError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+        loadingDevices.value = false
+    }
+}
+
+watch(
+    () => output.value?.mode,
+    (mode) => {
+        if (mode === 'sdi' && !videoDevices.value && !loadingDevices.value) {
+            loadVideoDevices()
+        }
+    },
+    { immediate: true },
+)
+
+const sdi = computed(() => parseDeckLink(output.value.stream_url ?? ''))
+/** DeckLink outputs: the device number and the name the driver gives it. */
+const sdiOutputs = computed(() =>
+    (videoDevices.value?.devices ?? [])
+        .filter((device) => device.kind === 'decklink' && device.direction === 'output')
+        .map((device) => ({ number: device.address.replace('decklink://', ''), name: device.name })),
+)
+const sdiModes = computed(() => videoDevices.value?.modes ?? [sdi.value.mode])
+const sdiDevice = computed({
+    get: () => sdi.value.device,
+    set: (device: string) => {
+        output.value.stream_url = `decklink://${device}?mode=${sdi.value.mode}`
+    },
+})
+/** Choosing a card mode also sets the picture size and frame rate to match it. */
+const sdiMode = computed({
+    get: () => sdi.value.mode,
+    set: (mode: string) => {
+        output.value.stream_url = `decklink://${sdi.value.device}?mode=${mode}`
+        const info = videoModeInfo(mode)
+
+        if (info) {
+            output.value.width = info.width
+            output.value.height = info.height
+            output.value.fps = info.fps
+        }
+    },
+})
 
 /** Destinations this channel can use; the desktop window only shows when it is in use. */
 const destinations = computed(() =>
     configStore.outputs
         .filter((item) => item.name !== 'desktop' || output.value.mode === 'desktop')
-        .map((item) => ({
-            value: String(item.id),
-            label: t(`settings.output.mode.${modeOf(item.name)}`),
-            description: t(`settings.output.modeHint.${modeOf(item.name)}`),
-        })),
+        .map((item) => {
+            const mode = modeOf(item.name)
+            // NDI needs the NDI runtime on the server; the saved choice stays selectable.
+            const unavailable = mode === 'ndi' && Boolean(ndiUnavailable.value) && output.value.mode !== 'ndi'
+
+            return {
+                value: String(item.id),
+                label: t(`settings.output.mode.${mode}`),
+                description: unavailable ? t('settings.output.ndiUnavailable') : t(`settings.output.modeHint.${mode}`),
+                disabled: unavailable,
+            }
+        }),
 )
 
 function parseOptions(value: string | null | undefined): Record<string, string> {
@@ -88,6 +156,7 @@ const outputId = computed({
             audio_codec: selected.audio_codec ?? 'aac',
             audio_options: parseOptions(selected.audio_options),
             audio_bitrate: selected.audio_bitrate ?? 128,
+            audio_sample_rate: selected.audio_sample_rate ?? 48000,
             hls_variants: (selected.hls_variants ?? '')
                 .split(';')
                 .map((variant) => variant.trim())
@@ -144,12 +213,17 @@ const customFps = ref(false)
 const codecOptions = computed<OutputCodecOptions>(() =>
     output.value.mode === 'stream'
         ? configStore.outputCodecs[output.value.stream_type ?? 'rtmp']
-        : configStore.outputCodecs.hls,
+        : output.value.mode === 'ndi' || output.value.mode === 'sdi'
+          ? configStore.outputCodecs.udp
+          : configStore.outputCodecs.hls,
 )
 
 const videoSettings = computed(
     () => codecOptions.value.video.find((codec) => codec.name === output.value.video_codec)?.settings ?? [],
 )
+// The engine processes at 48 kHz; the output resamples just before the encoder.
+const audioSampleRates = [32000, 44100, 48000]
+
 const audioUsesBitrate = computed(
     () => codecOptions.value.audio.find((codec) => codec.name === output.value.audio_codec)?.uses_bitrate ?? true,
 )
@@ -355,6 +429,47 @@ const showAdvanced = ref(false)
                 </label>
             </div>
 
+            <div v-if="output.mode === 'ndi'" class="flex flex-col gap-1.5">
+                <label class="field-label">
+                    {{ t('settings.output.ndiName') }}
+                    <input v-model.trim="output.stream_url" class="field-input" spellcheck="false" maxlength="128" />
+                </label>
+                <p class="m-0 field-hint">{{ t('settings.output.ndiHint') }}</p>
+                <p v-if="ndiUnavailable" class="m-0 text-[13px] text-error" role="alert">
+                    {{ t('settings.output.ndiUnavailable') }} ({{ ndiUnavailable }})
+                </p>
+            </div>
+
+            <div v-if="output.mode === 'sdi'" class="flex flex-col gap-1.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <label class="field-label">
+                        {{ t('settings.output.sdiDevice') }}
+                        <select v-model="sdiDevice" class="field-input">
+                            <option v-for="device in sdiOutputs" :key="device.number" :value="device.number">
+                                {{ device.name }}
+                            </option>
+                            <option v-if="!sdiOutputs.some((device) => device.number === sdiDevice)" :value="sdiDevice">
+                                {{ t('settings.output.sdiDeviceNumber', { number: sdiDevice }) }}
+                            </option>
+                        </select>
+                    </label>
+                    <label class="field-label">
+                        {{ t('settings.output.sdiMode') }}
+                        <select v-model="sdiMode" class="field-input">
+                            <option v-for="mode in sdiModes" :key="mode" :value="mode">
+                                {{ videoModeLabel(mode) }}
+                            </option>
+                        </select>
+                    </label>
+                </div>
+                <p class="m-0 field-hint">{{ t('settings.output.sdiHint') }}</p>
+                <p v-if="loadingDevices" class="m-0 text-[13px] text-muted">{{ t('settings.output.sdiSearching') }}</p>
+                <p v-else-if="devicesError" class="m-0 text-[13px] text-error" role="alert">{{ devicesError }}</p>
+                <p v-else-if="videoDevices && !sdiOutputs.length" class="m-0 text-[13px] text-error" role="alert">
+                    {{ t('settings.output.sdiNoDevice') }}
+                </p>
+            </div>
+
             <label v-if="output.mode === 'desktop'" class="flex items-center gap-3 min-h-10 cursor-pointer">
                 <input v-model="output.desktop_fullscreen" type="checkbox" role="switch" class="toggle toggle-accent" />
                 {{ t('settings.output.fullscreen') }}
@@ -543,6 +658,14 @@ const showAdvanced = ref(false)
                     {{ t('settings.output.bitrate') }}
                     <UnitInput v-model.number="output.audio_bitrate" unit="kb/s" type="number" min="16" />
                 </label>
+                <label class="field-label">
+                    {{ t('settings.output.sampleRate') }}
+                    <select v-model.number="output.audio_sample_rate" class="field-input">
+                        <option v-for="rate in audioSampleRates" :key="rate" :value="rate">
+                            {{ (rate / 1000).toLocaleString(locale, { maximumFractionDigits: 1 }) }} kHz
+                        </option>
+                    </select>
+                </label>
             </div>
         </SectionCard>
 
@@ -566,6 +689,7 @@ const showAdvanced = ref(false)
                     :hint="t('config.audioEncoderOptionsHelp')"
                 />
                 <KeyValueEditor
+                    v-if="output.mode !== 'ndi' && output.mode !== 'sdi'"
                     v-model="output.muxer_options"
                     :label="t('config.muxerOptions')"
                     :hint="t('config.muxerOptionsHelp')"

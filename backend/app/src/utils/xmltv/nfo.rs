@@ -195,6 +195,8 @@ pub struct Nfo {
     /// Everyone in the credits, in the order of the file.
     pub credits: Vec<Credit>,
     pub countries: Vec<String>,
+    /// Usual length in minutes (`<runtime>`).
+    pub runtime: Option<u32>,
     pub thumbs: Vec<NfoThumb>,
     pub fanart: Vec<String>,
 }
@@ -238,6 +240,16 @@ impl Nfo {
             "director" => self.add_people(CreditRole::Director, &value),
             "credits" | "writer" => self.add_people(CreditRole::Writer, &value),
             "country" => push_split(&mut self.countries, &value),
+            "runtime" => {
+                self.runtime = self.runtime.or_else(|| {
+                    value
+                        .trim()
+                        .trim_end_matches(|c: char| !c.is_ascii_digit())
+                        .parse()
+                        .ok()
+                        .filter(|minutes| *minutes > 0)
+                });
+            }
             "thumb" => self.thumbs.push(NfoThumb {
                 aspect,
                 location: value,

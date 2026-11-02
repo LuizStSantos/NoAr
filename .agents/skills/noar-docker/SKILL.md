@@ -5,7 +5,7 @@ description: Use when working on Dockerfile, Compose, BuildKit, release images o
 
 # noar-docker — Codex adapter
 
-Use the canonical Docker reference for version-aware official documentation. Check image bases, Compose volumes, ports, FFmpeg runtime dependencies and GitHub workflow conditions. Do not build or publish images or modify production mounts without permission.
+Use the canonical Docker reference for version-aware official documentation. Check image bases, Compose volumes, ports, GStreamer plugins, remaining FFmpeg frame-memory dependencies and GitHub workflow conditions. Consult `noar-gstreamer` for the sole media engine. Do not build or publish images or modify production mounts without permission.
 
 ## Canonical reference
 

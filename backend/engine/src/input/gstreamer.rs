@@ -1,0 +1,1376 @@
+//! GStreamer source decoding and bounded raw-frame delivery.
+//!
+//! AVFrame is retained only as the CPU compositor's in-memory interchange
+//! format. All input, decoding, scaling, frame-rate conversion and resampling
+//! happen in GStreamer before a sample crosses this boundary.
+
+use std::{
+    collections::BTreeMap,
+    path::Path,
+    sync::{
+        Arc, Mutex, PoisonError,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+    time::{Duration, Instant},
+};
+
+use ::gstreamer::{self as gst, prelude::*};
+use anyhow::{Context, Result, anyhow, bail, ensure};
+use ffmpeg_next::{
+    frame,
+    util::{channel_layout::ChannelLayout, format::pixel::Pixel, format::sample::Sample},
+};
+use gstreamer_app::AppSink;
+use gstreamer_video::{VideoFrameExt, VideoFrameRef, VideoInfo};
+use url::{Host, Url};
+
+use crate::{
+    benchmark::{self, Stage},
+    utils::{config::OutputConfig, helper::is_network_url},
+};
+
+const OPEN_TIMEOUT: Duration = Duration::from_secs(12);
+/// How long a clip may take to become seekable (its first frame decoded).
+const SEEK_READY_TIMEOUT: Duration = Duration::from_secs(5);
+/// How long an NDI source with a picture may take to announce its audio.
+const NDI_AUDIO_GRACE: Duration = Duration::from_millis(1500);
+/// URL scheme of NDI sources: `ndi://SERVER (Source name)`.
+const NDI_SCHEME: &str = "ndi://";
+const POLL_INTERVAL: Duration = Duration::from_millis(2);
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct SourceInfo {
+    pub(crate) has_video: bool,
+    pub(crate) has_audio: bool,
+    pub(crate) duration: Option<f64>,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) fps: f64,
+}
+
+pub(crate) enum FrameEvent {
+    Video(frame::Video),
+    Audio(frame::Audio),
+}
+
+pub(crate) struct Source {
+    pipeline: gst::Pipeline,
+    video: AppSink,
+    audio: AppSink,
+    metadata: Arc<Mutex<SourceInfo>>,
+    error: Arc<Mutex<Option<String>>>,
+    abort: Arc<AtomicBool>,
+    pending_video: Option<gst::Sample>,
+    pending_audio: Option<gst::Sample>,
+    fps: u32,
+    sample_rate: u32,
+    eos: bool,
+    first_samples: [bool; 2],
+    selected_streams: Option<(bool, bool)>,
+}
+
+impl Source {
+    pub(crate) fn open(path: &str, config: &OutputConfig) -> Result<Self> {
+        Self::open_with_options(path, config, &BTreeMap::new(), &BTreeMap::new())
+    }
+
+    pub(crate) fn open_with_options(
+        path: &str,
+        config: &OutputConfig,
+        protocol_options: &BTreeMap<String, String>,
+        demuxer_options: &BTreeMap<String, String>,
+    ) -> Result<Self> {
+        Self::open_with_options_and_cancel(
+            path,
+            config,
+            protocol_options,
+            demuxer_options,
+            Arc::new(AtomicBool::new(false)),
+        )
+    }
+
+    pub(crate) fn open_with_options_and_cancel(
+        path: &str,
+        config: &OutputConfig,
+        protocol_options: &BTreeMap<String, String>,
+        demuxer_options: &BTreeMap<String, String>,
+        abort: Arc<AtomicBool>,
+    ) -> Result<Self> {
+        crate::gstreamer::init()?;
+        ensure!(
+            config.width > 0 && config.height > 0 && config.fps > 0 && config.sample_rate > 0,
+            "source normalization dimensions, frame rate and sample rate must be positive"
+        );
+        ensure!(
+            demuxer_options.is_empty(),
+            "FFmpeg demuxer options are not supported by the GStreamer engine; clear demuxer options before starting this input"
+        );
+
+        let ndi = ndi_source_name(path)?;
+        let card = CardSource::parse(path)?;
+        let (uri, protocol_options) = if ndi.is_some() || card.is_some() {
+            ensure!(
+                protocol_options.is_empty(),
+                "NDI and video card sources take no protocol options"
+            );
+            (String::new(), BTreeMap::new())
+        } else {
+            source_uri(path, protocol_options)?
+        };
+        let pipeline = gst::Pipeline::new();
+        // An NDI source is received and split into raw audio and video by the
+        // NDI elements; everything else is decoded by uridecodebin3. Both
+        // hand the same raw pads to the normalization below.
+        let card_bin = card.as_ref().map(|_| gst::Bin::new());
+        let decoder = match &ndi {
+            _ if card_bin.is_some() => {
+                let bin = card_bin.clone().context("video card source missing")?;
+                pipeline.add(&bin)?;
+                bin.upcast()
+            }
+            Some(name) => {
+                if let Some(reason) = crate::output::ndi::ndi_unavailable_reason() {
+                    bail!("NDI input is unavailable: {reason}");
+                }
+                let receiver = gst::ElementFactory::make("ndisrc")
+                    .property("ndi-name", name.as_str())
+                    .build()
+                    .context("GStreamer ndisrc is unavailable")?;
+                let demux = gst::ElementFactory::make("ndisrcdemux")
+                    .build()
+                    .context("GStreamer ndisrcdemux is unavailable")?;
+                pipeline.add_many([&receiver, &demux])?;
+                receiver.link(&demux)?;
+                demux
+            }
+            None => {
+                let decoder = gst::ElementFactory::make("uridecodebin3")
+                    .property("uri", &uri)
+                    .build()
+                    .context("GStreamer uridecodebin3 is unavailable")?;
+                guard_hls_transport_rollover(&decoder);
+                pipeline.add(&decoder)?;
+                decoder
+            }
+        };
+        let video_bin = gst::parse::bin_from_description(
+            &format!(
+                "queue max-size-buffers=4 max-size-bytes=0 max-size-time=0 ! \
+                 videoconvert ! videoscale add-borders=true ! \
+                 videorate skip-to-first=true ! \
+                 video/x-raw,format=I420,width={},height={},framerate={}/1,pixel-aspect-ratio=1/1 ! \
+                 appsink name=video-samples sync=false async=false max-buffers=2 wait-on-eos=false",
+                config.width, config.height, config.fps,
+            ),
+            true,
+        )?;
+        let audio_bin = normalized_audio_bin(config.sample_rate)?;
+        let video = video_bin
+            .by_name("video-samples")
+            .context("video sample sink is missing")?
+            .downcast::<AppSink>()
+            .map_err(|_| anyhow!("video sample sink has the wrong type"))?;
+        let audio = audio_bin
+            .by_name("audio-samples")
+            .context("audio sample sink is missing")?
+            .downcast::<AppSink>()
+            .map_err(|_| anyhow!("audio sample sink has the wrong type"))?;
+        pipeline.add_many([&video_bin, &audio_bin])?;
+
+        let metadata = Arc::new(Mutex::new(SourceInfo::default()));
+        let error = Arc::new(Mutex::new(None));
+        let complete = Arc::new(AtomicBool::new(false));
+        let source_metadata = Arc::clone(&metadata);
+        let source_error = Arc::clone(&error);
+        let video_sink = video_bin
+            .static_pad("sink")
+            .context("video input pad missing")?;
+        let audio_sink = audio_bin
+            .static_pad("sink")
+            .context("audio input pad missing")?;
+        decoder.connect_pad_added(move |_, pad| {
+            let caps = pad.current_caps().unwrap_or_else(|| pad.query_caps(None));
+            let Some(structure) = caps.structure(0) else {
+                return;
+            };
+            let name = structure.name();
+            let mut info = source_metadata
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            let target = if name.starts_with("video/x-raw") && !video_sink.is_linked() {
+                info.has_video = true;
+                info.width = structure.get::<i32>("width").unwrap_or_default().max(0) as u32;
+                info.height = structure.get::<i32>("height").unwrap_or_default().max(0) as u32;
+                info.fps = structure
+                    .get::<gst::Fraction>("framerate")
+                    .map_or(0.0, |rate| {
+                        f64::from(rate.numer()) / f64::from(rate.denom().max(1))
+                    });
+                Some(&video_sink)
+            } else if name.starts_with("audio/x-raw") && !audio_sink.is_linked() {
+                info.has_audio = true;
+                Some(&audio_sink)
+            } else {
+                None
+            };
+            if let Some(target) = target
+                && let Err(link_error) = pad.link(target)
+            {
+                *source_error.lock().unwrap_or_else(PoisonError::into_inner) = Some(format!(
+                    "cannot attach decoded GStreamer stream: {link_error:?}"
+                ));
+            }
+        });
+        let source_complete = Arc::clone(&complete);
+        decoder.connect_no_more_pads(move |_| source_complete.store(true, Ordering::Release));
+        // A card's pads exist from the start: exposing them now attaches them
+        // through the same pad-added path as decoded streams.
+        if let (Some(card), Some(bin)) = (&card, &card_bin) {
+            card.build(bin)?;
+            complete.store(true, Ordering::Release);
+        }
+        if ndi.is_none() {
+            let options = protocol_options;
+            let options_error = Arc::clone(&error);
+            decoder.connect("source-setup", false, move |values| {
+                if let Ok(source) = values[1].get::<gst::Element>()
+                    && let Err(error) = configure_source(&source, &options)
+                {
+                    *options_error.lock().unwrap_or_else(PoisonError::into_inner) =
+                        Some(error.to_string());
+                }
+                None
+            });
+        }
+
+        let mut source = Self {
+            pipeline,
+            video,
+            audio,
+            metadata,
+            error,
+            abort,
+            pending_video: None,
+            pending_audio: None,
+            fps: config.fps,
+            sample_rate: config.sample_rate,
+            eos: false,
+            first_samples: [true; 2],
+            selected_streams: None,
+        };
+        // Negotiate seekable files while paused. Starting them in PLAYING and
+        // immediately pausing a full appsink can race the first flushing seek.
+        let initial_state = if is_network_url(path) {
+            gst::State::Playing
+        } else {
+            gst::State::Paused
+        };
+        source.pipeline.set_state(initial_state)?;
+        let opened_at = Instant::now();
+        let deadline = opened_at + OPEN_TIMEOUT;
+
+        loop {
+            source.check_bus()?;
+            ensure!(
+                !source.abort.load(Ordering::Acquire),
+                "source opening cancelled"
+            );
+            let info = source.info();
+            let selected_ready = source.selected_streams.is_some_and(|(video, audio)| {
+                (video || audio) && (!video || info.has_video) && (!audio || info.has_audio)
+            });
+            // NDI announces audio only when it arrives; a picture-only
+            // source is accepted after a short wait.
+            let ndi_video_only = (ndi.is_some() || card.is_some())
+                && info.has_video
+                && opened_at.elapsed() >= NDI_AUDIO_GRACE;
+            if (info.has_video && info.has_audio)
+                || ndi_video_only
+                || selected_ready
+                || (complete.load(Ordering::Acquire) && (info.has_video || info.has_audio))
+            {
+                break;
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "GStreamer source opening deadline: video={}, audio={}, discovery_complete={}",
+                info.has_video,
+                info.has_audio,
+                complete.load(Ordering::Acquire)
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+
+        // A file without sound (stock footage often has none) or without
+        // picture leaves that branch unlinked. A seek must reach every sink of
+        // the pipeline, and an unlinked one refuses it, so resuming such a
+        // clip in its middle failed. Once the file has announced all its
+        // tracks, the missing branch leaves. NDI and cards keep theirs: their
+        // sound can still come.
+        if ndi.is_none() && card.is_none() {
+            let info = source.info();
+            let all_announced = complete.load(Ordering::Acquire);
+            // The selected streams tell which tracks the file has, even before
+            // every pad has been announced.
+            let (video_selected, audio_selected) = source.selected_streams.unwrap_or((
+                !all_announced || info.has_video,
+                !all_announced || info.has_audio,
+            ));
+            for (present, selected, branch) in [
+                (info.has_video, video_selected, &video_bin),
+                (info.has_audio, audio_selected, &audio_bin),
+            ] {
+                if !present && !selected {
+                    let _ = branch.set_state(gst::State::Null);
+                    let _ = source.pipeline.remove(branch);
+                }
+            }
+        }
+
+        if let Some(duration) = source.pipeline.query_duration::<gst::ClockTime>() {
+            source
+                .metadata
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .duration =
+                Some(duration.nseconds() as f64 / gst::ClockTime::SECOND.nseconds() as f64);
+        }
+        log::debug!("GStreamer decoded streams: {:?}", source.info());
+
+        Ok(source)
+    }
+
+    pub(crate) fn info(&self) -> SourceInfo {
+        self.metadata
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    pub(crate) fn start(&mut self, seek_seconds: Option<f64>) -> Result<()> {
+        self.check_bus()?;
+        ensure!(
+            seek_seconds.is_none_or(|seconds| seconds.is_finite() && seconds >= 0.0),
+            "seek position must be finite and nonnegative"
+        );
+
+        if let Some(seconds) = seek_seconds.filter(|seconds| *seconds > 0.0) {
+            ensure!(seconds.is_finite(), "seek position must be finite");
+            self.seek_when_ready(seconds)?;
+            self.pending_video = None;
+            self.pending_audio = None;
+            self.eos = false;
+        }
+        self.pipeline.set_state(gst::State::Playing)?;
+
+        Ok(())
+    }
+
+    /// Seeks once the source can: a file opened paused may still be
+    /// prerolling (the first frame of a large 4K clip takes a while to
+    /// decode), and a pipeline refuses a seek until then. Bounded, so a source
+    /// that never gets ready still fails with the position and length.
+    fn seek_when_ready(&mut self, seconds: f64) -> Result<()> {
+        let position = gst::ClockTime::from_nseconds((seconds * 1_000_000_000.0).round() as u64);
+        let deadline = Instant::now() + SEEK_READY_TIMEOUT;
+
+        let refused = loop {
+            self.check_bus()?;
+            let (_, current, pending) = self.pipeline.state(gst::ClockTime::ZERO);
+            if current < gst::State::Paused && pending < gst::State::Paused {
+                self.pipeline.set_state(gst::State::Paused)?;
+            }
+            // Wait for preroll to complete, in short steps so errors and
+            // cancellation are still noticed.
+            let _ = self.pipeline.state(gst::ClockTime::from_mseconds(100));
+
+            let error = match self
+                .pipeline
+                .seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE, position)
+            {
+                Ok(()) => return Ok(()),
+                Err(error) => error,
+            };
+            ensure!(
+                !self.abort.load(Ordering::Acquire),
+                "source seeking cancelled"
+            );
+            if Instant::now() >= deadline {
+                break error;
+            }
+            thread::sleep(Duration::from_millis(25));
+        };
+
+        let length = self.info().duration.map_or_else(
+            || "unknown length".to_owned(),
+            |length| format!("{length:.3} s long"),
+        );
+        bail!("cannot seek to {seconds:.3} s (clip {length}): {refused}")
+    }
+
+    pub(crate) fn pause(&self) -> Result<()> {
+        self.pipeline.set_state(gst::State::Paused)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn next(&mut self, timeout: Duration) -> Result<Option<FrameEvent>> {
+        let deadline = Instant::now() + timeout;
+
+        loop {
+            self.check_bus()?;
+            ensure!(
+                !self.abort.load(Ordering::Acquire),
+                "source reading cancelled"
+            );
+            if self.pending_video.is_none() {
+                self.pending_video = self.video.try_pull_sample(gst::ClockTime::ZERO);
+            }
+            if self.pending_audio.is_none() {
+                self.pending_audio = self.audio.try_pull_sample(gst::ClockTime::ZERO);
+            }
+            for pending in [&mut self.pending_video, &mut self.pending_audio] {
+                if pending.as_ref().is_some_and(|sample| {
+                    sample.buffer().and_then(gst::BufferRef::pts).is_some()
+                        && sample_timestamp(sample).is_none()
+                }) {
+                    // Decoder preroll outside the selected segment has no
+                    // stream timestamp and must not reset the media origin.
+                    *pending = None;
+                }
+            }
+            let info = self.info();
+            let waiting_video = self.pending_audio.is_some()
+                && self.pending_video.is_none()
+                && info.has_video
+                && !self.video.is_eos();
+            let waiting_audio = self.pending_video.is_some()
+                && self.pending_audio.is_none()
+                && info.has_audio
+                && !self.audio.is_eos();
+
+            if (waiting_video || waiting_audio) && Instant::now() < deadline {
+                // Separate decoder threads can finish a few milliseconds
+                // apart. Give the other negotiated track this read budget
+                // before advancing one track and synthesizing missing media.
+                thread::sleep(POLL_INTERVAL);
+                continue;
+            }
+
+            let video_first = match (&self.pending_video, &self.pending_audio) {
+                (Some(video), Some(audio)) => sample_pts(video) <= sample_pts(audio),
+                (Some(_), None) => true,
+                _ => false,
+            };
+
+            if video_first {
+                let sample = self.pending_video.take().context("video sample missing")?;
+                self.log_first_sample(&sample, 0);
+
+                return Ok(Some(FrameEvent::Video(benchmark::measure_success(
+                    Stage::InputVideo,
+                    || video_frame(&sample, self.fps),
+                )?)));
+            }
+            if let Some(sample) = self.pending_audio.take() {
+                self.log_first_sample(&sample, 1);
+                return Ok(Some(FrameEvent::Audio(benchmark::measure_success(
+                    Stage::InputAudio,
+                    || audio_frame(&sample, self.sample_rate),
+                )?)));
+            }
+            if self.is_eos() || Instant::now() >= deadline {
+                return Ok(None);
+            }
+            thread::sleep(POLL_INTERVAL);
+        }
+    }
+
+    pub(crate) fn video_ended(&self) -> bool {
+        self.pending_video.is_none() && self.video.is_eos()
+    }
+
+    fn log_first_sample(&mut self, sample: &gst::Sample, track: usize) {
+        if std::mem::take(&mut self.first_samples[track]) {
+            log::debug!(
+                "GStreamer first {} sample: PTS {:?}, segment {:?}",
+                if track == 0 { "video" } else { "audio" },
+                sample.buffer().and_then(gst::BufferRef::pts),
+                sample.segment()
+            );
+        }
+    }
+
+    pub(crate) fn audio_ended(&self) -> bool {
+        self.pending_audio.is_none() && self.audio.is_eos()
+    }
+
+    pub(crate) fn is_eos(&self) -> bool {
+        let info = self.info();
+        self.pending_video.is_none()
+            && self.pending_audio.is_none()
+            && (self.eos
+                || ((!info.has_video || self.video.is_eos())
+                    && (!info.has_audio || self.audio.is_eos())))
+    }
+
+    fn check_bus(&mut self) -> Result<()> {
+        if let Some(error) = self
+            .error
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take()
+        {
+            bail!(error);
+        }
+        let bus = self
+            .pipeline
+            .bus()
+            .context("GStreamer source bus is missing")?;
+
+        while let Some(message) = bus.pop() {
+            match message.view() {
+                gst::MessageView::Error(error) => bail!("GStreamer source: {}", error.error()),
+                gst::MessageView::Eos(_) => self.eos = true,
+                gst::MessageView::Latency(_) => {
+                    self.pipeline.recalculate_latency()?;
+                }
+                gst::MessageView::StreamsSelected(selected) => {
+                    let mut video = false;
+                    let mut audio = false;
+                    for stream in selected.streams() {
+                        video |= stream.stream_type().contains(gst::StreamType::VIDEO);
+                        audio |= stream.stream_type().contains(gst::StreamType::AUDIO);
+                    }
+                    self.selected_streams = Some((video, audio));
+                }
+                _ => {}
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// A baseband video card input: DeckLink or V4L2 capture.
+enum CardSource {
+    DeckLink(crate::output::video_card::DeckLinkAddress),
+    V4l2(crate::output::video_card::V4l2Address),
+}
+
+impl CardSource {
+    fn parse(path: &str) -> Result<Option<Self>> {
+        if let Some(address) =
+            crate::output::video_card::parse_decklink(path, false).map_err(anyhow::Error::msg)?
+        {
+            return Ok(Some(Self::DeckLink(address)));
+        }
+        Ok(crate::output::video_card::parse_v4l2(path)
+            .map_err(anyhow::Error::msg)?
+            .map(Self::V4l2))
+    }
+
+    /// Builds the capture elements in `bin` and exposes a `video` and, when
+    /// the card has audio, an `audio` pad.
+    fn build(&self, bin: &gst::Bin) -> Result<()> {
+        use crate::output::video_card::make;
+
+        let (video_out, audio_out) = match self {
+            Self::DeckLink(address) => {
+                let video = make("decklinkvideosrc")?;
+                video.set_property("device-number", address.device as i32);
+                video.set_property_from_str("mode", address.mode.map_or("auto", |mode| mode.name));
+                video.set_property_from_str("connection", &address.connection);
+                // Interlaced SDI is shown as whole frames.
+                let deinterlace = make("deinterlace")?;
+                let audio = make("decklinkaudiosrc")?;
+                audio.set_property("device-number", address.device as i32);
+                audio.set_property("channels", 2_i32);
+                bin.add_many([&video, &deinterlace, &audio])?;
+                video.link(&deinterlace)?;
+                (deinterlace, Some(audio))
+            }
+            Self::V4l2(address) => {
+                let video = make("v4l2src")?;
+                video.set_property("device", address.device.as_str());
+                let deinterlace = make("deinterlace")?;
+                bin.add_many([&video, &deinterlace])?;
+                video.link(&deinterlace)?;
+                let audio = match &address.audio {
+                    Some(device) => {
+                        let alsa = make("alsasrc")?;
+                        alsa.set_property("device", device.as_str());
+                        bin.add(&alsa)?;
+                        Some(alsa)
+                    }
+                    None => None,
+                };
+                (deinterlace, audio)
+            }
+        };
+        for (name, element) in [("video", Some(video_out)), ("audio", audio_out)] {
+            let Some(element) = element else { continue };
+            let target = element
+                .static_pad("src")
+                .with_context(|| format!("{name} capture has no output"))?;
+            let ghost = gst::GhostPad::builder_with_target(&target)?
+                .name(name)
+                .build();
+            bin.add_pad(&ghost)?;
+        }
+        Ok(())
+    }
+}
+
+/// The NDI source name of an `ndi://` address, as receivers list it
+/// (`SERVER (Source name)`); `None` for other addresses.
+pub(crate) fn ndi_source_name(path: &str) -> Result<Option<String>> {
+    let Some(prefix) = path.get(..NDI_SCHEME.len()) else {
+        return Ok(None);
+    };
+    if !prefix.eq_ignore_ascii_case(NDI_SCHEME) {
+        return Ok(None);
+    }
+    let name = path[NDI_SCHEME.len()..].trim();
+    crate::output::ndi::validate_ndi_name(name).map_err(anyhow::Error::msg)?;
+    Ok(Some(name.to_owned()))
+}
+
+fn source_uri(
+    path: &str,
+    options: &BTreeMap<String, String>,
+) -> Result<(String, BTreeMap<String, String>)> {
+    if path
+        .get(..6)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("srt://"))
+    {
+        let normalized =
+            crate::output::link::normalize_srt_uri(path, options).map_err(anyhow::Error::msg)?;
+        let uri = Url::parse(&normalized)?;
+        ensure!(
+            uri.query_pairs()
+                .all(|(name, value)| name != "mode" || value == "caller"),
+            "NoAr accepts SRT client URLs only; publish to external MediaMTX and configure its read URL"
+        );
+        ensure!(
+            !matches!(uri.host_str(), None | Some("0.0.0.0" | "[::]" | "::")),
+            "SRT input must name the external media server"
+        );
+
+        // GIO hostname resolution inside srtsrc can abort the process when
+        // the element is unlocked mid-lookup; hand it an IP literal instead.
+        let uri =
+            crate::output::link::resolve_srt_host(&uri, crate::output::link::SRT_RESOLVE_TIMEOUT)
+                .map_err(anyhow::Error::msg)?;
+
+        // The normalized URI already contains every native SRT option. Applying
+        // source-setup options again would convert latency units twice.
+        return Ok((uri.into(), BTreeMap::new()));
+    }
+    ensure!(
+        !options
+            .get("listen")
+            .is_some_and(|value| value != "0" && value != "false"),
+        "input listener/server mode was removed; use an external media server's read URL"
+    );
+    let uri = if path.contains("://") {
+        path.to_string()
+    } else {
+        gst::glib::filename_to_uri(Path::new(path).canonicalize()?, None)?.to_string()
+    };
+
+    Ok((
+        uri,
+        options
+            .iter()
+            .filter(|(key, _)| key.as_str() != "listen")
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect(),
+    ))
+}
+
+impl Drop for Source {
+    fn drop(&mut self) {
+        let _ = self.pipeline.set_state(gst::State::Null);
+    }
+}
+
+fn normalized_audio_bin(sample_rate: u32) -> Result<gst::Bin> {
+    // MPEG-TS PCR adjustment and millisecond FLV timestamps can jitter while
+    // the audio samples themselves remain continuous. Normalize their clock
+    // natively before the playout compares them with the output timeline.
+    Ok(gst::parse::bin_from_description(
+        &format!(
+            "queue max-size-buffers=8 max-size-bytes=0 max-size-time=0 ! \
+             audioconvert ! audioresample ! \
+             audio/x-raw,format=F32LE,layout=interleaved,rate={sample_rate},channels=2 ! \
+             audiorate skip-to-first=true tolerance=40000000 ! \
+             appsink name=audio-samples sync=false async=false max-buffers=4 wait-on-eos=false"
+        ),
+        true,
+    )?)
+}
+
+fn guard_hls_transport_rollover(decoder: &gst::Element) {
+    let Some(bin) = decoder.downcast_ref::<gst::Bin>() else {
+        return;
+    };
+    bin.connect_deep_element_added(|_, _, element| {
+        if element.factory().is_none_or(|f| f.name() != "tsdemux") {
+            return;
+        }
+        let mut parent = element.parent();
+        let mut adaptive_hls = false;
+        while let Some(object) = parent {
+            adaptive_hls |= object
+                .downcast_ref::<gst::Element>()
+                .and_then(gst::Element::factory)
+                .is_some_and(|f| f.name() == "hlsdemux2");
+            parent = object.parent();
+        }
+        if !adaptive_hls {
+            return;
+        }
+        element.connect_pad_added(|_, pad| {
+            pad.add_probe(
+                gst::PadProbeType::BUFFER | gst::PadProbeType::BUFFER_LIST,
+                |pad, info| {
+                    let Some(event) = pad.sticky_event::<gst::event::Segment>(0) else {
+                        return gst::PadProbeReturn::Ok;
+                    };
+                    let Some(start) = event
+                        .segment()
+                        .downcast_ref::<gst::ClockTime>()
+                        .and_then(gst::FormattedSegment::start)
+                    else {
+                        return gst::PadProbeReturn::Ok;
+                    };
+                    // In ignore-PCR mode, tsdemux 1.26 can assign an AAC frame
+                    // just before the segment boundary to the next 33-bit cycle.
+                    // Adaptive demux would then insert a 26-hour gap. Unwrap at
+                    // the compressed pad, before that gap can enter its queue.
+                    if let Some(buffer) = info.buffer_mut() {
+                        unwrap_hls_buffer(buffer.make_mut(), start);
+                    } else if let Some(list) = info.buffer_list_mut() {
+                        let list = list.make_mut();
+                        for index in 0..list.len() {
+                            if let Some(buffer) = list.get_mut(index) {
+                                unwrap_hls_buffer(buffer, start);
+                            }
+                        }
+                    }
+                    gst::PadProbeReturn::Ok
+                },
+            );
+        });
+    });
+}
+
+fn unwrap_hls_buffer(buffer: &mut gst::BufferRef, start: gst::ClockTime) {
+    buffer.set_pts(unwrap_hls_timestamp(buffer.pts(), start));
+    buffer.set_dts(unwrap_hls_timestamp(buffer.dts(), start));
+}
+
+fn unwrap_hls_timestamp(
+    timestamp: Option<gst::ClockTime>,
+    start: gst::ClockTime,
+) -> Option<gst::ClockTime> {
+    const WRAP: u64 = ((1_u128 << 33) * 1_000_000_000 / 90_000) as u64;
+    let timestamp = timestamp?;
+    let delta = timestamp.nseconds().saturating_sub(start.nseconds());
+    let cycles = (u128::from(delta) + u128::from(WRAP / 2)) / u128::from(WRAP);
+    let correction = u64::try_from(cycles * u128::from(WRAP)).ok()?;
+
+    Some(gst::ClockTime::from_nseconds(
+        timestamp.nseconds().checked_sub(correction)?,
+    ))
+}
+
+fn sample_pts(sample: &gst::Sample) -> u64 {
+    sample_timestamp(sample).map_or(0, gst::ClockTime::nseconds)
+}
+
+fn sample_timestamp(sample: &gst::Sample) -> Option<gst::ClockTime> {
+    let pts = sample.buffer()?.pts()?;
+    // Adaptive inputs can change the raw timestamp origin per segment. Use
+    // stream time to keep those segments on one media clock. Unlike running
+    // time, stream time also preserves the position of a seeked file.
+    match sample
+        .segment()
+        .and_then(|s| s.downcast_ref::<gst::ClockTime>())
+    {
+        Some(segment) => segment.to_stream_time(pts),
+        None => Some(pts),
+    }
+}
+
+pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video> {
+    let buffer = sample
+        .buffer()
+        .context("decoded video sample has no buffer")?;
+    let caps = sample.caps().context("decoded video sample has no caps")?;
+    let info = VideoInfo::from_caps(caps)?;
+    ensure!(
+        info.format() == gstreamer_video::VideoFormat::I420,
+        "decoded video is not I420"
+    );
+    let mapped = VideoFrameRef::from_buffer_ref_readable(buffer, &info)?;
+    let mut frame = frame::Video::new(Pixel::YUV420P, info.width(), info.height());
+
+    for plane in 0..3 {
+        let source = mapped.plane_data(plane as u32)?;
+        let source_stride = usize::try_from(mapped.plane_stride()[plane])?;
+        let width = if plane == 0 {
+            info.width()
+        } else {
+            info.width().div_ceil(2)
+        } as usize;
+        let height = if plane == 0 {
+            info.height()
+        } else {
+            info.height().div_ceil(2)
+        } as usize;
+        let target_stride = frame.stride(plane);
+        let target = frame.data_mut(plane);
+
+        for row in 0..height {
+            target[row * target_stride..row * target_stride + width]
+                .copy_from_slice(&source[row * source_stride..row * source_stride + width]);
+        }
+    }
+    frame.set_pts(
+        sample_timestamp(sample)
+            .map(|pts| (u128::from(pts.nseconds()) * u128::from(fps) / 1_000_000_000) as i64),
+    );
+
+    Ok(frame)
+}
+
+pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<frame::Audio> {
+    let buffer = sample
+        .buffer()
+        .context("decoded audio sample has no buffer")?;
+    let mapped = buffer.map_readable()?;
+    ensure!(
+        mapped.len().is_multiple_of(8),
+        "decoded stereo f32 audio has a partial sample"
+    );
+    let samples = mapped.len() / 8;
+    let mut frame = frame::Audio::new(
+        Sample::F32(ffmpeg_next::format::sample::Type::Planar),
+        samples,
+        ChannelLayout::STEREO,
+    );
+    frame.set_rate(sample_rate);
+
+    for channel in 0..2 {
+        for (index, value) in frame.plane_mut::<f32>(channel).iter_mut().enumerate() {
+            let start = index * 8 + channel * 4;
+            *value = f32::from_le_bytes(mapped[start..start + 4].try_into()?);
+        }
+    }
+    frame.set_pts(sample_timestamp(sample).map(|pts| {
+        // Nanosecond timestamps cannot represent every sample boundary.
+        // Flooring an already-rounded 1024-sample AAC timestamp moves it
+        // back one sample and can make playout trim or insert otherwise
+        // continuous PCM.
+        ((u128::from(pts.nseconds()) * u128::from(sample_rate) + 500_000_000) / 1_000_000_000)
+            as i64
+    }));
+
+    Ok(frame)
+}
+
+fn configure_source(source: &gst::Element, options: &BTreeMap<String, String>) -> Result<()> {
+    let factory = source
+        .factory()
+        .map(|factory| factory.name().to_string())
+        .unwrap_or_default();
+    if factory == "souphttpsrc" {
+        let location = source.property::<String>("location");
+        let exclusions = std::env::var("no_proxy")
+            .or_else(|_| std::env::var("NO_PROXY"))
+            .unwrap_or_default();
+        if loopback_proxy_exception(&location, &exclusions) {
+            // souphttpsrc copies http_proxy into a resolver with no ignore
+            // list. Clearing that override restores GIO's system resolver,
+            // which honors the explicit loopback no_proxy exception.
+            source.set_property("proxy", "");
+        }
+    }
+    if factory == "rtspsrc" {
+        set_property(source, "protocols", "tcp")?;
+        set_property(source, "latency", "120")?;
+    }
+
+    for (name, value) in options {
+        let (property, value) = match name.as_str() {
+            "mode" | "passphrase" | "pbkeylen" | "streamid" => (name.as_str(), value.clone()),
+            "latency" if factory == "srtsrc" => {
+                let microseconds: u64 = value.parse().context("invalid SRT latency")?;
+                ("latency", microseconds.div_ceil(1_000).to_string())
+            }
+            "rtsp_transport" if factory == "rtspsrc" => ("protocols", value.clone()),
+            "buffer_size" if factory == "udpsrc" => ("buffer-size", value.clone()),
+            "timeout" | "rw_timeout" if factory == "souphttpsrc" || factory == "rtspsrc" => {
+                let microseconds: u64 = value.parse().context("invalid input timeout")?;
+                if factory == "souphttpsrc" {
+                    ("timeout", microseconds.div_ceil(1_000_000).to_string())
+                } else {
+                    ("timeout", microseconds.to_string())
+                }
+            }
+            "listen" if value == "0" => continue,
+            "listen" => bail!(
+                "GStreamer RTMP input requires the managed ingest relay, not an FFmpeg listen option"
+            ),
+            _ => bail!("input option {name} is not supported by GStreamer source {factory}"),
+        };
+        set_property(source, property, &value)?;
+    }
+
+    Ok(())
+}
+
+fn loopback_proxy_exception(location: &str, exclusions: &str) -> bool {
+    let Ok(uri) = Url::parse(location) else {
+        return false;
+    };
+    let loopback = match uri.host() {
+        Some(Host::Ipv4(address)) => address.is_loopback(),
+        Some(Host::Ipv6(address)) => address.is_loopback(),
+        Some(Host::Domain(name)) => name.eq_ignore_ascii_case("localhost"),
+        None => false,
+    };
+    if !loopback {
+        return false;
+    }
+    let host = uri.host_str().unwrap_or_default();
+
+    exclusions.split(',').any(|entry| {
+        let entry = entry.trim();
+        entry == "*"
+            || entry
+                .trim_matches(['[', ']'])
+                .eq_ignore_ascii_case(host.trim_matches(['[', ']']))
+    })
+}
+
+fn set_property(element: &gst::Element, name: &str, text: &str) -> Result<()> {
+    let specification = element
+        .find_property(name)
+        .with_context(|| format!("GStreamer input does not provide property {name}"))?;
+    let value = gst::glib::Value::deserialize(text, specification.value_type())
+        .with_context(|| format!("invalid value for GStreamer input property {name}"))?;
+    element.set_property_from_value(name, &value);
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use super::*;
+
+    /// Stock clips often have no sound: resuming one in its middle must seek
+    /// even though the audio branch stays unlinked.
+    #[test]
+    fn a_clip_without_audio_seeks() {
+        crate::gstreamer::init().unwrap();
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/media_mix/no_audio.mp4");
+        let config = OutputConfig::new(320, 180, 25, 48_000);
+        let mut source = Source::open(path.to_str().unwrap(), &config).unwrap();
+        assert!(source.info().has_video && !source.info().has_audio);
+
+        source
+            .start(Some(3.0))
+            .unwrap_or_else(|error| panic!("{error:#}"));
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let first = loop {
+            assert!(Instant::now() < deadline, "no frame after the seek");
+            if let Some(FrameEvent::Video(frame)) = source.next(Duration::from_millis(50)).unwrap()
+            {
+                break frame.pts().unwrap();
+            }
+        };
+        assert!((70..=80).contains(&first), "first frame {first}");
+    }
+
+    /// A clip that is not prerolled yet (here held back in READY) refuses a
+    /// seek; resuming it in its middle waits until it can seek.
+    #[test]
+    fn a_seek_on_a_source_that_is_not_ready_yet_waits_for_it() {
+        crate::gstreamer::init().unwrap();
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/media_mix/av_sync.mp4");
+        let config = OutputConfig::new(320, 180, 25, 48_000);
+        let mut source = Source::open(path.to_str().unwrap(), &config).unwrap();
+        source.pipeline.set_state(gst::State::Ready).unwrap();
+
+        source
+            .start(Some(3.0))
+            .unwrap_or_else(|error| panic!("{error:#}"));
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let first = loop {
+            assert!(Instant::now() < deadline, "no frame after the seek");
+            if let Some(FrameEvent::Video(frame)) = source.next(Duration::from_millis(50)).unwrap()
+            {
+                break frame.pts().unwrap();
+            }
+        };
+        assert!((70..=80).contains(&first), "first frame {first}");
+    }
+
+    #[test]
+    fn ndi_addresses_name_the_source_as_receivers_list_it() {
+        assert_eq!(
+            ndi_source_name("ndi://STUDIO (Camera 1)")
+                .unwrap()
+                .as_deref(),
+            Some("STUDIO (Camera 1)")
+        );
+        assert_eq!(
+            ndi_source_name("NDI:// STUDIO (Camera 1) ")
+                .unwrap()
+                .as_deref(),
+            Some("STUDIO (Camera 1)")
+        );
+        assert_eq!(ndi_source_name("srt://10.0.0.5:9000").unwrap(), None);
+        assert_eq!(ndi_source_name("/media/clip.mp4").unwrap(), None);
+        assert!(ndi_source_name("ndi://").is_err());
+    }
+
+    #[test]
+    fn ndi_input_without_the_runtime_is_refused_with_a_reason() {
+        if crate::output::ndi::ndi_unavailable_reason().is_none() {
+            return; // A server with the NDI runtime installed.
+        }
+        let config = OutputConfig::new(64, 36, 25, 48_000);
+        let error = Source::open("ndi://STUDIO (Camera 1)", &config)
+            .err()
+            .unwrap();
+        assert!(
+            format!("{error:#}").contains("NDI input is unavailable"),
+            "{error:#}"
+        );
+    }
+
+    #[test]
+    fn asynchronous_tracks_are_ordered_before_advancing_the_playout() {
+        crate::gstreamer::init().unwrap();
+        let pipeline = gst::parse::launch(
+            "appsrc name=vsrc format=time caps=\"video/x-raw,format=I420,width=64,height=64,framerate=25/1\" ! appsink name=video sync=false async=false \
+             appsrc name=asrc format=time caps=\"audio/x-raw,format=F32LE,layout=interleaved,channels=2,rate=48000\" ! appsink name=audio sync=false async=false"
+        ).unwrap().downcast::<gst::Pipeline>().unwrap();
+        let video = pipeline
+            .by_name("video")
+            .unwrap()
+            .downcast::<AppSink>()
+            .unwrap();
+        let audio = pipeline
+            .by_name("audio")
+            .unwrap()
+            .downcast::<AppSink>()
+            .unwrap();
+        let video_source = pipeline
+            .by_name("vsrc")
+            .unwrap()
+            .downcast::<gstreamer_app::AppSrc>()
+            .unwrap();
+        let audio_source = pipeline
+            .by_name("asrc")
+            .unwrap()
+            .downcast::<gstreamer_app::AppSrc>()
+            .unwrap();
+        pipeline.set_state(gst::State::Playing).unwrap();
+        let mut buffer = gst::Buffer::with_size(64 * 64 * 3 / 2).unwrap();
+        buffer
+            .get_mut()
+            .unwrap()
+            .set_pts(gst::ClockTime::from_mseconds(40));
+        video_source.push_buffer(buffer).unwrap();
+        let pending_video = video.try_pull_sample(gst::ClockTime::from_seconds(1));
+        assert!(pending_video.is_some());
+        let mut source = Source {
+            pipeline,
+            video,
+            audio,
+            metadata: Arc::new(Mutex::new(SourceInfo {
+                has_video: true,
+                has_audio: true,
+                ..SourceInfo::default()
+            })),
+            error: Arc::new(Mutex::new(None)),
+            abort: Arc::new(AtomicBool::new(false)),
+            pending_video,
+            pending_audio: None,
+            fps: 25,
+            sample_rate: 48_000,
+            eos: false,
+            first_samples: [false; 2],
+            selected_streams: Some((true, true)),
+        };
+        let worker = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(10));
+            let mut buffer = gst::Buffer::from_mut_slice(vec![0_u8; 8 * 1024]);
+            buffer.get_mut().unwrap().set_pts(gst::ClockTime::ZERO);
+            audio_source.push_buffer(buffer).unwrap();
+            audio_source.end_of_stream().unwrap();
+        });
+
+        assert!(
+            matches!(source.next(Duration::from_millis(500)).unwrap(), Some(FrameEvent::Audio(frame)) if frame.pts() == Some(0))
+        );
+        assert!(
+            matches!(source.next(Duration::ZERO).unwrap(), Some(FrameEvent::Video(frame)) if frame.pts() == Some(1))
+        );
+        worker.join().unwrap();
+    }
+
+    #[test]
+    fn hls_transport_rollover_uses_the_current_segment_cycle() {
+        let start = gst::ClockTime::from_seconds(62);
+        let before_start = gst::ClockTime::from_nseconds(61_978_666_666);
+        let cycle = gst::ClockTime::from_nseconds(((1_u128 << 33) * 1_000_000_000 / 90_000) as u64);
+
+        assert_eq!(
+            unwrap_hls_timestamp(Some(before_start + cycle), start),
+            Some(before_start)
+        );
+        assert_eq!(
+            unwrap_hls_timestamp(Some(before_start), start),
+            Some(before_start)
+        );
+        assert_eq!(unwrap_hls_timestamp(Some(start), start), Some(start));
+        assert_eq!(unwrap_hls_timestamp(None, start), None);
+        assert_eq!(
+            unwrap_hls_timestamp(Some(start + cycle), start + cycle),
+            Some(start + cycle)
+        );
+    }
+
+    #[test]
+    fn hls_rollover_preserves_payload_duration_and_composition_offset() {
+        crate::gstreamer::init().unwrap();
+        let cycle = gst::ClockTime::from_nseconds(((1_u128 << 33) * 1_000_000_000 / 90_000) as u64);
+        let mut buffer = gst::Buffer::from_slice(vec![1, 2, 3]);
+        let writable = buffer.get_mut().unwrap();
+        writable.set_pts(cycle + gst::ClockTime::from_mseconds(61_980));
+        writable.set_dts(cycle + gst::ClockTime::from_mseconds(61_960));
+        writable.set_duration(gst::ClockTime::from_mseconds(40));
+
+        unwrap_hls_buffer(writable, gst::ClockTime::from_seconds(62));
+
+        assert_eq!(buffer.pts(), Some(gst::ClockTime::from_mseconds(61_980)));
+        assert_eq!(buffer.dts(), Some(gst::ClockTime::from_mseconds(61_960)));
+        assert_eq!(buffer.duration(), Some(gst::ClockTime::from_mseconds(40)));
+        assert_eq!(buffer.map_readable().unwrap().as_slice(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn decoded_frames_use_stream_time_across_adaptive_timestamp_origins_and_file_seeks() {
+        crate::gstreamer::init().unwrap();
+        let info = VideoInfo::builder(gstreamer_video::VideoFormat::I420, 64, 64)
+            .build()
+            .unwrap();
+        let caps = info.to_caps().unwrap();
+        for (start, time, raw, expected) in [(66, 4, 66, 4), (3, 6, 3, 6), (9, 9, 10, 10)] {
+            let mut segment = gst::FormattedSegment::<gst::ClockTime>::new();
+            segment.set_start(gst::ClockTime::from_seconds(start));
+            segment.set_time(gst::ClockTime::from_seconds(time));
+            let mut buffer = gst::Buffer::with_size(info.size()).unwrap();
+            buffer
+                .get_mut()
+                .unwrap()
+                .set_pts(gst::ClockTime::from_seconds(raw));
+            let video = gst::Sample::builder()
+                .buffer(&buffer)
+                .caps(&caps)
+                .segment(&segment)
+                .build();
+            assert_eq!(
+                video_frame(&video, 25).unwrap().pts(),
+                Some(expected as i64 * 25)
+            );
+            let mut buffer = gst::Buffer::with_size(8 * 1024).unwrap();
+            buffer
+                .get_mut()
+                .unwrap()
+                .set_pts(gst::ClockTime::from_seconds(raw));
+            let audio = gst::Sample::builder()
+                .buffer(&buffer)
+                .segment(&segment)
+                .build();
+            assert_eq!(
+                audio_frame(&audio, 48_000).unwrap().pts(),
+                Some(expected as i64 * 48_000)
+            );
+            assert_eq!(sample_pts(&audio), expected * 1_000_000_000);
+        }
+    }
+
+    #[test]
+    fn native_audio_normalization_preserves_samples_through_timestamp_jitter() {
+        crate::gstreamer::init().unwrap();
+        let pipeline = gst::Pipeline::new();
+        let source = gstreamer_app::AppSrc::builder()
+            .format(gst::Format::Time)
+            .caps(
+                &gst::Caps::builder("audio/x-raw")
+                    .field("format", "F32LE")
+                    .field("layout", "interleaved")
+                    .field("rate", 48_000_i32)
+                    .field("channels", 2_i32)
+                    .build(),
+            )
+            .build();
+        let normalization = normalized_audio_bin(48_000).unwrap();
+        let sink = normalization
+            .by_name("audio-samples")
+            .unwrap()
+            .downcast::<AppSink>()
+            .unwrap();
+        pipeline
+            .add_many([
+                source.upcast_ref::<gst::Element>(),
+                normalization.upcast_ref(),
+            ])
+            .unwrap();
+        source.link(&normalization).unwrap();
+        pipeline.set_state(gst::State::Playing).unwrap();
+        let mut expected = Vec::new();
+        for packet in 0..48_u64 {
+            let mut bytes = Vec::new();
+            for sample in packet * 1024..(packet + 1) * 1024 {
+                let value = ((sample % 251) as f32 / 251.0).to_le_bytes();
+                bytes.extend_from_slice(&value);
+                bytes.extend_from_slice(&value);
+            }
+            expected.extend_from_slice(&bytes);
+            let mut buffer = gst::Buffer::from_mut_slice(bytes);
+            let jitter = if packet % 3 == 0 {
+                -5_000_000_i64
+            } else {
+                5_000_000
+            };
+            let rounded = packet * 1024 * 1000 / 48_000 * 1_000_000;
+            buffer
+                .get_mut()
+                .unwrap()
+                .set_pts(gst::ClockTime::from_nseconds(
+                    (1_000_000_000 + rounded as i64 + if packet == 0 { 0 } else { jitter }) as u64,
+                ));
+            source.push_buffer(buffer).unwrap();
+        }
+        source.end_of_stream().unwrap();
+        let mut actual = Vec::new();
+        while let Some(sample) = sink.try_pull_sample(gst::ClockTime::from_seconds(1)) {
+            let buffer = sample.buffer().unwrap();
+            let pts = buffer.pts().unwrap().nseconds();
+            let next = 1_000_000_000 + actual.len() as u64 / 8 * 1_000_000_000 / 48_000;
+            assert!(pts.abs_diff(next) <= 1);
+            let frame = audio_frame(&sample, 48_000).unwrap();
+            assert_eq!(
+                frame.pts(),
+                Some(48_000 + actual.len() as i64 / 8),
+                "the Rust adapter must not introduce sample gaps after native normalization"
+            );
+            actual.extend_from_slice(buffer.map_readable().unwrap().as_slice());
+        }
+        pipeline.set_state(gst::State::Null).unwrap();
+
+        assert_eq!(actual.len(), expected.len());
+        assert!(
+            actual == expected,
+            "audio samples changed while normalizing timestamp jitter"
+        );
+    }
+
+    #[test]
+    fn stream_selection_opens_sources_with_only_one_track() {
+        crate::gstreamer::init().unwrap();
+        let directory = std::env::temp_dir().join(format!(
+            "noar-selected-streams-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        for (name, description, video) in [
+            (
+                "video.mp4",
+                "videotestsrc num-buffers=5 ! video/x-raw,width=64,height=64,framerate=25/1 ! x264enc tune=zerolatency ! h264parse ! qtmux",
+                true,
+            ),
+            (
+                "audio.wav",
+                "audiotestsrc num-buffers=5 ! audio/x-raw,rate=48000 ! wavenc",
+                false,
+            ),
+        ] {
+            let path = directory.join(name);
+            let pipeline = gst::parse::launch(&format!(
+                "{description} ! filesink location=\"{}\"",
+                path.display()
+            ))
+            .unwrap();
+            pipeline.set_state(gst::State::Playing).unwrap();
+            let message = pipeline
+                .bus()
+                .unwrap()
+                .timed_pop_filtered(
+                    gst::ClockTime::from_seconds(5),
+                    &[gst::MessageType::Eos, gst::MessageType::Error],
+                )
+                .unwrap();
+            pipeline.set_state(gst::State::Null).unwrap();
+            assert!(
+                matches!(message.view(), gst::MessageView::Eos(_)),
+                "{message:?}"
+            );
+            let config = OutputConfig {
+                width: 64,
+                height: 64,
+                fps: 25,
+                ..OutputConfig::default()
+            };
+            let mut source = Source::open(path.to_str().unwrap(), &config).unwrap();
+            assert_eq!(
+                (source.info().has_video, source.info().has_audio),
+                (video, !video)
+            );
+            source.start(None).unwrap();
+            let first = source.next(Duration::from_secs(1)).unwrap().unwrap();
+            assert_eq!(matches!(first, FrameEvent::Video(_)), video);
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn explicit_proxy_exceptions_are_limited_to_exact_loopback_hosts() {
+        assert!(loopback_proxy_exception(
+            "http://127.0.0.1:21988/input/index.m3u8",
+            "localhost, 127.0.0.1"
+        ));
+        assert!(loopback_proxy_exception(
+            "http://localhost:8080/",
+            "LOCALHOST"
+        ));
+        assert!(loopback_proxy_exception("http://[::1]:8080/", "::1"));
+        assert!(!loopback_proxy_exception(
+            "http://127.0.0.1:8080/",
+            "localhost"
+        ));
+        assert!(!loopback_proxy_exception("http://127.0.0.1:8080/", ""));
+        assert!(!loopback_proxy_exception(
+            "https://localhost.example.org/",
+            "localhost"
+        ));
+        assert!(!loopback_proxy_exception("https://example.org/", "*"));
+    }
+}

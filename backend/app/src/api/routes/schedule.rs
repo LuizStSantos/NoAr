@@ -15,7 +15,7 @@ use crate::{
     },
     db::{
         handles,
-        models::{Role, ScheduleEvent},
+        models::{Role, ScheduleEvent, ScheduleKind},
     },
     player::{
         controller::ChannelManager,
@@ -26,7 +26,7 @@ use crate::{
         schedule::{
             OccurrenceView, ScheduleEventInput,
             live::{
-                LiveSource, NewLive, SignalTest, list_lives, save_live, test_signal,
+                LiveSource, NewLive, SignalTest, list_lives, read_live_url, save_live, test_signal,
                 update_live_address,
             },
             occurrence_now, occurrence_views, parse_date, prepare_event, timing_changed,
@@ -307,6 +307,179 @@ pub async fn stop_schedule_event(
     Ok(Json(return_to_programme(&manager).await))
 }
 
+/// How to extend the live on air: by `minutes` from its current end, or
+/// `until` a time of day (`HH:MM` or `HH:MM:SS`, channel time; a time earlier
+/// than the current end means the next day).
+#[derive(Debug, Deserialize)]
+pub struct ExtendLive {
+    #[serde(default)]
+    pub minutes: Option<f64>,
+    #[serde(default)]
+    pub until: Option<String>,
+}
+
+/// **Extend the live on air**
+///
+/// Pushes the end of the live on air later, for this airing only: it goes on
+/// without a break and the programme comes back at the new end, as the event
+/// says (where it stopped, or on the clock). Use `/stop` to end it now.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/schedule/1/extend -H 'Content-Type: application/json' \
+/// -d '{"until": "13:30"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn extend_live(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<ExtendLive>,
+) -> Result<Json<ActiveEvent>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+
+    Ok(Json(extend_on_air(&state, &manager, id, &request).await?))
+}
+
+/// Move the end of the live on air of channel `id` as `request` says.
+async fn extend_on_air(
+    state: &AppState,
+    manager: &ChannelManager,
+    id: i32,
+    request: &ExtendLive,
+) -> Result<ActiveEvent, ServiceError> {
+    let (timezone, storage) = {
+        let config = manager.config.read().await;
+        (config.channel.timezone, config.channel.storage.clone())
+    };
+    let now = time_now(&timezone).naive_local();
+    let current_end = manager
+        .schedule
+        .live_end()
+        .ok_or_else(|| ServiceError::Conflict("no live is on air".to_string()))?;
+    let new_end = match (request.minutes, request.until.as_deref()) {
+        (Some(minutes), None) if minutes.is_finite() && minutes > 0.0 => {
+            current_end
+                + TimeDelta::try_milliseconds((minutes * 60_000.0) as i64).unwrap_or_default()
+        }
+        (None, Some(until)) => {
+            let time =
+                crate::utils::schedule::parse_time(until).map_err(ServiceError::BadRequest)?;
+            let mut end = current_end.date().and_time(time);
+            if end <= current_end - TimeDelta::try_hours(12).unwrap_or_default() {
+                end += TimeDelta::try_days(1).unwrap_or_default();
+            }
+            end
+        }
+        _ => {
+            return Err(ServiceError::BadRequest(
+                "give either minutes (more than 0) or until (HH:MM)".to_string(),
+            ));
+        }
+    };
+
+    let active = manager
+        .schedule
+        .extend_live(new_end, now)
+        .map_err(ServiceError::Conflict)?;
+
+    // Keep the signal connected at its live edge, so the live goes on at
+    // its old end without reconnecting.
+    if let Some(source) = handles::select_schedule_event(&state.pool, id, active.event_id)
+        .await?
+        .and_then(|event| event.sources.into_iter().next())
+        && let Ok(url) = read_live_url(&storage.join(source)).await
+    {
+        manager.preloader.lock().await.clone().preload_live(&url);
+    }
+
+    Ok(active)
+}
+
+/// What an encoder or a script can do with the live on air.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum LiveAction {
+    /// Push its end later: `minutes=` or `until=HH:MM`.
+    Extend,
+    /// End it now; the programme comes back as the event says.
+    End,
+}
+
+/// The query of `/live/{id}/{action}`.
+#[derive(Debug, Default, Deserialize)]
+pub struct LiveKeyQuery {
+    #[serde(default)]
+    pub key: Option<String>,
+    #[serde(default)]
+    pub minutes: Option<f64>,
+    #[serde(default)]
+    pub until: Option<String>,
+}
+
+/// Header an encoder can send the key in, instead of the `key` query.
+const LIVE_KEY_HEADER: &str = "x-live-key";
+
+/// **Extend or end the live on air, with the channel's live key**
+///
+/// For encoders, Stream Decks and scripts that cannot log in. The key is set
+/// in the Scheduler (Lives › Remote control); without one this answers 403.
+/// Answers the event on air after the change (`null` after `end`).
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/live/1/extend?key=<KEY>&minutes=30'
+/// curl -X POST 'http://127.0.0.1:8787/live/1/extend?key=<KEY>&until=13:30'
+/// curl -X POST 'http://127.0.0.1:8787/live/1/end?key=<KEY>'
+/// ```
+pub async fn control_live_with_key(
+    State(state): State<AppState>,
+    Path((id, action)): Path<(i32, LiveAction)>,
+    Query(query): Query<LiveKeyQuery>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<Option<ActiveEvent>>, ServiceError> {
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
+    let expected = manager.config.read().await.processing.live_key.clone();
+    let given = headers
+        .get(LIVE_KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .or(query.key.as_deref())
+        .unwrap_or_default();
+
+    if !crate::api::routes::logo::key_matches(&expected, given) {
+        return Err(ServiceError::Forbidden(
+            "Wrong or missing live key".to_string(),
+        ));
+    }
+
+    match action {
+        LiveAction::Extend => {
+            let request = ExtendLive {
+                minutes: query.minutes,
+                until: query.until,
+            };
+
+            Ok(Json(Some(
+                extend_on_air(&state, &manager, id, &request).await?,
+            )))
+        }
+        LiveAction::End => {
+            if manager
+                .schedule
+                .active()
+                .is_none_or(|active| active.kind != ScheduleKind::Live)
+            {
+                return Err(ServiceError::Conflict("no live is on air".to_string()));
+            }
+            return_to_programme(&manager).await;
+
+            Ok(Json(None))
+        }
+    }
+}
+
 /// **Scheduler state**
 ///
 /// The event on air, events waiting for the clip on air, and what comes in
@@ -369,6 +542,103 @@ pub async fn get_lives(
     Ok(Json(list_lives(&storage).await))
 }
 
+/// Where an assembled program file is, relative to the storage.
+#[derive(Debug, Deserialize)]
+pub struct ProgramPath {
+    pub path: String,
+}
+
+/// An assembled program to save at `path`.
+#[derive(Debug, Deserialize)]
+pub struct SaveProgram {
+    pub path: String,
+    #[serde(flatten)]
+    pub program: crate::utils::assembled::ProgramInput,
+}
+
+/// **Read an assembled program**
+///
+/// ```BASH
+/// curl -X GET 'http://127.0.0.1:8787/api/schedule/1/programs?path=Programas/Jornal.program' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_assembled_program(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Query(query): Query<ProgramPath>,
+) -> Result<Json<crate::utils::assembled::ProgramFile>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let (path, _, relative) = crate::file::norm_abs_path(&storage, &query.path)?;
+
+    if !crate::utils::assembled::is_program(&relative) || !path.is_file() {
+        return Err(ServiceError::NotFound(format!(
+            "{relative} is not a program"
+        )));
+    }
+
+    Ok(Json(
+        crate::utils::assembled::read_current_program(&storage, &path).await?,
+    ))
+}
+
+/// **Create or change an assembled program**
+///
+/// Blocks in order and breaks of commercials between them; the clip
+/// lengths are read here. Scheduled events that air it take its new length.
+///
+/// ```BASH
+/// curl -X PUT http://127.0.0.1:8787/api/schedule/1/programs -H 'Content-Type: application/json' \
+/// -d '{"path": "Programas/Jornal.program", "title": "Jornal da Noite",
+///      "segments": [{"kind": "block", "source": "Recebidos/b1.mp4"},
+///                   {"kind": "break", "clips": ["Comerciais/a.mp4"]},
+///                   {"kind": "block", "source": "Recebidos/b2.mp4"}]}' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn save_assembled_program(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(input): Json<SaveProgram>,
+) -> Result<Json<crate::utils::assembled::ProgramFile>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let program =
+        crate::utils::assembled::save_program(&storage, &input.path, input.program).await?;
+    let (_, _, relative) = crate::file::norm_abs_path(&storage, &input.path)?;
+
+    // Events that air it now run for its new length.
+    let mut changed = false;
+    for mut event in handles::select_schedule_events(&state.pool, id).await? {
+        if event.kind != ScheduleKind::Media || !event.sources.contains(&relative) {
+            continue;
+        }
+        let mut total = 0.0;
+        for source in &event.sources {
+            total += if source == &relative {
+                program.duration()
+            } else {
+                crate::utils::schedule::trimmed_length(&storage.join(source))
+                    .await
+                    .unwrap_or_default()
+            };
+        }
+        if (total - event.duration).abs() > 0.001 {
+            event.duration = total;
+            handles::update_schedule_event(&state.pool, &event).await?;
+            changed = true;
+        }
+    }
+    if changed {
+        manager.schedule.invalidate();
+    }
+
+    Ok(Json(program))
+}
+
 /// **Create or update a live**
 ///
 /// Writes `Lives/<name>/signal.live` and `tvshow.nfo`; upload the poster to
@@ -421,6 +691,31 @@ pub async fn test_live_signal(
     authorized_manager(&state, id, &user, &details).await?;
 
     Ok(Json(test_signal(&request.url).await?))
+}
+
+/// **NDI sources on the network**
+///
+/// Names to use as `ndi://<name>` in a live. Discovery takes about two
+/// seconds; an empty list can also mean mDNS does not reach the server.
+///
+/// ```BASH
+/// curl -X GET 'http://127.0.0.1:8787/api/schedule/1/lives/ndi' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_ndi_sources(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<String>>, ServiceError> {
+    authorized_manager(&state, id, &user, &details).await?;
+
+    tokio::task::spawn_blocking(|| {
+        noar_engine::discover_ndi_sources(std::time::Duration::from_secs(2))
+    })
+    .await
+    .map_err(|error| ServiceError::Conflict(error.to_string()))?
+    .map(Json)
+    .map_err(|error| ServiceError::Conflict(format!("{error:#}")))
 }
 
 /// **Graphics events of a channel**

@@ -320,7 +320,7 @@ mod tests {
         let root = root();
         let global_before = handles::select_global(&pool).await.unwrap();
         let channel_before = handles::select_channel(&pool, &1).await.unwrap();
-        sqlx::query("UPDATE config_live_input SET options = 'invalid-json' WHERE backend = 'rtmp'")
+        sqlx::query("DELETE FROM config_notification WHERE config_id = (SELECT id FROM config WHERE channel_id = 1)")
             .execute(&pool)
             .await
             .unwrap();
@@ -344,7 +344,7 @@ mod tests {
         assert_eq!(channel.storage, channel_before.storage);
         assert!(controllers.read().await.managers.is_empty());
         assert!(queues.lock().await.is_empty());
-        sqlx::query("UPDATE config_live_input SET options = '{}' WHERE backend = 'rtmp'")
+        sqlx::query("INSERT INTO config_notification (config_id) SELECT id FROM config WHERE channel_id = 1")
             .execute(&pool)
             .await
             .unwrap();

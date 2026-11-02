@@ -1,0 +1,27 @@
+logLevel: info
+api: yes
+apiAddress: :9997
+# The API is reachable only inside this disposable Compose network.
+authInternalUsers:
+  - user: any
+    permissions:
+      - action: api
+      - action: publish
+        path: input
+      - action: publish
+        path: output
+      - action: read
+        path: input
+      - action: read
+        path: output
+rtsp: no
+rtmp: no
+hls: no
+webrtc: no
+srt: yes
+srtAddress: :8890
+paths:
+  input:
+    source: publisher
+  output:
+    source: publisher

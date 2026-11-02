@@ -315,9 +315,15 @@ pub async fn prepare_event(
             let mut total = 0.0;
 
             for (path, relative) in &sources {
-                total += trimmed_length(path).await.ok_or_else(|| {
-                    bad_request(format!("cannot read the length of '{relative}'"))
-                })?;
+                total += if crate::utils::assembled::is_program(relative) {
+                    crate::utils::assembled::read_current_program(storage, path)
+                        .await?
+                        .duration()
+                } else {
+                    trimmed_length(path).await.ok_or_else(|| {
+                        bad_request(format!("cannot read the length of '{relative}'"))
+                    })?
+                };
             }
 
             if total > MAX_MEDIA_EVENT_SECONDS {

@@ -1,14 +1,15 @@
 # NoAr technology reference skills
 
-The NoAr repository includes four additional scoped reference skills. These are **not agents** and **do not join the five-member audit councils**.
+The NoAr repository includes scoped reference skills. These are **not agents** and **do not join the five-member audit councils**. GStreamer is the primary reference for the current media engine.
 
 | Skill | References | Version evidence |
 | --- | --- | --- |
 | `/noar-rust` | Rust, Axum, Tokio, SQLx, SQLite | Cargo manifests, Cargo.lock |
 | `/noar-vue` | Vue, TypeScript, Pinia, Vue Router, Vite | package.json, package-lock.json |
 | `/noar-docker` | Docker, Compose, BuildKit | Dockerfile, Compose, workflows |
-| `/noar-video-processing` | Pipeline, FFmpeg, A/V sync, SCTE-35 | engine code, native FFmpeg, ffmpeg-next |
-| `/noar-ffmpeg` (existing) | Scoped FFmpeg C API and CLI manuals | installed native libs + bindings |
+| `/noar-gstreamer` | Native pipeline, states, clocks, buffers, caps and transport | Cargo.lock, native GStreamer, gst-inspect-1.0; [navigation](gstreamer.md) |
+| `/noar-video-processing` | GStreamer pipeline, A/V sync, SCTE-35 | engine code and integrated stream evidence |
+| `/noar-ffmpeg` (existing) | Remaining frame-memory interfaces and fixture CLI/API | installed native libs + bindings; not a playout backend |
 | `/noar-intelligent-development` (existing) | Main development, audits and integration QA | repository source + evidence |
 
 Examples:
@@ -17,6 +18,7 @@ Examples:
 /noar-rust review Tokio cancellation
 /noar-vue reference Pinia store reactivity
 /noar-docker review multi-stage build cache
+/noar-gstreamer review source switching and persistent SRT output
 /noar-video-processing review A/V timestamp continuity
 /noar-intelligent-development implement improve playout synchronization
 ```

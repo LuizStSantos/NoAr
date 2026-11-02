@@ -129,6 +129,15 @@ export const useSchedule = defineStore('schedule', {
             })
         },
 
+        /** Push the live on air later: by `minutes`, or `until` a time (HH:MM), this airing only. */
+        async extendLive(change: { minutes: number } | { until: string }): Promise<ActiveScheduleEvent> {
+            return authFetch<ActiveScheduleEvent>(`/api/schedule/${channelId()}/extend`, {
+                method: 'POST',
+                headers: headers(true),
+                body: JSON.stringify(change),
+            })
+        },
+
         async stop(): Promise<boolean> {
             return authFetch<boolean>(`/api/schedule/${channelId()}/stop`, {
                 method: 'POST',
@@ -150,6 +159,38 @@ export const useSchedule = defineStore('schedule', {
                 method: 'PUT',
                 headers: headers(true),
                 body: JSON.stringify({ path, url }),
+            })
+        },
+
+        /** An assembled program (`.program` file in the storage). */
+        async getProgram(path: string): Promise<AssembledProgram> {
+            return authFetch<AssembledProgram>(
+                `/api/schedule/${channelId()}/programs?path=${encodeURIComponent(path)}`,
+                { headers: headers(false) },
+            )
+        },
+
+        /** Save an assembled program; the clip lengths are read by the server. */
+        async saveProgram(
+            path: string,
+            title: string,
+            segments: (
+                | { kind: 'block'; source: string }
+                | { kind: 'break'; clips: string[] }
+                | { kind: 'live'; source: string; duration: number }
+            )[],
+        ): Promise<AssembledProgram> {
+            return authFetch<AssembledProgram>(`/api/schedule/${channelId()}/programs`, {
+                method: 'PUT',
+                headers: headers(true),
+                body: JSON.stringify({ path, title, segments }),
+            })
+        },
+
+        /** NDI sources announced on the network, by the name receivers list. */
+        async ndiSources(): Promise<string[]> {
+            return authFetch<string[]>(`/api/schedule/${channelId()}/lives/ndi`, {
+                headers: headers(false),
             })
         },
 

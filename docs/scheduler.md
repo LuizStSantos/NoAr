@@ -119,6 +119,7 @@ All routes need a login with access to the channel.
 | `DELETE` | `/api/schedule/{id}/{event}` | Remove an event |
 | `POST` | `/api/schedule/{id}/{event}/trigger` | Play an event now, cutting what is on air |
 | `POST` | `/api/schedule/{id}/stop` | Stop the event on air and return to the programme |
+| `POST` | `/api/schedule/{id}/extend` | Extend the live on air, this airing only: `{"minutes": 30}` from its current end, or `{"until": "13:30"}`. It goes on without a break; the programme comes back at the new end as the event says. Returns the event on air, with `ends_at` |
 | `GET` | `/api/schedule/{id}/status` | Event on air, waiting events and the next 24 hours |
 | `GET` | `/api/schedule/{id}/lives` | Lives in the storage |
 | `POST` | `/api/schedule/{id}/lives` | Create or update a live: `{"name", "url", "guide": {"title", "plot", "genre", "rating"}}` |
@@ -179,3 +180,35 @@ Scheduled graphics:
 `actions` takes the same fields as a [quick scene](logo.md) without its name:
 `logo` is `keep`, `show`, `hide` or `replace` (with `logo_image`); `lshape` is
 `keep`, `on` or `off`; `null` leaves a field as it is.
+
+## Extending or ending a live on air
+
+While a live is on air, the **Now** panel of the Player shows when it ends and
+offers **+5**, **+15** and **+30 min**, or **Extend until** a time: a live due
+to end at 13:00 can run until 13:30. The change applies to this airing only;
+the saved event keeps its times. The live goes on without reconnecting (its
+signal is kept connected), and the programme comes back at the new end, where
+it stopped or on the clock, as the event says. **End the live and go back to
+the programme** ends it at once. Encoders and automation can do the same with
+`POST /api/schedule/{id}/extend` and `POST /api/schedule/{id}/stop`.
+
+### Without logging in: the live key
+
+Encoders, Stream Decks and scripts that cannot log in use the channel's
+**live key**, created in the **Live by API** section at the bottom of the
+Scheduler, like the logo and SCTE-35 keys. That section has a tutorial with
+the addresses of this channel, ready to copy, and examples for curl, vMix,
+Stream Deck (Companion) and the API with a login; **By API…** in the Player's
+live controls opens it. Without a key these routes answer `403`; renewing
+it invalidates the previous one. Send it as `?key=` or in the `X-Live-Key`
+header; `GET` works too, for devices that only open URLs.
+
+```sh
+curl -X POST 'http://SERVER:8787/live/1/extend?key=KEY&minutes=30'
+curl -X POST 'http://SERVER:8787/live/1/extend?key=KEY&until=13:30'
+curl -X POST 'http://SERVER:8787/live/1/end?key=KEY'
+curl -X POST -H 'X-Live-Key: KEY' 'http://SERVER:8787/live/1/end'
+```
+
+`extend` answers the live on air with its new `ends_at`; `end` answers
+`null`. Both answer `409` when no live is on air.

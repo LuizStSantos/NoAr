@@ -66,13 +66,36 @@ pub fn validate_live_url(url: &str) -> Result<String, String> {
         .map(|(scheme, _)| scheme.to_ascii_lowercase())
         .unwrap_or_default();
 
+    // NDI names a source as receivers list it, `SERVER (Name)`, spaces
+    // included; every other address is one word.
+    if scheme == "ndi" {
+        let name = url["ndi://".len()..].trim();
+        if url.len() > MAX_URL_LENGTH || url.chars().any(char::is_control) || name.is_empty() {
+            return Err(
+                "an NDI address is ndi:// followed by the source name, such as ndi://STUDIO (Camera 1)"
+                    .to_string(),
+            );
+        }
+        return Ok(format!("ndi://{name}"));
+    }
+
+    // Video cards: a DeckLink input or a V4L2 capture device on this server.
+    if scheme == "decklink" {
+        noar_engine::parse_decklink(url, false)?;
+        return Ok(url.to_string());
+    }
+    if scheme == "v4l2" {
+        noar_engine::parse_v4l2(url)?;
+        return Ok(url.to_string());
+    }
+
     if url.len() > MAX_URL_LENGTH || url.chars().any(char::is_whitespace) {
         return Err("the address must be one line without spaces".to_string());
     }
 
     if !ALLOWED_SCHEMES.contains(&scheme.as_str()) {
         return Err(format!(
-            "unsupported address '{url}'; use srt://, rtmp://, rtmps://, http(s):// (HLS), udp://, rtsp:// or rist://"
+            "unsupported address '{url}'; use srt://, rtmp://, rtmps://, http(s):// (HLS), udp://, rtsp://, rist://, ndi://, decklink:// or v4l2://"
         ));
     }
 
@@ -93,6 +116,9 @@ pub fn live_protocol(url: &str) -> &'static str {
         "udp" => "UDP",
         "rtsp" => "RTSP",
         "rist" => "RIST",
+        "ndi" => "NDI",
+        "decklink" => "SDI",
+        "v4l2" => "V4L2",
         _ => "?",
     }
 }
@@ -103,13 +129,51 @@ pub async fn read_live_url(path: &Path) -> Result<String, ServiceError> {
     let content = fs::read_to_string(path)
         .await
         .map_err(|e| ServiceError::BadRequest(format!("cannot read {}: {e}", path.display())))?;
+    live_url_in(&content)
+        .map_err(|error| ServiceError::BadRequest(format!("{}: {error}", path.display())))
+}
+
+/// The first address line of a `.live` file's text.
+fn live_url_in(content: &str) -> Result<String, String> {
     let line = content
         .lines()
         .map(str::trim)
         .find(|line| !line.is_empty() && !line.starts_with('#'))
-        .ok_or_else(|| ServiceError::BadRequest(format!("{} is empty", path.display())))?;
+        .ok_or_else(|| "the live file is empty".to_string())?;
 
-    validate_live_url(line).map_err(ServiceError::BadRequest)
+    validate_live_url(line)
+}
+
+/// [`read_live_url`] for code that prepares a playlist outside async code.
+pub fn read_live_url_sync(path: &Path) -> Result<String, String> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+
+    live_url_in(&content)
+}
+
+/// The guide title and usual length (seconds) of the live whose `.live`
+/// file is `path`, from its folder's `tvshow.nfo`.
+pub fn live_guide_sync(path: &Path) -> (Option<String>, Option<f64>) {
+    let Some(text) = path
+        .parent()
+        .and_then(|folder| std::fs::read(folder.join("tvshow.nfo")).ok())
+    else {
+        return (None, None);
+    };
+    let nfo = parse_nfo(&String::from_utf8_lossy(&text));
+
+    (
+        nfo.title,
+        nfo.runtime.map(|minutes| f64::from(minutes) * 60.0),
+    )
+}
+
+/// Whether a source is a live's `.live` file in the storage.
+pub fn is_live_file(source: &str) -> bool {
+    Path::new(source)
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case(LIVE_EXTENSION))
 }
 
 /// A live as listed in the web interface.
@@ -123,6 +187,9 @@ pub struct LiveSource {
     pub protocol: String,
     /// Title from the folder's `.nfo`, if any.
     pub title: Option<String>,
+    /// Usual length in minutes from the `.nfo` (`<runtime>`): the end the
+    /// Scheduler proposes when the live is scheduled.
+    pub runtime: Option<u32>,
 }
 
 /// Every `.live` file in the storage, by path.
@@ -168,7 +235,7 @@ async fn describe_live(storage: &Path, path: &Path) -> Option<LiveSource> {
         .or_else(|| path.file_stem())?
         .to_string_lossy()
         .to_string();
-    let title = folder_title(folder).await;
+    let (title, runtime) = folder_guide(folder).await;
 
     Some(LiveSource {
         path: relative,
@@ -176,13 +243,17 @@ async fn describe_live(storage: &Path, path: &Path) -> Option<LiveSource> {
         protocol: live_protocol(&url).to_string(),
         url,
         title,
+        runtime,
     })
 }
 
-async fn folder_title(folder: &Path) -> Option<String> {
-    let bytes = fs::read(folder.join("tvshow.nfo")).await.ok()?;
+async fn folder_guide(folder: &Path) -> (Option<String>, Option<u32>) {
+    let Ok(bytes) = fs::read(folder.join("tvshow.nfo")).await else {
+        return (None, None);
+    };
+    let nfo = parse_nfo(&String::from_utf8_lossy(&bytes));
 
-    parse_nfo(&String::from_utf8_lossy(&bytes)).title
+    (nfo.title, nfo.runtime)
 }
 
 /// Guide data written to the live's `tvshow.nfo`.
@@ -376,6 +447,35 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn accepts_video_card_inputs() {
+        assert_eq!(
+            validate_live_url(" decklink://1?mode=1080i5994&connection=sdi ").unwrap(),
+            "decklink://1?mode=1080i5994&connection=sdi"
+        );
+        assert_eq!(live_protocol("decklink://1"), "SDI");
+        assert!(validate_live_url("decklink://x").is_err());
+        assert_eq!(
+            validate_live_url("v4l2:///dev/video0?audio=hw:1,0").unwrap(),
+            "v4l2:///dev/video0?audio=hw:1,0"
+        );
+        assert_eq!(live_protocol("v4l2:///dev/video0"), "V4L2");
+        assert!(validate_live_url("v4l2:///etc/passwd").is_err());
+    }
+
+    #[test]
+    fn accepts_ndi_sources_by_their_listed_name() {
+        assert_eq!(
+            validate_live_url("  NDI://STUDIO (Camera 1) ").unwrap(),
+            "ndi://STUDIO (Camera 1)"
+        );
+        assert_eq!(live_protocol("ndi://STUDIO (Camera 1)"), "NDI");
+        assert!(validate_live_url("ndi://").is_err());
+        assert!(validate_live_url("ndi://A\nB").is_err());
+        // Other addresses still take no spaces.
+        assert!(validate_live_url("srt://host:9000 extra").is_err());
     }
 
     #[test]

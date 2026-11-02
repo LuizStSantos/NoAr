@@ -13,7 +13,9 @@ has commercials of its own.
 ## What it needs
 
 - An **SRT or UDP output** (Settings › Output). SCTE-35 travels inside the
-  MPEG-TS next to the video. HLS and RTMP outputs carry no SCTE-35 yet; with
+  MPEG-TS next to the video. This integration branch also implements experimental
+  native HLS signaling, currently **NOT_READY** pending runtime validation; see
+  [the integration checkpoint](gstreamer-integration.md). RTMP carries no SCTE-35; with
   them the page says so and nothing is marked.
 - A receiver that keeps the SCTE-35 track. **A stock MediaMTX drops it** (it
   only keeps the video, audio, subtitle and KLV tracks it knows), so a

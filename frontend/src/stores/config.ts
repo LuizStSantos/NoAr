@@ -26,6 +26,7 @@ export const useConfig = defineStore('config', {
             udp: { video: [], audio: [] },
             custom: { video: [], audio: [] },
             recording: { video: [], audio: [] },
+            ndi_unavailable: null,
         } as PlayoutCodecOptions,
         currentUser: 0,
         configUser: {} as User,
@@ -178,6 +179,17 @@ export const useConfig = defineStore('config', {
                 .catch(() => {
                     indexStore.msgAlert('error', i18n.t('config.noPlayoutConfig'), 3)
                 })
+        },
+
+        /** Video card ports on the server and the DeckLink modes. */
+        async getVideoDevices(): Promise<VideoDevices> {
+            const authStore = useAuth()
+            const id = this.channels[this.i]?.id
+
+            return authFetch<VideoDevices>(`/api/playout/devices/${id}`, {
+                method: 'GET',
+                headers: authStore.authHeader,
+            })
         },
 
         async setPlayoutConfig(obj: any) {

@@ -1,43 +1,17 @@
 use std::{
     collections::HashSet,
-    ffi::CString,
     fs,
     io::ErrorKind,
     path::{Path, PathBuf},
-    ptr,
     time::{Duration, SystemTime},
 };
 
+use crate::utils::config::HlsVariant;
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next as ffmpeg;
-
-use crate::utils::{
-    config::{HlsSubtitle, HlsVariant},
-    ffmpeg_capabilities::ffmpeg_capabilities,
-};
 
 const HLS_RESUME_MAX_AGE: Duration = Duration::from_secs(60);
 
-pub(super) fn playlist_path(path: &str, variants: &[HlsVariant]) -> Result<String> {
-    if variants.is_empty() {
-        return Ok(path.to_string());
-    }
-
-    let path = Path::new(path);
-    path.file_name()
-        .and_then(|file_name| file_name.to_str())
-        .context("HLS playlist path must include a file name")?;
-    Ok(path
-        .with_file_name("%v.m3u8")
-        .to_string_lossy()
-        .into_owned())
-}
-
-/// Resolves the concrete, on-disk playlist path ffmpeg writes for a single
-/// variant once it substitutes `%v` (produced by [`playlist_path`]) with the
-/// variant's `name` from `var_stream_map`. Callers (e.g. a watchdog that
-/// checks the playlist's mtime) need this to know which file to observe when
-/// real bitrate variants are configured.
+/// Resolve a rendition's manifest for the writer and the HLS watchdog.
 pub fn resolved_variant_playlist_path(path: &str, variant_name: &str) -> Result<String> {
     let path = Path::new(path);
     path.file_name()
@@ -63,40 +37,6 @@ pub(super) fn validate_variants(variants: &[HlsVariant]) -> Result<()> {
     }
 
     Ok(())
-}
-
-pub(super) fn output_context(path: &str) -> Result<ffmpeg::format::context::Output> {
-    let path = CString::new(path).context("HLS output path contains a null byte")?;
-    let format = CString::new("hls").expect("static HLS format name is valid");
-
-    unsafe {
-        let mut context = ptr::null_mut();
-        let result = ffmpeg::ffi::avformat_alloc_output_context2(
-            &mut context,
-            ptr::null_mut(),
-            format.as_ptr(),
-            path.as_ptr(),
-        );
-
-        if result < 0 {
-            if !context.is_null() {
-                ffmpeg::ffi::avformat_free_context(context);
-            }
-
-            return Err(ffmpeg::Error::from(result).into());
-        }
-
-        if context.is_null() {
-            return Err(ffmpeg::Error::Unknown.into());
-        }
-
-        Ok(ffmpeg::format::context::Output::wrap(context))
-    }
-}
-
-pub(super) fn remove_master_playlist(path: &str) -> Result<()> {
-    let master = master_playlist_path(path);
-    remove_playlist(&master)
 }
 
 pub(super) fn prepare_resume_start_number(
@@ -409,48 +349,6 @@ fn playlist_uri(line: &str) -> Option<&str> {
     )
 }
 
-pub(super) fn segment_pattern(path: &str) -> String {
-    Path::new(path)
-        .with_file_name("%v_%d.ts")
-        .to_string_lossy()
-        .into_owned()
-}
-
-pub(super) fn standalone_segment_pattern(path: &str) -> String {
-    let path = Path::new(path);
-    let stem = path
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .unwrap_or("stream");
-    path.with_file_name(format!("{stem}_%d.ts"))
-        .to_string_lossy()
-        .into_owned()
-}
-
-pub(super) fn var_stream_map(variants: &[HlsVariant], subtitle: Option<&HlsSubtitle>) -> String {
-    variants
-        .iter()
-        .enumerate()
-        .map(|(index, variant)| {
-            if let Some(subtitle) = subtitle.filter(|_| index == 0) {
-                let default = if subtitle.default { "YES" } else { "NO" };
-                let subtitle_name = if ffmpeg_capabilities().features.hls_subtitle_name {
-                    format!(",sname:{}", subtitle.name)
-                } else {
-                    String::new()
-                };
-                format!(
-                    "v:{index},a:{index},s:0,sgroup:subs,name:{}{subtitle_name},language:{},default:{default}",
-                    variant.name, subtitle.language
-                )
-            } else {
-                format!("v:{index},a:{index},name:{}", variant.name)
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 #[cfg(test)]
 mod tests {
     use std::{env, process};
@@ -467,30 +365,6 @@ mod tests {
         }
     }
 
-    fn subtitle() -> HlsSubtitle {
-        HlsSubtitle {
-            name: "Deutsch".to_string(),
-            language: "de-DE".to_string(),
-            default: false,
-        }
-    }
-
-    #[test]
-    fn playlist_path_is_unchanged_without_variants() {
-        assert_eq!(
-            playlist_path("live/index.m3u8", &[]).unwrap(),
-            "live/index.m3u8"
-        );
-    }
-
-    #[test]
-    fn playlist_path_uses_variant_name_as_file_name() {
-        assert_eq!(
-            playlist_path("live/index.m3u8", &[variant("high")]).unwrap(),
-            "live/%v.m3u8"
-        );
-    }
-
     #[test]
     fn resolved_variant_path_uses_variant_name() {
         assert_eq!(
@@ -500,8 +374,8 @@ mod tests {
     }
 
     #[test]
-    fn playlist_path_rejects_missing_file_name() {
-        assert!(playlist_path("/", &[variant("high")]).is_err());
+    fn variant_playlist_path_rejects_missing_file_name() {
+        assert!(resolved_variant_playlist_path("/", "high").is_err());
     }
 
     #[test]
@@ -512,19 +386,6 @@ mod tests {
     #[test]
     fn validate_variants_accepts_unique_names() {
         assert!(validate_variants(&[variant("high"), variant("low")]).is_ok());
-    }
-
-    #[test]
-    fn segment_pattern_prefixes_file_name() {
-        assert_eq!(segment_pattern("live/index.m3u8"), "live/%v_%d.ts");
-    }
-
-    #[test]
-    fn standalone_segment_pattern_uses_playlist_stem() {
-        assert_eq!(
-            standalone_segment_pattern("live/stream.m3u8"),
-            "live/stream_%d.ts"
-        );
     }
 
     #[test]
@@ -645,23 +506,5 @@ mod tests {
         assert!(!dir.join("stream_1.ts").exists());
         assert!(dir.join("other_0.ts").exists());
         fs::remove_dir_all(&dir).ok();
-    }
-
-    #[test]
-    fn var_stream_map_without_subtitles() {
-        let map = var_stream_map(&[variant("high"), variant("low")], None);
-        assert_eq!(map, "v:0,a:0,name:high v:1,a:1,name:low");
-    }
-
-    #[test]
-    fn var_stream_map_links_subtitles_to_first_variant_only() {
-        let subtitle = subtitle();
-        let map = var_stream_map(&[variant("high"), variant("low")], Some(&subtitle));
-        let expected = if ffmpeg_capabilities().features.hls_subtitle_name {
-            "v:0,a:0,s:0,sgroup:subs,name:high,sname:Deutsch,language:de-DE,default:NO v:1,a:1,name:low"
-        } else {
-            "v:0,a:0,s:0,sgroup:subs,name:high,language:de-DE,default:NO v:1,a:1,name:low"
-        };
-        assert_eq!(map, expected);
     }
 }

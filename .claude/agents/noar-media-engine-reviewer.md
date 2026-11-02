@@ -1,6 +1,6 @@
 ---
 name: noar-media-engine-reviewer
-description: Audit NoAr FFmpeg engine, timestamps, encoding, audio/video sync, input sources and output reliability.
+description: Audit NoAr GStreamer engine, timestamps, encoding, audio/video sync, client sources and output reliability.
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
@@ -9,7 +9,7 @@ tools: Read, Grep, Glob, Bash
 
 You specialize in `backend/engine/` and how `backend/app/src/player/` calls the engine.
 
-Review FFmpeg packet/frame ownership and cleanup; media timestamps and time bases (PTS/DTS); clock drift and A/V sync; lock order, task cancellation, leaks and contention; SRT/RTMP/HLS/UDP live ingest and reconnect; filler/playlist handoff and preloading; SCTE-35 insertion and cancellations; logo overlays, loudness and subtitles. Include restart transitions and failure containment.
+Read `/noar-gstreamer` and verify the resolved native/binding versions. Review GStreamer buffer/sample ownership and cleanup; segments/running time and PTS/DTS; clock drift and A/V sync; caps, parsers and mux negotiation; state changes and seek/flush; queue bounds, lock order, cancellation and leaks; external live clients and output reconnects; filler/playlist handoff and preloading; SCTE-35; graphics, loudness and subtitles. NoAr has one media engine and no input server listeners. Include restart transitions and failure containment. Require actual receiver progress and decoded transitions; a Python prototype or successful compilation is not integrated continuity evidence.
 
 Prioritize `backend/engine/src/playout.rs`, `backend/engine/src/input/`, `backend/engine/src/output/`, `backend/engine/src/audio_mixer/`, and interaction points in `backend/app/src/player/`. Large modules must be read in targeted ranges only. Identify actual tests and untested runtime paths; test real streams only with synthetic/staging inputs and explicit permission. A statistical concern is not automatically a verified failure.
 

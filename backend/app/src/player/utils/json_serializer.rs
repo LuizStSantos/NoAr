@@ -73,10 +73,49 @@ fn default_channel() -> String {
     "Channel 1".to_string()
 }
 
+/// Lives of the storage (their `.live` file) air at their current address,
+/// under their guide title, for the length the playlist gives them. A live
+/// whose file cannot be read keeps its slot and fails over like a missing
+/// clip.
+fn resolve_lives(storage: &Path, entries: &mut [Media]) {
+    use crate::utils::schedule::live::{is_live_file, live_guide_sync, read_live_url_sync};
+
+    for entry in entries
+        .iter_mut()
+        .filter(|entry| is_live_file(&entry.source))
+    {
+        let path = if Path::new(&entry.source).is_absolute() {
+            Path::new(&entry.source).to_path_buf()
+        } else {
+            storage.join(&entry.source)
+        };
+
+        match read_live_url_sync(&path) {
+            Ok(url) => {
+                if entry.title.is_none() {
+                    entry.title = live_guide_sync(&path).0.or_else(|| {
+                        path.parent()
+                            .and_then(Path::file_name)
+                            .map(|name| name.to_string_lossy().to_string())
+                    });
+                }
+                entry.source = url;
+            }
+            Err(error) => error!("Live {} cannot be aired: {error}", entry.source),
+        }
+    }
+}
+
 pub fn set_defaults(config: &PlayoutConfig, playlist: &mut JsonPlaylist) {
     let mut start_sec = playlist.start_sec.unwrap();
     let mut length = 0.0;
     let mut commercials = CommercialFolders::new(&config.storage.path);
+    // Assembled programs air as their blocks and breaks, as they are now.
+    playlist.program = crate::utils::assembled::expand_playlist(
+        &config.storage.path,
+        std::mem::take(&mut playlist.program),
+    );
+    resolve_lives(&config.storage.path, &mut playlist.program);
 
     // Add extra values to every media clip
     for (i, item) in playlist.program.iter_mut().enumerate() {
@@ -223,4 +262,50 @@ pub async fn read_json(
     error!(channel = id; "Playlist <span class=\"log-addr\">{current_file}</span> not exist!");
 
     JsonPlaylist::new(date, start_sec)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lives_air_at_their_current_address_under_their_title() {
+        let storage =
+            std::env::temp_dir().join(format!("noar-live-entries-{}", std::process::id()));
+        let folder = storage.join("Lives/Jornal");
+        std::fs::create_dir_all(&folder).unwrap();
+        std::fs::write(
+            folder.join("signal.live"),
+            "# studio\nsrt://10.0.0.5:9000?mode=caller\n",
+        )
+        .unwrap();
+        std::fs::write(
+            folder.join("tvshow.nfo"),
+            "<tvshow><title>Jornal Ao Vivo</title><runtime>30</runtime></tvshow>",
+        )
+        .unwrap();
+
+        let mut entries = vec![
+            Media {
+                source: "Lives/Jornal/signal.live".to_string(),
+                out: 600.0,
+                duration: 600.0,
+                ..Media::default()
+            },
+            Media {
+                source: "Lives/Gone/signal.live".to_string(),
+                out: 60.0,
+                ..Media::default()
+            },
+        ];
+        resolve_lives(&storage, &mut entries);
+
+        assert_eq!(entries[0].source, "srt://10.0.0.5:9000?mode=caller");
+        assert_eq!(entries[0].title.as_deref(), Some("Jornal Ao Vivo"));
+        assert_eq!(entries[0].out, 600.0);
+        // An unreadable live keeps its slot.
+        assert_eq!(entries[1].source, "Lives/Gone/signal.live");
+
+        std::fs::remove_dir_all(storage).unwrap();
+    }
 }

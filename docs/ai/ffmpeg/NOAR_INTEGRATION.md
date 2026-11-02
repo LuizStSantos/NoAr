@@ -1,11 +1,16 @@
 # FFmpeg ↔ NoAr integration notes
 
+GStreamer is the sole playout engine on the integration branch. Start media
+research with `docs/ai/tech-references/gstreamer.md` and `/noar-gstreamer`.
+FFmpeg remains a memory-frame and codec/test dependency.
+
 ## Where the FFmpeg code lives
 
 - Root Cargo workspace has `backend/app` (`noar`) and `backend/engine` (`noar-engine`).
 - `backend/engine/Cargo.toml` declares `ffmpeg-next` with selected native features and optional `ffmpeg-filter` / `ffmpeg-device` feature flags.
-- Core playback/timestamps: `backend/engine/src/playout.rs` and related `input/` modules.
-- Encoding and muxing: `backend/engine/src/output/encoded.rs`, plus protocol-specific output modules.
+- Native playback/timestamps: `backend/engine/src/playout.rs` and `input/gstreamer.rs` use GStreamer.
+- Native encoding/muxing: `backend/engine/src/output/gstreamer_output.rs`, `output/pipeline.rs` and `output/link.rs`.
+- Remaining FFmpeg memory adapter: `backend/engine/src/utils/ffmpeg.rs`; frame containers are also used by the Rust compositor/audio code. Test modules may use FFmpeg to generate independent fixtures.
 - Broadcast cue insertion: `backend/engine/src/output/scte35.rs`.
 - Control/scheduling: `backend/app/src/player/`.
 

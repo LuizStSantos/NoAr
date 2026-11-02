@@ -20,6 +20,7 @@ No account-level skill installation or additional ZIP is required when the repos
 | `noar-rust` | `.claude/skills/noar-rust/SKILL.md` |
 | `noar-vue` | `.claude/skills/noar-vue/SKILL.md` |
 | `noar-docker` | `.claude/skills/noar-docker/SKILL.md` |
+| `noar-gstreamer` | `.claude/skills/noar-gstreamer/SKILL.md` (primary media runtime reference) |
 | `noar-ffmpeg` | `.claude/skills/noar-ffmpeg/SKILL.md` |
 | `noar-video-processing` | `.claude/skills/noar-video-processing/SKILL.md` |
 

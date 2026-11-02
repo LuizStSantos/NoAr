@@ -7,6 +7,10 @@ paths:
 
 # FFmpeg source-reference rule (NoAr)
 
+GStreamer is the sole playout runtime on the integration branch. Start engine
+research with `/noar-gstreamer`; this rule applies only when a remaining FFmpeg
+frame-memory interface, codec dependency or test fixture specifically needs it.
+
 When a task involving these files depends on FFmpeg details, consult `/noar-ffmpeg` or request the `noar-ffmpeg-docs-specialist` to examine the **relevant** official documentation. Do not spawn the specialist for trivial Rust edits or rename-only tasks. This is a documentation adviser, not a new audit council member.
 
 - Official index: `https://www.ffmpeg.org/documentation.html`

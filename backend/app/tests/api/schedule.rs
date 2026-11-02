@@ -297,3 +297,368 @@ async fn moving_an_event_lets_it_play_again_at_the_new_time() {
     assert_eq!(updated["start_time"], "21:00:00");
     assert_eq!(runs(pool).await, ["2000-01-01"]);
 }
+
+#[tokio::test]
+#[serial]
+async fn assembled_programs_are_saved_listed_scheduled_and_updated_everywhere() {
+    let fixture = security_fixture().await;
+    let token = access_token(&fixture.state, 1).await;
+    let storage = fixture.root.join("storage");
+    let media = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests_assets/storage/media_mix");
+    for folder in ["Shows", "Ads", "Programs"] {
+        tokio::fs::create_dir_all(storage.join(folder))
+            .await
+            .unwrap();
+    }
+    tokio::fs::copy(media.join("av_sync.mp4"), storage.join("Shows/b1.mp4"))
+        .await
+        .unwrap();
+    tokio::fs::copy(media.join("no_audio.mp4"), storage.join("Shows/b2.mp4"))
+        .await
+        .unwrap();
+    tokio::fs::copy(media.join("ad.mp4"), storage.join("Ads/spot.mp4"))
+        .await
+        .unwrap();
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/file/1/commercial",
+        Some(&token),
+        json!({"path": "Ads", "commercial": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let program = |segments: serde_json::Value| json!({"path": "Programs/Jornal ep 12.program", "title": "Jornal da Noite", "segments": segments});
+    let block = |source: &str| json!({"kind": "block", "source": source});
+
+    // Unauthenticated, a commercial outside a commercials folder, a block
+    // that is a commercial, and no block at all are refused.
+    let valid = program(json!([
+        block("Shows/b1.mp4"),
+        {"kind": "break", "clips": ["Ads/spot.mp4"]},
+        block("Shows/b2.mp4")
+    ]));
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        None,
+        valid.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    for refused in [
+        program(json!([block("Shows/b1.mp4"), {"kind": "break", "clips": ["Shows/b2.mp4"]}])),
+        program(json!([block("Ads/spot.mp4")])),
+        program(json!([{"kind": "break", "clips": ["Ads/spot.mp4"]}])),
+    ] {
+        let (status, body) = send(
+            &fixture,
+            "PUT",
+            "/api/schedule/1/programs",
+            Some(&token),
+            refused,
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    }
+
+    // A path out of the storage is refused like everywhere else.
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        program(json!([block("../secret.mp4")])),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, saved) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        valid,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["segments"].as_array().unwrap().len(), 3);
+    let length = |segment: &serde_json::Value| {
+        segment["out"].as_f64().unwrap() - segment["in"].as_f64().unwrap()
+    };
+    let first = length(&saved["segments"][0]);
+    let spot = length(&saved["segments"][1]["clips"][0]);
+    let second = length(&saved["segments"][2]);
+    assert!(first > 0.0 && spot > 0.0 && second > 0.0, "{saved}");
+    let total = first + spot + second;
+
+    let (status, read) = send(
+        &fixture,
+        "GET",
+        "/api/schedule/1/programs?path=Programs/Jornal%20ep%2012.program",
+        Some(&token),
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    assert_eq!(read, saved);
+
+    // The storage lists it as a program with its whole length.
+    let (_, folder) = send(
+        &fixture,
+        "POST",
+        "/api/file/1/browse",
+        Some(&token),
+        json!({"source": "/Programs"}),
+    )
+    .await;
+    let listed = &folder["files"][0];
+    assert_eq!(listed["name"], "Jornal ep 12.program");
+    assert_eq!(listed["program"], true);
+    assert!(
+        (listed["duration"].as_f64().unwrap() - total).abs() < 0.01,
+        "{folder}"
+    );
+
+    // A scheduled event takes its length, and the new one after an edit.
+    let (status, event) = send(
+        &fixture,
+        "POST",
+        "/api/schedule/1",
+        Some(&token),
+        json!({
+            "kind": "media",
+            "sources": ["Programs/Jornal ep 12.program"],
+            "start_date": "2026-10-14",
+            "start_time": "20:00",
+            "entry_mode": "after_clip",
+            "after_mode": "continue"
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{event}");
+    assert!(
+        (event["duration"].as_f64().unwrap() - total).abs() < 0.01,
+        "{event}"
+    );
+
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        program(json!([block("Shows/b1.mp4")])),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, events) = send(
+        &fixture,
+        "GET",
+        "/api/schedule/1/events",
+        Some(&token),
+        json!(null),
+    )
+    .await;
+    let updated = events
+        .as_array()
+        .and_then(|events| events.iter().find(|item| item["id"] == event["id"]))
+        .cloned()
+        .unwrap_or_else(|| panic!("{events}"));
+    assert!(
+        (updated["duration"].as_f64().unwrap() - first).abs() < 0.01,
+        "{updated}"
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn lives_go_into_programs_and_list_with_their_usual_length() {
+    let fixture = security_fixture().await;
+    let token = access_token(&fixture.state, 1).await;
+    let storage = fixture.root.join("storage");
+    let media = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests_assets/storage/media_mix");
+    for folder in ["Shows", "Programs", "Lives/Jornal"] {
+        tokio::fs::create_dir_all(storage.join(folder))
+            .await
+            .unwrap();
+    }
+    tokio::fs::copy(media.join("av_sync.mp4"), storage.join("Shows/b1.mp4"))
+        .await
+        .unwrap();
+    tokio::fs::write(
+        storage.join("Lives/Jornal/signal.live"),
+        "srt://10.0.0.5:9000?mode=caller\n",
+    )
+    .await
+    .unwrap();
+    tokio::fs::write(
+        storage.join("Lives/Jornal/tvshow.nfo"),
+        "<tvshow><title>Jornal</title><runtime>30</runtime></tvshow>",
+    )
+    .await
+    .unwrap();
+
+    // Storage lists the live with its usual length.
+    let (_, folder) = send(
+        &fixture,
+        "POST",
+        "/api/file/1/browse",
+        Some(&token),
+        json!({"source": "/Lives/Jornal"}),
+    )
+    .await;
+    let live = folder["files"]
+        .as_array()
+        .and_then(|files| files.iter().find(|file| file["name"] == "signal.live"))
+        .cloned()
+        .unwrap_or_else(|| panic!("{folder}"));
+    assert_eq!(live["live"], true);
+    assert_eq!(live["duration"], 1800.0);
+
+    let program = |segments: serde_json::Value| json!({"path": "Programs/Com live.program", "title": "Com live", "segments": segments});
+    for (refused, why) in [
+        (
+            json!([{"kind": "live", "source": "Lives/Jornal/signal.live", "duration": 0}]),
+            "no length",
+        ),
+        (
+            json!([{"kind": "live", "source": "Shows/b1.mp4", "duration": 60}]),
+            "not a live",
+        ),
+    ] {
+        let (status, body) = send(
+            &fixture,
+            "PUT",
+            "/api/schedule/1/programs",
+            Some(&token),
+            program(refused),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{why}: {body}");
+    }
+
+    let (status, saved) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        program(json!([
+            {"kind": "block", "source": "Shows/b1.mp4"},
+            {"kind": "live", "source": "Lives/Jornal/signal.live", "duration": 1200}
+        ])),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["segments"][1]["kind"], "live");
+    assert_eq!(saved["segments"][1]["out"], 1200.0);
+}
+
+#[tokio::test]
+#[serial]
+async fn extending_a_live_needs_one_on_air_and_a_clear_request() {
+    let fixture = security_fixture().await;
+    let token = access_token(&fixture.state, 1).await;
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/schedule/1/extend",
+        None,
+        json!({"minutes": 30}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    for request in [json!({"minutes": 30}), json!({"until": "13:30"})] {
+        let (status, body) = send(
+            &fixture,
+            "POST",
+            "/api/schedule/1/extend",
+            Some(&token),
+            request,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT, "nothing on air: {body}");
+        assert!(body.to_string().contains("no live"), "{body}");
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn the_live_can_be_controlled_with_the_channel_live_key() {
+    let fixture = security_fixture().await;
+    // Keys are set by administrators.
+    let token = access_token(&fixture.state, 2).await;
+
+    // Without a key the route is off.
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/live/1/end?key=anything",
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, created) = send(
+        &fixture,
+        "POST",
+        "/api/playout/config/1/keys/live",
+        Some(&token),
+        json!({"action": "renew"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    let key = created["key"].as_str().unwrap().to_string();
+    assert_eq!(key.len(), 32);
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/live/1/extend?key=wrong&minutes=30",
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    // The right key, by query or header, reaches the live: none is on air.
+    let extend = format!("/live/1/extend?key={key}&minutes=30");
+    let (status, body) = send(&fixture, "POST", &extend, None, json!(null)).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(
+            axum::http::Request::builder()
+                .method("POST")
+                .uri("/live/1/end")
+                .header("x-live-key", &key)
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+
+    let (status, _) = send(&fixture, "POST", "/live/1/rewind?key=x", None, json!(null)).await;
+    assert!(status.is_client_error());
+
+    // Clearing the key turns the route off again.
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/playout/config/1/keys/live",
+        Some(&token),
+        json!({"action": "clear"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = send(&fixture, "POST", &extend, None, json!(null)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}

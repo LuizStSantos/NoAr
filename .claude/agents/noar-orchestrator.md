@@ -32,10 +32,10 @@ You are the delegated coordinator of **complex** NoAr workflows. The parent Clau
 
 ## Technology documentation routing
 
-For multi-stage work that genuinely needs outside documentation, select the smallest applicable project reference skill: `.claude/skills/noar-rust/SKILL.md` for Rust/API/SQLite, `noar-vue/SKILL.md` for Vue/TypeScript, `noar-docker/SKILL.md` for containers, `noar-video-processing/SKILL.md` for playout pipelines, and `noar-ffmpeg/SKILL.md` for FFmpeg APIs. Validate exact versions and return concise official sources to the existing implementer. These skills are **not subprocess agents** and do not vote. Do not delegate unnecessarily or duplicate reference research.
+For multi-stage work needing documentation, select the smallest applicable reference: `.claude/skills/noar-rust/SKILL.md` for Rust/API/SQLite, `noar-vue/SKILL.md` for frontend, `noar-docker/SKILL.md` for containers, and `noar-gstreamer/SKILL.md` with `noar-video-processing/SKILL.md` for the single GStreamer engine. Use `noar-ffmpeg/SKILL.md` only for remaining frame-memory/fixture interfaces. Validate exact versions and installed plugin properties/caps. These skills are **not subprocess agents** and do not vote. Do not delegate unnecessarily or duplicate research.
 
 ## FFmpeg reference delegation
 
-When complex media work needs external FFmpeg API/protocol evidence, send a **focused, read-only** question to `noar-ffmpeg-docs-specialist` using paths/symbols from the repository map. Ask for relevant official URLs, installed-version / `ffmpeg-next` caveats and staging test proposals. Do not delegate formatting or unrelated tasks.
+When remaining frame-memory or fixture work needs external FFmpeg API evidence, send a **focused, read-only** question to `noar-ffmpeg-docs-specialist` using paths/symbols from the repository map. Ask for relevant official URLs, installed-version / `ffmpeg-next` caveats and staging test proposals. GStreamer playback, transport and pipeline questions use `noar-gstreamer`. Do not delegate formatting or unrelated tasks.
 
 If nested delegation is not supported, provide the brief to the parent Claude session. The adviser is **non-voting** and never replaces `noar-media-engine-reviewer`; Integration QA handles observed runtime evidence and Documentation Guardian checks documentation impact. Follow `.claude/rules/ffmpeg-reference.md` and `docs/ai/ffmpeg/AGENT_HANDOFF.md`.

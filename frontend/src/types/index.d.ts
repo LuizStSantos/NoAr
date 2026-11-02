@@ -42,6 +42,7 @@ declare global {
         audio_codec: string | null
         audio_options: string
         audio_bitrate: number | null
+        audio_sample_rate: number | null
         channel_id: number
     }
 
@@ -80,6 +81,40 @@ declare global {
         audio: CodecOption[]
     }
 
+    /** A clip of an assembled program, with the part that airs. */
+    interface ProgramClip {
+        source: string
+        in: number
+        out: number
+    }
+
+    type ProgramSegment =
+        | ({ kind: 'block' } & ProgramClip)
+        | { kind: 'break'; clips: ProgramClip[] }
+        /** A live of the storage (its `.live` file) for `out` seconds. */
+        | ({ kind: 'live' } & ProgramClip)
+
+    /** An assembled program: blocks in order and commercial breaks between them. */
+    interface AssembledProgram {
+        title: string
+        segments: ProgramSegment[]
+    }
+
+    /** A video card port on the server. */
+    interface VideoDevice {
+        kind: 'decklink' | 'v4l2'
+        direction: 'input' | 'output'
+        name: string
+        /** `decklink://N` or `v4l2:///dev/videoN`. */
+        address: string
+    }
+
+    interface VideoDevices {
+        devices: VideoDevice[]
+        /** DeckLink mode names, such as `1080i5994`. */
+        modes: string[]
+    }
+
     interface PlayoutCodecOptions {
         hls: OutputCodecOptions
         rtmp: OutputCodecOptions
@@ -87,6 +122,8 @@ declare global {
         udp: OutputCodecOptions
         custom: OutputCodecOptions
         recording: OutputCodecOptions
+        /** Why NDI output cannot be used on this server; null when it can. */
+        ndi_unavailable: string | null
     }
 
     interface Token {
@@ -183,6 +220,10 @@ declare global {
         logo_marks?: boolean
         /** The part that airs by default, saved in its marks. */
         trim?: { from: number; to: number } | null
+        /** An assembled program (`.program`): blocks and breaks under one title. */
+        program?: boolean
+        /** A live's address file (`.live`); its length is the live's usual one. */
+        live?: boolean
     }
 
     interface Folder {
@@ -247,6 +288,8 @@ declare global {
         credits: Credit[]
         season: number | null
         episode: number | null
+        /** Usual length in minutes (`<runtime>`); a live's default airtime. */
+        runtime: number | null
     }
 
     /** The `.nfo` sheet of a program folder or a clip, with its artwork. */
@@ -314,10 +357,6 @@ declare global {
         index: number
         audio?: AudioLevel
         loudness?: LiveLoudnessMetrics
-        ingest: boolean
-        ingest_listener_id?: number | null
-        ingest_listener_name?: string | null
-        ingest_listener_backend?: string | null
         mode: string
         elapsed: number
         shift: number
@@ -326,6 +365,18 @@ declare global {
         title?: string
         /** How a network output (SRT, RTMP, UDP) reaches its destination. */
         output_link?: OutputLinkStatus
+        /** The playout is off air and retried; the media above is not airing. */
+        failure?: PlayoutFailure | null
+    }
+
+    interface PlayoutFailure {
+        /** The error, addresses cut to their host. */
+        message: string
+        /** Unix seconds of the first failure in a row. */
+        since: number
+        /** Seconds to the next attempt. */
+        retry_in: number
+        attempts: number
     }
 
     interface OutputLinkStatus {

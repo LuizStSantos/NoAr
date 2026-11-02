@@ -33,10 +33,6 @@ lshape_corner: string | null,
  */
 lshape_scale: number | null, };
 
-export type Ingest = { listeners: Array<LiveInput>, };
-
-export type LiveInput = { id: number, priority: number, enabled: boolean, name: string, backend: string, identifier: string, options: { [key in string]: string }, demuxer_options: { [key in string]: string }, };
-
 export type Logging = { ffmpeg_level: string, ingest_level: string, detect_silence: boolean, ignore_lines: Array<string>, };
 
 /**
@@ -52,11 +48,11 @@ export type NotificationLevel = "INFO" | "WARNING" | "ERROR" | "FATAL";
 
 export type Output = { id: number, mode: OutputMode, stream_url: string, stream_type: StreamType, stream_format: string, hls_playlist_name: string, hls_segment_duration: number, hls_list_size: number, desktop_fullscreen: boolean, width: number, height: number, fps: number, video_codec: string, video_options: { [key in string]: string }, 
 /**
- * FFmpeg AVIO/protocol options used while opening a network stream.
+ * GStreamer transport options used while opening a network stream.
  */
 protocol_options: { [key in string]: string }, 
 /**
- * FFmpeg muxer options for this output, such as HLS `hls_flags`.
+ * GStreamer muxer options and supported legacy HLS options for this output.
  */
 muxer_options: { [key in string]: string }, 
 /**
@@ -64,9 +60,14 @@ muxer_options: { [key in string]: string },
  */
 metadata_options: { [key in string]: string }, audio_codec: string, 
 /**
- * FFmpeg AVOptions for the selected audio encoder.
+ * GStreamer properties and supported legacy options for the selected audio encoder.
  */
 audio_options: { [key in string]: string }, audio_bitrate: number, 
+/**
+ * Encoded output audio sample rate in Hz (32000, 44100 or 48000). The
+ * engine processes at 48 kHz and resamples just before the encoder.
+ */
+audio_sample_rate: number, 
 /**
  * Adaptive HLS renditions, one per entry, each formatted as
  * `NAME:WIDTHxHEIGHT:VIDEO_BITRATE[:AUDIO_BITRATE]` (e.g.
@@ -76,7 +77,7 @@ audio_options: { [key in string]: string }, audio_bitrate: number,
  */
 hls_variants: Array<string>, };
 
-export type OutputMode = "desktop" | "hls" | "stream";
+export type OutputMode = "desktop" | "hls" | "stream" | "ndi" | "sdi";
 
 export type Playlist = { day_start: string, length: string, infinit: boolean, };
 
@@ -85,7 +86,7 @@ export type Playlist = { day_start: string, length: string, infinit: boolean, };
  *
  * This we init ones, when NoAr is starting and use them globally in the hole program.
  */
-export type PlayoutConfig = { general: General, mail: Mail, notification: Notification, logging: Logging, processing: Processing, audio: Audio, ingest: Ingest, playlist: Playlist, storage: Storage, task: Task, recording: Recording, scte35: Scte35, output: Output, };
+export type PlayoutConfig = { general: General, mail: Mail, notification: Notification, logging: Logging, processing: Processing, audio: Audio, playlist: Playlist, storage: Storage, task: Task, recording: Recording, scte35: Scte35, output: Output, };
 
 export type ProcessMode = "folder" | "playlist";
 
@@ -100,6 +101,11 @@ guide_logo: string,
  * turns that off.
  */
 logo_key: string, 
+/**
+ * Key that lets an encoder or a script extend or end the live on air;
+ * empty turns that off.
+ */
+live_key: string, 
 /**
  * How the logo comes up.
  */

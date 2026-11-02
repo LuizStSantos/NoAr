@@ -16,6 +16,7 @@ use tokio::{
 use serde::{Deserialize, Deserializer, de};
 
 pub mod args_parse;
+pub mod assembled;
 pub mod channels;
 pub mod commercial;
 pub mod config;

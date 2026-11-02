@@ -37,11 +37,16 @@ impl PlayoutClock {
     }
 
     pub(crate) fn set_rate(&mut self, rate: f64) {
-        self.pending_rate = if rate.is_finite() && rate > 0.0 {
+        let rate = if rate.is_finite() && rate > 0.0 {
             rate
         } else {
             1.0
         };
+        if self.pending_rate == rate {
+            return;
+        }
+
+        self.pending_rate = rate;
         self.reanchor_next = true;
     }
 
@@ -153,6 +158,35 @@ mod tests {
         assert_eq!(
             clock.delay(2 * SECOND, start + Duration::from_millis(1600)),
             Some(Duration::from_millis(400))
+        );
+    }
+
+    #[test]
+    fn consecutive_clips_at_the_same_rate_preserve_the_wall_clock() {
+        let mut clock = PlayoutClock::new();
+        let start = Instant::now();
+        clock.delay(0, start);
+        clock.set_rate(1.0);
+
+        assert_eq!(
+            clock.delay(SECOND, start + Duration::from_millis(500)),
+            Some(Duration::from_millis(500))
+        );
+    }
+
+    #[test]
+    fn a_changed_rate_anchors_once_and_uses_the_new_pace() {
+        let mut clock = PlayoutClock::new();
+        let start = Instant::now();
+        clock.delay(0, start);
+        clock.set_rate(2.0);
+        let changed = start + Duration::from_millis(500);
+        assert_eq!(clock.delay(SECOND, changed), None);
+        clock.set_rate(2.0);
+
+        assert_eq!(
+            clock.delay(2 * SECOND, changed),
+            Some(Duration::from_millis(500))
         );
     }
 

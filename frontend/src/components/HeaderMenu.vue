@@ -178,7 +178,15 @@ async function logout() {
 
             <div class="flex items-center gap-2 ms-auto">
                 <span
-                    v-if="playlistStore.playoutIsRunning"
+                    v-if="playlistStore.playoutIsRunning && playlistStore.failure"
+                    class="inline-flex items-center gap-2 bg-[#5a2a2d] text-white rounded-full px-3 py-1 font-semibold text-xs tracking-wide"
+                    role="status"
+                    :title="playlistStore.failure.message"
+                >
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true" />{{ t('nav.offAir') }}
+                </span>
+                <span
+                    v-else-if="playlistStore.playoutIsRunning"
                     class="inline-flex items-center gap-2 bg-on-air-soft text-on-air-text rounded-full px-3 py-1 font-semibold text-xs tracking-wide"
                 >
                     <span class="dot bg-[#ff5a5f]" aria-hidden="true" />{{ t('nav.onAir') }}

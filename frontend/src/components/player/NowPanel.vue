@@ -20,6 +20,27 @@ const { channelNow, playlistNow, clipLength, clipPosition, clipRemaining, curren
     useOnAir()
 
 const stopping = ref(false)
+const extending = ref(false)
+/** The end typed for the live on air, `HH:MM`. */
+const extendUntil = ref('')
+
+/** The live on air's end as `HH:MM`, extensions included. */
+const liveEnd = computed(() => active.value?.ends_at?.slice(11, 16) ?? '')
+
+async function extend(change: { minutes: number } | { until: string }) {
+    extending.value = true
+
+    try {
+        await scheduleStore.extendLive(change)
+        await scheduleStore.loadStatus()
+        extendUntil.value = ''
+        indexStore.msgAlert('success', t('schedule.liveExtended', { end: liveEnd.value }), 3)
+    } catch (err) {
+        indexStore.msgAlert('error', err instanceof Error ? err.message : String(err), 5)
+    } finally {
+        extending.value = false
+    }
+}
 
 const dateLabel = computed(() => {
     const label = channelNow.value.locale(locale.value.toLowerCase()).format('ddd, D MMM YYYY')
@@ -158,8 +179,49 @@ async function backToProgramme() {
                     <template v-else>{{ t('schedule.returnsOnClock') }}</template>
                 </span>
                 <button class="btn-quiet min-h-9" :disabled="stopping" @click="backToProgramme">
-                    {{ t('schedule.backToProgramme') }}
+                    {{ active.kind === 'live' ? t('schedule.endLiveNow') : t('schedule.backToProgramme') }}
                 </button>
+            </div>
+            <div
+                v-if="active.kind === 'live' && liveEnd"
+                class="flex flex-wrap items-center gap-2 text-[13px] border-t border-live/40 pt-2"
+                role="group"
+                :aria-label="t('schedule.extendLive')"
+            >
+                <span class="text-muted">
+                    {{ t('schedule.liveEndsAt', { end: liveEnd }) }}
+                    <template v-if="active.extended_seconds">
+                        · {{ t('schedule.liveExtendedBy', { length: formatLength(active.extended_seconds) }) }}
+                    </template>
+                </span>
+                <span class="ms-auto flex flex-wrap items-center gap-1.5">
+                    <button
+                        v-for="minutes in [5, 15, 30]"
+                        :key="minutes"
+                        class="btn-quiet min-h-8 px-2.5"
+                        :disabled="extending"
+                        @click="extend({ minutes })"
+                    >
+                        +{{ minutes }} min
+                    </button>
+                    <form
+                        class="flex items-center gap-1.5"
+                        @submit.prevent="extendUntil && extend({ until: extendUntil })"
+                    >
+                        <input
+                            v-model="extendUntil"
+                            type="time"
+                            class="field-input font-mono min-h-8 py-0 w-28"
+                            :aria-label="t('schedule.extendUntil')"
+                        />
+                        <button class="btn-quiet min-h-8 px-2.5" type="submit" :disabled="extending || !extendUntil">
+                            {{ t('schedule.extendUntilButton') }}
+                        </button>
+                    </form>
+                    <RouterLink to="/schedule#live-api" class="link-accent text-[12px]">{{
+                        t('schedule.liveRemote.link')
+                    }}</RouterLink>
+                </span>
             </div>
         </div>
 

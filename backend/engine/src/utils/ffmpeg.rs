@@ -1,9 +1,5 @@
 use anyhow::{Context, Result};
-use ffmpeg_next::{
-    Packet,
-    codec::packet::{Mut as PacketMut, Ref as PacketRef},
-    ffi, frame,
-};
+use ffmpeg_next::{ffi, frame};
 
 pub(crate) fn reference_video_frame(source: &frame::Video) -> Result<frame::Video> {
     let mut referenced = frame::Video::empty();
@@ -47,38 +43,11 @@ pub(crate) fn make_audio_frame_writable(frame: &mut frame::Audio) -> Result<()> 
     Ok(())
 }
 
-pub(crate) fn reference_packet(source: &Packet) -> Result<Packet> {
-    let mut referenced = Packet::empty();
-    let result = unsafe { ffi::av_packet_ref(referenced.as_mut_ptr(), source.as_ptr()) };
-
-    if result < 0 {
-        return Err(ffmpeg_next::Error::from(result)).context("referencing FFmpeg packet");
-    }
-
-    Ok(referenced)
-}
-
 #[cfg(test)]
 mod tests {
     use ffmpeg_next::format::Pixel;
 
     use super::*;
-
-    #[test]
-    fn referenced_packet_shares_payload_but_has_independent_metadata() {
-        let mut source = Packet::copy(&[1, 2, 3, 4]);
-        source.set_stream(1);
-
-        let mut referenced = reference_packet(&source).expect("packet reference should succeed");
-        assert_eq!(
-            source.data().expect("source payload").as_ptr(),
-            referenced.data().expect("referenced payload").as_ptr()
-        );
-
-        referenced.set_stream(2);
-        assert_eq!(source.stream(), 1);
-        assert_eq!(referenced.stream(), 2);
-    }
 
     #[test]
     fn writable_referenced_frame_does_not_modify_source_pixels() {

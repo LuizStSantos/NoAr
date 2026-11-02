@@ -7,9 +7,8 @@ use std::{
 
 use log::*;
 use noar_engine::{
-    AsyncPlayout, AudioLevelCallback, ClipBreaks, ClipResult, HlsHealth, LiveInputBackend,
-    LiveListenerConfig, LogLevel, LogoConfig, LogoFade, OutputConfig, Preloader, RecordingConfig,
-    RecordingEncodeConfig,
+    AsyncPlayout, AudioLevelCallback, ClipBreaks, ClipResult, HlsHealth, LogLevel, LogoConfig,
+    LogoFade, OutputConfig, Preloader, RecordingConfig, RecordingEncodeConfig,
 };
 use tokio::{task::JoinHandle, time::sleep};
 use tokio_util::sync::CancellationToken;
@@ -41,6 +40,31 @@ const PRELOAD_LEAD_SECONDS: f64 = 10.0;
 
 /// The channel's L-shape graphic, sized to the output. One that cannot be
 /// read leaves the L-shape off rather than the channel.
+/// The channel's logo as configured, or none when it is off.
+pub fn channel_logo(config: &PlayoutConfig) -> Option<LogoConfig> {
+    config.processing.add_logo.then(|| LogoConfig {
+        path: config.processing.logo_path.clone(),
+        scale: (!config.processing.logo_scale.trim().is_empty())
+            .then(|| config.processing.logo_scale.clone()),
+        opacity: config.processing.logo_opacity,
+        position: config.processing.logo_position.clone(),
+    })
+}
+
+/// Puts the channel's saved logo (image, size, opacity and place) on air
+/// without restarting, sized for the output the playout runs with. An image
+/// that cannot be read leaves the logo on air as it was.
+pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
+    let logo = channel_logo(config);
+
+    if let Err(error) = manager
+        .logo_control
+        .set_configured(logo.as_ref(), width, height)
+    {
+        warn!(channel = config.general.channel_id; "Logo not changed on air: {error:#}");
+    }
+}
+
 pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     let loaded = config
         .processing
@@ -189,49 +213,12 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         );
     }
 
-    let listeners: Vec<_> = config
-        .ingest
-        .listeners
-        .iter()
-        .filter(|input| input.enabled)
-        .filter_map(|input| {
-            let backend = match input.backend.as_str() {
-                "rtmp" => LiveInputBackend::Rtmp,
-                "srt" => LiveInputBackend::Srt,
-                _ => return None,
-            };
-
-            Some(LiveListenerConfig {
-                id: input.id,
-                priority: input.priority,
-                backend,
-                url: input.identifier.clone(),
-                options: input.options.clone(),
-                demuxer_options: input.demuxer_options.clone(),
-            })
-        })
-        .collect();
-    let count = listeners.len();
     // Background work that ends with the play loop, also when the stop gives
     // up waiting and drops this run.
     let ticker_cancel = CancellationToken::new();
     let _ticker_guard = ticker_cancel.clone().drop_guard();
-    let mut ingest_watcher = None;
 
     as_run::close_unfinished(&manager).await;
-
-    if count > 0 {
-        playout
-            .start_live_listeners(listeners, output_config)
-            .await
-            .map_err(engine_error)?;
-        info!(channel = config.general.channel_id; "Started {count} live listener(s)");
-        ingest_watcher = Some(tokio::spawn(as_run::watch_ingest(
-            manager.clone(),
-            playout.playback_control(),
-            ticker_cancel.clone(),
-        )));
-    }
 
     // Scheduled events: the ticker queues them, the play loop airs them. An
     // event cut by the stop goes back on air first.
@@ -252,10 +239,6 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     ticker_cancel.cancel();
     let _ = ticker.await;
     let _ = graphics_ticker.await;
-
-    if let Some(watcher) = ingest_watcher {
-        let _ = watcher.await;
-    }
 
     let finish_result = playout.finish().await.map_err(engine_error);
     result?;
@@ -373,6 +356,8 @@ async fn play_loop(
         };
 
         *manager.current_media.lock().await = Some(node.clone());
+        // A clip started: the output is open, so the playout is on air.
+        manager.clear_failure();
 
         if cancel_token
             .as_ref()
@@ -573,13 +558,6 @@ async fn playlist_breaks(
         return ClipBreaks::default();
     }
 
-    // A live that took the channel over hides the playlist's commercials.
-    if manager.playback_control.lock().await.live_status().0 {
-        *announced = false;
-
-        return ClipBreaks::default();
-    }
-
     if node.ad && *announced {
         return ClipBreaks::default();
     }
@@ -747,6 +725,20 @@ async fn open_playout(
                 .await
                 .map_err(engine_error)
         }
+        OutputMode::Sdi => AsyncPlayout::open_decklink(
+            config.output.stream_url.trim(),
+            output_config,
+            fallback_duration,
+        )
+        .await
+        .map_err(engine_error),
+        OutputMode::Ndi => AsyncPlayout::open_ndi(
+            config.output.stream_url.trim(),
+            output_config,
+            fallback_duration,
+        )
+        .await
+        .map_err(engine_error),
         OutputMode::Desktop => open_desktop_playout(output_config, fallback_duration).await,
     }
 }
@@ -794,13 +786,7 @@ fn engine_output_config(
     }
     let fps = config.output.fps.round() as u32;
 
-    let logo = config.processing.add_logo.then(|| LogoConfig {
-        path: config.processing.logo_path.clone(),
-        scale: (!config.processing.logo_scale.trim().is_empty())
-            .then(|| config.processing.logo_scale.clone()),
-        opacity: config.processing.logo_opacity,
-        position: config.processing.logo_position.clone(),
-    });
+    let logo = channel_logo(config);
     let ffmpeg_log_level = config
         .logging
         .ffmpeg_level
@@ -849,6 +835,7 @@ fn engine_output_config(
                 config.output.audio_options.clone(),
                 u64::from(config.output.audio_bitrate) * 1_000,
             )
+            .with_output_sample_rate(Some(config.output.audio_sample_rate))
             .with_protocol_options(config.output.protocol_options.clone())
             .with_muxer_options(config.output.muxer_options.clone())
             .with_metadata_options(config.output.metadata_options.clone())

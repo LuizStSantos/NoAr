@@ -10,7 +10,7 @@ For ordinary natural-language requests to implement, fix or refactor code:
 2. Consult only the relevant `.agents/skills/` adapter for unfamiliar or version-sensitive technical questions. Each adapter points to shared canonical documentation in `.claude/skills/`; do not load every skill by default.
 3. Make small, clear changes consistent with existing code and contracts; add focused regression tests when behavior changes.
 4. Plan verification with `python3 .claude/scripts/verify_changes.py --files <changed paths>`; run feasible, permitted local checks with `--run`. Correct failures and state exactly what passed or remains untested.
-5. For UI interaction, scheduling, SQLite persistence or FFmpeg/SRT/RTMP/HLS output, require actual evidence from isolated, authorized staging. Never infer runtime PASS from source review or documentation. Use NOT_RUN/NOT_AVAILABLE when appropriate.
+5. For UI interaction, scheduling, SQLite persistence or GStreamer/SRT/RTMP/HLS output, require actual evidence from isolated, authorized staging. Never infer runtime PASS from source review or documentation. Use NOT_RUN/NOT_AVAILABLE when appropriate.
 6. Review documentation impact for material changes. Summarize changed paths, test evidence, uncertainty and next actions.
 
 Small tasks need no subagent or audit council by default. Keep official documentation research scoped and verify installed dependency versions.
@@ -23,6 +23,9 @@ Small tasks need no subagent or audit council by default. Keep official document
 - Use throwaway users, databases and synthetic media for tests; never transmit sensitive configuration or real operator credentials.
 
 ## Compatibility limits
+
+- GStreamer is the sole playout engine on this integration branch. For media runtime questions read `.agents/skills/noar-gstreamer/SKILL.md` and the canonical references it links. Confirm Cargo.lock and native plugin versions; use `gst-inspect-1.0` for actual properties/caps/units.
+- FFmpeg remains a frame-memory adapter and test/codec dependency. Its manuals do not define GStreamer pipeline, seek, state, transport or encoder-property behavior. NoAr pulls live URLs from external servers such as MediaMTX; it does not host RTMP/SRT input listeners.
 
 Claude-specific agent definitions under `.claude/agents/` are **not** Codex subagents. If independent five-reviewer councils cannot run, report NOT_RUN and do not fabricate any ballots or 3/5 approvals. For risky tasks consult `.claude/audit/QUALITY_GATES.md`.
 

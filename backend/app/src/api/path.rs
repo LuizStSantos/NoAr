@@ -92,6 +92,7 @@ pub fn routes() -> Router<AppState> {
                 .route("/playout/config/{id}/keys/{kind}", post(update_remote_key))
                 .route("/playout/outputs/{id}", get(get_playout_outputs))
                 .route("/playout/codecs/{id}", get(get_playout_codecs))
+                .route("/playout/devices/{id}", get(get_video_devices))
                 .route("/program/{id}", get(get_program))
                 .route("/report/{id}", get(get_report))
                 .route(
@@ -110,11 +111,17 @@ pub fn routes() -> Router<AppState> {
                 .route("/schedule/{id}/grade", get(get_schedule_grade))
                 .route("/schedule/{id}/status", get(get_schedule_status))
                 .route("/schedule/{id}/stop", post(stop_schedule_event))
+                .route("/schedule/{id}/extend", post(extend_live))
                 .route(
                     "/schedule/{id}/lives",
                     get(get_lives).post(add_live).put(update_live),
                 )
                 .route("/schedule/{id}/lives/test", post(test_live_signal))
+                .route("/schedule/{id}/lives/ndi", get(get_ndi_sources))
+                .route(
+                    "/schedule/{id}/programs",
+                    get(get_assembled_program).put(save_assembled_program),
+                )
                 .route(
                     "/schedule/{id}/{event_id}",
                     put(update_schedule_event).delete(delete_schedule_event),
@@ -162,6 +169,10 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/scte35/{id}/{action}",
             get(control_scte35_with_key).post(control_scte35_with_key),
+        )
+        .route(
+            "/live/{id}/{action}",
+            get(control_live_with_key).post(control_live_with_key),
         )
         .route("/xmltv/{id}/images/{*image}", get(get_xmltv_image))
 }

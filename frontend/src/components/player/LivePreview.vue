@@ -178,12 +178,6 @@ const sourceLabel = computed(() => {
         return active.kind === 'live' ? t('onair.sourceScheduledLive') : t('onair.sourceScheduled')
     }
 
-    if (playlistStore.ingestRuns) {
-        return playlistStore.ingestListenerName
-            ? t('onair.sourceIngestNamed', { name: playlistStore.ingestListenerName })
-            : t('onair.sourceIngest')
-    }
-
     return configStore.playout.processing?.mode === 'folder' ? t('onair.sourceFolder') : t('onair.sourcePlaylist')
 })
 
@@ -195,7 +189,8 @@ const outputLabel = computed(() => {
         return ''
     }
 
-    const kind = output.mode === 'hls' ? 'HLS' : output.mode === 'stream' ? output.stream_type.toUpperCase() : 'Desktop'
+    const kinds: Record<string, string> = { hls: 'HLS', ndi: 'NDI', sdi: 'SDI', desktop: 'Desktop' }
+    const kind = output.mode === 'stream' ? output.stream_type.toUpperCase() : (kinds[output.mode] ?? output.mode)
     const fps = Number.isInteger(output.fps) ? output.fps : output.fps.toFixed(2)
     const parts = [kind, `${output.height}p${fps}`]
     const bitrate = output.video_options?.['b:v'] ?? output.video_options?.maxrate
@@ -217,16 +212,12 @@ const outputLabel = computed(() => {
 const clipLabel = computed(() => {
     const source = scheduleStore.status.active?.item || playlistStore.current.source || ''
 
-    return playlistStore.ingestRuns ? '' : storageLabel(source, channel.value?.storage ?? '')
+    return storageLabel(source, channel.value?.storage ?? '')
 })
 
 const title = computed(() => {
     if (scheduleStore.status.active) {
         return scheduleStore.status.active.title
-    }
-
-    if (playlistStore.ingestRuns) {
-        return playlistStore.ingestListenerName || t('onair.sourceIngest')
     }
 
     return playlistStore.playoutIsRunning ? currentTitle.value : t('onair.notRunning')
@@ -236,7 +227,7 @@ const title = computed(() => {
 const outputLinkLabel = computed(() => {
     const link = playlistStore.outputLink
 
-    if (!playlistStore.playoutIsRunning || !link || link.state === 'idle') {
+    if (!playlistStore.playoutIsRunning || playlistStore.failure || !link || link.state === 'idle') {
         return ''
     }
 
@@ -254,7 +245,6 @@ const outputLinkLabel = computed(() => {
     }
 })
 
-const listeners = computed(() => configStore.playout.ingest?.listeners?.filter((input) => input.enabled) ?? [])
 const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/guide.xml` : ''))
 </script>
 <template>
@@ -288,7 +278,13 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
 
             <div class="absolute top-3.5 left-3.5 flex gap-2">
                 <span
-                    v-if="playlistStore.playoutIsRunning"
+                    v-if="playlistStore.playoutIsRunning && playlistStore.failure"
+                    class="bg-[#5a2a2d] text-white font-semibold text-xs tracking-wider px-2.5 py-1 rounded-md"
+                >
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true" /> {{ t('nav.offAir') }}
+                </span>
+                <span
+                    v-else-if="playlistStore.playoutIsRunning"
                     class="bg-on-air text-white font-semibold text-xs tracking-wider px-2.5 py-1 rounded-md"
                 >
                     ● {{ t('nav.onAir') }}
@@ -372,7 +368,21 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
         </div>
 
         <div class="flex flex-wrap gap-x-4.5 gap-y-2 text-muted text-[13px]">
-            <span v-if="playlistStore.playoutIsRunning" class="inline-flex items-center gap-1.5">
+            <span
+                v-if="playlistStore.playoutIsRunning && playlistStore.failure"
+                class="inline-flex items-center gap-1.5 text-on-air-text font-medium"
+                role="alert"
+            >
+                <span class="dot bg-on-air" aria-hidden="true" />
+                {{
+                    t('onair.failing', {
+                        error: playlistStore.failure.message,
+                        seconds: playlistStore.failure.retry_in,
+                        attempts: playlistStore.failure.attempts,
+                    })
+                }}
+            </span>
+            <span v-else-if="playlistStore.playoutIsRunning" class="inline-flex items-center gap-1.5">
                 <span class="dot bg-ok" aria-hidden="true" />
                 {{
                     playlistStore.uptime !== null
@@ -383,15 +393,6 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
             <span v-else class="inline-flex items-center gap-1.5">
                 <span class="dot bg-subtle" aria-hidden="true" />{{ t('onair.notRunning') }}
             </span>
-            <span v-if="playlistStore.ingestRuns" class="text-on-air-text">
-                {{
-                    t('onair.ingestOnAir', {
-                        name: playlistStore.ingestListenerName || playlistStore.ingestListenerBackend || '',
-                    })
-                }}
-            </span>
-            <span v-else-if="listeners.length">{{ t('onair.ingestWaiting', listeners.length) }}</span>
-            <span v-else>{{ t('onair.ingestNone') }}</span>
             <span
                 v-if="outputLinkLabel"
                 class="inline-flex items-center gap-1.5"

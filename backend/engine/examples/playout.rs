@@ -12,7 +12,7 @@ use glob::glob;
 
 use noar_engine::{
     ClipResult, HlsSubtitle, HlsVariant, LogoConfig, OutputConfig, OutputSize, Playout,
-    print_media_info, spawn_rtmp_listener,
+    print_media_info,
 };
 
 #[derive(Parser, Debug)]
@@ -112,10 +112,6 @@ struct Args {
     #[arg(long, default_value = "W-w-20:H-h-20")]
     logo_position: String,
 
-    /// RTMP listen URL for live override, e.g. rtmp://0.0.0.0:1935/live/input
-    #[arg(long, value_name = "URL")]
-    rtmp_live: Option<String>,
-
     /// Duration in seconds used when an input is missing or cannot be decoded
     #[arg(long, default_value_t = 10.0)]
     fallback_duration: f64,
@@ -187,7 +183,6 @@ fn main() -> Result<()> {
         opacity: args.logo_opacity,
         position: args.logo_position.clone(),
     });
-    let live_config = config.clone();
 
     let mut playout = if args.desktop() {
         #[cfg(feature = "desktop-base")]
@@ -224,15 +219,10 @@ fn main() -> Result<()> {
         )?
     };
 
-    let mut live = args
-        .rtmp_live
-        .clone()
-        .map(|url| spawn_rtmp_listener(url, live_config));
-
     for (index, path) in inputs.iter().enumerate() {
         print_media_info(path);
         let seek_seconds = (index == 0 && args.seek > 0.0).then_some(args.seek);
-        match playout.play_with_live(path, seek_seconds, &mut live)? {
+        match playout.play_with_seek(path, seek_seconds)? {
             ClipResult::Played => {}
             ClipResult::Skipped => {}
             ClipResult::LiveEnded => {}

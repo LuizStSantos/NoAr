@@ -98,16 +98,9 @@ pub async fn control_state(
 ) -> Result<Map<String, Value>, ServiceError> {
     // Keep the asynchronous manager lock until navigation is committed: a new
     // engine must not replace this control while playlist/DB updates are pending.
-    // The engine's reservation also excludes live activation within this run.
     let playback_control = manager.playback_control.lock().await;
     let navigation = match playback_control.begin_navigation() {
         Ok(navigation) => navigation,
-        Err(noar_engine::NavigationBlocked::Live) => {
-            return Ok(Map::from_iter([
-                ("operation".to_string(), json!("ignored")),
-                ("reason".to_string(), json!("live_ingest_active")),
-            ]));
-        }
         Err(noar_engine::NavigationBlocked::Busy) => {
             return Err(ServiceError::Conflict(
                 "A navigation command is already being processed".to_string(),
@@ -179,10 +172,7 @@ mod tests {
     use crate::{
         db::models::Channel,
         player::utils::{Media, get_data_map},
-        utils::{
-            config::{LiveInput, PlayoutConfig},
-            system::SystemStat,
-        },
+        utils::{config::PlayoutConfig, system::SystemStat},
     };
 
     async fn manager() -> ChannelManager {
@@ -265,13 +255,8 @@ mod tests {
         let mut current = replacement.await;
         assert_eq!(manager.channel.lock().await.time_shift, 0.0);
         *current = noar_engine::PlaybackControl::default();
-        let live = current.try_activate_live().unwrap();
-        drop(current);
-        let response = control_state(&manager.db_pool, &manager, &PlayerCtl::Back)
-            .await
-            .unwrap();
-        assert_eq!(response["reason"], "live_ingest_active");
-        drop(live);
+        let navigation = current.begin_navigation().unwrap();
+        drop(navigation);
     }
 
     #[tokio::test]
@@ -291,88 +276,39 @@ mod tests {
         drop(navigation);
         drop(config);
         let current = manager.playback_control.try_lock().unwrap();
-        assert!(current.try_activate_live().is_some());
+        assert!(current.begin_navigation().is_ok());
         assert_eq!(manager.channel.lock().await.time_shift, 42.0);
     }
 
     #[tokio::test]
-    async fn live_navigation_is_ignored_without_memory_or_database_changes() {
+    async fn player_status_exposes_no_input_server_state() {
         let manager = manager().await;
-        let mut running = manager.config.read().await.clone();
-        running.ingest.listeners.push(LiveInput {
-            id: 17,
-            enabled: true,
-            name: "On air".to_string(),
-            backend: "rtmp".to_string(),
-            ..LiveInput::default()
-        });
-        let _running_config = manager.track_running_config(running);
-        let control = manager.playback_control.lock().await.clone();
-        let live = control.try_activate_live_for_listener(17).unwrap();
-        for command in [PlayerCtl::Back, PlayerCtl::Next, PlayerCtl::Reset] {
-            let response = control_state(&manager.db_pool, &manager, &command)
-                .await
-                .unwrap();
-            assert_eq!(response["operation"], "ignored");
-            assert_eq!(response["reason"], "live_ingest_active");
-            assert_eq!(manager.current_index.load(Ordering::SeqCst), 2);
-            assert!(!manager.list_init.load(Ordering::SeqCst));
-            assert_eq!(manager.channel.lock().await.time_shift, 42.0);
+        let status = get_data_map(&manager).await;
+
+        for key in [
+            "ingest",
+            "ingest_listener_id",
+            "ingest_listener_name",
+            "ingest_listener_backend",
+        ] {
+            assert!(
+                !status.contains_key(key),
+                "obsolete listener state {key} was exposed"
+            );
         }
-        assert_eq!(get_data_map(&manager).await["ingest"], true);
-        assert_eq!(get_data_map(&manager).await["ingest_listener_id"], 17);
-        assert_eq!(
-            get_data_map(&manager).await["ingest_listener_name"],
-            "On air"
-        );
-        assert_eq!(
-            get_data_map(&manager).await["ingest_listener_backend"],
-            "rtmp"
-        );
-
-        let mut saved = manager.config.read().await.clone();
-        saved.ingest.listeners.push(LiveInput {
-            id: 17,
-            enabled: true,
-            name: "Next listener".to_string(),
-            backend: "srt".to_string(),
-            ..LiveInput::default()
-        });
-        manager.update_config(saved).await;
-        assert_eq!(
-            get_data_map(&manager).await["ingest_listener_name"],
-            "On air"
-        );
-        assert_eq!(
-            get_data_map(&manager).await["ingest_listener_backend"],
-            "rtmp"
-        );
-
-        drop(live);
-        assert_eq!(get_data_map(&manager).await["ingest"], false);
-        assert!(get_data_map(&manager).await["ingest_listener_id"].is_null());
-        assert!(
-            control.try_activate_live().is_some(),
-            "ignored commands must not queue navigation"
-        );
     }
-
     #[tokio::test]
     async fn running_config_guard_does_not_clear_a_newer_playout() {
         let manager = manager().await;
         let first = manager.track_running_config(PlayoutConfig::default());
         let mut newer_config = PlayoutConfig::default();
-        newer_config.ingest.listeners.push(LiveInput {
-            id: 23,
-            name: "New listener".to_string(),
-            ..LiveInput::default()
-        });
+        newer_config.output.stream_url = "srt://mediamtx:8890?streamid=publish:output".to_string();
         let second = manager.track_running_config(newer_config);
 
         drop(first);
         assert_eq!(
-            manager.running_listener_label(23).unwrap().0,
-            "New listener"
+            manager.running_config().unwrap().output.stream_url,
+            "srt://mediamtx:8890?streamid=publish:output"
         );
 
         drop(second);
@@ -392,12 +328,12 @@ mod tests {
             assert_eq!(manager.current_index.load(Ordering::SeqCst), 2);
             assert!(!manager.list_init.load(Ordering::SeqCst));
             assert_eq!(manager.channel.lock().await.time_shift, 42.0);
-            assert!(control.try_activate_live().is_some());
+            assert!(control.begin_navigation().is_ok());
         }
     }
 
     #[tokio::test]
-    async fn navigation_without_live_still_persists_and_requests_a_clip_change() {
+    async fn navigation_persists_playlist_state() {
         let manager = manager().await;
         sqlx::query("DROP TRIGGER reject_stat_update")
             .execute(&manager.db_pool)
@@ -414,14 +350,5 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(shift, 0.0);
-        assert!(
-            manager
-                .playback_control
-                .lock()
-                .await
-                .try_activate_live()
-                .is_none(),
-            "pending navigation must precede a live takeover"
-        );
     }
 }

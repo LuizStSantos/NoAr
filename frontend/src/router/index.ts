@@ -161,12 +161,6 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {
-                    path: 'ingest',
-                    name: 'settings-ingest',
-                    component: () => import('@/components/settings/SettingsIngest.vue'),
-                    meta: { showHeader: true, roles: ADMINS },
-                },
-                {
                     path: 'playlist',
                     name: 'settings-playlist',
                     component: () => import('@/components/settings/SettingsPlaylist.vue'),
@@ -227,6 +221,12 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ['global_admin'] },
                 },
             ],
+        },
+        // An unknown address (an old bookmark, a page that was removed) opens
+        // the home page instead of a blank screen without the menu.
+        {
+            path: '/:pathMatch(.*)*',
+            redirect: '/',
         },
     ],
 })

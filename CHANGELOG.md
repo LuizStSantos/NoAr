@@ -11,6 +11,139 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-02
+
+### Added
+
+- Assembled programs: a `.program` file in Storage holds a program's blocks in
+  order and commercial breaks between them under a chosen title. Drag it into
+  a playlist or schedule it as one item; the playout expands it when it airs,
+  so edits apply to every airing still to come. The guide shows one
+  programme; the as-run log lists every clip. See `docs/programs.md`.
+
+- NDI output: publish the uncompressed program as an NDI source on the local
+  network (*Settings › Output › NDI*). The NDI elements are compiled in; the
+  proprietary NDI Runtime is installed on the server and NDI stays disabled,
+  with an explanation, until it is present. Migration `00024` adds an inactive
+  NDI output to every channel. `docker/ndi/enable-ndi.sh` installs the
+  runtime (after the NDI license is accepted), mDNS discovery and the Compose
+  override in one step. See `docs/ndi.md`.
+- NDI input for lives: `ndi://SERVER (Source name)` addresses in Storage and
+  the Scheduler, a *Find NDI sources* list from network discovery
+  (`GET /api/schedule/{id}/lives/ndi`) and the signal test. Picture-only
+  sources are accepted and get silence.
+- Video cards: play the program on a Blackmagic DeckLink card
+  (*Settings › Output › SDI*, any DeckLink/UltraStudio sub-device, NTSC/PAL
+  to 2160p modes, including 1080i59.94, 1080p29.97 and 1080p30), and take
+  DeckLink or V4L2 capture cards as lives (`decklink://`, `v4l2://`).
+  `GET /api/playout/devices/{id}` lists the cards the server sees. Migration
+  `00025` adds an inactive SDI output to every channel. See
+  `docs/video-cards.md`.
+
+- A disposable actual-NoAr smoke harness verifies scheduled live transitions,
+  source-loss recovery, decoded markers, timestamps, receiver progress and
+  persistent SRT sessions independently of the standalone Python prototype.
+- Shared GStreamer reference skills for Codex and Claude, with official native
+  and Rust documentation, installed-plugin checks and integrated-media test
+  requirements.
+
+### Changed
+
+- The live key's tutorial is a section of its own at the bottom of the
+  Scheduler, **Live by API**, like the SCTE-35 one: this channel's addresses to
+  extend by minutes, until a time or end the live, ready to copy, with curl,
+  vMix, Stream Deck and authenticated-API examples. **By API…** in the
+  Player's live controls opens it.
+- The sign-in page lists what NoAr does now: lives and outputs over NDI and
+  video cards, assembled programs, lives that can be extended, SCTE-35 breaks,
+  logo and L-shape. The README screenshots show the English interface with a
+  demo channel, rebuilt by `qa/screenshots/`.
+- Extend the live on air from the Player's Now panel (+5/+15/+30 min, or until
+  a time) or with `POST /api/schedule/{id}/extend`, for this airing only; it
+  goes on without reconnecting. The panel names the end and ends the live at
+  once with its button (`/stop`).
+- A channel **live key** (migration `00026`) lets encoders and scripts extend
+  or end the live on air without logging in:
+  `/live/{id}/extend?key=…&minutes=30|until=13:30` and `/live/{id}/end?key=…`,
+  set under *Scheduler › Lives › Live remote control*.
+- Lives go into playlists (dragged from the Player library for their default
+  length) and into assembled programs as a **Live** part with its own length;
+  both air the live's current address. A program's clips follow trims made
+  in Storage after it was saved (programs keep each file's length), and keep
+  their own logo, L-shape and break marks.
+- NDI, DeckLink and V4L2 addresses are no longer taken for storage paths in
+  playlists.
+- A live's guide data also takes its year, countries and credits (hosts, cast
+  and crew, once saved), like a clip's sheet, and a **default length**
+  (`<runtime>` in its `tvshow.nfo`, minutes). Scheduling the live proposes its
+  end from that length (12:00 with 60 min ends at 13:00) and follows changes
+  of the start until the end is edited by hand.
+- Encoded outputs can select a 32, 44.1 or 48 kHz audio sample rate
+  (migration `00023`, default 48 kHz). The engine keeps processing at 48 kHz
+  and resamples just before the audio encoder; recordings with their own
+  encoding settings stay at 48 kHz.
+- Use GStreamer as the single playout engine for decoding, normalization,
+  encoding, muxing and media transports. FFmpeg frame structures remain the
+  compositor/audio memory interface and FFmpeg tools remain available for tests.
+- Configure live events with read URLs from an external service such as
+  MediaMTX. Clock and Continue scheduling remain available.
+- Install GStreamer development libraries and runtime plugins in the existing
+  Docker image and validation workflow.
+
+### Removed
+
+- Built-in RTMP/SRT input servers, their runtime controls and the input-server
+  settings page. Historical database rows remain stored; current configuration
+  responses omit input-server settings. **Breaking**: encoders can no longer
+  push to NoAr on ports 1936 (RTMP) or 9000/udp (SRT); `docker-compose.yml` no
+  longer publishes them, so remove those two port lines from your own copy and
+  send streams to an external service such as MediaMTX, then schedule its read
+  URL as a live.
+
+### Fixed
+
+- Building the image no longer fails when a slow link cuts the SRT source
+  download: it uses HTTP/1.1 and retries on any transfer error (the SHA-256
+  check still applies).
+- A playout that cannot go on air (a DeckLink card missing, an output that
+  does not open) no longer looks on air or stopped while NoAr retries it: the
+  Player and the header show OFF AIR with the reason and the next attempt, and
+  the status (`media/current`, playout events) carries a `failure` field. The
+  Player's format label also names NDI and SDI outputs instead of "Desktop".
+- The LIVE mark on the playlist's day bar no longer breaks letter by letter
+  when the live is short or the screen narrow.
+- An unknown address (an old bookmark, a page that was removed) opens the home
+  page instead of a blank screen without the menu.
+- Building the image behind a proxy with the `proxy_ca` secret: apt can read
+  the certificate, and Debian packages come over HTTPS for proxies that refuse
+  plain HTTP. Builds without the secret are unchanged.
+- Ending a live twice in quick succession (a double press on a Stream Deck,
+  or the Player and the API at once) no longer leaves a pending skip that
+  could cut the programme clip coming back after the live.
+- Clips without sound (common in stock footage), or without picture, can be
+  resumed in their middle again. Their unused audio or video branch stayed in
+  the pipeline unlinked and made every seek fail ("Failed to seek; fallback
+  generated", black on air), for example when the programme continued after
+  a scheduled event. The missing branch now leaves once the file has
+  announced its tracks.
+- Resuming a clip in its middle (for example when the programme continues
+  after a scheduled event) no longer fails with "Failed to seek" when the
+  clip has not finished prerolling, as with large 4K files: the seek waits
+  for the clip to become seekable, up to five seconds, and a failure names the
+  position and the clip length.
+- Saving the channel logo (image, on/off, size, opacity or position) in the
+  Graphics tab puts it on air at once, cross-fading from the previous image,
+  instead of requiring a playout restart. An image that cannot be read is
+  refused when saving.
+- Resolve SRT hostnames in NoAr, bounded by a timeout, and hand GStreamer an
+  IP literal. The SRT plugin's own GIO lookup reused a cancellable that state
+  changes reset, which aborted (output) or crashed (input) the whole process
+  and, with the URL saved, on every restart (#33). SRT `localaddress` must be
+  an IP address.
+- Keep live audio/video interleaved when only one source track stalls; hold the
+  picture or insert silence instead of allowing the output muxer to wait for
+  the missing track. Preserve the pacing anchor across unchanged clip rates.
+
 ## [1.11.0] - 2026-10-28
 
 ### Added
@@ -689,7 +822,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...v2.0.0
 [1.11.0]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/LuizStSantos/NoAr/compare/v1.9.0...v1.10.0

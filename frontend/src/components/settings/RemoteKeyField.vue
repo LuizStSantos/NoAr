@@ -15,7 +15,7 @@ import { useIndex } from '@/stores/index'
  * off here: saving the other settings never changes it.
  */
 const props = defineProps<{
-    kind: 'logo' | 'scte35'
+    kind: 'logo' | 'scte35' | 'live'
     label: string
     noKey: string
     hint: string
@@ -30,7 +30,13 @@ const busy = ref(false)
 const confirming = ref<'renew' | 'clear' | null>(null)
 
 const key = computed(() =>
-    ((props.kind === 'logo' ? configStore.playout.processing?.logo_key : configStore.playout.scte35?.key) ?? '').trim(),
+    (
+        (props.kind === 'logo'
+            ? configStore.playout.processing?.logo_key
+            : props.kind === 'live'
+              ? configStore.playout.processing?.live_key
+              : configStore.playout.scte35?.key) ?? ''
+    ).trim(),
 )
 
 /** The key in the settings on screen and in the saved copy, so it is no unsaved change. */
@@ -38,6 +44,8 @@ function apply(value: string) {
     for (const config of [configStore.playout, configStore.playoutSaved]) {
         if (props.kind === 'logo' && config.processing) {
             config.processing.logo_key = value
+        } else if (props.kind === 'live' && config.processing) {
+            config.processing.live_key = value
         } else if (props.kind === 'scte35' && config.scte35) {
             config.scte35.key = value
         }

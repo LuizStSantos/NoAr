@@ -14,6 +14,7 @@ import { useHead } from '@unhead/vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import GenericModal from '@/components/utils/GenericModal.vue'
+import LiveRemote from '@/components/settings/LiveRemote.vue'
 import GraphicsEventDialog from '@/components/schedule/GraphicsEventDialog.vue'
 import LiveDialog from '@/components/schedule/LiveDialog.vue'
 import ScheduleDialog from '@/components/schedule/ScheduleDialog.vue'
@@ -161,7 +162,18 @@ function left(seconds: number): string {
 }
 
 function width(start: number, end: number, minimum = 4): string {
-    return `${Math.max(minimum, (Math.min(end, DAY) - Math.max(start, 0)) * pxPerSecond.value)}px`
+    return `${Math.max(minimum, pixels(start, end))}px`
+}
+
+function pixels(start: number, end: number): number {
+    return (Math.min(end, DAY) - Math.max(start, 0)) * pxPerSecond.value
+}
+
+/** Narrower than its text: the block keeps its true length and the label goes beside it. */
+const LABEL_INSIDE_PX = 120
+
+function narrow(start: number, end: number): boolean {
+    return pixels(start, end) < LABEL_INSIDE_PX
 }
 
 function textColor(color: string): string {
@@ -606,6 +618,11 @@ onMounted(async () => {
     await Promise.all([refresh(), scheduleStore.loadLives().catch(() => undefined)])
     openLinkedLive()
     scrollToFocus()
+    if (route.hash === '#live-api') {
+        // From the Player's live controls: straight to the API tutorial.
+        await nextTick()
+        document.getElementById('live-api')?.scrollIntoView({ block: 'start' })
+    }
     refreshTimer = setInterval(refresh, 5000)
     clockTimer = setInterval(() => (nowSeconds.value = secondsOfDay()), 1000)
 })
@@ -869,8 +886,10 @@ watch(zoom, scrollToFocus)
                                 <button
                                     v-for="block in eventBlocks"
                                     :key="`${block.occurrence.event.id}-${block.occurrence.start}`"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1 overflow-hidden [overflow-wrap:normal] text-left cursor-grab min-w-30 border-0"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md py-1 [overflow-wrap:normal] text-left cursor-grab border-0"
                                     :class="{
+                                        'px-2.5 overflow-hidden': !narrow(block.start, block.end),
+                                        'px-0 overflow-visible hover:z-10': narrow(block.start, block.end),
                                         'opacity-50': block.occurrence.status === 'done',
                                         'ring-2 ring-error': block.occurrence.status === 'failed',
                                         'ring-2 ring-white animate-pulse':
@@ -887,23 +906,34 @@ watch(zoom, scrollToFocus)
                                     @dragstart="dragEvent($event, block.occurrence)"
                                     @click="edit(block.occurrence)"
                                 >
-                                    <div class="text-sm font-semibold truncate flex items-center gap-1.5">
-                                        <span
-                                            v-if="block.occurrence.event.kind === 'live'"
-                                            class="bg-[#1c1c1c] text-[#ffb1a3] text-[11px] px-1 rounded"
-                                        >
-                                            {{ t('schedule.liveBadge') }}
-                                        </span>
-                                        {{ block.occurrence.event.title }}
-                                    </div>
-                                    <div class="font-mono text-xs opacity-85 truncate">
-                                        {{ secondsToTime(block.start).slice(0, 5) }}
-                                        <template v-if="block.occurrence.event.kind === 'live'">
-                                            – {{ secondsToTime(block.end).slice(0, 5) }}</template
-                                        >
-                                        <template v-else>
-                                            · {{ formatLength(block.occurrence.event.duration) }}</template
-                                        >
+                                    <div
+                                        :class="
+                                            narrow(block.start, block.end)
+                                                ? 'absolute left-[calc(100%+4px)] top-0 bottom-0 flex flex-col justify-center px-2 rounded-md bg-base-300 text-base-content whitespace-nowrap border-l-3'
+                                                : 'contents'
+                                        "
+                                        :style="
+                                            narrow(block.start, block.end) ? { borderColor: block.color } : undefined
+                                        "
+                                    >
+                                        <div class="text-sm font-semibold truncate flex items-center gap-1.5">
+                                            <span
+                                                v-if="block.occurrence.event.kind === 'live'"
+                                                class="bg-[#1c1c1c] text-[#ffb1a3] text-[11px] px-1 rounded"
+                                            >
+                                                {{ t('schedule.liveBadge') }}
+                                            </span>
+                                            {{ block.occurrence.event.title }}
+                                        </div>
+                                        <div class="font-mono text-xs opacity-85 truncate">
+                                            {{ secondsToTime(block.start).slice(0, 5) }}
+                                            <template v-if="block.occurrence.event.kind === 'live'">
+                                                – {{ secondsToTime(block.end).slice(0, 5) }}</template
+                                            >
+                                            <template v-else>
+                                                · {{ formatLength(block.occurrence.event.duration) }}</template
+                                            >
+                                        </div>
                                     </div>
                                 </button>
                                 <div
@@ -925,8 +955,13 @@ watch(zoom, scrollToFocus)
                                     v-for="block in graphicsBlocks"
                                     :key="`gr-${block.event.id}`"
                                     type="button"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 overflow-hidden [overflow-wrap:normal] text-left cursor-pointer min-w-24 border-0 text-[#16121f]"
-                                    :class="block.open ? 'rounded-e-none' : ''"
+                                    class="absolute top-1.5 bottom-1.5 rounded-md [overflow-wrap:normal] text-left cursor-pointer border-0 text-[#16121f]"
+                                    :class="[
+                                        block.open ? 'rounded-e-none' : '',
+                                        !block.open && narrow(block.start, block.end)
+                                            ? 'px-0 overflow-visible hover:z-10'
+                                            : 'px-2.5 overflow-hidden',
+                                    ]"
                                     :style="{
                                         left: left(block.start),
                                         width: width(block.start, block.end),
@@ -937,14 +972,27 @@ watch(zoom, scrollToFocus)
                                     :title="`${block.event.title} · ${graphicsSummary(block.event)}`"
                                     @click="editGraphics(block.event)"
                                 >
-                                    <div class="text-[13px] font-semibold truncate leading-tight">
-                                        {{ block.event.title }}
-                                    </div>
-                                    <div class="font-mono text-[11px] opacity-85 truncate">
-                                        {{ block.event.start_time.slice(0, 5) }}
-                                        <template v-if="block.event.end_time">
-                                            – {{ block.event.end_time.slice(0, 5) }}</template
-                                        >
+                                    <div
+                                        :class="
+                                            !block.open && narrow(block.start, block.end)
+                                                ? 'absolute left-[calc(100%+4px)] top-0 bottom-0 flex flex-col justify-center px-2 rounded-md bg-base-300 text-base-content whitespace-nowrap border-l-3'
+                                                : 'contents'
+                                        "
+                                        :style="
+                                            !block.open && narrow(block.start, block.end)
+                                                ? { borderColor: GRAPHICS_COLOR }
+                                                : undefined
+                                        "
+                                    >
+                                        <div class="text-[13px] font-semibold truncate leading-tight">
+                                            {{ block.event.title }}
+                                        </div>
+                                        <div class="font-mono text-[11px] opacity-85 truncate">
+                                            {{ block.event.start_time.slice(0, 5) }}
+                                            <template v-if="block.event.end_time">
+                                                – {{ block.event.end_time.slice(0, 5) }}</template
+                                            >
+                                        </div>
                                     </div>
                                 </button>
                             </div>
@@ -1135,6 +1183,10 @@ watch(zoom, scrollToFocus)
                         </li>
                     </ul>
                 </section>
+
+                <div id="live-api" class="scroll-mt-20">
+                    <LiveRemote :open="route.hash === '#live-api'" />
+                </div>
             </main>
         </div>
 

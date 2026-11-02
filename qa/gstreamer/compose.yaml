@@ -1,0 +1,52 @@
+name: noar-gstreamer-prototype
+
+x-runtime: &runtime
+  image: noar-gstreamer-prototype:local
+  pull_policy: never
+  user: "${NOAR_GST_UID:-1000}:${NOAR_GST_GID:-1000}"
+  read_only: true
+  tmpfs:
+    - /tmp
+  restart: "no"
+  environment:
+    NOAR_GST_STAGING: "1"
+  labels:
+    com.centurylinklabs.watchtower.enable: "false"
+  volumes:
+    - .:/prototype:ro
+    - ./fixtures:/fixtures:ro
+    - ./artifacts:/artifacts
+
+services:
+  fixtures:
+    <<: *runtime
+    profiles: [tools]
+    volumes:
+      - .:/prototype:ro
+      - ./fixtures:/fixtures
+    command: [fixtures.py]
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.15.3
+    restart: "no"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    ports:
+      - "${NOAR_GST_BIND_IP:-127.0.0.1}:${NOAR_GST_SRT_PORT:-19890}:8890/udp"
+
+  source:
+    <<: *runtime
+    restart: on-failure:3
+    depends_on: [mediamtx]
+    command: [playout.py, source]
+
+  playout:
+    <<: *runtime
+    depends_on: [mediamtx, source]
+    environment:
+      NOAR_GST_STAGING: "1"
+      NOAR_GST_VERIFY: "${NOAR_GST_VERIFY:-1}"
+      NOAR_GST_RECOVERY: "${NOAR_GST_RECOVERY:-0}"
+    command: [session.py, --cycles, "${NOAR_GST_CYCLES:-3}"]

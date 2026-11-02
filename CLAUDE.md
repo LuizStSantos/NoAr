@@ -58,12 +58,13 @@ Use the parent Claude session for simple changes. Full five-agent councils and r
 
 ## Technology references
 
-- For nontrivial version-sensitive work use the relevant repository skill: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-video-processing` or `/noar-ffmpeg`. Confirm lockfile and installed native library versions.
+- For nontrivial version-sensitive work use the relevant repository skill: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-gstreamer` or `/noar-video-processing`. GStreamer is the sole playout engine on this branch. Confirm lockfiles, native libraries and installed plugin properties/caps. Use `/noar-ffmpeg` only for frame-memory compatibility, codec dependencies and test tooling.
 - These are reference instructions, not agents or new council voters. Select only the needed official documentation through `.claude/rules/`. See `docs/ai/tech-references/README.md`.
 
-## FFmpeg reference guidance
+## Media reference guidance
 
-- For nontrivial FFmpeg/media API questions, consult the scoped rule `.claude/rules/ffmpeg-reference.md` and ask `noar-ffmpeg-docs-specialist` only when official research is necessary.
+- Start GStreamer pipeline, seek, state, clock, encoder and transport research with `/noar-gstreamer` and `.claude/rules/video-processing-reference.md`. NoAr reads client URLs from MediaMTX or another ingest service; it does not host input listeners.
+- For scoped FFmpeg compatibility or fixture API questions, consult `.claude/rules/ffmpeg-reference.md` and ask `noar-ffmpeg-docs-specialist` only when official research is necessary.
 - Read relevant references through `/noar-ffmpeg`; check the actual FFmpeg build and Rust bindings before applying advice.
 - The specialist is read-only and non-voting; the existing Backend Council remains five voters. See `docs/ai/ffmpeg/README.md`.
 

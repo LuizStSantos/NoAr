@@ -184,6 +184,25 @@ SRT, RTMP or UDP output reaches its destination
 times the destination was reached since the playout started. The address
 leaves out credentials, the query string and the RTMP stream key.
 
+They also carry `failure`: `null` while the playout is on air, or why it is
+off air while NoAr starts it again (an output card missing, an output that
+does not open). The clip in `media` is then the last one that aired, not one
+airing now.
+
+```json
+"failure": {
+  "message": "Conflict: opening DeckLink output 1 in 1080p25 (driver, device number and mode): Element failed to change its state",
+  "since": 1793650133,
+  "retry_in": 6,
+  "attempts": 4
+}
+```
+
+`since` is when the failures began (Unix seconds), `retry_in` the seconds to
+the next attempt and `attempts` how many tries failed in a row. Addresses in
+`message` keep only their host. The Player and the header show **OFF AIR**
+with this message instead of **ON AIR**.
+
 ```bash
 curl -X POST http://127.0.0.1:8787/api/control/1/process \
   -H 'Authorization: Bearer <ACCESS_TOKEN>' \
@@ -460,7 +479,9 @@ is appropriate for previewing and simple deployments.
 ## Scheduler
 
 Scheduled events and lives: see [Scheduler](/docs/scheduler.md#api) for the
-routes under `/api/schedule/{id}` and the event format.
+routes under `/api/schedule/{id}` and the event format. Assembled programs
+(`/api/schedule/{id}/programs`) are described in
+[Assembled programs](/docs/programs.md#api).
 
 ## Public XMLTV guide
 

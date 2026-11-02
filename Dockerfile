@@ -1,29 +1,30 @@
 # NoAr image: builds the web interface and the server, then ships them on a
-# slim Debian with only the FFmpeg libraries the server links against.
+# slim Debian with the native GStreamer runtime and codec plugins.
 #
 #   docker compose up -d
 #
 # The first visit to http://<server>:8787 opens the setup page.
 
 ARG NODE_IMAGE=node:24-trixie-slim
-ARG RUST_IMAGE=rust:1-slim-trixie
+ARG RUST_IMAGE=rust:1.99.1-slim-trixie
 ARG RUNTIME_IMAGE=debian:trixie-slim
 
-# FFmpeg opens and closes SRT inputs in the same process as the output.
-# Debian's SRT 1.5.4 misses a startup reference, so closing an input can
-# destroy the output socket. Use the corrected release with the same GnuTLS ABI.
+# Keep independent input/output sockets safe when their shared SRT runtime is
+# initialized and released. Debian's SRT 1.5.4 misses a startup reference; use
+# the corrected release with the same GnuTLS ABI.
 FROM ${RUNTIME_IMAGE} AS srt-build
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export APT_CONFIG=/tmp/noar-apt.conf; \
         printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
     fi; \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates cmake curl g++ libgnutls28-dev make pkg-config && \
     rm -rf /var/lib/apt/lists/* /tmp/noar-apt.conf
 COPY docker/srt /src/srt
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export CURL_CA_BUNDLE=/run/secrets/proxy_ca; \
     fi; \
@@ -38,7 +39,7 @@ FROM ${NODE_IMAGE} AS frontend
 WORKDIR /src
 
 COPY package.json package-lock.json ./
-RUN --mount=type=secret,id=proxy_ca \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; \
     fi; \
@@ -52,7 +53,13 @@ RUN npm run build
 FROM ${RUST_IMAGE} AS backend
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export APT_CONFIG=/tmp/noar-apt.conf; \
+        printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         clang \
         libavcodec-dev \
@@ -61,10 +68,19 @@ RUN apt-get update && \
         libavformat-dev \
         libavutil-dev \
         libclang-dev \
+        libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev \
+        libgstreamer-plugins-bad1.0-dev \
         libswresample-dev \
         libswscale-dev \
         pkg-config && \
-    rm -rf /var/lib/apt/lists/*
+    pkg-config --atleast-version=1.26 gstreamer-1.0 && \
+    pkg-config --atleast-version=1.26 gstreamer-app-1.0 && \
+    pkg-config --atleast-version=1.26 gstreamer-audio-1.0 && \
+    pkg-config --atleast-version=1.26 gstreamer-video-1.0 && \
+    pkg-config --atleast-version=1.26 gstreamer-pbutils-1.0 && \
+    pkg-config --atleast-version=1.26 gstreamer-mpegts-1.0 && \
+    rm -rf /var/lib/apt/lists/* /tmp/noar-apt.conf
 
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
@@ -78,7 +94,7 @@ ENV NOAR_FRONTEND_PREBUILT=1
 ARG NOAR_COMMIT=""
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
-    --mount=type=secret,id=proxy_ca \
+    --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
         export CARGO_HTTP_CAINFO=/run/secrets/proxy_ca; \
     fi; \
@@ -86,7 +102,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     install -m 755 target/release/noar /usr/local/bin/noar
 
 # Record which Debian packages provide the shared libraries the binary needs,
-# so the runtime image installs exactly those.
+# so the runtime image installs those in addition to dynamically loaded plugins.
 RUN ldd /usr/local/bin/noar \
         | awk '/=> \// { print $3 }' \
         | xargs -r realpath \
@@ -100,21 +116,42 @@ FROM ${RUNTIME_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY --from=backend /runtime-packages.txt /tmp/runtime-packages.txt
-RUN apt-get update && \
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export APT_CONFIG=/tmp/noar-apt.conf; \
+        printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
         fonts-dejavu-core \
+        glib-networking \
+        gstreamer1.0-tools \
+        gstreamer1.0-plugins-base \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-bad \
+        gstreamer1.0-plugins-ugly \
+        gstreamer1.0-libav \
         tini \
         tzdata \
         $(cat /tmp/runtime-packages.txt) && \
-    rm -rf /var/lib/apt/lists/* /tmp/runtime-packages.txt
+    rm -rf /var/lib/apt/lists/* /tmp/runtime-packages.txt /tmp/noar-apt.conf
 
 # Prefer the corrected GnuTLS library over Debian's affected build.
 # Keep the package-provided dependencies installed and record its provenance.
 COPY --from=srt-build /opt/noar-srt/lib/libsrt-gnutls.so* /usr/local/lib/
 COPY --from=srt-build /opt/noar-srt/share/noar/srt-build.txt /usr/local/share/noar/srt-build.txt
 COPY --from=srt-build /opt/noar-srt/share/licenses/noar-srt /usr/local/share/licenses/noar-srt
-RUN ldconfig
+RUN ldconfig && \
+    export GST_REGISTRY=/tmp/noar-gstreamer-registry.bin && \
+    for factory in appsrc appsink uridecodebin uridecodebin3 hlsdemux2 videoconvert videoscale videorate \
+        audioconvert audioresample audiorate x264enc avenc_aac h264parse aacparse \
+        mpegtsmux tsdemux srtsrc srtsink rtmp2src rtmp2sink flvmux \
+        qtdemux qtmux matroskamux splitmuxsink; do \
+        gst-inspect-1.0 "$factory" >/dev/null || exit 1; \
+    done && \
+    rm -f /tmp/noar-gstreamer-registry.bin
 
 COPY --from=backend /usr/local/bin/noar /usr/local/bin/noar
 

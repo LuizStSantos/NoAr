@@ -11,8 +11,8 @@ This is a **review runbook**, not proof that any check was performed. Scope the 
 
 ## B. Media engine (`backend/engine`)
 
-- FFmpeg lifetime, owned references, timestamps and frame/packet/timebase conversion; thread safety, unbounded buffers, and hardware encoder fallback.
-- File/folder/live inputs, preloading, decoder errors, reconnect/backoff, timeout, A/V synchronization and output continuity.
+- GStreamer states, owned buffer/sample references, segments/running time and PTS/DTS conversion; thread safety, bounded queues and caps/parser/mux negotiation. GStreamer is the sole engine; no implicit FFmpeg fallback.
+- File/folder/external live clients, preloading, seek/flush, decoder errors, reconnect/backoff, timeout, A/V synchronization and continuous output. NoAr must not start RTMP/SRT input listeners. Use `/noar-gstreamer` for native references and require decoded transitions plus wall-clock receiver progress.
 - HLS, RTMP, SRT, UDP and SCTE-35 behavior under discontinuity, marker cancellation, ad splice timing and restart.
 - Audio loudness/mixing, program-to-commercial transitions, logo blending and missing-media filler behavior.
 

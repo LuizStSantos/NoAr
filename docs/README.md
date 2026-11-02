@@ -27,6 +27,9 @@ Portuguese and English; menus are named here in English.
   folder mode and the playlist generator.
 - **[Converting uploaded videos](uploads.md)**: videos converted to the
   output format when they are uploaded, so the playout does less on air.
+- **[Assembled programs](programs.md)**: a program delivered in blocks
+  assembled once, with commercial breaks between the blocks, then dragged into
+  playlists or scheduled as one item.
 - **[Commercials folders](commercials.md)**: clips that play as commercials
   everywhere, out of the guide and without the logo, and breaks inside a
   video.

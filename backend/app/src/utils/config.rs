@@ -31,6 +31,10 @@ pub enum OutputMode {
     #[default]
     HLS,
     Stream,
+    /// The uncompressed program published as an NDI source on the network.
+    Ndi,
+    /// The program on a baseband video card (Blackmagic DeckLink SDI/HDMI).
+    Sdi,
 }
 
 impl OutputMode {
@@ -38,6 +42,8 @@ impl OutputMode {
         match s {
             "desktop" => Self::Desktop,
             "stream" => Self::Stream,
+            "ndi" => Self::Ndi,
+            "sdi" => Self::Sdi,
             _ => Self::HLS,
         }
     }
@@ -51,7 +57,9 @@ impl FromStr for OutputMode {
             "desktop" => Ok(Self::Desktop),
             "hls" => Ok(Self::HLS),
             "stream" => Ok(Self::Stream),
-            _ => Err("Use 'desktop', 'hls' or 'stream'".to_string()),
+            "ndi" => Ok(Self::Ndi),
+            "sdi" => Ok(Self::Sdi),
+            _ => Err("Use 'desktop', 'hls', 'stream', 'ndi' or 'sdi'".to_string()),
         }
     }
 }
@@ -62,6 +70,8 @@ impl fmt::Display for OutputMode {
             OutputMode::Desktop => write!(f, "desktop"),
             OutputMode::HLS => write!(f, "hls"),
             OutputMode::Stream => write!(f, "stream"),
+            OutputMode::Ndi => write!(f, "ndi"),
+            OutputMode::Sdi => write!(f, "sdi"),
         }
     }
 }
@@ -181,7 +191,6 @@ pub struct PlayoutConfig {
     pub logging: Logging,
     pub processing: Processing,
     pub audio: Audio,
-    pub ingest: Ingest,
     pub playlist: Playlist,
     pub storage: Storage,
     pub task: Task,
@@ -616,6 +625,10 @@ pub struct Processing {
     /// turns that off.
     #[serde(default)]
     pub logo_key: String,
+    /// Key that lets an encoder or a script extend or end the live on air;
+    /// empty turns that off.
+    #[serde(default)]
+    pub live_key: String,
     /// How the logo comes up.
     #[serde(default)]
     pub logo_transition_in: LogoTransition,
@@ -832,6 +845,7 @@ impl Processing {
             vtt_default: config.processing_vtt_default,
             guide_logo: config.processing_guide_logo.clone(),
             logo_key: config.processing_logo_key.clone(),
+            live_key: config.processing_live_key.clone(),
             logo_transition_in: LogoTransition::new(&config.processing_logo_transition_in),
             logo_transition_out: LogoTransition::new(&config.processing_logo_transition_out),
             logo_transition_seconds: config.processing_logo_transition_seconds,
@@ -1001,100 +1015,6 @@ impl Audio {
             loudness_true_peak_ceiling_dbtp: config.processing_loudness_true_peak_ceiling_dbtp,
         }
     }
-}
-
-#[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
-#[ts(export, export_to = "playout_config.d.ts")]
-pub struct Ingest {
-    pub listeners: Vec<LiveInput>,
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize, TS)]
-#[ts(export, export_to = "playout_config.d.ts")]
-pub struct LiveInput {
-    pub id: i32,
-    pub priority: i32,
-    pub enabled: bool,
-    pub name: String,
-    pub backend: String,
-    pub identifier: String,
-    pub options: BTreeMap<String, String>,
-    pub demuxer_options: BTreeMap<String, String>,
-}
-
-impl LiveInput {
-    pub fn listen_port(&self) -> Result<u16, String> {
-        match self.backend.as_str() {
-            "rtmp" => parse_rtmp_ingest_port(&self.identifier),
-            "srt" => {
-                let url = reqwest::Url::parse(&self.identifier)
-                    .map_err(|_| "invalid SRT listener URL".to_string())?;
-
-                if url.scheme() != "srt"
-                    || url.host_str().is_none()
-                    || !url.username().is_empty()
-                    || url.password().is_some()
-                    || url.query().is_some()
-                    || url.fragment().is_some()
-                    || !matches!(url.path(), "" | "/")
-                {
-                    return Err("SRT listener must use srt://host:port".to_string());
-                }
-
-                let port = url.port().ok_or("SRT listener must include a port")?;
-
-                if port < MIN_INGEST_PORT {
-                    return Err(format!("listener port must be at least {MIN_INGEST_PORT}"));
-                }
-
-                Ok(port)
-            }
-            _ => Err("unsupported live input backend".to_string()),
-        }
-    }
-}
-
-pub const MIN_INGEST_PORT: u16 = 1024;
-pub const DEFAULT_INGEST_PORT: u16 = 1936;
-
-/// Extract the explicit listen port from an RTMP ingest URL.
-///
-/// The RTMP listener must use an unprivileged port so every channel can be
-/// started by the regular service user.
-pub fn parse_rtmp_ingest_port(url: &str) -> Result<u16, String> {
-    let authority_and_path = url
-        .strip_prefix("rtmp://")
-        .ok_or_else(|| "ingest URL must use the rtmp:// scheme".to_string())?;
-    let authority = authority_and_path
-        .split_once('/')
-        .map(|(authority, _)| authority)
-        .ok_or_else(|| "ingest URL must include a stream path".to_string())?;
-
-    let (host, port) = if let Some(rest) = authority.strip_prefix('[') {
-        let (host, port) = rest
-            .split_once("]:")
-            .ok_or_else(|| "ingest URL must include a port".to_string())?;
-        (host, port)
-    } else {
-        authority
-            .rsplit_once(':')
-            .ok_or_else(|| "ingest URL must include a port".to_string())?
-    };
-
-    if host.is_empty() {
-        return Err("ingest URL must include a host".to_string());
-    }
-
-    let port = port
-        .parse::<u16>()
-        .map_err(|_| "ingest URL port must be between 1024 and 65535".to_string())?;
-    if port < MIN_INGEST_PORT {
-        return Err(format!(
-            "ingest URL port must be between {MIN_INGEST_PORT} and 65535"
-        ));
-    }
-
-    Ok(port)
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
@@ -1286,10 +1206,10 @@ pub struct Output {
     pub video_codec: String,
     #[serde(default)]
     pub video_options: BTreeMap<String, String>,
-    /// FFmpeg AVIO/protocol options used while opening a network stream.
+    /// GStreamer transport options used while opening a network stream.
     #[serde(default)]
     pub protocol_options: BTreeMap<String, String>,
-    /// FFmpeg muxer options for this output, such as HLS `hls_flags`.
+    /// GStreamer muxer options and supported legacy HLS options for this output.
     #[serde(default)]
     pub muxer_options: BTreeMap<String, String>,
     /// Global container metadata. Availability depends on the output muxer.
@@ -1297,11 +1217,15 @@ pub struct Output {
     pub metadata_options: BTreeMap<String, String>,
     #[serde(default = "default_audio_codec")]
     pub audio_codec: String,
-    /// FFmpeg AVOptions for the selected audio encoder.
+    /// GStreamer properties and supported legacy options for the selected audio encoder.
     #[serde(default)]
     pub audio_options: BTreeMap<String, String>,
     #[serde(default = "default_audio_bitrate")]
     pub audio_bitrate: u32,
+    /// Encoded output audio sample rate in Hz (32000, 44100 or 48000). The
+    /// engine processes at 48 kHz and resamples just before the encoder.
+    #[serde(default = "default_output_audio_sample_rate")]
+    pub audio_sample_rate: u32,
     /// Adaptive HLS renditions, one per entry, each formatted as
     /// `NAME:WIDTHxHEIGHT:VIDEO_BITRATE[:AUDIO_BITRATE]` (e.g.
     /// `high:1920x1080:5000k:192k`). Only relevant when `mode == HLS`;
@@ -1329,6 +1253,10 @@ fn default_video_codec() -> String {
 
 fn default_audio_codec() -> String {
     "aac".to_string()
+}
+
+const fn default_output_audio_sample_rate() -> u32 {
+    ENGINE_AUDIO_SAMPLE_RATE
 }
 
 const fn default_audio_bitrate() -> u32 {
@@ -1387,6 +1315,10 @@ impl Output {
                 .audio_bitrate
                 .and_then(|value| u32::try_from(value).ok())
                 .unwrap_or_else(default_audio_bitrate),
+            audio_sample_rate: output
+                .audio_sample_rate
+                .and_then(|value| u32::try_from(value).ok())
+                .unwrap_or_else(default_output_audio_sample_rate),
             hls_variants: output
                 .hls_variants
                 .split(';')
@@ -1443,7 +1375,7 @@ impl Output {
             noar_engine::validate_audio_options(
                 &self.audio_codec,
                 &self.audio_options,
-                ENGINE_AUDIO_SAMPLE_RATE,
+                self.audio_sample_rate,
                 variant.audio_bitrate,
             )
             .map_err(|error| format!("HLS variant {:?}: {error}", variant.name))?;
@@ -1475,9 +1407,45 @@ impl Output {
             return Err("container metadata is unavailable for desktop output".to_string());
         }
 
-        if matches!(self.mode, OutputMode::HLS | OutputMode::Stream) {
+        if self.mode == OutputMode::Ndi {
+            if !self.muxer_options.is_empty() {
+                return Err("NDI output has no container options".to_string());
+            }
+            noar_engine::validate_ndi_name(&self.stream_url)?;
+            if let Some(reason) = noar_engine::ndi_unavailable_reason() {
+                return Err(format!(
+                    "NDI output is unavailable on this server: {reason}"
+                ));
+            }
+        }
+
+        if self.mode == OutputMode::Sdi {
+            if !self.muxer_options.is_empty() {
+                return Err("SDI output has no container options".to_string());
+            }
+            let card = noar_engine::parse_decklink(&self.stream_url, true)?.ok_or(
+                "SDI output needs a DeckLink address, such as decklink://0?mode=1080i5994",
+            )?;
+            let mode = card.mode.ok_or("SDI output needs a video mode")?;
+            // The channel renders whole frames; the card's 29.97/59.94 is met
+            // by repeating a frame now and then, other rates would judder.
+            let card_fps = f64::from(mode.fps_num) / f64::from(mode.fps_den);
+            if (self.fps.round() - card_fps).abs() > 0.5 {
+                return Err(format!(
+                    "the output frame rate ({}) must match the card mode {} ({card_fps:.2} frames/s)",
+                    self.fps, mode.name
+                ));
+            }
+        }
+
+        // NDI and SDI encode only the Player preview, as MPEG-TS like UDP.
+        if matches!(
+            self.mode,
+            OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi | OutputMode::Sdi
+        ) {
             let target = match self.mode {
                 OutputMode::HLS => noar_engine::FfmpegOutputTarget::Hls,
+                OutputMode::Ndi | OutputMode::Sdi => noar_engine::FfmpegOutputTarget::Udp,
                 OutputMode::Stream => self
                     .stream_type
                     .ffmpeg_target()
@@ -1492,12 +1460,13 @@ impl Output {
                 }
                 if !capabilities.has_muxer_named(custom_format) {
                     return Err(format!(
-                        "FFmpeg output format {custom_format:?} is not available"
+                        "GStreamer output format {custom_format:?} is not available"
                     ));
                 }
             }
             let muxer_name = match self.mode {
                 OutputMode::HLS => "hls",
+                OutputMode::Ndi | OutputMode::Sdi => "mpegts",
                 OutputMode::Stream => match self.stream_type {
                     StreamType::Rtmp => "flv",
                     StreamType::Srt | StreamType::Udp => "mpegts",
@@ -1545,10 +1514,16 @@ impl Output {
                 ));
             }
             noar_engine::validate_video_options(&self.video_codec, &self.video_options)?;
+            if !noar_engine::OUTPUT_AUDIO_SAMPLE_RATES.contains(&self.audio_sample_rate) {
+                return Err(format!(
+                    "audio sample rate must be one of {:?} Hz",
+                    noar_engine::OUTPUT_AUDIO_SAMPLE_RATES
+                ));
+            }
             noar_engine::validate_audio_options(
                 &self.audio_codec,
                 &self.audio_options,
-                ENGINE_AUDIO_SAMPLE_RATE,
+                self.audio_sample_rate,
                 u64::from(self.audio_bitrate) * 1_000,
             )?;
             if noar_engine::audio_codec_uses_bitrate(&self.audio_codec) && self.audio_bitrate == 0 {
@@ -1633,8 +1608,6 @@ impl PlayoutConfig {
         let logging = Logging::new(&config);
         let mut processing = Processing::new(&config);
         let audio = Audio::new(&config);
-        let listeners = handles::select_live_inputs(pool, config.id).await?;
-        let ingest = Ingest { listeners };
         let mut playlist = Playlist::new(&config);
         let task = Task::new(&config);
         let recording = Recording::new(&recording_config);
@@ -1679,7 +1652,6 @@ impl PlayoutConfig {
             logging,
             processing,
             audio,
-            ingest,
             playlist,
             storage,
             task,
@@ -1843,8 +1815,64 @@ mod output_tests {
             audio_codec: "aac".to_string(),
             audio_options: BTreeMap::new(),
             audio_bitrate: 128,
+            audio_sample_rate: 48_000,
             hls_variants: Vec::new(),
         }
+    }
+
+    #[test]
+    fn sdi_output_needs_a_card_mode_matching_the_frame_rate() {
+        let mut output = output(OutputMode::Sdi);
+        output.width = 1920;
+        output.height = 1080;
+        output.fps = 29.97;
+        output.stream_url = "decklink://1?mode=1080i5994".to_string();
+        assert!(output.validate().is_ok(), "{:?}", output.validate());
+
+        output.fps = 30.0;
+        assert!(output.validate().is_ok());
+        output.stream_url = "decklink://1?mode=1080p30".to_string();
+        assert!(output.validate().is_ok());
+
+        output.fps = 25.0;
+        assert!(output.validate().unwrap_err().contains("frame rate"));
+
+        output.fps = 30.0;
+        output.stream_url = "decklink://1".to_string();
+        assert!(output.validate().unwrap_err().contains("mode"));
+        output.stream_url = "rtmp://example.com/live".to_string();
+        assert!(output.validate().unwrap_err().contains("DeckLink"));
+        assert_eq!("sdi".parse::<OutputMode>(), Ok(OutputMode::Sdi));
+    }
+
+    #[test]
+    fn ndi_output_needs_a_name_and_the_runtime() {
+        let mut output = output(OutputMode::Ndi);
+        output.stream_url = "   ".to_string();
+        assert!(output.validate().unwrap_err().contains("NDI source name"));
+
+        output.stream_url = "NoAr Canal 1".to_string();
+        output
+            .muxer_options
+            .insert("x".to_string(), "1".to_string());
+        assert!(output.validate().unwrap_err().contains("container"));
+        output.muxer_options.clear();
+
+        match noar_engine::ndi_unavailable_reason() {
+            Some(_) => assert!(output.validate().unwrap_err().contains("unavailable")),
+            None => assert!(output.validate().is_ok()),
+        }
+        assert_eq!("ndi".parse::<OutputMode>(), Ok(OutputMode::Ndi));
+        assert_eq!(OutputMode::Ndi.to_string(), "ndi");
+    }
+
+    #[test]
+    fn output_audio_sample_rate_is_limited_to_supported_rates() {
+        let mut output = output(OutputMode::Stream);
+        output.audio_sample_rate = 44_100;
+        assert!(output.validate().is_ok());
+        output.audio_sample_rate = 22_050;
+        assert!(output.validate().unwrap_err().contains("sample rate"));
     }
 
     #[test]
@@ -2121,67 +2149,30 @@ mod output_tests {
 }
 
 #[cfg(test)]
-mod ingest_tests {
-    use super::{Ingest, LiveInput, MIN_INGEST_PORT, parse_rtmp_ingest_port};
+mod external_live_source_tests {
+    use super::PlayoutConfig;
 
     #[test]
-    fn ingest_api_uses_only_the_listener_list() {
-        let json = serde_json::to_value(Ingest::default()).unwrap();
+    fn configuration_api_has_no_input_server_settings() {
+        let config = serde_json::to_value(PlayoutConfig::default()).unwrap();
 
-        assert_eq!(json, serde_json::json!({ "listeners": [] }));
+        assert!(config.get("ingest").is_none());
+    }
+
+    #[test]
+    fn legacy_input_server_payload_cannot_restore_listener_settings() {
+        let mut payload = serde_json::to_value(PlayoutConfig::default()).unwrap();
+        payload["ingest"] = serde_json::json!({
+            "listeners": [{"enabled": true, "backend": "srt", "identifier": "srt://0.0.0.0:9000"}]
+        });
+        let config: PlayoutConfig = serde_json::from_value(payload).unwrap();
+
         assert!(
-            serde_json::from_value::<Ingest>(serde_json::json!({
-                "enable": true,
-                "ingest_url": "rtmp://127.0.0.1:1936/live/stream"
-            }))
-            .is_err()
+            serde_json::to_value(config)
+                .unwrap()
+                .get("ingest")
+                .is_none()
         );
-    }
-
-    fn srt_input(url: &str) -> LiveInput {
-        LiveInput {
-            backend: "srt".to_string(),
-            identifier: url.to_string(),
-            ..LiveInput::default()
-        }
-    }
-
-    #[test]
-    fn validates_srt_listener_addresses_without_url_options() {
-        assert_eq!(srt_input("srt://127.0.0.1:9000").listen_port(), Ok(9000));
-        assert_eq!(srt_input("srt://[::1]:9001").listen_port(), Ok(9001));
-
-        for url in [
-            "srt://127.0.0.1:80",
-            "srt://127.0.0.1",
-            "srt://127.0.0.1:9000?mode=caller",
-            "srt://127.0.0.1:9000/live",
-            "srt://user@127.0.0.1:9000",
-            "http://127.0.0.1:9000",
-        ] {
-            assert!(srt_input(url).listen_port().is_err(), "accepted {url}");
-        }
-    }
-
-    #[test]
-    fn parses_unprivileged_rtmp_ingest_ports() {
-        assert_eq!(
-            parse_rtmp_ingest_port("rtmp://127.0.0.1:1936/live/stream"),
-            Ok(1936)
-        );
-        assert_eq!(
-            parse_rtmp_ingest_port("rtmp://[::1]:1940/live/stream"),
-            Ok(1940)
-        );
-    }
-
-    #[test]
-    fn rejects_privileged_or_invalid_rtmp_ingest_urls() {
-        assert!(parse_rtmp_ingest_port("rtmp://127.0.0.1:1023/live/stream").is_err());
-        assert!(parse_rtmp_ingest_port("rtmp://127.0.0.1/live/stream").is_err());
-        assert!(parse_rtmp_ingest_port("http://127.0.0.1:1936/live/stream").is_err());
-        assert!(parse_rtmp_ingest_port("rtmp://:1936/live/stream").is_err());
-        const { assert!(MIN_INGEST_PORT > 0) };
     }
 }
 

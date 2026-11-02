@@ -33,7 +33,7 @@ watch(
     },
 )
 
-const navigationBlocked = computed(() => locked.value || playlistStore.ingestRuns || !playlistStore.playoutIsRunning)
+const navigationBlocked = computed(() => locked.value || !playlistStore.playoutIsRunning)
 
 function channelId() {
     return configStore.channels[configStore.i]?.id
@@ -71,15 +71,12 @@ async function playoutCommand(control: 'back' | 'next' | 'reset') {
     busy.value = control
 
     try {
-        const result = await authFetch<{ operation?: string; reason?: string }>(`/api/control/${channelId()}/playout`, {
+        await authFetch<{ operation?: string; reason?: string }>(`/api/control/${channelId()}/playout`, {
             method: 'POST',
             headers: { ...configStore.contentType, ...authStore.authHeader },
             body: JSON.stringify({ control }),
         })
 
-        if (result?.reason === 'live_ingest_active') {
-            indexStore.msgAlert('warning', t('control.navigationDisabledLive'), 3)
-        }
     } catch (e: any) {
         indexStore.msgAlert('error', e?.data ?? e, 3)
     } finally {

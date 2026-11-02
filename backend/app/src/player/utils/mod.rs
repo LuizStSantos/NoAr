@@ -181,8 +181,6 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
         .unwrap_or_else(Media::default);
     let channel = manager.channel.lock().await.clone();
     let config = manager.config.read().await.processing.clone();
-    let (ingest_is_alive, ingest_listener_id) = manager.playback_control.lock().await.live_status();
-    let ingest_listener = ingest_listener_id.and_then(|id| manager.running_listener_label(id));
 
     let mut data_map = Map::new();
     let current_time = time_in_seconds(&channel.timezone);
@@ -191,16 +189,6 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
     let played_time = current_time - begin;
 
     data_map.insert("index".to_string(), json!(media.index));
-    data_map.insert("ingest".to_string(), json!(ingest_is_alive));
-    data_map.insert("ingest_listener_id".to_string(), json!(ingest_listener_id));
-    data_map.insert(
-        "ingest_listener_name".to_string(),
-        json!(ingest_listener.as_ref().map(|(name, _)| name)),
-    );
-    data_map.insert(
-        "ingest_listener_backend".to_string(),
-        json!(ingest_listener.as_ref().map(|(_, backend)| backend)),
-    );
     data_map.insert("mode".to_string(), json!(config.mode));
     data_map.insert(
         "shift".to_string(),
@@ -215,6 +203,18 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
     data_map.insert(
         "output_link".to_string(),
         output_link_map(&manager.output_link.status()),
+    );
+    // The playout is off air and retried: the last clip above is not airing.
+    data_map.insert(
+        "failure".to_string(),
+        manager.failure().map_or(Value::Null, |failure| {
+            json!({
+                "message": failure.message,
+                "since": failure.since,
+                "retry_in": (failure.retry_at - chrono::Utc::now().timestamp()).max(0),
+                "attempts": failure.attempts,
+            })
+        }),
     );
     if let Ok(audio_level) = manager.audio_level.lock()
         && let Some(audio_level) = *audio_level
@@ -744,7 +744,8 @@ pub fn get_delta(config: &PlayoutConfig, begin: &f64) -> (f64, f64) {
 }
 
 pub fn is_remote(path: &str) -> bool {
-    Regex::new(r"^(https?|rtmps?|rts?p|udp|tcp|srt|rist)://.*")
+    // Network streams, NDI sources and video cards: never storage paths.
+    Regex::new(r"^(https?|rtmps?|rts?p|udp|tcp|srt|rist|ndi|decklink|v4l2)://.*")
         .unwrap()
         .is_match(&path.to_lowercase())
 }

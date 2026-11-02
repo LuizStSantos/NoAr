@@ -9,6 +9,7 @@
 
 use std::{
     collections::{HashSet, VecDeque},
+    path::PathBuf,
     sync::{Mutex, MutexGuard, PoisonError, atomic::Ordering},
     time::{Duration, Instant},
 };
@@ -99,8 +100,16 @@ pub struct ActiveEvent {
     /// What is playing inside the event: a clip name, or the live protocol.
     pub item: Option<String>,
     pub interrupted: Option<InterruptedClip>,
+    /// A live's end time, channel time (`YYYY-MM-DDTHH:MM:SS`), extensions
+    /// included.
+    pub ends_at: Option<String>,
+    /// Seconds a live was extended by while on air (this airing only).
+    pub extended_seconds: f64,
     #[serde(skip)]
     started: Instant,
+    /// A live's planned end before any extension.
+    #[serde(skip)]
+    planned_end: Option<NaiveDateTime>,
 }
 
 /// Where an occurrence that was on air when the playout stopped picks up.
@@ -128,6 +137,8 @@ struct Inner {
     events: Option<Vec<ScheduleEvent>>,
     queue: VecDeque<Queued>,
     active: Option<ActiveEvent>,
+    /// How much later the live on air ends than planned (this airing only).
+    extension: TimeDelta,
     abort: bool,
     interrupt_wanted: bool,
     /// Counts player starts, so work left over from an earlier start (a live
@@ -157,6 +168,7 @@ impl ScheduleState {
 
         inner.queue.clear();
         inner.active = None;
+        inner.extension = TimeDelta::zero();
         inner.abort = false;
         inner.interrupt_wanted = false;
         inner.generation += 1;
@@ -266,8 +278,73 @@ impl ScheduleState {
         })
     }
 
+    /// End the live on air at `new_end` (channel time) instead of when it was
+    /// going to, for this airing only; the saved event keeps its times.
+    /// Returns the live as it is now, or why it cannot change: no live on
+    /// air, or an end that is not later than now.
+    pub fn extend_live(
+        &self,
+        new_end: NaiveDateTime,
+        now: NaiveDateTime,
+    ) -> Result<ActiveEvent, String> {
+        let mut inner = self.lock();
+        let Some(active) = inner.active.as_mut() else {
+            return Err("no live is on air".to_string());
+        };
+        let Some(planned_end) = active
+            .planned_end
+            .filter(|_| active.kind == ScheduleKind::Live)
+        else {
+            return Err("the event on air is not a live".to_string());
+        };
+        if new_end <= now + seconds(5.0) {
+            return Err(
+                "the new end must be later than now; to end the live now, go back to the programme"
+                    .to_string(),
+            );
+        }
+        if new_end - planned_end > TimeDelta::try_hours(24).unwrap_or_default() {
+            return Err("a live can be extended by 24 hours at most".to_string());
+        }
+
+        let extension = new_end - planned_end;
+        let change = extension - inner.extension;
+        let active = inner.active.as_mut().expect("checked above");
+        active.planned_seconds += change.num_milliseconds() as f64 / 1000.0;
+        active.extended_seconds = extension.num_milliseconds() as f64 / 1000.0;
+        active.ends_at = Some(new_end.format("%Y-%m-%dT%H:%M:%S").to_string());
+        let mut current = active.clone();
+        inner.extension = extension;
+        current.elapsed_seconds = current.started.elapsed().as_secs_f64();
+
+        Ok(current)
+    }
+
+    /// When the live on air now ends compared with its planned end.
+    fn live_extension(&self) -> TimeDelta {
+        self.lock().extension
+    }
+
+    /// The live on air's end, extensions included.
+    pub fn live_end(&self) -> Option<NaiveDateTime> {
+        let inner = self.lock();
+        let active = inner.active.as_ref()?;
+
+        active.planned_end.map(|end| end + inner.extension)
+    }
+
     pub fn is_active(&self) -> bool {
         self.lock().active.is_some()
+    }
+
+    /// Close the event that was on air. A stop asked while it was closing
+    /// (a second "end", say) was meant for it, not for what comes next.
+    fn close_active(&self) {
+        let mut inner = self.lock();
+
+        inner.active = None;
+        inner.extension = TimeDelta::zero();
+        inner.abort = false;
     }
 
     /// Ask the event on air to stop; returns `false` when none is on air.
@@ -672,7 +749,7 @@ async fn queue_when_signal_answers(manager: ChannelManager, occurrence: Occurren
     finish_run(&manager, &occurrence, "failed").await;
 }
 
-/// Cut the clip on air. `false` when a live ingest is on air or another
+/// Cut the clip on air. `false` when another
 /// navigation is in progress; the caller tries again on the next tick.
 async fn request_interrupt(manager: &ChannelManager) -> bool {
     let control = manager.playback_control.lock().await;
@@ -682,7 +759,7 @@ async fn request_interrupt(manager: &ChannelManager) -> bool {
             navigation.commit();
             true
         }
-        Err(NavigationBlocked::Live) | Err(NavigationBlocked::Busy) => false,
+        Err(NavigationBlocked::Busy) => false,
     }
 }
 
@@ -747,18 +824,26 @@ pub(crate) async fn play_queued_event(
         error!(channel = channel_id; "Unable to save the scheduled event state: {error}");
     }
 
-    manager.schedule.lock().active = Some(ActiveEvent {
-        event_id: event.id,
-        title: event.title.clone(),
-        kind: event.kind,
-        entry_mode: event.entry_mode,
-        after_mode: event.after_mode,
-        planned_seconds,
-        elapsed_seconds: 0.0,
-        item: None,
-        interrupted,
-        started,
-    });
+    let planned_end = (event.kind == ScheduleKind::Live).then_some(occurrence.end);
+    {
+        let mut schedule = manager.schedule.lock();
+        schedule.active = Some(ActiveEvent {
+            event_id: event.id,
+            title: event.title.clone(),
+            kind: event.kind,
+            entry_mode: event.entry_mode,
+            after_mode: event.after_mode,
+            planned_seconds,
+            elapsed_seconds: 0.0,
+            item: None,
+            interrupted,
+            ends_at: planned_end.map(|end| end.format("%Y-%m-%dT%H:%M:%S").to_string()),
+            extended_seconds: 0.0,
+            started,
+            planned_end,
+        });
+        schedule.extension = TimeDelta::zero();
+    }
     manager.schedule.lock().abort = false;
 
     if resume.is_some() {
@@ -812,6 +897,9 @@ pub(crate) async fn play_queued_event(
     };
 
     return_preload.abort();
+    // An end or skip that arrived while the event was closing was meant for
+    // it; left pending it would cut the programme that comes back now.
+    manager.playback_control.lock().await.cancel_skip();
 
     let elapsed = started.elapsed().as_secs_f64();
     let shift = match event.after_mode {
@@ -828,7 +916,7 @@ pub(crate) async fn play_queued_event(
 
     manager.channel.lock().await.time_shift = shift;
     manager.list_init.store(true, Ordering::SeqCst);
-    manager.schedule.lock().active = None;
+    manager.schedule.close_active();
 
     // The playout stopping, or the output failing and the playout restarting,
     // cut the event: it stays open, and the next start puts it back on air if
@@ -894,15 +982,54 @@ async fn play_clips(
     let mut commercials = CommercialFolders::new(&config.channel.storage);
     // The run of commercials on air or next has had its SCTE-35 break.
     let mut break_announced = false;
+    // Assembled programs play as their blocks, breaks and lives, as they
+    // are now. A live in a program airs for the length the program gives it.
+    let expanded;
+    let mut live_lengths: Vec<Option<f64>> = vec![];
+    let event = if event
+        .sources
+        .iter()
+        .any(|source| crate::utils::assembled::is_program(source))
+    {
+        let (sources, lengths) = crate::utils::assembled::expand_sources_with_lengths(
+            &config.channel.storage,
+            &event.sources,
+        )
+        .await
+        .into_iter()
+        .unzip();
+        live_lengths = lengths;
+        expanded = ScheduleEvent {
+            sources,
+            ..event.clone()
+        };
+        &expanded
+    } else {
+        event
+    };
 
     for (index, source) in event.sources.iter().enumerate() {
         if manager.schedule.take_abort() || stopping(manager) {
             break;
         }
 
-        let path = config.channel.storage.join(source);
-        // The part the trim saved with the clip keeps.
-        let Some((start, duration)) = trimmed_clip(&path).await else {
+        let mut path = config.channel.storage.join(source);
+        let live_length = live_lengths.get(index).copied().flatten();
+        // A live airs at its current address; a clip keeps its saved trim.
+        let timing = match live_length {
+            Some(length) => match read_live_url(&path).await {
+                Ok(url) => {
+                    path = PathBuf::from(url);
+                    Some((0.0, length))
+                }
+                Err(error) => {
+                    error!(channel = id; "Live <span class=\"log-addr\">{source}</span> of the program: {error}");
+                    None
+                }
+            },
+            None => trimmed_clip(&path).await,
+        };
+        let Some((start, duration)) = timing else {
             error!(channel = id; "Scheduled clip <span class=\"log-addr\">{source}</span> cannot be read; skipped");
             completed = false;
             continue;
@@ -927,7 +1054,9 @@ async fn play_clips(
         let commercial = commercials.contains(source);
         let entry = as_run::event_clip_entry(event, scheduled_at, source, seek, length, commercial);
         let aired = as_run::record_start(manager, entry).await;
-        let next_preload = match event.sources.get(index + 1) {
+        // A live of a program connects when its turn comes.
+        let next_is_live = live_lengths.get(index + 1).copied().flatten().is_some();
+        let next_preload = match event.sources.get(index + 1).filter(|_| !next_is_live) {
             Some(next) => {
                 let next = config.channel.storage.join(next);
 
@@ -1097,10 +1226,12 @@ async fn play_live(
     // The on-air record of the waiting screen, from when it first airs until
     // the signal answers or the event gives up.
     let mut waiting: Option<Option<i64>> = None;
+    // Extended on air: it runs to the new end.
     let seconds_left = || {
         let now = time_now(&config.channel.timezone).naive_local();
 
-        (occurrence.end - now).num_milliseconds() as f64 / 1000.0
+        (occurrence.end + manager.schedule.live_extension() - now).num_milliseconds() as f64
+            / 1000.0
     };
 
     loop {
@@ -1148,7 +1279,11 @@ async fn play_live(
 
             let entry = as_run::event_live_entry(event, scheduled_at, remaining);
             let aired = as_run::record_start(manager, entry).await;
+            let aired_from = Instant::now();
             let result = play_plain(playout, config, &url, remaining).await;
+            // It ran its whole time and was extended meanwhile: the signal is
+            // fine, so it goes on at once (its connection was kept open).
+            let ran_its_time = aired_from.elapsed().as_secs_f64() >= remaining - 1.0;
             let end = match &result {
                 Ok(result) => as_run::live_end(manager, result, seconds_left()),
                 Err(error) => AiredEnd::Failed(error.to_string()),
@@ -1161,6 +1296,15 @@ async fn play_live(
                     completed: true,
                     stopped: true,
                 });
+            }
+
+            if ran_its_time && seconds_left() >= 1.0 {
+                trusted_signal = true;
+                info!(channel = id;
+                    "Live <span class=\"log-addr\">{}</span> extended; on air for <span class=\"log-number\">{:.0}</span> s more",
+                    event.title,
+                    seconds_left()
+                );
             }
 
             // Ending before the end time means the signal was lost.
@@ -1261,7 +1405,7 @@ async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
     let preloader = manager.preloader.lock().await.clone();
     let deadline = Instant::now() + SIGNAL_WAIT;
 
-    preloader.preload(url);
+    preloader.preload_live(url);
 
     loop {
         match preloader.signal(url) {
@@ -1278,10 +1422,18 @@ async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
 /// Open what an event starts with ahead of its start, so the switch to it
 /// is immediate. A live connects and stays at its live edge.
 async fn preload_event(manager: &ChannelManager, occurrence: &Occurrence) {
-    let Some(source) = occurrence.event.sources.first() else {
+    let storage = manager.config.read().await.channel.storage.clone();
+    // An assembled program starts with its first clip.
+    let Some(source) = crate::utils::assembled::expand_sources(
+        &storage,
+        &occurrence.event.sources[..occurrence.event.sources.len().min(1)],
+    )
+    .await
+    .into_iter()
+    .next() else {
         return;
     };
-    let path = manager.config.read().await.channel.storage.join(source);
+    let path = storage.join(source);
     let target = match occurrence.event.kind {
         ScheduleKind::Media => path.to_string_lossy().to_string(),
         ScheduleKind::Live => match read_live_url(&path).await {
@@ -1290,7 +1442,12 @@ async fn preload_event(manager: &ChannelManager, occurrence: &Occurrence) {
         },
     };
 
-    manager.preloader.lock().await.clone().preload(&target);
+    let preloader = manager.preloader.lock().await.clone();
+    if occurrence.event.kind == ScheduleKind::Live {
+        preloader.preload_live(&target);
+    } else {
+        preloader.preload(&target);
+    }
 }
 
 /// Open the clip the programme goes back to shortly before the event ends,
@@ -1498,6 +1655,62 @@ mod tests {
         }
     }
 
+    fn on_air(kind: ScheduleKind, planned_end: Option<NaiveDateTime>) -> ActiveEvent {
+        ActiveEvent {
+            event_id: 7,
+            title: "Jornal".to_string(),
+            kind,
+            entry_mode: EntryMode::Interrupt,
+            after_mode: AfterMode::Clock,
+            planned_seconds: 3600.0,
+            elapsed_seconds: 0.0,
+            item: None,
+            interrupted: None,
+            ends_at: None,
+            extended_seconds: 0.0,
+            started: Instant::now(),
+            planned_end,
+        }
+    }
+
+    #[test]
+    fn a_live_on_air_is_extended_for_this_airing() {
+        let at = |time: &str| {
+            NaiveDateTime::parse_from_str(&format!("2026-11-02T{time}"), "%Y-%m-%dT%H:%M:%S")
+                .unwrap()
+        };
+        let state = ScheduleState::default();
+        let now = at("12:40:00");
+        assert!(
+            state.extend_live(at("13:30:00"), now).is_err(),
+            "nothing on air"
+        );
+
+        state.lock().active = Some(on_air(ScheduleKind::Live, Some(at("13:00:00"))));
+        let extended = state.extend_live(at("13:30:00"), now).unwrap();
+        assert_eq!(extended.extended_seconds, 1800.0);
+        assert_eq!(extended.planned_seconds, 5400.0);
+        assert_eq!(extended.ends_at.as_deref(), Some("2026-11-02T13:30:00"));
+        assert_eq!(state.live_end(), Some(at("13:30:00")));
+        assert_eq!(state.live_extension(), TimeDelta::try_minutes(30).unwrap());
+
+        // Changed again: from the planned end, not on top of the last change.
+        let changed = state.extend_live(at("13:15:00"), now).unwrap();
+        assert_eq!(changed.extended_seconds, 900.0);
+        assert_eq!(changed.planned_seconds, 4500.0);
+
+        assert!(
+            state.extend_live(at("12:40:02"), now).is_err(),
+            "an end that already passed"
+        );
+
+        state.lock().active = Some(on_air(ScheduleKind::Media, None));
+        assert!(
+            state.extend_live(at("13:30:00"), now).is_err(),
+            "not a live"
+        );
+    }
+
     #[test]
     fn a_removed_event_leaves_the_queue() {
         let state = ScheduleState::default();
@@ -1648,6 +1861,24 @@ mod tests {
         assert_eq!(state.queued()[0].event.entry_mode, EntryMode::Interrupt);
         assert!(!state.request_abort());
         assert!(!state.take_abort());
+    }
+
+    #[test]
+    fn a_second_end_while_the_event_closes_does_not_reach_what_follows() {
+        let state = ScheduleState::default();
+
+        state.lock().active = Some(on_air(ScheduleKind::Live, Some(at("2026-11-02 13:00:00"))));
+        assert!(state.request_abort());
+        assert!(state.take_abort());
+        // The live loop took the first end; a second one comes in before the
+        // event is closed.
+        assert!(state.request_abort());
+
+        state.close_active();
+
+        assert!(!state.take_abort());
+        assert!(!state.is_active());
+        assert!(!state.request_abort());
     }
 
     #[test]

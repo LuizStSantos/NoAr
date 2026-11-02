@@ -276,6 +276,21 @@ pub async fn read_marks(video: &Path) -> LogoMarks {
     }
 }
 
+/// [`read_marks`] for code that prepares a playlist outside async code.
+pub fn read_marks_sync(video: &Path) -> LogoMarks {
+    let Some(path) = [marks_path(video), legacy_marks_path(video)]
+        .into_iter()
+        .find(|path| path.is_file())
+    else {
+        return LogoMarks::default();
+    };
+
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default()
+}
+
 /// Remove `path`; one that is not there is fine.
 async fn remove_if_there(path: &Path) -> std::io::Result<()> {
     match fs::remove_file(path).await {

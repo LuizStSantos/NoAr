@@ -10,9 +10,9 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{codec, frame, media, software::scaling, util::format::pixel::Pixel};
+use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
-use crate::utils::helper::{even, open_media_input};
+use crate::utils::helper::even;
 
 /// How long the picture takes to shrink or grow back.
 pub const LSHAPE_SECONDS: f64 = 0.8;
@@ -110,50 +110,11 @@ impl LShapeGraphic {
             ));
         }
 
-        let mut ictx = open_media_input(&config.path)
-            .with_context(|| format!("cannot open the L-shape graphic {}", config.path))?;
-        let stream = ictx
-            .streams()
-            .best(media::Type::Video)
-            .ok_or_else(|| anyhow!("the L-shape graphic {} has no image", config.path))?;
-        let index = stream.index();
-        let mut decoder = codec::context::Context::from_parameters(stream.parameters())?
-            .decoder()
-            .video()?;
-        let mut decoded = frame::Video::empty();
-        let mut found = false;
-
-        for (stream, packet) in ictx.packets() {
-            if stream.index() == index
-                && decoder.send_packet(&packet).is_ok()
-                && decoder.receive_frame(&mut decoded).is_ok()
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if !found {
-            decoder.send_eof()?;
-            found = decoder.receive_frame(&mut decoded).is_ok();
-        }
-
-        if !found {
-            return Err(anyhow!("the L-shape graphic {} has no image", config.path));
-        }
-
-        // Stretched to the screen: the graphic is made for it.
-        let mut background = frame::Video::empty();
-        scaling::Context::get(
-            decoded.format(),
-            decoded.width(),
-            decoded.height(),
-            Pixel::YUV420P,
-            width,
-            height,
-            scaling::flag::Flags::BICUBIC,
-        )?
-        .run(&decoded, &mut background)?;
+        let decoded = crate::gstreamer::load_image(&config.path)
+            .with_context(|| format!("cannot load the L-shape graphic {}", config.path))?;
+        let background =
+            crate::gstreamer::FrameConverter::new(&decoded, Pixel::YUV420P, width, height)?
+                .run(&decoded)?;
 
         let home = window(config, width, height);
 
@@ -472,7 +433,7 @@ impl LShapeControl {
 /// Scales pictures into the L-shape window, reusing the scaler while the
 /// size stays the same.
 #[derive(Default)]
-pub(crate) struct LShapeScaler(Option<(scaling::Context, ScaleKey)>);
+pub(crate) struct LShapeScaler(Option<(crate::gstreamer::FrameConverter, ScaleKey)>);
 
 /// The source's format and size, and the window's size.
 type ScaleKey = (Pixel, u32, u32, u32, u32);
@@ -504,22 +465,13 @@ pub(crate) fn apply_lshape(
 
     if scaler.0.as_ref().is_none_or(|(_, size)| *size != key) {
         scaler.0 = Some((
-            scaling::Context::get(
-                key.0,
-                key.1,
-                key.2,
-                Pixel::YUV420P,
-                rect.width,
-                rect.height,
-                scaling::flag::Flags::BILINEAR,
-            )?,
+            crate::gstreamer::FrameConverter::new(frame, Pixel::YUV420P, rect.width, rect.height)?,
             key,
         ));
     }
 
     let (context, _) = scaler.0.as_mut().context("L-shape scaler")?;
-    let mut picture = frame::Video::empty();
-    context.run(frame, &mut picture)?;
+    let picture = context.run(frame)?;
 
     let mut composed = (*graphic.background).clone();
     paste(&picture, &mut composed, rect);

@@ -94,7 +94,9 @@ cargo clippy --all-features --all-targets -- --deny warnings
   Do not force unrelated cases into a generic abstraction just to eliminate
   similar-looking lines.
 - Keep interfaces small and make ownership, units, and timing assumptions
-  explicit, especially at FFmpeg and thread boundaries.
+  explicit, especially at GStreamer sample, remaining FFmpeg frame-memory
+  and thread boundaries. Use the root `noar-gstreamer` reference for native
+  media documentation and installed plugin properties.
 - Propagate errors with useful context. Avoid `unwrap` and `expect` in
   production paths unless an invariant makes failure impossible and that
   invariant is clear nearby.

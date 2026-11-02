@@ -291,6 +291,8 @@ pub struct Configuration {
     pub processing_guide_logo: String,
     #[serde(default)]
     pub processing_logo_key: String,
+    #[serde(default)]
+    pub processing_live_key: String,
     #[serde(default = "default_logo_transition")]
     pub processing_logo_transition_in: String,
     #[serde(default = "default_logo_transition")]
@@ -386,6 +388,7 @@ impl Configuration {
             processing_vtt_default: config.processing.vtt_default,
             processing_guide_logo: config.processing.guide_logo,
             processing_logo_key: config.processing.logo_key,
+            processing_live_key: config.processing.live_key,
             processing_logo_transition_in: config.processing.logo_transition_in.to_string(),
             processing_logo_transition_out: config.processing.logo_transition_out.to_string(),
             processing_logo_transition_seconds: config.processing.logo_transition_seconds,
@@ -466,19 +469,29 @@ pub struct Output {
     pub audio_codec: Option<String>,
     pub audio_options: String,
     pub audio_bitrate: Option<i64>,
+    #[sqlx(default)]
+    #[serde(default)]
+    pub audio_sample_rate: Option<i64>,
 }
 
 impl Output {
     pub fn new(channel_id: i32, mode: OutputMode) -> Self {
-        let stream_url = if mode == OutputMode::Stream {
-            "rtmp://127.0.0.1/live/stream".to_string()
-        } else {
-            Default::default()
+        let stream_url = match mode {
+            OutputMode::Stream => "rtmp://127.0.0.1/live/stream".to_string(),
+            // NDI keeps its source name here.
+            OutputMode::Ndi => "NoAr".to_string(),
+            // The card and mode: `decklink://<device>?mode=<mode>`.
+            OutputMode::Sdi => "decklink://0?mode=1080i5994".to_string(),
+            _ => Default::default(),
         };
         let hls_playlist_name = (mode == OutputMode::HLS).then(|| "stream".to_string());
         let hls_segment_duration = (mode == OutputMode::HLS).then_some(6);
         let hls_list_size = (mode == OutputMode::HLS).then_some(600);
-        let encoded = matches!(mode, OutputMode::HLS | OutputMode::Stream);
+        // NDI encodes the Player preview with these settings.
+        let encoded = matches!(
+            mode,
+            OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi | OutputMode::Sdi
+        );
 
         Self {
             id: 0,
@@ -492,9 +505,10 @@ impl Output {
             hls_segment_duration,
             hls_list_size,
             desktop_fullscreen: false,
-            width: 1280,
-            height: 720,
-            fps: 25.0,
+            // An SDI output starts in its default card mode, 1080i59.94.
+            width: if mode == OutputMode::Sdi { 1920 } else { 1280 },
+            height: if mode == OutputMode::Sdi { 1080 } else { 720 },
+            fps: if mode == OutputMode::Sdi { 29.97 } else { 25.0 },
             video_codec: encoded.then(|| "libx264".to_string()),
             video_options: if encoded {
                 "{\"preset\":\"faster\",\"rate_control\":\"crf\",\"quality\":\"23\",\"maxrate\":\"2400\"}".to_string()
@@ -507,6 +521,7 @@ impl Output {
             audio_codec: encoded.then(|| "aac".to_string()),
             audio_options: "{}".to_string(),
             audio_bitrate: encoded.then_some(128),
+            audio_sample_rate: None,
         }
     }
 }
@@ -517,18 +532,6 @@ fn default_vtt_name() -> String {
 
 fn default_vtt_language() -> String {
     "und".to_string()
-}
-
-#[derive(Debug, sqlx::FromRow)]
-pub struct LiveInputRecord {
-    pub id: i32,
-    pub priority: i32,
-    pub enabled: bool,
-    pub name: String,
-    pub backend: String,
-    pub identifier: String,
-    pub options: String,
-    pub demuxer_options: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

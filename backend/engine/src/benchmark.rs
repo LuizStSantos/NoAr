@@ -1,89 +1,73 @@
 #[derive(Clone, Copy)]
 pub(crate) enum Stage {
-    VideoDecode,
-    AudioDecode,
+    InputVideo,
+    InputAudio,
     AudioProcess,
-    AudioEncode,
     Scale,
     LogoOverlay,
     TextStatic,
     TextRuntime,
-    Vtt,
-    EncodeMux,
     #[cfg(feature = "desktop-base")]
     DesktopSend,
     #[cfg(feature = "desktop-base")]
     DesktopConvert,
     #[cfg(feature = "desktop-base")]
     DesktopPresent,
-    LiveQueue,
 }
 
 #[cfg(feature = "processing-bench")]
 impl Stage {
     const ALL: &[Self] = &[
-        Self::VideoDecode,
-        Self::AudioDecode,
+        Self::InputVideo,
+        Self::InputAudio,
         Self::AudioProcess,
-        Self::AudioEncode,
         Self::Scale,
         Self::LogoOverlay,
         Self::TextStatic,
         Self::TextRuntime,
-        Self::Vtt,
-        Self::EncodeMux,
         #[cfg(feature = "desktop-base")]
         Self::DesktopSend,
         #[cfg(feature = "desktop-base")]
         Self::DesktopConvert,
         #[cfg(feature = "desktop-base")]
         Self::DesktopPresent,
-        Self::LiveQueue,
     ];
 
     const COUNT: usize = Self::ALL.len();
 
     const fn index(self) -> usize {
         match self {
-            Self::VideoDecode => 0,
-            Self::AudioDecode => 1,
+            Self::InputVideo => 0,
+            Self::InputAudio => 1,
             Self::AudioProcess => 2,
-            Self::AudioEncode => 3,
-            Self::Scale => 4,
-            Self::LogoOverlay => 5,
-            Self::TextStatic => 6,
-            Self::TextRuntime => 7,
-            Self::Vtt => 8,
-            Self::EncodeMux => 9,
+            Self::Scale => 3,
+            Self::LogoOverlay => 4,
+            Self::TextStatic => 5,
+            Self::TextRuntime => 6,
             #[cfg(feature = "desktop-base")]
-            Self::DesktopSend => 10,
+            Self::DesktopSend => 7,
             #[cfg(feature = "desktop-base")]
-            Self::DesktopConvert => 11,
+            Self::DesktopConvert => 8,
             #[cfg(feature = "desktop-base")]
-            Self::DesktopPresent => 12,
-            Self::LiveQueue => Self::COUNT - 1,
+            Self::DesktopPresent => 9,
         }
     }
 
     const fn name(self) -> &'static str {
         match self {
-            Self::VideoDecode => "video_decode",
-            Self::AudioDecode => "audio_decode",
+            Self::InputVideo => "input_video_transfer",
+            Self::InputAudio => "input_audio_transfer",
             Self::AudioProcess => "audio_process",
-            Self::AudioEncode => "audio_encode",
             Self::Scale => "scale",
             Self::LogoOverlay => "logo",
             Self::TextStatic => "text_static",
             Self::TextRuntime => "text_runtime",
-            Self::Vtt => "vtt",
-            Self::EncodeMux => "encode_mux",
             #[cfg(feature = "desktop-base")]
             Self::DesktopSend => "desktop_send",
             #[cfg(feature = "desktop-base")]
             Self::DesktopConvert => "desktop_convert",
             #[cfg(feature = "desktop-base")]
             Self::DesktopPresent => "desktop_present",
-            Self::LiveQueue => "live_queue",
         }
     }
 }
@@ -241,13 +225,9 @@ mod enabled {
         handle
     }
 
+    #[cfg(feature = "desktop-base")]
     pub(crate) fn activate(handle: BenchHandle) {
         BENCH.with(|bench| *bench.borrow_mut() = Some(handle));
-    }
-
-    #[cfg(feature = "tokio")]
-    pub(crate) fn current() -> Option<BenchHandle> {
-        BENCH.with(|bench| bench.borrow().as_ref().cloned())
     }
 
     pub(crate) fn set_report_interval(interval: Duration) {
@@ -336,10 +316,7 @@ pub(crate) use enabled::{
     finish, measure, measure_overlay, measure_success, set_report_interval, start,
 };
 
-#[cfg(all(feature = "processing-bench", feature = "tokio"))]
-pub(crate) use enabled::current;
-
-#[cfg(feature = "processing-bench")]
+#[cfg(all(feature = "processing-bench", feature = "desktop-base"))]
 pub(crate) use enabled::{BenchHandle, activate};
 
 #[cfg(all(feature = "processing-bench", feature = "desktop-base"))]
@@ -355,15 +332,9 @@ pub(crate) fn start(_channel_id: Option<i32>) -> BenchHandle {
     BenchHandle
 }
 
-#[cfg(not(feature = "processing-bench"))]
+#[cfg(all(not(feature = "processing-bench"), feature = "desktop-base"))]
 #[inline]
 pub(crate) fn activate(_handle: BenchHandle) {}
-
-#[cfg(all(not(feature = "processing-bench"), feature = "tokio"))]
-#[inline]
-pub(crate) fn current() -> Option<BenchHandle> {
-    None
-}
 
 #[cfg(all(not(feature = "processing-bench"), feature = "desktop-base"))]
 #[inline]

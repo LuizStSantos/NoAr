@@ -2,7 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import CreditsEditor from '@/components/storage/CreditsEditor.vue'
 import { LIVES_FOLDER, emptyFields, imageUrl, saveSheet, storageJoin, uploadArtwork } from '@/composables/storage'
+import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
 
@@ -22,10 +24,12 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const configStore = useConfig()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
 
-type Protocol = 'SRT' | 'RTMP' | 'HLS'
+/** `SDI` is a video card on the server: Blackmagic DeckLink or a V4L2 capture card. */
+type Protocol = 'SRT' | 'RTMP' | 'HLS' | 'UDP' | 'NDI' | 'SDI'
 
 /** The two guide images: the poster (upright) and the wide image (fanart). */
 type GuideImage = 'poster' | 'backdrop'
@@ -34,6 +38,9 @@ const PLACEHOLDERS: Record<Protocol, string> = {
     SRT: 'srt://203.0.113.10:9000?mode=caller&latency=200',
     RTMP: 'rtmp://203.0.113.10/live/stream-key',
     HLS: 'https://cdn.example.org/live/index.m3u8',
+    UDP: 'udp://239.10.10.10:5000',
+    NDI: 'ndi://STUDIO (Camera 1)',
+    SDI: 'decklink://0?mode=auto&connection=sdi',
 }
 const RATINGS = ['Livre', '10', '12', '14', '16', '18']
 const GUIDE_IMAGES: GuideImage[] = ['poster', 'backdrop']
@@ -47,6 +54,11 @@ const guideTitle = ref(fields?.title ?? '')
 const plot = ref(fields?.plot ?? '')
 const genre = ref(fields?.genres.join(', ') ?? '')
 const rating = ref(fields?.rating || 'Livre')
+/** How long the live usually lasts, in minutes: the Scheduler proposes its end. */
+const runtime = ref<number | null>(fields?.runtime ?? null)
+const year = ref(fields?.year ?? '')
+const countries = ref(fields?.countries.join(', ') ?? '')
+const credits = ref<Credit[]>(fields?.credits ? [...fields.credits] : [])
 const chosen = reactive<Record<GuideImage, File | null>>({ poster: null, backdrop: null })
 const previews = reactive<Record<GuideImage, string>>({ poster: '', backdrop: '' })
 const saved = reactive<Record<GuideImage, string>>({ poster: '', backdrop: '' })
@@ -59,7 +71,56 @@ const safeName = computed(() => name.value.trim().replace(/[\\/:*?"<>|]/g, ''))
 const ratingOptions = computed(() => (RATINGS.includes(rating.value) ? RATINGS : [...RATINGS, rating.value]))
 
 function protocolOf(value?: string): Protocol {
-    return value === 'RTMP' || value === 'HLS' ? value : 'SRT'
+    if (value === 'V4L2') {
+        return 'SDI'
+    }
+
+    return value === 'RTMP' || value === 'HLS' || value === 'UDP' || value === 'NDI' || value === 'SDI' ? value : 'SRT'
+}
+
+/** Video card inputs on the server, to pick from instead of typing. */
+const cardInputs = ref<VideoDevice[] | null>(null)
+const searchingCards = ref(false)
+const cardError = ref('')
+
+async function findCards() {
+    searchingCards.value = true
+    cardError.value = ''
+
+    try {
+        const found = await configStore.getVideoDevices()
+
+        cardInputs.value = found.devices.filter((device) => device.direction === 'input')
+    } catch (err) {
+        cardInputs.value = null
+        cardError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+        searchingCards.value = false
+    }
+}
+
+/** A DeckLink input detects the incoming mode unless one is set. */
+function pickCard(device: VideoDevice) {
+    url.value = device.kind === 'decklink' ? `${device.address}?mode=auto&connection=auto` : device.address
+}
+
+/** NDI sources found on the network, to pick from instead of typing. */
+const ndiSources = ref<string[] | null>(null)
+const searchingNdi = ref(false)
+const ndiError = ref('')
+
+async function findNdiSources() {
+    searchingNdi.value = true
+    ndiError.value = ''
+
+    try {
+        ndiSources.value = await scheduleStore.ndiSources()
+    } catch (err) {
+        ndiSources.value = null
+        ndiError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+        searchingNdi.value = false
+    }
 }
 
 // The tabs follow an address typed or pasted in full.
@@ -72,6 +133,12 @@ watch(url, (value) => {
         protocol.value = 'RTMP'
     } else if (scheme === 'http' || scheme === 'https') {
         protocol.value = 'HLS'
+    } else if (scheme === 'udp') {
+        protocol.value = 'UDP'
+    } else if (scheme === 'ndi') {
+        protocol.value = 'NDI'
+    } else if (scheme === 'decklink' || scheme === 'v4l2') {
+        protocol.value = 'SDI'
     }
 })
 
@@ -184,18 +251,6 @@ async function submit(): Promise<LiveSource> {
             url.value.trim() === props.live.url
                 ? props.live
                 : await scheduleStore.updateLive(props.live.path, url.value.trim())
-
-        // Through the sheet, so fields this form does not show are kept.
-        await saveSheet(props.channelId, folderOf(live.path), {
-            kind: 'program',
-            fields: {
-                ...(fields ?? emptyFields()),
-                title: guideTitle.value.trim() || props.live.name,
-                plot: plot.value.trim(),
-                genres: genres(),
-                rating: rating.value,
-            },
-        })
     } else {
         live = await scheduleStore.saveLive(safeName.value, url.value.trim(), {
             title: guideTitle.value.trim(),
@@ -204,6 +259,25 @@ async function submit(): Promise<LiveSource> {
             rating: rating.value,
         })
     }
+
+    // Through the sheet, so fields this form does not show are kept.
+    await saveSheet(props.channelId, folderOf(live.path), {
+        kind: 'program',
+        fields: {
+            ...(fields ?? emptyFields()),
+            title: guideTitle.value.trim() || live.name,
+            plot: plot.value.trim(),
+            genres: genres(),
+            rating: rating.value,
+            year: year.value.trim(),
+            countries: countries.value
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean),
+            credits: credits.value,
+            runtime: runtime.value && runtime.value > 0 ? Math.round(runtime.value) : null,
+        },
+    })
 
     for (const kind of GUIDE_IMAGES) {
         const file = chosen[kind]
@@ -222,7 +296,7 @@ async function submit(): Promise<LiveSource> {
     return live
 }
 
-defineExpose({ check, submit })
+defineExpose({ check, submit, runtime })
 </script>
 
 <template>
@@ -240,7 +314,7 @@ defineExpose({ check, submit })
         <div class="text-xs text-muted">{{ t('schedule.signal') }}</div>
         <div class="flex w-fit" role="group" :aria-label="t('schedule.protocol')">
             <button
-                v-for="option in ['SRT', 'RTMP', 'HLS'] as Protocol[]"
+                v-for="option in ['SRT', 'RTMP', 'HLS', 'UDP', 'NDI', 'SDI'] as Protocol[]"
                 :key="option"
                 type="button"
                 class="border min-h-9 px-4 cursor-pointer first:rounded-s-field last:rounded-e-field -ms-px first:ms-0"
@@ -252,7 +326,7 @@ defineExpose({ check, submit })
                 :aria-pressed="protocol === option"
                 @click="protocol = option"
             >
-                {{ option }}
+                {{ option === 'SDI' ? t('schedule.cardTab') : option }}
             </button>
         </div>
         <div class="flex gap-2">
@@ -262,9 +336,57 @@ defineExpose({ check, submit })
                 :aria-label="t('schedule.address')"
                 :placeholder="PLACEHOLDERS[protocol]"
             />
+            <button
+                v-if="protocol === 'NDI'"
+                type="button"
+                class="btn-quiet"
+                :disabled="searchingNdi"
+                @click="findNdiSources"
+            >
+                <span v-if="searchingNdi" class="loading loading-spinner loading-xs" />
+                {{ t('schedule.findNdi') }}
+            </button>
+            <button
+                v-if="protocol === 'SDI'"
+                type="button"
+                class="btn-quiet"
+                :disabled="searchingCards"
+                @click="findCards"
+            >
+                <span v-if="searchingCards" class="loading loading-spinner loading-xs" />
+                {{ t('schedule.findCards') }}
+            </button>
             <button type="button" class="btn-quiet" :disabled="testing" @click="testSignal">
                 <span v-if="testing" class="loading loading-spinner loading-xs" />
                 {{ t('schedule.testSignal') }}
+            </button>
+        </div>
+        <div v-if="protocol === 'SDI' && (cardInputs || cardError)" class="flex flex-wrap gap-2" role="status">
+            <span v-if="cardError" class="text-sm text-error">{{ cardError }}</span>
+            <span v-else-if="!cardInputs?.length" class="text-sm text-muted">{{ t('schedule.noCards') }}</span>
+            <button
+                v-for="device in cardInputs ?? []"
+                :key="device.address"
+                type="button"
+                class="btn-quiet min-h-8 text-[13px]"
+                :aria-pressed="url.startsWith(device.address)"
+                @click="pickCard(device)"
+            >
+                {{ device.name }} <span class="font-mono text-muted">{{ device.address }}</span>
+            </button>
+        </div>
+        <div v-if="protocol === 'NDI' && (ndiSources || ndiError)" class="flex flex-wrap gap-2" role="status">
+            <span v-if="ndiError" class="text-sm text-error">{{ ndiError }}</span>
+            <span v-else-if="!ndiSources?.length" class="text-sm text-muted">{{ t('schedule.noNdiSources') }}</span>
+            <button
+                v-for="source in ndiSources ?? []"
+                :key="source"
+                type="button"
+                class="btn-quiet min-h-8 font-mono text-[13px]"
+                :aria-pressed="url === `ndi://${source}`"
+                @click="url = `ndi://${source}`"
+            >
+                {{ source }}
             </button>
         </div>
         <div
@@ -345,6 +467,44 @@ defineExpose({ check, submit })
                     </select>
                 </label>
             </div>
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+                <label class="field-label">
+                    {{ t('storage.live.runtime') }}
+                    <span class="flex items-center gap-2 min-w-0">
+                        <input
+                            v-model.number="runtime"
+                            type="number"
+                            min="1"
+                            max="1440"
+                            step="1"
+                            class="field-input font-mono min-w-0 flex-1"
+                            :placeholder="t('storage.live.runtimePlaceholder')"
+                        />
+                        <span class="text-[13px] text-muted shrink-0">min</span>
+                    </span>
+                </label>
+                <label class="field-label">
+                    {{ t('storage.sheet.year') }}
+                    <input v-model="year" class="field-input font-mono" inputmode="numeric" maxlength="4" />
+                </label>
+                <label class="field-label">
+                    {{ t('storage.sheet.country') }}
+                    <input v-model="countries" class="field-input" />
+                </label>
+            </div>
+            <span class="field-hint -mt-1">{{ t('storage.live.runtimeHint') }}</span>
+            <CreditsEditor
+                v-if="editing && props.sheet"
+                v-model="credits"
+                class="border-t border-line pt-4"
+                :channel-id="channelId"
+                :path="folderOf(props.live?.path ?? '')"
+                :episode="false"
+                :photos="props.sheet.photos"
+                :program-credits="[]"
+                :program="null"
+            />
+            <p v-else class="m-0 text-[13px] text-muted">{{ t('storage.live.creditsLater') }}</p>
         </div>
     </div>
 

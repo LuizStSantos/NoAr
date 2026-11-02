@@ -1,0 +1,335 @@
+{
+  "scope": "Bounded actual-NoAr development tests; no production readiness approval",
+  "recorded_utc": "2026-10-30T01:04:48.451471+00:00",
+  "source_base": "18e4af513ac30477edf5763d5b901bba7e25dc83",
+  "source_sha256": {
+    "backend/engine/src/playout.rs": "cb588a85162c568b3f006a4c4b33e692899b5916a3ad6fc9f36b974ac8d745fb",
+    "backend/engine/src/output/gstreamer_output.rs": "ef4ab56c8a7cb51a5ef57dc3ae1a6511d20c18be1ed12092848a98f9ebd5dd59"
+  },
+  "binary_sha256": "5fc413675b00b653c8013f81d8535d0b7eb4927b9dbeace5c49897bef9f76ad6",
+  "rust": {
+    "status": "PASS",
+    "tests_passed": 573,
+    "tests_ignored": 13,
+    "features": "no-default-features",
+    "clippy_no_default_features": "PASS",
+    "clippy_all_features_static": "PASS",
+    "all_features_caveat": "ORT_SKIP_DOWNLOAD=1: optional ONNX native runtime is not linked or exercised",
+    "format": "PASS",
+    "embed_frontend_build": "PASS"
+  },
+  "toolkit": {
+    "status": "PASS",
+    "tests_passed": 58
+  },
+  "streams": [
+    {
+      "status": "PASS",
+      "scenario": "normal",
+      "checks": {
+        "single_output_publisher": "PASS",
+        "single_output_reader": "PASS",
+        "no_srt_packet_drops": "PASS",
+        "video_timestamps": "PASS",
+        "audio_timestamps": "PASS",
+        "av_end_alignment": "PASS",
+        "receiver_progress": "PASS",
+        "captured_duration": "PASS",
+        "three_video_sources": "PASS",
+        "three_audio_sources": "PASS",
+        "all_scheduled_live_entries": "PASS",
+        "recording_created": "PASS",
+        "fault_was_injected": "PASS"
+      },
+      "receiver_progress": {
+        "samples": 539,
+        "maximum_gap_seconds": 0.20665125099912984
+      },
+      "packets": {
+        "video": {
+          "packets": 1452,
+          "dts_regressions": 0,
+          "maximum_gap_seconds": 0.04,
+          "first_dts": 3.229356,
+          "last_dts": 61.269356,
+          "duration_seconds": 58.04
+        },
+        "audio": {
+          "packets": 2807,
+          "dts_regressions": 0,
+          "maximum_gap_seconds": 0.042689,
+          "first_dts": 1.4,
+          "last_dts": 61.325389,
+          "duration_seconds": 59.925389
+        }
+      },
+      "markers": {
+        "video_quarter_seconds": {
+          "a": 102,
+          "b": 35,
+          "live": 65
+        },
+        "audio_quarter_seconds": {
+          "a": 110,
+          "b": 33,
+          "live": 68
+        },
+        "video_sequence": [
+          "a",
+          "b",
+          "live",
+          "b",
+          "a",
+          "live",
+          "a",
+          "b",
+          "live",
+          "a"
+        ],
+        "audio_sequence": [
+          "a",
+          "b",
+          "live",
+          "b",
+          "a",
+          "live",
+          "a",
+          "b",
+          "a",
+          "live",
+          "a"
+        ]
+      },
+      "limitations": [
+        "No browser interaction or hardware validation",
+        "Trigger API exercises Clock/Continue; automatic wall-time admission needs separate validation",
+        "Recording presence is checked; recording decode/retention need separate validation",
+        "No HLS, RTMP, SCTE-35 or long soak coverage in this smoke test"
+      ]
+    },
+    {
+      "status": "PASS",
+      "scenario": "source_loss",
+      "checks": {
+        "single_output_publisher": "PASS",
+        "single_output_reader": "PASS",
+        "no_srt_packet_drops": "PASS",
+        "video_timestamps": "PASS",
+        "audio_timestamps": "PASS",
+        "av_end_alignment": "PASS",
+        "receiver_progress": "PASS",
+        "captured_duration": "PASS",
+        "three_video_sources": "PASS",
+        "three_audio_sources": "PASS",
+        "all_scheduled_live_entries": "PASS",
+        "recording_created": "PASS",
+        "fault_was_injected": "PASS"
+      },
+      "receiver_progress": {
+        "samples": 529,
+        "maximum_gap_seconds": 0.4064098989983904
+      },
+      "packets": {
+        "video": {
+          "packets": 1456,
+          "dts_regressions": 0,
+          "maximum_gap_seconds": 0.04,
+          "first_dts": 3.208,
+          "last_dts": 61.408,
+          "duration_seconds": 58.2
+        },
+        "audio": {
+          "packets": 2812,
+          "dts_regressions": 0,
+          "maximum_gap_seconds": 0.042689,
+          "first_dts": 1.4,
+          "last_dts": 61.432033,
+          "duration_seconds": 60.032033
+        }
+      },
+      "markers": {
+        "video_quarter_seconds": {
+          "a": 103,
+          "live": 65,
+          "b": 37
+        },
+        "audio_quarter_seconds": {
+          "a": 111,
+          "live": 33,
+          "b": 37
+        },
+        "video_sequence": [
+          "a",
+          "live",
+          "b",
+          "a",
+          "live",
+          "a",
+          "b",
+          "live",
+          "a"
+        ],
+        "audio_sequence": [
+          "a",
+          "live",
+          "b",
+          "a",
+          "live",
+          "a",
+          "b",
+          "live",
+          "a"
+        ]
+      },
+      "limitations": [
+        "No browser interaction or hardware validation",
+        "Trigger API exercises Clock/Continue; automatic wall-time admission needs separate validation",
+        "Recording presence is checked; recording decode/retention need separate validation",
+        "No HLS, RTMP, SCTE-35 or long soak coverage in this smoke test"
+      ]
+    },
+    {
+      "status": "PASS",
+      "scenario": "normal",
+      "checks": {
+        "single_output_publisher": "PASS",
+        "single_output_reader": "PASS",
+        "no_srt_packet_drops": "PASS",
+        "video_timestamps": "PASS",
+        "audio_timestamps": "PASS",
+        "av_end_alignment": "PASS",
+        "receiver_progress": "PASS",
+        "captured_duration": "PASS",
+        "three_video_sources": "PASS",
+        "three_audio_sources": "PASS",
+        "all_scheduled_live_entries": "PASS",
+        "recording_created": "PASS",
+        "fault_was_injected": "PASS"
+      },
+      "receiver_progress": {
+        "samples": 542,
+        "maximum_gap_seconds": 0.20425462599814637
+      },
+      "packets": {
+        "video": {
+          "packets": 1456,
+          "dts_regressions": 0,
+          "maximum_gap_seconds": 0.04,
+          "first_dts": 3.144,
+          "last_dts": 61.344,
+          "duration_seconds": 58.2
+        },
+        "audio": {
+          "packets": 2809,
+          "dts_regressions": 0,
+          "maximum_gap_seconds": 0.042689,
+          "first_dts": 1.4,
+          "last_dts": 61.346678,
+          "duration_seconds": 59.946678
+        }
+      },
+      "markers": {
+        "video_quarter_seconds": {
+          "a": 102,
+          "live": 71,
+          "b": 32
+        },
+        "audio_quarter_seconds": {
+          "a": 108,
+          "live": 72,
+          "b": 32
+        },
+        "video_sequence": [
+          "a",
+          "live",
+          "b",
+          "a",
+          "live",
+          "a",
+          "b",
+          "live",
+          "a"
+        ],
+        "audio_sequence": [
+          "a",
+          "live",
+          "b",
+          "a",
+          "live",
+          "a",
+          "b",
+          "live",
+          "a"
+        ]
+      },
+      "limitations": [
+        "No browser interaction or hardware validation",
+        "Trigger API exercises Clock/Continue; automatic wall-time admission needs separate validation",
+        "Recording presence is checked; recording decode/retention need separate validation",
+        "No HLS, RTMP, SCTE-35 or long soak coverage in this smoke test"
+      ],
+      "run": "normal_repeat"
+    }
+  ],
+  "recording_decode": [
+    {
+      "scenario": "normal",
+      "file": "recording-ch1-2026-10-30_00-59-04-106959-0.mkv",
+      "status": "PASS",
+      "errors": ""
+    },
+    {
+      "scenario": "normal",
+      "file": "recording-ch1-2026-10-30_00-59-35-106959-1.mkv",
+      "status": "PASS",
+      "errors": ""
+    },
+    {
+      "scenario": "normal",
+      "file": "recording-ch1-2026-10-30_01-00-05-106959-2.mkv",
+      "status": "PASS",
+      "errors": ""
+    },
+    {
+      "scenario": "source_loss",
+      "file": "recording-ch1-2026-10-30_01-01-10-107512-0.mkv",
+      "status": "PASS",
+      "errors": ""
+    },
+    {
+      "scenario": "source_loss",
+      "file": "recording-ch1-2026-10-30_01-01-42-107512-1.mkv",
+      "status": "PASS",
+      "errors": ""
+    },
+    {
+      "scenario": "source_loss",
+      "file": "recording-ch1-2026-10-30_01-02-10-107512-2.mkv",
+      "status": "PASS",
+      "errors": ""
+    }
+  ],
+  "browser": {
+    "status": "PASS",
+    "checks": {
+      "anonymous_redirect": "PASS",
+      "password_visibility": "PASS",
+      "browser_login": "PASS",
+      "/configure/output": "PASS",
+      "/configure/audio": "PASS",
+      "/configure/recording": "PASS",
+      "/schedule": "PASS",
+      "/player": "PASS",
+      "no_page_errors": "PASS"
+    },
+    "scope": "Built Vue frontend through a test-only loopback proxy to the debug backend; login, password toggle and five authenticated pages; no scheduled form submission or automatic wall-time admission"
+  },
+  "remaining": {
+    "root_docker_image": "NOT_AVAILABLE: 32 GB executor filesystem with Docker vfs exhausted disk; no image published",
+    "onnx_runtime": "NOT_AVAILABLE: configured proxy denies binary CDN with HTTP 403",
+    "long_soak": "NOT_RUN",
+    "gpu": "NOT_RUN",
+    "automatic_wall_time_admission": "NOT_RUN",
+    "full_authenticated_scheduler_form_flow": "NOT_RUN"
+  }
+}

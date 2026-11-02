@@ -94,6 +94,12 @@ pub struct VideoFile {
     /// The part of the video that airs by default, saved in its marks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     trim: Option<crate::utils::logo_marks::LogoSpan>,
+    /// An assembled program (`.program`): blocks and breaks under one title.
+    #[serde(default)]
+    program: bool,
+    /// A live's address file (`.live`); its length is the live's usual one.
+    #[serde(default)]
+    live: bool,
 }
 
 fn default_true() -> bool {
