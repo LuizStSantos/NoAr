@@ -1999,7 +1999,7 @@ export default {
         },
         keywords: {
             general: 'nome fuso horário prévia pastas canais excluir extensões',
-            logging: 'registro log erros avisos ffmpeg baixar copiar',
+            logging: 'registro log erros avisos gstreamer baixar copiar',
             output: 'hls stream rtmp srt udp resolução fps quadros codificador taxa bits versões qualidade adaptável',
             playlist: 'dia começa duração tapa-buraco filler pasta modo embaralhar extensões sem fim',
             logo: 'logo posição opacidade webvtt vtt legendas',
@@ -2463,7 +2463,7 @@ export default {
             limit: 'Limite',
             log: 'Registro',
             logHint: 'O que aparece na página Registro.',
-            ffmpegLevel: 'Mensagens do GStreamer',
+            mediaLevel: 'Mensagens do GStreamer',
             ingestLevel: 'Mensagens das fontes',
             silence: 'Avisar quando houver silêncio',
             silenceHint: 'Registra um aviso se um clipe ficar mudo por muito tempo.',

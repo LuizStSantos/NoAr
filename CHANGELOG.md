@@ -20,6 +20,12 @@ one is tagged.
   `libav*-dev`/`libsw*-dev` packages nor clang; the `ffmpeg-filter` and
   `ffmpeg-device` Cargo features are gone. The image still carries
   `gstreamer1.0-libav` for codecs GStreamer has no native decoder for.
+- The log level of the media engine's messages is `logging.media_level` in the
+  configuration API and the database (migration 00027 renames the column).
+  The API still accepts `ffmpeg_level` and returns it as a deprecated copy,
+  so older clients keep working. Internal names follow (`MediaCapabilities`,
+  `OutputTarget`, `media_log_level`, `log_ignore_lines`), and three unused
+  `ffmpeg_*` fields of the general settings are gone.
 
 ## [2.0.0] - 2026-11-02
 

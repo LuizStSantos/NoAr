@@ -45,8 +45,8 @@ function removeLine(index: number) {
         <SectionCard :title="t('settings.advanced.log')" :description="t('settings.advanced.logHint')">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-2xl">
                 <label class="field-label">
-                    {{ t('settings.advanced.ffmpegLevel') }}
-                    <select v-model="logging.ffmpeg_level" class="field-input">
+                    {{ t('settings.advanced.mediaLevel') }}
+                    <select v-model="logging.media_level" class="field-input">
                         <option v-for="level in LOG_LEVELS" :key="level" :value="level">
                             {{ t(`settings.logLevels.${level}`) }}
                         </option>

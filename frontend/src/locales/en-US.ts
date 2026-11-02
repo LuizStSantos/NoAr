@@ -2460,7 +2460,7 @@ export default {
             limit: 'Limit',
             log: 'Log',
             logHint: 'What shows up on the Log page.',
-            ffmpegLevel: 'GStreamer messages',
+            mediaLevel: 'GStreamer messages',
             ingestLevel: 'Source messages',
             silence: 'Warn about silence',
             silenceHint: 'Logs a warning when a clip stays silent for a long time.',

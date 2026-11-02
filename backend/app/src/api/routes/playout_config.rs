@@ -161,25 +161,21 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
     current != updated
 }
 
-fn codec_option(codec: &noar_engine::FfmpegCodec) -> CodecOption {
+fn codec_option(codec: &noar_engine::MediaCodec) -> CodecOption {
     CodecOption {
         name: codec.name.clone(),
         display_name: codec.display_name.clone(),
         codec_id: codec.codec_id.clone(),
         hardware: codec.hardware,
         uses_bitrate: match codec.media_type {
-            noar_engine::FfmpegMediaType::Video => {
-                noar_engine::video_codec_uses_bitrate(&codec.name)
-            }
-            noar_engine::FfmpegMediaType::Audio => {
-                noar_engine::audio_codec_uses_bitrate(&codec.name)
-            }
-            noar_engine::FfmpegMediaType::Subtitle => false,
+            noar_engine::MediaKind::Video => noar_engine::video_codec_uses_bitrate(&codec.name),
+            noar_engine::MediaKind::Audio => noar_engine::audio_codec_uses_bitrate(&codec.name),
+            noar_engine::MediaKind::Subtitle => false,
         },
         settings: match codec.media_type {
-            noar_engine::FfmpegMediaType::Video => noar_engine::video_option_specs(&codec.name),
-            noar_engine::FfmpegMediaType::Audio => &[],
-            noar_engine::FfmpegMediaType::Subtitle => &[],
+            noar_engine::MediaKind::Video => noar_engine::video_option_specs(&codec.name),
+            noar_engine::MediaKind::Audio => &[],
+            noar_engine::MediaKind::Subtitle => &[],
         }
         .iter()
         .map(|setting| EncoderSetting {
@@ -211,8 +207,8 @@ fn codec_option(codec: &noar_engine::FfmpegCodec) -> CodecOption {
     }
 }
 
-fn output_codec_options(target: noar_engine::FfmpegOutputTarget) -> OutputCodecOptions {
-    let capabilities = noar_engine::ffmpeg_capabilities();
+fn output_codec_options(target: noar_engine::OutputTarget) -> OutputCodecOptions {
+    let capabilities = noar_engine::media_capabilities();
 
     OutputCodecOptions {
         video: capabilities
@@ -230,16 +226,16 @@ fn output_codec_options(target: noar_engine::FfmpegOutputTarget) -> OutputCodecO
 }
 
 fn custom_output_codec_options() -> OutputCodecOptions {
-    let capabilities = noar_engine::ffmpeg_capabilities();
+    let capabilities = noar_engine::media_capabilities();
 
     OutputCodecOptions {
         video: capabilities
-            .usable_codecs(noar_engine::FfmpegMediaType::Video)
+            .usable_codecs(noar_engine::MediaKind::Video)
             .iter()
             .map(codec_option)
             .collect(),
         audio: capabilities
-            .usable_codecs(noar_engine::FfmpegMediaType::Audio)
+            .usable_codecs(noar_engine::MediaKind::Audio)
             .iter()
             .filter(|codec| !codec.hardware)
             .map(codec_option)
@@ -791,12 +787,12 @@ pub async fn get_playout_codecs(
     user.ensure_channel_or_admin(id)?;
 
     Ok(Json(PlayoutCodecOptions {
-        hls: output_codec_options(noar_engine::FfmpegOutputTarget::Hls),
-        rtmp: output_codec_options(noar_engine::FfmpegOutputTarget::Rtmp),
-        srt: output_codec_options(noar_engine::FfmpegOutputTarget::Srt),
-        udp: output_codec_options(noar_engine::FfmpegOutputTarget::Udp),
+        hls: output_codec_options(noar_engine::OutputTarget::Hls),
+        rtmp: output_codec_options(noar_engine::OutputTarget::Rtmp),
+        srt: output_codec_options(noar_engine::OutputTarget::Srt),
+        udp: output_codec_options(noar_engine::OutputTarget::Udp),
         custom: custom_output_codec_options(),
-        recording: output_codec_options(noar_engine::FfmpegOutputTarget::Matroska),
+        recording: output_codec_options(noar_engine::OutputTarget::Matroska),
         ndi_unavailable: noar_engine::ndi_unavailable_reason().map(str::to_string),
     }))
 }

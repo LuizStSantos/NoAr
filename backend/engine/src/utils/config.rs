@@ -276,9 +276,9 @@ pub struct OutputConfig {
     /// engine rate (`sample_rate`); otherwise the encoder input is
     /// resampled, leaving the internal timeline and processing unchanged.
     pub output_sample_rate: Option<u32>,
-    pub ffmpeg_log_level: LogLevel,
+    pub media_log_level: LogLevel,
     pub ingest_log_level: LogLevel,
-    pub ffmpeg_ignore_lines: Vec<String>,
+    pub log_ignore_lines: Vec<String>,
     pub channel_id: Option<i32>,
     pub desktop_control_callback: Option<DesktopControlCallback>,
     pub recording: Option<RecordingConfig>,
@@ -1280,9 +1280,9 @@ impl OutputConfig {
             audio_options: AudioOptions::new(),
             audio_bitrate: 128_000,
             output_sample_rate: None,
-            ffmpeg_log_level: LogLevel::Warning,
+            media_log_level: LogLevel::Warning,
             ingest_log_level: LogLevel::Warning,
-            ffmpeg_ignore_lines: Vec::new(),
+            log_ignore_lines: Vec::new(),
             channel_id: None,
             desktop_control_callback: None,
             recording: None,
@@ -1459,14 +1459,14 @@ impl OutputConfig {
             .saturating_mul(1_000)
     }
 
-    pub fn with_logging(mut self, ffmpeg_log_level: LogLevel, ingest_log_level: LogLevel) -> Self {
-        self.ffmpeg_log_level = ffmpeg_log_level;
+    pub fn with_logging(mut self, media_log_level: LogLevel, ingest_log_level: LogLevel) -> Self {
+        self.media_log_level = media_log_level;
         self.ingest_log_level = ingest_log_level;
         self
     }
 
-    pub fn with_ffmpeg_ignore_lines(mut self, ignore_lines: Vec<String>) -> Self {
-        self.ffmpeg_ignore_lines = ignore_lines;
+    pub fn with_log_ignore_lines(mut self, ignore_lines: Vec<String>) -> Self {
+        self.log_ignore_lines = ignore_lines;
         self
     }
 

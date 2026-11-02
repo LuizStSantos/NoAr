@@ -80,12 +80,12 @@ pub use utils::{
         validate_video_options, video_codec_uses_bitrate, video_option_defaults,
         video_option_specs,
     },
-    ffmpeg_capabilities::{
-        FfmpegCapabilities, FfmpegCodec, FfmpegFeatureSet, FfmpegMediaType, FfmpegMuxer,
-        FfmpegOutputTarget, ffmpeg_capabilities, validate_muxer_options,
-    },
     helper::is_live_input,
     logging,
+    media_capabilities::{
+        MediaCapabilities, MediaCodec, MediaFeatureSet, MediaKind, MediaMuxer, OutputTarget,
+        media_capabilities, validate_muxer_options,
+    },
     media_info::{
         AudioStream as EngineAudioStream, MediaInfo, MediaProbe as EngineMediaProbe, ProbeFormat,
         SilenceDetection, VideoStream as EngineVideoStream, detect_audio_silence, print_media_info,
@@ -928,9 +928,9 @@ fn init_media(config: &OutputConfig) -> Result<()> {
     compositor::text::init();
     gstreamer::init()?;
     logging::init(
-        config.ffmpeg_log_level,
+        config.media_log_level,
         config.ingest_log_level,
-        &config.ffmpeg_ignore_lines,
+        &config.log_ignore_lines,
         config.channel_id,
     );
 

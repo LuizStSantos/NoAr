@@ -20,7 +20,7 @@ pub async fn select_configuration(
         notification.topic AS notification_topic,
         notification.level AS notification_level,
         notification.tags AS notification_tags,
-        logging.ffmpeg_level AS logging_ffmpeg_level,
+        logging.media_level AS logging_media_level,
         logging.ingest_level AS logging_ingest_level,
         logging.detect_silence AS logging_detect_silence,
         logging.ignore_lines AS logging_ignore,
@@ -159,8 +159,8 @@ pub async fn update_configuration_on(
     .bind(config.notification.tags)
     .execute(&mut *connection)
     .await?;
-    sqlx::query("UPDATE config_logging SET ffmpeg_level = $2, ingest_level = $3, detect_silence = $4, ignore_lines = $5 WHERE config_id = $1")
-        .bind(id).bind(config.logging.ffmpeg_level).bind(config.logging.ingest_level)
+    sqlx::query("UPDATE config_logging SET media_level = $2, ingest_level = $3, detect_silence = $4, ignore_lines = $5 WHERE config_id = $1")
+        .bind(id).bind(config.logging.media_level).bind(config.logging.ingest_level)
         .bind(config.logging.detect_silence).bind(config.logging.ignore_lines.join(";"))
         .execute(&mut *connection).await?;
     sqlx::query("UPDATE config_processing SET mode = $2, add_logo = $3, logo = $4, logo_scale = $5, logo_opacity = $6, logo_position = $7, vtt_enable = $8, vtt_dummy = $9, vtt_name = $10, vtt_language = $11, vtt_default = $12, guide_logo = $13, logo_key = $14, logo_transition_in = $15, logo_transition_out = $16, logo_transition_seconds = $17, lshape = $18, lshape_scale = $19, lshape_corner = $20, graphics_scenes = $21 WHERE config_id = $1")

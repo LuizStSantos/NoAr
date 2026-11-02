@@ -97,6 +97,12 @@ listed authenticated endpoints also enforce the channel assignment where an
 | `POST` | `/api/playout/config/{id}/keys/{kind}` | `GA, CA` | `kind` is `logo` (logo and L-shape links) or `scte35`; `{ "action": "renew" }` makes and saves a new key, `{ "action": "clear" }` turns it off. Answers `{ "key": "..." }`. `PUT /api/playout/config/{id}` keeps the stored keys whatever it is sent. |
 | `POST` | `/api/playout/config/{id}/test-alert` | `GA, CA` | `{ "kind": "mail", "recipient": "...", "subject": "..." }` or `{ "kind": "push", "topic": "...", "tags": "..." }`. Sends one test alert with these values, saved or not. `409` when no mail or push server is configured. |
 
+`logging.media_level` is the level of the media engine's (GStreamer's)
+messages in the log. Until 2.0 it was named `ffmpeg_level`: requests may still
+send that name, and responses still carry it as a deprecated copy of
+`media_level` for older clients. When a request has both, `media_level` is
+used.
+
 `PUT /api/playout/config/{id}` validates output mode, codecs, HLS subtitle
 settings, and volume before persisting the change.
 Video settings are submitted as `output.video_options`: a string map whose
@@ -104,12 +110,13 @@ allowed keys, values, numeric bounds, defaults, and visibility conditions are
 provided with the selected video codec by `GET /api/playout/codecs/{id}`.
 Audio encoder settings use `output.audio_options` and, for dedicated recording
 encoding, `recording.audio_options`. Both are string maps and remain empty by
-default so FFmpeg retains its codec defaults. FFmpeg audio-encoding AVOptions
-can be submitted through the advanced editor. Options managed by NoAr,
-including bitrate, sample rate, channel layout and time base, cannot be
-overridden. FFmpeg validates every remaining name and value
-before the configuration is stored, so unsupported options cannot cause a
-delayed failure during the next output restart.
+default so the encoder keeps its own defaults. Further encoder settings can be
+submitted through the advanced editor. Options managed by NoAr, including
+bitrate, sample rate, channel layout and time base, cannot be overridden.
+NoAr builds the GStreamer encoder with every remaining name and value before
+the configuration is stored, so unsupported options cannot cause a delayed
+failure during the next output restart. Codec names keep the values stored
+before GStreamer (`libx264`, `aac`, `libopus` and so on).
 
 Network stream transports use the separate `output.protocol_options` string
 map. NoAr validates its names and values for the RTMP, SRT, UDP, or custom
@@ -121,15 +128,15 @@ authenticated endpoints.
 `output.metadata_options` is a separate string map of global container tags,
 such as `title`, `copyright`, `service_name`, or `service_provider`. Tag names
 and values are validated for safe length and characters before saving. They
-are applied to the FFmpeg output context before its header is written, not as
-muxer or transport options. Whether a tag is retained or visible depends on
+are set as tags on the GStreamer muxer (on MPEG-TS, as the service name and
+provider of the SDT), not as muxer or transport options. Whether a tag is retained or visible depends on
 the selected output format. Desktop output does not accept container metadata.
 
 For `output.mode: "stream"`, `output.stream_type` also accepts `"custom"`.
-Set `output.stream_format` to an FFmpeg output format such as `"decklink"` and
-`output.stream_url` to its target, for example a DeckLink device name. The
-format must be available in the FFmpeg libraries linked by NoAr; FFmpeg
-performs the final device and codec compatibility check when the playout opens.
+Set `output.stream_format` to one of the container formats NoAr can write with
+GStreamer (`mpegts`, `flv`, `matroska`, `webm`, `mp4` or `mov`) and
+`output.stream_url` to its target. DeckLink cards and NDI have output modes of
+their own (`sdi`, `ndi`).
 Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 `pcm_s16le` do not use bitrate settings.
 

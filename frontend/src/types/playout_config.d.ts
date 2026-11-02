@@ -33,7 +33,11 @@ lshape_corner: string | null,
  */
 lshape_scale: number | null, };
 
-export type Logging = { ffmpeg_level: string, ingest_level: string, detect_silence: boolean, ignore_lines: Array<string>, };
+export type Logging = { 
+/**
+ * Level of the media engine's (GStreamer's) messages in the log.
+ */
+media_level: string, ingest_level: string, detect_silence: boolean, ignore_lines: Array<string>, };
 
 /**
  * How the logo comes up or goes off.
