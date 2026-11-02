@@ -88,6 +88,8 @@ declare global {
         udp: OutputCodecOptions
         custom: OutputCodecOptions
         recording: OutputCodecOptions
+        /** Why NDI output cannot be used on this server; null when it can. */
+        ndi_unavailable: string | null
     }
 
     interface Token {

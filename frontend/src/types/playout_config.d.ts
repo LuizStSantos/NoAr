@@ -77,7 +77,7 @@ audio_sample_rate: number,
  */
 hls_variants: Array<string>, };
 
-export type OutputMode = "desktop" | "hls" | "stream";
+export type OutputMode = "desktop" | "hls" | "stream" | "ndi";
 
 export type Playlist = { day_start: string, length: string, infinit: boolean, };
 

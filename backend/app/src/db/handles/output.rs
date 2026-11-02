@@ -178,6 +178,31 @@ mod tests {
     use crate::{db::handles::db_migrate, utils::config::OutputMode};
 
     #[tokio::test]
+    async fn existing_channels_get_an_inactive_ndi_output() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        db_migrate(&pool).await.unwrap();
+
+        let outputs = select_outputs(&pool, 1).await.unwrap();
+        let ndi: Vec<_> = outputs
+            .iter()
+            .filter(|output| output.name == "ndi")
+            .collect();
+        assert_eq!(ndi.len(), 1, "{outputs:?}");
+        assert_eq!(ndi[0].stream_url, "NoAr");
+        assert_eq!(ndi[0].video_codec.as_deref(), Some("libx264"));
+        let active: Vec<_> =
+            sqlx::query_scalar::<_, String>("SELECT name FROM config_output WHERE active = 1")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(!active.contains(&"ndi".to_string()), "{active:?}");
+    }
+
+    #[tokio::test]
     async fn output_insert_select_and_update_are_scoped_to_the_channel() {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)

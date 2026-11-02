@@ -52,6 +52,7 @@ pub use input::preload::{PreloadSignal, Preloader};
 #[cfg(all(feature = "desktop-base", feature = "tokio"))]
 pub use output::desktop::thread::run_on_main_thread as run_desktop_on_main_thread;
 pub use output::link::{LinkState, LinkStatus, OutputLink};
+pub use output::ndi::{ndi_unavailable_reason, validate_ndi_name};
 pub use output::resolved_variant_playlist_path;
 pub use output::scte35::{
     BreakInfo, BreakSource, BreakState, ClipBreaks, DEFAULT_SCTE35_PID,
@@ -286,6 +287,16 @@ impl AsyncPlayout {
         playout.hls_health = Some(hls_health);
 
         Ok(playout)
+    }
+
+    /// Publishes the program as the NDI source `name`.
+    pub async fn open_ndi(
+        name: impl Into<String>,
+        config: OutputConfig,
+        fallback_duration: f64,
+    ) -> Result<Self> {
+        let name = name.into();
+        Self::open_with(move || Playout::open_ndi(&name, config, fallback_duration)).await
     }
 
     #[cfg(feature = "desktop-base")]
@@ -578,6 +589,14 @@ impl Playout {
         Self::validate_fallback_duration(fallback_duration)?;
         init_media(&config)?;
         let output = Output::open_stream(output_url, &config)?;
+
+        Ok(Self::with_output(config, output, fallback_duration))
+    }
+
+    pub fn open_ndi(name: &str, config: OutputConfig, fallback_duration: f64) -> Result<Self> {
+        Self::validate_fallback_duration(fallback_duration)?;
+        init_media(&config)?;
+        let output = Output::open_ndi(name, &config)?;
 
         Ok(Self::with_output(config, output, fallback_duration))
     }

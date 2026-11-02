@@ -45,6 +45,10 @@ gstreamer-audio = { version = "0.24", features = ["v1_26"] }
 gstreamer-video = { version = "0.24", features = ["v1_26"] }
 gstreamer-pbutils = { version = "0.24", features = ["v1_26"] }
 gstreamer-mpegts = { version = "0.24", features = ["v1_26"] }
+# NDI elements, compiled in; the proprietary NDI runtime (libndi) is loaded
+# from the host at runtime and NDI stays unavailable without it.
+gst-plugin-ndi = { version = "0.14.5", default-features = false, features = ["sink", "static"] }
+libloading = "0.8"
 log = { version = "0.4", features = ["kv"] }
 pollster = { version = "1.0", optional = true }
 regex = "1"

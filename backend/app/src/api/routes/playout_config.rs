@@ -73,6 +73,8 @@ pub struct PlayoutCodecOptions {
     pub udp: OutputCodecOptions,
     pub custom: OutputCodecOptions,
     pub recording: OutputCodecOptions,
+    /// Why NDI output cannot be used on this server; `None` when it can.
+    pub ndi_unavailable: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -406,7 +408,10 @@ pub async fn update_playout_config(
     }
 
     let is_hls = data.output.mode == OutputMode::HLS;
-    let is_encoded = matches!(data.output.mode, OutputMode::HLS | OutputMode::Stream);
+    let is_encoded = matches!(
+        data.output.mode,
+        OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi
+    );
     let video_options = serde_json::to_string(&data.output.video_options)
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
     let protocol_options = serde_json::to_string(&data.output.protocol_options)
@@ -769,6 +774,7 @@ pub async fn get_playout_codecs(
         udp: output_codec_options(noar_engine::FfmpegOutputTarget::Udp),
         custom: custom_output_codec_options(),
         recording: output_codec_options(noar_engine::FfmpegOutputTarget::Matroska),
+        ndi_unavailable: noar_engine::ndi_unavailable_reason().map(str::to_string),
     }))
 }
 

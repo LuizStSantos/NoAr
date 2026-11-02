@@ -88,7 +88,9 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
         .await
         .unwrap();
     let outputs: Vec<noar::db::models::Output> = serde_json::from_slice(&outputs_body).unwrap();
-    assert_eq!(outputs.len(), 3);
+    // HLS, stream, desktop and NDI.
+    assert_eq!(outputs.len(), 4);
+    assert!(outputs.iter().any(|output| output.name == "ndi"));
     assert!(outputs.iter().all(|output| output.channel_id == 1));
 
     let global_response = app

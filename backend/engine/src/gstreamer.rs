@@ -13,7 +13,15 @@ pub(crate) fn init() -> Result<()> {
     static INITIALIZED: OnceLock<Result<(), String>> = OnceLock::new();
 
     INITIALIZED
-        .get_or_init(|| ::gstreamer::init().map_err(|error| error.to_string()))
+        .get_or_init(|| {
+            ::gstreamer::init().map_err(|error| error.to_string())?;
+            // Registers the NDI elements; they load the NDI runtime only
+            // when used, so this succeeds on servers without it.
+            if let Err(error) = gstndi::plugin_register_static() {
+                log::warn!("NDI elements unavailable: {error}");
+            }
+            Ok(())
+        })
         .as_ref()
         .map_err(|error| anyhow!("initializing GStreamer: {error}"))?;
 

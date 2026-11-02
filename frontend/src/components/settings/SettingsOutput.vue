@@ -34,19 +34,29 @@ const RESOLUTIONS = [
 ]
 const FRAME_RATES = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60]
 
-function modeOf(name: string | undefined): 'desktop' | 'hls' | 'stream' {
-    return name === 'desktop' || name === 'hls' ? name : 'stream'
+function modeOf(name: string | undefined): 'desktop' | 'hls' | 'stream' | 'ndi' {
+    return name === 'desktop' || name === 'hls' || name === 'ndi' ? name : 'stream'
 }
+
+/** Why NDI cannot be used on this server; null when it can. */
+const ndiUnavailable = computed(() => configStore.outputCodecs.ndi_unavailable)
 
 /** Destinations this channel can use; the desktop window only shows when it is in use. */
 const destinations = computed(() =>
     configStore.outputs
         .filter((item) => item.name !== 'desktop' || output.value.mode === 'desktop')
-        .map((item) => ({
-            value: String(item.id),
-            label: t(`settings.output.mode.${modeOf(item.name)}`),
-            description: t(`settings.output.modeHint.${modeOf(item.name)}`),
-        })),
+        .map((item) => {
+            const mode = modeOf(item.name)
+            // NDI needs the NDI runtime on the server; the saved choice stays selectable.
+            const unavailable = mode === 'ndi' && Boolean(ndiUnavailable.value) && output.value.mode !== 'ndi'
+
+            return {
+                value: String(item.id),
+                label: t(`settings.output.mode.${mode}`),
+                description: unavailable ? t('settings.output.ndiUnavailable') : t(`settings.output.modeHint.${mode}`),
+                disabled: unavailable,
+            }
+        }),
 )
 
 function parseOptions(value: string | null | undefined): Record<string, string> {
@@ -145,7 +155,9 @@ const customFps = ref(false)
 const codecOptions = computed<OutputCodecOptions>(() =>
     output.value.mode === 'stream'
         ? configStore.outputCodecs[output.value.stream_type ?? 'rtmp']
-        : configStore.outputCodecs.hls,
+        : output.value.mode === 'ndi'
+          ? configStore.outputCodecs.udp
+          : configStore.outputCodecs.hls,
 )
 
 const videoSettings = computed(
@@ -357,6 +369,17 @@ const showAdvanced = ref(false)
                     {{ t('settings.output.format') }}
                     <input v-model.trim="output.stream_format" class="field-input font-mono" placeholder="mpegts" />
                 </label>
+            </div>
+
+            <div v-if="output.mode === 'ndi'" class="flex flex-col gap-1.5">
+                <label class="field-label">
+                    {{ t('settings.output.ndiName') }}
+                    <input v-model.trim="output.stream_url" class="field-input" spellcheck="false" maxlength="128" />
+                </label>
+                <p class="m-0 field-hint">{{ t('settings.output.ndiHint') }}</p>
+                <p v-if="ndiUnavailable" class="m-0 text-[13px] text-error" role="alert">
+                    {{ t('settings.output.ndiUnavailable') }} ({{ ndiUnavailable }})
+                </p>
             </div>
 
             <label v-if="output.mode === 'desktop'" class="flex items-center gap-3 min-h-10 cursor-pointer">
@@ -578,6 +601,7 @@ const showAdvanced = ref(false)
                     :hint="t('config.audioEncoderOptionsHelp')"
                 />
                 <KeyValueEditor
+                    v-if="output.mode !== 'ndi'"
                     v-model="output.muxer_options"
                     :label="t('config.muxerOptions')"
                     :hint="t('config.muxerOptionsHelp')"

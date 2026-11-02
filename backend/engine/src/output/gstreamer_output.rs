@@ -63,6 +63,11 @@ pub(super) enum EncodedFormat {
         segment_seconds: u32,
         list_size: u32,
     },
+    /// Uncompressed program as an NDI source; the encoder serves only the
+    /// Player preview and recordings.
+    Ndi {
+        name: String,
+    },
 }
 
 struct Destination {
@@ -732,6 +737,7 @@ pub(super) struct EncodedOutput {
     last_audio_end: Option<i64>,
     pending_vtt: VecDeque<vtt::VttCue>,
     splice: bool,
+    ndi: Option<super::ndi::NdiSink>,
 }
 
 impl EncodedOutput {
@@ -814,6 +820,7 @@ impl EncodedOutput {
                 .unavailable("SCTE-35 requires MPEG-TS over SRT/UDP or native HLS".to_owned());
         }
         let mut variants = Vec::new();
+        let mut ndi = None;
         match format {
             #[cfg(feature = "desktop-base")]
             EncodedFormat::Recording(recording) => {
@@ -886,6 +893,9 @@ impl EncodedOutput {
                     splice,
                 )?);
             }
+            EncodedFormat::Ndi { name } => {
+                ndi = Some(super::ndi::NdiSink::open(&name, cfg)?);
+            }
             EncodedFormat::Auto => {
                 let muxer = match Path::new(path)
                     .extension()
@@ -957,6 +967,17 @@ impl EncodedOutput {
                 Err(error) => log::warn!("Recording unavailable: {error:#}"),
             }
         }
+        if ndi.is_some() {
+            // NDI carries the program itself; an encoder nobody reads from
+            // (no preview, no recording copying it) would only cost CPU.
+            encoders.retain(|encoder| {
+                !encoder
+                    .destinations
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .is_empty()
+            });
+        }
 
         Ok(Self {
             encoders,
@@ -965,11 +986,12 @@ impl EncodedOutput {
             audio_level: AudioLevelMeter::new(cfg.sample_rate, cfg.audio_level_callback.clone()),
             loudness: LoudnessMeter::new(cfg.sample_rate, cfg.loudness_meter_control.clone()),
             clock: PlayoutClock::new(),
-            pace: path.contains("://") || path.ends_with(".m3u8"),
+            pace: ndi.is_some() || path.contains("://") || path.ends_with(".m3u8"),
             last_video: None,
             last_audio_end: None,
             pending_vtt: VecDeque::new(),
             splice,
+            ndi,
         })
     }
 
@@ -982,6 +1004,9 @@ impl EncodedOutput {
     }
 
     fn poll(&mut self) -> Result<()> {
+        if let Some(ndi) = &self.ndi {
+            ndi.poll()?;
+        }
         for encoder in &mut self.encoders {
             if let Err(error) = encoder.poll() {
                 if encoder.optional {
@@ -1041,6 +1066,9 @@ impl EncodedOutput {
                 );
                 encoder.video.push_buffer(buffer.clone())?;
             }
+        }
+        if let Some(ndi) = &self.ndi {
+            ndi.push_video(buffer)?;
         }
         self.last_video = Some(reference_video_frame(frame)?);
         Ok(())
@@ -1105,6 +1133,9 @@ impl EncodedOutput {
                 encoder.audio.push_buffer(buffer.clone())?;
             }
         }
+        if let Some(ndi) = &self.ndi {
+            ndi.push_audio(buffer)?;
+        }
         self.last_audio_end = Some(pts + audio.samples() as i64);
         Ok(())
     }
@@ -1162,6 +1193,11 @@ impl EncodedOutput {
     }
 
     pub(super) fn finish(mut self) -> Result<()> {
+        if let Some(ndi) = &self.ndi
+            && let Err(error) = ndi.finish()
+        {
+            log::warn!("NDI output finalization: {error:#}");
+        }
         for encoder in &mut self.encoders {
             if encoder.optional {
                 if let Err(error) = encoder.finish() {

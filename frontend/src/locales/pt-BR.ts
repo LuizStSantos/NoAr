@@ -2031,12 +2031,18 @@ export default {
                 hls: 'HLS',
                 stream: 'Stream',
                 desktop: 'Desktop',
+                ndi: 'NDI',
             },
             modeHint: {
                 hls: 'Gera .m3u8 servidos pelo NoAr ou por um servidor web.',
                 stream: 'Envia para um servidor RTMP, SRT ou UDP.',
                 desktop: 'Mostra o canal numa janela deste computador.',
+                ndi: 'Publica o programa sem compressão como fonte NDI na rede local.',
             },
+            ndiName: 'Nome da fonte NDI',
+            ndiHint:
+                'Os receptores mostram a fonte como "SERVIDOR (nome)". Precisa do NDI Runtime no servidor; o NoAr em Docker também precisa da rede do host para a descoberta.',
+            ndiUnavailable: 'Instale o NDI Runtime no servidor e reinicie o NoAr para usar NDI.',
             playlistName: 'Nome da playlist',
             segmentDuration: 'Duração do segmento',
             listSize: 'Segmentos na lista',

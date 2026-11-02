@@ -473,15 +473,17 @@ pub struct Output {
 
 impl Output {
     pub fn new(channel_id: i32, mode: OutputMode) -> Self {
-        let stream_url = if mode == OutputMode::Stream {
-            "rtmp://127.0.0.1/live/stream".to_string()
-        } else {
-            Default::default()
+        let stream_url = match mode {
+            OutputMode::Stream => "rtmp://127.0.0.1/live/stream".to_string(),
+            // NDI keeps its source name here.
+            OutputMode::Ndi => "NoAr".to_string(),
+            _ => Default::default(),
         };
         let hls_playlist_name = (mode == OutputMode::HLS).then(|| "stream".to_string());
         let hls_segment_duration = (mode == OutputMode::HLS).then_some(6);
         let hls_list_size = (mode == OutputMode::HLS).then_some(600);
-        let encoded = matches!(mode, OutputMode::HLS | OutputMode::Stream);
+        // NDI encodes the Player preview with these settings.
+        let encoded = matches!(mode, OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi);
 
         Self {
             id: 0,

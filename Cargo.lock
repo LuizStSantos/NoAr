@@ -508,6 +508,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
+name = "byte-slice-cast"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7575182f7272186991736b70173b0ea045398f984bf5ebbb3804736ce1330c9d"
+
+[[package]]
 name = "bytemuck"
 version = "1.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1164,6 +1170,12 @@ name = "dasp_sample"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
+
+[[package]]
+name = "data-encoding"
+version = "2.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
 name = "defmt"
@@ -2101,6 +2113,38 @@ dependencies = [
  "ff",
  "rand_core 0.6.4",
  "subtle",
+]
+
+[[package]]
+name = "gst-plugin-ndi"
+version = "0.14.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a48a5f959adbd2aae3fb0c5c536641b3418ab2fa84cc493e5f07ffd1c780ad22"
+dependencies = [
+ "anyhow",
+ "byte-slice-cast",
+ "byteorder",
+ "data-encoding",
+ "glib",
+ "gst-plugin-version-helper",
+ "gstreamer",
+ "gstreamer-audio",
+ "gstreamer-base",
+ "gstreamer-video",
+ "libloading",
+ "quick-xml 0.39.4",
+ "smallvec",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "gst-plugin-version-helper"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94668bc2592732b8c2b653668ae41211d45988fb61264888b9c2d545d4bd826d"
+dependencies = [
+ "chrono",
+ "toml_edit",
 ]
 
 [[package]]
@@ -3490,7 +3534,7 @@ dependencies = [
  "notify-debouncer-full",
  "path-clean",
  "protect-axum",
- "quick-xml",
+ "quick-xml 0.41.0",
  "rand 0.10.3",
  "real",
  "regex",
@@ -3527,12 +3571,14 @@ dependencies = [
  "env_logger 0.11.11",
  "ffmpeg-next",
  "glob",
+ "gst-plugin-ndi",
  "gstreamer",
  "gstreamer-app",
  "gstreamer-audio",
  "gstreamer-mpegts",
  "gstreamer-pbutils",
  "gstreamer-video",
+ "libloading",
  "log",
  "naga",
  "pollster",
@@ -4569,6 +4615,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.39.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdcc8dd4e2f670d309a5f0e83fe36dfdc05af317008fea29144da1a2ac858e5e"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
@@ -6782,7 +6837,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "338e30461b3a2b67d70eb30a6d89f8e0c93a833e07d2ae89085cd070c4a00ac0"
 dependencies = [
  "proc-macro2",
- "quick-xml",
+ "quick-xml 0.41.0",
  "quote",
 ]
 

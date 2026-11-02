@@ -13,6 +13,12 @@ one is tagged.
 
 ### Added
 
+- NDI output: publish the uncompressed program as an NDI source on the local
+  network (*Settings › Output › NDI*). The NDI elements are compiled in; the
+  proprietary NDI Runtime is installed on the server and NDI stays disabled,
+  with an explanation, until it is present. Migration `00024` adds an inactive
+  NDI output to every channel. See `docs/ndi.md`.
+
 - A disposable actual-NoAr smoke harness verifies scheduled live transitions,
   source-loss recovery, decoded markers, timestamps, receiver progress and
   persistent SRT sessions independently of the standalone Python prototype.

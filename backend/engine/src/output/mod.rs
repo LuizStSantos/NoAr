@@ -13,6 +13,7 @@ mod gst_hls;
 mod gst_metadata;
 mod hls;
 pub(crate) mod link;
+pub(crate) mod ndi;
 pub(crate) mod pipeline;
 mod recording_native;
 mod recording_retention;
@@ -184,6 +185,19 @@ impl Output {
                     list_size: hls_list_size,
                 },
                 Some(hls_health),
+            )?)),
+        })
+    }
+
+    /// Publishes the program as the NDI source `name`, uncompressed.
+    pub(crate) fn open_ndi(name: &str, cfg: &OutputConfig) -> Result<Self> {
+        Ok(Self {
+            kind: OutputKind::Encoded(Box::new(EncodedOutput::open(
+                name,
+                cfg,
+                EncodedFormat::Ndi {
+                    name: name.to_owned(),
+                },
             )?)),
         })
     }

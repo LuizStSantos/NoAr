@@ -31,6 +31,8 @@ pub enum OutputMode {
     #[default]
     HLS,
     Stream,
+    /// The uncompressed program published as an NDI source on the network.
+    Ndi,
 }
 
 impl OutputMode {
@@ -38,6 +40,7 @@ impl OutputMode {
         match s {
             "desktop" => Self::Desktop,
             "stream" => Self::Stream,
+            "ndi" => Self::Ndi,
             _ => Self::HLS,
         }
     }
@@ -51,7 +54,8 @@ impl FromStr for OutputMode {
             "desktop" => Ok(Self::Desktop),
             "hls" => Ok(Self::HLS),
             "stream" => Ok(Self::Stream),
-            _ => Err("Use 'desktop', 'hls' or 'stream'".to_string()),
+            "ndi" => Ok(Self::Ndi),
+            _ => Err("Use 'desktop', 'hls', 'stream' or 'ndi'".to_string()),
         }
     }
 }
@@ -62,6 +66,7 @@ impl fmt::Display for OutputMode {
             OutputMode::Desktop => write!(f, "desktop"),
             OutputMode::HLS => write!(f, "hls"),
             OutputMode::Stream => write!(f, "stream"),
+            OutputMode::Ndi => write!(f, "ndi"),
         }
     }
 }
@@ -1392,9 +1397,26 @@ impl Output {
             return Err("container metadata is unavailable for desktop output".to_string());
         }
 
-        if matches!(self.mode, OutputMode::HLS | OutputMode::Stream) {
+        if self.mode == OutputMode::Ndi {
+            if !self.muxer_options.is_empty() {
+                return Err("NDI output has no container options".to_string());
+            }
+            noar_engine::validate_ndi_name(&self.stream_url)?;
+            if let Some(reason) = noar_engine::ndi_unavailable_reason() {
+                return Err(format!(
+                    "NDI output is unavailable on this server: {reason}"
+                ));
+            }
+        }
+
+        // NDI encodes only the Player preview, as MPEG-TS like UDP.
+        if matches!(
+            self.mode,
+            OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi
+        ) {
             let target = match self.mode {
                 OutputMode::HLS => noar_engine::FfmpegOutputTarget::Hls,
+                OutputMode::Ndi => noar_engine::FfmpegOutputTarget::Udp,
                 OutputMode::Stream => self
                     .stream_type
                     .ffmpeg_target()
@@ -1415,6 +1437,7 @@ impl Output {
             }
             let muxer_name = match self.mode {
                 OutputMode::HLS => "hls",
+                OutputMode::Ndi => "mpegts",
                 OutputMode::Stream => match self.stream_type {
                     StreamType::Rtmp => "flv",
                     StreamType::Srt | StreamType::Udp => "mpegts",
@@ -1766,6 +1789,27 @@ mod output_tests {
             audio_sample_rate: 48_000,
             hls_variants: Vec::new(),
         }
+    }
+
+    #[test]
+    fn ndi_output_needs_a_name_and_the_runtime() {
+        let mut output = output(OutputMode::Ndi);
+        output.stream_url = "   ".to_string();
+        assert!(output.validate().unwrap_err().contains("NDI source name"));
+
+        output.stream_url = "NoAr Canal 1".to_string();
+        output
+            .muxer_options
+            .insert("x".to_string(), "1".to_string());
+        assert!(output.validate().unwrap_err().contains("container"));
+        output.muxer_options.clear();
+
+        match noar_engine::ndi_unavailable_reason() {
+            Some(_) => assert!(output.validate().unwrap_err().contains("unavailable")),
+            None => assert!(output.validate().is_ok()),
+        }
+        assert_eq!("ndi".parse::<OutputMode>(), Ok(OutputMode::Ndi));
+        assert_eq!(OutputMode::Ndi.to_string(), "ndi");
     }
 
     #[test]

@@ -30,6 +30,9 @@ and the Report for what aired.
   reconnects by itself, the preview keeps playing, and the Player says whether
   the output is sending, waiting for a receiver or cannot connect, and why
   ([docs](docs/output.md#when-the-destination-is-down)).
+- **NDI output**: the uncompressed program as an NDI source on the local
+  network, once the NDI Runtime is installed on the server
+  ([docs](docs/ndi.md)).
 - **Scheduled live sources**: NoAr pulls streams from an external ingest server
   such as MediaMTX and switches between files and live sources through GStreamer
   ([docs](docs/live_ingest.md)).
