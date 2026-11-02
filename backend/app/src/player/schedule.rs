@@ -894,6 +894,25 @@ async fn play_clips(
     let mut commercials = CommercialFolders::new(&config.channel.storage);
     // The run of commercials on air or next has had its SCTE-35 break.
     let mut break_announced = false;
+    // Assembled programs play as their blocks and breaks, as they are now.
+    let expanded;
+    let event = if event
+        .sources
+        .iter()
+        .any(|source| crate::utils::assembled::is_program(source))
+    {
+        expanded = ScheduleEvent {
+            sources: crate::utils::assembled::expand_sources(
+                &config.channel.storage,
+                &event.sources,
+            )
+            .await,
+            ..event.clone()
+        };
+        &expanded
+    } else {
+        event
+    };
 
     for (index, source) in event.sources.iter().enumerate() {
         if manager.schedule.take_abort() || stopping(manager) {
@@ -1278,10 +1297,18 @@ async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
 /// Open what an event starts with ahead of its start, so the switch to it
 /// is immediate. A live connects and stays at its live edge.
 async fn preload_event(manager: &ChannelManager, occurrence: &Occurrence) {
-    let Some(source) = occurrence.event.sources.first() else {
+    let storage = manager.config.read().await.channel.storage.clone();
+    // An assembled program starts with its first clip.
+    let Some(source) = crate::utils::assembled::expand_sources(
+        &storage,
+        &occurrence.event.sources[..occurrence.event.sources.len().min(1)],
+    )
+    .await
+    .into_iter()
+    .next() else {
         return;
     };
-    let path = manager.config.read().await.channel.storage.join(source);
+    let path = storage.join(source);
     let target = match occurrence.event.kind {
         ScheduleKind::Media => path.to_string_lossy().to_string(),
         ScheduleKind::Live => match read_live_url(&path).await {

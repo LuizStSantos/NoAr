@@ -118,6 +118,10 @@ pub fn routes() -> Router<AppState> {
                 .route("/schedule/{id}/lives/test", post(test_live_signal))
                 .route("/schedule/{id}/lives/ndi", get(get_ndi_sources))
                 .route(
+                    "/schedule/{id}/programs",
+                    get(get_assembled_program).put(save_assembled_program),
+                )
+                .route(
                     "/schedule/{id}/{event_id}",
                     put(update_schedule_event).delete(delete_schedule_event),
                 )

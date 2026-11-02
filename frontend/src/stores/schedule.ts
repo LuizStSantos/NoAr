@@ -153,6 +153,27 @@ export const useSchedule = defineStore('schedule', {
             })
         },
 
+        /** An assembled program (`.program` file in the storage). */
+        async getProgram(path: string): Promise<AssembledProgram> {
+            return authFetch<AssembledProgram>(
+                `/api/schedule/${channelId()}/programs?path=${encodeURIComponent(path)}`,
+                { headers: headers(false) },
+            )
+        },
+
+        /** Save an assembled program; the clip lengths are read by the server. */
+        async saveProgram(
+            path: string,
+            title: string,
+            segments: ({ kind: 'block'; source: string } | { kind: 'break'; clips: string[] })[],
+        ): Promise<AssembledProgram> {
+            return authFetch<AssembledProgram>(`/api/schedule/${channelId()}/programs`, {
+                method: 'PUT',
+                headers: headers(true),
+                body: JSON.stringify({ path, title, segments }),
+            })
+        },
+
         /** NDI sources announced on the network, by the name receivers list. */
         async ndiSources(): Promise<string[]> {
             return authFetch<string[]>(`/api/schedule/${channelId()}/lives/ndi`, {

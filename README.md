@@ -30,6 +30,9 @@ and the Report for what aired.
   reconnects by itself, the preview keeps playing, and the Player says whether
   the output is sending, waiting for a receiver or cannot connect, and why
   ([docs](docs/output.md#when-the-destination-is-down)).
+- **Assembled programs**: a program delivered in blocks becomes one file with
+  its commercial breaks, dragged into playlists or scheduled as one item, and
+  edited once for every airing ([docs](docs/programs.md)).
 - **NDI output**: the uncompressed program as an NDI source on the local
   network, once the NDI Runtime is installed on the server
   ([docs](docs/ndi.md)).

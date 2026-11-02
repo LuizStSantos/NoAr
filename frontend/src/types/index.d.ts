@@ -81,6 +81,21 @@ declare global {
         audio: CodecOption[]
     }
 
+    /** A clip of an assembled program, with the part that airs. */
+    interface ProgramClip {
+        source: string
+        in: number
+        out: number
+    }
+
+    type ProgramSegment = ({ kind: 'block' } & ProgramClip) | { kind: 'break'; clips: ProgramClip[] }
+
+    /** An assembled program: blocks in order and commercial breaks between them. */
+    interface AssembledProgram {
+        title: string
+        segments: ProgramSegment[]
+    }
+
     /** A video card port on the server. */
     interface VideoDevice {
         kind: 'decklink' | 'v4l2'
@@ -201,6 +216,8 @@ declare global {
         logo_marks?: boolean
         /** The part that airs by default, saved in its marks. */
         trim?: { from: number; to: number } | null
+        /** An assembled program (`.program`): blocks and breaks under one title. */
+        program?: boolean
     }
 
     interface Folder {

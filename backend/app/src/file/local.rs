@@ -143,7 +143,9 @@ impl LocalStorage {
                 logo_stems.insert(stem.to_string());
             }
 
-            let media = extensions.contains(&extension);
+            // Assembled programs play like a clip.
+            let media = extensions.contains(&extension)
+                || extension == crate::utils::assembled::PROGRAM_EXTENSION;
 
             if media || path_obj.all_files {
                 files.push((child.path(), f_meta, media));
@@ -167,7 +169,16 @@ impl LocalStorage {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_lowercase();
-            let duration = if media {
+            let program = crate::utils::assembled::is_program(&name);
+            let duration = if program {
+                match crate::utils::assembled::read_program(&file).await {
+                    Ok(program) => program.duration(),
+                    Err(e) => {
+                        error!("{e:?}");
+                        continue;
+                    }
+                }
+            } else if media {
                 match probe_media(file.to_string_lossy().as_ref()).await {
                     Ok(probe) => probe.format.duration.unwrap_or_default(),
                     Err(e) => {
@@ -193,6 +204,7 @@ impl LocalStorage {
             };
 
             media_files.push(VideoFile {
+                program,
                 sheet: media && sheet_stems.contains(&stem),
                 logo_marks,
                 trim,

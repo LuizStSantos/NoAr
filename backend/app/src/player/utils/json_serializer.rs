@@ -77,6 +77,11 @@ pub fn set_defaults(config: &PlayoutConfig, playlist: &mut JsonPlaylist) {
     let mut start_sec = playlist.start_sec.unwrap();
     let mut length = 0.0;
     let mut commercials = CommercialFolders::new(&config.storage.path);
+    // Assembled programs air as their blocks and breaks, as they are now.
+    playlist.program = crate::utils::assembled::expand_playlist(
+        &config.storage.path,
+        std::mem::take(&mut playlist.program),
+    );
 
     // Add extra values to every media clip
     for (i, item) in playlist.program.iter_mut().enumerate() {

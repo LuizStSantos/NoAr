@@ -297,3 +297,178 @@ async fn moving_an_event_lets_it_play_again_at_the_new_time() {
     assert_eq!(updated["start_time"], "21:00:00");
     assert_eq!(runs(pool).await, ["2000-01-01"]);
 }
+
+#[tokio::test]
+#[serial]
+async fn assembled_programs_are_saved_listed_scheduled_and_updated_everywhere() {
+    let fixture = security_fixture().await;
+    let token = access_token(&fixture.state, 1).await;
+    let storage = fixture.root.join("storage");
+    let media = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests_assets/storage/media_mix");
+    for folder in ["Shows", "Ads", "Programs"] {
+        tokio::fs::create_dir_all(storage.join(folder))
+            .await
+            .unwrap();
+    }
+    tokio::fs::copy(media.join("av_sync.mp4"), storage.join("Shows/b1.mp4"))
+        .await
+        .unwrap();
+    tokio::fs::copy(media.join("no_audio.mp4"), storage.join("Shows/b2.mp4"))
+        .await
+        .unwrap();
+    tokio::fs::copy(media.join("ad.mp4"), storage.join("Ads/spot.mp4"))
+        .await
+        .unwrap();
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/file/1/commercial",
+        Some(&token),
+        json!({"path": "Ads", "commercial": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let program = |segments: serde_json::Value| json!({"path": "Programs/Jornal ep 12.program", "title": "Jornal da Noite", "segments": segments});
+    let block = |source: &str| json!({"kind": "block", "source": source});
+
+    // Unauthenticated, a commercial outside a commercials folder, a block
+    // that is a commercial, and no block at all are refused.
+    let valid = program(json!([
+        block("Shows/b1.mp4"),
+        {"kind": "break", "clips": ["Ads/spot.mp4"]},
+        block("Shows/b2.mp4")
+    ]));
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        None,
+        valid.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    for refused in [
+        program(json!([block("Shows/b1.mp4"), {"kind": "break", "clips": ["Shows/b2.mp4"]}])),
+        program(json!([block("Ads/spot.mp4")])),
+        program(json!([{"kind": "break", "clips": ["Ads/spot.mp4"]}])),
+    ] {
+        let (status, body) = send(
+            &fixture,
+            "PUT",
+            "/api/schedule/1/programs",
+            Some(&token),
+            refused,
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    }
+
+    // A path out of the storage is refused like everywhere else.
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        program(json!([block("../secret.mp4")])),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, saved) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        valid,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["segments"].as_array().unwrap().len(), 3);
+    let length = |segment: &serde_json::Value| {
+        segment["out"].as_f64().unwrap() - segment["in"].as_f64().unwrap()
+    };
+    let first = length(&saved["segments"][0]);
+    let spot = length(&saved["segments"][1]["clips"][0]);
+    let second = length(&saved["segments"][2]);
+    assert!(first > 0.0 && spot > 0.0 && second > 0.0, "{saved}");
+    let total = first + spot + second;
+
+    let (status, read) = send(
+        &fixture,
+        "GET",
+        "/api/schedule/1/programs?path=Programs/Jornal%20ep%2012.program",
+        Some(&token),
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    assert_eq!(read, saved);
+
+    // The storage lists it as a program with its whole length.
+    let (_, folder) = send(
+        &fixture,
+        "POST",
+        "/api/file/1/browse",
+        Some(&token),
+        json!({"source": "/Programs"}),
+    )
+    .await;
+    let listed = &folder["files"][0];
+    assert_eq!(listed["name"], "Jornal ep 12.program");
+    assert_eq!(listed["program"], true);
+    assert!(
+        (listed["duration"].as_f64().unwrap() - total).abs() < 0.01,
+        "{folder}"
+    );
+
+    // A scheduled event takes its length, and the new one after an edit.
+    let (status, event) = send(
+        &fixture,
+        "POST",
+        "/api/schedule/1",
+        Some(&token),
+        json!({
+            "kind": "media",
+            "sources": ["Programs/Jornal ep 12.program"],
+            "start_date": "2026-10-14",
+            "start_time": "20:00",
+            "entry_mode": "after_clip",
+            "after_mode": "continue"
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{event}");
+    assert!(
+        (event["duration"].as_f64().unwrap() - total).abs() < 0.01,
+        "{event}"
+    );
+
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        "/api/schedule/1/programs",
+        Some(&token),
+        program(json!([block("Shows/b1.mp4")])),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, events) = send(
+        &fixture,
+        "GET",
+        "/api/schedule/1/events",
+        Some(&token),
+        json!(null),
+    )
+    .await;
+    let updated = events
+        .as_array()
+        .and_then(|events| events.iter().find(|item| item["id"] == event["id"]))
+        .cloned()
+        .unwrap_or_else(|| panic!("{events}"));
+    assert!(
+        (updated["duration"].as_f64().unwrap() - first).abs() < 0.01,
+        "{updated}"
+    );
+}

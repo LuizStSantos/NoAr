@@ -18,6 +18,7 @@ import ImageViewer, { type ViewerImage } from '@/components/storage/ImageViewer.
 import LiveCard from '@/components/storage/LiveCard.vue'
 import LogoMarksEditor from '@/components/storage/LogoMarksEditor.vue'
 import LiveEditor from '@/components/storage/LiveEditor.vue'
+import ProgramEditor from '@/components/storage/ProgramEditor.vue'
 import SheetCard from '@/components/storage/SheetCard.vue'
 import SheetEditor from '@/components/storage/SheetEditor.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
@@ -131,7 +132,7 @@ const rows = computed<Row[]>(() => {
     const needle = filter.value.trim().toLowerCase()
     const folders: Row[] = mediaStore.folderTree.folders.map((folder) => ({ name: folder.name, folder: true }))
     const files: Row[] = mediaStore.folderTree.files
-        .filter((file) => view.value === 'all' || isLiveFolder.value || isVideo(file))
+        .filter((file) => view.value === 'all' || isLiveFolder.value || isVideo(file) || isProgram(file))
         .map((file) => ({ name: file.name, folder: false, file }))
 
     return [...folders, ...files].filter((row) => !needle || row.name.toLowerCase().includes(needle))
@@ -139,7 +140,12 @@ const rows = computed<Row[]>(() => {
 
 /** Playable video or audio; images can be in the channel's extensions too. */
 function isVideo(file?: FileObject): boolean {
-    return Boolean(file) && file?.media !== false && !isImage(file?.name ?? '')
+    return Boolean(file) && file?.media !== false && !file?.program && !isImage(file?.name ?? '')
+}
+
+/** An assembled program: blocks and breaks under one title. */
+function isProgram(file?: FileObject): boolean {
+    return Boolean(file?.program)
 }
 
 function isImage(name: string): boolean {
@@ -391,6 +397,8 @@ const currentLive = computed(() => {
     return scheduleStore.lives.find((live) => live.path === path) ?? null
 })
 const liveEditor = ref<{ live: LiveSource | null } | null>(null)
+/** The assembled program being made (`path` null) or changed. */
+const programEditor = ref<{ path: string | null } | null>(null)
 const liveTests = reactive(new Map<string, { ok: boolean; text: string; at: string }>())
 const liveTesting = ref(false)
 
@@ -1027,6 +1035,9 @@ const uploadAccept = computed(() =>
             <button type="button" class="btn-quiet min-h-10.5" @click="showCreate = true">
                 <i class="bi bi-folder-plus" aria-hidden="true" />{{ t('storage.newFolder') }}
             </button>
+            <button type="button" class="btn-quiet min-h-10.5" @click="programEditor = { path: null }">
+                <i class="bi bi-collection-play" aria-hidden="true" />{{ t('storage.program.new') }}
+            </button>
             <button type="button" class="btn-quiet min-h-10.5 border-live/60" @click="liveEditor = { live: null }">
                 <i class="bi bi-broadcast text-live" aria-hidden="true" />{{ t('storage.live.new') }}
             </button>
@@ -1375,6 +1386,17 @@ const uploadAccept = computed(() =>
                                                 {{ row.name }}
                                             </button>
                                             <button
+                                                v-else-if="isProgram(row.file)"
+                                                type="button"
+                                                class="truncate max-w-[calc(100%-1.75rem)] bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
+                                                :aria-label="t('storage.program.edit', { name: row.name })"
+                                                @click="programEditor = { path: storageJoin(current, row.name) }"
+                                            >
+                                                <i class="bi bi-collection-play me-1" aria-hidden="true" />{{
+                                                    row.name.replace(/\.program$/i, '')
+                                                }}
+                                            </button>
+                                            <button
                                                 v-else-if="isVideo(row.file)"
                                                 type="button"
                                                 class="truncate max-w-[calc(100%-1.75rem)] bg-transparent border-0 p-0 text-inherit cursor-pointer hover:underline text-left"
@@ -1436,7 +1458,11 @@ const uploadAccept = computed(() =>
                                         </span>
                                     </td>
                                     <td class="px-2 py-2 font-mono">
-                                        {{ isVideo(row.file) ? clock(row.file?.duration ?? 0) : '' }}
+                                        {{
+                                            isVideo(row.file) || isProgram(row.file)
+                                                ? clock(row.file?.duration ?? 0)
+                                                : ''
+                                        }}
                                     </td>
                                     <td class="px-2 py-2 font-mono text-muted whitespace-nowrap">
                                         {{ row.file ? fileSize(row.file.size, 1) || '0 B' : '' }}
@@ -1702,6 +1728,19 @@ const uploadAccept = computed(() =>
             :initial-kind="logoMarksKind"
             @close="logoMarksPath = null"
             @saved="refresh"
+        />
+
+        <ProgramEditor
+            v-if="programEditor"
+            :path="programEditor.path"
+            :folder="current"
+            @close="programEditor = null"
+            @saved="
+                () => {
+                    programEditor = null
+                    refresh()
+                }
+            "
         />
 
         <LiveEditor

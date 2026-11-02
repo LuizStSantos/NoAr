@@ -460,7 +460,9 @@ is appropriate for previewing and simple deployments.
 ## Scheduler
 
 Scheduled events and lives: see [Scheduler](/docs/scheduler.md#api) for the
-routes under `/api/schedule/{id}` and the event format.
+routes under `/api/schedule/{id}` and the event format. Assembled programs
+(`/api/schedule/{id}/programs`) are described in
+[Assembled programs](/docs/programs.md#api).
 
 ## Public XMLTV guide
 

@@ -33,7 +33,14 @@ pub async fn read_playlist(
     }
 
     match json_reader(&playlist_path).await {
-        Ok(p) => Ok(p),
+        Ok(mut playlist) => {
+            // Assembled programs show with their current length and title.
+            crate::utils::assembled::refresh_entries(
+                &config.channel.storage,
+                &mut playlist.program,
+            );
+            Ok(playlist)
+        }
         Err(e) => Err(ServiceError::Conflict(e.to_string())),
     }
 }

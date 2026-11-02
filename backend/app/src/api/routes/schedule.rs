@@ -15,7 +15,7 @@ use crate::{
     },
     db::{
         handles,
-        models::{Role, ScheduleEvent},
+        models::{Role, ScheduleEvent, ScheduleKind},
     },
     player::{
         controller::ChannelManager,
@@ -367,6 +367,101 @@ pub async fn get_lives(
     let storage = manager.config.read().await.channel.storage.clone();
 
     Ok(Json(list_lives(&storage).await))
+}
+
+/// Where an assembled program file is, relative to the storage.
+#[derive(Debug, Deserialize)]
+pub struct ProgramPath {
+    pub path: String,
+}
+
+/// An assembled program to save at `path`.
+#[derive(Debug, Deserialize)]
+pub struct SaveProgram {
+    pub path: String,
+    #[serde(flatten)]
+    pub program: crate::utils::assembled::ProgramInput,
+}
+
+/// **Read an assembled program**
+///
+/// ```BASH
+/// curl -X GET 'http://127.0.0.1:8787/api/schedule/1/programs?path=Programas/Jornal.program' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_assembled_program(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Query(query): Query<ProgramPath>,
+) -> Result<Json<crate::utils::assembled::ProgramFile>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let (path, _, relative) = crate::file::norm_abs_path(&storage, &query.path)?;
+
+    if !crate::utils::assembled::is_program(&relative) || !path.is_file() {
+        return Err(ServiceError::NotFound(format!(
+            "{relative} is not a program"
+        )));
+    }
+
+    Ok(Json(crate::utils::assembled::read_program(&path).await?))
+}
+
+/// **Create or change an assembled program**
+///
+/// Blocks in order and breaks of commercials between them; the clip
+/// lengths are read here. Scheduled events that air it take its new length.
+///
+/// ```BASH
+/// curl -X PUT http://127.0.0.1:8787/api/schedule/1/programs -H 'Content-Type: application/json' \
+/// -d '{"path": "Programas/Jornal.program", "title": "Jornal da Noite",
+///      "segments": [{"kind": "block", "source": "Recebidos/b1.mp4"},
+///                   {"kind": "break", "clips": ["Comerciais/a.mp4"]},
+///                   {"kind": "block", "source": "Recebidos/b2.mp4"}]}' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn save_assembled_program(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(input): Json<SaveProgram>,
+) -> Result<Json<crate::utils::assembled::ProgramFile>, ServiceError> {
+    let manager = authorized_manager(&state, id, &user, &details).await?;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let program =
+        crate::utils::assembled::save_program(&storage, &input.path, input.program).await?;
+    let (_, _, relative) = crate::file::norm_abs_path(&storage, &input.path)?;
+
+    // Events that air it now run for its new length.
+    let mut changed = false;
+    for mut event in handles::select_schedule_events(&state.pool, id).await? {
+        if event.kind != ScheduleKind::Media || !event.sources.contains(&relative) {
+            continue;
+        }
+        let mut total = 0.0;
+        for source in &event.sources {
+            total += if source == &relative {
+                program.duration()
+            } else {
+                crate::utils::schedule::trimmed_length(&storage.join(source))
+                    .await
+                    .unwrap_or_default()
+            };
+        }
+        if (total - event.duration).abs() > 0.001 {
+            event.duration = total;
+            handles::update_schedule_event(&state.pool, &event).await?;
+            changed = true;
+        }
+    }
+    if changed {
+        manager.schedule.invalidate();
+    }
+
+    Ok(Json(program))
 }
 
 /// **Create or update a live**

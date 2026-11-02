@@ -13,6 +13,12 @@ one is tagged.
 
 ### Added
 
+- Assembled programs: a `.program` file in Storage holds a program's blocks in
+  order and commercial breaks between them under a chosen title. Drag it into
+  a playlist or schedule it as one item; the playout expands it when it airs,
+  so edits apply to every airing still to come. The guide shows one
+  programme; the as-run log lists every clip. See `docs/programs.md`.
+
 - NDI output: publish the uncompressed program as an NDI source on the local
   network (*Settings › Output › NDI*). The NDI elements are compiled in; the
   proprietary NDI Runtime is installed on the server and NDI stays disabled,
