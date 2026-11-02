@@ -84,7 +84,8 @@ onBeforeUnmount(() => {
         >
             <div class="flex items-center gap-2">
                 <h2 class="m-0 font-semibold text-[16px] truncate flex-1 w-0">{{ title }}</h2>
-                <button v-if="hideButtons" class="btn-icon" :aria-label="t('cancel')" @click="modalAction(false)">
+                <!-- Always there: a long form's buttons can be out of view. -->
+                <button class="btn-icon" :aria-label="t('cancel')" @click="modalAction(false)">
                     <i class="bi bi-x-lg" aria-hidden="true" />
                 </button>
             </div>
