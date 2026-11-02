@@ -1,6 +1,6 @@
 //! Shared broadcast-style processing for program output and the live_loudness example.
 
-use ffmpeg_next::frame;
+use crate::frame::AudioFrame;
 
 use crate::analysis::loudness::LoudnessAnalyzer;
 
@@ -155,14 +155,14 @@ impl LiveDynamicsProcessor {
         self.preview_primed = false;
     }
 
-    pub fn process(&mut self, audio: &mut frame::Audio, future: &[[f32; 2]]) {
+    pub fn process(&mut self, audio: &mut AudioFrame, future: &[[f32; 2]]) {
         self.process_with_gain_hold(audio, future, false);
     }
 
     /// Intentional playout fades may reduce gain but must never trigger compensation.
     pub(crate) fn process_with_gain_hold(
         &mut self,
-        audio: &mut frame::Audio,
+        audio: &mut AudioFrame,
         future: &[[f32; 2]],
         hold: bool,
     ) {
@@ -171,7 +171,7 @@ impl LiveDynamicsProcessor {
 
     pub(crate) fn process_with_output_gain(
         &mut self,
-        audio: &mut frame::Audio,
+        audio: &mut AudioFrame,
         future: &[[f32; 2]],
         hold: bool,
         mut output_gain: Option<&mut GainEffect>,
@@ -185,9 +185,9 @@ impl LiveDynamicsProcessor {
         self.source_left.clear();
         self.source_right.clear();
         self.source_left
-            .extend(audio.plane::<f32>(0).iter().copied().map(finite));
+            .extend(audio.plane(0).iter().copied().map(finite));
         self.source_right
-            .extend(audio.plane::<f32>(1).iter().copied().map(finite));
+            .extend(audio.plane(1).iter().copied().map(finite));
         let samples = audio.samples();
         let preview = (PREVIEW_SECONDS * f64::from(self.rate)).round() as usize;
         let window = ((RMS_SECONDS * f64::from(self.rate)).round() as usize).max(1);
@@ -338,17 +338,16 @@ impl LiveDynamicsProcessor {
                 .into_iter()
                 .enumerate()
             {
-                let output = audio.plane_mut::<f32>(plane);
+                let output = audio.plane_mut(plane);
 
                 for index in offset..end {
                     output[index] = source[index] * gains[index - offset];
                 }
             }
 
-            let output_measurements = self.output_analyzer.process_samples(
-                &audio.plane::<f32>(0)[offset..end],
-                &audio.plane::<f32>(1)[offset..end],
-            );
+            let output_measurements = self
+                .output_analyzer
+                .process_samples(&audio.plane(0)[offset..end], &audio.plane(1)[offset..end]);
 
             self.until_analysis -= end - offset;
             offset = end;
@@ -524,10 +523,6 @@ fn compression(level: f64, threshold: f64, ratio: f64, knee_db: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{
-        ChannelLayout,
-        format::{Sample, sample::Type},
-    };
 
     use super::*;
 
@@ -546,17 +541,13 @@ mod tests {
 
         for offset in (0..source.len()).step_by(size) {
             let end = (offset + size).min(source.len());
-            let mut audio = frame::Audio::new(
-                Sample::F32(Type::Planar),
-                end - offset,
-                ChannelLayout::STEREO,
-            );
+            let mut audio = AudioFrame::stereo(end - offset);
             audio.set_rate(RATE);
             audio.set_pts(Some(offset as i64));
 
             for channel in 0..2 {
                 for (index, sample) in source[offset..end].iter().enumerate() {
-                    audio.plane_mut::<f32>(channel)[index] = sample[channel];
+                    audio.plane_mut(channel)[index] = sample[channel];
                 }
             }
 
@@ -565,9 +556,9 @@ mod tests {
             assert_eq!(audio.pts(), Some(offset as i64));
             output.extend(
                 audio
-                    .plane::<f32>(0)
+                    .plane(0)
                     .iter()
-                    .zip(audio.plane::<f32>(1))
+                    .zip(audio.plane(1))
                     .map(|(&left, &right)| [left, right]),
             );
         }
@@ -614,12 +605,12 @@ mod tests {
         processor.active = true;
         processor.source_power = 0.0001;
         processor.preview_primed = true;
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 480, ChannelLayout::STEREO);
+        let mut audio = AudioFrame::stereo(480);
         audio.set_rate(RATE);
-        audio.plane_mut::<f32>(0).fill(0.01);
-        audio.plane_mut::<f32>(1).fill(0.01);
+        audio.plane_mut(0).fill(0.01);
+        audio.plane_mut(1).fill(0.01);
         processor.process(&mut audio, &[[0.01; 2]; 3500]);
-        let mut previous = *audio.plane::<f32>(0).last().unwrap();
+        let mut previous = *audio.plane(0).last().unwrap();
 
         for limit in [0.0, 8.0] {
             processor.update_config(LiveLoudnessConfig {
@@ -630,11 +621,11 @@ mod tests {
             for block in 0..2 {
                 // Runtime configuration is re-read each frame; it must not restart the ramp.
                 processor.update_config(processor.config);
-                audio.plane_mut::<f32>(0).fill(0.01);
-                audio.plane_mut::<f32>(1).fill(0.01);
+                audio.plane_mut(0).fill(0.01);
+                audio.plane_mut(1).fill(0.01);
                 processor.process(&mut audio, &[[0.01; 2]; 3500]);
 
-                for &sample in audio.plane::<f32>(0) {
+                for &sample in audio.plane(0) {
                     let delta_db = 20.0 * (f64::from(sample) / f64::from(previous)).log10();
                     assert!(delta_db.abs() < 0.009, "sample jump: {delta_db} dB");
                     previous = sample;
@@ -659,10 +650,10 @@ mod tests {
         assert!(!processor.preview_primed);
         assert_eq!(processor.agc_db, 2.0);
         assert_eq!(processor.until_analysis, 100);
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 48, ChannelLayout::STEREO);
+        let mut audio = AudioFrame::stereo(48);
         audio.set_rate(RATE);
-        audio.plane_mut::<f32>(0).fill(0.0);
-        audio.plane_mut::<f32>(1).fill(0.0);
+        audio.plane_mut(0).fill(0.0);
+        audio.plane_mut(1).fill(0.0);
         processor.process(&mut audio, &[]);
         assert_eq!(processor.reduction_db, 6.0);
         assert_eq!(processor.until_analysis, 52);
@@ -730,18 +721,13 @@ mod tests {
         assert_eq!(processor.output_gain_db, 2.0);
         assert_eq!(processor.output_target_db, 0.5);
         assert_eq!(processor.hold_samples, 1000);
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 480, ChannelLayout::STEREO);
+        let mut audio = AudioFrame::stereo(480);
         audio.set_rate(RATE);
-        audio.plane_mut::<f32>(0).fill(0.0);
-        audio.plane_mut::<f32>(1).fill(0.0);
+        audio.plane_mut(0).fill(0.0);
+        audio.plane_mut(1).fill(0.0);
         processor.process(&mut audio, &[]);
         assert!((processor.output_gain_db - 1.98).abs() < 1e-9);
-        assert!(
-            audio
-                .plane::<f32>(0)
-                .iter()
-                .all(|sample| sample.is_finite())
-        );
+        assert!(audio.plane(0).iter().all(|sample| sample.is_finite()));
     }
 
     #[test]
@@ -759,10 +745,10 @@ mod tests {
         processor.source_power = 0.0001;
         processor.output_target_db = 1.0;
         processor.update_config(processor.config);
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 480, ChannelLayout::STEREO);
+        let mut audio = AudioFrame::stereo(480);
         audio.set_rate(RATE);
-        audio.plane_mut::<f32>(0).fill(0.01);
-        audio.plane_mut::<f32>(1).fill(0.01);
+        audio.plane_mut(0).fill(0.01);
+        audio.plane_mut(1).fill(0.01);
         processor.process(&mut audio, &[]);
         assert!((processor.output_gain_db - 0.01).abs() < 1e-9);
         processor.update_config(LiveLoudnessConfig {
@@ -770,8 +756,8 @@ mod tests {
             ..processor.config
         });
         processor.output_target_db = 1.0;
-        audio.plane_mut::<f32>(0).fill(0.01);
-        audio.plane_mut::<f32>(1).fill(0.01);
+        audio.plane_mut(0).fill(0.01);
+        audio.plane_mut(1).fill(0.01);
         processor.process(&mut audio, &[]);
         assert!((processor.output_gain_db - 0.025).abs() < 1e-9);
     }
@@ -803,11 +789,10 @@ mod tests {
             processor.active = true;
             processor.reduction_db = initial;
             processor.hold_samples = (hold_ms * f64::from(RATE) / 1000.0) as usize;
-            let mut audio =
-                frame::Audio::new(Sample::F32(Type::Planar), 480, ChannelLayout::STEREO);
+            let mut audio = AudioFrame::stereo(480);
             audio.set_rate(RATE);
-            audio.plane_mut::<f32>(0).fill(amplitude);
-            audio.plane_mut::<f32>(1).fill(amplitude);
+            audio.plane_mut(0).fill(amplitude);
+            audio.plane_mut(1).fill(amplitude);
             processor.process(
                 &mut audio,
                 &vec![[amplitude; 2]; processor.lookahead_samples()],
@@ -870,12 +855,11 @@ mod tests {
         let mut gains = Vec::new();
 
         for block in 0..120 {
-            let mut audio =
-                frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+            let mut audio = AudioFrame::stereo(4800);
             audio.set_rate(RATE);
 
             for channel in 0..2 {
-                for (index, sample) in audio.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (index, sample) in audio.plane_mut(channel).iter_mut().enumerate() {
                     *sample = if block < 80 {
                         tone(block * 4800 + index, 0.01)[channel]
                     } else {
@@ -888,7 +872,7 @@ mod tests {
             gains.push(processor.agc_db - processor.reduction_db);
 
             if block > 82 {
-                assert!(audio.plane::<f32>(0).iter().all(|&sample| sample > 0.0));
+                assert!(audio.plane(0).iter().all(|&sample| sample > 0.0));
                 assert!(
                     gains[block] <= gains[block - 1] + 0.00001,
                     "noise gain rose during pause"
@@ -965,12 +949,11 @@ mod tests {
         let mut processor = LiveDynamicsProcessor::new(RATE, config).unwrap();
 
         for block in 0..100 {
-            let mut audio =
-                frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+            let mut audio = AudioFrame::stereo(4800);
             audio.set_rate(RATE);
 
             for channel in 0..2 {
-                for (index, sample) in audio.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (index, sample) in audio.plane_mut(channel).iter_mut().enumerate() {
                     *sample = tone(block * 4800 + index, 0.05)[channel];
                 }
             }
@@ -992,11 +975,11 @@ mod tests {
             processor.output_gain_db,
             processor.reduction_db,
         );
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+        let mut audio = AudioFrame::stereo(4800);
         audio.set_rate(RATE);
 
         for channel in 0..2 {
-            audio.plane_mut::<f32>(channel).fill(0.002);
+            audio.plane_mut(channel).fill(0.002);
         }
 
         processor.process_with_gain_hold(&mut audio, &[], true);
@@ -1064,12 +1047,11 @@ mod tests {
 
         for block in 0..80 {
             for processor in &mut processors {
-                let mut audio =
-                    frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+                let mut audio = AudioFrame::stereo(4800);
                 audio.set_rate(RATE);
 
                 for channel in 0..2 {
-                    for (index, sample) in audio.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                    for (index, sample) in audio.plane_mut(channel).iter_mut().enumerate() {
                         *sample = tone(block * 4800 + index, 0.05)[channel];
                     }
                 }

@@ -1,17 +1,14 @@
-use crate::frame::VideoFrame;
+use crate::frame::{AudioFrame, VideoFrame};
 use std::collections::VecDeque;
 
 use anyhow::Result;
-use ffmpeg_next::{Rational, Rescale, frame};
+use ffmpeg_next::{Rational, Rescale};
 
 use crate::{
     benchmark::{self, Stage},
     compositor::logo::LogoOverlay,
     output::FrameOutput,
-    utils::{
-        config::OutputConfig,
-        ffmpeg::{make_audio_frame_writable, reference_audio_frame},
-    },
+    utils::config::OutputConfig,
 };
 
 use super::{
@@ -29,7 +26,7 @@ pub(crate) struct ProgramAudioState {
 enum PendingFrame {
     Video(VideoFrame),
     Audio {
-        frame: frame::Audio,
+        frame: AudioFrame,
         live: bool,
         hold_gain: bool,
     },
@@ -92,9 +89,8 @@ impl<'a, O: FrameOutput> ProgramAudioOutput<'a, O> {
         })
     }
 
-    fn queue_audio(&mut self, audio: &frame::Audio, live: bool, hold_gain: bool) -> Result<()> {
-        let mut frame = reference_audio_frame(audio)?;
-        make_audio_frame_writable(&mut frame)?;
+    fn queue_audio(&mut self, audio: &AudioFrame, live: bool, hold_gain: bool) -> Result<()> {
+        let mut frame = audio.clone();
 
         if self.scope == LoudnessScope::Off {
             if let Some(volume) = self.state.volume.as_mut() {
@@ -232,15 +228,15 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
             .or_else(|| self.output.held_video_frame())
     }
 
-    fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.queue_audio(frame, false, false)
     }
 
-    fn encode_live_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_live_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.queue_audio(frame, true, false)
     }
 
-    fn encode_audio_with_gain_hold(&mut self, frame: &frame::Audio, hold: bool) -> Result<()> {
+    fn encode_audio_with_gain_hold(&mut self, frame: &AudioFrame, hold: bool) -> Result<()> {
         self.queue_audio(frame, false, hold)
     }
 
@@ -326,10 +322,6 @@ impl<O: FrameOutput> FrameOutput for ProgramAudioOutput<'_, O> {
 #[cfg(test)]
 mod tests {
     use crate::frame::PixelFormat;
-    use ffmpeg_next::{
-        ChannelLayout,
-        format::sample::{Sample, Type},
-    };
 
     use super::*;
     use crate::LiveLoudnessConfig;
@@ -352,9 +344,9 @@ mod tests {
             Ok(())
         }
 
-        fn encode_audio(&mut self, audio: &frame::Audio) -> Result<()> {
+        fn encode_audio(&mut self, audio: &AudioFrame) -> Result<()> {
             self.audio
-                .push((audio.pts().unwrap(), audio.plane::<f32>(0).to_vec()));
+                .push((audio.pts().unwrap(), audio.plane(0).to_vec()));
             Ok(())
         }
 
@@ -368,13 +360,13 @@ mod tests {
         }
     }
 
-    fn audio(pts: i64, amplitude: f32) -> frame::Audio {
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+    fn audio(pts: i64, amplitude: f32) -> AudioFrame {
+        let mut audio = AudioFrame::stereo(4800);
         audio.set_rate(48000);
         audio.set_pts(Some(pts));
 
         for channel in 0..2 {
-            for (index, sample) in audio.plane_mut::<f32>(channel).iter_mut().enumerate() {
+            for (index, sample) in audio.plane_mut(channel).iter_mut().enumerate() {
                 *sample = ((pts + index as i64) as f64 * std::f64::consts::TAU * 997.0 / 48000.0)
                     .sin() as f32
                     * amplitude;
@@ -450,8 +442,7 @@ mod tests {
             let loud = audio(4800, 0.8);
 
             for channel in 0..2 {
-                burst.plane_mut::<f32>(channel)[..960]
-                    .copy_from_slice(&loud.plane::<f32>(channel)[..960]);
+                burst.plane_mut(channel)[..960].copy_from_slice(&loud.plane(channel)[..960]);
             }
 
             if separate_clip {
@@ -505,7 +496,7 @@ mod tests {
             output.finish().unwrap();
             drop(output);
 
-            for (&actual, &sample) in capture.audio[0].1.iter().zip(source.plane::<f32>(0)) {
+            for (&actual, &sample) in capture.audio[0].1.iter().zip(source.plane(0)) {
                 assert!((actual - sample * 0.5).abs() < 1e-6);
             }
 
@@ -575,7 +566,7 @@ mod tests {
                         .fold(0.0, f32::max);
                     assert!(peak < 0.3, "{scope:?}: {peak}");
                 } else {
-                    assert_eq!(capture.audio[index].1, original.plane::<f32>(0));
+                    assert_eq!(capture.audio[index].1, original.plane(0));
                 }
             }
         }

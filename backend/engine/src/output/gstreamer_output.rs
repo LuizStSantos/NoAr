@@ -3,7 +3,7 @@
 //! Encoded samples are shared with preview and copy recording. Each muxer owns
 //! a pipeline, so an optional recording or viewer cannot interrupt the air.
 
-use crate::frame::{PixelFormat, VideoFrame};
+use crate::frame::{AudioFrame, PixelFormat, VideoFrame};
 use std::{
     collections::{BTreeMap, VecDeque},
     fs,
@@ -18,7 +18,7 @@ use std::{
 
 use ::gstreamer::{self as gst, prelude::*};
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use ffmpeg_next::{Rational, frame};
+use ffmpeg_next::Rational;
 use gstreamer_app::{AppSink, AppSinkCallbacks, AppSrc};
 
 use super::{
@@ -36,7 +36,6 @@ use crate::{
     utils::{
         clock::PlayoutClock,
         config::{HlsSubtitle, HlsVariant, OutputConfig},
-        ffmpeg::{make_audio_frame_writable, reference_audio_frame},
     },
 };
 
@@ -1099,14 +1098,14 @@ impl EncodedOutput {
         self.last_video.clone()
     }
 
-    pub(super) fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    pub(super) fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.audio(frame, true)
     }
-    pub(super) fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    pub(super) fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.audio(frame, false)
     }
 
-    fn audio(&mut self, input: &frame::Audio, effects: bool) -> Result<()> {
+    fn audio(&mut self, input: &AudioFrame, effects: bool) -> Result<()> {
         self.poll()?;
         let pts = input.pts().unwrap_or(self.last_audio_end.unwrap_or(0));
         let skip = self
@@ -1121,8 +1120,7 @@ impl EncodedOutput {
             self.clock
                 .wait_until(Some(pts), self.config.audio_time_base);
         }
-        let mut audio = reference_audio_frame(input)?;
-        make_audio_frame_writable(&mut audio)?;
+        let mut audio = input.clone();
         if effects {
             self.audio_effects.process(&mut audio);
         }
@@ -1131,7 +1129,7 @@ impl EncodedOutput {
         let mut bytes = Vec::with_capacity((audio.samples() - skip) * 8);
         for index in skip..audio.samples() {
             for channel in 0..2 {
-                let sample = audio.plane::<f32>(channel)[index];
+                let sample = audio.plane(channel)[index];
                 bytes.extend_from_slice(
                     &if sample.is_finite() { sample } else { 0.0 }.to_le_bytes(),
                 );
@@ -1328,11 +1326,6 @@ fn apply_metadata(
 mod tests {
     use std::{env, path::PathBuf, process::Command, sync::atomic::AtomicU64, time::Instant};
 
-    use ffmpeg_next::{
-        ChannelLayout,
-        format::{Sample, sample::Type},
-    };
-
     #[cfg(feature = "desktop-base")]
     use crate::RecordingConfig;
 
@@ -1370,12 +1363,11 @@ mod tests {
     fn encode_seconds(output: &mut EncodedOutput, width: u32, height: u32, seconds: i64) {
         for tick in 0..seconds * 25 {
             output.encode_video(&video(width, height, tick)).unwrap();
-            let mut audio =
-                frame::Audio::new(Sample::F32(Type::Planar), 1920, ChannelLayout::STEREO);
+            let mut audio = AudioFrame::stereo(1920);
             audio.set_rate(48_000);
             audio.set_pts(Some(tick * 1920));
             for channel in 0..2 {
-                for (index, sample) in audio.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (index, sample) in audio.plane_mut(channel).iter_mut().enumerate() {
                     let at = (tick * 1920 + index as i64) as f32 / 48_000.0;
                     *sample = (at * 440.0 * std::f32::consts::TAU).sin() * 0.2;
                 }

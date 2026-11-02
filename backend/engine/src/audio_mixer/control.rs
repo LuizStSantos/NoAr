@@ -1,10 +1,10 @@
+use crate::frame::AudioFrame;
 use std::sync::{
     Arc,
     atomic::{AtomicU32, Ordering},
 };
 
 use anyhow::{Result, anyhow};
-use ffmpeg_next::frame;
 
 use super::volume::GainEffect;
 
@@ -53,7 +53,7 @@ fn validate_volume(volume: f64) -> Result<()> {
 }
 
 pub(crate) trait AudioEffect: Send {
-    fn process(&mut self, frame: &mut frame::Audio);
+    fn process(&mut self, frame: &mut AudioFrame);
 }
 
 pub(crate) struct AudioEffectChain {
@@ -73,7 +73,7 @@ impl AudioEffectChain {
         self.effects.push(Box::new(effect));
     }
 
-    pub(crate) fn process(&mut self, frame: &mut frame::Audio) {
+    pub(crate) fn process(&mut self, frame: &mut AudioFrame) {
         for effect in &mut self.effects {
             effect.process(frame);
         }

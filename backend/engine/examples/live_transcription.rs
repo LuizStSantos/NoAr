@@ -15,6 +15,7 @@
 //!   --engine moonshine
 //! ```
 
+use noar_engine::frame::AudioFrame;
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -27,7 +28,6 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use clap::{Parser, ValueEnum};
-use ffmpeg_next::frame;
 use noar_engine::{
     AudioFrameCallback, ClipResult, OutputConfig, Playout, RgbaColor, TextBackgroundConfig,
     TextConfig, TextOverlayState, TextPosition,
@@ -83,14 +83,14 @@ struct Downsample48To16 {
 }
 
 impl Downsample48To16 {
-    fn process(&mut self, input: &frame::Audio) -> Vec<f32> {
+    fn process(&mut self, input: &AudioFrame) -> Vec<f32> {
         let mut output = Vec::with_capacity(input.samples() / 3 + 1);
         if input.channels() < 2 || input.rate() != PLAYOUT_SAMPLE_RATE {
             return output;
         }
 
-        let left = input.plane::<f32>(0);
-        let right = input.plane::<f32>(1);
+        let left = input.plane(0);
+        let right = input.plane(1);
         for (left, right) in left.iter().zip(right).take(input.samples()) {
             let left = if left.is_finite() { *left } else { 0.0 };
             let right = if right.is_finite() { *right } else { 0.0 };

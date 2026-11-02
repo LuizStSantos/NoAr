@@ -4,7 +4,7 @@
 //! format. All input, decoding, scaling, frame-rate conversion and resampling
 //! happen in GStreamer before a sample crosses this boundary.
 
-use crate::frame::{PixelFormat, VideoFrame};
+use crate::frame::{AudioFrame, PixelFormat, VideoFrame};
 use std::{
     collections::BTreeMap,
     path::Path,
@@ -18,10 +18,6 @@ use std::{
 
 use ::gstreamer::{self as gst, prelude::*};
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use ffmpeg_next::{
-    frame,
-    util::{channel_layout::ChannelLayout, format::sample::Sample},
-};
 use gstreamer_app::AppSink;
 use gstreamer_video::{VideoFrameExt, VideoFrameRef, VideoInfo};
 use url::{Host, Url};
@@ -52,7 +48,7 @@ pub(crate) struct SourceInfo {
 
 pub(crate) enum FrameEvent {
     Video(VideoFrame),
-    Audio(frame::Audio),
+    Audio(AudioFrame),
 }
 
 pub(crate) struct Source {
@@ -848,7 +844,7 @@ pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<VideoFrame> 
     Ok(frame)
 }
 
-pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<frame::Audio> {
+pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<AudioFrame> {
     let buffer = sample
         .buffer()
         .context("decoded audio sample has no buffer")?;
@@ -858,15 +854,11 @@ pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<fram
         "decoded stereo f32 audio has a partial sample"
     );
     let samples = mapped.len() / 8;
-    let mut frame = frame::Audio::new(
-        Sample::F32(ffmpeg_next::format::sample::Type::Planar),
-        samples,
-        ChannelLayout::STEREO,
-    );
+    let mut frame = AudioFrame::stereo(samples);
     frame.set_rate(sample_rate);
 
     for channel in 0..2 {
-        for (index, value) in frame.plane_mut::<f32>(channel).iter_mut().enumerate() {
+        for (index, value) in frame.plane_mut(channel).iter_mut().enumerate() {
             let start = index * 8 + channel * 4;
             *value = f32::from_le_bytes(mapped[start..start + 4].try_into()?);
         }

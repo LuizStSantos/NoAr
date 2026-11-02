@@ -1,8 +1,8 @@
-use crate::frame::VideoFrame;
+use crate::frame::{AudioFrame, VideoFrame};
 use std::{collections::VecDeque, time::Duration};
 
 use anyhow::Result;
-use ffmpeg_next::{Rational, Rescale, frame};
+use ffmpeg_next::{Rational, Rescale};
 
 mod stats;
 
@@ -10,15 +10,12 @@ pub(crate) use stats::AudioStatsOverlay;
 
 use crate::{
     BufferedLoudnessAnalysis, LiveDynamicsProcessor, LiveLoudnessMeasurement, LiveLoudnessMetrics,
-    LiveLoudnessProcessor,
-    audio_mixer::collect_audio_preview,
-    output::FrameOutput,
-    utils::ffmpeg::{make_audio_frame_writable, reference_audio_frame},
+    LiveLoudnessProcessor, audio_mixer::collect_audio_preview, output::FrameOutput,
 };
 
 enum PendingFrame {
     Video(VideoFrame),
-    Audio(frame::Audio, Option<BufferedLoudnessAnalysis>),
+    Audio(AudioFrame, Option<BufferedLoudnessAnalysis>),
 }
 
 /// Preserve decode order and source timestamps while holding a bounded A/V preview.
@@ -195,9 +192,8 @@ impl<O: FrameOutput> FrameOutput for LoudnessPreview<'_, O> {
         self.drain(false)
     }
 
-    fn encode_audio(&mut self, audio: &frame::Audio) -> Result<()> {
-        let mut audio = reference_audio_frame(audio)?;
-        make_audio_frame_writable(&mut audio)?;
+    fn encode_audio(&mut self, audio: &AudioFrame) -> Result<()> {
+        let mut audio = audio.clone();
 
         let analysis = (self.lookahead_samples > 0 && self.dynamics.is_none())
             .then(|| self.processor.analyze_buffered(&mut audio));
@@ -226,10 +222,6 @@ impl<O: FrameOutput> FrameOutput for LoudnessPreview<'_, O> {
 #[cfg(test)]
 mod tests {
     use crate::frame::PixelFormat;
-    use ffmpeg_next::{
-        ChannelLayout,
-        format::{Sample, sample::Type},
-    };
 
     use crate::LiveLoudnessConfig;
 
@@ -254,11 +246,11 @@ mod tests {
             Ok(())
         }
 
-        fn encode_audio(&mut self, audio: &frame::Audio) -> Result<()> {
+        fn encode_audio(&mut self, audio: &AudioFrame) -> Result<()> {
             self.audio_samples += audio.samples();
             self.audio_rms.push(
                 (audio
-                    .plane::<f32>(0)
+                    .plane(0)
                     .iter()
                     .map(|&sample| f64::from(sample).powi(2))
                     .sum::<f64>()
@@ -266,7 +258,7 @@ mod tests {
                     .sqrt(),
             );
 
-            for sample in audio.plane::<f32>(0) {
+            for sample in audio.plane(0) {
                 self.peak = self.peak.max(sample.abs());
             }
             Ok(())
@@ -284,12 +276,12 @@ mod tests {
         video
     }
 
-    fn audio(pts: i64) -> frame::Audio {
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+    fn audio(pts: i64) -> AudioFrame {
+        let mut audio = AudioFrame::stereo(4800);
         audio.set_rate(48000);
         audio.set_pts(Some(pts));
-        audio.plane_mut::<f32>(0).fill(2.0);
-        audio.plane_mut::<f32>(1).fill(2.0);
+        audio.plane_mut(0).fill(2.0);
+        audio.plane_mut(1).fill(2.0);
         audio
     }
 
@@ -379,7 +371,7 @@ mod tests {
             let amplitude = if index < 40 { 0.01 } else { 0.4 };
 
             for channel in 0..2 {
-                for (offset, sample) in source.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (offset, sample) in source.plane_mut(channel).iter_mut().enumerate() {
                     let position = index * 4800 + offset as i64;
                     *sample = (std::f64::consts::TAU * 997.0 * position as f64 / 48000.0).sin()
                         as f32
@@ -425,7 +417,7 @@ mod tests {
             let amplitude = if index < 20 { 0.01 } else { 0.4 };
 
             for channel in 0..2 {
-                for (offset, sample) in source.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (offset, sample) in source.plane_mut(channel).iter_mut().enumerate() {
                     let position = index * 4800 + offset as i64;
                     *sample = (std::f64::consts::TAU * 997.0 * position as f64 / 48000.0).sin()
                         as f32

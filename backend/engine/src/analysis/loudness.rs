@@ -1,10 +1,10 @@
+use crate::frame::AudioFrame;
 use std::sync::{
     Arc, PoisonError, RwLock,
     atomic::{AtomicUsize, Ordering},
 };
 
 use ebur128_stream::{Analyzer, AnalyzerBuilder, Channel, Mode};
-use ffmpeg_next::frame;
 
 use super::integrated_loudness::IntegratedLoudness;
 
@@ -55,12 +55,12 @@ impl LoudnessAnalyzer {
         })
     }
 
-    pub fn process_frame(&mut self, frame: &frame::Audio) -> LoudnessMetrics {
+    pub fn process_frame(&mut self, frame: &AudioFrame) -> LoudnessMetrics {
         if frame.planes() != 2 || frame.samples() == 0 {
             return self.metrics;
         }
 
-        self.process_samples(frame.plane::<f32>(0), frame.plane::<f32>(1))
+        self.process_samples(frame.plane(0), frame.plane(1))
     }
 
     pub(crate) fn process_samples(&mut self, left: &[f32], right: &[f32]) -> LoudnessMetrics {
@@ -166,7 +166,7 @@ impl LoudnessMeter {
         }
     }
 
-    pub(crate) fn process_frame(&mut self, frame: &frame::Audio) {
+    pub(crate) fn process_frame(&mut self, frame: &AudioFrame) {
         if !self.control.active() {
             self.analyzer = None;
 
@@ -185,19 +185,14 @@ impl LoudnessMeter {
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{
-        format::sample::{Sample, Type},
-        util::channel_layout::ChannelLayout,
-    };
 
     use super::*;
 
-    fn audio_frame(left: &[f32], right: &[f32], sample_rate: u32) -> frame::Audio {
-        let mut frame =
-            frame::Audio::new(Sample::F32(Type::Planar), left.len(), ChannelLayout::STEREO);
+    fn audio_frame(left: &[f32], right: &[f32], sample_rate: u32) -> AudioFrame {
+        let mut frame = AudioFrame::stereo(left.len());
         frame.set_rate(sample_rate);
-        frame.plane_mut::<f32>(0).copy_from_slice(left);
-        frame.plane_mut::<f32>(1).copy_from_slice(right);
+        frame.plane_mut(0).copy_from_slice(left);
+        frame.plane_mut(1).copy_from_slice(right);
 
         frame
     }

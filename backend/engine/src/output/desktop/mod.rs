@@ -1,4 +1,4 @@
-use crate::frame::VideoFrame;
+use crate::frame::{AudioFrame, VideoFrame};
 use std::{
     cell::RefCell,
     collections::VecDeque,
@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{Rational, Rescale, frame};
+use ffmpeg_next::{Rational, Rescale};
 #[cfg(target_os = "linux")]
 use winit::platform::{wayland::WindowAttributesExtWayland, x11::WindowAttributesExtX11};
 use winit::{
@@ -201,7 +201,7 @@ enum DesktopRecordingMessage {
         logo: Option<Arc<LogoOverlay>>,
         logo_opacity: f64,
     },
-    Audio(frame::Audio),
+    Audio(AudioFrame),
     AudioPadding {
         pts: i64,
         samples: u64,
@@ -209,19 +209,15 @@ enum DesktopRecordingMessage {
     Finish,
 }
 
-fn recording_silence(pts: i64, samples: u64, rate: u32) -> impl Iterator<Item = frame::Audio> {
+fn recording_silence(pts: i64, samples: u64, rate: u32) -> impl Iterator<Item = AudioFrame> {
     (0..samples).step_by(1_024).map(move |offset| {
         let count = (samples - offset).min(1_024) as usize;
-        let mut frame = frame::Audio::new(
-            ffmpeg_next::format::Sample::F32(ffmpeg_next::format::sample::Type::Planar),
-            count,
-            ffmpeg_next::ChannelLayout::STEREO,
-        );
+        let mut frame = AudioFrame::stereo(count);
         frame.set_rate(rate);
         frame.set_pts(Some(pts + offset as i64));
 
         for channel in 0..2 {
-            frame.plane_mut::<f32>(channel).fill(0.0);
+            frame.plane_mut(channel).fill(0.0);
         }
         frame
     })
@@ -441,7 +437,7 @@ impl DesktopOutput {
         ))
     }
 
-    pub(super) fn encode_audio(&mut self, _frame: &frame::Audio) -> Result<()> {
+    pub(super) fn encode_audio(&mut self, _frame: &AudioFrame) -> Result<()> {
         Err(anyhow!(
             "desktop audio must be produced by the decode worker"
         ))
@@ -623,11 +619,11 @@ impl FrameOutput for DesktopFrameSender {
         false
     }
 
-    fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio_with_effects(frame, true)
     }
 
-    fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio_with_effects(frame, false)
     }
 
@@ -713,11 +709,7 @@ impl FrameOutput for DesktopFrameSender {
 }
 
 impl DesktopFrameSender {
-    fn encode_audio_with_effects(
-        &mut self,
-        frame: &frame::Audio,
-        apply_effects: bool,
-    ) -> Result<()> {
+    fn encode_audio_with_effects(&mut self, frame: &AudioFrame, apply_effects: bool) -> Result<()> {
         if frame.samples() == 0 {
             return Ok(());
         }
@@ -734,8 +726,8 @@ impl DesktopFrameSender {
 
                 self.audio_level_meter.process_frame(&frame);
                 self.loudness_meter.process_frame(&frame);
-                let left = frame.plane::<f32>(0);
-                let right = frame.plane::<f32>(1);
+                let left = frame.plane(0);
+                let right = frame.plane(1);
                 let mut interleaved =
                     take_audio_buffer(&self.audio_buffer_pool, frame.samples() * AUDIO_CHANNELS);
                 for (left, right) in left.iter().zip(right) {
@@ -2246,11 +2238,6 @@ mod tests {
 
     #[test]
     fn processed_audio_bypasses_desktop_volume_and_reaches_recording() {
-        use ffmpeg_next::{
-            ChannelLayout,
-            format::{Sample, sample::Type},
-        };
-
         let (video_sender, _video_rx) = sync_channel(2);
         let (audio_sender, audio_rx) = sync_channel(2);
         let (control_sender, _control_rx) = sync_channel(2);
@@ -2278,11 +2265,11 @@ mod tests {
             recording_last_overload_log: None,
             channel_id: 0,
         };
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 32, ChannelLayout::STEREO);
+        let mut audio = AudioFrame::stereo(32);
         audio.set_rate(48000);
         audio.set_pts(Some(480000));
-        audio.plane_mut::<f32>(0).fill(0.2);
-        audio.plane_mut::<f32>(1).fill(0.2);
+        audio.plane_mut(0).fill(0.2);
+        audio.plane_mut(1).fill(0.2);
         sender.encode_processed_audio(&audio).unwrap();
         audio.set_pts(Some(480032));
         sender.encode_audio(&audio).unwrap();
@@ -2301,7 +2288,7 @@ mod tests {
             };
             assert!(
                 frame
-                    .plane::<f32>(0)
+                    .plane(0)
                     .iter()
                     .all(|sample| (sample - expected).abs() < 1e-6)
             );
@@ -2428,12 +2415,7 @@ mod tests {
                             expected_pts += frame.samples() as i64;
 
                             for channel in 0..2 {
-                                assert!(
-                                    frame
-                                        .plane::<f32>(channel)
-                                        .iter()
-                                        .all(|sample| *sample == 0.0)
-                                );
+                                assert!(frame.plane(channel).iter().all(|sample| *sample == 0.0));
                             }
                             frame.samples()
                         })

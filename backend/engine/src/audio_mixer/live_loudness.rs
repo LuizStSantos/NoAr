@@ -4,9 +4,8 @@
 //! programme-integrated value.  The latter is a reporting metric and must not
 //! steer a live programme because it never forgets earlier material.
 
+use crate::frame::AudioFrame;
 use std::sync::{Arc, PoisonError, RwLock};
-
-use ffmpeg_next::frame;
 
 use crate::analysis::loudness::LoudnessAnalyzer;
 
@@ -248,13 +247,13 @@ impl LiveLoudnessProcessor {
     /// Processes one normalized stereo frame in place. Non-finite samples are
     /// sanitized before analysis so malformed live input cannot poison the
     /// analyzer or encoder.
-    pub fn process(&mut self, frame: &mut frame::Audio) {
+    pub fn process(&mut self, frame: &mut AudioFrame) {
         self.analyze_frame(frame, true, true, None);
     }
 
     /// Applies the live limiter using buffered future source samples, keeping
     /// this frame's sample count and PTS intact. Preview never enters analysis.
-    pub fn process_with_lookahead(&mut self, frame: &mut frame::Audio, future: &[[f32; 2]]) {
+    pub fn process_with_lookahead(&mut self, frame: &mut AudioFrame, future: &[[f32; 2]]) {
         if frame.planes() != 2 || frame.samples() == 0 {
             return;
         }
@@ -270,7 +269,7 @@ impl LiveLoudnessProcessor {
 
     /// Apply the current rider and lookahead limiter to previously analyzed audio.
     /// This supports offline experiments with a longer loudness preview window.
-    pub fn apply_gain_with_lookahead(&mut self, frame: &mut frame::Audio, future: &[[f32; 2]]) {
+    pub fn apply_gain_with_lookahead(&mut self, frame: &mut AudioFrame, future: &[[f32; 2]]) {
         if frame.planes() != 2 || frame.samples() == 0 {
             return;
         }
@@ -281,7 +280,7 @@ impl LiveLoudnessProcessor {
         self.limit_with_lookahead(frame, future);
     }
 
-    fn limit_with_lookahead(&mut self, frame: &mut frame::Audio, future: &[[f32; 2]]) {
+    fn limit_with_lookahead(&mut self, frame: &mut AudioFrame, future: &[[f32; 2]]) {
         let mut preview_gain_db = self.rider_gain_db
             + self.config.gain_up_db_per_second * super::LIVE_LATENCY.as_secs_f64();
 
@@ -303,12 +302,12 @@ impl LiveLoudnessProcessor {
     /// Updates source metrics and the rider target without applying gain.
     /// This is used by offline/lookahead callers that apply the resulting gain
     /// to an earlier buffered frame.
-    pub fn analyze(&mut self, frame: &mut frame::Audio) {
+    pub fn analyze(&mut self, frame: &mut AudioFrame) {
         self.analyze_frame(frame, false, false, None);
     }
 
     /// Analyze ahead of playback, retaining the exact 100 ms control boundaries.
-    pub fn analyze_buffered(&mut self, frame: &mut frame::Audio) -> BufferedLoudnessAnalysis {
+    pub fn analyze_buffered(&mut self, frame: &mut AudioFrame) -> BufferedLoudnessAnalysis {
         let mut measurements = vec![(0, self.analysis_control_metrics)];
         self.analyze_frame(frame, false, false, Some(&mut measurements));
 
@@ -318,7 +317,7 @@ impl LiveLoudnessProcessor {
     /// Replay source measurements at their original sample positions, then limit peaks.
     pub fn apply_buffered_gain(
         &mut self,
-        frame: &mut frame::Audio,
+        frame: &mut AudioFrame,
         analysis: &BufferedLoudnessAnalysis,
         future: &[[f32; 2]],
     ) {
@@ -350,7 +349,7 @@ impl LiveLoudnessProcessor {
 
     fn analyze_frame(
         &mut self,
-        frame: &mut frame::Audio,
+        frame: &mut AudioFrame,
         apply_gain: bool,
         sample_ceiling: bool,
         mut measurements: Option<&mut Vec<(usize, LiveLoudnessMetrics)>>,
@@ -370,10 +369,9 @@ impl LiveLoudnessProcessor {
         while offset < frame.samples() {
             let samples = self.samples_until_analysis.min(frame.samples() - offset);
             let end = offset + samples;
-            let metrics = self.analyzer.process_samples(
-                &frame.plane::<f32>(0)[offset..end],
-                &frame.plane::<f32>(1)[offset..end],
-            );
+            let metrics = self
+                .analyzer
+                .process_samples(&frame.plane(0)[offset..end], &frame.plane(1)[offset..end]);
             self.metrics.momentary_lufs = metrics.momentary_lufs;
             self.metrics.short_term_lufs = metrics.short_term_lufs;
             self.metrics.integrated_lufs = metrics.integrated_lufs;
@@ -403,7 +401,7 @@ impl LiveLoudnessProcessor {
 
     /// Applies the current rider gain and safety ceiling to a frame previously
     /// passed to [`Self::analyze`].
-    pub fn apply_gain(&mut self, frame: &mut frame::Audio) {
+    pub fn apply_gain(&mut self, frame: &mut AudioFrame) {
         if frame.planes() != 2 || frame.samples() == 0 {
             return;
         }
@@ -496,7 +494,7 @@ impl LiveLoudnessProcessor {
 
     fn apply_gain_and_ceiling(
         &mut self,
-        frame: &mut frame::Audio,
+        frame: &mut AudioFrame,
         start: usize,
         end: usize,
         sample_ceiling: bool,
@@ -508,8 +506,8 @@ impl LiveLoudnessProcessor {
         while offset < end {
             let batch_end = (offset + GAIN_BATCH_SAMPLES).min(end);
             let mut gains = [0.0; GAIN_BATCH_SAMPLES];
-            let left = &frame.plane::<f32>(0)[offset..batch_end];
-            let right = &frame.plane::<f32>(1)[offset..batch_end];
+            let left = &frame.plane(0)[offset..batch_end];
+            let right = &frame.plane(1)[offset..batch_end];
 
             for ((left, right), gain) in left.iter().zip(right).zip(&mut gains) {
                 let rider = self.next_rider_gain();
@@ -533,7 +531,7 @@ impl LiveLoudnessProcessor {
             }
 
             for channel in 0..2 {
-                for (sample, gain) in frame.plane_mut::<f32>(channel)[offset..batch_end]
+                for (sample, gain) in frame.plane_mut(channel)[offset..batch_end]
                     .iter_mut()
                     .zip(gains)
                 {
@@ -551,9 +549,9 @@ impl LiveLoudnessProcessor {
     }
 }
 
-fn sanitize_samples(frame: &mut frame::Audio) {
+fn sanitize_samples(frame: &mut AudioFrame) {
     for plane in 0..2 {
-        for sample in frame.plane_mut::<f32>(plane) {
+        for sample in frame.plane_mut(plane) {
             if !sample.is_finite() {
                 *sample = 0.0;
             }
@@ -567,21 +565,16 @@ fn db_to_gain(db: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{
-        format::sample::{Sample, Type},
-        util::channel_layout::ChannelLayout,
-    };
 
     use super::*;
 
     const SAMPLE_RATE: u32 = 48_000;
 
-    fn stereo_frame(left: &[f32], right: &[f32]) -> frame::Audio {
-        let mut frame =
-            frame::Audio::new(Sample::F32(Type::Planar), left.len(), ChannelLayout::STEREO);
+    fn stereo_frame(left: &[f32], right: &[f32]) -> AudioFrame {
+        let mut frame = AudioFrame::stereo(left.len());
         frame.set_rate(SAMPLE_RATE);
-        frame.plane_mut::<f32>(0).copy_from_slice(left);
-        frame.plane_mut::<f32>(1).copy_from_slice(right);
+        frame.plane_mut(0).copy_from_slice(left);
+        frame.plane_mut(1).copy_from_slice(right);
 
         frame
     }
@@ -635,12 +628,12 @@ mod tests {
         let samples = vec![0.01; 480];
         let mut frame = stereo_frame(&samples, &samples);
         processor.apply_gain(&mut frame);
-        let output = frame.plane::<f32>(0);
+        let output = frame.plane(0);
 
         assert!(output.windows(2).all(|pair| pair[1] > pair[0]));
         assert!((f64::from(output[0]) / 0.01 - db_to_gain(6.0 / 48_000.0)).abs() < 1e-7);
         assert!((processor.metrics().rider_gain_db - 0.06).abs() < 1e-10);
-        assert_eq!(frame.plane::<f32>(0), frame.plane::<f32>(1));
+        assert_eq!(frame.plane(0), frame.plane(1));
     }
 
     #[test]
@@ -676,12 +669,12 @@ mod tests {
         processor.apply_gain(&mut frame);
         let ceiling = db_to_gain(-1.0) as f32;
 
-        for (left, right) in frame.plane::<f32>(0).iter().zip(frame.plane::<f32>(1)) {
+        for (left, right) in frame.plane(0).iter().zip(frame.plane(1)) {
             assert!(left.abs() <= ceiling);
             assert!((*right - *left * -0.25).abs() < 1e-7);
         }
 
-        let output = frame.plane::<f32>(0);
+        let output = frame.plane(0);
         assert_eq!(output[0], 0.1);
         assert!(output[2] < 0.05);
         assert!(output[3] > output[2]);
@@ -689,7 +682,7 @@ mod tests {
         let samples = vec![0.1; SAMPLE_RATE as usize / 2];
         let mut recovered = stereo_frame(&samples, &samples);
         processor.apply_gain(&mut recovered);
-        assert!((recovered.plane::<f32>(0).last().unwrap() - 0.1).abs() < 1e-5);
+        assert!((recovered.plane(0).last().unwrap() - 0.1).abs() < 1e-5);
     }
 
     #[test]
@@ -704,8 +697,8 @@ mod tests {
         let mut frame = stereo_frame(&[1.0], &[0.5]);
         processor.apply_gain(&mut frame);
 
-        assert!(frame.plane::<f32>(0)[0] <= db_to_gain(-12.0) as f32);
-        assert_eq!(frame.plane::<f32>(1)[0], frame.plane::<f32>(0)[0] * 0.5);
+        assert!(frame.plane(0)[0] <= db_to_gain(-12.0) as f32);
+        assert_eq!(frame.plane(1)[0], frame.plane(0)[0] * 0.5);
     }
 
     #[test]
@@ -748,7 +741,7 @@ mod tests {
         processor.apply_gain(&mut frame);
 
         assert_eq!(processor.metrics().rider_gain_db, 4.0);
-        assert!(frame.plane::<f32>(0).iter().all(|sample| *sample == 0.0));
+        assert!(frame.plane(0).iter().all(|sample| *sample == 0.0));
         processor.metrics.momentary_lufs = None;
         processor.target_gain_db = 8.0;
         processor.update_rider_target();
@@ -793,7 +786,7 @@ mod tests {
             assert!(processor.metrics().rider_gain_db >= config.max_attenuation_db);
             assert!(processor.metrics().rider_gain_db <= config.max_gain_db);
 
-            for (left, right) in frame.plane::<f32>(0).iter().zip(frame.plane::<f32>(1)) {
+            for (left, right) in frame.plane(0).iter().zip(frame.plane(1)) {
                 assert!(left.is_finite() && left.abs() <= ceiling);
                 assert!((*right + *left * 0.5).abs() < 1e-7);
             }
@@ -838,10 +831,7 @@ mod tests {
             packetized.process(&mut packet);
 
             for channel in 0..2 {
-                assert_eq!(
-                    &frame.plane::<f32>(channel)[offset..end],
-                    packet.plane::<f32>(channel)
-                );
+                assert_eq!(&frame.plane(channel)[offset..end], packet.plane(channel));
             }
 
             offset = end;
@@ -878,41 +868,26 @@ mod tests {
         let mut frame = stereo_frame(&invalid, &invalid);
         processor.process(&mut frame);
 
-        assert!(
-            frame
-                .plane::<f32>(0)
-                .iter()
-                .all(|sample| sample.is_finite())
-        );
+        assert!(frame.plane(0).iter().all(|sample| sample.is_finite()));
         assert!(processor.limiter_gain.is_finite());
         assert!(processor.metrics().rider_gain_db.is_finite());
         let mut frame = stereo_frame(&invalid, &invalid);
         processor.apply_gain(&mut frame);
-        assert!(
-            frame
-                .plane::<f32>(0)
-                .iter()
-                .all(|sample| sample.is_finite())
-        );
+        assert!(frame.plane(0).iter().all(|sample| sample.is_finite()));
     }
 
     #[test]
     fn ceiling_limiter_never_allows_a_sample_over_the_ceiling() {
         let mut processor =
             LiveLoudnessProcessor::new(48_000, LiveLoudnessConfig::default()).unwrap();
-        let mut frame = frame::Audio::new(Sample::F32(Type::Planar), 48_000, ChannelLayout::STEREO);
+        let mut frame = AudioFrame::stereo(48_000);
 
         for plane in 0..2 {
-            frame.plane_mut::<f32>(plane).fill(1.0);
+            frame.plane_mut(plane).fill(1.0);
         }
         processor.process(&mut frame);
         let ceiling = db_to_gain(-1.0) as f32;
-        assert!(
-            frame
-                .plane::<f32>(0)
-                .iter()
-                .all(|sample| sample.abs() <= ceiling)
-        );
+        assert!(frame.plane(0).iter().all(|sample| sample.abs() <= ceiling));
         assert!(processor.metrics().limiter_gain_reduction_db > 0.0);
     }
 
@@ -932,7 +907,7 @@ mod tests {
         assert_eq!(frame.samples(), input.len());
         assert!(
             frame
-                .plane::<f32>(0)
+                .plane(0)
                 .iter()
                 .all(|sample| sample.is_finite() && sample.abs() <= db_to_gain(-1.0) as f32)
         );
@@ -943,10 +918,10 @@ mod tests {
     fn silence_is_not_amplified() {
         let mut processor =
             LiveLoudnessProcessor::new(48_000, LiveLoudnessConfig::default()).unwrap();
-        let mut frame = frame::Audio::new(Sample::F32(Type::Planar), 48_000, ChannelLayout::STEREO);
+        let mut frame = AudioFrame::stereo(48_000);
 
         for channel in 0..2 {
-            frame.plane_mut::<f32>(channel).fill(0.0);
+            frame.plane_mut(channel).fill(0.0);
         }
 
         processor.process(&mut frame);

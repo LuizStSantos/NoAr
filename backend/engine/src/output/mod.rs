@@ -1,10 +1,9 @@
-use crate::frame::VideoFrame;
+use crate::frame::{AudioFrame, VideoFrame};
 use std::{error::Error, fmt};
 
 use anyhow::Result;
 #[cfg(feature = "desktop-base")]
 use anyhow::anyhow;
-use ffmpeg_next::frame;
 
 #[cfg(feature = "desktop-base")]
 pub(crate) mod desktop;
@@ -57,18 +56,18 @@ pub(crate) trait FrameOutput {
         None
     }
 
-    fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()>;
+    fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()>;
 
     /// Volume has already been applied; meters and encoding still run normally.
-    fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio(frame)
     }
 
-    fn encode_live_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_live_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio(frame)
     }
 
-    fn encode_audio_with_gain_hold(&mut self, frame: &frame::Audio, _hold: bool) -> Result<()> {
+    fn encode_audio_with_gain_hold(&mut self, frame: &AudioFrame, _hold: bool) -> Result<()> {
         self.encode_audio(frame)
     }
 
@@ -240,7 +239,7 @@ impl Output {
         }
     }
 
-    pub(crate) fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    pub(crate) fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         match &mut self.kind {
             OutputKind::Encoded(output) => output.encode_audio(frame),
             #[cfg(feature = "desktop-base")]
@@ -299,11 +298,11 @@ impl FrameOutput for Output {
         Self::encode_video(self, frame)
     }
 
-    fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         Self::encode_audio(self, frame)
     }
 
-    fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         match &mut self.kind {
             OutputKind::Encoded(output) => output.encode_processed_audio(frame),
             #[cfg(feature = "desktop-base")]

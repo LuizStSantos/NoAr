@@ -459,7 +459,7 @@ fn frame_bytes(frame: &FrameEvent) -> usize {
         }
         FrameEvent::Audio(frame) => frame
             .samples()
-            .saturating_mul(frame.channels() as usize)
+            .saturating_mul(frame.channels())
             .saturating_mul(size_of::<f32>()),
     }
 }

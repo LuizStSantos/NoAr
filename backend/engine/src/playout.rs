@@ -1,6 +1,6 @@
 //! GStreamer decoding on the continuous NoAr scheduling timeline.
 
-use crate::frame::{PixelFormat, VideoFrame};
+use crate::frame::{AudioFrame, PixelFormat, VideoFrame};
 use std::{
     error::Error,
     fmt,
@@ -14,10 +14,6 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use ffmpeg_next::{
-    format, frame,
-    util::{channel_layout::ChannelLayout, format::sample::Sample},
-};
 use log::{debug, trace};
 
 use crate::{
@@ -795,7 +791,7 @@ fn seconds_to_microseconds(seconds: f64) -> i64 {
 
 #[allow(clippy::too_many_arguments)]
 fn send_audio<O: FrameOutput>(
-    source: &frame::Audio,
+    source: &AudioFrame,
     skip: usize,
     cfg: &OutputConfig,
     timeline: &mut Timeline,
@@ -813,17 +809,13 @@ fn send_audio<O: FrameOutput>(
     if count == 0 {
         return Ok(());
     }
-    let mut audio = frame::Audio::new(
-        Sample::F32(format::sample::Type::Planar),
-        count,
-        ChannelLayout::STEREO,
-    );
+    let mut audio = AudioFrame::stereo(count);
     audio.set_rate(cfg.sample_rate);
     audio.set_pts(Some(timeline.audio_pts));
     for plane in 0..2 {
         audio
-            .plane_mut::<f32>(plane)
-            .copy_from_slice(&source.plane::<f32>(plane)[skip..skip + count]);
+            .plane_mut(plane)
+            .copy_from_slice(&source.plane(plane)[skip..skip + count]);
     }
     if let Some(callback) = cfg.audio_frame_callback.as_ref() {
         callback.emit(&audio);
@@ -844,7 +836,7 @@ fn send_audio<O: FrameOutput>(
 
 struct ExternalAudioInput {
     source: Source,
-    pending: Option<frame::Audio>,
+    pending: Option<AudioFrame>,
     offset: usize,
     eof: bool,
     fade: MediaFadePlan,
@@ -1369,13 +1361,13 @@ fn apply_video_fade(frame: &mut VideoFrame, opacity: f32) {
     }
 }
 
-fn apply_audio_fade(frame: &mut frame::Audio, start_pts: i64, fade: MediaFadePlan) {
+fn apply_audio_fade(frame: &mut AudioFrame, start_pts: i64, fade: MediaFadePlan) {
     if fade.audio_end_pts.is_none() {
         return;
     }
 
     for plane in 0..frame.planes() {
-        for (sample_index, sample) in frame.plane_mut::<f32>(plane).iter_mut().enumerate() {
+        for (sample_index, sample) in frame.plane_mut(plane).iter_mut().enumerate() {
             *sample *= fade.audio_gain_at(start_pts + sample_index as i64);
         }
     }
@@ -1705,16 +1697,12 @@ fn write_silence_frame<O: FrameOutput>(
     output: &mut O,
     samples: usize,
 ) -> Result<()> {
-    let mut frame = frame::Audio::new(
-        Sample::F32(format::sample::Type::Planar),
-        samples,
-        ChannelLayout::STEREO,
-    );
+    let mut frame = AudioFrame::stereo(samples);
     frame.set_rate(cfg.sample_rate);
     frame.set_pts(Some(timeline.audio_pts));
 
     for plane in 0..frame.planes() {
-        frame.plane_mut::<f32>(plane).fill(0.0);
+        frame.plane_mut(plane).fill(0.0);
     }
     output.encode_audio(&frame)?;
     timeline.audio_pts += samples as i64;
@@ -1774,8 +1762,8 @@ mod live_interleave_tests {
             Ok(())
         }
 
-        fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
-            assert!(frame.plane::<f32>(0).iter().all(|sample| *sample == 0.0));
+        fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
+            assert!(frame.plane(0).iter().all(|sample| *sample == 0.0));
             self.audio.push((frame.pts().unwrap(), frame.samples()));
 
             Ok(())
