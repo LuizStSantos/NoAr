@@ -18,7 +18,7 @@ On the Docker server:
 
 ```sh
 cd ~
-git clone --single-branch --branch prototype/gstreamer-continuity \
+git clone --single-branch --branch claude/branch-review-opz967 \
   https://github.com/LuizStSantos/NoAr.git NoAr-gstreamer-test
 cd ~/NoAr-gstreamer-test
 git branch --show-current
@@ -53,47 +53,38 @@ already suitable for this isolated installation.
 
 ## Open the web interface
 
-The default binds all test ports to the server's loopback address. On a PC
-with SSH access to that server, keep this command running in a terminal:
+The test ports are published on all server interfaces by default, so open
+`http://SERVER_IP:18787` from a PC on the test network once the firewall
+allows the port. Complete the fresh NoAr setup, create test credentials and
+add synthetic/test media. Finish the setup before exposing access more
+broadly. Network/firewall/NAT rules must already permit the chosen test
+ports; this guide does not change firewall rules. Only the test paths in this
+dedicated MediaMTX instance accept unauthenticated publication/reading; do not
+use it as a production media server.
+
+To keep the test reachable only from the server itself, set the binding to
+loopback in `.env` (in the root of the test checkout, ignored by Git) and
+recreate only this Compose project:
+
+```sh
+cd ~/NoAr-gstreamer-test
+printf '%s\n' 'NOAR_GST_BIND_IP=127.0.0.1' >> .env
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml up -d --no-build
+```
+
+Then reach it through an SSH tunnel kept open on the PC, and open
+`http://127.0.0.1:18787` there. The tunnel forwards HTTP only, not SRT or UDP:
 
 ```sh
 ssh -N -L 18787:127.0.0.1:18787 YOUR_USER@YOUR_SERVER
 ```
 
-Then open `http://127.0.0.1:18787` on that PC. Complete the fresh NoAr setup,
-create test credentials and add synthetic/test media. The SSH tunnel forwards
-HTTP only; it does not forward SRT or UDP.
-
-For direct access from an authorized test network, bind the dedicated test
-ports to the server interfaces and recreate only this Compose project:
-
-```sh
-cd ~/NoAr-gstreamer-test
-export NOAR_GST_BIND_IP=0.0.0.0
-docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml up -d --no-build
-```
-
-Open `http://SERVER_IP:18787` and finish setup before exposing access more
-broadly. Network/firewall/NAT rules must already permit the chosen test ports.
-This guide does not change firewall rules. Only the test paths in this
-dedicated MediaMTX instance accept unauthenticated publication/reading; do not
-use it as a production media server.
-
-To preserve this binding across new SSH sessions, create `.env` in the root
-of the fresh **test checkout**, which is ignored by Git:
-
-```sh
-cd ~/NoAr-gstreamer-test
-printf '%s\n' 'NOAR_GST_BIND_IP=0.0.0.0' > .env
-```
-
-Use this creation command only in a fresh checkout without an existing `.env`.
-If one already contains custom test settings, edit its binding instead of
-overwriting it. All Compose commands in this guide pass `--env-file .env`
-explicitly and run from the checkout root. Before starting, inspect
-`docker ps --format 'table {{.Names}}\t{{.Ports}}'`. If a test port is already
-occupied, choose a free `NOAR_GST_*_PORT` value in this file and use that same
-port in the browser, encoder and VLC URLs.
+All Compose commands in this guide pass `--env-file .env` explicitly and run
+from the checkout root. Check the published addresses with
+`docker ps --format 'table {{.Names}}\t{{.Ports}}'`; the UI shows as
+`0.0.0.0:18787->8787/tcp`. If a test port is already occupied, choose a free
+`NOAR_GST_*_PORT` value in `.env` and use that same port in the browser,
+encoder and VLC URLs.
 
 The default ports below can be changed using the variables in
 `compose.integrated.yaml`. Keep the same variable values when recreating the
@@ -165,8 +156,8 @@ After new commits are pushed to the branch:
 ```sh
 cd ~/NoAr-gstreamer-test
 git status --short
-git fetch origin prototype/gstreamer-continuity
-git pull --ff-only origin prototype/gstreamer-continuity
+git fetch origin claude/branch-review-opz967
+git pull --ff-only origin claude/branch-review-opz967
 git rev-parse --short HEAD
 touch .env
 export NOAR_COMMIT="$(git rev-parse HEAD)"
