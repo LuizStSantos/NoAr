@@ -21,6 +21,7 @@ mod audio_mixer;
 mod benchmark;
 mod compositor;
 mod convert;
+pub mod frame;
 pub(crate) mod gstreamer;
 mod input;
 #[cfg(feature = "desktop-base")]

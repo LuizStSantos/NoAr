@@ -11,6 +11,7 @@ FFmpeg remains a memory-frame and codec/test dependency.
 - Native playback/timestamps: `backend/engine/src/playout.rs` and `input/gstreamer.rs` use GStreamer.
 - Native encoding/muxing: `backend/engine/src/output/gstreamer_output.rs`, `output/pipeline.rs` and `output/link.rs`.
 - Remaining FFmpeg memory adapter: `backend/engine/src/utils/ffmpeg.rs`; frame containers are also used by the Rust compositor/audio code. Test modules may use FFmpeg to generate independent fixtures.
+- Moving off FFmpeg frames: `backend/engine/src/frame.rs` holds NoAr's own `VideoFrame` (YUV420P, YUVA420P, BGRx) and `AudioFrame` (planar f32), with copy-on-write planes and temporary conversions to and from FFmpeg frames. Modules move to them one at a time, each checked against the FFmpeg path with identical synthetic input; once none is left, `ffmpeg-next` and the `libav*-dev` build packages go. `gstreamer1.0-libav` (codecs at runtime) and the `ffmpeg`/`ffprobe` test tools stay.
 - Broadcast cue insertion: `backend/engine/src/output/scte35.rs`.
 - Control/scheduling: `backend/app/src/player/`.
 
