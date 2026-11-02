@@ -337,6 +337,16 @@ impl ScheduleState {
         self.lock().active.is_some()
     }
 
+    /// Close the event that was on air. A stop asked while it was closing
+    /// (a second "end", say) was meant for it, not for what comes next.
+    fn close_active(&self) {
+        let mut inner = self.lock();
+
+        inner.active = None;
+        inner.extension = TimeDelta::zero();
+        inner.abort = false;
+    }
+
     /// Ask the event on air to stop; returns `false` when none is on air.
     pub fn request_abort(&self) -> bool {
         let mut inner = self.lock();
@@ -887,6 +897,9 @@ pub(crate) async fn play_queued_event(
     };
 
     return_preload.abort();
+    // An end or skip that arrived while the event was closing was meant for
+    // it; left pending it would cut the programme that comes back now.
+    manager.playback_control.lock().await.cancel_skip();
 
     let elapsed = started.elapsed().as_secs_f64();
     let shift = match event.after_mode {
@@ -903,11 +916,7 @@ pub(crate) async fn play_queued_event(
 
     manager.channel.lock().await.time_shift = shift;
     manager.list_init.store(true, Ordering::SeqCst);
-    {
-        let mut schedule = manager.schedule.lock();
-        schedule.active = None;
-        schedule.extension = TimeDelta::zero();
-    }
+    manager.schedule.close_active();
 
     // The playout stopping, or the output failing and the playout restarting,
     // cut the event: it stays open, and the next start puts it back on air if
@@ -1852,6 +1861,24 @@ mod tests {
         assert_eq!(state.queued()[0].event.entry_mode, EntryMode::Interrupt);
         assert!(!state.request_abort());
         assert!(!state.take_abort());
+    }
+
+    #[test]
+    fn a_second_end_while_the_event_closes_does_not_reach_what_follows() {
+        let state = ScheduleState::default();
+
+        state.lock().active = Some(on_air(ScheduleKind::Live, Some(at("2026-11-02 13:00:00"))));
+        assert!(state.request_abort());
+        assert!(state.take_abort());
+        // The live loop took the first end; a second one comes in before the
+        // event is closed.
+        assert!(state.request_abort());
+
+        state.close_active();
+
+        assert!(!state.take_abort());
+        assert!(!state.is_active());
+        assert!(!state.request_abort());
     }
 
     #[test]

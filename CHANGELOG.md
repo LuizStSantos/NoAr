@@ -96,6 +96,9 @@ one is tagged.
 
 ### Fixed
 
+- Ending a live twice in quick succession (a double press on a Stream Deck,
+  or the Player and the API at once) no longer leaves a pending skip that
+  could cut the programme clip coming back after the live.
 - Clips without sound (common in stock footage), or without picture, can be
   resumed in their middle again. Their unused audio or video branch stayed in
   the pipeline unlinked and made every seek fail ("Failed to seek; fallback
