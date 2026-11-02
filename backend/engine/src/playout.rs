@@ -1280,8 +1280,13 @@ fn apply_overlays(
         * (1.0 - logo_off.clamp(0.0, 1.0));
     let mut incoming = 1.0;
 
-    // The clip's own logo takes the configured one's place.
-    let base = logo.clip_image.as_deref().or(video.logo.as_ref());
+    // A logo saved while on air takes the place of the one the playout
+    // started with; the clip's own logo takes the configured one's place.
+    let configured_base = match &logo.configured {
+        Some(saved) => saved.as_deref(),
+        None => video.logo.as_ref(),
+    };
+    let base = logo.clip_image.as_deref().or(configured_base);
     let base_id = base.map(|overlay| overlay as *const LogoOverlay as usize);
 
     // Moved from outside: that logo drawn at the new place, made once for

@@ -42,6 +42,10 @@ one is tagged.
 
 ### Fixed
 
+- Saving the channel logo (image, on/off, size, opacity or position) in the
+  Graphics tab puts it on air at once, cross-fading from the previous image,
+  instead of requiring a playout restart. An image that cannot be read is
+  refused when saving.
 - Resolve SRT hostnames in NoAr, bounded by a timeout, and hand GStreamer an
   IP literal. The SRT plugin's own GIO lookup reused a cancellable that state
   changes reset, which aborted (output) or crashed (input) the whole process

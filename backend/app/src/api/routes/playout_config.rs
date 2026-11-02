@@ -105,6 +105,16 @@ fn requires_playout_restart(current: &PlayoutConfig, updated: &PlayoutConfig) ->
         {
             processing.remove("guide_logo");
             processing.remove("logo_key");
+            // The channel logo is put on air right away when saved.
+            for key in [
+                "add_logo",
+                "logo",
+                "logo_scale",
+                "logo_opacity",
+                "logo_position",
+            ] {
+                processing.remove(key);
+            }
             // The logo control takes these on air right away.
             processing.remove("logo_transition_in");
             processing.remove("logo_transition_out");
@@ -277,9 +287,26 @@ pub async fn update_playout_config(
     data.processing.logo_key = config.processing.logo_key.clone();
     data.scte35.key = config.scte35.key.clone();
 
-    let (_, _, logo) = norm_abs_path(storage, &data.processing.logo)?;
+    let (logo_path, _, logo) = norm_abs_path(storage, &data.processing.logo)?;
     let (_, _, filler) = norm_abs_path(storage, &data.storage.filler)?;
 
+    // The logo goes on air when saved, so an image that cannot be read is
+    // refused here rather than leaving the old one on air.
+    if data.processing.add_logo {
+        let mut check = data.clone();
+        check.processing.logo_path = logo_path.to_string_lossy().to_string();
+        if let Some(config) = crate::player::output::channel_logo(&check) {
+            noar_engine::LogoControl::default()
+                .set_configured(Some(&config), data.output.width, data.output.height)
+                .map_err(|error| {
+                    ServiceError::BadRequest(format!(
+                        "{}: the logo cannot be used ({})",
+                        data.processing.logo,
+                        error.root_cause()
+                    ))
+                })?;
+        }
+    }
     data.processing.logo = logo;
     data.storage.filler = filler;
     if !data.processing.lshape.trim().is_empty() {
@@ -486,6 +513,12 @@ pub async fn update_playout_config(
     );
     manager.logo_control.set_transitions(logo_transitions);
     crate::player::output::load_lshape(&manager, &new_config);
+    // Sized for the output on air; a new output size restarts anyway.
+    let (logo_width, logo_height) = running_config.as_deref().map_or(
+        (new_config.output.width, new_config.output.height),
+        |running| (running.output.width, running.output.height),
+    );
+    crate::player::output::load_logo(&manager, &new_config, logo_width, logo_height);
     manager.update_config(new_config).await;
 
     Ok(Json(PlayoutConfigUpdate { requires_restart }))
@@ -783,8 +816,22 @@ mod tests {
         updated.processing.logo_key = "c0ffee".to_string();
 
         assert!(!requires_playout_restart(&current, &updated));
+    }
 
+    #[test]
+    fn channel_logo_changes_apply_without_restart() {
+        let current = PlayoutConfig::default();
+        let mut updated = current.clone();
+        updated.processing.add_logo = !current.processing.add_logo;
         updated.processing.logo = "00-assets/outra.png".to_string();
+        updated.processing.logo_scale = "15%:-1".to_string();
+        updated.processing.logo_opacity = 0.5;
+        updated.processing.logo_position = "12:12".to_string();
+
+        assert!(!requires_playout_restart(&current, &updated));
+
+        // Output changes still restart the playout.
+        updated.output.width += 2;
         assert!(requires_playout_restart(&current, &updated));
     }
 

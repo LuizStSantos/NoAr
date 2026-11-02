@@ -299,6 +299,10 @@ struct LogoOverride {
     /// The logo of the clip playing, in place of the configured one, and the
     /// image it was read from; a replacement from outside goes first.
     clip_image: Option<(String, Arc<LogoOverlay>)>,
+    /// The channel's logo as saved since the playout started, in place of
+    /// the one it started with; `Some(None)` turns it off. `None` keeps the
+    /// logo the playout was started with.
+    configured: Option<Option<Arc<LogoOverlay>>>,
 }
 
 struct Outgoing {
@@ -321,6 +325,9 @@ pub(crate) struct LogoFrame {
     pub position: Option<String>,
     /// The clip's own logo, drawn in place of the configured one.
     pub clip_image: Option<Arc<LogoOverlay>>,
+    /// The configured logo saved while on air (`Some(None)`: no logo), in
+    /// place of the one the playout started with.
+    pub configured: Option<Option<Arc<LogoOverlay>>>,
 }
 
 impl LogoOverride {
@@ -506,6 +513,40 @@ impl LogoControl {
         Ok(())
     }
 
+    /// Take the channel's logo settings on air: `config` (`None` for no
+    /// logo) replaces the configured logo, sized and placed for an output of
+    /// `width` x `height`, without restarting the playout. A visible logo
+    /// cross-fades to the new image. Replacements, moves and the clip's own
+    /// logo still go first.
+    pub fn set_configured(
+        &self,
+        config: Option<&LogoConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        // Read outside the lock: frames keep being drawn meanwhile.
+        let overlay = config
+            .map(|config| LogoOverlay::load(config, width, height))
+            .transpose()?
+            .map(Arc::new);
+        let mut state = self.lock();
+        let now = Instant::now();
+
+        if state.replacement.is_none()
+            && !state.hidden
+            && state.level(now) > 0.0
+            && let Some(Some(previous)) = &state.configured
+        {
+            state.outgoing = Some(Outgoing {
+                image: Some(previous.clone()),
+                since: now,
+            });
+        }
+        state.configured = Some(overlay);
+
+        Ok(())
+    }
+
     pub fn state(&self) -> LogoState {
         let state = self.lock();
 
@@ -519,7 +560,9 @@ impl LogoControl {
     pub(crate) fn has_replacement(&self) -> bool {
         let state = self.lock();
 
-        state.replacement.is_some() || state.clip_image.is_some()
+        state.replacement.is_some()
+            || state.clip_image.is_some()
+            || matches!(state.configured, Some(Some(_)))
     }
 
     /// For the frame being drawn: how visible the logo is, the image
@@ -556,6 +599,7 @@ impl LogoControl {
                 .clip_image
                 .as_ref()
                 .map(|(_, overlay)| overlay.clone()),
+            configured: state.configured.clone(),
         }
     }
 }
@@ -702,6 +746,43 @@ mod tests {
         hidden.lock().switched_at = None;
         hidden.replace("b.png", &logo_asset(), 1920, 1080).unwrap();
         assert!(hidden.lock().outgoing.is_none());
+    }
+
+    #[test]
+    fn a_saved_logo_goes_on_air_without_a_restart() {
+        let control = LogoControl::default();
+        // Nothing saved yet: the logo the playout started with stays.
+        assert!(control.frame().configured.is_none());
+
+        control
+            .set_configured(Some(&logo_asset()), 1920, 1080)
+            .unwrap();
+        let first = control.frame().configured.unwrap().unwrap();
+        assert!(control.has_replacement());
+        // The first save has no earlier saved image to cross-fade from.
+        assert!(control.lock().outgoing.is_none());
+
+        // A second save cross-fades from the image on air.
+        let mut moved = logo_asset();
+        moved.position = "12:12".to_string();
+        control.set_configured(Some(&moved), 1920, 1080).unwrap();
+        let (image, _) = control.frame().outgoing.unwrap();
+        assert!(std::sync::Arc::ptr_eq(&image.unwrap(), &first));
+        assert!(!std::sync::Arc::ptr_eq(
+            &control.frame().configured.unwrap().unwrap(),
+            &first
+        ));
+
+        // Turned off: no logo, and nothing extra to draw.
+        control.set_configured(None, 1920, 1080).unwrap();
+        assert!(matches!(control.frame().configured, Some(None)));
+        assert!(!control.has_replacement());
+
+        // A missing image is refused and keeps what is on air.
+        let mut missing = logo_asset();
+        missing.path.push_str(".missing");
+        assert!(control.set_configured(Some(&missing), 1920, 1080).is_err());
+        assert!(matches!(control.frame().configured, Some(None)));
     }
 
     #[test]

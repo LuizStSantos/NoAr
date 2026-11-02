@@ -40,6 +40,31 @@ const PRELOAD_LEAD_SECONDS: f64 = 10.0;
 
 /// The channel's L-shape graphic, sized to the output. One that cannot be
 /// read leaves the L-shape off rather than the channel.
+/// The channel's logo as configured, or none when it is off.
+pub fn channel_logo(config: &PlayoutConfig) -> Option<LogoConfig> {
+    config.processing.add_logo.then(|| LogoConfig {
+        path: config.processing.logo_path.clone(),
+        scale: (!config.processing.logo_scale.trim().is_empty())
+            .then(|| config.processing.logo_scale.clone()),
+        opacity: config.processing.logo_opacity,
+        position: config.processing.logo_position.clone(),
+    })
+}
+
+/// Puts the channel's saved logo (image, size, opacity and place) on air
+/// without restarting, sized for the output the playout runs with. An image
+/// that cannot be read leaves the logo on air as it was.
+pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
+    let logo = channel_logo(config);
+
+    if let Err(error) = manager
+        .logo_control
+        .set_configured(logo.as_ref(), width, height)
+    {
+        warn!(channel = config.general.channel_id; "Logo not changed on air: {error:#}");
+    }
+}
+
 pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     let loaded = config
         .processing
@@ -745,13 +770,7 @@ fn engine_output_config(
     }
     let fps = config.output.fps.round() as u32;
 
-    let logo = config.processing.add_logo.then(|| LogoConfig {
-        path: config.processing.logo_path.clone(),
-        scale: (!config.processing.logo_scale.trim().is_empty())
-            .then(|| config.processing.logo_scale.clone()),
-        opacity: config.processing.logo_opacity,
-        position: config.processing.logo_position.clone(),
-    });
+    let logo = channel_logo(config);
     let ffmpeg_log_level = config
         .logging
         .ffmpeg_level
