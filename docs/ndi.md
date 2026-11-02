@@ -22,44 +22,73 @@ Video cards (Blackmagic DeckLink SDI/HDMI, V4L2 capture) are described in
 - NoAr checks for the runtime when it starts. After installing it, restart
   NoAr.
 
-## Installing the NDI Runtime on the server
+## Turning NDI on (script)
 
-1. Download the NDI SDK for Linux from <https://ndi.video/for-developers/ndi-sdk/>
-   and accept its license. Run the installer, which unpacks a folder such as
-   `NDI SDK for Linux/`.
-2. Copy the runtime library for your architecture to a fixed place, for
-   example:
+From the NoAr folder (the one with `docker-compose.yml`) on the server:
 
-   ```sh
-   sudo mkdir -p /opt/ndi
-   sudo cp "NDI SDK for Linux/lib/x86_64-linux-gnu/"libndi.so* /opt/ndi/
-   ```
+```sh
+sudo sh docker/ndi/enable-ndi.sh
+docker compose up -d
+```
 
-3. Discovery uses mDNS. Make sure `avahi-daemon` runs on the server, or
-   configure an NDI Discovery Server for your network.
+The script:
 
-## Docker
+1. downloads the NDI SDK for Linux and runs its installer, which shows the
+   NDI license: read it and accept it to continue;
+2. copies the NDI Runtime (`libndi.so.6`) for the server's architecture to
+   `/opt/ndi`, with the license files;
+3. installs and starts `avahi-daemon` (mDNS discovery) when it is missing;
+4. writes `docker-compose.override.yml`, which Docker Compose loads by
+   itself: NoAr uses the server's network (needed for NDI discovery; the web
+   interface stays on port 8787) and reads the runtime from `/opt/ndi`.
 
-Uncomment the NDI lines in `docker-compose.yml` (they are already there,
-commented):
+Then allow 5353/UDP (mDNS) and 5959-5999/TCP (NDI) in the firewall. In
+*Settings › Output*, NDI is now available. To check that NoAr can load the
+runtime: `docker compose exec noar ldd /opt/ndi/libndi.so.6 | grep 'not found'`
+(no output means it can).
+
+Options: `--sdk FILE` uses an installer already downloaded,
+`--runtime-dir DIR` another folder, `--no-compose` installs the runtime only.
+The script never overwrites a `docker-compose.override.yml` of your own; it
+stops and asks you to add the lines below to it. Docker Compose 2.24 or newer
+is needed. To turn NDI off: delete `docker-compose.override.yml` and run
+`docker compose up -d`.
+
+For the isolated test project, write its settings to a file of its own and
+pass it with the other `-f` files:
+
+```sh
+sudo sh docker/ndi/enable-ndi.sh --compose-file qa/gstreamer/compose.ndi.yaml
+docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml \
+  -f qa/gstreamer/compose.ndi.yaml up -d --no-build
+```
+
+With host networking the test UI is on port 8787 and the `mediamtx` service
+name does not resolve inside NoAr; use `127.0.0.1` with the published test
+ports (for example `srt://127.0.0.1:19890?streamid=read:input`).
+
+## Docker settings by hand
+
+The lines the script writes, to add to your own override file:
 
 ```yaml
 services:
   noar:
-    # NDI receivers find sources through mDNS on the server's network.
     network_mode: host
+    ports: !reset []
     environment:
       NDI_RUNTIME_DIR_V6: /opt/ndi
+      NOAR_UPDATER_URL: http://127.0.0.1:18080
     volumes:
       - /opt/ndi:/opt/ndi:ro
+  noar-updater:
+    ports:
+      - "127.0.0.1:18080:8080"
 ```
 
-With `network_mode: host`, the `ports:` section is ignored and the web
-interface stays on port 8787 of the server. Then:
-
-```sh
-docker compose up -d
-```
+On the server's network NoAr cannot resolve the `noar-updater` service name,
+so the updater is published on the server's loopback for *Settings ›
+Updates*.
 
 ## Without Docker
 

@@ -21,13 +21,9 @@ services:
       # Lets Settings › Updates install a new version through noar-updater.
       NOAR_UPDATER_URL: http://noar-updater:8080
       NOAR_UPDATER_TOKEN: ${NOAR_UPDATER_TOKEN:-}
-      # NDI output: where the NDI Runtime (libndi.so.6) is mounted.
-      # NDI_RUNTIME_DIR_V6: /opt/ndi
     volumes:
       # Media, playlists, database, HLS output and logs.
       - ./data:/data
-      # NDI output (see docs/ndi.md): the NDI Runtime installed on the server.
-      # - /opt/ndi:/opt/ndi:ro
       # DeckLink cards (see docs/video-cards.md): the Desktop Video API.
       # - /usr/lib/libDeckLinkAPI.so:/usr/lib/libDeckLinkAPI.so:ro
     # Video cards (see docs/video-cards.md).
@@ -35,9 +31,8 @@ services:
     #   - /dev/blackmagic:/dev/blackmagic
     #   - /dev/video0:/dev/video0
     #   - /dev/snd:/dev/snd
-    # NDI receivers discover sources through mDNS on the server's network;
-    # with host networking the ports below are not needed.
-    # network_mode: host
+    # NDI: run `sudo sh docker/ndi/enable-ndi.sh` (see docs/ndi.md); it
+    # writes docker-compose.override.yml instead of changing this file.
     ports:
       # Web interface, API, HLS and XMLTV guide.
       - "8787:8787"

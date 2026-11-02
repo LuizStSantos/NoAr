@@ -23,7 +23,9 @@ one is tagged.
   network (*Settings › Output › NDI*). The NDI elements are compiled in; the
   proprietary NDI Runtime is installed on the server and NDI stays disabled,
   with an explanation, until it is present. Migration `00024` adds an inactive
-  NDI output to every channel. See `docs/ndi.md`.
+  NDI output to every channel. `docker/ndi/enable-ndi.sh` installs the
+  runtime (after the NDI license is accepted), mDNS discovery and the Compose
+  override in one step. See `docs/ndi.md`.
 - NDI input for lives: `ndi://SERVER (Source name)` addresses in Storage and
   the Scheduler, a *Find NDI sources* list from network discovery
   (`GET /api/schedule/{id}/lives/ndi`) and the signal test. Picture-only
