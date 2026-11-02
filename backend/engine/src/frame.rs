@@ -9,17 +9,10 @@
 //! Planes are shared until written: cloning a frame is cheap, and the first
 //! write to a shared plane copies it (the behaviour the engine had with
 //! `av_frame_ref` and `av_frame_make_writable`).
-//!
-//! While modules still take FFmpeg frames, [`VideoFrame::to_ffmpeg`],
-//! [`AudioFrame::to_ffmpeg`] and the `From` conversions carry frames across;
-//! they go away with the FFmpeg dependency.
 
 use std::sync::Arc;
 
-use anyhow::{Result, bail};
-use ffmpeg_next::{ChannelLayout, format, frame, util::color};
-
-/// Row starts are aligned like FFmpeg's default frame buffers.
+/// Row starts are aligned to 32 bytes, for vectorised loops.
 const ROW_ALIGNMENT: usize = 32;
 
 /// Pixel layouts the engine handles.
@@ -52,23 +45,6 @@ impl PixelFormat {
             (Self::Yuv420p | Self::Yuva420p, 1 | 2) => (width.div_ceil(2), height.div_ceil(2)),
             (Self::Yuv420p | Self::Yuva420p, _) => (width, height),
         }
-    }
-
-    fn to_ffmpeg(self) -> format::Pixel {
-        match self {
-            Self::Yuv420p => format::Pixel::YUV420P,
-            Self::Yuva420p => format::Pixel::YUVA420P,
-            Self::Bgrx => format::Pixel::BGRZ,
-        }
-    }
-
-    fn from_ffmpeg(format: format::Pixel) -> Result<Self> {
-        Ok(match format {
-            format::Pixel::YUV420P => Self::Yuv420p,
-            format::Pixel::YUVA420P => Self::Yuva420p,
-            format::Pixel::BGRZ => Self::Bgrx,
-            other => bail!("pixel format {other:?} is not used by the engine"),
-        })
     }
 }
 
@@ -117,87 +93,6 @@ pub enum ColorRange {
     Limited,
     /// 0–255.
     Full,
-}
-
-impl ColorSpace {
-    fn from_ffmpeg(space: color::Space) -> Self {
-        match space {
-            color::Space::Unspecified => Self::Unspecified,
-            color::Space::BT709 => Self::Bt709,
-            color::Space::BT2020NCL => Self::Bt2020Ncl,
-            color::Space::BT2020CL => Self::Bt2020Cl,
-            _ => Self::Other,
-        }
-    }
-
-    fn to_ffmpeg(self) -> color::Space {
-        match self {
-            Self::Unspecified | Self::Other => color::Space::Unspecified,
-            Self::Bt709 => color::Space::BT709,
-            Self::Bt2020Ncl => color::Space::BT2020NCL,
-            Self::Bt2020Cl => color::Space::BT2020CL,
-        }
-    }
-}
-
-impl ColorPrimaries {
-    fn from_ffmpeg(primaries: color::Primaries) -> Self {
-        match primaries {
-            color::Primaries::Unspecified => Self::Unspecified,
-            color::Primaries::BT709 => Self::Bt709,
-            color::Primaries::BT2020 => Self::Bt2020,
-            _ => Self::Other,
-        }
-    }
-
-    fn to_ffmpeg(self) -> color::Primaries {
-        match self {
-            Self::Unspecified | Self::Other => color::Primaries::Unspecified,
-            Self::Bt709 => color::Primaries::BT709,
-            Self::Bt2020 => color::Primaries::BT2020,
-        }
-    }
-}
-
-impl ColorTransfer {
-    fn from_ffmpeg(transfer: color::TransferCharacteristic) -> Self {
-        match transfer {
-            color::TransferCharacteristic::Unspecified => Self::Unspecified,
-            color::TransferCharacteristic::SMPTE2084 => Self::Pq,
-            color::TransferCharacteristic::ARIB_STD_B67 => Self::Hlg,
-            color::TransferCharacteristic::Linear => Self::Linear,
-            color::TransferCharacteristic::IEC61966_2_1 => Self::Srgb,
-            _ => Self::Other,
-        }
-    }
-
-    fn to_ffmpeg(self) -> color::TransferCharacteristic {
-        match self {
-            Self::Unspecified | Self::Other => color::TransferCharacteristic::Unspecified,
-            Self::Pq => color::TransferCharacteristic::SMPTE2084,
-            Self::Hlg => color::TransferCharacteristic::ARIB_STD_B67,
-            Self::Linear => color::TransferCharacteristic::Linear,
-            Self::Srgb => color::TransferCharacteristic::IEC61966_2_1,
-        }
-    }
-}
-
-impl ColorRange {
-    fn from_ffmpeg(range: color::Range) -> Self {
-        match range {
-            color::Range::MPEG => Self::Limited,
-            color::Range::JPEG => Self::Full,
-            _ => Self::Unspecified,
-        }
-    }
-
-    fn to_ffmpeg(self) -> color::Range {
-        match self {
-            Self::Unspecified => color::Range::Unspecified,
-            Self::Limited => color::Range::MPEG,
-            Self::Full => color::Range::JPEG,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -351,63 +246,6 @@ impl VideoFrame {
     pub fn is_shared(&self, plane: usize) -> bool {
         Arc::strong_count(&self.planes[plane].data) > 1
     }
-
-    /// The same picture as an FFmpeg frame, for modules not moved yet.
-    pub fn to_ffmpeg(&self) -> frame::Video {
-        let mut target = frame::Video::new(self.format.to_ffmpeg(), self.width, self.height);
-
-        for plane in 0..self.planes() {
-            let row_bytes = self.plane_row_bytes(plane);
-            let source_stride = self.stride(plane);
-            let target_stride = target.stride(plane);
-            let source = self.data(plane);
-            let destination = target.data_mut(plane);
-
-            for row in 0..self.plane_height(plane) as usize {
-                destination[row * target_stride..row * target_stride + row_bytes]
-                    .copy_from_slice(&source[row * source_stride..row * source_stride + row_bytes]);
-            }
-        }
-
-        target.set_pts(self.pts);
-        target.set_color_space(self.color_space.to_ffmpeg());
-        target.set_color_range(self.color_range.to_ffmpeg());
-        target.set_color_primaries(self.color_primaries.to_ffmpeg());
-        target.set_color_transfer_characteristic(self.color_transfer.to_ffmpeg());
-
-        target
-    }
-}
-
-impl TryFrom<&frame::Video> for VideoFrame {
-    type Error = anyhow::Error;
-
-    fn try_from(source: &frame::Video) -> Result<Self> {
-        let format = PixelFormat::from_ffmpeg(source.format())?;
-        let mut target = Self::new(format, source.width(), source.height());
-
-        for plane in 0..target.planes() {
-            let row_bytes = target.plane_row_bytes(plane);
-            let rows = target.plane_height(plane) as usize;
-            let source_stride = source.stride(plane);
-            let target_stride = target.stride(plane);
-            let pixels = source.data(plane);
-            let destination = target.data_mut(plane);
-
-            for row in 0..rows {
-                destination[row * target_stride..row * target_stride + row_bytes]
-                    .copy_from_slice(&pixels[row * source_stride..row * source_stride + row_bytes]);
-            }
-        }
-
-        target.pts = source.pts();
-        target.color_space = ColorSpace::from_ffmpeg(source.color_space());
-        target.color_range = ColorRange::from_ffmpeg(source.color_range());
-        target.color_primaries = ColorPrimaries::from_ffmpeg(source.color_primaries());
-        target.color_transfer = ColorTransfer::from_ffmpeg(source.color_transfer_characteristic());
-
-        Ok(target)
-    }
 }
 
 /// Planar 32-bit float audio: one plane per channel.
@@ -482,54 +320,6 @@ impl AudioFrame {
     pub fn is_shared(&self, channel: usize) -> bool {
         Arc::strong_count(&self.planes[channel]) > 1
     }
-
-    /// The same audio as an FFmpeg frame, for modules not moved yet.
-    pub fn to_ffmpeg(&self) -> Result<frame::Audio> {
-        let layout = match self.channels() {
-            1 => ChannelLayout::MONO,
-            2 => ChannelLayout::STEREO,
-            other => bail!("{other} audio channels have no FFmpeg layout here"),
-        };
-        let mut target = frame::Audio::new(
-            format::Sample::F32(format::sample::Type::Planar),
-            self.samples,
-            layout,
-        );
-
-        for channel in 0..self.channels() {
-            target
-                .plane_mut::<f32>(channel)
-                .copy_from_slice(self.plane(channel));
-        }
-
-        target.set_rate(self.rate);
-        target.set_pts(self.pts);
-
-        Ok(target)
-    }
-}
-
-impl TryFrom<&frame::Audio> for AudioFrame {
-    type Error = anyhow::Error;
-
-    fn try_from(source: &frame::Audio) -> Result<Self> {
-        if source.format() != format::Sample::F32(format::sample::Type::Planar) {
-            bail!("audio format {:?} is not planar f32", source.format());
-        }
-
-        let mut target = Self::new(source.samples(), usize::from(source.channels()));
-
-        for channel in 0..target.channels() {
-            target
-                .plane_mut(channel)
-                .copy_from_slice(source.plane::<f32>(channel));
-        }
-
-        target.rate = source.rate();
-        target.pts = source.pts();
-
-        Ok(target)
-    }
 }
 
 #[cfg(test)]
@@ -566,64 +356,61 @@ mod tests {
     }
 
     #[test]
-    fn plane_geometry_matches_ffmpeg_for_odd_and_even_sizes() {
-        ffmpeg_next::init().ok();
-
-        for format in [
-            PixelFormat::Yuv420p,
-            PixelFormat::Yuva420p,
-            PixelFormat::Bgrx,
+    fn plane_sizes_follow_each_format() {
+        // Width x height of each plane, in pixels, for a 1919x1081 picture.
+        for (format, planes) in [
+            (
+                PixelFormat::Yuv420p,
+                vec![(1919, 1081), (960, 541), (960, 541)],
+            ),
+            (
+                PixelFormat::Yuva420p,
+                vec![(1919, 1081), (960, 541), (960, 541), (1919, 1081)],
+            ),
+            (PixelFormat::Bgrx, vec![(1919, 1081)]),
         ] {
-            for (width, height) in [(4, 2), (5, 3), (1280, 720), (1919, 1081)] {
-                let ours = VideoFrame::new(format, width, height);
-                let theirs = frame::Video::new(format.to_ffmpeg(), width, height);
+            let frame = VideoFrame::new(format, 1919, 1081);
 
-                assert_eq!(ours.planes(), theirs.planes(), "{format:?}");
+            assert_eq!(frame.planes(), planes.len(), "{format:?}");
 
-                for plane in 0..ours.planes() {
-                    assert_eq!(
-                        (ours.plane_width(plane), ours.plane_height(plane)),
-                        (theirs.plane_width(plane), theirs.plane_height(plane)),
-                        "{format:?} {width}x{height} plane {plane} rows"
-                    );
-                    assert!(ours.stride(plane) >= ours.plane_row_bytes(plane));
-                    assert_eq!(
-                        ours.data(plane).len(),
-                        ours.stride(plane) * ours.plane_height(plane) as usize
-                    );
-                }
+            for (plane, (width, height)) in planes.into_iter().enumerate() {
+                assert_eq!(
+                    (frame.plane_width(plane), frame.plane_height(plane)),
+                    (width, height),
+                    "{format:?} plane {plane}"
+                );
+                assert!(frame.stride(plane) >= frame.plane_row_bytes(plane));
+                assert_eq!(frame.stride(plane) % ROW_ALIGNMENT, 0);
+                assert_eq!(
+                    frame.data(plane).len(),
+                    frame.stride(plane) * height as usize
+                );
             }
         }
+
+        assert_eq!(
+            VideoFrame::new(PixelFormat::Bgrx, 5, 3).plane_row_bytes(0),
+            20
+        );
     }
 
     #[test]
-    fn video_survives_a_round_trip_through_ffmpeg_unchanged() {
-        ffmpeg_next::init().ok();
+    fn a_frame_keeps_its_timestamp_and_colour_description() {
+        let mut frame = patterned(PixelFormat::Yuv420p, 7, 5);
+        frame.set_color_space(ColorSpace::Bt709);
+        frame.set_color_range(ColorRange::Limited);
+        frame.set_color_primaries(ColorPrimaries::Bt2020);
+        frame.set_color_transfer(ColorTransfer::Pq);
+        let copy = frame.clone();
 
-        for format in [
-            PixelFormat::Yuv420p,
-            PixelFormat::Yuva420p,
-            PixelFormat::Bgrx,
-        ] {
-            let mut original = patterned(format, 7, 5);
-            original.set_color_space(ColorSpace::Bt709);
-            original.set_color_range(ColorRange::Limited);
-            original.set_color_primaries(ColorPrimaries::Bt2020);
-            original.set_color_transfer(ColorTransfer::Pq);
+        assert_eq!(copy.pts(), Some(1234));
+        assert_eq!(copy.color_space(), ColorSpace::Bt709);
+        assert_eq!(copy.color_range(), ColorRange::Limited);
+        assert_eq!(copy.color_primaries(), ColorPrimaries::Bt2020);
+        assert_eq!(copy.color_transfer(), ColorTransfer::Pq);
 
-            let back = VideoFrame::try_from(&original.to_ffmpeg()).unwrap();
-
-            assert_eq!(back.format(), format);
-            assert_eq!((back.width(), back.height()), (7, 5));
-            assert_eq!(back.pts(), Some(1234));
-            assert_eq!(back.color_space(), ColorSpace::Bt709);
-            assert_eq!(back.color_range(), ColorRange::Limited);
-            assert_eq!(back.color_primaries(), ColorPrimaries::Bt2020);
-            assert_eq!(back.color_transfer(), ColorTransfer::Pq);
-
-            for plane in 0..original.planes() {
-                assert_eq!(visible_rows(&back, plane), visible_rows(&original, plane));
-            }
+        for plane in 0..frame.planes() {
+            assert_eq!(visible_rows(&copy, plane), visible_rows(&frame, plane));
         }
     }
 
@@ -645,26 +432,23 @@ mod tests {
     }
 
     #[test]
-    fn audio_survives_a_round_trip_through_ffmpeg_unchanged() {
-        ffmpeg_next::init().ok();
-
-        let mut original = AudioFrame::stereo(1920);
+    fn audio_keeps_its_rate_timestamp_and_samples() {
+        let mut audio = AudioFrame::stereo(1920);
         for channel in 0..2 {
-            for (index, sample) in original.plane_mut(channel).iter_mut().enumerate() {
+            for (index, sample) in audio.plane_mut(channel).iter_mut().enumerate() {
                 *sample = (index as f32 * 0.001 + channel as f32).sin();
             }
         }
-        original.set_rate(48_000);
-        original.set_pts(Some(96_000));
+        audio.set_rate(48_000);
+        audio.set_pts(Some(96_000));
+        let copy = audio.clone();
 
-        let back = AudioFrame::try_from(&original.to_ffmpeg().unwrap()).unwrap();
-
-        assert_eq!(back.samples(), 1920);
-        assert_eq!(back.channels(), 2);
-        assert_eq!(back.rate(), 48_000);
-        assert_eq!(back.pts(), Some(96_000));
-        assert_eq!(back.plane(0), original.plane(0));
-        assert_eq!(back.plane(1), original.plane(1));
+        assert_eq!((copy.samples(), copy.channels()), (1920, 2));
+        assert_eq!(copy.rate(), 48_000);
+        assert_eq!(copy.pts(), Some(96_000));
+        assert_eq!(copy.plane(1), audio.plane(1));
+        assert_eq!(AudioFrame::new(16, 1).channels(), 1);
+        assert_eq!(AudioFrame::empty().samples(), 0);
     }
 
     #[test]
@@ -678,20 +462,5 @@ mod tests {
         assert_eq!(source.plane(0)[0], 0.5);
         assert_eq!(copy.plane(0)[0], -1.0);
         assert!(copy.is_shared(1));
-    }
-
-    #[test]
-    fn formats_outside_the_engine_are_refused() {
-        ffmpeg_next::init().ok();
-
-        let rgb = frame::Video::new(format::Pixel::RGB24, 4, 4);
-        assert!(VideoFrame::try_from(&rgb).is_err());
-
-        let packed = frame::Audio::new(
-            format::Sample::I16(format::sample::Type::Packed),
-            16,
-            ChannelLayout::STEREO,
-        );
-        assert!(AudioFrame::try_from(&packed).is_err());
     }
 }

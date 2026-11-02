@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- NoAr no longer links the FFmpeg libraries: the engine keeps video and audio
+  in its own frames and time bases, and GStreamer does all decoding, encoding
+  and muxing. Output is unchanged (decoded frames are identical to the
+  previous release's with lossless encoding). Building needs neither the
+  `libav*-dev`/`libsw*-dev` packages nor clang; the `ffmpeg-filter` and
+  `ffmpeg-device` Cargo features are gone. The image still carries
+  `gstreamer1.0-libav` for codecs GStreamer has no native decoder for.
+
 ## [2.0.0] - 2026-11-02
 
 ### Added

@@ -12,8 +12,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::time_base::{Rational, Rescale};
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{Rational, Rescale};
 #[cfg(target_os = "linux")]
 use winit::platform::{wayland::WindowAttributesExtWayland, x11::WindowAttributesExtX11};
 use winit::{

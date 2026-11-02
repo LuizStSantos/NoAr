@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use ffmpeg_next::{Rational, Rescale};
+use crate::time_base::{Rational, Rescale};
 
 #[derive(Default)]
 pub(super) struct VideoRedrawTiming {

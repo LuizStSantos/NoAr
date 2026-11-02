@@ -9,7 +9,7 @@ The NoAr repository includes scoped reference skills. These are **not agents** a
 | `/noar-docker` | Docker, Compose, BuildKit | Dockerfile, Compose, workflows |
 | `/noar-gstreamer` | Native pipeline, states, clocks, buffers, caps and transport | Cargo.lock, native GStreamer, gst-inspect-1.0; [navigation](gstreamer.md) |
 | `/noar-video-processing` | GStreamer pipeline, A/V sync, SCTE-35 | engine code and integrated stream evidence |
-| `/noar-ffmpeg` (existing) | Remaining frame-memory interfaces and fixture CLI/API | installed native libs + bindings; not a playout backend |
+| `/noar-ffmpeg` (existing) | `gstreamer1.0-libav` codecs and `ffmpeg`/`ffprobe` test tooling | installed native libs; NoAr does not link FFmpeg |
 | `/noar-intelligent-development` (existing) | Main development, audits and integration QA | repository source + evidence |
 
 Examples:

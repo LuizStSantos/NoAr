@@ -30,6 +30,7 @@ mod output;
 mod playback_control;
 mod playout;
 mod preview_quality;
+pub mod time_base;
 mod utils;
 
 pub use analysis::audio_level::{AudioFrameCallback, AudioLevel, AudioLevelCallback};

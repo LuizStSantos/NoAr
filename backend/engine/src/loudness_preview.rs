@@ -1,8 +1,8 @@
 use crate::frame::{AudioFrame, VideoFrame};
 use std::{collections::VecDeque, time::Duration};
 
+use crate::time_base::{Rational, Rescale};
 use anyhow::Result;
-use ffmpeg_next::{Rational, Rescale};
 
 mod stats;
 
@@ -287,7 +287,6 @@ mod tests {
 
     #[test]
     fn three_second_preview_plays_before_eof_and_flushes_audio_and_video() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let processor = LiveLoudnessProcessor::new(48000, LiveLoudnessConfig::default()).unwrap();
         let mut preview = LoudnessPreview::new(
@@ -329,7 +328,6 @@ mod tests {
 
     #[test]
     fn video_without_more_audio_continues_with_bounded_preview() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let processor = LiveLoudnessProcessor::new(48000, LiveLoudnessConfig::default()).unwrap();
         let mut preview = LoudnessPreview::new(
@@ -354,7 +352,6 @@ mod tests {
     }
     #[test]
     fn future_loud_section_does_not_attenuate_earlier_desktop_audio() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let processor = LiveLoudnessProcessor::new(48000, LiveLoudnessConfig::default()).unwrap();
         let mut preview = LoudnessPreview::new(
@@ -395,7 +392,6 @@ mod tests {
     }
     #[test]
     fn live_dynamics_desktop_uses_short_preview_and_emits_audio_and_video() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let config = LiveLoudnessConfig {
             compressor_ratio: 6.0,

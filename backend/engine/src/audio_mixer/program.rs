@@ -1,8 +1,8 @@
 use crate::frame::{AudioFrame, VideoFrame};
 use std::collections::VecDeque;
 
+use crate::time_base::{Rational, Rescale};
 use anyhow::Result;
-use ffmpeg_next::{Rational, Rescale};
 
 use crate::{
     benchmark::{self, Stage},
@@ -614,7 +614,6 @@ mod tests {
 
     #[test]
     fn decoded_playlist_clips_keep_the_same_audio_video_timeline_with_processing() {
-        ffmpeg_next::init().unwrap();
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests_assets/storage/media_mix/av_sync.mp4");
         let mut captures = Vec::new();

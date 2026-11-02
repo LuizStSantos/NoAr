@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, PoisonError, RwLock},
 };
 
-use ffmpeg_next::Rational;
+use crate::time_base::Rational;
 
 use crate::{
     AudioEffectsControl, AudioFrameCallback, AudioLevelCallback, LiveLoudnessConfig,
@@ -1683,7 +1683,6 @@ mod tests {
 
     #[test]
     fn accepts_valid_aac_audio_options() {
-        ffmpeg_next::init().ok();
         let options = [
             ("aac_coder".to_string(), "fast".to_string()),
             ("cutoff".to_string(), "18000".to_string()),
@@ -1696,9 +1695,9 @@ mod tests {
 
     #[test]
     fn accepts_valid_libopus_audio_options_when_available() {
-        ffmpeg_next::init().ok();
-
-        if ffmpeg_next::codec::encoder::find_by_name("libopus").is_none() {
+        crate::gstreamer::init().unwrap();
+        // "libopus" is encoded by GStreamer's opusenc.
+        if ::gstreamer::ElementFactory::find("opusenc").is_none() {
             return;
         }
 
@@ -1711,7 +1710,6 @@ mod tests {
 
     #[test]
     fn rejects_audio_options_managed_by_noar() {
-        ffmpeg_next::init().ok();
         let options = [("ar".to_string(), "44100".to_string())]
             .into_iter()
             .collect();
@@ -1725,8 +1723,6 @@ mod tests {
 
     #[test]
     fn rejects_unknown_and_invalid_audio_encoder_options() {
-        ffmpeg_next::init().ok();
-
         assert!(
             validate_audio_options(
                 "aac",

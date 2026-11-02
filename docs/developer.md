@@ -19,9 +19,7 @@ sudo apt install \
     libgstreamer-plugins-bad1.0-dev \
     gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
-    glib-networking \
-    libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev \
-    libavutil-dev libswresample-dev libswscale-dev
+    glib-networking
 rustup component add rustfmt clippy
 ```
 
@@ -58,9 +56,11 @@ publication takeover have been removed. See [live_ingest.md](live_ingest.md).
 
 Desktop presentation remains available through the desktop Cargo features. It
 needs ALSA development files and a graphical session on Linux. The Docker server
-image is built without a desktop window. Legacy `ffmpeg-filter` and
-`ffmpeg-device` features only affect linked library capabilities; they do not
-select a second media engine or restore input listeners.
+image is built without a desktop window. The server does not link the FFmpeg
+libraries: decoding, compositing, encoding and muxing all go through
+GStreamer, and the engine keeps video and audio in its own frame types
+(`backend/engine/src/frame.rs`). Some tests call the `ffmpeg`/`ffprobe`
+commands to check generated files, so keep them installed for `cargo test`.
 
 ## Processing Benchmark
 

@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ffmpeg_next::{Rational, Rescale, rescale};
+use crate::time_base::{Rational, Rescale, TIME_BASE};
 
 /// How far the output may fall behind the clock and still catch up by
 /// sending faster. Past it (a slow file open, a disk stall, a long fallback),
@@ -55,7 +55,7 @@ impl PlayoutClock {
             return;
         };
 
-        let target_us = timestamp.rescale(time_base, rescale::TIME_BASE);
+        let target_us = timestamp.rescale(time_base, TIME_BASE);
 
         if let Some(delay) = self.delay(target_us, Instant::now()) {
             thread::sleep(delay);

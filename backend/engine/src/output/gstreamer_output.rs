@@ -16,9 +16,9 @@ use std::{
     time::Duration,
 };
 
+use crate::time_base::Rational;
 use ::gstreamer::{self as gst, prelude::*};
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use ffmpeg_next::Rational;
 use gstreamer_app::{AppSink, AppSinkCallbacks, AppSrc};
 
 use super::{

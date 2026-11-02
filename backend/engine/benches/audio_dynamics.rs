@@ -8,8 +8,6 @@ const FRAME_SAMPLES: usize = 1024;
 const SECONDS: usize = 12;
 
 fn main() {
-    ffmpeg_next::init().unwrap();
-
     for scenario in ["quiet", "loud", "transitions"] {
         let source: Vec<[f32; 2]> = (0..RATE as usize * SECONDS)
             .map(|index| {

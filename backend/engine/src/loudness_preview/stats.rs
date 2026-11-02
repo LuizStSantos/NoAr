@@ -5,8 +5,8 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+use crate::time_base::{Rational, Rescale};
 use anyhow::Result;
-use ffmpeg_next::{Rational, Rescale};
 
 use crate::{
     LiveLoudnessMetrics,
@@ -372,7 +372,6 @@ mod tests {
     fn rendered_statistics_are_visible_and_preserve_shared_video_buffers() {
         use crate::frame::PixelFormat;
 
-        ffmpeg_next::init().unwrap();
         let mut stats = AudioStatsOverlay::new(48000).unwrap();
         for index in 0..3 {
             let mut input = audio(0.1);
