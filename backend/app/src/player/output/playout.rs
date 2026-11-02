@@ -356,6 +356,8 @@ async fn play_loop(
         };
 
         *manager.current_media.lock().await = Some(node.clone());
+        // A clip started: the output is open, so the playout is on air.
+        manager.clear_failure();
 
         if cancel_token
             .as_ref()

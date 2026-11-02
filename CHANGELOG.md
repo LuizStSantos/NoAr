@@ -96,6 +96,11 @@ one is tagged.
 
 ### Fixed
 
+- A playout that cannot go on air (a DeckLink card missing, an output that
+  does not open) no longer looks on air or stopped while NoAr retries it: the
+  Player and the header show OFF AIR with the reason and the next attempt, and
+  the status (`media/current`, playout events) carries a `failure` field. The
+  Player's format label also names NDI and SDI outputs instead of "Desktop".
 - The LIVE mark on the playlist's day bar no longer breaks letter by letter
   when the live is short or the screen narrow.
 - An unknown address (an old bookmark, a page that was removed) opens the home

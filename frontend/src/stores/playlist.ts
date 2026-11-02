@@ -72,6 +72,8 @@ export const usePlaylist = defineStore('playlist', {
         loudness: null as LiveLoudnessMetrics | null,
         uptime: null as number | null,
         outputLink: null as OutputLinkStatus | null,
+        /** The playout is off air and retried (an output card missing...). */
+        failure: null as PlayoutFailure | null,
         elapsedSec: 0,
         shift: 0,
         playoutIsRunning: false,
@@ -194,6 +196,7 @@ export const usePlaylist = defineStore('playlist', {
             this.loudness = item.loudness ?? null
             this.uptime = item.uptime ?? null
             this.outputLink = item.output_link ?? null
+            this.failure = item.failure ?? null
             this.shift = item.shift
 
             this.progressValue = (this.elapsedSec * 100) / this.current.out
@@ -206,6 +209,7 @@ export const usePlaylist = defineStore('playlist', {
             this.loudness = null
             this.uptime = null
             this.outputLink = null
+            this.failure = null
             this.current = {} as PlaylistItem
             this.currentIndex = 0
         },

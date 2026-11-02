@@ -129,7 +129,11 @@ impl Broadcaster {
                 Endpoint::Playout => {
                     let media_map = get_data_map(&client.manager).await;
 
-                    let message = if client.manager.is_alive.load(Ordering::SeqCst) {
+                    // A playout that failed and is retried is still started: the
+                    // Player shows it off air, with why, not as stopped.
+                    let message = if client.manager.is_alive.load(Ordering::SeqCst)
+                        || client.manager.failure().is_some()
+                    {
                         serde_json::to_string(&media_map).unwrap_or_default()
                     } else {
                         "not running".to_string()

@@ -365,6 +365,18 @@ declare global {
         title?: string
         /** How a network output (SRT, RTMP, UDP) reaches its destination. */
         output_link?: OutputLinkStatus
+        /** The playout is off air and retried; the media above is not airing. */
+        failure?: PlayoutFailure | null
+    }
+
+    interface PlayoutFailure {
+        /** The error, addresses cut to their host. */
+        message: string
+        /** Unix seconds of the first failure in a row. */
+        since: number
+        /** Seconds to the next attempt. */
+        retry_in: number
+        attempts: number
     }
 
     interface OutputLinkStatus {

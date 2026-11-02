@@ -189,7 +189,8 @@ const outputLabel = computed(() => {
         return ''
     }
 
-    const kind = output.mode === 'hls' ? 'HLS' : output.mode === 'stream' ? output.stream_type.toUpperCase() : 'Desktop'
+    const kinds: Record<string, string> = { hls: 'HLS', ndi: 'NDI', sdi: 'SDI', desktop: 'Desktop' }
+    const kind = output.mode === 'stream' ? output.stream_type.toUpperCase() : (kinds[output.mode] ?? output.mode)
     const fps = Number.isInteger(output.fps) ? output.fps : output.fps.toFixed(2)
     const parts = [kind, `${output.height}p${fps}`]
     const bitrate = output.video_options?.['b:v'] ?? output.video_options?.maxrate
@@ -226,7 +227,7 @@ const title = computed(() => {
 const outputLinkLabel = computed(() => {
     const link = playlistStore.outputLink
 
-    if (!playlistStore.playoutIsRunning || !link || link.state === 'idle') {
+    if (!playlistStore.playoutIsRunning || playlistStore.failure || !link || link.state === 'idle') {
         return ''
     }
 
@@ -277,7 +278,13 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
 
             <div class="absolute top-3.5 left-3.5 flex gap-2">
                 <span
-                    v-if="playlistStore.playoutIsRunning"
+                    v-if="playlistStore.playoutIsRunning && playlistStore.failure"
+                    class="bg-[#5a2a2d] text-white font-semibold text-xs tracking-wider px-2.5 py-1 rounded-md"
+                >
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true" /> {{ t('nav.offAir') }}
+                </span>
+                <span
+                    v-else-if="playlistStore.playoutIsRunning"
                     class="bg-on-air text-white font-semibold text-xs tracking-wider px-2.5 py-1 rounded-md"
                 >
                     ● {{ t('nav.onAir') }}
@@ -361,7 +368,21 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
         </div>
 
         <div class="flex flex-wrap gap-x-4.5 gap-y-2 text-muted text-[13px]">
-            <span v-if="playlistStore.playoutIsRunning" class="inline-flex items-center gap-1.5">
+            <span
+                v-if="playlistStore.playoutIsRunning && playlistStore.failure"
+                class="inline-flex items-center gap-1.5 text-on-air-text font-medium"
+                role="alert"
+            >
+                <span class="dot bg-on-air" aria-hidden="true" />
+                {{
+                    t('onair.failing', {
+                        error: playlistStore.failure.message,
+                        seconds: playlistStore.failure.retry_in,
+                        attempts: playlistStore.failure.attempts,
+                    })
+                }}
+            </span>
+            <span v-else-if="playlistStore.playoutIsRunning" class="inline-flex items-center gap-1.5">
                 <span class="dot bg-ok" aria-hidden="true" />
                 {{
                     playlistStore.uptime !== null

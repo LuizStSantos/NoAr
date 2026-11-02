@@ -119,6 +119,8 @@ pub struct ChannelManager {
     pub splice_control: noar_engine::SpliceControl,
     /// How the network output reaches its destination; outlasts restarts.
     pub output_link: noar_engine::OutputLink,
+    /// Why the playout is off air while it is retried; `None` on air.
+    pub playout_failure: Arc<StdMutex<Option<PlayoutFailure>>>,
     /// Uploaded videos being converted to the output format.
     pub conversions: crate::utils::convert::Conversions,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
@@ -148,6 +150,30 @@ impl Drop for RunningConfigGuard {
             *slot = None;
         }
     }
+}
+
+/// The playout cannot go on air (an output card missing, a destination
+/// refusing it...) and the supervisor tries it again.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct PlayoutFailure {
+    /// The error, with addresses cut to their host (no paths, keys or tokens).
+    pub message: String,
+    /// Unix seconds of the first failure in this run of failures.
+    pub since: i64,
+    /// Unix seconds of the next attempt.
+    pub retry_at: i64,
+    pub attempts: u32,
+}
+
+/// Cut every `scheme://host/...` in a message to `scheme://host`: an RTMP
+/// error can carry the stream key, and the status reaches every viewer.
+fn redact_addresses(message: &str) -> String {
+    static ADDRESS: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"([a-zA-Z][a-zA-Z0-9+.-]*://)(?:[^@/\s?#]*@)?([^/\s?#]*)[^\s]*")
+            .expect("valid address pattern")
+    });
+
+    ADDRESS.replace_all(message, "$1$2").into_owned()
 }
 
 impl ChannelManager {
@@ -213,6 +239,7 @@ impl ChannelManager {
             lshape_control: noar_engine::LShapeControl::default(),
             splice_control: noar_engine::SpliceControl::default(),
             output_link: noar_engine::OutputLink::default(),
+            playout_failure: Arc::new(StdMutex::new(None)),
             conversions,
             audio_level: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
@@ -370,6 +397,40 @@ impl ChannelManager {
     }
 
     /// Seconds since the playout was started, while it runs.
+    /// The playout failed to run and is retried in `retry`.
+    pub fn record_failure(&self, message: &str, retry: Duration) {
+        let now = chrono::Utc::now().timestamp();
+        let mut failure = self
+            .playout_failure
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let (since, attempts) = failure
+            .as_ref()
+            .map_or((now, 0), |failure| (failure.since, failure.attempts));
+
+        *failure = Some(PlayoutFailure {
+            message: redact_addresses(message),
+            since,
+            retry_at: now + i64::try_from(retry.as_secs()).unwrap_or(i64::MAX / 2),
+            attempts: attempts + 1,
+        });
+    }
+
+    /// The playout is on air again, or stopped on purpose.
+    pub fn clear_failure(&self) {
+        self.playout_failure
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+    }
+
+    pub fn failure(&self) -> Option<PlayoutFailure> {
+        self.playout_failure
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
     pub fn uptime(&self) -> Option<i64> {
         let since = self.running_since.load(Ordering::SeqCst);
 
@@ -792,6 +853,7 @@ async fn supervisor_loop(
             );
 
             error!(target: Target::All.as_str(), channel = channel_id; "Run channel <span class=\"log-number\">{channel_id}</span> failed: {e} | {retry_msg}");
+            manager.record_failure(&e.to_string(), retry_delay);
 
             trace!(
                 "Runtime has <span class=\"log-number\">{}</span> active tasks",
@@ -812,6 +874,8 @@ async fn supervisor_loop(
     } else {
         "done"
     };
+    // Stopped on purpose: nothing is failing any more.
+    manager.clear_failure();
     manager.log_dev_task("supervisor", event, generation).await;
     trace!("Async start done");
 }
@@ -894,6 +958,47 @@ mod tests {
     use crate::test_support::channel_manager;
 
     use super::*;
+
+    #[test]
+    fn failure_messages_keep_only_the_host_of_addresses() {
+        assert_eq!(
+            redact_addresses(
+                "opening rtmp://user:pass@live.example.com/app/SECRET-KEY?x=1 failed: refused"
+            ),
+            "opening rtmp://live.example.com failed: refused"
+        );
+        assert_eq!(
+            redact_addresses("srt://10.0.0.5:9000?passphrase=abc timed out"),
+            "srt://10.0.0.5:9000 timed out"
+        );
+        assert_eq!(
+            redact_addresses("opening DeckLink output 1 in 1080p25"),
+            "opening DeckLink output 1 in 1080p25"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_failure_is_kept_across_retries_until_the_playout_airs() {
+        let (manager, pool) = channel_manager().await;
+
+        assert!(manager.failure().is_none());
+        manager.record_failure("card missing", Duration::from_secs(1));
+        let first = manager.failure().unwrap();
+        manager.record_failure("card missing", Duration::from_secs(4));
+        let second = manager.failure().unwrap();
+
+        assert_eq!(second.attempts, 2);
+        assert_eq!(second.since, first.since);
+        assert!(second.retry_at >= first.retry_at + 3);
+
+        manager.clear_failure();
+        assert!(manager.failure().is_none());
+
+        pool.close().await;
+        tokio::fs::remove_dir_all(manager.storage.root.read().await.clone())
+            .await
+            .unwrap();
+    }
 
     #[tokio::test]
     async fn failed_start_restores_not_running_state() {

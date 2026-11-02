@@ -204,6 +204,18 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
         "output_link".to_string(),
         output_link_map(&manager.output_link.status()),
     );
+    // The playout is off air and retried: the last clip above is not airing.
+    data_map.insert(
+        "failure".to_string(),
+        manager.failure().map_or(Value::Null, |failure| {
+            json!({
+                "message": failure.message,
+                "since": failure.since,
+                "retry_in": (failure.retry_at - chrono::Utc::now().timestamp()).max(0),
+                "attempts": failure.attempts,
+            })
+        }),
+    );
     if let Ok(audio_level) = manager.audio_level.lock()
         && let Some(audio_level) = *audio_level
     {
