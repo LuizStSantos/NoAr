@@ -1,12 +1,14 @@
-# NDI output
+# NDI output and input
 
 NoAr can publish the channel's program as an NDI source: the composited
 picture (logo, L-shape, text) and the processed program audio (volume,
 loudness), uncompressed, to NDI receivers on the local network such as NDI
 Studio Monitor, vMix, OBS or a hardware converter.
 
-NDI input in Scheduler live events and Blackmagic DeckLink SDI input/output
-are planned and not available yet.
+It can also take an NDI source as a **live** in the Scheduler, like an SRT or
+RTMP live.
+
+Blackmagic DeckLink SDI input/output is planned and not available yet.
 
 ## How it is packaged
 
@@ -78,9 +80,24 @@ not available for NDI.
 
 SCTE-35 is not carried over NDI.
 
+## NDI input (lives)
+
+1. *Storage* or *Scheduler › Live*: choose the **NDI** tab of the signal.
+2. Press **Find NDI sources** and pick one, or type the address as
+   `ndi://` followed by the name receivers list, for example
+   `ndi://STUDIO (Camera 1)`. Spaces are allowed in NDI addresses.
+3. **Test signal** receives the source briefly and shows its picture size and
+   frame rate.
+
+The live is then scheduled like any other: Clock or Continue, with the same
+return to the playlist. A source that sends picture without audio is accepted
+after 1.5 seconds and gets silence. Discovery needs mDNS on the server's
+network (host networking in Docker) or an NDI Discovery Server.
+
 ## Verification status
 
-- Compiled-in elements, name validation and the refusal without the runtime
-  are covered by automated tests.
-- Publishing to a real NDI receiver has **not** been verified by the
-  developers yet; please test on your network before going on air.
+- Compiled-in elements, name and address validation, and the refusal of NDI
+  output and input without the runtime are covered by automated tests.
+- Publishing to and receiving from real NDI devices, discovery and the signal
+  test have **not** been verified by the developers yet; please test on your
+  network before going on air.

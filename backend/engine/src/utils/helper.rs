@@ -19,7 +19,7 @@ pub fn is_live_input(path: &str) -> bool {
 
     matches!(
         scheme.to_ascii_lowercase().as_str(),
-        "rtmp" | "rtmps" | "rtp" | "rtsp" | "srt" | "udp" | "tcp" | "rist"
+        "rtmp" | "rtmps" | "rtp" | "rtsp" | "srt" | "udp" | "tcp" | "rist" | "ndi"
     )
 }
 
@@ -55,6 +55,7 @@ mod tests {
             "udp://239.0.0.1:1234",
             "tcp://example.com:9000",
             "rist://example.com:8193",
+            "ndi://STUDIO (Camera 1)",
         ] {
             assert!(is_live_input(input), "{input}");
         }

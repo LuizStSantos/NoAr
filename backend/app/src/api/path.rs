@@ -115,6 +115,7 @@ pub fn routes() -> Router<AppState> {
                     get(get_lives).post(add_live).put(update_live),
                 )
                 .route("/schedule/{id}/lives/test", post(test_live_signal))
+                .route("/schedule/{id}/lives/ndi", get(get_ndi_sources))
                 .route(
                     "/schedule/{id}/{event_id}",
                     put(update_schedule_event).delete(delete_schedule_event),

@@ -1029,6 +1029,8 @@ export default {
         address: 'Endereço do sinal',
         signalOk: 'Sinal OK',
         signalFailed: 'Sem sinal: {error}',
+        findNdi: 'Procurar fontes NDI',
+        noNdiSources: 'Nenhuma fonte NDI encontrada. Verifique se o servidor enxerga a rede (mDNS ou um NDI Discovery Server).',
         needAddress: 'Informe o endereço do sinal.',
         starts: 'Começa',
         ends: 'Termina',

@@ -423,6 +423,31 @@ pub async fn test_live_signal(
     Ok(Json(test_signal(&request.url).await?))
 }
 
+/// **NDI sources on the network**
+///
+/// Names to use as `ndi://<name>` in a live. Discovery takes about two
+/// seconds; an empty list can also mean mDNS does not reach the server.
+///
+/// ```BASH
+/// curl -X GET 'http://127.0.0.1:8787/api/schedule/1/lives/ndi' -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_ndi_sources(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<String>>, ServiceError> {
+    authorized_manager(&state, id, &user, &details).await?;
+
+    tokio::task::spawn_blocking(|| {
+        noar_engine::discover_ndi_sources(std::time::Duration::from_secs(2))
+    })
+    .await
+    .map_err(|error| ServiceError::Conflict(error.to_string()))?
+    .map(Json)
+    .map_err(|error| ServiceError::Conflict(format!("{error:#}")))
+}
+
 /// **Graphics events of a channel**
 ///
 /// Logo and L-shape changes at a set time, undone at the end.

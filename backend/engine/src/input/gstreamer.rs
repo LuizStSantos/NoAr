@@ -31,6 +31,10 @@ use crate::{
 };
 
 const OPEN_TIMEOUT: Duration = Duration::from_secs(12);
+/// How long an NDI source with a picture may take to announce its audio.
+const NDI_AUDIO_GRACE: Duration = Duration::from_millis(1500);
+/// URL scheme of NDI sources: `ndi://SERVER (Source name)`.
+const NDI_SCHEME: &str = "ndi://";
 const POLL_INTERVAL: Duration = Duration::from_millis(2);
 
 #[derive(Debug, Clone, Default)]
@@ -101,13 +105,47 @@ impl Source {
             "FFmpeg demuxer options are not supported by the GStreamer engine; clear demuxer options before starting this input"
         );
 
-        let (uri, protocol_options) = source_uri(path, protocol_options)?;
+        let ndi = ndi_source_name(path)?;
+        let (uri, protocol_options) = match &ndi {
+            Some(_) => {
+                ensure!(
+                    protocol_options.is_empty(),
+                    "NDI sources take no protocol options"
+                );
+                (String::new(), BTreeMap::new())
+            }
+            None => source_uri(path, protocol_options)?,
+        };
         let pipeline = gst::Pipeline::new();
-        let decoder = gst::ElementFactory::make("uridecodebin3")
-            .property("uri", &uri)
-            .build()
-            .context("GStreamer uridecodebin3 is unavailable")?;
-        guard_hls_transport_rollover(&decoder);
+        // An NDI source is received and split into raw audio and video by the
+        // NDI elements; everything else is decoded by uridecodebin3. Both
+        // hand the same raw pads to the normalization below.
+        let decoder = match &ndi {
+            Some(name) => {
+                if let Some(reason) = crate::output::ndi::ndi_unavailable_reason() {
+                    bail!("NDI input is unavailable: {reason}");
+                }
+                let receiver = gst::ElementFactory::make("ndisrc")
+                    .property("ndi-name", name.as_str())
+                    .build()
+                    .context("GStreamer ndisrc is unavailable")?;
+                let demux = gst::ElementFactory::make("ndisrcdemux")
+                    .build()
+                    .context("GStreamer ndisrcdemux is unavailable")?;
+                pipeline.add_many([&receiver, &demux])?;
+                receiver.link(&demux)?;
+                demux
+            }
+            None => {
+                let decoder = gst::ElementFactory::make("uridecodebin3")
+                    .property("uri", &uri)
+                    .build()
+                    .context("GStreamer uridecodebin3 is unavailable")?;
+                guard_hls_transport_rollover(&decoder);
+                pipeline.add(&decoder)?;
+                decoder
+            }
+        };
         let video_bin = gst::parse::bin_from_description(
             &format!(
                 "queue max-size-buffers=4 max-size-bytes=0 max-size-time=0 ! \
@@ -130,7 +168,7 @@ impl Source {
             .context("audio sample sink is missing")?
             .downcast::<AppSink>()
             .map_err(|_| anyhow!("audio sample sink has the wrong type"))?;
-        pipeline.add_many([&decoder, video_bin.upcast_ref(), audio_bin.upcast_ref()])?;
+        pipeline.add_many([&video_bin, &audio_bin])?;
 
         let metadata = Arc::new(Mutex::new(SourceInfo::default()));
         let error = Arc::new(Mutex::new(None));
@@ -178,17 +216,19 @@ impl Source {
         });
         let source_complete = Arc::clone(&complete);
         decoder.connect_no_more_pads(move |_| source_complete.store(true, Ordering::Release));
-        let options = protocol_options;
-        let options_error = Arc::clone(&error);
-        decoder.connect("source-setup", false, move |values| {
-            if let Ok(source) = values[1].get::<gst::Element>()
-                && let Err(error) = configure_source(&source, &options)
-            {
-                *options_error.lock().unwrap_or_else(PoisonError::into_inner) =
-                    Some(error.to_string());
-            }
-            None
-        });
+        if ndi.is_none() {
+            let options = protocol_options;
+            let options_error = Arc::clone(&error);
+            decoder.connect("source-setup", false, move |values| {
+                if let Ok(source) = values[1].get::<gst::Element>()
+                    && let Err(error) = configure_source(&source, &options)
+                {
+                    *options_error.lock().unwrap_or_else(PoisonError::into_inner) =
+                        Some(error.to_string());
+                }
+                None
+            });
+        }
 
         let mut source = Self {
             pipeline,
@@ -213,7 +253,8 @@ impl Source {
             gst::State::Paused
         };
         source.pipeline.set_state(initial_state)?;
-        let deadline = Instant::now() + OPEN_TIMEOUT;
+        let opened_at = Instant::now();
+        let deadline = opened_at + OPEN_TIMEOUT;
 
         loop {
             source.check_bus()?;
@@ -225,7 +266,12 @@ impl Source {
             let selected_ready = source.selected_streams.is_some_and(|(video, audio)| {
                 (video || audio) && (!video || info.has_video) && (!audio || info.has_audio)
             });
+            // NDI announces audio only when it arrives; a picture-only
+            // source is accepted after a short wait.
+            let ndi_video_only =
+                ndi.is_some() && info.has_video && opened_at.elapsed() >= NDI_AUDIO_GRACE;
             if (info.has_video && info.has_audio)
+                || ndi_video_only
                 || selected_ready
                 || (complete.load(Ordering::Acquire) && (info.has_video || info.has_audio))
             {
@@ -425,6 +471,20 @@ impl Source {
 
         Ok(())
     }
+}
+
+/// The NDI source name of an `ndi://` address, as receivers list it
+/// (`SERVER (Source name)`); `None` for other addresses.
+pub(crate) fn ndi_source_name(path: &str) -> Result<Option<String>> {
+    let Some(prefix) = path.get(..NDI_SCHEME.len()) else {
+        return Ok(None);
+    };
+    if !prefix.eq_ignore_ascii_case(NDI_SCHEME) {
+        return Ok(None);
+    }
+    let name = path[NDI_SCHEME.len()..].trim();
+    crate::output::ndi::validate_ndi_name(name).map_err(anyhow::Error::msg)?;
+    Ok(Some(name.to_owned()))
 }
 
 fn source_uri(
@@ -763,6 +823,40 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
+
+    #[test]
+    fn ndi_addresses_name_the_source_as_receivers_list_it() {
+        assert_eq!(
+            ndi_source_name("ndi://STUDIO (Camera 1)")
+                .unwrap()
+                .as_deref(),
+            Some("STUDIO (Camera 1)")
+        );
+        assert_eq!(
+            ndi_source_name("NDI:// STUDIO (Camera 1) ")
+                .unwrap()
+                .as_deref(),
+            Some("STUDIO (Camera 1)")
+        );
+        assert_eq!(ndi_source_name("srt://10.0.0.5:9000").unwrap(), None);
+        assert_eq!(ndi_source_name("/media/clip.mp4").unwrap(), None);
+        assert!(ndi_source_name("ndi://").is_err());
+    }
+
+    #[test]
+    fn ndi_input_without_the_runtime_is_refused_with_a_reason() {
+        if crate::output::ndi::ndi_unavailable_reason().is_none() {
+            return; // A server with the NDI runtime installed.
+        }
+        let config = OutputConfig::new(64, 36, 25, 48_000);
+        let error = Source::open("ndi://STUDIO (Camera 1)", &config)
+            .err()
+            .unwrap();
+        assert!(
+            format!("{error:#}").contains("NDI input is unavailable"),
+            "{error:#}"
+        );
+    }
 
     #[test]
     fn asynchronous_tracks_are_ordered_before_advancing_the_playout() {

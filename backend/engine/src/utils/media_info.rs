@@ -209,7 +209,46 @@ pub fn probe_media_info(path: &str) -> Result<MediaInfo> {
     })
 }
 
+/// An NDI source cannot be discovered from a URI: receive it briefly and
+/// report what arrives (NDI carries uncompressed audio and video).
+fn probe_ndi(path: &str) -> Result<MediaProbe> {
+    let config = crate::OutputConfig::new(320, 180, 25, 48_000);
+    let source = crate::input::gstreamer::Source::open(path, &config)?;
+    let info = source.info();
+    let video = info.has_video.then(|| VideoStream {
+        aspect_ratio: Some(format!("{}:{}", info.width, info.height)),
+        bit_rate: None,
+        codec_name: Some("ndi".to_owned()),
+        duration: None,
+        field_order: None,
+        frame_rate: format!("{}/1000", (info.fps * 1000.0).round() as i64),
+        height: Some(i64::from(info.height)),
+        nb_frames: None,
+        width: Some(i64::from(info.width)),
+    });
+    let audio = info.has_audio.then(|| AudioStream {
+        channels: None,
+        codec_name: Some("ndi".to_owned()),
+        duration: None,
+        sample_rate: None,
+    });
+
+    Ok(MediaProbe {
+        format: ProbeFormat {
+            duration: None,
+            nb_streams: i64::from(info.has_video) + i64::from(info.has_audio),
+            size: None,
+            bit_rate: None,
+        },
+        audio: audio.into_iter().collect(),
+        video: video.into_iter().collect(),
+    })
+}
+
 pub fn probe_media(path: &str) -> Result<MediaProbe> {
+    if crate::input::gstreamer::ndi_source_name(path)?.is_some() {
+        return probe_ndi(path);
+    }
     let info = discover_media(path)?;
     let duration = info
         .duration()

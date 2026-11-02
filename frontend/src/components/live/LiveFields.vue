@@ -25,7 +25,7 @@ const { t } = useI18n()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
 
-type Protocol = 'SRT' | 'RTMP' | 'HLS' | 'UDP'
+type Protocol = 'SRT' | 'RTMP' | 'HLS' | 'UDP' | 'NDI'
 
 /** The two guide images: the poster (upright) and the wide image (fanart). */
 type GuideImage = 'poster' | 'backdrop'
@@ -35,6 +35,7 @@ const PLACEHOLDERS: Record<Protocol, string> = {
     RTMP: 'rtmp://203.0.113.10/live/stream-key',
     HLS: 'https://cdn.example.org/live/index.m3u8',
     UDP: 'udp://239.10.10.10:5000',
+    NDI: 'ndi://STUDIO (Camera 1)',
 }
 const RATINGS = ['Livre', '10', '12', '14', '16', '18']
 const GUIDE_IMAGES: GuideImage[] = ['poster', 'backdrop']
@@ -60,7 +61,26 @@ const safeName = computed(() => name.value.trim().replace(/[\\/:*?"<>|]/g, ''))
 const ratingOptions = computed(() => (RATINGS.includes(rating.value) ? RATINGS : [...RATINGS, rating.value]))
 
 function protocolOf(value?: string): Protocol {
-    return value === 'RTMP' || value === 'HLS' || value === 'UDP' ? value : 'SRT'
+    return value === 'RTMP' || value === 'HLS' || value === 'UDP' || value === 'NDI' ? value : 'SRT'
+}
+
+/** NDI sources found on the network, to pick from instead of typing. */
+const ndiSources = ref<string[] | null>(null)
+const searchingNdi = ref(false)
+const ndiError = ref('')
+
+async function findNdiSources() {
+    searchingNdi.value = true
+    ndiError.value = ''
+
+    try {
+        ndiSources.value = await scheduleStore.ndiSources()
+    } catch (err) {
+        ndiSources.value = null
+        ndiError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+        searchingNdi.value = false
+    }
 }
 
 // The tabs follow an address typed or pasted in full.
@@ -75,6 +95,8 @@ watch(url, (value) => {
         protocol.value = 'HLS'
     } else if (scheme === 'udp') {
         protocol.value = 'UDP'
+    } else if (scheme === 'ndi') {
+        protocol.value = 'NDI'
     }
 })
 
@@ -243,7 +265,7 @@ defineExpose({ check, submit })
         <div class="text-xs text-muted">{{ t('schedule.signal') }}</div>
         <div class="flex w-fit" role="group" :aria-label="t('schedule.protocol')">
             <button
-                v-for="option in ['SRT', 'RTMP', 'HLS', 'UDP'] as Protocol[]"
+                v-for="option in ['SRT', 'RTMP', 'HLS', 'UDP', 'NDI'] as Protocol[]"
                 :key="option"
                 type="button"
                 class="border min-h-9 px-4 cursor-pointer first:rounded-s-field last:rounded-e-field -ms-px first:ms-0"
@@ -265,9 +287,33 @@ defineExpose({ check, submit })
                 :aria-label="t('schedule.address')"
                 :placeholder="PLACEHOLDERS[protocol]"
             />
+            <button
+                v-if="protocol === 'NDI'"
+                type="button"
+                class="btn-quiet"
+                :disabled="searchingNdi"
+                @click="findNdiSources"
+            >
+                <span v-if="searchingNdi" class="loading loading-spinner loading-xs" />
+                {{ t('schedule.findNdi') }}
+            </button>
             <button type="button" class="btn-quiet" :disabled="testing" @click="testSignal">
                 <span v-if="testing" class="loading loading-spinner loading-xs" />
                 {{ t('schedule.testSignal') }}
+            </button>
+        </div>
+        <div v-if="protocol === 'NDI' && (ndiSources || ndiError)" class="flex flex-wrap gap-2" role="status">
+            <span v-if="ndiError" class="text-sm text-error">{{ ndiError }}</span>
+            <span v-else-if="!ndiSources?.length" class="text-sm text-muted">{{ t('schedule.noNdiSources') }}</span>
+            <button
+                v-for="source in ndiSources ?? []"
+                :key="source"
+                type="button"
+                class="btn-quiet min-h-8 font-mono text-[13px]"
+                :aria-pressed="url === `ndi://${source}`"
+                @click="url = `ndi://${source}`"
+            >
+                {{ source }}
             </button>
         </div>
         <div

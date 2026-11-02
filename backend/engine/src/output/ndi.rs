@@ -63,6 +63,38 @@ fn runtime_loadable() -> bool {
     })
 }
 
+/// NDI sources announced on the network, by the name receivers list
+/// (`SERVER (Source name)`), sorted. Discovery takes up to `wait`; an empty
+/// list can also mean mDNS does not reach this server.
+pub fn discover_ndi_sources(wait: Duration) -> Result<Vec<String>> {
+    crate::gstreamer::init()?;
+    if let Some(reason) = ndi_unavailable_reason() {
+        bail!("NDI is unavailable: {reason}");
+    }
+    let monitor = gst::DeviceMonitor::new();
+    monitor.add_filter(Some("Source/Network"), None);
+    monitor.start().context("starting NDI discovery")?;
+    let deadline = Instant::now() + wait;
+    let mut names = Vec::new();
+    // Sources answer over a few hundred milliseconds; keep what is found.
+    while Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(250));
+        names = monitor
+            .devices()
+            .iter()
+            .filter_map(|device| {
+                device
+                    .properties()
+                    .and_then(|properties| properties.get::<String>("ndi-name").ok())
+            })
+            .collect();
+    }
+    monitor.stop();
+    names.sort();
+    names.dedup();
+    Ok(names)
+}
+
 /// Checks an NDI source name before it is saved or published.
 pub fn validate_ndi_name(name: &str) -> Result<(), String> {
     let name = name.trim();

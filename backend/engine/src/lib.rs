@@ -52,7 +52,7 @@ pub use input::preload::{PreloadSignal, Preloader};
 #[cfg(all(feature = "desktop-base", feature = "tokio"))]
 pub use output::desktop::thread::run_on_main_thread as run_desktop_on_main_thread;
 pub use output::link::{LinkState, LinkStatus, OutputLink};
-pub use output::ndi::{ndi_unavailable_reason, validate_ndi_name};
+pub use output::ndi::{discover_ndi_sources, ndi_unavailable_reason, validate_ndi_name};
 pub use output::resolved_variant_playlist_path;
 pub use output::scte35::{
     BreakInfo, BreakSource, BreakState, ClipBreaks, DEFAULT_SCTE35_PID,

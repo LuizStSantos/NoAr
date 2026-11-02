@@ -153,6 +153,13 @@ export const useSchedule = defineStore('schedule', {
             })
         },
 
+        /** NDI sources announced on the network, by the name receivers list. */
+        async ndiSources(): Promise<string[]> {
+            return authFetch<string[]>(`/api/schedule/${channelId()}/lives/ndi`, {
+                headers: headers(false),
+            })
+        },
+
         async testSignal(url: string): Promise<SignalTest> {
             return authFetch<SignalTest>(`/api/schedule/${channelId()}/lives/test`, {
                 method: 'POST',

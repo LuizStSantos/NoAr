@@ -66,13 +66,26 @@ pub fn validate_live_url(url: &str) -> Result<String, String> {
         .map(|(scheme, _)| scheme.to_ascii_lowercase())
         .unwrap_or_default();
 
+    // NDI names a source as receivers list it, `SERVER (Name)`, spaces
+    // included; every other address is one word.
+    if scheme == "ndi" {
+        let name = url["ndi://".len()..].trim();
+        if url.len() > MAX_URL_LENGTH || url.chars().any(char::is_control) || name.is_empty() {
+            return Err(
+                "an NDI address is ndi:// followed by the source name, such as ndi://STUDIO (Camera 1)"
+                    .to_string(),
+            );
+        }
+        return Ok(format!("ndi://{name}"));
+    }
+
     if url.len() > MAX_URL_LENGTH || url.chars().any(char::is_whitespace) {
         return Err("the address must be one line without spaces".to_string());
     }
 
     if !ALLOWED_SCHEMES.contains(&scheme.as_str()) {
         return Err(format!(
-            "unsupported address '{url}'; use srt://, rtmp://, rtmps://, http(s):// (HLS), udp://, rtsp:// or rist://"
+            "unsupported address '{url}'; use srt://, rtmp://, rtmps://, http(s):// (HLS), udp://, rtsp://, rist:// or ndi://"
         ));
     }
 
@@ -93,6 +106,7 @@ pub fn live_protocol(url: &str) -> &'static str {
         "udp" => "UDP",
         "rtsp" => "RTSP",
         "rist" => "RIST",
+        "ndi" => "NDI",
         _ => "?",
     }
 }
@@ -376,6 +390,19 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn accepts_ndi_sources_by_their_listed_name() {
+        assert_eq!(
+            validate_live_url("  NDI://STUDIO (Camera 1) ").unwrap(),
+            "ndi://STUDIO (Camera 1)"
+        );
+        assert_eq!(live_protocol("ndi://STUDIO (Camera 1)"), "NDI");
+        assert!(validate_live_url("ndi://").is_err());
+        assert!(validate_live_url("ndi://A\nB").is_err());
+        // Other addresses still take no spaces.
+        assert!(validate_live_url("srt://host:9000 extra").is_err());
     }
 
     #[test]

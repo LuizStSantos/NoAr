@@ -18,6 +18,10 @@ one is tagged.
   proprietary NDI Runtime is installed on the server and NDI stays disabled,
   with an explanation, until it is present. Migration `00024` adds an inactive
   NDI output to every channel. See `docs/ndi.md`.
+- NDI input for lives: `ndi://SERVER (Source name)` addresses in Storage and
+  the Scheduler, a *Find NDI sources* list from network discovery
+  (`GET /api/schedule/{id}/lives/ndi`) and the signal test. Picture-only
+  sources are accepted and get silence.
 
 - A disposable actual-NoAr smoke harness verifies scheduled live transitions,
   source-loss recovery, decoded markers, timestamps, receiver progress and
