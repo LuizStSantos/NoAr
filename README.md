@@ -33,6 +33,9 @@ and the Report for what aired.
 - **NDI output**: the uncompressed program as an NDI source on the local
   network, once the NDI Runtime is installed on the server
   ([docs](docs/ndi.md)).
+- **Video cards**: the program on a Blackmagic DeckLink card (SDI/HDMI), and
+  DeckLink or V4L2 capture cards as live inputs
+  ([docs](docs/video-cards.md)).
 - **Scheduled live sources**: NoAr pulls streams from an external ingest server
   such as MediaMTX and switches between files and live sources through GStreamer
   ([docs](docs/live_ingest.md)).

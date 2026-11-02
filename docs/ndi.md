@@ -8,7 +8,8 @@ Studio Monitor, vMix, OBS or a hardware converter.
 It can also take an NDI source as a **live** in the Scheduler, like an SRT or
 RTMP live.
 
-Blackmagic DeckLink SDI input/output is planned and not available yet.
+Video cards (Blackmagic DeckLink SDI/HDMI, V4L2 capture) are described in
+[video-cards.md](video-cards.md).
 
 ## How it is packaged
 

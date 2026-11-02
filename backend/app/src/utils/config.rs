@@ -33,6 +33,8 @@ pub enum OutputMode {
     Stream,
     /// The uncompressed program published as an NDI source on the network.
     Ndi,
+    /// The program on a baseband video card (Blackmagic DeckLink SDI/HDMI).
+    Sdi,
 }
 
 impl OutputMode {
@@ -41,6 +43,7 @@ impl OutputMode {
             "desktop" => Self::Desktop,
             "stream" => Self::Stream,
             "ndi" => Self::Ndi,
+            "sdi" => Self::Sdi,
             _ => Self::HLS,
         }
     }
@@ -55,7 +58,8 @@ impl FromStr for OutputMode {
             "hls" => Ok(Self::HLS),
             "stream" => Ok(Self::Stream),
             "ndi" => Ok(Self::Ndi),
-            _ => Err("Use 'desktop', 'hls', 'stream' or 'ndi'".to_string()),
+            "sdi" => Ok(Self::Sdi),
+            _ => Err("Use 'desktop', 'hls', 'stream', 'ndi' or 'sdi'".to_string()),
         }
     }
 }
@@ -67,6 +71,7 @@ impl fmt::Display for OutputMode {
             OutputMode::HLS => write!(f, "hls"),
             OutputMode::Stream => write!(f, "stream"),
             OutputMode::Ndi => write!(f, "ndi"),
+            OutputMode::Sdi => write!(f, "sdi"),
         }
     }
 }
@@ -1409,14 +1414,33 @@ impl Output {
             }
         }
 
-        // NDI encodes only the Player preview, as MPEG-TS like UDP.
+        if self.mode == OutputMode::Sdi {
+            if !self.muxer_options.is_empty() {
+                return Err("SDI output has no container options".to_string());
+            }
+            let card = noar_engine::parse_decklink(&self.stream_url, true)?.ok_or(
+                "SDI output needs a DeckLink address, such as decklink://0?mode=1080i5994",
+            )?;
+            let mode = card.mode.ok_or("SDI output needs a video mode")?;
+            // The channel renders whole frames; the card's 29.97/59.94 is met
+            // by repeating a frame now and then, other rates would judder.
+            let card_fps = f64::from(mode.fps_num) / f64::from(mode.fps_den);
+            if (self.fps.round() - card_fps).abs() > 0.5 {
+                return Err(format!(
+                    "the output frame rate ({}) must match the card mode {} ({card_fps:.2} frames/s)",
+                    self.fps, mode.name
+                ));
+            }
+        }
+
+        // NDI and SDI encode only the Player preview, as MPEG-TS like UDP.
         if matches!(
             self.mode,
-            OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi
+            OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi | OutputMode::Sdi
         ) {
             let target = match self.mode {
                 OutputMode::HLS => noar_engine::FfmpegOutputTarget::Hls,
-                OutputMode::Ndi => noar_engine::FfmpegOutputTarget::Udp,
+                OutputMode::Ndi | OutputMode::Sdi => noar_engine::FfmpegOutputTarget::Udp,
                 OutputMode::Stream => self
                     .stream_type
                     .ffmpeg_target()
@@ -1437,7 +1461,7 @@ impl Output {
             }
             let muxer_name = match self.mode {
                 OutputMode::HLS => "hls",
-                OutputMode::Ndi => "mpegts",
+                OutputMode::Ndi | OutputMode::Sdi => "mpegts",
                 OutputMode::Stream => match self.stream_type {
                     StreamType::Rtmp => "flv",
                     StreamType::Srt | StreamType::Udp => "mpegts",
@@ -1789,6 +1813,31 @@ mod output_tests {
             audio_sample_rate: 48_000,
             hls_variants: Vec::new(),
         }
+    }
+
+    #[test]
+    fn sdi_output_needs_a_card_mode_matching_the_frame_rate() {
+        let mut output = output(OutputMode::Sdi);
+        output.width = 1920;
+        output.height = 1080;
+        output.fps = 29.97;
+        output.stream_url = "decklink://1?mode=1080i5994".to_string();
+        assert!(output.validate().is_ok(), "{:?}", output.validate());
+
+        output.fps = 30.0;
+        assert!(output.validate().is_ok());
+        output.stream_url = "decklink://1?mode=1080p30".to_string();
+        assert!(output.validate().is_ok());
+
+        output.fps = 25.0;
+        assert!(output.validate().unwrap_err().contains("frame rate"));
+
+        output.fps = 30.0;
+        output.stream_url = "decklink://1".to_string();
+        assert!(output.validate().unwrap_err().contains("mode"));
+        output.stream_url = "rtmp://example.com/live".to_string();
+        assert!(output.validate().unwrap_err().contains("DeckLink"));
+        assert_eq!("sdi".parse::<OutputMode>(), Ok(OutputMode::Sdi));
     }
 
     #[test]

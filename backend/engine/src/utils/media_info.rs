@@ -218,7 +218,7 @@ fn probe_ndi(path: &str) -> Result<MediaProbe> {
     let video = info.has_video.then(|| VideoStream {
         aspect_ratio: Some(format!("{}:{}", info.width, info.height)),
         bit_rate: None,
-        codec_name: Some("ndi".to_owned()),
+        codec_name: Some(raw_codec(path).to_owned()),
         duration: None,
         field_order: None,
         frame_rate: format!("{}/1000", (info.fps * 1000.0).round() as i64),
@@ -228,7 +228,7 @@ fn probe_ndi(path: &str) -> Result<MediaProbe> {
     });
     let audio = info.has_audio.then(|| AudioStream {
         channels: None,
-        codec_name: Some("ndi".to_owned()),
+        codec_name: Some(raw_codec(path).to_owned()),
         duration: None,
         sample_rate: None,
     });
@@ -245,8 +245,27 @@ fn probe_ndi(path: &str) -> Result<MediaProbe> {
     })
 }
 
+/// NDI sources and video cards arrive uncompressed.
+fn raw_codec(path: &str) -> &'static str {
+    if path
+        .get(..6)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("ndi://"))
+    {
+        "ndi"
+    } else {
+        "raw"
+    }
+}
+
 pub fn probe_media(path: &str) -> Result<MediaProbe> {
-    if crate::input::gstreamer::ndi_source_name(path)?.is_some() {
+    if crate::input::gstreamer::ndi_source_name(path)?.is_some()
+        || crate::output::sdi::parse_decklink(path, false)
+            .map_err(anyhow::Error::msg)?
+            .is_some()
+        || crate::output::sdi::parse_v4l2(path)
+            .map_err(anyhow::Error::msg)?
+            .is_some()
+    {
         return probe_ndi(path);
     }
     let info = discover_media(path)?;

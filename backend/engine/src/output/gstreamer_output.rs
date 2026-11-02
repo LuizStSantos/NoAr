@@ -68,6 +68,11 @@ pub(super) enum EncodedFormat {
     Ndi {
         name: String,
     },
+    /// Uncompressed program on a DeckLink card; the encoder serves only the
+    /// Player preview and recordings.
+    Sdi {
+        address: String,
+    },
 }
 
 struct Destination {
@@ -738,6 +743,7 @@ pub(super) struct EncodedOutput {
     pending_vtt: VecDeque<vtt::VttCue>,
     splice: bool,
     ndi: Option<super::ndi::NdiSink>,
+    sdi: Option<super::sdi::SdiSink>,
 }
 
 impl EncodedOutput {
@@ -821,6 +827,7 @@ impl EncodedOutput {
         }
         let mut variants = Vec::new();
         let mut ndi = None;
+        let mut sdi = None;
         match format {
             #[cfg(feature = "desktop-base")]
             EncodedFormat::Recording(recording) => {
@@ -896,6 +903,9 @@ impl EncodedOutput {
             EncodedFormat::Ndi { name } => {
                 ndi = Some(super::ndi::NdiSink::open(&name, cfg)?);
             }
+            EncodedFormat::Sdi { address } => {
+                sdi = Some(super::sdi::SdiSink::open(&address, cfg)?);
+            }
             EncodedFormat::Auto => {
                 let muxer = match Path::new(path)
                     .extension()
@@ -967,8 +977,8 @@ impl EncodedOutput {
                 Err(error) => log::warn!("Recording unavailable: {error:#}"),
             }
         }
-        if ndi.is_some() {
-            // NDI carries the program itself; an encoder nobody reads from
+        if ndi.is_some() || sdi.is_some() {
+            // NDI and SDI carry the program themselves; an encoder nobody reads from
             // (no preview, no recording copying it) would only cost CPU.
             encoders.retain(|encoder| {
                 !encoder
@@ -986,12 +996,13 @@ impl EncodedOutput {
             audio_level: AudioLevelMeter::new(cfg.sample_rate, cfg.audio_level_callback.clone()),
             loudness: LoudnessMeter::new(cfg.sample_rate, cfg.loudness_meter_control.clone()),
             clock: PlayoutClock::new(),
-            pace: ndi.is_some() || path.contains("://") || path.ends_with(".m3u8"),
+            pace: ndi.is_some() || sdi.is_some() || path.contains("://") || path.ends_with(".m3u8"),
             last_video: None,
             last_audio_end: None,
             pending_vtt: VecDeque::new(),
             splice,
             ndi,
+            sdi,
         })
     }
 
@@ -1006,6 +1017,9 @@ impl EncodedOutput {
     fn poll(&mut self) -> Result<()> {
         if let Some(ndi) = &self.ndi {
             ndi.poll()?;
+        }
+        if let Some(sdi) = &self.sdi {
+            sdi.poll()?;
         }
         for encoder in &mut self.encoders {
             if let Err(error) = encoder.poll() {
@@ -1066,6 +1080,9 @@ impl EncodedOutput {
                 );
                 encoder.video.push_buffer(buffer.clone())?;
             }
+        }
+        if let Some(sdi) = &self.sdi {
+            sdi.push_video(buffer.clone())?;
         }
         if let Some(ndi) = &self.ndi {
             ndi.push_video(buffer)?;
@@ -1133,6 +1150,9 @@ impl EncodedOutput {
                 encoder.audio.push_buffer(buffer.clone())?;
             }
         }
+        if let Some(sdi) = &self.sdi {
+            sdi.push_audio(buffer.clone())?;
+        }
         if let Some(ndi) = &self.ndi {
             ndi.push_audio(buffer)?;
         }
@@ -1197,6 +1217,11 @@ impl EncodedOutput {
             && let Err(error) = ndi.finish()
         {
             log::warn!("NDI output finalization: {error:#}");
+        }
+        if let Some(sdi) = &self.sdi
+            && let Err(error) = sdi.finish()
+        {
+            log::warn!("SDI output finalization: {error:#}");
         }
         for encoder in &mut self.encoders {
             if encoder.optional {

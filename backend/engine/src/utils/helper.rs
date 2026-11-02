@@ -19,7 +19,17 @@ pub fn is_live_input(path: &str) -> bool {
 
     matches!(
         scheme.to_ascii_lowercase().as_str(),
-        "rtmp" | "rtmps" | "rtp" | "rtsp" | "srt" | "udp" | "tcp" | "rist" | "ndi"
+        "rtmp"
+            | "rtmps"
+            | "rtp"
+            | "rtsp"
+            | "srt"
+            | "udp"
+            | "tcp"
+            | "rist"
+            | "ndi"
+            | "decklink"
+            | "v4l2"
     )
 }
 
@@ -56,6 +66,8 @@ mod tests {
             "tcp://example.com:9000",
             "rist://example.com:8193",
             "ndi://STUDIO (Camera 1)",
+            "decklink://0?mode=1080i5994",
+            "v4l2:///dev/video0",
         ] {
             assert!(is_live_input(input), "{input}");
         }

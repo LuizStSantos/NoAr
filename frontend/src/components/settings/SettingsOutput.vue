@@ -10,6 +10,7 @@ import SectionCard from '@/components/settings/SectionCard.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import { useCodecLabels } from '@/composables/codecs'
 import { usePlayoutPage } from '@/composables/settingsPage'
+import { parseDeckLink, videoModeInfo, videoModeLabel } from '@/composables/videoModes'
 
 const { t, locale } = useI18n()
 const { ready, changes, alsoSaves, restarts, saveLabel, save, discard, settings, configStore } =
@@ -34,12 +35,69 @@ const RESOLUTIONS = [
 ]
 const FRAME_RATES = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60]
 
-function modeOf(name: string | undefined): 'desktop' | 'hls' | 'stream' | 'ndi' {
-    return name === 'desktop' || name === 'hls' || name === 'ndi' ? name : 'stream'
+function modeOf(name: string | undefined): 'desktop' | 'hls' | 'stream' | 'ndi' | 'sdi' {
+    return name === 'desktop' || name === 'hls' || name === 'ndi' || name === 'sdi' ? name : 'stream'
 }
 
 /** Why NDI cannot be used on this server; null when it can. */
 const ndiUnavailable = computed(() => configStore.outputCodecs.ndi_unavailable)
+
+/** Video cards on the server, looked up when the SDI destination is shown. */
+const videoDevices = ref<VideoDevices | null>(null)
+const devicesError = ref('')
+const loadingDevices = ref(false)
+
+async function loadVideoDevices() {
+    loadingDevices.value = true
+    devicesError.value = ''
+
+    try {
+        videoDevices.value = await configStore.getVideoDevices()
+    } catch (err) {
+        devicesError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+        loadingDevices.value = false
+    }
+}
+
+watch(
+    () => output.value?.mode,
+    (mode) => {
+        if (mode === 'sdi' && !videoDevices.value && !loadingDevices.value) {
+            loadVideoDevices()
+        }
+    },
+    { immediate: true },
+)
+
+const sdi = computed(() => parseDeckLink(output.value.stream_url ?? ''))
+/** DeckLink outputs: the device number and the name the driver gives it. */
+const sdiOutputs = computed(() =>
+    (videoDevices.value?.devices ?? [])
+        .filter((device) => device.kind === 'decklink' && device.direction === 'output')
+        .map((device) => ({ number: device.address.replace('decklink://', ''), name: device.name })),
+)
+const sdiModes = computed(() => videoDevices.value?.modes ?? [sdi.value.mode])
+const sdiDevice = computed({
+    get: () => sdi.value.device,
+    set: (device: string) => {
+        output.value.stream_url = `decklink://${device}?mode=${sdi.value.mode}`
+    },
+})
+/** Choosing a card mode also sets the picture size and frame rate to match it. */
+const sdiMode = computed({
+    get: () => sdi.value.mode,
+    set: (mode: string) => {
+        output.value.stream_url = `decklink://${sdi.value.device}?mode=${mode}`
+        const info = videoModeInfo(mode)
+
+        if (info) {
+            output.value.width = info.width
+            output.value.height = info.height
+            output.value.fps = info.fps
+        }
+    },
+})
 
 /** Destinations this channel can use; the desktop window only shows when it is in use. */
 const destinations = computed(() =>
@@ -155,7 +213,7 @@ const customFps = ref(false)
 const codecOptions = computed<OutputCodecOptions>(() =>
     output.value.mode === 'stream'
         ? configStore.outputCodecs[output.value.stream_type ?? 'rtmp']
-        : output.value.mode === 'ndi'
+        : output.value.mode === 'ndi' || output.value.mode === 'sdi'
           ? configStore.outputCodecs.udp
           : configStore.outputCodecs.hls,
 )
@@ -382,6 +440,36 @@ const showAdvanced = ref(false)
                 </p>
             </div>
 
+            <div v-if="output.mode === 'sdi'" class="flex flex-col gap-1.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <label class="field-label">
+                        {{ t('settings.output.sdiDevice') }}
+                        <select v-model="sdiDevice" class="field-input">
+                            <option v-for="device in sdiOutputs" :key="device.number" :value="device.number">
+                                {{ device.name }}
+                            </option>
+                            <option v-if="!sdiOutputs.some((device) => device.number === sdiDevice)" :value="sdiDevice">
+                                {{ t('settings.output.sdiDeviceNumber', { number: sdiDevice }) }}
+                            </option>
+                        </select>
+                    </label>
+                    <label class="field-label">
+                        {{ t('settings.output.sdiMode') }}
+                        <select v-model="sdiMode" class="field-input">
+                            <option v-for="mode in sdiModes" :key="mode" :value="mode">
+                                {{ videoModeLabel(mode) }}
+                            </option>
+                        </select>
+                    </label>
+                </div>
+                <p class="m-0 field-hint">{{ t('settings.output.sdiHint') }}</p>
+                <p v-if="loadingDevices" class="m-0 text-[13px] text-muted">{{ t('settings.output.sdiSearching') }}</p>
+                <p v-else-if="devicesError" class="m-0 text-[13px] text-error" role="alert">{{ devicesError }}</p>
+                <p v-else-if="videoDevices && !sdiOutputs.length" class="m-0 text-[13px] text-error" role="alert">
+                    {{ t('settings.output.sdiNoDevice') }}
+                </p>
+            </div>
+
             <label v-if="output.mode === 'desktop'" class="flex items-center gap-3 min-h-10 cursor-pointer">
                 <input v-model="output.desktop_fullscreen" type="checkbox" role="switch" class="toggle toggle-accent" />
                 {{ t('settings.output.fullscreen') }}
@@ -601,7 +689,7 @@ const showAdvanced = ref(false)
                     :hint="t('config.audioEncoderOptionsHelp')"
                 />
                 <KeyValueEditor
-                    v-if="output.mode !== 'ndi'"
+                    v-if="output.mode !== 'ndi' && output.mode !== 'sdi'"
                     v-model="output.muxer_options"
                     :label="t('config.muxerOptions')"
                     :hint="t('config.muxerOptionsHelp')"

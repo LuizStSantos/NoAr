@@ -178,7 +178,7 @@ mod tests {
     use crate::{db::handles::db_migrate, utils::config::OutputMode};
 
     #[tokio::test]
-    async fn existing_channels_get_an_inactive_ndi_output() {
+    async fn existing_channels_get_inactive_ndi_and_sdi_outputs() {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
@@ -194,12 +194,20 @@ mod tests {
         assert_eq!(ndi.len(), 1, "{outputs:?}");
         assert_eq!(ndi[0].stream_url, "NoAr");
         assert_eq!(ndi[0].video_codec.as_deref(), Some("libx264"));
+        let sdi: Vec<_> = outputs
+            .iter()
+            .filter(|output| output.name == "sdi")
+            .collect();
+        assert_eq!(sdi.len(), 1, "{outputs:?}");
+        assert_eq!(sdi[0].stream_url, "decklink://0?mode=1080i5994");
+        assert_eq!((sdi[0].width, sdi[0].height), (1920, 1080));
         let active: Vec<_> =
             sqlx::query_scalar::<_, String>("SELECT name FROM config_output WHERE active = 1")
                 .fetch_all(&pool)
                 .await
                 .unwrap();
         assert!(!active.contains(&"ndi".to_string()), "{active:?}");
+        assert!(!active.contains(&"sdi".to_string()), "{active:?}");
     }
 
     #[tokio::test]

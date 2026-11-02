@@ -77,6 +77,25 @@ pub struct PlayoutCodecOptions {
     pub ndi_unavailable: Option<String>,
 }
 
+/// A video card port on this server.
+#[derive(Debug, Serialize)]
+pub struct VideoDeviceInfo {
+    /// `decklink` or `v4l2`.
+    pub kind: &'static str,
+    /// `input` or `output`.
+    pub direction: &'static str,
+    pub name: String,
+    /// `decklink://N` or `v4l2:///dev/videoN`.
+    pub address: String,
+}
+
+/// Video card ports found on this server and the DeckLink modes NoAr plays.
+#[derive(Debug, Serialize)]
+pub struct VideoDevices {
+    pub devices: Vec<VideoDeviceInfo>,
+    pub modes: Vec<&'static str>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct PlayoutConfigUpdate {
     pub requires_restart: bool,
@@ -410,7 +429,7 @@ pub async fn update_playout_config(
     let is_hls = data.output.mode == OutputMode::HLS;
     let is_encoded = matches!(
         data.output.mode,
-        OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi
+        OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi | OutputMode::Sdi
     );
     let video_options = serde_json::to_string(&data.output.video_options)
         .map_err(|error| ServiceError::BadRequest(error.to_string()))?;
@@ -775,6 +794,47 @@ pub async fn get_playout_codecs(
         custom: custom_output_codec_options(),
         recording: output_codec_options(noar_engine::FfmpegOutputTarget::Matroska),
         ndi_unavailable: noar_engine::ndi_unavailable_reason().map(str::to_string),
+    }))
+}
+
+/// **Video cards**
+///
+/// DeckLink inputs/outputs and V4L2 capture devices this server sees, and the
+/// DeckLink modes. An empty list means no card or driver visible to NoAr.
+///
+/// ```BASH
+/// curl -X GET http://127.0.0.1:8787/api/playout/devices/1 -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn get_video_devices(
+    AxumPath(id): AxumPath<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<VideoDevices>, ServiceError> {
+    ensure_any_authority(
+        &details,
+        &[&Role::GlobalAdmin, &Role::ChannelAdmin, &Role::User],
+    )?;
+    user.ensure_channel_or_admin(id)?;
+
+    let devices = tokio::task::spawn_blocking(noar_engine::discover_video_devices)
+        .await
+        .map_err(|error| ServiceError::Conflict(error.to_string()))?
+        .map_err(|error| ServiceError::Conflict(format!("{error:#}")))?;
+
+    Ok(Json(VideoDevices {
+        devices: devices
+            .into_iter()
+            .map(|device| VideoDeviceInfo {
+                kind: device.kind,
+                direction: device.direction,
+                name: device.name,
+                address: device.address,
+            })
+            .collect(),
+        modes: noar_engine::VIDEO_MODES
+            .iter()
+            .map(|mode| mode.name)
+            .collect(),
     }))
 }
 

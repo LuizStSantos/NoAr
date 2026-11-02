@@ -58,6 +58,10 @@ pub use output::scte35::{
     BreakInfo, BreakSource, BreakState, ClipBreaks, DEFAULT_SCTE35_PID,
     DEFAULT_SCTE35_PREROLL_SECONDS, Scte35Config, SpliceControl, SpliceError, SpliceStatus,
 };
+pub use output::sdi::{
+    DeckLinkAddress, V4l2Address, VIDEO_MODES, VideoDevice, VideoMode, discover_video_devices,
+    parse_decklink, parse_v4l2, video_mode,
+};
 use output::{FrameOutput, Output, PlaybackStopped};
 pub use playback_control::{NavigationBlocked, PlaybackControl, PlaylistNavigation};
 use playout::{PlaybackRestart, PlaybackSkipped, Timeline, write_fallback};
@@ -287,6 +291,16 @@ impl AsyncPlayout {
         playout.hls_health = Some(hls_health);
 
         Ok(playout)
+    }
+
+    /// Plays the program on a DeckLink card (`decklink://N?mode=…`).
+    pub async fn open_sdi(
+        address: impl Into<String>,
+        config: OutputConfig,
+        fallback_duration: f64,
+    ) -> Result<Self> {
+        let address = address.into();
+        Self::open_with(move || Playout::open_sdi(&address, config, fallback_duration)).await
     }
 
     /// Publishes the program as the NDI source `name`.
@@ -589,6 +603,14 @@ impl Playout {
         Self::validate_fallback_duration(fallback_duration)?;
         init_media(&config)?;
         let output = Output::open_stream(output_url, &config)?;
+
+        Ok(Self::with_output(config, output, fallback_duration))
+    }
+
+    pub fn open_sdi(address: &str, config: OutputConfig, fallback_duration: f64) -> Result<Self> {
+        Self::validate_fallback_duration(fallback_duration)?;
+        init_media(&config)?;
+        let output = Output::open_sdi(address, &config)?;
 
         Ok(Self::with_output(config, output, fallback_duration))
     }

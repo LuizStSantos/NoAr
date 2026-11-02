@@ -106,21 +106,27 @@ impl Source {
         );
 
         let ndi = ndi_source_name(path)?;
-        let (uri, protocol_options) = match &ndi {
-            Some(_) => {
-                ensure!(
-                    protocol_options.is_empty(),
-                    "NDI sources take no protocol options"
-                );
-                (String::new(), BTreeMap::new())
-            }
-            None => source_uri(path, protocol_options)?,
+        let card = CardSource::parse(path)?;
+        let (uri, protocol_options) = if ndi.is_some() || card.is_some() {
+            ensure!(
+                protocol_options.is_empty(),
+                "NDI and video card sources take no protocol options"
+            );
+            (String::new(), BTreeMap::new())
+        } else {
+            source_uri(path, protocol_options)?
         };
         let pipeline = gst::Pipeline::new();
         // An NDI source is received and split into raw audio and video by the
         // NDI elements; everything else is decoded by uridecodebin3. Both
         // hand the same raw pads to the normalization below.
+        let card_bin = card.as_ref().map(|_| gst::Bin::new());
         let decoder = match &ndi {
+            _ if card_bin.is_some() => {
+                let bin = card_bin.clone().context("video card source missing")?;
+                pipeline.add(&bin)?;
+                bin.upcast()
+            }
             Some(name) => {
                 if let Some(reason) = crate::output::ndi::ndi_unavailable_reason() {
                     bail!("NDI input is unavailable: {reason}");
@@ -216,6 +222,12 @@ impl Source {
         });
         let source_complete = Arc::clone(&complete);
         decoder.connect_no_more_pads(move |_| source_complete.store(true, Ordering::Release));
+        // A card's pads exist from the start: exposing them now attaches them
+        // through the same pad-added path as decoded streams.
+        if let (Some(card), Some(bin)) = (&card, &card_bin) {
+            card.build(bin)?;
+            complete.store(true, Ordering::Release);
+        }
         if ndi.is_none() {
             let options = protocol_options;
             let options_error = Arc::clone(&error);
@@ -268,8 +280,9 @@ impl Source {
             });
             // NDI announces audio only when it arrives; a picture-only
             // source is accepted after a short wait.
-            let ndi_video_only =
-                ndi.is_some() && info.has_video && opened_at.elapsed() >= NDI_AUDIO_GRACE;
+            let ndi_video_only = (ndi.is_some() || card.is_some())
+                && info.has_video
+                && opened_at.elapsed() >= NDI_AUDIO_GRACE;
             if (info.has_video && info.has_audio)
                 || ndi_video_only
                 || selected_ready
@@ -469,6 +482,76 @@ impl Source {
             }
         }
 
+        Ok(())
+    }
+}
+
+/// A baseband video card input: DeckLink or V4L2 capture.
+enum CardSource {
+    DeckLink(crate::output::sdi::DeckLinkAddress),
+    V4l2(crate::output::sdi::V4l2Address),
+}
+
+impl CardSource {
+    fn parse(path: &str) -> Result<Option<Self>> {
+        if let Some(address) =
+            crate::output::sdi::parse_decklink(path, false).map_err(anyhow::Error::msg)?
+        {
+            return Ok(Some(Self::DeckLink(address)));
+        }
+        Ok(crate::output::sdi::parse_v4l2(path)
+            .map_err(anyhow::Error::msg)?
+            .map(Self::V4l2))
+    }
+
+    /// Builds the capture elements in `bin` and exposes a `video` and, when
+    /// the card has audio, an `audio` pad.
+    fn build(&self, bin: &gst::Bin) -> Result<()> {
+        use crate::output::sdi::make;
+
+        let (video_out, audio_out) = match self {
+            Self::DeckLink(address) => {
+                let video = make("decklinkvideosrc")?;
+                video.set_property("device-number", address.device as i32);
+                video.set_property_from_str("mode", address.mode.map_or("auto", |mode| mode.name));
+                video.set_property_from_str("connection", &address.connection);
+                // Interlaced SDI is shown as whole frames.
+                let deinterlace = make("deinterlace")?;
+                let audio = make("decklinkaudiosrc")?;
+                audio.set_property("device-number", address.device as i32);
+                audio.set_property("channels", 2_i32);
+                bin.add_many([&video, &deinterlace, &audio])?;
+                video.link(&deinterlace)?;
+                (deinterlace, Some(audio))
+            }
+            Self::V4l2(address) => {
+                let video = make("v4l2src")?;
+                video.set_property("device", address.device.as_str());
+                let deinterlace = make("deinterlace")?;
+                bin.add_many([&video, &deinterlace])?;
+                video.link(&deinterlace)?;
+                let audio = match &address.audio {
+                    Some(device) => {
+                        let alsa = make("alsasrc")?;
+                        alsa.set_property("device", device.as_str());
+                        bin.add(&alsa)?;
+                        Some(alsa)
+                    }
+                    None => None,
+                };
+                (deinterlace, audio)
+            }
+        };
+        for (name, element) in [("video", Some(video_out)), ("audio", audio_out)] {
+            let Some(element) = element else { continue };
+            let target = element
+                .static_pad("src")
+                .with_context(|| format!("{name} capture has no output"))?;
+            let ghost = gst::GhostPad::builder_with_target(&target)?
+                .name(name)
+                .build();
+            bin.add_pad(&ghost)?;
+        }
         Ok(())
     }
 }

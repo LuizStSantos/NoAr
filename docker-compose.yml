@@ -28,6 +28,13 @@ services:
       - ./data:/data
       # NDI output (see docs/ndi.md): the NDI Runtime installed on the server.
       # - /opt/ndi:/opt/ndi:ro
+      # DeckLink cards (see docs/video-cards.md): the Desktop Video API.
+      # - /usr/lib/libDeckLinkAPI.so:/usr/lib/libDeckLinkAPI.so:ro
+    # Video cards (see docs/video-cards.md).
+    # devices:
+    #   - /dev/blackmagic:/dev/blackmagic
+    #   - /dev/video0:/dev/video0
+    #   - /dev/snd:/dev/snd
     # NDI receivers discover sources through mDNS on the server's network;
     # with host networking the ports below are not needed.
     # network_mode: host

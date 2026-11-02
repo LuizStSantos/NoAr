@@ -92,6 +92,7 @@ pub fn routes() -> Router<AppState> {
                 .route("/playout/config/{id}/keys/{kind}", post(update_remote_key))
                 .route("/playout/outputs/{id}", get(get_playout_outputs))
                 .route("/playout/codecs/{id}", get(get_playout_codecs))
+                .route("/playout/devices/{id}", get(get_video_devices))
                 .route("/program/{id}", get(get_program))
                 .route("/report/{id}", get(get_report))
                 .route(

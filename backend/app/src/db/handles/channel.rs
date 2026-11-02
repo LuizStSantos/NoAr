@@ -169,6 +169,7 @@ pub async fn create_channel_records(
         models::Output::new(channel.id, OutputMode::Stream),
         models::Output::new(channel.id, OutputMode::Desktop),
         models::Output::new(channel.id, OutputMode::Ndi),
+        models::Output::new(channel.id, OutputMode::Sdi),
     ];
 
     let config_id = handles::insert_configuration(&mut transaction, channel.id).await?;

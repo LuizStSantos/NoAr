@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { LIVES_FOLDER, emptyFields, imageUrl, saveSheet, storageJoin, uploadArtwork } from '@/composables/storage'
+import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { useSchedule } from '@/stores/schedule'
 
@@ -22,10 +23,12 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const configStore = useConfig()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
 
-type Protocol = 'SRT' | 'RTMP' | 'HLS' | 'UDP' | 'NDI'
+/** `SDI` is a video card on the server: Blackmagic DeckLink or a V4L2 capture card. */
+type Protocol = 'SRT' | 'RTMP' | 'HLS' | 'UDP' | 'NDI' | 'SDI'
 
 /** The two guide images: the poster (upright) and the wide image (fanart). */
 type GuideImage = 'poster' | 'backdrop'
@@ -36,6 +39,7 @@ const PLACEHOLDERS: Record<Protocol, string> = {
     HLS: 'https://cdn.example.org/live/index.m3u8',
     UDP: 'udp://239.10.10.10:5000',
     NDI: 'ndi://STUDIO (Camera 1)',
+    SDI: 'decklink://0?mode=auto&connection=sdi',
 }
 const RATINGS = ['Livre', '10', '12', '14', '16', '18']
 const GUIDE_IMAGES: GuideImage[] = ['poster', 'backdrop']
@@ -61,7 +65,39 @@ const safeName = computed(() => name.value.trim().replace(/[\\/:*?"<>|]/g, ''))
 const ratingOptions = computed(() => (RATINGS.includes(rating.value) ? RATINGS : [...RATINGS, rating.value]))
 
 function protocolOf(value?: string): Protocol {
-    return value === 'RTMP' || value === 'HLS' || value === 'UDP' || value === 'NDI' ? value : 'SRT'
+    if (value === 'V4L2') {
+        return 'SDI'
+    }
+
+    return value === 'RTMP' || value === 'HLS' || value === 'UDP' || value === 'NDI' || value === 'SDI'
+        ? value
+        : 'SRT'
+}
+
+/** Video card inputs on the server, to pick from instead of typing. */
+const cardInputs = ref<VideoDevice[] | null>(null)
+const searchingCards = ref(false)
+const cardError = ref('')
+
+async function findCards() {
+    searchingCards.value = true
+    cardError.value = ''
+
+    try {
+        const found = await configStore.getVideoDevices()
+
+        cardInputs.value = found.devices.filter((device) => device.direction === 'input')
+    } catch (err) {
+        cardInputs.value = null
+        cardError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+        searchingCards.value = false
+    }
+}
+
+/** A DeckLink input detects the incoming mode unless one is set. */
+function pickCard(device: VideoDevice) {
+    url.value = device.kind === 'decklink' ? `${device.address}?mode=auto&connection=auto` : device.address
 }
 
 /** NDI sources found on the network, to pick from instead of typing. */
@@ -97,6 +133,8 @@ watch(url, (value) => {
         protocol.value = 'UDP'
     } else if (scheme === 'ndi') {
         protocol.value = 'NDI'
+    } else if (scheme === 'decklink' || scheme === 'v4l2') {
+        protocol.value = 'SDI'
     }
 })
 
@@ -265,7 +303,7 @@ defineExpose({ check, submit })
         <div class="text-xs text-muted">{{ t('schedule.signal') }}</div>
         <div class="flex w-fit" role="group" :aria-label="t('schedule.protocol')">
             <button
-                v-for="option in ['SRT', 'RTMP', 'HLS', 'UDP', 'NDI'] as Protocol[]"
+                v-for="option in ['SRT', 'RTMP', 'HLS', 'UDP', 'NDI', 'SDI'] as Protocol[]"
                 :key="option"
                 type="button"
                 class="border min-h-9 px-4 cursor-pointer first:rounded-s-field last:rounded-e-field -ms-px first:ms-0"
@@ -277,7 +315,7 @@ defineExpose({ check, submit })
                 :aria-pressed="protocol === option"
                 @click="protocol = option"
             >
-                {{ option }}
+                {{ option === 'SDI' ? t('schedule.cardTab') : option }}
             </button>
         </div>
         <div class="flex gap-2">
@@ -297,9 +335,33 @@ defineExpose({ check, submit })
                 <span v-if="searchingNdi" class="loading loading-spinner loading-xs" />
                 {{ t('schedule.findNdi') }}
             </button>
+            <button
+                v-if="protocol === 'SDI'"
+                type="button"
+                class="btn-quiet"
+                :disabled="searchingCards"
+                @click="findCards"
+            >
+                <span v-if="searchingCards" class="loading loading-spinner loading-xs" />
+                {{ t('schedule.findCards') }}
+            </button>
             <button type="button" class="btn-quiet" :disabled="testing" @click="testSignal">
                 <span v-if="testing" class="loading loading-spinner loading-xs" />
                 {{ t('schedule.testSignal') }}
+            </button>
+        </div>
+        <div v-if="protocol === 'SDI' && (cardInputs || cardError)" class="flex flex-wrap gap-2" role="status">
+            <span v-if="cardError" class="text-sm text-error">{{ cardError }}</span>
+            <span v-else-if="!cardInputs?.length" class="text-sm text-muted">{{ t('schedule.noCards') }}</span>
+            <button
+                v-for="device in cardInputs ?? []"
+                :key="device.address"
+                type="button"
+                class="btn-quiet min-h-8 text-[13px]"
+                :aria-pressed="url.startsWith(device.address)"
+                @click="pickCard(device)"
+            >
+                {{ device.name }} <span class="font-mono text-muted">{{ device.address }}</span>
             </button>
         </div>
         <div v-if="protocol === 'NDI' && (ndiSources || ndiError)" class="flex flex-wrap gap-2" role="status">

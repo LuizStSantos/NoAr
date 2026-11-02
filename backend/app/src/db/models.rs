@@ -477,13 +477,18 @@ impl Output {
             OutputMode::Stream => "rtmp://127.0.0.1/live/stream".to_string(),
             // NDI keeps its source name here.
             OutputMode::Ndi => "NoAr".to_string(),
+            // The card and mode: `decklink://<device>?mode=<mode>`.
+            OutputMode::Sdi => "decklink://0?mode=1080i5994".to_string(),
             _ => Default::default(),
         };
         let hls_playlist_name = (mode == OutputMode::HLS).then(|| "stream".to_string());
         let hls_segment_duration = (mode == OutputMode::HLS).then_some(6);
         let hls_list_size = (mode == OutputMode::HLS).then_some(600);
         // NDI encodes the Player preview with these settings.
-        let encoded = matches!(mode, OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi);
+        let encoded = matches!(
+            mode,
+            OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi | OutputMode::Sdi
+        );
 
         Self {
             id: 0,
@@ -497,9 +502,10 @@ impl Output {
             hls_segment_duration,
             hls_list_size,
             desktop_fullscreen: false,
-            width: 1280,
-            height: 720,
-            fps: 25.0,
+            // An SDI output starts in its default card mode, 1080i59.94.
+            width: if mode == OutputMode::Sdi { 1920 } else { 1280 },
+            height: if mode == OutputMode::Sdi { 1080 } else { 720 },
+            fps: if mode == OutputMode::Sdi { 29.97 } else { 25.0 },
             video_codec: encoded.then(|| "libx264".to_string()),
             video_options: if encoded {
                 "{\"preset\":\"faster\",\"rate_control\":\"crf\",\"quality\":\"23\",\"maxrate\":\"2400\"}".to_string()

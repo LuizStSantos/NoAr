@@ -723,6 +723,13 @@ async fn open_playout(
                 .await
                 .map_err(engine_error)
         }
+        OutputMode::Sdi => AsyncPlayout::open_sdi(
+            config.output.stream_url.trim(),
+            output_config,
+            fallback_duration,
+        )
+        .await
+        .map_err(engine_error),
         OutputMode::Ndi => AsyncPlayout::open_ndi(
             config.output.stream_url.trim(),
             output_config,

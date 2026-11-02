@@ -181,6 +181,17 @@ export const useConfig = defineStore('config', {
                 })
         },
 
+        /** Video card ports on the server and the DeckLink modes. */
+        async getVideoDevices(): Promise<VideoDevices> {
+            const authStore = useAuth()
+            const id = this.channels[this.i]?.id
+
+            return authFetch<VideoDevices>(`/api/playout/devices/${id}`, {
+                method: 'GET',
+                headers: authStore.authHeader,
+            })
+        },
+
         async setPlayoutConfig(obj: any) {
             const { timeToSeconds } = stringFormatter()
             const authStore = useAuth()

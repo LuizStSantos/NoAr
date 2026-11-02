@@ -81,6 +81,21 @@ declare global {
         audio: CodecOption[]
     }
 
+    /** A video card port on the server. */
+    interface VideoDevice {
+        kind: 'decklink' | 'v4l2'
+        direction: 'input' | 'output'
+        name: string
+        /** `decklink://N` or `v4l2:///dev/videoN`. */
+        address: string
+    }
+
+    interface VideoDevices {
+        devices: VideoDevice[]
+        /** DeckLink mode names, such as `1080i5994`. */
+        modes: string[]
+    }
+
     interface PlayoutCodecOptions {
         hls: OutputCodecOptions
         rtmp: OutputCodecOptions

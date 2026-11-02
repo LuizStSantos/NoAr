@@ -22,6 +22,13 @@ one is tagged.
   the Scheduler, a *Find NDI sources* list from network discovery
   (`GET /api/schedule/{id}/lives/ndi`) and the signal test. Picture-only
   sources are accepted and get silence.
+- Video cards: play the program on a Blackmagic DeckLink card
+  (*Settings › Output › SDI*, any DeckLink/UltraStudio sub-device, NTSC/PAL
+  to 2160p modes, including 1080i59.94, 1080p29.97 and 1080p30), and take
+  DeckLink or V4L2 capture cards as lives (`decklink://`, `v4l2://`).
+  `GET /api/playout/devices/{id}` lists the cards the server sees. Migration
+  `00025` adds an inactive SDI output to every channel. See
+  `docs/video-cards.md`.
 
 - A disposable actual-NoAr smoke harness verifies scheduled live transitions,
   source-loss recovery, decoded markers, timestamps, receiver progress and

@@ -79,13 +79,23 @@ pub fn validate_live_url(url: &str) -> Result<String, String> {
         return Ok(format!("ndi://{name}"));
     }
 
+    // Video cards: a DeckLink input or a V4L2 capture device on this server.
+    if scheme == "decklink" {
+        noar_engine::parse_decklink(url, false)?;
+        return Ok(url.to_string());
+    }
+    if scheme == "v4l2" {
+        noar_engine::parse_v4l2(url)?;
+        return Ok(url.to_string());
+    }
+
     if url.len() > MAX_URL_LENGTH || url.chars().any(char::is_whitespace) {
         return Err("the address must be one line without spaces".to_string());
     }
 
     if !ALLOWED_SCHEMES.contains(&scheme.as_str()) {
         return Err(format!(
-            "unsupported address '{url}'; use srt://, rtmp://, rtmps://, http(s):// (HLS), udp://, rtsp://, rist:// or ndi://"
+            "unsupported address '{url}'; use srt://, rtmp://, rtmps://, http(s):// (HLS), udp://, rtsp://, rist://, ndi://, decklink:// or v4l2://"
         ));
     }
 
@@ -107,6 +117,8 @@ pub fn live_protocol(url: &str) -> &'static str {
         "rtsp" => "RTSP",
         "rist" => "RIST",
         "ndi" => "NDI",
+        "decklink" => "SDI",
+        "v4l2" => "V4L2",
         _ => "?",
     }
 }
@@ -390,6 +402,22 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn accepts_video_card_inputs() {
+        assert_eq!(
+            validate_live_url(" decklink://1?mode=1080i5994&connection=sdi ").unwrap(),
+            "decklink://1?mode=1080i5994&connection=sdi"
+        );
+        assert_eq!(live_protocol("decklink://1"), "SDI");
+        assert!(validate_live_url("decklink://x").is_err());
+        assert_eq!(
+            validate_live_url("v4l2:///dev/video0?audio=hw:1,0").unwrap(),
+            "v4l2:///dev/video0?audio=hw:1,0"
+        );
+        assert_eq!(live_protocol("v4l2:///dev/video0"), "V4L2");
+        assert!(validate_live_url("v4l2:///etc/passwd").is_err());
     }
 
     #[test]
