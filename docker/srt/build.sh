@@ -8,7 +8,10 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 
 version=1.5.5
 checksum=c3518bc43a71b5289032395b2db4c3e09e73d78b54247d56c14553a503b491cf
-curl --fail --location --retry 3 \
+# Slow or unstable links to GitHub cut HTTP/2 streams (curl error 92), which
+# plain --retry does not cover; the checksum below still verifies the file.
+curl --fail --location --http1.1 --connect-timeout 30 \
+    --retry 6 --retry-delay 5 --retry-all-errors \
     "https://codeload.github.com/Haivision/srt/tar.gz/refs/tags/v${version}" \
     -o "$build_dir/srt.tar.gz"
 printf '%s  %s\n' "$checksum" "$build_dir/srt.tar.gz" | sha256sum --check -
