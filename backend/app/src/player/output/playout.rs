@@ -800,6 +800,7 @@ fn engine_output_config(
                 config.output.audio_options.clone(),
                 u64::from(config.output.audio_bitrate) * 1_000,
             )
+            .with_output_sample_rate(Some(config.output.audio_sample_rate))
             .with_protocol_options(config.output.protocol_options.clone())
             .with_muxer_options(config.output.muxer_options.clone())
             .with_metadata_options(config.output.metadata_options.clone())

@@ -534,23 +534,25 @@ impl Encoder {
             video_parser.set_property("config-interval", -1_i32);
         }
         let audio_converter = make("audioconvert")?;
+        // Passthrough when the output rate equals the engine rate.
+        let audio_resampler = make("audioresample")?;
         let audio_caps = make("capsfilter")?;
+        let mut encoder_caps = gst::Caps::builder("audio/x-raw")
+            .field("rate", cfg.encoded_sample_rate() as i32)
+            .field("channels", 2_i32);
         if matches!(cfg.audio_codec.as_str(), "pcm_s16le" | "pcm_f32le") {
-            audio_caps.set_property(
-                "caps",
-                gst::Caps::builder("audio/x-raw")
-                    .field(
-                        "format",
-                        if cfg.audio_codec == "pcm_s16le" {
-                            "S16LE"
-                        } else {
-                            "F32LE"
-                        },
-                    )
-                    .field("layout", "interleaved")
-                    .build(),
-            );
+            encoder_caps = encoder_caps
+                .field(
+                    "format",
+                    if cfg.audio_codec == "pcm_s16le" {
+                        "S16LE"
+                    } else {
+                        "F32LE"
+                    },
+                )
+                .field("layout", "interleaved");
         }
+        audio_caps.set_property("caps", encoder_caps.build());
         let audio_parser = pipeline::parser(&audio_encoder, false)?;
         let video_sink = AppSink::builder()
             .sync(false)
@@ -571,6 +573,7 @@ impl Encoder {
             &video_encoder,
             &video_parser,
             &audio_converter,
+            &audio_resampler,
             &audio_caps,
             &audio_encoder,
             &audio_parser,
@@ -589,6 +592,7 @@ impl Encoder {
         gst::Element::link_many([
             audio.upcast_ref(),
             &audio_converter,
+            &audio_resampler,
             &audio_caps,
             &audio_encoder,
             &audio_parser,
@@ -748,6 +752,7 @@ impl EncodedOutput {
             config.audio_codec = settings.audio_codec.clone();
             config.audio_options = settings.audio_options.clone();
             config.audio_bitrate = settings.audio_bitrate;
+            config.output_sample_rate = None;
         }
         Self::open(
             &recording.path,
@@ -934,6 +939,7 @@ impl EncodedOutput {
                         config.audio_codec = settings.audio_codec.clone();
                         config.audio_options = settings.audio_options.clone();
                         config.audio_bitrate = settings.audio_bitrate;
+                        config.output_sample_rate = None;
                         match Encoder::new(&config, cfg.width, cfg.height, true, None) {
                             Ok(encoder) => {
                                 encoder.attach(destination);
@@ -1358,6 +1364,29 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn output_audio_is_resampled_to_the_selected_rate_on_the_same_timeline() {
+        let directory = directory("resampled");
+        let path = directory.join("channel.ts");
+        let cfg = OutputConfig::new(34, 26, 25, 48_000).with_output_sample_rate(Some(44_100));
+        let mut output =
+            EncodedOutput::open(path.to_str().unwrap(), &cfg, EncodedFormat::Auto).unwrap();
+        encode_seconds(&mut output, 34, 26, 2);
+        output.finish().unwrap();
+        let result = probe(&path);
+        assert!(result.contains("sample_rate=44100"), "{result}");
+        let starts: Vec<f64> = result
+            .lines()
+            .filter_map(|line| line.strip_prefix("start_time=")?.parse().ok())
+            .collect();
+        assert!(starts.len() >= 2);
+        assert!(
+            (starts[0] - starts[1]).abs() < 0.1,
+            "resampling moved audio off the video timeline: {starts:?}"
+        );
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

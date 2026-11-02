@@ -2066,6 +2066,7 @@ export default {
             variantHint: 'Taxas como 2500k. A versão principal acima continua sendo a primeira.',
             audioTitle: 'Áudio da saída',
             bitrate: 'Taxa de bits',
+            sampleRate: 'Taxa de amostragem',
             advanced: 'Avançado: opções do GStreamer',
         },
         playlist: {

@@ -1207,6 +1207,10 @@ pub struct Output {
     pub audio_options: BTreeMap<String, String>,
     #[serde(default = "default_audio_bitrate")]
     pub audio_bitrate: u32,
+    /// Encoded output audio sample rate in Hz (32000, 44100 or 48000). The
+    /// engine processes at 48 kHz and resamples just before the encoder.
+    #[serde(default = "default_output_audio_sample_rate")]
+    pub audio_sample_rate: u32,
     /// Adaptive HLS renditions, one per entry, each formatted as
     /// `NAME:WIDTHxHEIGHT:VIDEO_BITRATE[:AUDIO_BITRATE]` (e.g.
     /// `high:1920x1080:5000k:192k`). Only relevant when `mode == HLS`;
@@ -1234,6 +1238,10 @@ fn default_video_codec() -> String {
 
 fn default_audio_codec() -> String {
     "aac".to_string()
+}
+
+const fn default_output_audio_sample_rate() -> u32 {
+    ENGINE_AUDIO_SAMPLE_RATE
 }
 
 const fn default_audio_bitrate() -> u32 {
@@ -1292,6 +1300,10 @@ impl Output {
                 .audio_bitrate
                 .and_then(|value| u32::try_from(value).ok())
                 .unwrap_or_else(default_audio_bitrate),
+            audio_sample_rate: output
+                .audio_sample_rate
+                .and_then(|value| u32::try_from(value).ok())
+                .unwrap_or_else(default_output_audio_sample_rate),
             hls_variants: output
                 .hls_variants
                 .split(';')
@@ -1348,7 +1360,7 @@ impl Output {
             noar_engine::validate_audio_options(
                 &self.audio_codec,
                 &self.audio_options,
-                ENGINE_AUDIO_SAMPLE_RATE,
+                self.audio_sample_rate,
                 variant.audio_bitrate,
             )
             .map_err(|error| format!("HLS variant {:?}: {error}", variant.name))?;
@@ -1450,10 +1462,16 @@ impl Output {
                 ));
             }
             noar_engine::validate_video_options(&self.video_codec, &self.video_options)?;
+            if !noar_engine::OUTPUT_AUDIO_SAMPLE_RATES.contains(&self.audio_sample_rate) {
+                return Err(format!(
+                    "audio sample rate must be one of {:?} Hz",
+                    noar_engine::OUTPUT_AUDIO_SAMPLE_RATES
+                ));
+            }
             noar_engine::validate_audio_options(
                 &self.audio_codec,
                 &self.audio_options,
-                ENGINE_AUDIO_SAMPLE_RATE,
+                self.audio_sample_rate,
                 u64::from(self.audio_bitrate) * 1_000,
             )?;
             if noar_engine::audio_codec_uses_bitrate(&self.audio_codec) && self.audio_bitrate == 0 {
@@ -1745,8 +1763,18 @@ mod output_tests {
             audio_codec: "aac".to_string(),
             audio_options: BTreeMap::new(),
             audio_bitrate: 128,
+            audio_sample_rate: 48_000,
             hls_variants: Vec::new(),
         }
+    }
+
+    #[test]
+    fn output_audio_sample_rate_is_limited_to_supported_rates() {
+        let mut output = output(OutputMode::Stream);
+        output.audio_sample_rate = 44_100;
+        assert!(output.validate().is_ok());
+        output.audio_sample_rate = 22_050;
+        assert!(output.validate().unwrap_err().contains("sample rate"));
     }
 
     #[test]

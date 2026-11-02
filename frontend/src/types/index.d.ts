@@ -42,6 +42,7 @@ declare global {
         audio_codec: string | null
         audio_options: string
         audio_bitrate: number | null
+        audio_sample_rate: number | null
         channel_id: number
     }
 

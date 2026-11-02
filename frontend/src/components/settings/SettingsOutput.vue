@@ -11,7 +11,7 @@ import UnitInput from '@/components/settings/UnitInput.vue'
 import { useCodecLabels } from '@/composables/codecs'
 import { usePlayoutPage } from '@/composables/settingsPage'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { ready, changes, alsoSaves, restarts, saveLabel, save, discard, settings, configStore } =
     usePlayoutPage('output')
 const { copy, copied } = useClipboard()
@@ -88,6 +88,7 @@ const outputId = computed({
             audio_codec: selected.audio_codec ?? 'aac',
             audio_options: parseOptions(selected.audio_options),
             audio_bitrate: selected.audio_bitrate ?? 128,
+            audio_sample_rate: selected.audio_sample_rate ?? 48000,
             hls_variants: (selected.hls_variants ?? '')
                 .split(';')
                 .map((variant) => variant.trim())
@@ -150,6 +151,9 @@ const codecOptions = computed<OutputCodecOptions>(() =>
 const videoSettings = computed(
     () => codecOptions.value.video.find((codec) => codec.name === output.value.video_codec)?.settings ?? [],
 )
+// The engine processes at 48 kHz; the output resamples just before the encoder.
+const audioSampleRates = [32000, 44100, 48000]
+
 const audioUsesBitrate = computed(
     () => codecOptions.value.audio.find((codec) => codec.name === output.value.audio_codec)?.uses_bitrate ?? true,
 )
@@ -542,6 +546,14 @@ const showAdvanced = ref(false)
                 <label v-if="audioUsesBitrate" class="field-label">
                     {{ t('settings.output.bitrate') }}
                     <UnitInput v-model.number="output.audio_bitrate" unit="kb/s" type="number" min="16" />
+                </label>
+                <label class="field-label">
+                    {{ t('settings.output.sampleRate') }}
+                    <select v-model.number="output.audio_sample_rate" class="field-input">
+                        <option v-for="rate in audioSampleRates" :key="rate" :value="rate">
+                            {{ (rate / 1000).toLocaleString(locale, { maximumFractionDigits: 1 }) }} kHz
+                        </option>
+                    </select>
                 </label>
             </div>
         </SectionCard>

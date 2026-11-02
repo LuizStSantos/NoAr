@@ -1,6 +1,6 @@
 # GStreamer integration checkpoint
 
-Branch: `prototype/gstreamer-continuity`. Status: **WORK IN PROGRESS**.
+Branch: `prototype/gstreamer-continuity` (developed on `claude/branch-review-opz967`). Status: **WORK IN PROGRESS**.
 
 This branch is for development and isolated tests. It is not a release or an
 on-air readiness approval. No version bump, release, production deployment or
@@ -8,6 +8,39 @@ main-branch merge is part of this checkpoint.
 
 To build this GitHub branch on a separate Docker test server and open the real
 NoAr interface, follow [Test the GStreamer branch from GitHub](gstreamer-testing.md).
+
+## SRT hostname resolution crash (#33)
+
+The native SRT object resolves URL hostnames through GIO's threaded resolver
+with the element's reusable `GCancellable`. A state change cancels and later
+resets it; when the resolver's cancellation source is dispatched after the
+reset, GLib aborts (`gthreadedresolver.c:1487: cancelled_cb`). A saved output
+URL therefore crashed NoAr on every start.
+
+**Reproduced** in a Debian trixie GStreamer 1.26.2 container with 300 rapid
+`PLAYING`/`NULL` cycles per case. With a hostname, `srtsink` aborted (SIGABRT,
+the reported message) and `uridecodebin3`/`srtsrc` crashed (SIGSEGV). The same
+cases with an IP literal, and RTMP (`rtmp2sink`, input), UDP (`udpsink`,
+input) and HLS input with either a hostname or an IP literal, survived all
+cycles.
+
+NoAr now resolves SRT hostnames itself, bounded by the transport timeout (at
+most five seconds), and passes an IP literal to `srtsink`/`srtsrc`, so the
+plugin never calls the resolver. A failed or slow lookup is an ordinary
+connection error that the output link retries. SRT `localaddress` must be an
+IP address for the same reason. Hostname changes are picked up on every
+reconnect. Not verified: the operator's original external server and a full
+integrated restart with that saved URL.
+
+## Output audio sample rate
+
+Encoded outputs select 32, 44.1 or 48 kHz (default 48 kHz, migration
+`00023`). The engine timeline, mixing, loudness and preview stay at 48 kHz;
+`audioresample` converts immediately before the encoder, so the managed `ar`
+option remains rejected. A focused test encodes 44.1 kHz MPEG-TS and checks
+the probed rate and audio/video start alignment. Recordings with their own
+encoding settings stay at 48 kHz; stream-copy recordings inherit the output
+rate.
 
 ## Audio-quality fix: operator confirmation
 

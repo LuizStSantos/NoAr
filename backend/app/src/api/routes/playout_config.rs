@@ -444,6 +444,7 @@ pub async fn update_playout_config(
         },
         (is_encoded && noar_engine::audio_codec_uses_bitrate(&data.output.audio_codec))
             .then_some(i64::from(data.output.audio_bitrate)),
+        is_encoded.then_some(i64::from(data.output.audio_sample_rate)),
     )
     .await?;
     handles::update_recording_on(&mut transaction, id, &data.recording).await?;

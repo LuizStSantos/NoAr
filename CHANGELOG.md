@@ -22,6 +22,10 @@ one is tagged.
 
 ### Changed
 
+- Encoded outputs can select a 32, 44.1 or 48 kHz audio sample rate
+  (migration `00023`, default 48 kHz). The engine keeps processing at 48 kHz
+  and resamples just before the audio encoder; recordings with their own
+  encoding settings stay at 48 kHz.
 - Use GStreamer as the single playout engine for decoding, normalization,
   encoding, muxing and media transports. FFmpeg frame structures remain the
   compositor/audio memory interface and FFmpeg tools remain available for tests.
@@ -38,6 +42,11 @@ one is tagged.
 
 ### Fixed
 
+- Resolve SRT hostnames in NoAr, bounded by a timeout, and hand GStreamer an
+  IP literal. The SRT plugin's own GIO lookup reused a cancellable that state
+  changes reset, which aborted (output) or crashed (input) the whole process
+  and, with the URL saved, on every restart (#33). SRT `localaddress` must be
+  an IP address.
 - Keep live audio/video interleaved when only one source track stalls; hold the
   picture or insert silence instead of allowing the output muxer to wait for
   the missing track. Preserve the pacing anchor across unchanged clip rates.

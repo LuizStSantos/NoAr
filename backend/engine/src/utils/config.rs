@@ -272,6 +272,10 @@ pub struct OutputConfig {
     pub audio_codec: String,
     pub audio_options: AudioOptions,
     pub audio_bitrate: u64,
+    /// Sample rate of the encoded output audio. `None` encodes at the
+    /// engine rate (`sample_rate`); otherwise the encoder input is
+    /// resampled, leaving the internal timeline and processing unchanged.
+    pub output_sample_rate: Option<u32>,
     pub ffmpeg_log_level: LogLevel,
     pub ingest_log_level: LogLevel,
     pub ffmpeg_ignore_lines: Vec<String>,
@@ -933,6 +937,10 @@ pub fn audio_codec_uses_bitrate(codec: &str) -> bool {
     !codec.starts_with("pcm_") && !matches!(codec, "alac" | "flac" | "truehd")
 }
 
+/// Output audio sample rates an operator can select. The engine processes at
+/// 48 kHz; these are produced by resampling just before the encoder.
+pub const OUTPUT_AUDIO_SAMPLE_RATES: &[u32] = &[32_000, 44_100, 48_000];
+
 const MANAGED_AUDIO_OPTIONS: &[&str] = &[
     "ab",
     "ac",
@@ -1271,6 +1279,7 @@ impl OutputConfig {
             audio_codec: "aac".to_string(),
             audio_options: AudioOptions::new(),
             audio_bitrate: 128_000,
+            output_sample_rate: None,
             ffmpeg_log_level: LogLevel::Warning,
             ingest_log_level: LogLevel::Warning,
             ffmpeg_ignore_lines: Vec::new(),
@@ -1385,6 +1394,17 @@ impl OutputConfig {
         self.audio_options = audio_options;
         self.audio_bitrate = audio_bitrate;
         self
+    }
+
+    /// Sets the encoded output's audio sample rate; `None` keeps the engine rate.
+    pub fn with_output_sample_rate(mut self, output_sample_rate: Option<u32>) -> Self {
+        self.output_sample_rate = output_sample_rate;
+        self
+    }
+
+    /// The sample rate the audio encoder receives.
+    pub fn encoded_sample_rate(&self) -> u32 {
+        self.output_sample_rate.unwrap_or(self.sample_rate)
     }
 
     pub fn with_muxer_options(mut self, muxer_options: BTreeMap<String, String>) -> Self {

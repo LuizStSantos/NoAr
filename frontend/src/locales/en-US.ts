@@ -2063,6 +2063,7 @@ export default {
             variantHint: 'Bitrates like 2500k. The main version above stays the first one.',
             audioTitle: 'Output audio',
             bitrate: 'Bitrate',
+            sampleRate: 'Sample rate',
             advanced: 'Advanced: GStreamer options',
         },
         playlist: {

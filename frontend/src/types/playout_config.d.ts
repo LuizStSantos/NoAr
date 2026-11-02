@@ -64,6 +64,11 @@ metadata_options: { [key in string]: string }, audio_codec: string,
  */
 audio_options: { [key in string]: string }, audio_bitrate: number, 
 /**
+ * Encoded output audio sample rate in Hz (32000, 44100 or 48000). The
+ * engine processes at 48 kHz and resamples just before the encoder.
+ */
+audio_sample_rate: number, 
+/**
  * Adaptive HLS renditions, one per entry, each formatted as
  * `NAME:WIDTHxHEIGHT:VIDEO_BITRATE[:AUDIO_BITRATE]` (e.g.
  * `high:1920x1080:5000k:192k`). Only relevant when `mode == HLS`;

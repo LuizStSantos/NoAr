@@ -466,6 +466,9 @@ pub struct Output {
     pub audio_codec: Option<String>,
     pub audio_options: String,
     pub audio_bitrate: Option<i64>,
+    #[sqlx(default)]
+    #[serde(default)]
+    pub audio_sample_rate: Option<i64>,
 }
 
 impl Output {
@@ -507,6 +510,7 @@ impl Output {
             audio_codec: encoded.then(|| "aac".to_string()),
             audio_options: "{}".to_string(),
             audio_bitrate: encoded.then_some(128),
+            audio_sample_rate: None,
         }
     }
 }
