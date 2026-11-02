@@ -809,6 +809,59 @@ pub(crate) fn validate_transport_options(
     TransportSettings::parse(address, options).map(|_| ())
 }
 
+/// Upper bound for resolving an SRT hostname before a socket is opened.
+pub(crate) const SRT_RESOLVE_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Replaces an SRT URL's hostname with a resolved IP literal.
+///
+/// GStreamer's SRT object resolves hostnames with GIO's threaded resolver and
+/// passes the element's reusable `GCancellable`. Unlocking the element cancels
+/// that object and later resets it; when the resolver's cancellation source
+/// is dispatched after the reset, GLib aborts the whole process
+/// (`gthreadedresolver.c: cancelled_cb: assertion failed`). An IP literal
+/// bypasses the resolver entirely, so NoAr resolves here, bounded, and reports
+/// failure as an ordinary connection error that the caller retries.
+pub(crate) fn resolve_srt_host(uri: &Url, timeout: Duration) -> Result<Url, String> {
+    let host = match uri.host() {
+        Some(url::Host::Domain(host)) => host.to_owned(),
+        Some(url::Host::Ipv4(_) | url::Host::Ipv6(_)) => return Ok(uri.clone()),
+        None => return Err("SRT URL requires a host".to_owned()),
+    };
+    let port = uri.port().ok_or("SRT URL requires a port")?;
+    let (sender, receiver) = mpsc::channel();
+    let lookup = host.clone();
+    // getaddrinfo cannot be cancelled; a stuck lookup only keeps this
+    // detached helper thread alive, never the caller.
+    thread::Builder::new()
+        .name("srt-resolve".to_owned())
+        .spawn(move || {
+            use std::net::ToSocketAddrs;
+            let result = (lookup.as_str(), port)
+                .to_socket_addrs()
+                .map(Iterator::collect::<Vec<_>>);
+            let _ = sender.send(result);
+        })
+        .map_err(|error| format!("cannot start SRT host resolution: {error}"))?;
+
+    let addresses = match receiver.recv_timeout(timeout.min(SRT_RESOLVE_TIMEOUT)) {
+        Ok(Ok(addresses)) => addresses,
+        Ok(Err(error)) => return Err(format!("cannot resolve SRT host {host:?}: {error}")),
+        Err(_) => return Err(format!("resolving SRT host {host:?} timed out")),
+    };
+    // Prefer IPv4: the plugin's default local address is 0.0.0.0.
+    let address = addresses
+        .iter()
+        .find(|address| address.is_ipv4())
+        .or_else(|| addresses.first())
+        .ok_or_else(|| format!("SRT host {host:?} has no address"))?;
+
+    let mut resolved = uri.clone();
+    resolved
+        .set_ip_host(address.ip())
+        .map_err(|()| "cannot apply the resolved SRT address".to_owned())?;
+    Ok(resolved)
+}
+
 fn parse_u64(name: &str, value: &str) -> Result<u64, String> {
     value
         .parse()
@@ -865,7 +918,15 @@ fn normalize_option(
             | "streamid" | "congestion" | "messageapi" | "payloadsize" | "transtype"
             | "kmrefreshrate" | "kmpreannounce" | "enforcedencryption" | "ipv6only"
             | "peeridletimeo" | "bindtodevice" | "packetfilter" | "retransmitalgo"
-            | "localaddress" | "localport" | "poll-timeout" => name,
+            | "localport" | "poll-timeout" => name,
+            "localaddress" => {
+                // A hostname here would be resolved by the plugin through GIO
+                // with its own reusable cancellable (see `resolve_srt_host`).
+                if value.parse::<std::net::IpAddr>().is_err() {
+                    return Err("SRT option \"localaddress\" requires an IP address".to_string());
+                }
+                name
+            }
             "linger" if value == "0" => return Ok(("conntimeo".to_string(), "3000".to_string())),
             _ => return Err(format!("unsupported GStreamer SRT option {name:?}")),
         },
@@ -1053,7 +1114,9 @@ impl NativeTransport {
 
         match settings.kind {
             TransportKind::Srt => {
-                sink.set_property("uri", settings.uri.as_str());
+                let uri = resolve_srt_host(&settings.uri, settings.timeout)
+                    .map_err(anyhow::Error::msg)?;
+                sink.set_property("uri", uri.as_str());
                 sink.set_property("auto-reconnect", false);
                 sink.set_property("wait-for-connection", true);
             }
@@ -1545,6 +1608,41 @@ mod tests {
             .unwrap();
 
         assert_eq!(receiver.join().unwrap(), expected);
+    }
+
+    #[test]
+    fn srt_hosts_are_resolved_before_gstreamer_sees_them() {
+        let literal = Url::parse("srt://10.0.0.5:9000?streamid=a").unwrap();
+        assert_eq!(
+            resolve_srt_host(&literal, Duration::from_secs(1)).unwrap(),
+            literal
+        );
+        let ipv6 = Url::parse("srt://[::1]:9000").unwrap();
+        assert_eq!(
+            resolve_srt_host(&ipv6, Duration::from_secs(1)).unwrap(),
+            ipv6
+        );
+
+        let named = Url::parse("srt://localhost:9000?mode=caller&streamid=publish:x").unwrap();
+        let resolved = resolve_srt_host(&named, Duration::from_secs(5)).unwrap();
+        assert!(matches!(
+            resolved.host(),
+            Some(url::Host::Ipv4(_) | url::Host::Ipv6(_))
+        ));
+        assert_eq!(resolved.port(), Some(9000));
+        assert_eq!(resolved.query(), named.query());
+
+        // RFC 2606: `.invalid` never resolves. Failure is an error, not an abort.
+        let missing = Url::parse("srt://noar-test.invalid:9000").unwrap();
+        assert!(resolve_srt_host(&missing, Duration::from_secs(5)).is_err());
+    }
+
+    #[test]
+    fn srt_local_address_must_be_an_ip_literal() {
+        let options = BTreeMap::from([("localaddress".to_string(), "example.com".to_string())]);
+        assert!(TransportSettings::parse("srt://10.0.0.5:9000", &options).is_err());
+        let options = BTreeMap::from([("localaddress".to_string(), "0.0.0.0".to_string())]);
+        assert!(TransportSettings::parse("srt://10.0.0.5:9000", &options).is_ok());
     }
 
     #[test]

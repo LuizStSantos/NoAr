@@ -448,9 +448,15 @@ fn source_uri(
             "SRT input must name the external media server"
         );
 
+        // GIO hostname resolution inside srtsrc can abort the process when
+        // the element is unlocked mid-lookup; hand it an IP literal instead.
+        let uri =
+            crate::output::link::resolve_srt_host(&uri, crate::output::link::SRT_RESOLVE_TIMEOUT)
+                .map_err(anyhow::Error::msg)?;
+
         // The normalized URI already contains every native SRT option. Applying
         // source-setup options again would convert latency units twice.
-        return Ok((normalized, BTreeMap::new()));
+        return Ok((uri.into(), BTreeMap::new()));
     }
     ensure!(
         !options
