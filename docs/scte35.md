@@ -6,7 +6,10 @@ inside videos since NoAr 1.2; how to use it is in
 [Ad breaks (SCTE-35)](ad_breaks.md). Written for NoAr 1.0.0 (October 2026) to
 decide whether and in what order NoAr should signal and read ad breaks, and
 kept up to date with the decisions taken since: one fixed signal from NoAr,
-and per-platform profiles in a [fork of MediaMTX](#mediamtx).*
+and per-platform profiles in a [fork of MediaMTX](#mediamtx). NoAr encoded and
+muxed with FFmpeg's libraries when this was written; it now uses GStreamer
+only. The FFmpeg findings are kept as the reason NoAr writes the sections
+itself.*
 
 ## In short
 
@@ -79,15 +82,15 @@ clean.
 
 ## What NoAr has today
 
-**Outputs.** The engine encodes with FFmpeg's libraries and muxes with:
+**Outputs.** The engine encodes and muxes with GStreamer:
 
-- the `mpegts` muxer for SRT and UDP (and the Player's preview);
-- the `hls` muxer for HLS. NoAr manages its segments (`delete_segments`,
-  `temp_file`, `append_list`), and `program_date_time` can be turned on;
-- `flv` for RTMP.
+- `mpegtsmux` for SRT and UDP (and the Player's preview);
+- `splitmuxsink` with `mpegtsmux` for HLS; NoAr writes the playlist itself
+  and manages its segments, and `program_date_time` can be turned on;
+- `flvmux` for RTMP.
 
-**What FFmpeg does with SCTE-35** (checked against FFmpeg's `master` in
-October 2026):
+**What FFmpeg did with SCTE-35**, when NoAr used its libraries (checked
+against FFmpeg's `master` in October 2026):
 
 - *Demuxing*: an MPEG-TS stream with `stream_type` 0x86 and a `CUEI`
   descriptor becomes a data stream with codec `AV_CODEC_ID_SCTE_35`. Each
@@ -95,8 +98,8 @@ October 2026):
   NoAr can read cues from a live with the libraries it already links.
 - *Muxing*: `mpegtsenc.c` has no SCTE-35 handling. A data stream would be muxed
   as private PES, which breaks SCTE-35. Patches to fix this were posted in
-  2021, 2023 and 2025 and are not merged. NoAr builds against Debian's
-  FFmpeg, so a patched FFmpeg is not an option.
+  2021, 2023 and 2025 and are not merged. NoAr built against Debian's
+  FFmpeg, so a patched FFmpeg was not an option.
 - *HLS*: `hlsenc.c` writes no CUE or DATERANGE tags.
 
 **Where NoAr knows breaks are**, with their exact output time:
@@ -132,9 +135,11 @@ At each cue's start and end, the encoder forces a key frame.
 
 ### MPEG-TS output (SRT, UDP)
 
-Since FFmpeg cannot write the sections, NoAr writes them **between the muxer
-and the network**. The muxer's output already goes through an AVIO context
-that NoAr opens; a thin layer there:
+NoAr writes the sections itself, **between the muxer and the network**: FFmpeg
+could not write them when this was designed, and writing them there keeps one
+implementation for every muxer. The muxer's output passes through NoAr before
+it is sent (today, the buffers leaving `mpegtsmux`; then, an AVIO context); a
+thin layer there (`TsInjector` in `backend/engine/src/output/scte35.rs`):
 
 1. watches the 188-byte TS packets that pass;
 2. rewrites the **PMT**: it adds an elementary stream with `stream_type` 0x86
@@ -236,7 +241,8 @@ each one for its current written specification before relying on it.
 **Pluto TV** ([live stream specification v2.2](https://www.paramount.com/pluto-tv-live-stream-specifications)):
 
 - Pluto pulls HLS from a URL, with 5 s segments of steady length and a list of
-  10. Its guidelines also name RTMP, which FFmpeg cannot carry SCTE-35 in.
+  10. Its guidelines also name RTMP, which has no standard way to carry
+  SCTE-35.
 - Video H.264, 1080p at 5–10 Mbps (or 720p), 30 fps, 16:9. Audio AAC-LC
   stereo, 48 kHz, 96 kb/s, loudness to EBU R128.
 - SCTE-35 both in the playlist (`#EXT-X-CUE-OUT`/`#EXT-X-CUE-IN` and

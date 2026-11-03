@@ -1,5 +1,5 @@
 //! Forward native GStreamer diagnostics to NoAr's logger without installing
-//! FFmpeg or libsrt process callbacks. Asynchronous native messages use the
+//! libsrt process callbacks. Asynchronous native messages use the
 //! console channel; pipeline owners report operational errors with channel IDs.
 
 use std::{

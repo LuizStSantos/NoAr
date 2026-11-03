@@ -2,7 +2,7 @@
 //!
 //! Files remain paused after negotiation. Live sources keep decoding into a
 //! bounded recent-frame window, so their signal and handover stay at the live
-//! edge without keeping an independent FFmpeg input open.
+//! edge without keeping a second, independent input open.
 
 use std::{
     collections::{BTreeMap, VecDeque},

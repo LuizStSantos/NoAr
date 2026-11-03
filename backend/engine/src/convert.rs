@@ -59,7 +59,7 @@ impl MediaShape {
     }
 }
 
-/// Reads the encoded stream metadata without opening FFmpeg contexts.
+/// Reads the encoded stream metadata with GStreamer, without decoding.
 pub fn probe_shape(path: &Path) -> Result<MediaShape> {
     let probe = probe_media(path.to_string_lossy().as_ref())?;
     let video = probe.video.first();

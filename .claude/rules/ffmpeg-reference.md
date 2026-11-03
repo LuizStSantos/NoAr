@@ -2,14 +2,15 @@
 paths:
   - "backend/engine/**/*.rs"
   - "backend/app/src/player/**/*.rs"
-  - "backend/app/src/utils/ffmpeg*.rs"
+  - "qa/**/*.py"
 ---
 
 # FFmpeg source-reference rule (NoAr)
 
-GStreamer is the sole playout runtime on the integration branch. Start engine
-research with `/noar-gstreamer`; this rule applies only when a remaining FFmpeg
-frame-memory interface, codec dependency or test fixture specifically needs it.
+GStreamer is NoAr's only media runtime and NoAr does not link FFmpeg. Start
+engine research with `/noar-gstreamer`; this rule applies only when a codec
+GStreamer takes from `gstreamer1.0-libav`, or an `ffmpeg`/`ffprobe` test
+fixture, specifically needs FFmpeg documentation.
 
 When a task involving these files depends on FFmpeg details, consult `/noar-ffmpeg` or request the `noar-ffmpeg-docs-specialist` to examine the **relevant** official documentation. Do not spawn the specialist for trivial Rust edits or rename-only tasks. This is a documentation adviser, not a new audit council member.
 

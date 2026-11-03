@@ -33,7 +33,7 @@ A clear and concise description of what you expected to happen.
 
 - OS: [e.g. debian 12]
 - NoAr version (Settings › Updates)
-- ffmpeg version
+- GStreamer version (`gst-inspect-1.0 --version` in the container)
 - are you using the latest image (ghcr.io/luizstsantos/noar:latest)?
 
 ### Config Settings:

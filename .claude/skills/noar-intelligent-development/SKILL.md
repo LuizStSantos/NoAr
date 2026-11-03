@@ -80,11 +80,11 @@ Natural-language change requests automatically use the root `CLAUDE.md` workflow
 
 ### Official technology reference skills
 
-For version-sensitive questions, consult only the relevant playbook: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-gstreamer`, or `/noar-video-processing`. GStreamer is the sole playout engine on this branch; start native media research with `/noar-gstreamer`. `/noar-ffmpeg` is limited to remaining frame-memory, codec-dependency and fixture interfaces. These references are **not additional agents or voting council members**. Confirm lockfiles, native versions and installed plugin properties/caps, then query only 1–3 relevant official sections. See `docs/ai/tech-references/README.md`.
+For version-sensitive questions, consult only the relevant playbook: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-gstreamer`, or `/noar-video-processing`. GStreamer is the sole playout engine on this branch; start native media research with `/noar-gstreamer`. `/noar-ffmpeg` is limited to the codecs GStreamer takes from `gstreamer1.0-libav` and `ffmpeg`/`ffprobe` test tooling (NoAr does not link FFmpeg). These references are **not additional agents or voting council members**. Confirm lockfiles, native versions and installed plugin properties/caps, then query only 1–3 relevant official sections. See `docs/ai/tech-references/README.md`.
 
 ### FFmpeg specialist (conditional, non-voting)
 
-For questions specifically involving a remaining FFmpeg memory/fixture interface, the lead/Orchestrator may request a focused read-only handoff from `noar-ffmpeg-docs-specialist`. Follow `.claude/rules/ffmpeg-reference.md` and verify ABI/binding compatibility. GStreamer timestamps, native plugins, SCTE-35 transport and source transitions use `/noar-gstreamer` and `/noar-video-processing` first. The adviser does **not** join Backend Council votes; staging behavior requires Integration QA.
+For questions specifically involving a libav codec inside GStreamer or an `ffmpeg`/`ffprobe` fixture, the lead/Orchestrator may request a focused read-only handoff from `noar-ffmpeg-docs-specialist`. Follow `.claude/rules/ffmpeg-reference.md` and check the installed `gstreamer1.0-libav` and `ffmpeg` versions. GStreamer timestamps, native plugins, SCTE-35 transport and source transitions use `/noar-gstreamer` and `/noar-video-processing` first. The adviser does **not** join Backend Council votes; staging behavior requires Integration QA.
 
 ## 5. NoAr safety and targeted checks
 

@@ -11,5 +11,5 @@
 Example Orchestrator delegation:
 
 ```text
-Consult noar-ffmpeg-docs-specialist for official, version-aware references on timestamp rescaling in encoded HLS output. Inspect only backend/engine/src/output/encoded.rs and the relevant helper functions. Return a maximum of four reference-backed findings and staging tests. Do not implement or vote.
+Consult noar-ffmpeg-docs-specialist for official, version-aware references on the AAC encoder options GStreamer passes to libavcodec (avenc_aac). Inspect only backend/engine/src/output/pipeline.rs and its audio_encoder function. Return a maximum of four reference-backed findings and staging tests. Do not implement or vote.
 ```

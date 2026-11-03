@@ -2032,8 +2032,8 @@ mod output_tests {
                 .contains("audio encoder options")
         );
         output.audio_bitrate = 128;
-        // Exercise rendition validation directly: FFmpeg builds differ in
-        // whether the HLS muxer advertises MP2 support.
+        // Exercise rendition validation directly: installations differ in
+        // whether an MP2 encoder is available.
         output.mode = OutputMode::HLS;
         output.hls_variants = vec!["low:640x360:1000k:129k".to_string()];
         assert!(

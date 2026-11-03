@@ -1,6 +1,6 @@
 ---
 name: noar-ffmpeg
-description: Independently research official FFmpeg CLI, protocol, filter and C library documentation for the NoAr Rust playout engine using scoped, version-aware lookups.
+description: Independently research official FFmpeg documentation for the codecs GStreamer takes from gstreamer1.0-libav and for the ffmpeg/ffprobe test tools, using scoped, version-aware lookups. NoAr does not link FFmpeg.
 ---
 
 # NoAr FFmpeg Specialist (independent project skill)
@@ -9,16 +9,20 @@ User command: `$ARGUMENTS`
 
 This skill is **separate** from `/noar-intelligent-development`. It may be invoked directly or be consulted by that workflow. It never votes in the existing five-agent audit councils and does not replace `noar-media-engine-reviewer`.
 
-GStreamer is NoAr's sole playout engine on this integration branch. Use
-`/noar-gstreamer` first for pipeline control, native encoders/transports, clocks,
-states, seeking and caps. This skill covers remaining FFmpeg frame-memory
-compatibility, codec dependencies and fixture/inspection tools; do not treat its
-CLI options as GStreamer properties or revive removed input listeners.
+GStreamer is NoAr's only media engine, and NoAr does not link the FFmpeg
+libraries: frames are NoAr's own (`backend/engine/src/frame.rs`) and time bases
+too (`time_base.rs`). Use `/noar-gstreamer` first for pipeline control, native
+encoders/transports, clocks, states, seeking and caps. This skill covers what
+is left of FFmpeg: the codecs GStreamer reaches through `gstreamer1.0-libav`
+(`avdec_*`/`avenc_*` elements wrap libavcodec), the `ffmpeg`/`ffprobe` tools
+used by tests and fixtures, and background research (for example why NoAr
+writes SCTE-35 itself). Do not treat FFmpeg CLI options as GStreamer
+properties, reintroduce an FFmpeg binding, or revive removed input listeners.
 
 ## Supported requests
 
 - `reference <topic>`: route to relevant official FFmpeg manuals, extract short passages, and connect findings to NoAr code.
-- `analyze <feature|file|symbol>`: inspect a small code range and compare its FFmpeg API use with the appropriate documentation and locally installed library version.
+- `analyze <feature|file|symbol>`: inspect a small code range that depends on a libav codec element or an `ffmpeg`/`ffprobe` fixture, and compare it with the documentation and the locally installed version.
 - `plan <feature>`: propose bounded, testable implementation steps with source references, risks and rollback.
 - `review <topic>`: read-only FFmpeg-specific review; never count as a sixth Backend Council vote.
 - `verify`: examine local version/build/protocol/filter/encoder availability; report NOT_AVAILABLE where the environment lacks FFmpeg.
@@ -31,9 +35,9 @@ CLI options as GStreamer properties or revive removed input listeners.
    `python3 .claude/scripts/ffmpeg_docs.py topics '<topic>'`
 3. Read only short on-demand excerpts from official manuals, for example:
    `python3 .claude/scripts/ffmpeg_docs.py search 'srt' --manual protocols --limit 4 --context 3`
-4. For Rust binding work use the official **version-specific Doxygen C API**, the installed FFmpeg headers and the `ffmpeg-next` crate source/definitions; do not mistake CLI options for C API members or for Rust binding methods. `ffmpeg-next = 9` is a crate dependency, not proof of the native FFmpeg library versions at runtime.
-4a. For deeper C API references, navigate official Doxygen to a specific function or group page, then use `python3 .claude/scripts/ffmpeg_docs.py search '<function>' --url 'https://www.ffmpeg.org/doxygen/<version>/...html'`. Only direct official FFmpeg documentation URLs are accepted.
-5. Get installed versions with `python3 .claude/scripts/ffmpeg_docs.py capabilities` if possible. If the host lacks binaries, check the build image, Cargo.lock, build flags and CI environment, explicitly labeling uncertain version/capability details.
+4. For a codec inside GStreamer, read the element first: `gst-inspect-1.0 avenc_<codec>` (or `avdec_<codec>`) lists the properties that expose libavcodec options, and the libavcodec version is that of the installed `gstreamer1.0-libav` package. Do not mistake FFmpeg CLI options for GStreamer element properties.
+4a. For codec behaviour the element does not document, navigate official Doxygen to a specific function or group page, then use `python3 .claude/scripts/ffmpeg_docs.py search '<function>' --url 'https://www.ffmpeg.org/doxygen/<version>/...html'`. Only direct official FFmpeg documentation URLs are accepted.
+5. Get installed versions with `python3 .claude/scripts/ffmpeg_docs.py capabilities` if possible. If the host lacks binaries, check the build image (`gstreamer1.0-libav`) and the CI environment, explicitly labeling uncertain version/capability details.
 6. State exact source URL, retrieved/manual version if known, relevant option/function and the NoAr file/line. Mark claims `DOCUMENTED`, `SOURCE_VERIFIED`, `RUNTIME_VERIFIED`, `INFERENCE`, or `NOT_VERIFIED`.
 7. Do not download or paste entire FFmpeg documents into the chat or context. Use source names and bounded excerpts; cache automatically in `.cache/noar-ffmpeg-docs/` (ignored by Git if installed instructions are followed). Remote calls require normal network access, so report `NOT_AVAILABLE` honestly if blocked.
 

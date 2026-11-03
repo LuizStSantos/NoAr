@@ -8,9 +8,9 @@ and SRT transport. FFmpeg generates synthetic files and independently captures
 and checks the resulting stream.
 
 This prototype uses the GStreamer `libav` plugin for some codecs (`avenc_aac`
-and automatically selected decoders). Those codecs still use FFmpeg libraries.
-The experiment replaces pipeline control and transport with GStreamer; it does
-not demonstrate removing every FFmpeg library from the final image.
+and automatically selected decoders). Since then NoAr moved to GStreamer
+entirely and no longer links FFmpeg; the `libav` plugin is the only part of
+FFmpeg left in the image.
 
 ## Run the automated test
 
@@ -167,7 +167,8 @@ NoAr integration in Rust, scheduler Clock/Continue semantics, playlist looping,
 API/configuration compatibility, preview, graphics/logo/text, audio processing,
 recording, HLS, SCTE-35, hardware encoding, output-network recovery, resource
 benchmarks, VLC observation and long-duration soak tests remain separate work.
-Keep the current FFmpeg backend available throughout any future integration.
+These were done in the integration that followed; GStreamer is now NoAr's only
+engine, and there is no FFmpeg backend to fall back to.
 
 Official references consulted (verify against the installed runtime):
 [compositor](https://gstreamer.freedesktop.org/documentation/compositor/index.html),
