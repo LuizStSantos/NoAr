@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-03
+
 ### Fixed
 
 - Clips no longer freeze the picture for up to 12 s now and then when they
@@ -894,7 +896,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...v2.0.0
 [1.11.0]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...v1.11.0
