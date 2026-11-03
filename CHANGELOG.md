@@ -11,6 +11,24 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-11-03
+
+### Changed
+
+- The log says why a live's signal check failed (the connection error, "still
+  connecting, or no picture yet" or "no media" after 12 s) instead of only "no signal".
+
+### Fixed
+
+- A live whose picture stopped while its sound kept arriving (a stalled
+  decoder after packet loss, an encoder or NDI sender that dropped its video)
+  froze the output with no warning until the playout was restarted: sound
+  alone counted as signal. A live with a picture that sends no video for 6 s
+  is now lost like one that sends nothing, so the waiting screen airs and the
+  source is connected again; its signal check also waits for a picture, so
+  sound alone does not put it back on air. This covers every live input
+  (SRT, RTMP, RTSP, RTP, UDP, TCP, RIST, NDI and video cards).
+
 ## [2.1.1] - 2026-11-03
 
 ### Fixed
@@ -896,7 +914,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/LuizStSantos/NoAr/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...v2.0.0
