@@ -969,9 +969,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "31b5905d056e264ffdb962d08de6e1fe5dc12118e5158e1ccf73a0cc54a6ec5e",
+      "sha256": "fe6f89ed5ff8cd10a244671cc3af8fdf2d5208418e5388fba761fb6faa187f7e",
       "language": "Markdown",
-      "bytes": 44264,
+      "bytes": 44751,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -19593,9 +19593,9 @@
       "symbols": []
     },
     "docker/ndi/enable-ndi.sh": {
-      "sha256": "a65c81503f3155cab7e35c44142a09984cba052d6715b25a0e27dc230a183ac2",
+      "sha256": "02d5c2c0058836519bacc91948a91724f35a1283e4e4cc7d0047575c1714a05d",
       "language": "Shell",
-      "bytes": 6696,
+      "bytes": 9705,
       "symbols": []
     },
     "docker/srt/build.sh": {
@@ -19695,9 +19695,9 @@
       "symbols": []
     },
     "docs/ndi.md": {
-      "sha256": "336aeb74b4d0c23057d4074cb83e4a3b028b43ed0e04a2ab32ea2b966168b727",
+      "sha256": "42496be519caff9422c3ae482e982eb831acd33b3b6b31b6e5e2be25e15629a0",
       "language": "Markdown",
-      "bytes": 5197,
+      "bytes": 6288,
       "symbols": []
     },
     "docs/notifications.md": {
