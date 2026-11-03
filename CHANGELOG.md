@@ -11,6 +11,11 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- The log says why a live's signal check failed (the connection error, "still
+  connecting" or "no media" after 12 s) instead of only "no signal".
+
 ## [2.1.1] - 2026-11-03
 
 ### Fixed

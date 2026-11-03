@@ -1417,6 +1417,7 @@ impl SignalCheck {
 /// at a time is not called twice, and the switch needs no new connection.
 async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
     let preloader = manager.preloader.lock().await.clone();
+    let id = manager.config.read().await.general.channel_id;
     let deadline = Instant::now() + SIGNAL_WAIT;
 
     preloader.preload_live(url);
@@ -1424,8 +1425,21 @@ async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
     loop {
         match preloader.signal(url) {
             Some(PreloadSignal::Ready) => return true,
-            None | Some(PreloadSignal::Failed(_)) => return false,
-            Some(PreloadSignal::Opening | PreloadSignal::Stalled) if Instant::now() >= deadline => {
+            None => return false,
+            Some(PreloadSignal::Failed(reason)) => {
+                warn!(channel = id; "Signal check of {url}: {reason}");
+
+                return false;
+            }
+            Some(signal @ (PreloadSignal::Opening | PreloadSignal::Stalled))
+                if Instant::now() >= deadline =>
+            {
+                warn!(channel = id;
+                    "Signal check of {url}: {} after {} s",
+                    if signal == PreloadSignal::Opening { "still connecting" } else { "no media" },
+                    SIGNAL_WAIT.as_secs()
+                );
+
                 return false;
             }
             Some(_) => sleep(SIGNAL_POLL).await,
