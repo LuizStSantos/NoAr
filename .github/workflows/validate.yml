@@ -120,7 +120,9 @@ jobs:
 
           # The engine's tests run real GStreamer pipelines against wall-clock
           # deadlines; two at a time keeps the 4-CPU runner from starving them.
-          check "cargo test" cargo test --no-default-features -- --test-threads=2
+          # Test binaries with a harness of their own ignore this variable.
+          export RUST_TEST_THREADS=2
+          check "cargo test" cargo test --no-default-features
           check "cargo clippy" cargo clippy --no-default-features --all-targets -- --deny warnings
           check "cargo fmt" cargo fmt --all -- --check
           check "cargo build" cargo build --no-default-features --features embed_frontend
