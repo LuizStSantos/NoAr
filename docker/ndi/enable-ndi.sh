@@ -167,6 +167,9 @@ services:
       NDI_RUNTIME_DIR_V6: $runtime_dir
     volumes:
       - $runtime_dir:$runtime_dir:ro
+      # The NDI library announces sources through the server's avahi-daemon,
+      # which it reaches over the system D-Bus.
+      - /run/dbus:/run/dbus:ro
 EOF
     else
         cat >"$compose_file" <<EOF
@@ -183,6 +186,9 @@ services:
       NOAR_UPDATER_URL: http://127.0.0.1:18080
     volumes:
       - $runtime_dir:$runtime_dir:ro
+      # The NDI library announces sources through the server's avahi-daemon,
+      # which it reaches over the system D-Bus.
+      - /run/dbus:/run/dbus:ro
   # Settings > Updates keeps working: the updater answers on the server only.
   noar-updater:
     ports:

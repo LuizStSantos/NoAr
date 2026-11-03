@@ -40,7 +40,10 @@ The script:
 3. installs and starts `avahi-daemon` (mDNS discovery) when it is missing;
 4. writes `docker-compose.override.yml`, which Docker Compose loads by
    itself: NoAr uses the server's network (needed for NDI discovery; the web
-   interface stays on port 8787) and reads the runtime from `/opt/ndi`.
+   interface stays on port 8787), reads the runtime from `/opt/ndi` and
+   reaches the server's system D-Bus (`/run/dbus`): the NDI library announces
+   its sources through `avahi-daemon` over D-Bus, and without it receivers do
+   not list NoAr.
 
 Then allow 5353/UDP (mDNS) and 5959-5999/TCP (NDI) in the firewall. In
 *Settings › Output*, NDI is now available. To check that NoAr can load the
@@ -53,6 +56,10 @@ The script never overwrites a `docker-compose.override.yml` of your own; it
 stops and asks you to add the lines below to it. Docker Compose 2.24 or newer
 is needed. To turn NDI off: delete `docker-compose.override.yml` and run
 `docker compose up -d`.
+
+To check that the source is announced, choose NDI in *Settings › Output*, then
+on the server run `avahi-browse -rt _ndi._tcp` (package `avahi-utils`): it
+lists `SERVER (name)`.
 
 For the isolated test project, run it from the test checkout with `--test`.
 It writes `qa/gstreamer/compose.ndi.yaml`, which keeps the test interface on
@@ -90,6 +97,7 @@ services:
       NOAR_UPDATER_URL: http://127.0.0.1:18080
     volumes:
       - /opt/ndi:/opt/ndi:ro
+      - /run/dbus:/run/dbus:ro
   noar-updater:
     ports:
       - "127.0.0.1:18080:8080"
