@@ -1174,8 +1174,10 @@ mod tests {
             std::fs::remove_dir_all(directory).unwrap();
             sent.send(()).unwrap();
         });
+        // The two parts last 13.4 s: paced in real time they could not end
+        // within 10 s, while a busy CI runner may need several seconds.
         received
-            .recv_timeout(std::time::Duration::from_secs(5))
+            .recv_timeout(std::time::Duration::from_secs(10))
             .expect("trimmed preloaded clips must complete promptly without wall-clock pacing");
     }
 
