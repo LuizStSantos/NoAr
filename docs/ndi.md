@@ -145,6 +145,10 @@ network (host networking in Docker) or an NDI Discovery Server.
 
 - Compiled-in elements, name and address validation, and the refusal of NDI
   output and input without the runtime are covered by automated tests.
-- Publishing to and receiving from real NDI devices, discovery and the signal
-  test have **not** been verified by the developers yet; please test on your
-  network before going on air.
+- NDI output was verified on a real network with the GStreamer test project
+  (NDI Runtime 6.3.2, Docker with host networking and `/run/dbus` mounted):
+  the source was announced through avahi-daemon and a receiver on another
+  machine showed picture and sound.
+- Receiving NDI in lives, discovery from NoAr (*Find NDI sources*) and the
+  signal test have **not** been verified on real devices yet; please test on
+  your network before going on air.

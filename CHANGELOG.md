@@ -26,6 +26,15 @@ one is tagged.
   so older clients keep working. Internal names follow (`MediaCapabilities`,
   `OutputTarget`, `media_log_level`, `log_ignore_lines`), and three unused
   `ffmpeg_*` fields of the general settings are gone.
+### Fixed
+
+- NDI output is now announced to receivers when NoAr runs in Docker:
+  `docker/ndi/enable-ndi.sh` mounts the server's `/run/dbus`, through which
+  the NDI library registers its sources with avahi-daemon. Run the script
+  again (or add the line from docs/ndi.md) and recreate the container.
+- `docker/ndi/enable-ndi.sh --test` sets NDI up for the isolated GStreamer
+  test project, and `--compose-only` writes only the Compose settings when the
+  runtime is already installed.
 
 ## [2.0.0] - 2026-11-02
 
