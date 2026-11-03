@@ -28,6 +28,12 @@ use crate::{
 };
 
 const OPEN_TIMEOUT: Duration = Duration::from_secs(12);
+/// How long a file in the storage may take to announce its tracks before it
+/// is opened again. Files open in well under a second; now and then
+/// GStreamer's discovery of one stalls, with one track or none announced and
+/// nothing flowing, and only a new pipeline gets it going, so waiting out
+/// [`OPEN_TIMEOUT`] would freeze the picture on air for that long.
+const LOCAL_OPEN_STALL: Duration = Duration::from_secs(2);
 /// How long a clip may take to become seekable (its first frame decoded).
 const SEEK_READY_TIMEOUT: Duration = Duration::from_secs(5);
 /// How long an NDI source with a picture may take to announce its audio.
@@ -35,6 +41,22 @@ const NDI_AUDIO_GRACE: Duration = Duration::from_millis(1500);
 /// URL scheme of NDI sources: `ndi://SERVER (Source name)`.
 const NDI_SCHEME: &str = "ndi://";
 const POLL_INTERVAL: Duration = Duration::from_millis(2);
+
+/// A file did not announce its tracks in time ([`LOCAL_OPEN_STALL`] per
+/// try): open it again.
+#[derive(Debug)]
+struct OpenStalled;
+
+impl std::fmt::Display for OpenStalled {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "GStreamer source did not announce its tracks in time"
+        )
+    }
+}
+
+impl std::error::Error for OpenStalled {}
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct SourceInfo {
@@ -93,6 +115,53 @@ impl Source {
         protocol_options: &BTreeMap<String, String>,
         demuxer_options: &BTreeMap<String, String>,
         abort: Arc<AtomicBool>,
+    ) -> Result<Self> {
+        let deadline = Instant::now() + OPEN_TIMEOUT;
+        // Only files are opened again: a network source or a live signal may
+        // rightly take seconds before its first track.
+        let local = !is_network_url(path)
+            && ndi_source_name(path).ok().flatten().is_none()
+            && CardSource::parse(path).ok().flatten().is_none();
+        let mut attempt = 1;
+
+        loop {
+            // Each try waits longer, so a slow disk still gets its file open.
+            let stall = local.then_some(LOCAL_OPEN_STALL * attempt);
+
+            match Self::open_attempt(
+                path,
+                config,
+                protocol_options,
+                demuxer_options,
+                Arc::clone(&abort),
+                deadline,
+                stall,
+            ) {
+                Err(error)
+                    if error.downcast_ref::<OpenStalled>().is_some()
+                        && Instant::now() + LOCAL_OPEN_STALL < deadline =>
+                {
+                    log::warn!(
+                        "{path} did not announce its tracks in {:?}; opening it again",
+                        LOCAL_OPEN_STALL * attempt
+                    );
+                    attempt += 1;
+                }
+                result => return result,
+            }
+        }
+    }
+
+    /// One try at opening `path`, given up at `deadline`, or after `stall`
+    /// when its tracks have not been announced by then.
+    fn open_attempt(
+        path: &str,
+        config: &OutputConfig,
+        protocol_options: &BTreeMap<String, String>,
+        demuxer_options: &BTreeMap<String, String>,
+        abort: Arc<AtomicBool>,
+        deadline: Instant,
+        stall: Option<Duration>,
     ) -> Result<Self> {
         crate::gstreamer::init()?;
         ensure!(
@@ -265,7 +334,6 @@ impl Source {
         };
         source.pipeline.set_state(initial_state)?;
         let opened_at = Instant::now();
-        let deadline = opened_at + OPEN_TIMEOUT;
 
         loop {
             source.check_bus()?;
@@ -288,6 +356,11 @@ impl Source {
                 || (complete.load(Ordering::Acquire) && (info.has_video || info.has_audio))
             {
                 break;
+            }
+            // Still waiting for a track (or for the file to say it has no
+            // more): the discovery stalled.
+            if stall.is_some_and(|stall| opened_at.elapsed() >= stall) {
+                return Err(OpenStalled.into());
             }
             ensure!(
                 Instant::now() < deadline,
