@@ -18,8 +18,9 @@ one is tagged.
   froze the output with no warning until the playout was restarted: sound
   alone counted as signal. A live with a picture that sends no video for 6 s
   is now lost like one that sends nothing, so the waiting screen airs and the
-  source is connected again. This covers every live input (SRT, RTMP, RTSP,
-  RTP, UDP, TCP, RIST, NDI and video cards).
+  source is connected again; its signal check also waits for a picture, so
+  sound alone does not put it back on air. This covers every live input
+  (SRT, RTMP, RTSP, RTP, UDP, TCP, RIST, NDI and video cards).
 
 ### Changed
 

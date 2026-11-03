@@ -1436,7 +1436,7 @@ async fn live_answers(manager: &ChannelManager, url: &str) -> bool {
             {
                 warn!(channel = id;
                     "Signal check of {url}: {} after {} s",
-                    if signal == PreloadSignal::Opening { "still connecting" } else { "no media" },
+                    if signal == PreloadSignal::Opening { "still connecting, or no picture yet" } else { "no media" },
                     SIGNAL_WAIT.as_secs()
                 );
 

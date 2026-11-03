@@ -398,9 +398,13 @@ fn keep_live(
 
         match source.next(IDLE_POLL) {
             Ok(Some(frame)) => {
-                control.set_status(Status::Open {
-                    last_frame: Some(Instant::now()),
-                });
+                // A source with a picture answers with its picture: sound
+                // alone does not make it ready to air.
+                if matches!(frame, FrameEvent::Video(_)) || !source.info().has_video {
+                    control.set_status(Status::Open {
+                        last_frame: Some(Instant::now()),
+                    });
+                }
                 preroll.push(frame);
             }
             Ok(None) if !source.is_eos() => {}
