@@ -14,7 +14,7 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use log::{debug, trace};
+use log::{debug, trace, warn};
 
 use crate::{
     LogoFade, MAX_LOGO_GAPS, PlaybackControl,
@@ -498,16 +498,29 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
     }
     output.set_video_end(end_video)?;
 
+    // A file whose decoder fails before its first frame (GStreamer can lose
+    // a decoder's setup to the seek that starts the clip) is opened once more
+    // instead of falling back for the whole clip.
+    let mut reopened = false;
     let result = (|| {
         loop {
             check_playback_control(playback_control)?;
             let start_video = timeline.video_pts;
             let start_audio = timeline.audio_pts;
             let source_started = Instant::now();
-            opened
+            if let Err(error) = opened
                 .input
                 .start(if first_iteration { seek } else { None })
-                .map_err(|error| source_error(error, live))?;
+            {
+                if live || reopened {
+                    return Err(source_error(error, live));
+                }
+                warn!(channel = cfg.channel_id.unwrap_or_default();
+                    "{path} failed to start ({error:#}); opening it again");
+                reopened = true;
+                opened = open_input(path, cfg, timeline, output, playback_control, None)?;
+                continue;
+            }
             debug!(channel = cfg.channel_id.unwrap_or_default();
                 "GStreamer source started in {:?}; seek={:?}", source_started.elapsed(), if first_iteration { seek } else { None });
             let source_origin = if live {
@@ -523,6 +536,8 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             let mut last_media = Instant::now();
             let mut last_hold = Instant::now();
             let mut video_frames = 0;
+            let frames_before = decoded_frames;
+            let mut reopen = false;
 
             loop {
                 check_playback_control(playback_control)?;
@@ -533,10 +548,22 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                 }
                 let event = match opened.preroll.pop_front() {
                     Some(event) => Some(event),
-                    None => opened
-                        .input
-                        .next(Duration::from_millis(10))
-                        .map_err(|error| source_error(error, live))?,
+                    None => match opened.input.next(Duration::from_millis(10)) {
+                        Ok(event) => event,
+                        Err(error)
+                            if !live
+                                && !reopened
+                                && decoded_frames == frames_before
+                                && timeline.video_pts == start_video
+                                && timeline.audio_pts == start_audio =>
+                        {
+                            warn!(channel = cfg.channel_id.unwrap_or_default();
+                                "{path} failed before its first frame ({error:#}); opening it again");
+                            reopen = true;
+                            break;
+                        }
+                        Err(error) => return Err(source_error(error, live)),
+                    },
                 };
                 let Some(event) = event else {
                     if opened.input.is_eos() {
@@ -690,6 +717,11 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                 }
             }
 
+            if reopen {
+                reopened = true;
+                opened = open_input(path, cfg, timeline, output, playback_control, None)?;
+                continue;
+            }
             if live || duration_seconds.is_none() {
                 break;
             }

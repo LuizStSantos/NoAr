@@ -11,6 +11,20 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-03
+
+### Fixed
+
+- Clips no longer freeze the picture for up to 12 s now and then when they
+  start. GStreamer sometimes stalls while discovering a file's tracks, with
+  nothing flowing; a file in the storage that has not announced its tracks
+  after 2 s (4 s, then 6 s on later tries) is now opened again, within the
+  same 12 s limit. Network sources and live signals keep their wait.
+- A clip whose decoder fails before its first frame ("negotiation problem",
+  "decoder not initialized", a race inside GStreamer when the clip starts
+  with a seek) is opened once more instead of airing the fallback for the
+  whole clip.
+
 ## [2.1.0] - 2026-11-03
 
 ### Added
@@ -882,7 +896,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...v2.0.0
 [1.11.0]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...v1.11.0
