@@ -34,6 +34,10 @@ use crate::{
 const LOGO_FADE_SECONDS: f64 = 1.0;
 const MEDIA_FADE_SECONDS: f64 = 1.0;
 const MEDIA_DURATION_TOLERANCE_US: i64 = 500_000;
+/// How long a live with a picture may send no video before it counts as lost,
+/// though its sound still arrives. Longer than the gap to the first picture
+/// of a source joined between key frames.
+const LIVE_VIDEO_LOST: Duration = Duration::from_secs(6);
 #[derive(Debug)]
 pub(crate) struct PlaybackSkipped;
 
@@ -534,6 +538,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             };
             let mut source_origin = source_origin;
             let mut last_media = Instant::now();
+            let mut last_video = Instant::now();
             let mut last_hold = Instant::now();
             let mut video_frames = 0;
             let frames_before = decoded_frames;
@@ -545,6 +550,12 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                     && end_audio.is_some_and(|end| timeline.audio_pts >= end)
                 {
                     break;
+                }
+                // Sound alone does not keep a live with a picture on air: the
+                // output would stop with the picture (a stalled decoder after
+                // packet loss, an encoder that dropped its video).
+                if live && info.has_video && last_video.elapsed() > LIVE_VIDEO_LOST {
+                    return Err(LiveSourceLost("live source stopped sending video".into()).into());
                 }
                 let event = match opened.preroll.pop_front() {
                     Some(event) => Some(event),
@@ -593,6 +604,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
 
                 match event {
                     FrameEvent::Video(mut picture) => {
+                        last_video = Instant::now();
                         if end_video.is_some_and(|end| timeline.video_pts >= end) {
                             continue;
                         }

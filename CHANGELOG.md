@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- A live whose picture stopped while its sound kept arriving (a stalled
+  decoder after packet loss, an encoder or NDI sender that dropped its video)
+  froze the output with no warning until the playout was restarted: sound
+  alone counted as signal. A live with a picture that sends no video for 6 s
+  is now lost like one that sends nothing, so the waiting screen airs and the
+  source is connected again. This covers every live input (SRT, RTMP, RTSP,
+  RTP, UDP, TCP, RIST, NDI and video cards).
+
 ### Changed
 
 - The log says why a live's signal check failed (the connection error, "still
