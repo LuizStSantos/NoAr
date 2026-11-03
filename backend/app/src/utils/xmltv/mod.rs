@@ -305,9 +305,15 @@ struct RunClip {
 /// Which clips are inserts: runs of consecutive clips with the same key, no
 /// description and at most [`INSERT_MAX_SECONDS`] in total, after a
 /// programme with another key. Breaks do not start or end a programme.
+///
+/// Only a programme that is described or longer than an insert takes
+/// inserts: in a playlist of short clips without sheets (music videos), each
+/// clip stays a programme of its own under its own name.
 fn insert_runs(clips: &[RunClip]) -> Vec<bool> {
     let mut inserts = vec![false; clips.len()];
-    let mut programme_key: Option<&str> = None;
+    // The programme on air: its key, whether it is described, and its length
+    // so far across its breaks and inserts.
+    let mut programme: Option<(&str, bool, f64)> = None;
     let mut index = 0;
 
     while index < clips.len() {
@@ -325,14 +331,21 @@ fn insert_runs(clips: &[RunClip]) -> Vec<bool> {
         }
 
         let length: f64 = clips[index..end].iter().map(|clip| clip.length).sum();
-        let is_insert = programme_key.is_some_and(|key| key != first.key)
-            && !first.described
-            && length <= INSERT_MAX_SECONDS;
+        let takes_inserts = programme.is_some_and(|(key, described, so_far)| {
+            key != first.key && (described || so_far > INSERT_MAX_SECONDS)
+        });
+        let is_insert = takes_inserts && !first.described && length <= INSERT_MAX_SECONDS;
 
         if is_insert {
             inserts[index..end].fill(true);
         } else {
-            programme_key = Some(&first.key);
+            programme = match programme {
+                // The programme continues after a break or an insert.
+                Some((key, described, so_far)) if key == first.key => {
+                    Some((key, described || first.described, so_far + length))
+                }
+                _ => Some((&first.key, first.described, length)),
+            };
         }
 
         index = end;

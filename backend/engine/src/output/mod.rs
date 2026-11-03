@@ -5,6 +5,7 @@ use anyhow::Result;
 #[cfg(feature = "desktop-base")]
 use anyhow::anyhow;
 
+mod backlog;
 #[cfg(feature = "desktop-base")]
 pub(crate) mod desktop;
 #[path = "gstreamer_output.rs"]

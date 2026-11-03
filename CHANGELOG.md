@@ -32,6 +32,14 @@ one is tagged.
   `docker/ndi/enable-ndi.sh` mounts the server's `/run/dbus`, through which
   the NDI library registers its sources with avahi-daemon. Run the script
   again (or add the line from docs/ndi.md) and recreate the container.
+- The Player and the XMLTV guide no longer show the name of a neighbouring
+  clip for short clips without a sheet: only a programme with a sheet or a
+  playlist title, or one longer than five minutes, takes such clips in as
+  idents or promos. A playlist of music videos now shows each clip under its
+  own name.
+- NDI and SDI outputs that fall behind for a moment drop frames and catch up
+  instead of taking the channel off air; they hold up to a second of video,
+  and the playout restarts them only after five seconds without taking any.
 - `docker/ndi/enable-ndi.sh --test` sets NDI up for the isolated GStreamer
   test project, and `--compose-only` writes only the Compose settings when the
   runtime is already installed.

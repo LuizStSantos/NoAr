@@ -623,6 +623,26 @@ fn insert_runs_count_the_whole_run_and_skip_breaks() {
         [false, false, false, true],
         "the programme continuing after a break is not an insert"
     );
+    assert_eq!(
+        insert_runs(&[
+            clip("alone.mp4", false, false, 163.0),
+            clip("tuca.mp4", false, false, 78.0),
+            clip("faded.mp4", false, false, 212.0),
+            clip("ident", false, false, 5.0),
+        ]),
+        [false, false, false, false],
+        "short clips without sheets (music videos) are each a programme of their own"
+    );
+    assert_eq!(
+        insert_runs(&[
+            clip("show", false, false, 200.0),
+            clip("", false, true, 30.0),
+            clip("show", false, false, 200.0),
+            clip("ident", false, false, 5.0),
+        ]),
+        [false, false, false, true],
+        "a programme longer than an insert across its breaks takes inserts"
+    );
 }
 
 #[tokio::test]

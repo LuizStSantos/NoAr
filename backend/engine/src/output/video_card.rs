@@ -14,10 +14,11 @@
 use std::time::{Duration, Instant};
 
 use ::gstreamer as gst;
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Context, Result, bail};
 use gst::prelude::*;
 use gstreamer_app::AppSrc;
 
+use super::backlog::{Backlog, video_backlog_bytes};
 use crate::utils::config::OutputConfig;
 
 const DECKLINK_SCHEME: &str = "decklink://";
@@ -282,6 +283,8 @@ pub(super) struct DeckLinkSink {
     video: AppSrc,
     audio: AppSrc,
     bus: gst::Bus,
+    video_backlog: Backlog,
+    audio_backlog: Backlog,
 }
 
 impl DeckLinkSink {
@@ -293,13 +296,15 @@ impl DeckLinkSink {
         let mode = target.mode.context("SDI output needs a video mode")?;
 
         let pipeline = gst::Pipeline::new();
+        let video_backlog = Backlog::new("SDI", "video", video_backlog_bytes(cfg));
+        let audio_backlog = Backlog::new("SDI", "audio", 4 * 1024 * 1024);
         // Frames are stamped when the real-time playout hands them over; the
         // card plays them on its own clock and the pipeline absorbs jitter.
         let video = AppSrc::builder()
             .format(gst::Format::Time)
             .is_live(true)
             .do_timestamp(true)
-            .max_bytes(64 * 1024 * 1024)
+            .max_bytes(video_backlog.limit())
             .caps(
                 &gst::Caps::builder("video/x-raw")
                     .field("format", "I420")
@@ -427,6 +432,8 @@ impl DeckLinkSink {
             video,
             audio,
             bus,
+            video_backlog,
+            audio_backlog,
         })
     }
 
@@ -440,10 +447,9 @@ impl DeckLinkSink {
     }
 
     pub(super) fn push_video(&self, buffer: gst::Buffer) -> Result<()> {
-        ensure!(
-            self.video.current_level_bytes() < 64 * 1024 * 1024,
-            "SDI output stopped consuming video"
-        );
+        if !self.video_backlog.admit(self.video.current_level_bytes())? {
+            return Ok(());
+        }
         // The source stamps it on arrival.
         let mut buffer = buffer;
         if let Some(writable) = buffer.get_mut() {
@@ -455,10 +461,9 @@ impl DeckLinkSink {
     }
 
     pub(super) fn push_audio(&self, buffer: gst::Buffer) -> Result<()> {
-        ensure!(
-            self.audio.current_level_bytes() < 4 * 1024 * 1024,
-            "SDI output stopped consuming audio"
-        );
+        if !self.audio_backlog.admit(self.audio.current_level_bytes())? {
+            return Ok(());
+        }
         let mut buffer = buffer;
         if let Some(writable) = buffer.get_mut() {
             writable.set_pts(gst::ClockTime::NONE);

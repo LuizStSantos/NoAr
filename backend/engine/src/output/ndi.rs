@@ -11,10 +11,11 @@ use std::{
 };
 
 use ::gstreamer as gst;
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Context, Result, bail};
 use gst::prelude::*;
 use gstreamer_app::AppSrc;
 
+use super::backlog::{Backlog, video_backlog_bytes};
 use crate::utils::config::OutputConfig;
 
 /// Library names and directory variables the NDI plugin searches, in order.
@@ -117,6 +118,8 @@ pub(super) struct NdiSink {
     video: AppSrc,
     audio: AppSrc,
     bus: gst::Bus,
+    video_backlog: Backlog,
+    audio_backlog: Backlog,
 }
 
 impl NdiSink {
@@ -128,11 +131,13 @@ impl NdiSink {
         validate_ndi_name(name).map_err(anyhow::Error::msg)?;
 
         let pipeline = gst::Pipeline::new();
+        let video_backlog = Backlog::new("NDI", "video", video_backlog_bytes(cfg));
+        let audio_backlog = Backlog::new("NDI", "audio", 4 * 1024 * 1024);
         // The playout paces frames in real time and stamps them on its own
         // timeline, so the elements neither wait on a clock nor run live.
         let video = AppSrc::builder()
             .format(gst::Format::Time)
-            .max_bytes(32 * 1024 * 1024)
+            .max_bytes(video_backlog.limit())
             .caps(
                 &gst::Caps::builder("video/x-raw")
                     .field("format", "I420")
@@ -211,6 +216,8 @@ impl NdiSink {
             video,
             audio,
             bus,
+            video_backlog,
+            audio_backlog,
         })
     }
 
@@ -224,19 +231,17 @@ impl NdiSink {
     }
 
     pub(super) fn push_video(&self, buffer: gst::Buffer) -> Result<()> {
-        ensure!(
-            self.video.current_level_bytes() < 32 * 1024 * 1024,
-            "NDI output stopped consuming video"
-        );
+        if !self.video_backlog.admit(self.video.current_level_bytes())? {
+            return Ok(());
+        }
         self.video.push_buffer(buffer)?;
         Ok(())
     }
 
     pub(super) fn push_audio(&self, buffer: gst::Buffer) -> Result<()> {
-        ensure!(
-            self.audio.current_level_bytes() < 4 * 1024 * 1024,
-            "NDI output stopped consuming audio"
-        );
+        if !self.audio_backlog.admit(self.audio.current_level_bytes())? {
+            return Ok(());
+        }
         self.audio.push_buffer(buffer)?;
         Ok(())
     }
