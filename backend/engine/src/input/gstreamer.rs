@@ -332,7 +332,7 @@ impl Source {
         } else {
             gst::State::Paused
         };
-        source.pipeline.set_state(initial_state)?;
+        source.set_state_with_room(initial_state)?;
         let opened_at = Instant::now();
 
         loop {
@@ -434,9 +434,33 @@ impl Source {
             self.pending_audio = None;
             self.eos = false;
         }
-        self.pipeline.set_state(gst::State::Playing)?;
+        self.set_state_with_room(gst::State::Playing)?;
 
         Ok(())
+    }
+
+    /// Change the pipeline's state with no limit on the sample queues for the
+    /// moment of the change. An appsink that waits for room in a full queue
+    /// does so holding its sink's preroll lock, which the change from PAUSED
+    /// to PLAYING needs too: with nobody pulling samples meanwhile, the change
+    /// waited forever. Lifting the limit wakes the waiting sink, which queues
+    /// its sample and lets go; the limits come back once the change is done.
+    fn set_state_with_room(&self, state: gst::State) -> Result<gst::StateChangeSuccess> {
+        let limits = [
+            (&self.video, self.video.max_buffers()),
+            (&self.audio, self.audio.max_buffers()),
+        ];
+
+        for (sink, _) in &limits {
+            // Zero means no limit.
+            sink.set_max_buffers(0);
+        }
+        let result = self.pipeline.set_state(state);
+        for (sink, max) in &limits {
+            sink.set_max_buffers(*max);
+        }
+
+        Ok(result?)
     }
 
     /// Seeks once the source can: a file opened paused may still be
@@ -1065,6 +1089,36 @@ mod tests {
             }
         };
         assert!((70..=80).contains(&first), "first frame {first}");
+    }
+
+    /// A source left paused for a while, like a preloaded clip waiting for
+    /// its turn, starts and delivers frames. (The hang this guards against,
+    /// an appsink waiting for room while holding the lock the change to
+    /// PLAYING needs, is too rare to provoke here; see `set_state_with_room`.)
+    #[test]
+    fn a_source_left_paused_still_starts() {
+        crate::gstreamer::init().unwrap();
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/media_mix/av_sync.mp4");
+        let config = OutputConfig::new(320, 180, 25, 48_000);
+        let mut source = Source::open(path.to_str().unwrap(), &config).unwrap();
+        // A preloaded clip waits for its turn like this.
+        thread::sleep(Duration::from_millis(1500));
+
+        let (sent, received) = std::sync::mpsc::channel();
+        thread::spawn(move || {
+            let started = source.start(None).map_err(|error| format!("{error:#}"));
+            let frame = started.and_then(|()| {
+                (0..100)
+                    .find_map(|_| source.next(Duration::from_millis(50)).ok().flatten())
+                    .ok_or_else(|| "no frame after starting".to_string())
+            });
+            let _ = sent.send(frame.map(|_| ()));
+        });
+        received
+            .recv_timeout(Duration::from_secs(10))
+            .expect("starting a source left paused must not hang")
+            .unwrap();
     }
 
     /// A clip that is not prerolled yet (here held back in READY) refuses a
