@@ -11,8 +11,22 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- The image's GStreamer core and gst-plugins-base are 1.26.11, built from the
+  release sources over Debian trixie's 1.26.2; the other plugin sets stay
+  Debian's packages. Provenance: `/usr/local/share/noar/gstreamer-build.txt`.
+
 ### Fixed
 
+- NoAr no longer stops when a live MPEG-TS source changes its streams (an
+  encoder that drops its video, say): GStreamer 1.26.2's `decodebin3` aborted
+  the process ("Stream switch requested for future collection"), which
+  1.26.11 handles.
+- Starting a clip or a source could hang for good, freezing the channel
+  until the playout was restarted: an appsink waiting for room in its full
+  queue held the lock that the change to playing needed, while nobody pulled
+  its samples. The queues have no limit for the moment of that change.
 - An RTMP live from a server that sends sound before the picture's first key
   frame (MediaMTX relaying an SRT or MPEG-TS source) dropped and reconnected
   every few seconds: the source opened as sound only, its picture branch was

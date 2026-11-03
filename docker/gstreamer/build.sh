@@ -1,0 +1,59 @@
+#!/bin/sh
+# Build GStreamer core and gst-plugins-base 1.26.11 to install over Debian's
+# 1.26.2. In 1.26.2, decodebin3 aborts the whole process ("Stream switch
+# requested for future collection") when a live MPEG-TS source changes its
+# streams, for example an encoder that drops its video. 1.26.11 handles the
+# smaller collection. The other plugin sets stay Debian's 1.26.2 builds, which
+# run on a newer core and base of the same series.
+#
+#   sh build.sh /opt/noar-gst   # files land in /opt/noar-gst/usr/...
+set -eu
+
+destdir=${1:-/opt/noar-gst}
+build_dir=$(mktemp -d)
+trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
+
+version=1.26.11
+core_sha256=2e0bd192d0438ea606a6f76a95c8e16542167656ffec2c2bc3aaf6ee0837fbf6
+base_sha256=fc50f885d41f5d0407ce0876ec7235d9e7b82d48db2f4bc72c5f244a4ac79263
+multiarch=$(gcc -dumpmachine)
+options="--prefix=/usr --libdir=lib/$multiarch --buildtype=release
+    -Dtests=disabled -Dexamples=disabled -Ddoc=disabled
+    -Dintrospection=disabled -Dnls=disabled"
+
+fetch() {
+    curl --fail --location --http1.1 --connect-timeout 30 \
+        --retry 6 --retry-delay 5 --retry-all-errors \
+        "https://gstreamer.freedesktop.org/src/$1/$1-$version.tar.xz" \
+        -o "$build_dir/$1.tar.xz"
+    printf '%s  %s\n' "$2" "$build_dir/$1.tar.xz" | sha256sum --check -
+    tar -xJf "$build_dir/$1.tar.xz" -C "$build_dir"
+}
+
+fetch gstreamer "$core_sha256"
+fetch gst-plugins-base "$base_sha256"
+
+# Core first, installed into the build image too, so plugins-base builds
+# against it; the copy for the runtime image goes to the destination.
+# shellcheck disable=SC2086
+meson setup "$build_dir/core" "$build_dir/gstreamer-$version" $options \
+    -Dbenchmarks=disabled -Dptp-helper=disabled
+ninja -C "$build_dir/core"
+meson install -C "$build_dir/core" --quiet
+meson install -C "$build_dir/core" --quiet --destdir "$destdir"
+
+# OpenGL stays Debian's: it would need the GL development stack here.
+# shellcheck disable=SC2086
+meson setup "$build_dir/base" "$build_dir/gst-plugins-base-$version" $options \
+    -Dgl=disabled
+ninja -C "$build_dir/base"
+meson install -C "$build_dir/base" --quiet --destdir "$destdir"
+
+# Only what runs: no headers, pkg-config files or GIR data.
+rm -rf "$destdir/usr/include" "$destdir/usr/share/gir-1.0" \
+    "$destdir/usr/lib/$multiarch/pkgconfig" "$destdir/usr/share/gstreamer-1.0/gdb"
+
+mkdir -p "$destdir/usr/local/share/noar" "$destdir/usr/local/share/licenses/noar-gstreamer"
+printf 'GStreamer core and gst-plugins-base %s over Debian 1.26.2 (decodebin3 collection fixes)\nSource SHA256: %s (core), %s (base)\n' \
+    "$version" "$core_sha256" "$base_sha256" > "$destdir/usr/local/share/noar/gstreamer-build.txt"
+cp "$build_dir/gstreamer-$version/COPYING" "$destdir/usr/local/share/licenses/noar-gstreamer/COPYING"
