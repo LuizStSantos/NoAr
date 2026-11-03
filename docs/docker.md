@@ -7,9 +7,17 @@ has everything a normal installation needs.
 ## First start
 
 ```sh
-docker compose up -d
+docker compose pull
+docker compose up -d --no-build
 docker compose logs -f
 ```
+
+`pull` downloads the published image (`latest`, the newest release; see
+[Image tags](releasing.md#image-tags)), so nothing is compiled on the server.
+The service also has a `build` section: without `--no-build`, Compose builds
+the image from the source when it cannot download it (for example a private
+package without `docker login ghcr.io`), which takes a long time. To build
+from the source on purpose: `docker compose build && docker compose up -d`.
 
 Open `http://<server>:8787`. The setup page asks for the admin user and shows
 the data paths, already pointing at the `/data` volume:
@@ -101,11 +109,12 @@ they override the paths of every channel.
 
 ## Prebuilt image
 
-Every push to `main` publishes `ghcr.io/luizstsantos/noar:latest` through
-GitHub Actions. While the package is private on GitHub, servers need
-`docker login ghcr.io` first; make it public in the package settings to skip
-that. With the image published, `docker compose pull && docker compose up -d`
-updates without building.
+Each release publishes `ghcr.io/luizstsantos/noar:X.Y.Z`, `:X.Y` and
+`:latest` through GitHub Actions, and every push to `main` publishes `:main`
+(see [Image tags](releasing.md#image-tags)). While the package is private on
+GitHub, servers need `docker login ghcr.io` first; make it public in the
+package settings to skip that. `docker compose pull && docker compose up -d
+--no-build` updates to the newest release without building.
 
 ## Updates
 

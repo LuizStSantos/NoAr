@@ -1,8 +1,9 @@
 # NoAr: 24/7 playout with scheduler and XMLTV guide.
 #
-#   docker compose up -d          # start (builds the image the first time)
+#   docker compose pull && docker compose up -d --no-build
+#                                 # start or update with the published image
 #   docker compose logs -f        # follow the logs
-#   docker compose pull && docker compose up -d   # update to a published image
+#   docker compose build          # only to compile from the source instead
 #
 # Then open http://<server>:8787 and complete the setup page.
 
