@@ -186,9 +186,14 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
     let current_time = time_in_seconds(&channel.timezone);
     let shift = channel.time_shift;
     let begin = media.begin.unwrap_or(0.0) - shift;
-    let played_time = current_time - begin;
+    // A clip of an assembled program counts from the start of its entry.
+    let (index, offset) = match media.entry {
+        Some((entry, offset)) => (Some(entry), offset),
+        None => (media.index, 0.0),
+    };
+    let played_time = current_time - begin + offset;
 
-    data_map.insert("index".to_string(), json!(media.index));
+    data_map.insert("index".to_string(), json!(index));
     data_map.insert("mode".to_string(), json!(config.mode));
     data_map.insert(
         "shift".to_string(),
@@ -251,6 +256,11 @@ pub struct Media {
 
     #[serde(skip_serializing, skip_deserializing)]
     pub index: Option<usize>,
+    /// The entry of the saved playlist this clip airs for, and where in that
+    /// entry it starts, in seconds. The clips of an assembled program share
+    /// their entry, so the Player counts entries as the playlist shows them.
+    #[serde(skip_serializing, skip_deserializing)]
+    pub entry: Option<(usize, f64)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     #[serde(rename = "in")]
@@ -341,6 +351,7 @@ impl Media {
         Self {
             begin: None,
             index: Some(index),
+            entry: None,
             title: None,
             seek: 0.0,
             out: duration,
@@ -462,6 +473,7 @@ impl Default for Media {
         Self {
             begin: None,
             index: Some(0),
+            entry: None,
             title: None,
             seek: 0.0,
             out: 0.0,

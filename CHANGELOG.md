@@ -47,6 +47,12 @@ one is tagged.
   listed in the Scheduler's storage panel and in the event dialog, so they
   can be scheduled; the picker left them out as it only showed video, audio
   and images.
+- The Player follows a playlist with an assembled program in it: the clip
+  number in the status (`index`) is now the entry of the saved playlist, not
+  the position among the program's clips, so the Player no longer loses the
+  clip on air (name and progress) after a program entry. The progress of a
+  scheduled program now runs over the whole program instead of restarting
+  with each block, and *Up next* takes the time shift into account.
 - `docker/ndi/enable-ndi.sh --test` sets NDI up for the isolated GStreamer
   test project, and `--compose-only` writes only the Compose settings when the
   runtime is already installed.

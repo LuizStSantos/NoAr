@@ -1008,6 +1008,10 @@ async fn play_clips(
         event
     };
 
+    // The progress in the player view runs over the whole event, from where
+    // it started (before a resumed part) for its planned length.
+    let event_begin = shifted_now(manager).await - skip;
+
     for (index, source) in event.sources.iter().enumerate() {
         if manager.schedule.take_abort() || stopping(manager) {
             break;
@@ -1045,7 +1049,16 @@ async fn play_clips(
         let length = duration - resumed;
 
         manager.schedule.set_item(source.clone());
-        show_on_air(manager, &path.to_string_lossy(), &event.title, length).await;
+        // A program changed since it was scheduled may run longer than planned.
+        let clip_end = shifted_now(manager).await - event_begin + length;
+        show_on_air(
+            manager,
+            &path.to_string_lossy(),
+            &event.title,
+            event_begin,
+            event.duration.max(clip_end),
+        )
+        .await;
         info!(channel = id;
             "Play scheduled clip for <span class=\"log-number\">{length:.1}</span> s from <span class=\"log-number\">{seek:.1}</span> s: <span class=\"log-addr\">{}</span>",
             path.display()
@@ -1271,7 +1284,8 @@ async fn play_live(
             lost_since = None;
             end_waiting(manager, &mut waiting, AiredEnd::Completed).await;
             manager.schedule.set_item(protocol.to_string());
-            show_on_air(manager, &url, &event.title, remaining).await;
+            let now = shifted_now(manager).await;
+            show_on_air(manager, &url, &event.title, now, remaining).await;
             info!(channel = id;
                 "Live <span class=\"log-addr\">{}</span> on air from {protocol} for <span class=\"log-number\">{remaining:.0}</span> s",
                 event.title
@@ -1578,21 +1592,25 @@ async fn end_waiting(manager: &ChannelManager, waiting: &mut Option<Option<i64>>
     }
 }
 
-/// Report the event's clip as the media on air, so the player view shows
-/// its name and progress instead of the interrupted clip.
-async fn show_on_air(manager: &ChannelManager, source: &str, title: &str, duration: f64) {
-    let begin = {
-        let channel = manager.channel.lock().await;
+/// The channel clock as the player view counts it: with the time shift.
+async fn shifted_now(manager: &ChannelManager) -> f64 {
+    let channel = manager.channel.lock().await;
 
-        time_in_seconds(&channel.timezone) + channel.time_shift
-    };
+    time_in_seconds(&channel.timezone) + channel.time_shift
+}
+
+/// Report the event as the media on air, so the player view shows its name
+/// and progress instead of the interrupted clip: `source` is the clip on air,
+/// and the progress runs over the whole event, which started at `begin` (see
+/// [`shifted_now`]) and lasts `length` seconds.
+async fn show_on_air(manager: &ChannelManager, source: &str, title: &str, begin: f64, length: f64) {
     let mut media = Media::new(0, source, false).await;
 
     media.index = None;
     media.begin = Some(begin);
     media.seek = 0.0;
-    media.out = duration;
-    media.duration = duration;
+    media.out = length;
+    media.duration = length;
     media.title = Some(title.to_string());
 
     *manager.current_media.lock().await = Some(media);

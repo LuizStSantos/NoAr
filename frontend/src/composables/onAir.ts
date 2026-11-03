@@ -55,6 +55,17 @@ export function useOnAir() {
     /** Now in playlist seconds, which continue past 86400 after midnight. */
     const playlistNow = computed(() => secondsOfDay.value + (beforeDayStart.value ? 86400 : 0))
 
+    /**
+     * Where the playout is in the playlist now: behind its times after an
+     * event it continued from (a negative shift), ahead after a cut.
+     */
+    const listNow = computed(() => playlistNow.value + (playlistStore.shift ?? 0))
+
+    /** When a playlist time airs on the clock, with the shift. */
+    function airsAt(seconds: number): number {
+        return seconds - (playlistStore.shift ?? 0)
+    }
+
     const viewingOnAir = computed(
         () => playlistStore.listDate === onAirDate.value || Boolean(configStore.playout.playlist?.infinit),
     )
@@ -86,7 +97,7 @@ export function useOnAir() {
     const currentGroup = computed(() => (onAirIndex.value >= 0 ? programmes.groupOf(onAirIndex.value) : undefined))
     const nextGroup = computed(() => {
         if (!currentGroup.value) {
-            return programmes.groups.find((group) => group.start > playlistNow.value)
+            return programmes.groups.find((group) => group.start > listNow.value)
         }
 
         const index = programmes.groups.indexOf(currentGroup.value)
@@ -111,6 +122,8 @@ export function useOnAir() {
         channelNow,
         secondsOfDay,
         playlistNow,
+        listNow,
+        airsAt,
         onAirDate,
         viewingOnAir,
         onAirIndex,

@@ -161,7 +161,7 @@ client can wait for `started_at` to change to know the new run is up.
 | --- | --- | --- | --- |
 | `POST` | `/api/control/{id}/playout` | `GA, CA, U` | `{ "control": "back" \| "next" \| "reset" }` |
 | `PUT` | `/api/control/{id}/audio` | `GA, CA` | `{ "volume": 0.0 }`, from `0.0` through `1.5`. |
-| `GET` | `/api/control/{id}/media/current` | `GA, CA, U` | Read the current media and playout state. |
+| `GET` | `/api/control/{id}/media/current` | `GA, CA, U` | Read the current media and playout state. `index` is the entry of the saved playlist on air (the clips of an assembled program share their entry, and `elapsed` counts from the start of the entry); during a scheduled event it is `null` and `media` covers the whole event. |
 | `POST` | `/api/control/{id}/process` | `GA, CA, U` | `{ "command": "status" \| "start" \| "stop" \| "restart" }` |
 
 During an active live ingest, `back`, `next`, and `reset` return HTTP 200 with

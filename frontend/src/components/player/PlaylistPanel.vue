@@ -56,7 +56,7 @@ const indexStore = useIndex()
 const playlistStore = usePlaylist()
 const programmes = useProgrammes()
 const scheduleStore = useSchedule()
-const { onAirDate, onAirIndex, playlistNow, viewingOnAir } = useOnAir()
+const { onAirDate, onAirIndex, listNow, playlistNow, viewingOnAir } = useOnAir()
 
 const PAGE = 10
 const MORE = 20
@@ -369,11 +369,11 @@ function groupStatus(group: ProgrammeGroup): 'past' | 'current' | 'future' {
     }
 
     if (viewingOnAir.value && !infinite.value && playlistStore.playoutIsRunning) {
-        if (group.end <= playlistNow.value) {
+        if (group.end <= listNow.value) {
             return 'past'
         }
 
-        return group.start <= playlistNow.value ? 'current' : 'future'
+        return group.start <= listNow.value ? 'current' : 'future'
     }
 
     return 'future'
