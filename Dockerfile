@@ -47,7 +47,7 @@ RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         bison ca-certificates curl flex g++ gcc meson ninja-build pkg-config xz-utils \
-        libdw-dev libglib2.0-dev libunwind-dev \
+        libglib2.0-dev \
         libogg-dev libopus-dev liborc-0.4-dev libpango1.0-dev libtheora-dev libvorbis-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/noar-apt.conf
 COPY docker/gstreamer /src/gstreamer

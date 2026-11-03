@@ -33,19 +33,22 @@ fetch() {
 fetch gstreamer "$core_sha256"
 fetch gst-plugins-base "$base_sha256"
 
+# Stack traces on errors (libunwind, libdw) stay off: Debian's runtime
+# packages do not bring those libraries into the image.
 # Core first, installed into the build image too, so plugins-base builds
 # against it; the copy for the runtime image goes to the destination.
 # shellcheck disable=SC2086
 meson setup "$build_dir/core" "$build_dir/gstreamer-$version" $options \
-    -Dbenchmarks=disabled -Dptp-helper=disabled
+    -Dbenchmarks=disabled -Dptp-helper=disabled -Dlibunwind=disabled -Dlibdw=disabled
 ninja -C "$build_dir/core"
 meson install -C "$build_dir/core" --quiet
 meson install -C "$build_dir/core" --quiet --destdir "$destdir"
 
-# OpenGL stays Debian's: it would need the GL development stack here.
+# Only what Debian's gst-plugins-base package carries: OpenGL and the X11
+# sinks are separate Debian packages (and libraries the image does not have).
 # shellcheck disable=SC2086
 meson setup "$build_dir/base" "$build_dir/gst-plugins-base-$version" $options \
-    -Dgl=disabled
+    -Dgl=disabled -Dx11=disabled -Dxvideo=disabled -Dxshm=disabled -Dxi=disabled
 ninja -C "$build_dir/base"
 meson install -C "$build_dir/base" --quiet --destdir "$destdir"
 
