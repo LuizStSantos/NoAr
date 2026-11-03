@@ -201,12 +201,17 @@ Requirements: Docker with the Compose plugin.
 ```sh
 git clone https://github.com/LuizStSantos/NoAr.git
 cd NoAr
-docker compose up -d
+docker compose pull
+docker compose up -d --no-build
 ```
 
-The first run builds the image, which takes a while. When it is up, open
-`http://<server>:8787` and complete the setup page: create the admin user and
-keep the suggested paths under `/data`.
+This downloads the published image (`ghcr.io/luizstsantos/noar:latest`, the
+newest release) instead of compiling NoAr on the server. Without
+`--no-build`, Compose builds the image from the source when it cannot
+download it, which takes a long time; to build on purpose, run
+`docker compose build` first. When it is up, open `http://<server>:8787` and
+complete the setup page: create the admin user and keep the suggested paths
+under `/data`.
 
 Everything NoAr stores lives in `./data` next to `docker-compose.yml`:
 
@@ -226,7 +231,7 @@ Update from **Settings › Updates** (with the `noar-updater` service on, see
 [docs/docker.md](docs/docker.md#updates)), or on the server:
 
 ```sh
-docker compose pull && docker compose up -d
+docker compose pull && docker compose up -d --no-build
 ```
 
 Forgot the admin password? Set a new one from the server with
