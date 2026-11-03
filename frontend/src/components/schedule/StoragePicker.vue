@@ -18,6 +18,8 @@ const props = defineProps({
     hideLives: { type: Boolean, default: false },
     /** Keep the add button on draggable items, to add with a click too. */
     addable: { type: Boolean, default: false },
+    /** List assembled programs (`.program`) too, for the scheduler. */
+    programs: { type: Boolean, default: false },
 })
 
 const emit = defineEmits<{
@@ -43,7 +45,7 @@ interface BrowseResult {
     commercial_folders?: string[]
     /** The commercials folder the browsed folder lies in, if any. */
     commercial?: string | null
-    files: { name: string; duration: number }[]
+    files: { name: string; duration: number; program?: boolean }[]
 }
 
 const source = ref('')
@@ -54,7 +56,7 @@ const liveFolders = ref<string[]>([])
 const commercialFolders = ref<string[]>([])
 /** The open folder is, or lies in, a commercials folder. */
 const inCommercials = ref(false)
-const files = ref<{ name: string; duration: number }[]>([])
+const files = ref<{ name: string; duration: number; program?: boolean }[]>([])
 /** How each clip of the open folder shows up in the guide, as in Storage. */
 const guide = ref<Record<string, GuideEntry>>({})
 const search = ref('')
@@ -65,7 +67,8 @@ const crumbs = computed(() => source.value.split('/').filter(Boolean))
 const shownFiles = computed(() =>
     files.value.filter(
         (file) =>
-            ['video', 'audio', 'image'].includes(mediaType(file.name) ?? '') &&
+            (['video', 'audio', 'image'].includes(mediaType(file.name) ?? '') ||
+                (props.programs && Boolean(file.program))) &&
             file.name.toLowerCase().includes(search.value.trim().toLowerCase()),
     ),
 )
@@ -255,9 +258,20 @@ watch(i, () => open(''))
                 @dragstart="dragStart($event, file.name, file.duration)"
             >
                 <i v-if="props.draggable" class="bi bi-grip-vertical text-subtle" aria-hidden="true" />
-                <i v-else class="bi bi-film text-muted" aria-hidden="true" />
+                <i
+                    v-else
+                    class="bi text-muted"
+                    :class="file.program ? 'bi-collection-play' : 'bi-film'"
+                    aria-hidden="true"
+                />
                 <span class="flex-1 min-w-0 flex flex-col">
-                    <span class="truncate" :title="file.name">{{ file.name }}</span>
+                    <span class="truncate" :title="file.name">
+                        <i
+                            v-if="props.draggable && file.program"
+                            class="bi bi-collection-play text-muted me-1"
+                            aria-hidden="true"
+                        />{{ file.name }}
+                    </span>
                     <span v-if="guide[file.name]?.title" class="truncate text-xs text-muted">
                         {{ t('storage.guideColumn') }}: {{ guide[file.name]?.title }}
                         <template v-if="guide[file.name]?.sub_title"> · {{ guide[file.name]?.sub_title }}</template>

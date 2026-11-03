@@ -43,6 +43,10 @@ one is tagged.
 - NDI and SDI outputs that fall behind for a moment drop frames and catch up
   instead of taking the channel off air; they hold up to a second of video,
   and the playout restarts them only after five seconds without taking any.
+- Assembled programs (`.program`, made with *Storage › New program*) are
+  listed in the Scheduler's storage panel and in the event dialog, so they
+  can be scheduled; the picker left them out as it only showed video, audio
+  and images.
 - `docker/ndi/enable-ndi.sh --test` sets NDI up for the isolated GStreamer
   test project, and `--compose-only` writes only the Compose settings when the
   runtime is already installed.
