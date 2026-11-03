@@ -551,7 +551,7 @@ fn delays_stop_at_the_end_of_the_playlist_day() {
 }
 
 #[tokio::test]
-async fn clips_marked_in_their_sheet_are_inserts_of_the_programme() {
+async fn clips_marked_as_idents_are_inserts_of_the_programme() {
     let storage = TempDir::new();
 
     storage.file(
@@ -561,10 +561,7 @@ async fn clips_marked_in_their_sheet_are_inserts_of_the_programme() {
     let block_1 = storage.file("Jornal/bloco1.mp4", "");
     let block_2 = storage.file("Jornal/bloco2.mp4", "");
     let ident = storage.file("00-assets/vinheta.mp4", "");
-    storage.file(
-        "00-assets/vinheta.nfo",
-        "<movie><noar_insert>true</noar_insert></movie>",
-    );
+    storage.file("00-assets/vinheta.marks.json", r#"{"insert": true}"#);
     let film = storage.file("Filmes/longa.mp4", "");
     let song_1 = storage.file("Clipes/alone.mp4", "");
     let song_2 = storage.file("Clipes/tuca.mp4", "");
@@ -650,10 +647,7 @@ async fn guide_folds_marked_idents_into_the_programme_they_interrupt() {
     let block_1 = storage.file("Jornal/bloco1.mp4", "");
     let block_2 = storage.file("Jornal/bloco2.mp4", "");
     let ident = storage.file("00-assets/vinheta.mp4", "");
-    storage.file(
-        "00-assets/vinheta.nfo",
-        "<movie><noar_insert>true</noar_insert></movie>",
-    );
+    storage.file("00-assets/vinheta.marks.json", r#"{"insert": true}"#);
     let film = storage.file("Filmes/longa.mp4", "");
     let playlist = serde_json::json!({
         "date": today.format("%Y-%m-%d").to_string(),

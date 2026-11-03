@@ -289,6 +289,9 @@ export default {
             hint: 'Arraste as alças da barra, ou selecione uma e use as setas (Shift: 1 s). Tempos em h:mm:ss.d. Salvo no arquivo .marks.json ao lado do vídeo.',
         },
         logoMarks: {
+            insert: 'Vinheta ou chamada',
+            insertHint:
+                'Entra dentro do programa anterior: o player e o guia mantêm o nome desse programa em vez de listar este vídeo.',
             title: 'Corte, logo, breaks e L-shape neste vídeo',
             open: 'Corte, logo, breaks e L-shape neste vídeo: {name}',
             badge: 'marcações',
@@ -569,9 +572,6 @@ export default {
                 movie: 'Filme',
                 episode: 'Episódio',
             },
-            insert: 'Vinheta ou chamada',
-            insertHint:
-                'Entra dentro do programa anterior: o player e o guia mantêm o nome desse programa em vez de listar este vídeo.',
             title: 'Título no guia',
             episodeTitle: 'Título do episódio',
             season: 'Temporada',

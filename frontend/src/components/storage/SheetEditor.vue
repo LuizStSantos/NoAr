@@ -331,21 +331,6 @@ onBeforeUnmount(() => {
                         </label>
                     </div>
 
-                    <label
-                        v-if="isClip"
-                        class="flex items-start gap-2.5 rounded-[10px] border border-line-strong px-3 py-2.5 cursor-pointer"
-                    >
-                        <input
-                            v-model="fields.insert"
-                            type="checkbox"
-                            class="checkbox checkbox-sm checkbox-accent mt-0.5"
-                        />
-                        <span class="flex flex-col gap-0.5">
-                            <span>{{ t('storage.sheet.insert') }}</span>
-                            <span class="text-xs text-muted">{{ t('storage.sheet.insertHint') }}</span>
-                        </span>
-                    </label>
-
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <label class="field-label col-span-2 sm:col-span-4">
                             {{

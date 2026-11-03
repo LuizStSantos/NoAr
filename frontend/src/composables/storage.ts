@@ -114,6 +114,8 @@ export interface VideoMarks {
     logo_position: string | null
     /** The logo shown while this video plays (storage path); null is the channel's. */
     logo_image: string | null
+    /** An ident or promo: it airs inside the program before it, under that program's name. */
+    insert: boolean
 }
 
 /** Marks read or saved, with every part present. */
@@ -128,6 +130,7 @@ function completeMarks(marks: Partial<VideoMarks>): VideoMarks {
         lshape_scale: marks.lshape_scale ?? null,
         logo_position: marks.logo_position ?? null,
         logo_image: marks.logo_image ?? null,
+        insert: marks.insert ?? false,
     }
 }
 
@@ -306,6 +309,5 @@ export function emptyFields(): SheetFields {
         season: null,
         episode: null,
         runtime: null,
-        insert: false,
     }
 }

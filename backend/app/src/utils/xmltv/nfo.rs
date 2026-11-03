@@ -199,9 +199,6 @@ pub struct Nfo {
     pub runtime: Option<u32>,
     pub thumbs: Vec<NfoThumb>,
     pub fanart: Vec<String>,
-    /// Marked as an ident or promo (`<noar_insert>true</noar_insert>`): it
-    /// airs inside the programme around it instead of being one.
-    pub insert: bool,
 }
 
 impl Nfo {
@@ -252,9 +249,6 @@ impl Nfo {
                         .ok()
                         .filter(|minutes| *minutes > 0)
                 });
-            }
-            "noar_insert" => {
-                self.insert = matches!(value.to_lowercase().as_str(), "true" | "1" | "yes");
             }
             "thumb" => self.thumbs.push(NfoThumb {
                 aspect,

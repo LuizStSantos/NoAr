@@ -36,8 +36,10 @@ one is tagged.
   clip: short clips without a sheet were guessed to be idents of the
   programme before them, so a playlist of music videos aired under one
   clip's name. Nothing is guessed now: mark idents and promos in the video's
-  sheet (*Storage › edit › Ident or promo*); every other clip is a programme
-  under its own name. Idents that relied on the guess need the mark.
+  marks (*Storage › trim, logo, breaks and L-shape › Ident or promo*, saved in
+  `<name>.marks.json`, so a clip keeps its folder's sheet); every other clip
+  is a programme under its own name. Idents that relied on the guess need the
+  mark.
 - NDI and SDI outputs that fall behind for a moment drop frames and catch up
   instead of taking the channel off air; they hold up to a second of video,
   and the playout restarts them only after five seconds without taking any.

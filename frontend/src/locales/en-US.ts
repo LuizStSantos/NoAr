@@ -289,6 +289,9 @@ export default {
             hint: 'Drag the handles of the bar, or select one and use the arrows (Shift: 1 s). Times as h:mm:ss.d. Saved in the .marks.json file next to the video.',
         },
         logoMarks: {
+            insert: 'Ident or promo',
+            insertHint:
+                "Airs inside the program before it: the player and the guide keep that program's name instead of listing this video.",
             title: 'Trim, logo, breaks and L-shape in this video',
             open: 'Trim, logo, breaks and L-shape in this video: {name}',
             badge: 'marks',
@@ -569,9 +572,6 @@ export default {
                 movie: 'Movie',
                 episode: 'Episode',
             },
-            insert: 'Ident or promo',
-            insertHint:
-                "Airs inside the program before it: the player and the guide keep that program's name instead of listing this video.",
             title: 'Title in the guide',
             episodeTitle: 'Episode title',
             season: 'Season',
