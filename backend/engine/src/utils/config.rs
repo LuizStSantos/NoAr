@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, PoisonError, RwLock},
 };
 
-use ffmpeg_next::Rational;
+use crate::time_base::Rational;
 
 use crate::{
     AudioEffectsControl, AudioFrameCallback, AudioLevelCallback, LiveLoudnessConfig,
@@ -276,9 +276,9 @@ pub struct OutputConfig {
     /// engine rate (`sample_rate`); otherwise the encoder input is
     /// resampled, leaving the internal timeline and processing unchanged.
     pub output_sample_rate: Option<u32>,
-    pub ffmpeg_log_level: LogLevel,
+    pub media_log_level: LogLevel,
     pub ingest_log_level: LogLevel,
-    pub ffmpeg_ignore_lines: Vec<String>,
+    pub log_ignore_lines: Vec<String>,
     pub channel_id: Option<i32>,
     pub desktop_control_callback: Option<DesktopControlCallback>,
     pub recording: Option<RecordingConfig>,
@@ -1280,9 +1280,9 @@ impl OutputConfig {
             audio_options: AudioOptions::new(),
             audio_bitrate: 128_000,
             output_sample_rate: None,
-            ffmpeg_log_level: LogLevel::Warning,
+            media_log_level: LogLevel::Warning,
             ingest_log_level: LogLevel::Warning,
-            ffmpeg_ignore_lines: Vec::new(),
+            log_ignore_lines: Vec::new(),
             channel_id: None,
             desktop_control_callback: None,
             recording: None,
@@ -1459,14 +1459,14 @@ impl OutputConfig {
             .saturating_mul(1_000)
     }
 
-    pub fn with_logging(mut self, ffmpeg_log_level: LogLevel, ingest_log_level: LogLevel) -> Self {
-        self.ffmpeg_log_level = ffmpeg_log_level;
+    pub fn with_logging(mut self, media_log_level: LogLevel, ingest_log_level: LogLevel) -> Self {
+        self.media_log_level = media_log_level;
         self.ingest_log_level = ingest_log_level;
         self
     }
 
-    pub fn with_ffmpeg_ignore_lines(mut self, ignore_lines: Vec<String>) -> Self {
-        self.ffmpeg_ignore_lines = ignore_lines;
+    pub fn with_log_ignore_lines(mut self, ignore_lines: Vec<String>) -> Self {
+        self.log_ignore_lines = ignore_lines;
         self
     }
 
@@ -1683,7 +1683,6 @@ mod tests {
 
     #[test]
     fn accepts_valid_aac_audio_options() {
-        ffmpeg_next::init().ok();
         let options = [
             ("aac_coder".to_string(), "fast".to_string()),
             ("cutoff".to_string(), "18000".to_string()),
@@ -1696,9 +1695,9 @@ mod tests {
 
     #[test]
     fn accepts_valid_libopus_audio_options_when_available() {
-        ffmpeg_next::init().ok();
-
-        if ffmpeg_next::codec::encoder::find_by_name("libopus").is_none() {
+        crate::gstreamer::init().unwrap();
+        // "libopus" is encoded by GStreamer's opusenc.
+        if ::gstreamer::ElementFactory::find("opusenc").is_none() {
             return;
         }
 
@@ -1711,7 +1710,6 @@ mod tests {
 
     #[test]
     fn rejects_audio_options_managed_by_noar() {
-        ffmpeg_next::init().ok();
         let options = [("ar".to_string(), "44100".to_string())]
             .into_iter()
             .collect();
@@ -1725,8 +1723,6 @@ mod tests {
 
     #[test]
     fn rejects_unknown_and_invalid_audio_encoder_options() {
-        ffmpeg_next::init().ok();
-
         assert!(
             validate_audio_options(
                 "aac",

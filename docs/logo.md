@@ -32,7 +32,7 @@ in percent of the room around the logo (`50 × 1` is the top centre).
   the edges and the middle). The **margin** keeps it that many pixels of the
   output clear of the edges. The edges and the middle are saved as before
   (`W-w-12:12`); anywhere else as a share with the margin, such as
-  `25%+15:80%-18`. **Advanced** takes any FFmpeg-style expression instead,
+  `25%+15:80%-18`. **Advanced** takes any position expression instead,
   such as `W-w-30:30` (`W`/`H` are the output size, `w`/`h` the logo's).
 - **Size**: a share of the output width, or the image's own size; Advanced
   takes `WIDTH:HEIGHT` in pixels or percent, with `-1` keeping the proportion.

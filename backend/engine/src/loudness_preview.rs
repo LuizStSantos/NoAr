@@ -1,7 +1,8 @@
+use crate::frame::{AudioFrame, VideoFrame};
 use std::{collections::VecDeque, time::Duration};
 
+use crate::time_base::{Rational, Rescale};
 use anyhow::Result;
-use ffmpeg_next::{Rational, Rescale, frame};
 
 mod stats;
 
@@ -9,15 +10,12 @@ pub(crate) use stats::AudioStatsOverlay;
 
 use crate::{
     BufferedLoudnessAnalysis, LiveDynamicsProcessor, LiveLoudnessMeasurement, LiveLoudnessMetrics,
-    LiveLoudnessProcessor,
-    audio_mixer::collect_audio_preview,
-    output::FrameOutput,
-    utils::ffmpeg::{make_audio_frame_writable, reference_audio_frame, reference_video_frame},
+    LiveLoudnessProcessor, audio_mixer::collect_audio_preview, output::FrameOutput,
 };
 
 enum PendingFrame {
-    Video(frame::Video),
-    Audio(frame::Audio, Option<BufferedLoudnessAnalysis>),
+    Video(VideoFrame),
+    Audio(AudioFrame, Option<BufferedLoudnessAnalysis>),
 }
 
 /// Preserve decode order and source timestamps while holding a bounded A/V preview.
@@ -183,21 +181,19 @@ impl<O: FrameOutput> FrameOutput for LoudnessPreview<'_, O> {
         self.output.audio_frame_size()
     }
 
-    fn encode_video(&mut self, video: &frame::Video) -> Result<()> {
+    fn encode_video(&mut self, video: &VideoFrame) -> Result<()> {
         self.latest_video_sample = self.latest_video_sample.max(
             video
                 .pts()
                 .unwrap_or_default()
                 .rescale(self.video_time_base, Rational(1, self.sample_rate as i32)),
         );
-        self.pending
-            .push_back(PendingFrame::Video(reference_video_frame(video)?));
+        self.pending.push_back(PendingFrame::Video(video.clone()));
         self.drain(false)
     }
 
-    fn encode_audio(&mut self, audio: &frame::Audio) -> Result<()> {
-        let mut audio = reference_audio_frame(audio)?;
-        make_audio_frame_writable(&mut audio)?;
+    fn encode_audio(&mut self, audio: &AudioFrame) -> Result<()> {
+        let mut audio = audio.clone();
 
         let analysis = (self.lookahead_samples > 0 && self.dynamics.is_none())
             .then(|| self.processor.analyze_buffered(&mut audio));
@@ -225,10 +221,7 @@ impl<O: FrameOutput> FrameOutput for LoudnessPreview<'_, O> {
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{
-        ChannelLayout,
-        format::{Sample, sample::Type},
-    };
+    use crate::frame::PixelFormat;
 
     use crate::LiveLoudnessConfig;
 
@@ -248,16 +241,16 @@ mod tests {
             4800
         }
 
-        fn encode_video(&mut self, video: &frame::Video) -> Result<()> {
+        fn encode_video(&mut self, video: &VideoFrame) -> Result<()> {
             self.video_pts.push(video.pts().unwrap());
             Ok(())
         }
 
-        fn encode_audio(&mut self, audio: &frame::Audio) -> Result<()> {
+        fn encode_audio(&mut self, audio: &AudioFrame) -> Result<()> {
             self.audio_samples += audio.samples();
             self.audio_rms.push(
                 (audio
-                    .plane::<f32>(0)
+                    .plane(0)
                     .iter()
                     .map(|&sample| f64::from(sample).powi(2))
                     .sum::<f64>()
@@ -265,7 +258,7 @@ mod tests {
                     .sqrt(),
             );
 
-            for sample in audio.plane::<f32>(0) {
+            for sample in audio.plane(0) {
                 self.peak = self.peak.max(sample.abs());
             }
             Ok(())
@@ -277,24 +270,23 @@ mod tests {
         }
     }
 
-    fn video(pts: i64) -> frame::Video {
-        let mut video = frame::Video::new(ffmpeg_next::format::Pixel::YUV420P, 16, 16);
+    fn video(pts: i64) -> VideoFrame {
+        let mut video = VideoFrame::new(PixelFormat::Yuv420p, 16, 16);
         video.set_pts(Some(pts));
         video
     }
 
-    fn audio(pts: i64) -> frame::Audio {
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+    fn audio(pts: i64) -> AudioFrame {
+        let mut audio = AudioFrame::stereo(4800);
         audio.set_rate(48000);
         audio.set_pts(Some(pts));
-        audio.plane_mut::<f32>(0).fill(2.0);
-        audio.plane_mut::<f32>(1).fill(2.0);
+        audio.plane_mut(0).fill(2.0);
+        audio.plane_mut(1).fill(2.0);
         audio
     }
 
     #[test]
     fn three_second_preview_plays_before_eof_and_flushes_audio_and_video() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let processor = LiveLoudnessProcessor::new(48000, LiveLoudnessConfig::default()).unwrap();
         let mut preview = LoudnessPreview::new(
@@ -336,7 +328,6 @@ mod tests {
 
     #[test]
     fn video_without_more_audio_continues_with_bounded_preview() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let processor = LiveLoudnessProcessor::new(48000, LiveLoudnessConfig::default()).unwrap();
         let mut preview = LoudnessPreview::new(
@@ -361,7 +352,6 @@ mod tests {
     }
     #[test]
     fn future_loud_section_does_not_attenuate_earlier_desktop_audio() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let processor = LiveLoudnessProcessor::new(48000, LiveLoudnessConfig::default()).unwrap();
         let mut preview = LoudnessPreview::new(
@@ -378,7 +368,7 @@ mod tests {
             let amplitude = if index < 40 { 0.01 } else { 0.4 };
 
             for channel in 0..2 {
-                for (offset, sample) in source.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (offset, sample) in source.plane_mut(channel).iter_mut().enumerate() {
                     let position = index * 4800 + offset as i64;
                     *sample = (std::f64::consts::TAU * 997.0 * position as f64 / 48000.0).sin()
                         as f32
@@ -402,7 +392,6 @@ mod tests {
     }
     #[test]
     fn live_dynamics_desktop_uses_short_preview_and_emits_audio_and_video() {
-        ffmpeg_next::init().unwrap();
         let mut output = Output::default();
         let config = LiveLoudnessConfig {
             compressor_ratio: 6.0,
@@ -424,7 +413,7 @@ mod tests {
             let amplitude = if index < 20 { 0.01 } else { 0.4 };
 
             for channel in 0..2 {
-                for (offset, sample) in source.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (offset, sample) in source.plane_mut(channel).iter_mut().enumerate() {
                     let position = index * 4800 + offset as i64;
                     *sample = (std::f64::consts::TAU * 997.0 * position as f64 / 48000.0).sin()
                         as f32

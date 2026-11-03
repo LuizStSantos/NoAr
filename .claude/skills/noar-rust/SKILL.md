@@ -7,7 +7,7 @@ description: Official Rust, Axum, Tokio, SQLx and SQLite documentation for NoAr 
 
 User request: $ARGUMENTS
 
-Applies to `backend/app/`, `backend/engine/`, `migrations/` and Rust workspace manifests. Respect `backend/AGENTS.md`. For media-runtime and gstreamer-rs questions consult `/noar-gstreamer`; `/noar-ffmpeg` covers only remaining frame-memory and fixture interfaces.
+Applies to `backend/app/`, `backend/engine/`, `migrations/` and Rust workspace manifests. Respect `backend/AGENTS.md`. For media-runtime and gstreamer-rs questions consult `/noar-gstreamer`; NoAr does not link FFmpeg (frames are `backend/engine/src/frame.rs`, time bases `time_base.rs`); `/noar-ffmpeg` covers only libav codecs inside GStreamer and test fixtures.
 
 ## Official sources
 

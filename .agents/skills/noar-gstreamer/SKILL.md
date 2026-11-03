@@ -8,5 +8,5 @@ description: Use for NoAr's GStreamer engine, gstreamer-rs APIs, source switchin
 Read `.claude/skills/noar-gstreamer/SKILL.md` for the shared canonical reference.
 GStreamer is NoAr's sole playout engine on this branch. Confirm Cargo.lock,
 native versions and installed plugin properties before using official examples.
-Keep FFmpeg research scoped to frame-memory compatibility and test tooling.
+Keep FFmpeg research scoped to the codecs GStreamer takes from `gstreamer1.0-libav` and `ffmpeg`/`ffprobe` test tooling (NoAr does not link FFmpeg).
 Follow root `AGENTS.md`; this adapter adds no agents or voting roles.

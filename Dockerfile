@@ -61,18 +61,9 @@ RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     fi; \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        clang \
-        libavcodec-dev \
-        libavdevice-dev \
-        libavfilter-dev \
-        libavformat-dev \
-        libavutil-dev \
-        libclang-dev \
         libgstreamer1.0-dev \
         libgstreamer-plugins-base1.0-dev \
         libgstreamer-plugins-bad1.0-dev \
-        libswresample-dev \
-        libswscale-dev \
         pkg-config && \
     pkg-config --atleast-version=1.26 gstreamer-1.0 && \
     pkg-config --atleast-version=1.26 gstreamer-app-1.0 && \

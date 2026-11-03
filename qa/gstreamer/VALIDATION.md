@@ -17,8 +17,8 @@ production services contacted.
 - 640×360 at 25 fps, H.264/AAC, mono 48 kHz. All media is synthetic.
 
 GStreamer manages pipeline timing and SRT lifecycle in this experiment. Its
-`libav` codec plugin still uses FFmpeg libraries. A successful experiment does
-not establish that NoAr can remove all FFmpeg dependencies.
+`libav` codec plugin still uses FFmpeg libraries. (NoAr has since moved to
+GStreamer entirely and does not link FFmpeg; only that plugin remains.)
 
 ## Executed checks
 
@@ -72,6 +72,5 @@ and controlled source loss in this synthetic setup. Timestamp gates are coarse;
 they do not certify lip sync, end-device playback, production resource usage or
 24/7 operation.
 
-The next engineering step is to define a Rust media-backend interface and verify
-NoAr's scheduling and configuration contracts before adding an optional
-GStreamer backend. Preserve the current FFmpeg backend for comparison and return.
+This experiment led to the integration that made GStreamer NoAr's only engine;
+the FFmpeg backend it compared against has since been removed.

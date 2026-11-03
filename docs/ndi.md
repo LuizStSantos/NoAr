@@ -40,7 +40,10 @@ The script:
 3. installs and starts `avahi-daemon` (mDNS discovery) when it is missing;
 4. writes `docker-compose.override.yml`, which Docker Compose loads by
    itself: NoAr uses the server's network (needed for NDI discovery; the web
-   interface stays on port 8787) and reads the runtime from `/opt/ndi`.
+   interface stays on port 8787), reads the runtime from `/opt/ndi` and
+   reaches the server's system D-Bus (`/run/dbus`): the NDI library announces
+   its sources through `avahi-daemon` over D-Bus, and without it receivers do
+   not list NoAr.
 
 Then allow 5353/UDP (mDNS) and 5959-5999/TCP (NDI) in the firewall. In
 *Settings › Output*, NDI is now available. To check that NoAr can load the
@@ -54,18 +57,31 @@ stops and asks you to add the lines below to it. Docker Compose 2.24 or newer
 is needed. To turn NDI off: delete `docker-compose.override.yml` and run
 `docker compose up -d`.
 
-For the isolated test project, write its settings to a file of its own and
-pass it with the other `-f` files:
+To check that the source is announced, choose NDI in *Settings › Output*, then
+on the server run `avahi-browse -rt _ndi._tcp` (package `avahi-utils`): it
+lists `SERVER (name)`.
+
+For the isolated test project, run it from the test checkout with `--test`.
+It writes `qa/gstreamer/compose.ndi.yaml`, which keeps the test interface on
+port 18787 (it does not take the installation's 8787) and leaves out the
+updater the test project does not have. Pass that file with the other `-f`
+files:
 
 ```sh
-sudo sh docker/ndi/enable-ndi.sh --compose-file qa/gstreamer/compose.ndi.yaml
+cd ~/NoAr-gstreamer-test
+sudo sh docker/ndi/enable-ndi.sh --test
 docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml \
   -f qa/gstreamer/compose.ndi.yaml up -d --no-build
 ```
 
-With host networking the test UI is on port 8787 and the `mediamtx` service
-name does not resolve inside NoAr; use `127.0.0.1` with the published test
-ports (for example `srt://127.0.0.1:19890?streamid=read:input`).
+When the runtime is already in `/opt/ndi` (from an earlier run, or the
+installation), `sh docker/ndi/enable-ndi.sh --test --compose-only` only writes
+the file, without downloading anything or needing sudo.
+
+With host networking the `mediamtx` service name does not resolve inside
+NoAr; use `127.0.0.1` with the published test ports (for example
+`srt://127.0.0.1:19890?streamid=read:input`). Without NDI, start the test as
+usual, without `-f qa/gstreamer/compose.ndi.yaml`.
 
 ## Docker settings by hand
 
@@ -81,6 +97,7 @@ services:
       NOAR_UPDATER_URL: http://127.0.0.1:18080
     volumes:
       - /opt/ndi:/opt/ndi:ro
+      - /run/dbus:/run/dbus:ro
   noar-updater:
     ports:
       - "127.0.0.1:18080:8080"
@@ -128,6 +145,10 @@ network (host networking in Docker) or an NDI Discovery Server.
 
 - Compiled-in elements, name and address validation, and the refusal of NDI
   output and input without the runtime are covered by automated tests.
-- Publishing to and receiving from real NDI devices, discovery and the signal
-  test have **not** been verified by the developers yet; please test on your
-  network before going on air.
+- NDI output was verified on a real network with the GStreamer test project
+  (NDI Runtime 6.3.2, Docker with host networking and `/run/dbus` mounted):
+  the source was announced through avahi-daemon and a receiver on another
+  machine showed picture and sound.
+- Receiving NDI in lives, discovery from NoAr (*Find NDI sources*) and the
+  signal test have **not** been verified on real devices yet; please test on
+  your network before going on air.

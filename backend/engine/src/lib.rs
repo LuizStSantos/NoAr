@@ -21,6 +21,7 @@ mod audio_mixer;
 mod benchmark;
 mod compositor;
 mod convert;
+pub mod frame;
 pub(crate) mod gstreamer;
 mod input;
 #[cfg(feature = "desktop-base")]
@@ -29,6 +30,7 @@ mod output;
 mod playback_control;
 mod playout;
 mod preview_quality;
+pub mod time_base;
 mod utils;
 
 pub use analysis::audio_level::{AudioFrameCallback, AudioLevel, AudioLevelCallback};
@@ -78,12 +80,12 @@ pub use utils::{
         validate_video_options, video_codec_uses_bitrate, video_option_defaults,
         video_option_specs,
     },
-    ffmpeg_capabilities::{
-        FfmpegCapabilities, FfmpegCodec, FfmpegFeatureSet, FfmpegMediaType, FfmpegMuxer,
-        FfmpegOutputTarget, ffmpeg_capabilities, validate_muxer_options,
-    },
     helper::is_live_input,
     logging,
+    media_capabilities::{
+        MediaCapabilities, MediaCodec, MediaFeatureSet, MediaKind, MediaMuxer, OutputTarget,
+        media_capabilities, validate_muxer_options,
+    },
     media_info::{
         AudioStream as EngineAudioStream, MediaInfo, MediaProbe as EngineMediaProbe, ProbeFormat,
         SilenceDetection, VideoStream as EngineVideoStream, detect_audio_silence, print_media_info,
@@ -926,9 +928,9 @@ fn init_media(config: &OutputConfig) -> Result<()> {
     compositor::text::init();
     gstreamer::init()?;
     logging::init(
-        config.ffmpeg_log_level,
+        config.media_log_level,
         config.ingest_log_level,
-        &config.ffmpeg_ignore_lines,
+        &config.log_ignore_lines,
         config.channel_id,
     );
 
@@ -1172,8 +1174,10 @@ mod tests {
             std::fs::remove_dir_all(directory).unwrap();
             sent.send(()).unwrap();
         });
+        // The two parts last 13.4 s: paced in real time they could not end
+        // within 10 s, while a busy CI runner may need several seconds.
         received
-            .recv_timeout(std::time::Duration::from_secs(5))
+            .recv_timeout(std::time::Duration::from_secs(10))
             .expect("trimmed preloaded clips must complete promptly without wall-clock pacing");
     }
 

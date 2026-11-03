@@ -16,7 +16,8 @@ properties/caps/units; do not apply FFmpeg options directly to GStreamer.
 
 Live URLs are clients of external services such as MediaMTX. Do not restore
 embedded RTMP/SRT input listeners or add an optional FFmpeg playback backend.
-FFmpeg research is limited to remaining frame-memory and fixture interfaces.
+NoAr does not link FFmpeg; FFmpeg research is limited to `gstreamer1.0-libav`
+codecs and `ffmpeg`/`ffprobe` fixtures.
 
 Preserve output sessions and timelines across source changes. Verify actual
 NoAr output with synthetic media, decoded transitions and wall-clock receiver

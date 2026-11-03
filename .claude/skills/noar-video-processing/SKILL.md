@@ -7,7 +7,7 @@ description: GStreamer-first media processing guidance for NoAr decoding, encodi
 
 User request: $ARGUMENTS
 
-This skill traces the whole playout pipeline. GStreamer is the sole media engine on this integration branch. Use `/noar-gstreamer` for native APIs, plugin properties, states, seeking, clocks and caps. `/noar-ffmpeg` remains scoped to memory-frame compatibility and test/codec tooling. These references add no agents or Backend Council voters.
+This skill traces the whole playout pipeline. GStreamer is the sole media engine on this integration branch. Use `/noar-gstreamer` for native APIs, plugin properties, states, seeking, clocks and caps. `/noar-ffmpeg` remains scoped to the codecs GStreamer takes from `gstreamer1.0-libav` and `ffmpeg`/`ffprobe` test tooling (NoAr does not link FFmpeg). These references add no agents or Backend Council voters.
 
 ## Official sources
 
@@ -18,11 +18,11 @@ This skill traces the whole playout pipeline. GStreamer is the sole media engine
 - Project references `docs/ai/tech-references/gstreamer.md`
 - HLS RFC https://www.rfc-editor.org/rfc/rfc8216
 
-### Remaining frame-memory and fixture interfaces
+### libav codecs inside GStreamer and test fixtures
 
 - FFmpeg documentation https://www.ffmpeg.org/documentation.html
 - FFmpeg Doxygen https://www.ffmpeg.org/doxygen/
-- Rust bindings https://docs.rs/ffmpeg-next/
+- GStreamer libav plugin https://gstreamer.freedesktop.org/documentation/libav/
 
 ## Research procedure
 

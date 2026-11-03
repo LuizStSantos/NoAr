@@ -11,7 +11,7 @@ Codex uses root `AGENTS.md` plus six lightweight repository-local `.agents/skill
 Open the NoAr repository and the intended branch at https://claude.ai/code. The root `CLAUDE.md` gives global guidance. The available skills are:
 
 - `/noar-intelligent-development` — mapping, implementation, audits, documentation, releases, and integration QA.
-- `/noar-ffmpeg` — bounded research in official FFmpeg manuals and C APIs.
+- `/noar-ffmpeg` — bounded research in official FFmpeg manuals, for the codecs GStreamer takes from `gstreamer1.0-libav` and the `ffmpeg`/`ffprobe` test tools (NoAr does not link FFmpeg).
 - `/noar-rust` — official Rust, Axum, Tokio, SQLx and SQLite.
 - `/noar-vue` — official Vue, TypeScript, Pinia and Vite.
 - `/noar-docker` — official Dockerfile, Compose and BuildKit.

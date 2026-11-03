@@ -97,6 +97,12 @@ listed authenticated endpoints also enforce the channel assignment where an
 | `POST` | `/api/playout/config/{id}/keys/{kind}` | `GA, CA` | `kind` is `logo` (logo and L-shape links) or `scte35`; `{ "action": "renew" }` makes and saves a new key, `{ "action": "clear" }` turns it off. Answers `{ "key": "..." }`. `PUT /api/playout/config/{id}` keeps the stored keys whatever it is sent. |
 | `POST` | `/api/playout/config/{id}/test-alert` | `GA, CA` | `{ "kind": "mail", "recipient": "...", "subject": "..." }` or `{ "kind": "push", "topic": "...", "tags": "..." }`. Sends one test alert with these values, saved or not. `409` when no mail or push server is configured. |
 
+`logging.media_level` is the level of the media engine's (GStreamer's)
+messages in the log. Until 2.0 it was named `ffmpeg_level`: requests may still
+send that name, and responses still carry it as a deprecated copy of
+`media_level` for older clients. When a request has both, `media_level` is
+used.
+
 `PUT /api/playout/config/{id}` validates output mode, codecs, HLS subtitle
 settings, and volume before persisting the change.
 Video settings are submitted as `output.video_options`: a string map whose
@@ -104,12 +110,13 @@ allowed keys, values, numeric bounds, defaults, and visibility conditions are
 provided with the selected video codec by `GET /api/playout/codecs/{id}`.
 Audio encoder settings use `output.audio_options` and, for dedicated recording
 encoding, `recording.audio_options`. Both are string maps and remain empty by
-default so FFmpeg retains its codec defaults. FFmpeg audio-encoding AVOptions
-can be submitted through the advanced editor. Options managed by NoAr,
-including bitrate, sample rate, channel layout and time base, cannot be
-overridden. FFmpeg validates every remaining name and value
-before the configuration is stored, so unsupported options cannot cause a
-delayed failure during the next output restart.
+default so the encoder keeps its own defaults. Further encoder settings can be
+submitted through the advanced editor. Options managed by NoAr, including
+bitrate, sample rate, channel layout and time base, cannot be overridden.
+NoAr builds the GStreamer encoder with every remaining name and value before
+the configuration is stored, so unsupported options cannot cause a delayed
+failure during the next output restart. Codec names keep the values stored
+before GStreamer (`libx264`, `aac`, `libopus` and so on).
 
 Network stream transports use the separate `output.protocol_options` string
 map. NoAr validates its names and values for the RTMP, SRT, UDP, or custom
@@ -121,15 +128,15 @@ authenticated endpoints.
 `output.metadata_options` is a separate string map of global container tags,
 such as `title`, `copyright`, `service_name`, or `service_provider`. Tag names
 and values are validated for safe length and characters before saving. They
-are applied to the FFmpeg output context before its header is written, not as
-muxer or transport options. Whether a tag is retained or visible depends on
+are set as tags on the GStreamer muxer (on MPEG-TS, as the service name and
+provider of the SDT), not as muxer or transport options. Whether a tag is retained or visible depends on
 the selected output format. Desktop output does not accept container metadata.
 
 For `output.mode: "stream"`, `output.stream_type` also accepts `"custom"`.
-Set `output.stream_format` to an FFmpeg output format such as `"decklink"` and
-`output.stream_url` to its target, for example a DeckLink device name. The
-format must be available in the FFmpeg libraries linked by NoAr; FFmpeg
-performs the final device and codec compatibility check when the playout opens.
+Set `output.stream_format` to one of the container formats NoAr can write with
+GStreamer (`mpegts`, `flv`, `matroska`, `webm`, `mp4` or `mov`) and
+`output.stream_url` to its target. DeckLink cards and NDI have output modes of
+their own (`sdi`, `ndi`).
 Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 `pcm_s16le` do not use bitrate settings.
 
@@ -154,7 +161,7 @@ client can wait for `started_at` to change to know the new run is up.
 | --- | --- | --- | --- |
 | `POST` | `/api/control/{id}/playout` | `GA, CA, U` | `{ "control": "back" \| "next" \| "reset" }` |
 | `PUT` | `/api/control/{id}/audio` | `GA, CA` | `{ "volume": 0.0 }`, from `0.0` through `1.5`. |
-| `GET` | `/api/control/{id}/media/current` | `GA, CA, U` | Read the current media and playout state. |
+| `GET` | `/api/control/{id}/media/current` | `GA, CA, U` | Read the current media and playout state. `index` is the entry of the saved playlist on air (the clips of an assembled program share their entry, and `elapsed` counts from the start of the entry); during a scheduled event it is `null` and `media` covers the whole event. |
 | `POST` | `/api/control/{id}/process` | `GA, CA, U` | `{ "command": "status" \| "start" \| "stop" \| "restart" }` |
 
 During an active live ingest, `back`, `next`, and `reset` return HTTP 200 with
@@ -392,7 +399,7 @@ rejected.
 | `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
 | `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
 | `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...], "trim": { "from": 8, "to": 1790.5 } }` |
-| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35, `lshape` the stretches in the [L-shape](logo.md#l-shape), with this video's own `lshape_graphic`, `lshape_corner` and `lshape_scale` for them (each optional), `logo_position` (`X%:Y%`) where the logo goes while it plays, and `logo_image` (a storage path) the logo it shows in place of the channel's ([docs](logo.md#logo-and-l-shape-of-one-video)). At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
+| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35, `lshape` the stretches in the [L-shape](logo.md#l-shape), with this video's own `lshape_graphic`, `lshape_corner` and `lshape_scale` for them (each optional), `logo_position` (`X%:Y%`) where the logo goes while it plays, and `logo_image` (a storage path) the logo it shows in place of the channel's ([docs](logo.md#logo-and-l-shape-of-one-video)). At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. `insert: true` makes the video an ident or promo, which the guide and the Player count inside the program before it ([guide](xmltv.md#how-the-guide-is-built)). See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
 | `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
 | `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
 | `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |

@@ -33,8 +33,9 @@ The loader selects `/usr/local/lib/libsrt-gnutls.so.1.5`; the distribution
 package version can still report 1.5.4. Build provenance is recorded in
 `/usr/local/share/noar/srt-build.txt`. Native GStreamer SRT plugins use this
 library. The image includes GStreamer 1.26, codec/container plugins and TLS
-support. The FFmpeg libraries remain available for the frame-memory adapter
-and GStreamer's libav codec plugins; they are not a second playout engine.
+support. NoAr itself does not link the FFmpeg libraries; they are present
+only through `gstreamer1.0-libav`, GStreamer's plugin for the codecs it does
+not have natively (MPEG-2, ProRes and others).
 
 Before deploying a candidate image, test repeated playlist/live/playlist
 transitions with synthetic sources and disposable MediaMTX and VLC instances.

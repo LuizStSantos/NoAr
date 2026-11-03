@@ -1,3 +1,6 @@
+#[cfg(feature = "desktop-gpu")]
+use crate::frame::{ColorPrimaries, ColorRange, ColorSpace, ColorTransfer};
+use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     mem,
     ops::Deref,
@@ -5,9 +8,6 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-#[cfg(feature = "desktop-gpu")]
-use ffmpeg_next::util::color;
-use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
 use crate::gstreamer::FrameConverter;
 
@@ -89,13 +89,13 @@ pub(super) struct VideoSurface {
     #[cfg(feature = "desktop-gpu")]
     pub(super) v: Arc<RecyclableBuffer<u8>>,
     #[cfg(feature = "desktop-gpu")]
-    pub(super) color_space: color::Space,
+    pub(super) color_space: ColorSpace,
     #[cfg(feature = "desktop-gpu")]
-    pub(super) color_range: color::Range,
+    pub(super) color_range: ColorRange,
     #[cfg(feature = "desktop-gpu")]
-    pub(super) color_primaries: color::Primaries,
+    pub(super) color_primaries: ColorPrimaries,
     #[cfg(feature = "desktop-gpu")]
-    pub(super) color_transfer: color::TransferCharacteristic,
+    pub(super) color_transfer: ColorTransfer,
     #[cfg(all(feature = "desktop-cpu", not(feature = "desktop-gpu")))]
     pub(super) pixels: Arc<RecyclableBuffer<u32>>,
     pub(super) pts: i64,
@@ -103,7 +103,7 @@ pub(super) struct VideoSurface {
 
 pub(super) struct DesktopFrameConverter {
     scaler: Option<FrameConverter>,
-    converted: frame::Video,
+    converted: VideoFrame,
     #[cfg(feature = "desktop-gpu")]
     buffer_pool: Arc<Mutex<Vec<Vec<u8>>>>,
     #[cfg(all(feature = "desktop-cpu", not(feature = "desktop-gpu")))]
@@ -114,14 +114,14 @@ impl Default for DesktopFrameConverter {
     fn default() -> Self {
         Self {
             scaler: None,
-            converted: frame::Video::empty(),
+            converted: VideoFrame::empty(),
             buffer_pool: Arc::new(Mutex::new(Vec::with_capacity(VIDEO_BUFFER_POOL_CAPACITY))),
         }
     }
 }
 
 impl DesktopFrameConverter {
-    pub(super) fn convert(&mut self, frame: &frame::Video) -> Result<VideoSurface> {
+    pub(super) fn convert(&mut self, frame: &VideoFrame) -> Result<VideoSurface> {
         let width = frame.width();
         let height = frame.height();
 
@@ -152,14 +152,14 @@ impl DesktopFrameConverter {
         {
             let mut pixels =
                 take_buffer(&self.buffer_pool, width as usize * height as usize, 0_u32);
-            let stride = self.converted.stride(0) / 4;
+            let stride = self.converted.stride(0);
 
             for (target_row, source_row) in pixels
                 .chunks_exact_mut(width as usize)
-                .zip(self.converted.plane::<[u8; 4]>(0).chunks_exact(stride))
+                .zip(self.converted.data(0).chunks_exact(stride))
             {
-                for (target, source) in target_row.iter_mut().zip(source_row) {
-                    *target = bgrz_to_rgb_pixel(*source);
+                for (target, source) in target_row.iter_mut().zip(source_row.chunks_exact(4)) {
+                    *target = bgrz_to_rgb_pixel([source[0], source[1], source[2], source[3]]);
                 }
             }
 
@@ -203,7 +203,7 @@ impl DesktopFrameConverter {
                 color_space: frame.color_space(),
                 color_range: frame.color_range(),
                 color_primaries: frame.color_primaries(),
-                color_transfer: frame.color_transfer_characteristic(),
+                color_transfer: frame.color_transfer(),
                 pts: frame.pts().unwrap_or_default(),
             })
         }
@@ -211,18 +211,18 @@ impl DesktopFrameConverter {
 }
 
 #[cfg(all(feature = "desktop-cpu", not(feature = "desktop-gpu")))]
-fn output_pixel_format() -> Pixel {
-    Pixel::BGRZ
+fn output_pixel_format() -> PixelFormat {
+    PixelFormat::Bgrx
 }
 
 #[cfg(feature = "desktop-gpu")]
-fn output_pixel_format() -> Pixel {
-    Pixel::YUV420P
+fn output_pixel_format() -> PixelFormat {
+    PixelFormat::Yuv420p
 }
 
 #[cfg(feature = "desktop-gpu")]
 fn copy_frame_plane(
-    frame: &frame::Video,
+    frame: &VideoFrame,
     plane: usize,
     width: usize,
     height: usize,

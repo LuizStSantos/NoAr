@@ -7,36 +7,36 @@ use ::gstreamer::{self as gst, prelude::*};
 use crate::output::pipeline;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FfmpegCapabilities {
-    pub features: FfmpegFeatureSet,
-    pub encoders: Vec<FfmpegCodec>,
-    pub muxers: Vec<FfmpegMuxer>,
+pub struct MediaCapabilities {
+    pub features: MediaFeatureSet,
+    pub encoders: Vec<MediaCodec>,
+    pub muxers: Vec<MediaMuxer>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct FfmpegFeatureSet {
+pub struct MediaFeatureSet {
     pub hls_subtitle_name: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FfmpegCodec {
+pub struct MediaCodec {
     pub name: String,
     pub display_name: String,
     pub codec_id: String,
-    pub media_type: FfmpegMediaType,
+    pub media_type: MediaKind,
     pub hardware: bool,
     pub wrapper: Option<String>,
     factory: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FfmpegMuxer {
+pub struct MediaMuxer {
     pub name: String,
     pub long_name: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FfmpegOutputTarget {
+pub enum OutputTarget {
     Hls,
     Rtmp,
     Srt,
@@ -45,24 +45,24 @@ pub enum FfmpegOutputTarget {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FfmpegMediaType {
+pub enum MediaKind {
     Audio,
     Video,
     Subtitle,
 }
 
-static CAPABILITIES: OnceLock<FfmpegCapabilities> = OnceLock::new();
+static CAPABILITIES: OnceLock<MediaCapabilities> = OnceLock::new();
 
-pub fn ffmpeg_capabilities() -> &'static FfmpegCapabilities {
-    CAPABILITIES.get_or_init(FfmpegCapabilities::detect)
+pub fn media_capabilities() -> &'static MediaCapabilities {
+    CAPABILITIES.get_or_init(MediaCapabilities::detect)
 }
 
-impl FfmpegCapabilities {
+impl MediaCapabilities {
     pub fn detect() -> Self {
         if let Err(error) = crate::gstreamer::init() {
             log::error!("GStreamer capabilities unavailable: {error:#}");
             return Self {
-                features: FfmpegFeatureSet {
+                features: MediaFeatureSet {
                     hls_subtitle_name: false,
                 },
                 encoders: Vec::new(),
@@ -78,14 +78,14 @@ impl FfmpegCapabilities {
                 .metadata(gst::ELEMENT_METADATA_KLASS)
                 .unwrap_or_default();
             let media_type = if class.contains("Video") || class.contains("Image") {
-                FfmpegMediaType::Video
+                MediaKind::Video
             } else if class.contains("Audio") {
-                FfmpegMediaType::Audio
+                MediaKind::Audio
             } else {
                 continue;
             };
             let raw = gst::Caps::builder(match media_type {
-                FfmpegMediaType::Video => "video/x-raw",
+                MediaKind::Video => "video/x-raw",
                 _ => "audio/x-raw",
             })
             .build();
@@ -101,7 +101,7 @@ impl FfmpegCapabilities {
             };
             let native_name = factory.name().to_string();
             let name = persisted_codec_name(&native_name).to_owned();
-            encoders.push(FfmpegCodec {
+            encoders.push(MediaCodec {
                 display_name: factory
                     .metadata(gst::ELEMENT_METADATA_LONGNAME)
                     .unwrap_or_default()
@@ -120,11 +120,11 @@ impl FfmpegCapabilities {
                 ("pcm_s16le", "PCM signed 16-bit little-endian"),
                 ("pcm_f32le", "PCM float 32-bit little-endian"),
             ] {
-                encoders.push(FfmpegCodec {
+                encoders.push(MediaCodec {
                     name: name.into(),
                     display_name: display.into(),
                     codec_id: name.into(),
-                    media_type: FfmpegMediaType::Audio,
+                    media_type: MediaKind::Audio,
                     hardware: false,
                     wrapper: None,
                     factory: "identity".into(),
@@ -137,7 +137,7 @@ impl FfmpegCapabilities {
             .into_iter()
             .filter_map(|name| {
                 let factory = mux_factory(name)?;
-                Some(FfmpegMuxer {
+                Some(MediaMuxer {
                     name: name.to_owned(),
                     long_name: factory
                         .metadata(gst::ELEMENT_METADATA_LONGNAME)
@@ -148,7 +148,7 @@ impl FfmpegCapabilities {
             .collect();
 
         Self {
-            features: FfmpegFeatureSet {
+            features: MediaFeatureSet {
                 hls_subtitle_name: true,
             },
             encoders,
@@ -156,23 +156,19 @@ impl FfmpegCapabilities {
         }
     }
 
-    pub fn audio_codecs_for(&self, target: FfmpegOutputTarget) -> Vec<FfmpegCodec> {
-        self.codecs_for(target, FfmpegMediaType::Audio)
+    pub fn audio_codecs_for(&self, target: OutputTarget) -> Vec<MediaCodec> {
+        self.codecs_for(target, MediaKind::Audio)
     }
 
-    pub fn video_codecs_for(&self, target: FfmpegOutputTarget) -> Vec<FfmpegCodec> {
-        self.codecs_for(target, FfmpegMediaType::Video)
+    pub fn video_codecs_for(&self, target: OutputTarget) -> Vec<MediaCodec> {
+        self.codecs_for(target, MediaKind::Video)
     }
 
-    pub fn codecs_for(
-        &self,
-        target: FfmpegOutputTarget,
-        media_type: FfmpegMediaType,
-    ) -> Vec<FfmpegCodec> {
+    pub fn codecs_for(&self, target: OutputTarget, media_type: MediaKind) -> Vec<MediaCodec> {
         let muxer = match target {
-            FfmpegOutputTarget::Hls | FfmpegOutputTarget::Srt | FfmpegOutputTarget::Udp => "mpegts",
-            FfmpegOutputTarget::Rtmp => "flv",
-            FfmpegOutputTarget::Matroska => "matroska",
+            OutputTarget::Hls | OutputTarget::Srt | OutputTarget::Udp => "mpegts",
+            OutputTarget::Rtmp => "flv",
+            OutputTarget::Matroska => "matroska",
         };
         let Some(muxer) = mux_factory(muxer) else {
             return Vec::new();
@@ -197,20 +193,20 @@ impl FfmpegCapabilities {
                 })
             })
             .filter(|codec| {
-                target != FfmpegOutputTarget::Rtmp
+                target != OutputTarget::Rtmp
                     || match codec.media_type {
-                        FfmpegMediaType::Video => {
+                        MediaKind::Video => {
                             matches!(codec.codec_id.as_str(), "h264" | "hevc" | "av1")
                         }
-                        FfmpegMediaType::Audio => matches!(codec.codec_id.as_str(), "aac" | "mp3"),
-                        FfmpegMediaType::Subtitle => false,
+                        MediaKind::Audio => matches!(codec.codec_id.as_str(), "aac" | "mp3"),
+                        MediaKind::Subtitle => false,
                     }
             })
             .cloned()
             .collect()
     }
 
-    pub fn usable_codecs(&self, media_type: FfmpegMediaType) -> Vec<FfmpegCodec> {
+    pub fn usable_codecs(&self, media_type: MediaKind) -> Vec<MediaCodec> {
         self.encoders
             .iter()
             .filter(|codec| codec.media_type == media_type)
@@ -218,12 +214,12 @@ impl FfmpegCapabilities {
             .collect()
     }
 
-    pub fn has_muxer(&self, target: FfmpegOutputTarget) -> bool {
+    pub fn has_muxer(&self, target: OutputTarget) -> bool {
         self.has_muxer_named(match target {
-            FfmpegOutputTarget::Hls => "hls",
-            FfmpegOutputTarget::Rtmp => "flv",
-            FfmpegOutputTarget::Srt | FfmpegOutputTarget::Udp => "mpegts",
-            FfmpegOutputTarget::Matroska => "matroska",
+            OutputTarget::Hls => "hls",
+            OutputTarget::Rtmp => "flv",
+            OutputTarget::Srt | OutputTarget::Udp => "mpegts",
+            OutputTarget::Matroska => "matroska",
         })
     }
 
@@ -298,13 +294,13 @@ mod tests {
 
     #[test]
     fn native_registry_advertises_encoders_usable_by_transport_muxers() {
-        let capabilities = FfmpegCapabilities::detect();
+        let capabilities = MediaCapabilities::detect();
         for target in [
-            FfmpegOutputTarget::Hls,
-            FfmpegOutputTarget::Srt,
-            FfmpegOutputTarget::Udp,
-            FfmpegOutputTarget::Rtmp,
-            FfmpegOutputTarget::Matroska,
+            OutputTarget::Hls,
+            OutputTarget::Srt,
+            OutputTarget::Udp,
+            OutputTarget::Rtmp,
+            OutputTarget::Matroska,
         ] {
             assert!(capabilities.has_muxer(target));
             assert!(

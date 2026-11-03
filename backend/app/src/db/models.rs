@@ -240,7 +240,7 @@ pub struct Configuration {
     pub notification_level: String,
     pub notification_tags: String,
 
-    pub logging_ffmpeg_level: String,
+    pub logging_media_level: String,
     pub logging_ingest_level: String,
     pub logging_detect_silence: bool,
     #[serde(default)]
@@ -336,7 +336,7 @@ impl Configuration {
             notification_topic: config.notification.topic,
             notification_level: config.notification.level.to_string(),
             notification_tags: config.notification.tags,
-            logging_ffmpeg_level: config.logging.ffmpeg_level,
+            logging_media_level: config.logging.media_level,
             logging_ingest_level: config.logging.ingest_level,
             logging_detect_silence: config.logging.detect_silence,
             logging_ignore: config.logging.ignore_lines.join(";"),

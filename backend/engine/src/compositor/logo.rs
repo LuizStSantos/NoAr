@@ -1,3 +1,4 @@
+use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     fmt,
     sync::{Arc, Mutex, MutexGuard, PoisonError},
@@ -5,7 +6,6 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
 use crate::{
     compositor::overlay::{OverlayRef, blend_overlay, chroma_alpha},
@@ -14,7 +14,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct LogoOverlay {
-    pub frame: frame::Video, // YUVA420P
+    pub frame: VideoFrame, // YUVA420P
     chroma_alpha: Vec<u8>,
     pub x: u32,
     pub y: u32,
@@ -39,7 +39,7 @@ impl LogoOverlay {
             output_height,
         )?;
         let frame =
-            crate::gstreamer::FrameConverter::new(&decoded, Pixel::YUVA420P, width, height)?
+            crate::gstreamer::FrameConverter::new(&decoded, PixelFormat::Yuva420p, width, height)?
                 .run(&decoded)?;
         let (x, y) = logo_position(&config.position, output_width, output_height, width, height)?;
 
@@ -224,7 +224,7 @@ fn eval_position_expr(expr: &str, main: u32, overlay: u32) -> Result<i64> {
     Ok(total)
 }
 
-pub fn blend_logo(target: &mut frame::Video, logo: &LogoOverlay, opacity_factor: f64) {
+pub fn blend_logo(target: &mut VideoFrame, logo: &LogoOverlay, opacity_factor: f64) {
     blend_overlay(target, logo.as_overlay(), opacity_factor);
 }
 
@@ -557,6 +557,9 @@ impl LogoControl {
         }
     }
 
+    /// Whether a logo image is set from any source (tests check the state
+    /// with it).
+    #[cfg(test)]
     pub(crate) fn has_replacement(&self) -> bool {
         let state = self.lock();
 

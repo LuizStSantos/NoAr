@@ -110,15 +110,27 @@ pub fn set_defaults(config: &PlayoutConfig, playlist: &mut JsonPlaylist) {
     let mut start_sec = playlist.start_sec.unwrap();
     let mut length = 0.0;
     let mut commercials = CommercialFolders::new(&config.storage.path);
-    // Assembled programs air as their blocks and breaks, as they are now.
+    // Assembled programs air as their blocks and breaks, as they are now;
+    // each clip keeps the entry it came from.
+    for (entry, item) in playlist.program.iter_mut().enumerate() {
+        item.entry = Some((entry, 0.0));
+    }
     playlist.program = crate::utils::assembled::expand_playlist(
         &config.storage.path,
         std::mem::take(&mut playlist.program),
     );
     resolve_lives(&config.storage.path, &mut playlist.program);
 
+    let mut entry_start = (usize::MAX, 0.0);
+
     // Add extra values to every media clip
     for (i, item) in playlist.program.iter_mut().enumerate() {
+        if let Some((entry, _)) = item.entry {
+            if entry_start.0 != entry {
+                entry_start = (entry, start_sec);
+            }
+            item.entry = Some((entry, start_sec - entry_start.1));
+        }
         normalize_live_source_timing(item);
         item.begin = Some(start_sec);
         item.index = Some(i);
@@ -305,6 +317,55 @@ mod tests {
         assert_eq!(entries[0].out, 600.0);
         // An unreadable live keeps its slot.
         assert_eq!(entries[1].source, "Lives/Gone/signal.live");
+
+        std::fs::remove_dir_all(storage).unwrap();
+    }
+
+    #[test]
+    fn clips_of_a_program_count_as_their_playlist_entry() {
+        let storage =
+            std::env::temp_dir().join(format!("noar-program-entries-{}", std::process::id()));
+        std::fs::create_dir_all(&storage).unwrap();
+        std::fs::write(
+            storage.join("show.program"),
+            r#"{"title": "Show", "segments": [
+                {"kind": "block", "source": "b1.mp4", "in": 0.0, "out": 30.0},
+                {"kind": "block", "source": "b2.mp4", "in": 0.0, "out": 20.0}]}"#,
+        )
+        .unwrap();
+        let clip = |source: &str, out: f64| Media {
+            source: source.to_string(),
+            out,
+            duration: out,
+            ..Media::default()
+        };
+        let mut config = PlayoutConfig::default();
+        config.storage.path = storage.clone();
+        let mut playlist = JsonPlaylist {
+            start_sec: Some(100.0),
+            program: vec![
+                clip("a.mp4", 10.0),
+                clip("show.program", 50.0),
+                clip("c.mp4", 5.0),
+            ],
+            ..JsonPlaylist::new("2026-11-03".to_string(), 100.0)
+        };
+
+        set_defaults(&config, &mut playlist);
+
+        let entries: Vec<_> = playlist.program.iter().map(|media| media.entry).collect();
+        // The program airs as its two blocks, both counted as entry 1; the
+        // second starts 30 s into it. The clip after it stays entry 2.
+        assert_eq!(
+            entries,
+            [
+                Some((0, 0.0)),
+                Some((1, 0.0)),
+                Some((1, 30.0)),
+                Some((2, 0.0))
+            ]
+        );
+        assert_eq!(playlist.program[3].index, Some(3));
 
         std::fs::remove_dir_all(storage).unwrap();
     }

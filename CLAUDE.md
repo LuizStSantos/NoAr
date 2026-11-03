@@ -58,7 +58,7 @@ Use the parent Claude session for simple changes. Full five-agent councils and r
 
 ## Technology references
 
-- For nontrivial version-sensitive work use the relevant repository skill: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-gstreamer` or `/noar-video-processing`. GStreamer is the sole playout engine on this branch. Confirm lockfiles, native libraries and installed plugin properties/caps. Use `/noar-ffmpeg` only for frame-memory compatibility, codec dependencies and test tooling.
+- For nontrivial version-sensitive work use the relevant repository skill: `/noar-rust`, `/noar-vue`, `/noar-docker`, `/noar-gstreamer` or `/noar-video-processing`. GStreamer is the sole playout engine on this branch. Confirm lockfiles, native libraries and installed plugin properties/caps. NoAr no longer links FFmpeg; use `/noar-ffmpeg` only for the codecs GStreamer takes from `gstreamer1.0-libav` and for `ffmpeg`/`ffprobe` test tooling.
 - These are reference instructions, not agents or new council voters. Select only the needed official documentation through `.claude/rules/`. See `docs/ai/tech-references/README.md`.
 
 ## Media reference guidance

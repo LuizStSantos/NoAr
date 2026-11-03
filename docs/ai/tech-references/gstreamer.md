@@ -18,7 +18,8 @@ canonical research workflow lives in
 Paths in the engine column after the first row are relative to
 `backend/engine/src/`. Confirm them in current source and use the repository map
 for symbols. `backend/engine/src/utils/media_capabilities.rs` detects native
-plugins; legacy public `Ffmpeg*` names preserve API compatibility.
+plugins (`MediaCapabilities`); the configuration API's codec names keep their
+stored values (`libx264`, `aac` and so on).
 
 Live/file playback uses `uridecodebin3` so adaptive HLS uses `hlsdemux2`.
 Selected-stream messages also identify audio-only and video-only inputs.

@@ -1,10 +1,11 @@
+use crate::frame::{AudioFrame, VideoFrame};
 use std::{error::Error, fmt};
 
 use anyhow::Result;
 #[cfg(feature = "desktop-base")]
 use anyhow::anyhow;
-use ffmpeg_next::frame;
 
+mod backlog;
 #[cfg(feature = "desktop-base")]
 pub(crate) mod desktop;
 #[path = "gstreamer_output.rs"]
@@ -48,26 +49,26 @@ impl Error for PlaybackStopped {}
 pub(crate) trait FrameOutput {
     fn audio_frame_size(&self) -> usize;
 
-    fn encode_video(&mut self, frame: &frame::Video) -> Result<()>;
+    fn encode_video(&mut self, frame: &VideoFrame) -> Result<()>;
 
     /// The newest picture on its way out, to hold on screen while a source
     /// connects. `None` holds black.
-    fn held_video_frame(&self) -> Option<frame::Video> {
+    fn held_video_frame(&self) -> Option<VideoFrame> {
         None
     }
 
-    fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()>;
+    fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()>;
 
     /// Volume has already been applied; meters and encoding still run normally.
-    fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio(frame)
     }
 
-    fn encode_live_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_live_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio(frame)
     }
 
-    fn encode_audio_with_gain_hold(&mut self, frame: &frame::Audio, _hold: bool) -> Result<()> {
+    fn encode_audio_with_gain_hold(&mut self, frame: &AudioFrame, _hold: bool) -> Result<()> {
         self.encode_audio(frame)
     }
 
@@ -80,7 +81,7 @@ pub(crate) trait FrameOutput {
 
     fn apply_logo_overlay(
         &mut self,
-        frame: &mut frame::Video,
+        frame: &mut VideoFrame,
         logo: &LogoOverlay,
         opacity_factor: f64,
     ) {
@@ -231,7 +232,7 @@ impl Output {
         }
     }
 
-    pub(crate) fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+    pub(crate) fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
         match &mut self.kind {
             OutputKind::Encoded(output) => output.encode_video(frame),
             #[cfg(feature = "desktop-base")]
@@ -239,7 +240,7 @@ impl Output {
         }
     }
 
-    pub(crate) fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    pub(crate) fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         match &mut self.kind {
             OutputKind::Encoded(output) => output.encode_audio(frame),
             #[cfg(feature = "desktop-base")]
@@ -286,7 +287,7 @@ impl FrameOutput for Output {
         Self::audio_frame_size(self)
     }
 
-    fn held_video_frame(&self) -> Option<frame::Video> {
+    fn held_video_frame(&self) -> Option<VideoFrame> {
         match &self.kind {
             OutputKind::Encoded(output) => output.held_video_frame(),
             #[cfg(feature = "desktop-base")]
@@ -294,15 +295,15 @@ impl FrameOutput for Output {
         }
     }
 
-    fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+    fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
         Self::encode_video(self, frame)
     }
 
-    fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         Self::encode_audio(self, frame)
     }
 
-    fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         match &mut self.kind {
             OutputKind::Encoded(output) => output.encode_processed_audio(frame),
             #[cfg(feature = "desktop-base")]
@@ -312,7 +313,7 @@ impl FrameOutput for Output {
 
     fn apply_logo_overlay(
         &mut self,
-        frame: &mut frame::Video,
+        frame: &mut VideoFrame,
         logo: &LogoOverlay,
         opacity_factor: f64,
     ) {

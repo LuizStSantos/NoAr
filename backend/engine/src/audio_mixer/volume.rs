@@ -1,4 +1,4 @@
-use ffmpeg_next::frame;
+use crate::frame::AudioFrame;
 
 use super::control::{AudioEffect, AudioEffectsControl};
 
@@ -54,7 +54,7 @@ impl GainEffect {
 }
 
 impl AudioEffect for GainEffect {
-    fn process(&mut self, frame: &mut frame::Audio) {
+    fn process(&mut self, frame: &mut AudioFrame) {
         let samples = frame.samples();
         let ramping = self.remaining_samples > 0 || self.control.volume_f32() != self.target;
 
@@ -62,7 +62,7 @@ impl AudioEffect for GainEffect {
             let gain = self.current;
 
             for plane in 0..frame.planes() {
-                for sample in frame.plane_mut::<f32>(plane) {
+                for sample in frame.plane_mut(plane) {
                     *sample = if sample.is_finite() {
                         *sample * gain
                     } else {
@@ -83,11 +83,7 @@ impl AudioEffect for GainEffect {
         }
 
         for plane in 0..frame.planes() {
-            for (sample, gain) in frame
-                .plane_mut::<f32>(plane)
-                .iter_mut()
-                .zip(&self.gain_buffer)
-            {
+            for (sample, gain) in frame.plane_mut(plane).iter_mut().zip(&self.gain_buffer) {
                 *sample = if sample.is_finite() {
                     *sample * gain
                 } else {
@@ -103,17 +99,12 @@ mod tests {
     use super::*;
     use crate::audio_mixer::AudioEffectChain;
 
-    use ffmpeg_next::{
-        format::sample::{Sample, Type as SampleType},
-        util::channel_layout::ChannelLayout,
-    };
-
     struct DoubleEffect;
 
     impl AudioEffect for DoubleEffect {
-        fn process(&mut self, frame: &mut frame::Audio) {
+        fn process(&mut self, frame: &mut AudioFrame) {
             for plane in 0..frame.planes() {
-                for sample in frame.plane_mut::<f32>(plane) {
+                for sample in frame.plane_mut(plane) {
                     *sample *= 2.0;
                 }
             }
@@ -145,16 +136,15 @@ mod tests {
         let control = AudioEffectsControl::new(1.0).unwrap();
         let mut chain = AudioEffectChain::new(control, 48_000);
         chain.add(DoubleEffect);
-        let mut frame =
-            frame::Audio::new(Sample::F32(SampleType::Planar), 4, ChannelLayout::STEREO);
+        let mut frame = AudioFrame::stereo(4);
         for plane in 0..frame.planes() {
-            frame.plane_mut::<f32>(plane).fill(0.25);
+            frame.plane_mut(plane).fill(0.25);
         }
 
         chain.process(&mut frame);
 
         for plane in 0..frame.planes() {
-            assert_eq!(frame.plane::<f32>(plane), &[0.5; 4]);
+            assert_eq!(frame.plane(plane), &[0.5; 4]);
         }
     }
 }

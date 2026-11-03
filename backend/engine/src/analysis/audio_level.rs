@@ -1,6 +1,5 @@
+use crate::frame::AudioFrame;
 use std::{fmt, sync::Arc};
-
-use ffmpeg_next::frame;
 
 const AUDIO_LEVEL_INTERVAL_MILLIS: u64 = 500;
 const MIN_DBFS: f32 = -100.0;
@@ -9,17 +8,17 @@ const MIN_DBFS: f32 = -100.0;
 /// synchronously on the decoder thread and must return quickly.
 #[derive(Clone)]
 pub struct AudioFrameCallback {
-    callback: Arc<dyn Fn(&frame::Audio) + Send + Sync>,
+    callback: Arc<dyn Fn(&AudioFrame) + Send + Sync>,
 }
 
 impl AudioFrameCallback {
-    pub fn new(callback: impl Fn(&frame::Audio) + Send + Sync + 'static) -> Self {
+    pub fn new(callback: impl Fn(&AudioFrame) + Send + Sync + 'static) -> Self {
         Self {
             callback: Arc::new(callback),
         }
     }
 
-    pub(crate) fn emit(&self, frame: &frame::Audio) {
+    pub(crate) fn emit(&self, frame: &AudioFrame) {
         (self.callback)(frame);
     }
 }
@@ -78,13 +77,13 @@ impl AudioLevelMeter {
         }
     }
 
-    pub(crate) fn process_frame(&mut self, frame: &frame::Audio) {
+    pub(crate) fn process_frame(&mut self, frame: &AudioFrame) {
         if self.callback.is_none() || frame.samples() == 0 {
             return;
         }
 
-        let left = frame.plane::<f32>(0);
-        let right = frame.plane::<f32>(1);
+        let left = frame.plane(0);
+        let right = frame.plane(1);
 
         for (left, right) in left.iter().zip(right).take(frame.samples()) {
             let left = finite_sample(*left);

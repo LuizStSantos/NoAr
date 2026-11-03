@@ -110,6 +110,7 @@ function emptyMarks(): VideoMarks {
         lshape_scale: null,
         logo_position: null,
         logo_image: null,
+        insert: false,
     }
 }
 
@@ -179,6 +180,7 @@ function normalized(value: VideoMarks): VideoMarks {
         lshape_scale: value.lshape_scale ?? null,
         logo_position: value.logo_position || null,
         logo_image: value.logo_image?.trim() || null,
+        insert: Boolean(value.insert),
     }
 }
 
@@ -680,6 +682,18 @@ onBeforeUnmount(() => {
                         <i class="bi bi-x-lg" aria-hidden="true" />
                     </button>
                 </div>
+
+                <!-- Idents and promos air inside the program before them: a mark of the video, not of a playlist entry. -->
+                <label
+                    v-if="!entry"
+                    class="flex items-start gap-2.5 rounded-field border border-line-strong px-3 py-2 cursor-pointer"
+                >
+                    <input v-model="marks.insert" type="checkbox" class="checkbox checkbox-sm checkbox-accent mt-0.5" />
+                    <span class="flex flex-col gap-0.5 text-sm">
+                        <span class="font-medium">{{ t('storage.logoMarks.insert') }}</span>
+                        <span class="text-xs text-muted">{{ t('storage.logoMarks.insertHint') }}</span>
+                    </span>
+                </label>
 
                 <!-- One tab per kind of mark, with what this video has of each. -->
                 <div

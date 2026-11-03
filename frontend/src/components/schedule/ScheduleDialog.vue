@@ -504,6 +504,7 @@ useDialogFocus(dialog, { open: () => props.draft !== null, onEscape: () => emit(
                     </div>
                     <div v-if="showPicker" class="border border-base-300 rounded-md p-2 max-h-64 flex flex-col">
                         <StoragePicker
+                            programs
                             @pick="addSource"
                             @live="(folder) => !draft?.event && emit('live', folder, date, time)"
                         />

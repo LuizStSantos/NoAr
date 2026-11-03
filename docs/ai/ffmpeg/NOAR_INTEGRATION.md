@@ -2,21 +2,22 @@
 
 GStreamer is the sole playout engine on the integration branch. Start media
 research with `docs/ai/tech-references/gstreamer.md` and `/noar-gstreamer`.
-FFmpeg remains a memory-frame and codec/test dependency.
+NoAr does not link the FFmpeg libraries. FFmpeg remains only as GStreamer codecs (`gstreamer1.0-libav`) and as `ffmpeg`/`ffprobe` test tools.
 
 ## Where the FFmpeg code lives
 
 - Root Cargo workspace has `backend/app` (`noar`) and `backend/engine` (`noar-engine`).
-- `backend/engine/Cargo.toml` declares `ffmpeg-next` with selected native features and optional `ffmpeg-filter` / `ffmpeg-device` feature flags.
+- No crate binds FFmpeg (`ffmpeg-next` and the `ffmpeg-filter`/`ffmpeg-device` features were removed).
 - Native playback/timestamps: `backend/engine/src/playout.rs` and `input/gstreamer.rs` use GStreamer.
 - Native encoding/muxing: `backend/engine/src/output/gstreamer_output.rs`, `output/pipeline.rs` and `output/link.rs`.
-- Remaining FFmpeg memory adapter: `backend/engine/src/utils/ffmpeg.rs`; frame containers are also used by the Rust compositor/audio code. Test modules may use FFmpeg to generate independent fixtures.
+- Frames: `backend/engine/src/frame.rs` (`VideoFrame` in YUV420P, YUVA420P and BGRx; `AudioFrame` in planar f32), copy-on-write planes. Time bases: `backend/engine/src/time_base.rs` (`Rational`, `Rescale` with FFmpeg's nearest, halves-away-from-zero rounding).
+- The move off FFmpeg frames was checked against the FFmpeg path with lossless x264 on the same clips: identical decoded video and audio frames.
 - Broadcast cue insertion: `backend/engine/src/output/scte35.rs`.
 - Control/scheduling: `backend/app/src/player/`.
 
 ## Crucial distinction
 
-The official *ffmpeg CLI* docs cover executable flags. NoAr also uses the FFmpeg *C libraries* through `ffmpeg-next`, so look at the official FFmpeg Doxygen interface and the actual binding, including library versions, ownership, error paths and time-base conversions. Never transcribe a CLI flag into a Rust API call without checking the binding.
+The official *ffmpeg CLI* docs cover the `ffmpeg`/`ffprobe` test tools. NoAr has no FFmpeg C-library binding any more; codec behaviour inside GStreamer's libav plugin is described by `gst-inspect-1.0 avdec_*`/`avenc_*` and the GStreamer docs.
 
 ## Request-specific handoff
 
@@ -34,7 +35,6 @@ Staging verification: <specific, safe, synthetic-media test>
 
 ## Common pitfalls
 
-- `ffmpeg-next` crate version is not proof of native runtime library versions.
 - The online manuals are generated from current FFmpeg, possibly ahead of the installed library.
 - Available encoders, protocols and hardware accelerators depend on the build.
 - Packet/frame lifetime and ownership differ across Rust bindings and C functions.

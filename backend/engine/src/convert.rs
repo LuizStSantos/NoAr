@@ -59,7 +59,7 @@ impl MediaShape {
     }
 }
 
-/// Reads the encoded stream metadata without opening FFmpeg contexts.
+/// Reads the encoded stream metadata with GStreamer, without decoding.
 pub fn probe_shape(path: &Path) -> Result<MediaShape> {
     let probe = probe_media(path.to_string_lossy().as_ref())?;
     let video = probe.video.first();
@@ -293,11 +293,7 @@ mod tests {
     use std::{env, process};
 
     use super::*;
-    use ffmpeg_next::{
-        ChannelLayout, Packet, Rational, codec,
-        format::{self, Pixel, Sample},
-        frame, media,
-    };
+    use gstreamer_app::AppSink;
 
     /// A clip of `seconds` with a moving gradient and a tone, in Matroska.
     fn write_test_clip(
@@ -333,164 +329,102 @@ mod tests {
         seconds: f64,
         audio_delay: f64,
     ) -> Result<()> {
-        let mut octx = format::output(path)?;
-        let global = octx
-            .format()
-            .flags()
-            .contains(format::flag::Flags::GLOBAL_HEADER);
-        let video_codec = codec::encoder::find(codec::Id::H264).context("h264")?;
-        let mut video_stream = octx.add_stream(video_codec)?;
-        let mut video = codec::context::Context::new_with_codec(video_codec)
-            .encoder()
-            .video()?;
-        video.set_width(width);
-        video.set_height(height);
-        video.set_format(Pixel::YUV420P);
-        video.set_time_base(Rational(1, fps as i32));
-        video.set_frame_rate(Some(Rational(fps as i32, 1)));
-        if global {
-            video.set_flags(codec::flag::Flags::GLOBAL_HEADER);
-        }
-        let mut video = video.open_as(video_codec)?;
-        video_stream.set_parameters(&video);
-        // Matroska needs container timing as well as the codec time base.
-        video_stream.set_avg_frame_rate(Rational(fps as i32, 1));
-        video_stream.set_rate(Rational(fps as i32, 1));
-        let audio_codec = codec::encoder::find(codec::Id::AAC).context("aac")?;
-        let mut audio_stream = octx.add_stream(audio_codec)?;
-        let layout = ChannelLayout::default(i32::from(channels));
-        let mut audio = codec::context::Context::new_with_codec(audio_codec)
-            .encoder()
-            .audio()?;
-        audio.set_rate(sample_rate as i32);
-        audio.set_channel_layout(layout);
-        audio.set_format(Sample::F32(format::sample::Type::Planar));
-        audio.set_time_base(Rational(1, sample_rate as i32));
-        audio.set_bit_rate(96_000);
-        if global {
-            audio.set_flags(codec::flag::Flags::GLOBAL_HEADER);
-        }
-        let mut audio = audio.open_as(audio_codec)?;
-        audio_stream.set_parameters(&audio);
-        octx.write_header()?;
+        crate::gstreamer::init()?;
+        let frames = (seconds * f64::from(fps)) as u64;
+        // The sound in 10 ms buffers.
+        let audio_buffers = (seconds * 100.0) as u64;
+        let pipeline = gst::parse::launch(&format!(
+            "videotestsrc num-buffers={frames} pattern=ball \
+               ! video/x-raw,format=I420,width={width},height={height},framerate={fps}/1 \
+               ! x264enc speed-preset=ultrafast key-int-max={fps} ! h264parse ! queue ! mux. \
+             audiotestsrc num-buffers={audio_buffers} samplesperbuffer={samples} wave=sine \
+               freq=440 volume=0.2 timestamp-offset={offset} \
+               ! audio/x-raw,format=F32LE,rate={sample_rate},channels={channels} \
+               ! audioconvert ! avenc_aac bitrate=96000 ! aacparse ! queue ! mux. \
+             matroskamux name=mux ! filesink location=\"{path}\"",
+            samples = sample_rate / 100,
+            offset = (audio_delay * 1_000_000_000.0) as i64,
+            path = path.display(),
+        ))?
+        .downcast::<gst::Pipeline>()
+        .map_err(|_| anyhow!("test clip is not a pipeline"))?;
 
-        let video_out = (
-            video_stream_index(&octx, media::Type::Video),
-            Rational(1, fps as i32),
-        );
-        let audio_out = (
-            video_stream_index(&octx, media::Type::Audio),
-            Rational(1, sample_rate as i32),
-        );
-        let frames = (seconds * f64::from(fps)) as i64;
-        for index in 0..frames {
-            let mut picture = frame::Video::new(Pixel::YUV420P, width, height);
-            picture.data_mut(0).fill((16 + index % 200) as u8);
-            picture.data_mut(1).fill(128);
-            picture.data_mut(2).fill(128);
-            picture.set_pts(Some(index));
-            video.send_frame(&picture)?;
-            drain(&mut video, &mut octx, video_out)?;
-        }
-        video.send_eof()?;
-        drain(&mut video, &mut octx, video_out)?;
+        run_to_end(&pipeline)
+    }
 
-        let frame_size = audio.frame_size() as usize;
-        let total = (seconds * f64::from(sample_rate)) as usize;
-        let mut done = 0;
-        while done < total {
-            let mut tone = frame::Audio::new(audio.format(), frame_size, layout);
-            tone.set_rate(sample_rate);
-            for channel in 0..usize::from(channels) {
-                for (offset, sample) in tone.plane_mut::<f32>(channel).iter_mut().enumerate() {
-                    *sample = ((done + offset) as f32 * 0.05).sin() * 0.2;
-                }
-            }
-            tone.set_pts(Some(
-                done as i64 + (audio_delay * f64::from(sample_rate)) as i64,
-            ));
-            audio.send_frame(&tone)?;
-            drain_audio(&mut audio, &mut octx, audio_out)?;
-            done += frame_size;
+    fn run_to_end(pipeline: &gst::Pipeline) -> Result<()> {
+        pipeline.set_state(gst::State::Playing)?;
+        let message = pipeline
+            .bus()
+            .context("pipeline has no bus")?
+            .timed_pop_filtered(
+                gst::ClockTime::from_seconds(60),
+                &[gst::MessageType::Eos, gst::MessageType::Error],
+            );
+        pipeline.set_state(gst::State::Null)?;
+
+        let Some(message) = message else {
+            bail!("the pipeline did not finish in a minute");
+        };
+
+        if let gst::MessageView::Error(error) = message.view() {
+            bail!("{}", error.error());
         }
-        audio.send_eof()?;
-        drain_audio(&mut audio, &mut octx, audio_out)?;
-        octx.write_trailer()?;
 
         Ok(())
     }
 
-    fn video_stream_index(octx: &format::context::Output, kind: media::Type) -> usize {
-        octx.streams()
-            .find(|stream| stream.parameters().medium() == kind)
-            .map(|stream| stream.index())
+    /// Every sample pulled from `branch` of `path`, read to its end.
+    fn pull_all(path: &Path, branch: &str) -> Vec<gst::Sample> {
+        crate::gstreamer::init().unwrap();
+        let pipeline = gst::parse::launch(&format!(
+            "filesrc location=\"{}\" ! {branch} ! appsink name=sink sync=false",
+            path.display()
+        ))
+        .unwrap()
+        .downcast::<gst::Pipeline>()
+        .unwrap();
+        let sink = pipeline
+            .by_name("sink")
             .unwrap()
-    }
-
-    fn drain(
-        encoder: &mut codec::encoder::video::Encoder,
-        octx: &mut format::context::Output,
-        (index, time_base): (usize, Rational),
-    ) -> Result<()> {
-        let mut packet = Packet::empty();
-        while encoder.receive_packet(&mut packet).is_ok() {
-            let stream_time_base = octx.stream(index).unwrap().time_base();
-            packet.set_stream(index);
-            packet.rescale_ts(time_base, stream_time_base);
-            packet.write_interleaved(octx)?;
-        }
-        Ok(())
-    }
-
-    fn drain_audio(
-        encoder: &mut codec::encoder::audio::Encoder,
-        octx: &mut format::context::Output,
-        (index, time_base): (usize, Rational),
-    ) -> Result<()> {
-        let mut packet = Packet::empty();
-        while encoder.receive_packet(&mut packet).is_ok() {
-            let stream_time_base = octx.stream(index).unwrap().time_base();
-            packet.set_stream(index);
-            packet.rescale_ts(time_base, stream_time_base);
-            packet.write_interleaved(octx)?;
-        }
-        Ok(())
-    }
-
-    fn audio_seconds(path: &Path) -> f64 {
-        let mut ictx = format::input(path).unwrap();
-        let stream = ictx.streams().best(media::Type::Audio).unwrap();
-        let index = stream.index();
-        let mut decoder = codec::context::Context::from_parameters(stream.parameters())
-            .unwrap()
-            .decoder()
-            .audio()
+            .downcast::<AppSink>()
             .unwrap();
-        let mut samples = 0;
-        let mut decoded = frame::Audio::empty();
-        let mut rate = 0;
-        for (stream, packet) in ictx.packets() {
-            if stream.index() == index && decoder.send_packet(&packet).is_ok() {
-                while decoder.receive_frame(&mut decoded).is_ok() {
-                    samples += decoded.samples();
-                    rate = decoded.rate();
-                }
-            }
+        pipeline.set_state(gst::State::Playing).unwrap();
+        let mut samples = Vec::new();
+
+        while let Ok(sample) = sink.pull_sample() {
+            samples.push(sample);
         }
-        samples as f64 / f64::from(rate)
+
+        pipeline.set_state(gst::State::Null).unwrap();
+
+        samples
     }
 
+    /// Seconds of decoded sound, counted in samples.
+    fn audio_seconds(path: &Path) -> f64 {
+        let mut frames = 0;
+        let mut rate = 0;
+
+        for sample in pull_all(
+            path,
+            "decodebin ! audioconvert ! audio/x-raw,format=F32LE,layout=interleaved",
+        ) {
+            let info = gstreamer_audio::AudioInfo::from_caps(sample.caps().unwrap()).unwrap();
+            rate = info.rate();
+            frames += sample.buffer().unwrap().size() / info.bpf() as usize;
+        }
+
+        frames as f64 / f64::from(rate)
+    }
+
+    /// Encoded video frames in the file.
     fn video_packets(path: &Path) -> usize {
-        format::input(path)
-            .unwrap()
-            .packets()
-            .filter(|(stream, _)| stream.parameters().medium() == media::Type::Video)
-            .count()
+        pull_all(path, "parsebin ! video/x-h264").len()
     }
 
     #[test]
     fn a_file_in_another_format_comes_out_in_the_target_one() {
-        ffmpeg_next::init().ok();
         let dir = env::temp_dir().join(format!("noar_convert_{}", process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let source = dir.join("source.mkv");
@@ -522,11 +456,7 @@ mod tests {
         assert!(shape.matches(&target), "{shape:?}");
         assert_eq!(shares.last(), Some(&1.0));
 
-        let frames = format::input(&target_path)
-            .unwrap()
-            .packets()
-            .filter(|(stream, _)| stream.parameters().medium() == media::Type::Video)
-            .count();
+        let frames = video_packets(&target_path);
         assert!(
             (98..=102).contains(&frames),
             "{frames} frames for 4 s at 25 fps"
@@ -540,7 +470,6 @@ mod tests {
 
     #[test]
     fn a_picture_already_in_the_output_format_is_copied() {
-        ffmpeg_next::init().ok();
         let dir = env::temp_dir().join(format!("noar_convert_copy_{}", process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let source = dir.join("source.mkv");
@@ -588,7 +517,6 @@ mod tests {
 
     #[test]
     fn sound_that_starts_late_stays_late() {
-        ffmpeg_next::init().ok();
         let dir = env::temp_dir().join(format!("noar_convert_delay_{}", process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let source = dir.join("source.mkv");
@@ -625,7 +553,6 @@ mod tests {
 
     #[test]
     fn a_stopped_conversion_fails() {
-        ffmpeg_next::init().ok();
         let dir = env::temp_dir().join(format!("noar_convert_stop_{}", process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let source = dir.join("source.mkv");

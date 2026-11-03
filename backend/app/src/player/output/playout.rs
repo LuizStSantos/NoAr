@@ -787,9 +787,9 @@ fn engine_output_config(
     let fps = config.output.fps.round() as u32;
 
     let logo = channel_logo(config);
-    let ffmpeg_log_level = config
+    let media_log_level = config
         .logging
-        .ffmpeg_level
+        .media_level
         .parse::<LogLevel>()
         .map_err(ServiceError::Conflict)?;
     let ingest_log_level = config
@@ -823,8 +823,8 @@ fn engine_output_config(
             .with_logo(logo)
             .with_desktop_fullscreen(config.output.desktop_fullscreen)
             .with_desktop_control_callback(desktop_control_callback)
-            .with_logging(ffmpeg_log_level, ingest_log_level)
-            .with_ffmpeg_ignore_lines(config.logging.ignore_lines.clone())
+            .with_logging(media_log_level, ingest_log_level)
+            .with_log_ignore_lines(config.logging.ignore_lines.clone())
             .with_channel_id(config.general.channel_id)
             .with_stream_type(config.output.stream_type.engine_stream_type())
             .with_stream_format(config.output.stream_format.clone())

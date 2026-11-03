@@ -1,3 +1,4 @@
+use crate::frame::{AudioFrame, VideoFrame};
 use std::{
     cell::RefCell,
     collections::VecDeque,
@@ -11,8 +12,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::time_base::{Rational, Rescale};
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{Rational, Rescale, frame};
 #[cfg(target_os = "linux")]
 use winit::platform::{wayland::WindowAttributesExtWayland, x11::WindowAttributesExtX11};
 use winit::{
@@ -45,10 +46,7 @@ use crate::{
     audio_mixer::{AudioEffectChain, AudioEffectsControl},
     benchmark::{self, BenchHandle, Stage},
     compositor::logo::{LogoOverlay, blend_logo},
-    utils::{
-        config::{DesktopControlCallback, DesktopControlCommand, OutputConfig},
-        ffmpeg::reference_video_frame,
-    },
+    utils::config::{DesktopControlCallback, DesktopControlCommand, OutputConfig},
 };
 
 use super::{EncodedOutput, FrameOutput, PlaybackStopped, vtt};
@@ -144,7 +142,7 @@ enum DesktopControlMessage {
 }
 
 struct DesktopVideoMessage {
-    frame: frame::Video,
+    frame: VideoFrame,
     logo_opacity: f64,
 }
 
@@ -199,11 +197,11 @@ struct DesktopRecording {
 
 enum DesktopRecordingMessage {
     Video {
-        frame: frame::Video,
+        frame: VideoFrame,
         logo: Option<Arc<LogoOverlay>>,
         logo_opacity: f64,
     },
-    Audio(frame::Audio),
+    Audio(AudioFrame),
     AudioPadding {
         pts: i64,
         samples: u64,
@@ -211,19 +209,15 @@ enum DesktopRecordingMessage {
     Finish,
 }
 
-fn recording_silence(pts: i64, samples: u64, rate: u32) -> impl Iterator<Item = frame::Audio> {
+fn recording_silence(pts: i64, samples: u64, rate: u32) -> impl Iterator<Item = AudioFrame> {
     (0..samples).step_by(1_024).map(move |offset| {
         let count = (samples - offset).min(1_024) as usize;
-        let mut frame = frame::Audio::new(
-            ffmpeg_next::format::Sample::F32(ffmpeg_next::format::sample::Type::Planar),
-            count,
-            ffmpeg_next::ChannelLayout::STEREO,
-        );
+        let mut frame = AudioFrame::stereo(count);
         frame.set_rate(rate);
         frame.set_pts(Some(pts + offset as i64));
 
         for channel in 0..2 {
-            frame.plane_mut::<f32>(channel).fill(0.0);
+            frame.plane_mut(channel).fill(0.0);
         }
         frame
     })
@@ -358,7 +352,7 @@ struct DesktopRenderer {
     window: Option<DesktopWindowHandle>,
     audio: DesktopAudio,
     audio_effects_control: AudioEffectsControl,
-    video_queue: VecDeque<frame::Video>,
+    video_queue: VecDeque<VideoFrame>,
     pending_audio: VecDeque<DesktopAudioMessage>,
     audio_buffer_pool: Arc<Mutex<Vec<Vec<f32>>>>,
     pending_audio_samples: u64,
@@ -437,13 +431,13 @@ impl DesktopOutput {
         1024
     }
 
-    pub(super) fn encode_video(&mut self, _frame: &frame::Video) -> Result<()> {
+    pub(super) fn encode_video(&mut self, _frame: &VideoFrame) -> Result<()> {
         Err(anyhow!(
             "desktop frames must be produced by the decode worker"
         ))
     }
 
-    pub(super) fn encode_audio(&mut self, _frame: &frame::Audio) -> Result<()> {
+    pub(super) fn encode_audio(&mut self, _frame: &AudioFrame) -> Result<()> {
         Err(anyhow!(
             "desktop audio must be produced by the decode worker"
         ))
@@ -573,8 +567,8 @@ impl FrameOutput for DesktopFrameSender {
         1024
     }
 
-    fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
-        let desktop_frame = reference_video_frame(frame)?;
+    fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
+        let desktop_frame = frame.clone();
         let recording_slot = self.reserve_recording_slot();
         let desktop_send = benchmark::measure(Stage::DesktopSend, || {
             self.video_sender.send(DesktopVideoMessage {
@@ -592,7 +586,7 @@ impl FrameOutput for DesktopFrameSender {
         }
 
         if recording_slot {
-            match reference_video_frame(frame) {
+            match Ok::<_, anyhow::Error>(frame.clone()) {
                 Ok(frame) => self.send_reserved_recording(DesktopRecordingMessage::Video {
                     frame,
                     logo: self.recording_logo.clone(),
@@ -610,7 +604,7 @@ impl FrameOutput for DesktopFrameSender {
 
     fn apply_logo_overlay(
         &mut self,
-        _frame: &mut frame::Video,
+        _frame: &mut VideoFrame,
         logo: &LogoOverlay,
         opacity_factor: f64,
     ) {
@@ -625,11 +619,11 @@ impl FrameOutput for DesktopFrameSender {
         false
     }
 
-    fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio_with_effects(frame, true)
     }
 
-    fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.encode_audio_with_effects(frame, false)
     }
 
@@ -715,11 +709,7 @@ impl FrameOutput for DesktopFrameSender {
 }
 
 impl DesktopFrameSender {
-    fn encode_audio_with_effects(
-        &mut self,
-        frame: &frame::Audio,
-        apply_effects: bool,
-    ) -> Result<()> {
+    fn encode_audio_with_effects(&mut self, frame: &AudioFrame, apply_effects: bool) -> Result<()> {
         if frame.samples() == 0 {
             return Ok(());
         }
@@ -736,8 +726,8 @@ impl DesktopFrameSender {
 
                 self.audio_level_meter.process_frame(&frame);
                 self.loudness_meter.process_frame(&frame);
-                let left = frame.plane::<f32>(0);
-                let right = frame.plane::<f32>(1);
+                let left = frame.plane(0);
+                let right = frame.plane(1);
                 let mut interleaved =
                     take_audio_buffer(&self.audio_buffer_pool, frame.samples() * AUDIO_CHANNELS);
                 for (left, right) in left.iter().zip(right) {
@@ -1306,7 +1296,7 @@ impl DesktopRenderer {
         let next_video_pts = self
             .video_queue
             .front()
-            .and_then(|frame| frame.pts())
+            .and_then(VideoFrame::pts)
             .unwrap_or(i64::MAX);
         let starved =
             expected_video_pts > last_video_pts + 1 && next_video_pts > expected_video_pts;
@@ -1352,7 +1342,7 @@ impl DesktopRenderer {
             .max(0)
     }
 
-    fn render_video_frame(&mut self, frame: &frame::Video) -> Result<()> {
+    fn render_video_frame(&mut self, frame: &VideoFrame) -> Result<()> {
         let now = Instant::now();
 
         if let Some(last_present) = self.last_video_present {
@@ -2244,15 +2234,10 @@ mod tests {
     #[cfg(all(feature = "desktop-cpu", not(feature = "desktop-gpu")))]
     use super::{cpu::scale_nearest, render::Rect, video::bgrz_to_rgb_pixel};
     #[cfg(feature = "desktop-gpu")]
-    use ffmpeg_next::util::color;
+    use crate::frame::{ColorRange, ColorSpace};
 
     #[test]
     fn processed_audio_bypasses_desktop_volume_and_reaches_recording() {
-        use ffmpeg_next::{
-            ChannelLayout,
-            format::{Sample, sample::Type},
-        };
-
         let (video_sender, _video_rx) = sync_channel(2);
         let (audio_sender, audio_rx) = sync_channel(2);
         let (control_sender, _control_rx) = sync_channel(2);
@@ -2280,11 +2265,11 @@ mod tests {
             recording_last_overload_log: None,
             channel_id: 0,
         };
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 32, ChannelLayout::STEREO);
+        let mut audio = AudioFrame::stereo(32);
         audio.set_rate(48000);
         audio.set_pts(Some(480000));
-        audio.plane_mut::<f32>(0).fill(0.2);
-        audio.plane_mut::<f32>(1).fill(0.2);
+        audio.plane_mut(0).fill(0.2);
+        audio.plane_mut(1).fill(0.2);
         sender.encode_processed_audio(&audio).unwrap();
         audio.set_pts(Some(480032));
         sender.encode_audio(&audio).unwrap();
@@ -2303,7 +2288,7 @@ mod tests {
             };
             assert!(
                 frame
-                    .plane::<f32>(0)
+                    .plane(0)
                     .iter()
                     .all(|sample| (sample - expected).abs() < 1e-6)
             );
@@ -2430,12 +2415,7 @@ mod tests {
                             expected_pts += frame.samples() as i64;
 
                             for channel in 0..2 {
-                                assert!(
-                                    frame
-                                        .plane::<f32>(channel)
-                                        .iter()
-                                        .all(|sample| *sample == 0.0)
-                                );
+                                assert!(frame.plane(channel).iter().all(|sample| *sample == 0.0));
                             }
                             frame.samples()
                         })
@@ -2665,7 +2645,7 @@ mod tests {
     #[cfg(feature = "desktop-gpu")]
     #[test]
     fn bt709_limited_range_uses_video_range_offset() {
-        let parameters = yuv_color_parameters(color::Space::BT709, color::Range::MPEG);
+        let parameters = yuv_color_parameters(ColorSpace::Bt709, ColorRange::Limited);
         assert_eq!(parameters[0], 1.1644);
         assert_eq!(parameters[12], -16.0 / 255.0);
         assert_eq!(parameters[13], -0.5);
@@ -2674,11 +2654,11 @@ mod tests {
     #[cfg(feature = "desktop-gpu")]
     #[test]
     fn bt2020_uses_its_own_chroma_coefficients() {
-        let full = yuv_color_parameters(color::Space::BT2020NCL, color::Range::JPEG);
+        let full = yuv_color_parameters(ColorSpace::Bt2020Ncl, ColorRange::Full);
         assert_eq!(full[6], 1.8814);
         assert_eq!(full[8], 1.4746);
 
-        let limited = yuv_color_parameters(color::Space::BT2020NCL, color::Range::MPEG);
+        let limited = yuv_color_parameters(ColorSpace::Bt2020Ncl, ColorRange::Limited);
         assert_eq!(limited[6], 2.1418);
         assert_eq!(limited[8], 1.6787);
     }

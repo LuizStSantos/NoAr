@@ -73,6 +73,15 @@ pub struct LogoMarks {
     /// of the channel's. A swap from outside still goes first.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logo_image: Option<String>,
+    /// An ident or promo: the guide and the Player count it inside the
+    /// programme before it instead of naming it. Kept here rather than in a
+    /// sheet, so a clip of a series keeps using its folder's sheet.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub insert: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl LogoMarks {
@@ -139,6 +148,7 @@ impl LogoMarks {
             && self.logo_position.is_none()
             && self.logo_image.is_none()
             && self.trim.is_none()
+            && !self.insert
     }
 
     /// Where the video starts and how long it plays, after its saved trim,
@@ -500,6 +510,21 @@ mod tests {
     }
 
     #[test]
+    fn an_ident_mark_alone_is_kept_and_read_back() {
+        let marks: LogoMarks = serde_json::from_str(r#"{"insert": true}"#).unwrap();
+
+        assert!(marks.insert);
+        assert!(
+            !marks.is_empty(),
+            "a file holding only the mark must be kept"
+        );
+        assert_eq!(
+            serde_json::to_string(&LogoMarks::default()).unwrap(),
+            r#"{"hide":[]}"#
+        );
+    }
+
+    #[test]
     fn marks_are_sorted_and_must_make_sense() {
         let marks = LogoMarks {
             hide: vec![span(300.0, 360.0), span(60.0, 90.0)],
@@ -511,6 +536,7 @@ mod tests {
             lshape_scale: None,
             logo_position: None,
             logo_image: None,
+            insert: false,
         }
         .validated()
         .unwrap();
@@ -527,6 +553,7 @@ mod tests {
                 lshape_scale: None,
                 logo_position: None,
                 logo_image: None,
+                insert: false,
             }
             .validated()
             .is_err()
@@ -542,6 +569,7 @@ mod tests {
                 lshape_scale: None,
                 logo_position: None,
                 logo_image: None,
+                insert: false,
             }
             .validated()
             .is_err()
@@ -557,6 +585,7 @@ mod tests {
                 lshape_scale: None,
                 logo_position: None,
                 logo_image: None,
+                insert: false,
             }
             .validated()
             .is_err()
@@ -575,6 +604,7 @@ mod tests {
             lshape_scale: None,
             logo_position: None,
             logo_image: None,
+            insert: false,
         };
 
         // The whole video.
@@ -651,6 +681,7 @@ mod tests {
             lshape_scale: None,
             logo_position: None,
             logo_image: None,
+            insert: false,
         };
 
         assert_eq!(marks_path(&video), dir.join("Programa 01.marks.json"));
@@ -718,6 +749,7 @@ mod tests {
             lshape_scale: None,
             logo_position: None,
             logo_image: None,
+            insert: false,
         };
         let video = dir.join("A.mp4");
         std::fs::write(&video, b"x").unwrap();

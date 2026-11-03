@@ -5,7 +5,7 @@ branch from GitHub, see [the test-server guide](gstreamer-testing.md).
 
 Use Rust 1.99.1 and Node.js 24, matching `Dockerfile` and
 `.github/workflows/validate.yml`. NoAr uses one mandatory GStreamer media
-runtime; no backend selector or FFmpeg playout fallback is provided.
+runtime and does not link FFmpeg.
 
 ### Native media dependencies
 
@@ -14,14 +14,12 @@ compatible codec libraries. On Debian install:
 
 ```bash
 sudo apt install \
-    clang libclang-dev pkg-config cmake ffmpeg fonts-dejavu-core \
+    pkg-config cmake ffmpeg fonts-dejavu-core \
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
     gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
-    glib-networking \
-    libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev \
-    libavutil-dev libswresample-dev libswscale-dev
+    glib-networking
 rustup component add rustfmt clippy
 ```
 
@@ -30,10 +28,11 @@ Check native core, app, audio, video, pbutils and mpegts libraries with
 `pkg-config --modversion gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0
 gstreamer-video-1.0 gstreamer-pbutils-1.0 gstreamer-mpegts-1.0`.
 
-FFmpeg frame structures remain a memory interchange for the existing Rust
-compositor and audio processing. GStreamer's libav plugin supplies additional
-native codecs. Neither is an alternative playback engine. The FFmpeg command
-line tools are used to generate and independently inspect synthetic test media.
+The compositor and audio processing work on NoAr's own frames
+(`backend/engine/src/frame.rs`). GStreamer's libav plugin
+(`gstreamer1.0-libav`) supplies the codecs GStreamer has no native decoder
+for. The `ffmpeg` and `ffprobe` command-line tools are only used by tests, to
+inspect generated media independently.
 
 ### SRT lifecycle dependency
 
@@ -51,16 +50,18 @@ process's libraries. Build provenance is recorded in the Docker image at
 `docker/srt/test-lifecycle.c` checks data transfer while 20 auxiliary sessions
 open and close. It is a dependency regression test; NoAr/MediaMTX/VLC transitions
 still need separate observation. The engine forwards GStreamer diagnostics to
-NoAr's logger. It does not install FFmpeg or libsrt process log callbacks.
+NoAr's logger. It does not install libsrt process log callbacks.
 
 NoAr reads external live URLs; input server listeners and automatic encoder
 publication takeover have been removed. See [live_ingest.md](live_ingest.md).
 
 Desktop presentation remains available through the desktop Cargo features. It
 needs ALSA development files and a graphical session on Linux. The Docker server
-image is built without a desktop window. Legacy `ffmpeg-filter` and
-`ffmpeg-device` features only affect linked library capabilities; they do not
-select a second media engine or restore input listeners.
+image is built without a desktop window. The server does not link the FFmpeg
+libraries: decoding, compositing, encoding and muxing all go through
+GStreamer, and the engine keeps video and audio in its own frame types
+(`backend/engine/src/frame.rs`). Some tests call the `ffmpeg`/`ffprobe`
+commands to check generated files, so keep them installed for `cargo test`.
 
 ## Processing Benchmark
 
@@ -86,8 +87,8 @@ The codec list comes from the installed GStreamer registry and checks encoded
 caps against each output muxer. CPU-backed frames pass through native color
 conversion before encoding. Hardware encoders additionally need their matching
 GStreamer plugin, driver and accessible device. Software-only validation does
-not establish that a GPU is available; unsupported encoder settings are rejected
-instead of falling back to FFmpeg.
+not establish that a GPU is available; unsupported encoder settings are
+rejected instead of falling back to another encoder.
 
 ## Generate types for Frontend
 The frontend uses TypeScript, to generate types for the rust structs run: `cargo test`.

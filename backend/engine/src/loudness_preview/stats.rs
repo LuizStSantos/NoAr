@@ -1,20 +1,18 @@
+use crate::frame::{AudioFrame, VideoFrame};
 use std::{
     collections::VecDeque,
     sync::mpsc::{self, Receiver, SyncSender, TrySendError},
     thread::{self, JoinHandle},
 };
 
+use crate::time_base::{Rational, Rescale};
 use anyhow::Result;
-use ffmpeg_next::{Rational, Rescale, frame};
 
 use crate::{
     LiveLoudnessMetrics,
     analysis::loudness::{LoudnessAnalyzer, LoudnessMetrics},
     compositor::text::TextOverlay,
-    utils::{
-        config::{RgbaColor, TextBackgroundConfig, TextConfig, TextPosition},
-        ffmpeg::make_video_frame_writable,
-    },
+    utils::config::{RgbaColor, TextBackgroundConfig, TextConfig, TextPosition},
 };
 
 const MAX_PENDING_SNAPSHOTS: usize = 64;
@@ -116,9 +114,9 @@ struct Levels {
 }
 
 impl Levels {
-    fn observe(&mut self, audio: &frame::Audio) {
+    fn observe(&mut self, audio: &AudioFrame) {
         for channel in 0..2 {
-            for &sample in audio.plane::<f32>(channel) {
+            for &sample in audio.plane(channel) {
                 let sample = if sample.is_finite() { sample } else { 0.0 };
                 self.squares += f64::from(sample).powi(2);
                 self.peak = self.peak.max(sample.abs());
@@ -179,14 +177,14 @@ impl AudioStatsOverlay {
         })
     }
 
-    pub(crate) fn observe_input(&mut self, audio: &frame::Audio) {
+    pub(crate) fn observe_input(&mut self, audio: &AudioFrame) {
         self.input_loudness = self.input.process_frame(audio);
         self.input_levels.observe(audio);
     }
 
     pub(crate) fn observe_output(
         &mut self,
-        audio: &frame::Audio,
+        audio: &AudioFrame,
         metrics: LiveLoudnessMetrics,
         compressor_db: Option<f64>,
         pause: Option<&str>,
@@ -263,7 +261,7 @@ impl AudioStatsOverlay {
         changed
     }
 
-    pub(crate) fn blend(&mut self, video: &mut frame::Video, time_base: Rational) -> Result<()> {
+    pub(crate) fn blend(&mut self, video: &mut VideoFrame, time_base: Rational) -> Result<()> {
         let pts = video.pts().unwrap_or_default();
         let sample_position = pts.rescale(time_base, Rational(1, self.sample_rate as i32));
         let changed = self.select_text(sample_position);
@@ -288,7 +286,6 @@ impl AudioStatsOverlay {
         }
 
         if let Some(overlay) = self.overlay.as_mut() {
-            make_video_frame_writable(video)?;
             overlay.blend(video, pts, pts);
         }
 
@@ -310,19 +307,15 @@ fn loudness(value: Option<f64>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{
-        ChannelLayout,
-        format::{Sample, sample::Type},
-    };
 
     use super::*;
 
-    fn audio(value: f32) -> frame::Audio {
-        let mut audio = frame::Audio::new(Sample::F32(Type::Planar), 4800, ChannelLayout::STEREO);
+    fn audio(value: f32) -> AudioFrame {
+        let mut audio = AudioFrame::stereo(4800);
         audio.set_pts(Some(0));
         audio.set_rate(48000);
-        audio.plane_mut::<f32>(0).fill(value);
-        audio.plane_mut::<f32>(1).fill(-value);
+        audio.plane_mut(0).fill(value);
+        audio.plane_mut(1).fill(-value);
         audio
     }
 
@@ -377,11 +370,8 @@ mod tests {
     }
     #[test]
     fn rendered_statistics_are_visible_and_preserve_shared_video_buffers() {
-        use ffmpeg_next::format::Pixel;
+        use crate::frame::PixelFormat;
 
-        use crate::utils::ffmpeg::reference_video_frame;
-
-        ffmpeg_next::init().unwrap();
         let mut stats = AudioStatsOverlay::new(48000).unwrap();
         for index in 0..3 {
             let mut input = audio(0.1);
@@ -400,12 +390,12 @@ mod tests {
                 Some("PAUSE / HOLD"),
             );
         }
-        let mut original = frame::Video::new(Pixel::YUV420P, 1280, 720);
+        let mut original = VideoFrame::new(PixelFormat::Yuv420p, 1280, 720);
         original.data_mut(0).fill(16);
         original.data_mut(1).fill(128);
         original.data_mut(2).fill(128);
         original.set_pts(Some(8));
-        let mut video = reference_video_frame(&original).unwrap();
+        let mut video = original.clone();
         stats.blend(&mut video, Rational(1, 25)).unwrap();
         stats.overlay = stats
             .renderer

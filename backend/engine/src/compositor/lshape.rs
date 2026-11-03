@@ -3,6 +3,7 @@
 //! next programme), and grows back when it ends. It is switched from outside
 //! the playout, like the logo, or by stretches marked in the video itself.
 
+use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     fmt,
     sync::{Arc, Mutex, MutexGuard, PoisonError},
@@ -10,7 +11,6 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
 use crate::utils::helper::even;
 
@@ -88,7 +88,7 @@ pub struct LShapeConfig {
 /// The graphic as drawn: the background at the output's size, and the
 /// window the picture takes in it.
 pub struct LShapeGraphic {
-    background: Arc<frame::Video>,
+    background: Arc<VideoFrame>,
     window: Rect,
     /// The window the graphic was made for, before any move from outside.
     home: Rect,
@@ -113,7 +113,7 @@ impl LShapeGraphic {
         let decoded = crate::gstreamer::load_image(&config.path)
             .with_context(|| format!("cannot load the L-shape graphic {}", config.path))?;
         let background =
-            crate::gstreamer::FrameConverter::new(&decoded, Pixel::YUV420P, width, height)?
+            crate::gstreamer::FrameConverter::new(&decoded, PixelFormat::Yuv420p, width, height)?
                 .run(&decoded)?;
 
         let home = window(config, width, height);
@@ -436,18 +436,18 @@ impl LShapeControl {
 pub(crate) struct LShapeScaler(Option<(crate::gstreamer::FrameConverter, ScaleKey)>);
 
 /// The source's format and size, and the window's size.
-type ScaleKey = (Pixel, u32, u32, u32, u32);
+type ScaleKey = (PixelFormat, u32, u32, u32, u32);
 
 /// Draw `frame` (YUV 4:2:0, the output's size) as `level` of the way into
 /// the L-shape of `graphic`. Nothing changes at level 0.
 pub(crate) fn apply_lshape(
-    frame: &mut frame::Video,
+    frame: &mut VideoFrame,
     graphic: &LShapeGraphic,
     level: f64,
     scaler: &mut LShapeScaler,
 ) -> Result<()> {
     if level <= 0.0
-        || frame.format() != Pixel::YUV420P
+        || frame.format() != PixelFormat::Yuv420p
         || frame.width() != graphic.background.width()
         || frame.height() != graphic.background.height()
     {
@@ -465,7 +465,12 @@ pub(crate) fn apply_lshape(
 
     if scaler.0.as_ref().is_none_or(|(_, size)| *size != key) {
         scaler.0 = Some((
-            crate::gstreamer::FrameConverter::new(frame, Pixel::YUV420P, rect.width, rect.height)?,
+            crate::gstreamer::FrameConverter::new(
+                frame,
+                PixelFormat::Yuv420p,
+                rect.width,
+                rect.height,
+            )?,
             key,
         ));
     }
@@ -482,7 +487,7 @@ pub(crate) fn apply_lshape(
 }
 
 /// Copy `picture` into `target` at `rect`, plane by plane.
-fn paste(picture: &frame::Video, target: &mut frame::Video, rect: Rect) {
+fn paste(picture: &VideoFrame, target: &mut VideoFrame, rect: Rect) {
     for plane in 0..3 {
         let shift = u32::from(plane > 0);
         let (x, y) = ((rect.x >> shift) as usize, (rect.y >> shift) as usize);
@@ -529,7 +534,7 @@ mod tests {
     use super::*;
 
     fn graphic(corner: LShapeCorner) -> LShapeGraphic {
-        let mut background = frame::Video::new(Pixel::YUV420P, 1920, 1080);
+        let mut background = VideoFrame::new(PixelFormat::Yuv420p, 1920, 1080);
         for plane in 0..3 {
             background
                 .data_mut(plane)
@@ -664,7 +669,7 @@ mod tests {
     #[test]
     fn the_frame_is_drawn_into_the_window_over_the_graphic() {
         let graphic = graphic(LShapeCorner::TopRight);
-        let mut frame = frame::Video::new(Pixel::YUV420P, 1920, 1080);
+        let mut frame = VideoFrame::new(PixelFormat::Yuv420p, 1920, 1080);
         for plane in 0..3 {
             frame
                 .data_mut(plane)
@@ -683,7 +688,7 @@ mod tests {
         assert_eq!(frame.pts(), Some(7));
 
         // Off: untouched.
-        let mut plain = frame::Video::new(Pixel::YUV420P, 1920, 1080);
+        let mut plain = VideoFrame::new(PixelFormat::Yuv420p, 1920, 1080);
         plain.data_mut(0).fill(50);
         apply_lshape(&mut plain, &graphic, 0.0, &mut scaler).unwrap();
         assert_eq!(plain.data(0)[0], 50);

@@ -1,3 +1,4 @@
+use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     collections::BTreeSet,
     mem,
@@ -9,7 +10,6 @@ use anyhow::{Context, Result, anyhow};
 #[cfg(feature = "desktop-base")]
 use cosmic_text::{Align, Wrap};
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache, Weight};
-use ffmpeg_next::{frame, util::format::pixel::Pixel};
 use regex::Regex;
 
 use crate::{
@@ -315,7 +315,7 @@ impl TextOverlay {
         }))
     }
 
-    pub fn blend(&mut self, target: &mut frame::Video, pts: i64, scroll_pts: i64) {
+    pub fn blend(&mut self, target: &mut VideoFrame, pts: i64, scroll_pts: i64) {
         let opacity = self.opacity_at(pts);
 
         if opacity <= 0.0 {
@@ -390,7 +390,7 @@ impl TextOverlay {
 }
 
 struct RenderedText {
-    frame: frame::Video,
+    frame: VideoFrame,
     width: u32,
     height: u32,
 }
@@ -559,8 +559,8 @@ fn render_width(config: &TextConfig, text: &str, output_width: u32, padding: u32
     even(estimated.max(output_width).min(max_width)).max(2)
 }
 
-fn rgba_to_yuva420p(rgba: &[u8], width: u32, height: u32) -> Result<frame::Video> {
-    let mut frame = frame::Video::new(Pixel::YUVA420P, width, height);
+fn rgba_to_yuva420p(rgba: &[u8], width: u32, height: u32) -> Result<VideoFrame> {
+    let mut frame = VideoFrame::new(PixelFormat::Yuva420p, width, height);
     let width = width as usize;
     let height = height as usize;
 

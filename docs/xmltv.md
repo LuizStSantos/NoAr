@@ -180,6 +180,13 @@ that goes missing falls back to the video logo.
 - Ads (`"ad": true` in the playlist), clips from a
   [commercials folder](commercials.md) and the configured filler are not
   listed: their time is added to the program they interrupt.
+- Idents and promos are marked by hand: in *Storage*, open the video's
+  marks (trim, logo, breaks and L-shape) and tick **Ident or promo**. It is
+  saved in the video's `<name>.marks.json` (`"insert": true`), not in a sheet,
+  so a clip in a series folder keeps using the folder's `.nfo`. A marked clip
+  is not listed; its time goes to the program before it, and the Player keeps
+  that program's name while it airs. Clips that are not marked are programs
+  of their own, whatever their length.
 - Without an `.nfo`, the title comes from the playlist item title or the file
   name.
 

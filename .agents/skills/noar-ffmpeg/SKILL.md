@@ -1,14 +1,14 @@
 ---
 name: noar-ffmpeg
-description: Use when working on NoAr FFmpeg API, codecs, formats, filters, command-line and SCTE-35 protocol research.
+description: Use for the codecs GStreamer takes from gstreamer1.0-libav, the ffmpeg/ffprobe test tools and SCTE-35 background research; NoAr does not link FFmpeg.
 ---
 
 # noar-ffmpeg — Codex adapter
 
-Read relevant canonical FFmpeg documentation and use .claude/scripts/ffmpeg_docs.py only for scoped questions. Check native FFmpeg and ffmpeg-next versions. Documentation cannot prove on-air continuity or count as an independent audit vote.
+Read relevant canonical FFmpeg documentation and use .claude/scripts/ffmpeg_docs.py only for scoped questions. Check the installed gstreamer1.0-libav and ffmpeg versions. Documentation cannot prove on-air continuity or count as an independent audit vote.
 
 For the GStreamer engine use `noar-gstreamer` first. This skill is limited to
-remaining frame-memory compatibility, codec dependencies and test tooling;
+libav codecs inside GStreamer and test tooling; NoAr does not link FFmpeg and
 FFmpeg is not a second playback backend.
 
 ## Canonical reference

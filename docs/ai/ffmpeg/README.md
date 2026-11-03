@@ -12,7 +12,7 @@ The existing `noar-media-engine-reviewer` is a **voting** backend auditor. The n
 
 **This does not bundle, clone, or embed all FFmpeg manuals.** Instead, it makes the official documentation available on demand and reads only small relevant excerpts, reducing token consumption and avoiding stale copies. Cached extracted documentation is local-only and may be stale when offline.
 
-FFmpeg online reference is regenerated frequently and can reflect a newer development revision than a deployed binary. For Rust API questions, inspect both native FFmpeg version/build and the `ffmpeg-next` binding.
+FFmpeg online reference is regenerated frequently and can reflect a newer development revision than a deployed binary. NoAr does not link FFmpeg; for a codec inside GStreamer, check the installed `gstreamer1.0-libav` version and `gst-inspect-1.0 avenc_<codec>`.
 
 ## Quick usage
 
@@ -32,8 +32,8 @@ Claude Code command:
 
 ```text
 /noar-ffmpeg reference srt latency and reconnection
-/noar-ffmpeg analyze backend/engine/src/output/encoded.rs timestamp handling
-/noar-ffmpeg plan HLS timestamp discontinuity recovery
+/noar-ffmpeg analyze avenc_aac options used by backend/engine/src/output/pipeline.rs
+/noar-ffmpeg plan an ffprobe check for HLS segment timing in qa/
 /noar-ffmpeg review SCTE-35 insertion path
 /noar-ffmpeg verify
 ```
@@ -56,7 +56,7 @@ Only direct HTTPS HTML pages on `www.ffmpeg.org` or `ffmpeg.org` are accepted. T
 - `INFERENCE`: reasoned but not confirmed in source/runtime.
 - `NOT_VERIFIED`: unavailable environment, source or test.
 
-Do not confuse documented features with available features in the installed FFmpeg build. A C API feature is not necessarily exposed by the chosen Rust crate methods.
+Do not confuse documented features with available features in the installed FFmpeg build. A libavcodec option is not necessarily exposed as a property of the GStreamer `avenc_*` element.
 
 ## Operational precautions
 

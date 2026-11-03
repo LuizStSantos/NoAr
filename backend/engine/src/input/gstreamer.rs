@@ -4,6 +4,7 @@
 //! format. All input, decoding, scaling, frame-rate conversion and resampling
 //! happen in GStreamer before a sample crosses this boundary.
 
+use crate::frame::{AudioFrame, PixelFormat, VideoFrame};
 use std::{
     collections::BTreeMap,
     path::Path,
@@ -17,10 +18,6 @@ use std::{
 
 use ::gstreamer::{self as gst, prelude::*};
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use ffmpeg_next::{
-    frame,
-    util::{channel_layout::ChannelLayout, format::pixel::Pixel, format::sample::Sample},
-};
 use gstreamer_app::AppSink;
 use gstreamer_video::{VideoFrameExt, VideoFrameRef, VideoInfo};
 use url::{Host, Url};
@@ -50,8 +47,8 @@ pub(crate) struct SourceInfo {
 }
 
 pub(crate) enum FrameEvent {
-    Video(frame::Video),
-    Audio(frame::Audio),
+    Video(VideoFrame),
+    Audio(AudioFrame),
 }
 
 pub(crate) struct Source {
@@ -805,7 +802,7 @@ fn sample_timestamp(sample: &gst::Sample) -> Option<gst::ClockTime> {
     }
 }
 
-pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video> {
+pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<VideoFrame> {
     let buffer = sample
         .buffer()
         .context("decoded video sample has no buffer")?;
@@ -816,7 +813,7 @@ pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video
         "decoded video is not I420"
     );
     let mapped = VideoFrameRef::from_buffer_ref_readable(buffer, &info)?;
-    let mut frame = frame::Video::new(Pixel::YUV420P, info.width(), info.height());
+    let mut frame = VideoFrame::new(PixelFormat::Yuv420p, info.width(), info.height());
 
     for plane in 0..3 {
         let source = mapped.plane_data(plane as u32)?;
@@ -847,7 +844,7 @@ pub(crate) fn video_frame(sample: &gst::Sample, fps: u32) -> Result<frame::Video
     Ok(frame)
 }
 
-pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<frame::Audio> {
+pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<AudioFrame> {
     let buffer = sample
         .buffer()
         .context("decoded audio sample has no buffer")?;
@@ -857,15 +854,11 @@ pub(crate) fn audio_frame(sample: &gst::Sample, sample_rate: u32) -> Result<fram
         "decoded stereo f32 audio has a partial sample"
     );
     let samples = mapped.len() / 8;
-    let mut frame = frame::Audio::new(
-        Sample::F32(ffmpeg_next::format::sample::Type::Planar),
-        samples,
-        ChannelLayout::STEREO,
-    );
+    let mut frame = AudioFrame::stereo(samples);
     frame.set_rate(sample_rate);
 
     for channel in 0..2 {
-        for (index, value) in frame.plane_mut::<f32>(channel).iter_mut().enumerate() {
+        for (index, value) in frame.plane_mut(channel).iter_mut().enumerate() {
             let start = index * 8 + channel * 4;
             *value = f32::from_le_bytes(mapped[start..start + 4].try_into()?);
         }

@@ -1,6 +1,5 @@
+use crate::frame::AudioFrame;
 use std::time::Duration;
-
-use ffmpeg_next::frame;
 
 /// Shared live A/V buffering and limiter lookahead. Rebuild after changing it.
 pub(crate) const LIVE_LATENCY: Duration = Duration::from_millis(10);
@@ -100,7 +99,7 @@ impl LookaheadLimiter {
     /// shifted. The live event buffer holds the frames until preview is ready.
     pub(super) fn process(
         &mut self,
-        frame: &mut frame::Audio,
+        frame: &mut AudioFrame,
         future: &[[f32; 2]],
         future_gain: f64,
         ceiling_db: f64,
@@ -113,9 +112,9 @@ impl LookaheadLimiter {
 
         signal.extend(
             frame
-                .plane::<f32>(0)
+                .plane(0)
                 .iter()
-                .zip(frame.plane::<f32>(1))
+                .zip(frame.plane(1))
                 .map(|(&left, &right)| [f64::from(left), f64::from(right)]),
         );
 
@@ -193,7 +192,7 @@ impl LookaheadLimiter {
         }
 
         for channel in [0, 1] {
-            let output = frame.plane_mut::<f32>(channel);
+            let output = frame.plane_mut(channel);
 
             for (index, sample) in output.iter_mut().enumerate() {
                 *sample = (signal[HISTORY_SAMPLES + index][channel] * envelope[index]) as f32;
@@ -296,7 +295,7 @@ pub(crate) fn lookahead_samples(sample_rate: u32) -> usize {
 /// Collect contiguous source audio without crossing a timestamp gap. A gap
 /// contributes silence; overlapping samples are skipped, just as at output.
 pub(crate) fn collect_audio_preview<'a>(
-    frames: impl Iterator<Item = &'a frame::Audio>,
+    frames: impl Iterator<Item = &'a AudioFrame>,
     mut expected_pts: i64,
     limit: usize,
     jitter: u64,
@@ -326,7 +325,7 @@ pub(crate) fn collect_audio_preview<'a>(
                 break;
             }
 
-            samples.push([frame.plane::<f32>(0)[index], frame.plane::<f32>(1)[index]]);
+            samples.push([frame.plane(0)[index], frame.plane(1)[index]]);
             expected_pts += 1;
         }
 
@@ -340,10 +339,6 @@ pub(crate) fn collect_audio_preview<'a>(
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{
-        format::sample::{Sample, Type},
-        util::channel_layout::ChannelLayout,
-    };
 
     use crate::analysis::loudness::LoudnessAnalyzer;
 
@@ -357,17 +352,13 @@ mod tests {
 
         while offset < signal.len() {
             let end = (offset + sizes[packet % sizes.len()]).min(signal.len());
-            let mut frame = frame::Audio::new(
-                Sample::F32(Type::Planar),
-                end - offset,
-                ChannelLayout::STEREO,
-            );
+            let mut frame = AudioFrame::stereo(end - offset);
             frame.set_rate(48_000);
             frame.set_pts(Some(offset as i64));
 
             for channel in 0..2 {
                 for (sample, input) in frame
-                    .plane_mut::<f32>(channel)
+                    .plane_mut(channel)
                     .iter_mut()
                     .zip(&signal[offset..end])
                 {
@@ -380,7 +371,7 @@ mod tests {
             assert_eq!(frame.samples(), end - offset);
 
             for index in 0..frame.samples() {
-                output.push([frame.plane::<f32>(0)[index], frame.plane::<f32>(1)[index]]);
+                output.push([frame.plane(0)[index], frame.plane(1)[index]]);
             }
 
             offset = end;

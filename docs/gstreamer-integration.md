@@ -147,9 +147,10 @@ approval. Earlier baseline evidence below applies only to its recorded runs.
 - GStreamer is the single media engine. Native input decoding, normalization,
   output encoding, muxing, transports, preview and recording replace the
   previous FFmpeg playback implementation.
-- The Rust compositor and audio processing retain FFmpeg frame structures as a
-  memory interface. FFmpeg tools remain useful for fixtures and independent
-  packet/decoder inspection.
+- The Rust compositor and audio processing work on NoAr's own frames
+  (`backend/engine/src/frame.rs`); NoAr does not link FFmpeg. The `ffmpeg` and
+  `ffprobe` tools remain useful for fixtures and independent packet/decoder
+  inspection.
 - Live events read external URLs, including MediaMTX SRT read URLs. Embedded
   RTMP/SRT input servers and their frontend settings have been removed.
 - Historical database tables and rows remain; no released migration is changed.

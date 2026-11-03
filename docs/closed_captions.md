@@ -11,6 +11,5 @@ by default are set.
 
 The output must be in **HLS** mode; other outputs carry no subtitles.
 
-The track name in the master playlist needs FFmpeg's `libavformat` 61.9.100 or
-newer. With an older one, NoAr still writes the subtitles and only leaves the
-name out.
+NoAr writes the master playlist itself, with the track name, language and
+default flag set here.

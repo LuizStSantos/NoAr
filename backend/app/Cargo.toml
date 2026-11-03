@@ -20,8 +20,6 @@ desktop-cpu = ["desktop-base", "noar-engine/desktop-cpu"]
 embed_frontend = []
 dev-metrics = ["dep:console-subscriber", "dep:tracing-subscriber", "tokio/tracing"]
 processing-bench = ["noar-engine/processing-bench"]
-ffmpeg-filter = ["noar-engine/ffmpeg-filter"]
-ffmpeg-device = ["noar-engine/ffmpeg-device"]
 
 [dependencies]
 noar-engine = { path = "../engine", default-features = false, features = [

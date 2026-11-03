@@ -3,6 +3,7 @@
 //! Encoded samples are shared with preview and copy recording. Each muxer owns
 //! a pipeline, so an optional recording or viewer cannot interrupt the air.
 
+use crate::frame::{AudioFrame, PixelFormat, VideoFrame};
 use std::{
     collections::{BTreeMap, VecDeque},
     fs,
@@ -15,9 +16,9 @@ use std::{
     time::Duration,
 };
 
+use crate::time_base::Rational;
 use ::gstreamer::{self as gst, prelude::*};
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use ffmpeg_next::{Rational, frame};
 use gstreamer_app::{AppSink, AppSinkCallbacks, AppSrc};
 
 use super::{
@@ -35,7 +36,6 @@ use crate::{
     utils::{
         clock::PlayoutClock,
         config::{HlsSubtitle, HlsVariant, OutputConfig},
-        ffmpeg::{make_audio_frame_writable, reference_audio_frame, reference_video_frame},
     },
 };
 
@@ -738,7 +738,7 @@ pub(super) struct EncodedOutput {
     loudness: LoudnessMeter,
     clock: PlayoutClock,
     pace: bool,
-    last_video: Option<frame::Video>,
+    last_video: Option<VideoFrame>,
     last_audio_end: Option<i64>,
     pending_vtt: VecDeque<vtt::VttCue>,
     splice: bool,
@@ -1038,13 +1038,13 @@ impl EncodedOutput {
         Ok(())
     }
 
-    pub(super) fn encode_video(&mut self, frame: &frame::Video) -> Result<()> {
+    pub(super) fn encode_video(&mut self, frame: &VideoFrame) -> Result<()> {
         self.poll()?;
         let pts = frame.pts().unwrap_or(0);
         if self
             .last_video
             .as_ref()
-            .and_then(|v| v.pts())
+            .and_then(VideoFrame::pts)
             .is_some_and(|previous| pts <= previous)
         {
             return Ok(());
@@ -1090,24 +1090,22 @@ impl EncodedOutput {
         if let Some(ndi) = &self.ndi {
             ndi.push_video(buffer)?;
         }
-        self.last_video = Some(reference_video_frame(frame)?);
+        self.last_video = Some(frame.clone());
         Ok(())
     }
 
-    pub(super) fn held_video_frame(&self) -> Option<frame::Video> {
-        self.last_video
-            .as_ref()
-            .and_then(|frame| reference_video_frame(frame).ok())
+    pub(super) fn held_video_frame(&self) -> Option<VideoFrame> {
+        self.last_video.clone()
     }
 
-    pub(super) fn encode_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    pub(super) fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.audio(frame, true)
     }
-    pub(super) fn encode_processed_audio(&mut self, frame: &frame::Audio) -> Result<()> {
+    pub(super) fn encode_processed_audio(&mut self, frame: &AudioFrame) -> Result<()> {
         self.audio(frame, false)
     }
 
-    fn audio(&mut self, input: &frame::Audio, effects: bool) -> Result<()> {
+    fn audio(&mut self, input: &AudioFrame, effects: bool) -> Result<()> {
         self.poll()?;
         let pts = input.pts().unwrap_or(self.last_audio_end.unwrap_or(0));
         let skip = self
@@ -1122,8 +1120,7 @@ impl EncodedOutput {
             self.clock
                 .wait_until(Some(pts), self.config.audio_time_base);
         }
-        let mut audio = reference_audio_frame(input)?;
-        make_audio_frame_writable(&mut audio)?;
+        let mut audio = input.clone();
         if effects {
             self.audio_effects.process(&mut audio);
         }
@@ -1132,7 +1129,7 @@ impl EncodedOutput {
         let mut bytes = Vec::with_capacity((audio.samples() - skip) * 8);
         for index in skip..audio.samples() {
             for channel in 0..2 {
-                let sample = audio.plane::<f32>(channel)[index];
+                let sample = audio.plane(channel)[index];
                 bytes.extend_from_slice(
                     &if sample.is_finite() { sample } else { 0.0 }.to_le_bytes(),
                 );
@@ -1251,9 +1248,9 @@ fn clock_time(pts: i64, time_base: Rational) -> gst::ClockTime {
 
 /// AVFrame rows can have different padding from GStreamer's default I420
 /// layout. Pack into the exact layout advertised by the appsrc caps.
-fn packed_video_buffer(frame: &frame::Video) -> Result<gst::Buffer> {
+fn packed_video_buffer(frame: &VideoFrame) -> Result<gst::Buffer> {
     ensure!(
-        frame.format() == ffmpeg_next::format::Pixel::YUV420P,
+        frame.format() == PixelFormat::Yuv420p,
         "GStreamer output expects a normalized I420 frame"
     );
     let info = gstreamer_video::VideoInfo::builder(
@@ -1329,11 +1326,6 @@ fn apply_metadata(
 mod tests {
     use std::{env, path::PathBuf, process::Command, sync::atomic::AtomicU64, time::Instant};
 
-    use ffmpeg_next::{
-        ChannelLayout,
-        format::{Pixel, Sample, sample::Type},
-    };
-
     #[cfg(feature = "desktop-base")]
     use crate::RecordingConfig;
 
@@ -1350,8 +1342,8 @@ mod tests {
         path
     }
 
-    fn video(width: u32, height: u32, pts: i64) -> frame::Video {
-        let mut frame = frame::Video::new(Pixel::YUV420P, width, height);
+    fn video(width: u32, height: u32, pts: i64) -> VideoFrame {
+        let mut frame = VideoFrame::new(PixelFormat::Yuv420p, width, height);
         frame.set_pts(Some(pts));
         for plane in 0..3 {
             let stride = frame.stride(plane);
@@ -1371,12 +1363,11 @@ mod tests {
     fn encode_seconds(output: &mut EncodedOutput, width: u32, height: u32, seconds: i64) {
         for tick in 0..seconds * 25 {
             output.encode_video(&video(width, height, tick)).unwrap();
-            let mut audio =
-                frame::Audio::new(Sample::F32(Type::Planar), 1920, ChannelLayout::STEREO);
+            let mut audio = AudioFrame::stereo(1920);
             audio.set_rate(48_000);
             audio.set_pts(Some(tick * 1920));
             for channel in 0..2 {
-                for (index, sample) in audio.plane_mut::<f32>(channel).iter_mut().enumerate() {
+                for (index, sample) in audio.plane_mut(channel).iter_mut().enumerate() {
                     let at = (tick * 1920 + index as i64) as f32 / 48_000.0;
                     *sample = (at * 440.0 * std::f32::consts::TAU).sin() * 0.2;
                 }

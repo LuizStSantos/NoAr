@@ -740,7 +740,7 @@ watch(zoom, scrollToFocus)
                     </button>
                 </div>
                 <div class="p-3.5 flex flex-col gap-2.5 min-h-0 overflow-auto">
-                    <StoragePicker v-if="tab === 'storage'" draggable hide-lives />
+                    <StoragePicker v-if="tab === 'storage'" draggable hide-lives programs />
                     <template v-else>
                         <ul class="m-0 p-0 list-none flex flex-col gap-0.5">
                             <li

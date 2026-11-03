@@ -2,7 +2,7 @@
 //!
 //! Files remain paused after negotiation. Live sources keep decoding into a
 //! bounded recent-frame window, so their signal and handover stay at the live
-//! edge without keeping an independent FFmpeg input open.
+//! edge without keeping a second, independent input open.
 
 use std::{
     collections::{BTreeMap, VecDeque},
@@ -459,19 +459,19 @@ fn frame_bytes(frame: &FrameEvent) -> usize {
         }
         FrameEvent::Audio(frame) => frame
             .samples()
-            .saturating_mul(frame.channels() as usize)
+            .saturating_mul(frame.channels())
             .saturating_mul(size_of::<f32>()),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use ffmpeg_next::{frame, util::format::pixel::Pixel};
 
     use super::*;
+    use crate::frame::{PixelFormat, VideoFrame};
 
     fn video() -> FrameEvent {
-        FrameEvent::Video(frame::Video::new(Pixel::YUV420P, 16, 16))
+        FrameEvent::Video(VideoFrame::new(PixelFormat::Yuv420p, 16, 16))
     }
 
     #[test]

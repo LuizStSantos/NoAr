@@ -1,4 +1,4 @@
-/* Closing one FFmpeg-style SRT session must not tear down another session. */
+/* Closing one SRT session must not tear down another session. */
 #include <srt/srt.h>
 #include <arpa/inet.h>
 #include <stdio.h>

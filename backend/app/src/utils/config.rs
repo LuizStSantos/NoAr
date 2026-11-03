@@ -88,11 +88,11 @@ pub enum StreamType {
 }
 
 impl StreamType {
-    fn ffmpeg_target(self) -> Option<noar_engine::FfmpegOutputTarget> {
+    fn output_target(self) -> Option<noar_engine::OutputTarget> {
         match self {
-            Self::Rtmp => Some(noar_engine::FfmpegOutputTarget::Rtmp),
-            Self::Srt => Some(noar_engine::FfmpegOutputTarget::Srt),
-            Self::Udp => Some(noar_engine::FfmpegOutputTarget::Udp),
+            Self::Rtmp => Some(noar_engine::OutputTarget::Rtmp),
+            Self::Srt => Some(noar_engine::OutputTarget::Srt),
+            Self::Udp => Some(noar_engine::OutputTarget::Udp),
             Self::Custom => None,
         }
     }
@@ -281,16 +281,16 @@ impl Recording {
                     "recording width and height must both be set or both be zero".to_string(),
                 );
             }
-            let capabilities = noar_engine::ffmpeg_capabilities();
+            let capabilities = noar_engine::media_capabilities();
             if !capabilities
-                .video_codecs_for(noar_engine::FfmpegOutputTarget::Matroska)
+                .video_codecs_for(noar_engine::OutputTarget::Matroska)
                 .iter()
                 .any(|codec| codec.name == self.video_codec)
             {
                 return Err("unsupported recording video codec".to_string());
             }
             if !capabilities
-                .audio_codecs_for(noar_engine::FfmpegOutputTarget::Matroska)
+                .audio_codecs_for(noar_engine::OutputTarget::Matroska)
                 .iter()
                 .any(|codec| codec.name == self.audio_codec && !codec.hardware)
             {
@@ -350,15 +350,6 @@ pub struct General {
     pub generate: Option<Vec<String>>,
     #[ts(skip)]
     #[serde(skip_serializing, skip_deserializing)]
-    pub ffmpeg_filters: Vec<String>,
-    #[ts(skip)]
-    #[serde(skip_serializing, skip_deserializing)]
-    pub ffmpeg_libs: Vec<String>,
-    #[ts(skip)]
-    #[serde(skip_serializing, skip_deserializing)]
-    pub ffmpeg_options: Vec<String>,
-    #[ts(skip)]
-    #[serde(skip_serializing, skip_deserializing)]
     pub template: Option<Template>,
     #[ts(skip)]
     #[serde(skip_serializing, skip_deserializing)]
@@ -375,9 +366,6 @@ impl General {
             channel_id: config.channel_id,
             stop_threshold: config.general_stop_threshold,
             generate: None,
-            ffmpeg_filters: vec![],
-            ffmpeg_libs: vec![],
-            ffmpeg_options: vec![],
             template: None,
             skip_validation: false,
             validate: false,
@@ -567,21 +555,90 @@ mod notification_level_tests {
     fn unknown_notification_level_falls_back_to_fatal() {
         assert_eq!(NotificationLevel::new("INVALID"), NotificationLevel::Fatal);
     }
+
+    #[test]
+    fn the_media_log_level_is_read_under_its_old_name_too() {
+        let old: super::Logging = serde_json::from_value(serde_json::json!({
+            "ffmpeg_level": "WARNING",
+            "ingest_level": "ERROR",
+            "detect_silence": false,
+            "ignore_lines": []
+        }))
+        .unwrap();
+        assert_eq!(old.media_level, "WARNING");
+
+        // A client sending back what it read has both names: the new one wins.
+        let both: super::Logging = serde_json::from_value(serde_json::json!({
+            "media_level": "ERROR",
+            "ffmpeg_level": "DEBUG",
+            "ingest_level": "ERROR",
+            "detect_silence": false,
+            "ignore_lines": []
+        }))
+        .unwrap();
+        assert_eq!(both.media_level, "ERROR");
+
+        let written = serde_json::to_value(&both).unwrap();
+        assert_eq!(written["media_level"], "ERROR");
+        assert_eq!(written["ffmpeg_level"], "ERROR");
+    }
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
+#[serde(from = "LoggingFields")]
 #[ts(export, export_to = "playout_config.d.ts")]
 pub struct Logging {
-    pub ffmpeg_level: String,
+    /// Level of the media engine's (GStreamer's) messages in the log.
+    pub media_level: String,
     pub ingest_level: String,
     pub detect_silence: bool,
     pub ignore_lines: Vec<String>,
+    /// `media_level` under its name before 2.1, still returned so older API
+    /// clients keep reading it. Deprecated: read `media_level`.
+    #[ts(skip)]
+    #[serde(rename = "ffmpeg_level")]
+    pub deprecated_ffmpeg_level: String,
+}
+
+/// What a client may send: `media_level`, or the older `ffmpeg_level`.
+/// When both come (a client sending back what it read), `media_level` wins.
+#[derive(Deserialize)]
+struct LoggingFields {
+    #[serde(default)]
+    media_level: Option<String>,
+    #[serde(default)]
+    ffmpeg_level: Option<String>,
+    #[serde(default)]
+    ingest_level: String,
+    #[serde(default)]
+    detect_silence: bool,
+    #[serde(default)]
+    ignore_lines: Vec<String>,
+}
+
+impl From<LoggingFields> for Logging {
+    fn from(fields: LoggingFields) -> Self {
+        let media_level = fields
+            .media_level
+            .filter(|level| !level.is_empty())
+            .or(fields.ffmpeg_level)
+            .unwrap_or_default();
+
+        Self {
+            deprecated_ffmpeg_level: media_level.clone(),
+            media_level,
+            ingest_level: fields.ingest_level,
+            detect_silence: fields.detect_silence,
+            ignore_lines: fields.ignore_lines,
+        }
+    }
 }
 
 impl Logging {
     fn new(config: &models::Configuration) -> Self {
         Self {
-            ffmpeg_level: config.logging_ffmpeg_level.clone(),
+            media_level: config.logging_media_level.clone(),
+            deprecated_ffmpeg_level: config.logging_media_level.clone(),
             ingest_level: config.logging_ingest_level.clone(),
             detect_silence: config.logging_detect_silence,
             ignore_lines: config
@@ -1444,15 +1501,15 @@ impl Output {
             OutputMode::HLS | OutputMode::Stream | OutputMode::Ndi | OutputMode::Sdi
         ) {
             let target = match self.mode {
-                OutputMode::HLS => noar_engine::FfmpegOutputTarget::Hls,
-                OutputMode::Ndi | OutputMode::Sdi => noar_engine::FfmpegOutputTarget::Udp,
+                OutputMode::HLS => noar_engine::OutputTarget::Hls,
+                OutputMode::Ndi | OutputMode::Sdi => noar_engine::OutputTarget::Udp,
                 OutputMode::Stream => self
                     .stream_type
-                    .ffmpeg_target()
-                    .unwrap_or(noar_engine::FfmpegOutputTarget::Rtmp),
+                    .output_target()
+                    .unwrap_or(noar_engine::OutputTarget::Rtmp),
                 OutputMode::Desktop => unreachable!("desktop output is not encoded"),
             };
-            let capabilities = noar_engine::ffmpeg_capabilities();
+            let capabilities = noar_engine::media_capabilities();
             let custom_format = self.stream_format.trim();
             if self.mode == OutputMode::Stream && self.stream_type == StreamType::Custom {
                 if custom_format.is_empty() {
@@ -1484,7 +1541,7 @@ impl Output {
             }
             let video_codecs =
                 if self.mode == OutputMode::Stream && self.stream_type == StreamType::Custom {
-                    capabilities.usable_codecs(noar_engine::FfmpegMediaType::Video)
+                    capabilities.usable_codecs(noar_engine::MediaKind::Video)
                 } else {
                     capabilities.video_codecs_for(target)
                 };
@@ -1499,7 +1556,7 @@ impl Output {
             }
             let audio_codecs =
                 if self.mode == OutputMode::Stream && self.stream_type == StreamType::Custom {
-                    capabilities.usable_codecs(noar_engine::FfmpegMediaType::Audio)
+                    capabilities.usable_codecs(noar_engine::MediaKind::Audio)
                 } else {
                     capabilities.audio_codecs_for(target)
                 };
@@ -1975,8 +2032,8 @@ mod output_tests {
                 .contains("audio encoder options")
         );
         output.audio_bitrate = 128;
-        // Exercise rendition validation directly: FFmpeg builds differ in
-        // whether the HLS muxer advertises MP2 support.
+        // Exercise rendition validation directly: installations differ in
+        // whether an MP2 encoder is available.
         output.mode = OutputMode::HLS;
         output.hls_variants = vec!["low:640x360:1000k:129k".to_string()];
         assert!(

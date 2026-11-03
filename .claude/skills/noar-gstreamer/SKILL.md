@@ -52,10 +52,11 @@ framing independently for each destination, and preserve both A/V timelines.
 Never equate a network connection count or valid timestamps with uninterrupted
 wall-clock delivery: inspect receiver progress and decoded source transitions.
 
-FFmpeg frame structures remain a memory adapter for Rust graphics/audio. The
-FFmpeg CLI is also used for synthetic fixtures and independent inspection.
-Use `/noar-ffmpeg` only for those scoped compatibility or fixture questions;
-it is not the primary reference for playout control or GStreamer properties.
+NoAr does not link FFmpeg: Rust graphics and audio work on NoAr's own frames
+(`backend/engine/src/frame.rs`). GStreamer's libav plugin supplies some codecs,
+and the FFmpeg CLI is used for synthetic fixtures and independent inspection.
+Use `/noar-ffmpeg` only for those codec or fixture questions; it is not the
+primary reference for playout control or GStreamer properties.
 
 ## Verification and boundaries
 

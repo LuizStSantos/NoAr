@@ -1,10 +1,10 @@
 //! Shared initialization of the single native media runtime.
 
+use crate::frame::{PixelFormat, VideoFrame};
 use std::sync::OnceLock;
 
 use ::gstreamer::{self as gst, prelude::*};
 use anyhow::{Context, Result, anyhow, ensure};
-use ffmpeg_next::{frame, util::format::pixel::Pixel};
 use gstreamer_app::AppSink;
 use gstreamer_video::{VideoConverter, VideoFormat, VideoFrameExt, VideoFrameRef, VideoInfo};
 
@@ -28,12 +28,11 @@ pub(crate) fn init() -> Result<()> {
     Ok(())
 }
 
-fn video_info(format: Pixel, width: u32, height: u32) -> Result<VideoInfo> {
+fn video_info(format: PixelFormat, width: u32, height: u32) -> Result<VideoInfo> {
     let format = match format {
-        Pixel::YUV420P => VideoFormat::I420,
-        Pixel::YUVA420P => VideoFormat::A420,
-        Pixel::BGRZ => VideoFormat::Bgrx,
-        _ => return Err(anyhow!("unsupported CPU frame format {format:?}")),
+        PixelFormat::Yuv420p => VideoFormat::I420,
+        PixelFormat::Yuva420p => VideoFormat::A420,
+        PixelFormat::Bgrx => VideoFormat::Bgrx,
     };
 
     Ok(VideoInfo::builder(format, width, height).build()?)
@@ -44,19 +43,19 @@ pub(crate) struct FrameConverter {
     input: VideoInfo,
     output: VideoInfo,
     converter: VideoConverter,
-    format: Pixel,
+    format: PixelFormat,
 }
 
 impl FrameConverter {
     #[cfg(feature = "desktop-base")]
-    pub(crate) fn accepts(&self, frame: &frame::Video) -> bool {
+    pub(crate) fn accepts(&self, frame: &VideoFrame) -> bool {
         video_info(frame.format(), frame.width(), frame.height())
             .is_ok_and(|info| info == self.input)
     }
 
     pub(crate) fn new(
-        input: &frame::Video,
-        format: Pixel,
+        input: &VideoFrame,
+        format: PixelFormat,
         width: u32,
         height: u32,
     ) -> Result<Self> {
@@ -73,11 +72,11 @@ impl FrameConverter {
         })
     }
 
-    pub(crate) fn run(&self, input: &frame::Video) -> Result<frame::Video> {
+    pub(crate) fn run(&self, input: &VideoFrame) -> Result<VideoFrame> {
         crate::benchmark::measure_success(crate::benchmark::Stage::Scale, || self.convert(input))
     }
 
-    fn convert(&self, input: &frame::Video) -> Result<frame::Video> {
+    fn convert(&self, input: &VideoFrame) -> Result<VideoFrame> {
         ensure!(
             input.width() == self.input.width() && input.height() == self.input.height(),
             "CPU graphics input size changed without reconfiguring the converter"
@@ -125,10 +124,10 @@ impl FrameConverter {
 fn copy_sample_frame(
     buffer: &gst::BufferRef,
     info: &VideoInfo,
-    format: Pixel,
-) -> Result<frame::Video> {
+    format: PixelFormat,
+) -> Result<VideoFrame> {
     let mapped = VideoFrameRef::from_buffer_ref_readable(buffer, info)?;
-    let mut output = frame::Video::new(format, info.width(), info.height());
+    let mut output = VideoFrame::new(format, info.width(), info.height());
 
     for plane in 0..output.planes() {
         let width = plane_bytes(&output, plane);
@@ -147,9 +146,9 @@ fn copy_sample_frame(
     Ok(output)
 }
 
-fn plane_bytes(frame: &frame::Video, plane: usize) -> usize {
+fn plane_bytes(frame: &VideoFrame, plane: usize) -> usize {
     let pixels = frame.plane_width(plane) as usize;
-    if frame.format() == Pixel::BGRZ {
+    if frame.format() == PixelFormat::Bgrx {
         pixels * 4
     } else {
         pixels
@@ -157,7 +156,7 @@ fn plane_bytes(frame: &frame::Video, plane: usize) -> usize {
 }
 
 /// Decode a graphic through GStreamer, preserving its alpha plane.
-pub(crate) fn load_image(path: &str) -> Result<frame::Video> {
+pub(crate) fn load_image(path: &str) -> Result<VideoFrame> {
     init()?;
     let pipeline = gst::Pipeline::new();
     let decoder = gst::ElementFactory::make("uridecodebin")
@@ -200,7 +199,7 @@ pub(crate) fn load_image(path: &str) -> Result<frame::Video> {
         copy_sample_frame(
             sample.buffer().context("image sample has no data")?,
             &info,
-            Pixel::YUVA420P,
+            PixelFormat::Yuva420p,
         )
     })();
     let _ = pipeline.set_state(gst::State::Null);

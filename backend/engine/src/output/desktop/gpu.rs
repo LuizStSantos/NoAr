@@ -1,4 +1,6 @@
 #[cfg(feature = "desktop-gpu")]
+use crate::frame::{ColorPrimaries, ColorRange, ColorSpace, ColorTransfer};
+#[cfg(feature = "desktop-gpu")]
 use std::{
     mem,
     sync::{
@@ -8,7 +10,6 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use ffmpeg_next::util::color;
 use winit::{event_loop::OwnedDisplayHandle, window::Window};
 
 use super::{
@@ -638,33 +639,33 @@ fn write_plane(queue: &wgpu::Queue, texture: &wgpu::Texture, width: u32, height:
 }
 
 #[cfg(feature = "desktop-gpu")]
-pub(super) fn yuv_color_parameters(space: color::Space, range: color::Range) -> [f32; 16] {
+pub(super) fn yuv_color_parameters(space: ColorSpace, range: ColorRange) -> [f32; 16] {
     let (matrix, offset) = match (space, range) {
-        (color::Space::BT2020NCL | color::Space::BT2020CL, color::Range::JPEG) => (
+        (ColorSpace::Bt2020Ncl | ColorSpace::Bt2020Cl, ColorRange::Full) => (
             [
                 1.0, 1.0, 1.0, 0.0, 0.0, -0.1646, 1.8814, 0.0, 1.4746, -0.5714, 0.0, 0.0,
             ],
             [0.0, -0.5, -0.5, 0.0],
         ),
-        (color::Space::BT2020NCL | color::Space::BT2020CL, _) => (
+        (ColorSpace::Bt2020Ncl | ColorSpace::Bt2020Cl, _) => (
             [
                 1.1644, 1.1644, 1.1644, 0.0, 0.0, -0.1873, 2.1418, 0.0, 1.6787, -0.6504, 0.0, 0.0,
             ],
             [-16.0 / 255.0, -0.5, -0.5, 0.0],
         ),
-        (color::Space::BT709, color::Range::JPEG) => (
+        (ColorSpace::Bt709, ColorRange::Full) => (
             [
                 1.0, 1.0, 1.0, 0.0, 0.0, -0.1873, 1.8556, 0.0, 1.5748, -0.4681, 0.0, 0.0,
             ],
             [0.0, -0.5, -0.5, 0.0],
         ),
-        (color::Space::BT709, _) => (
+        (ColorSpace::Bt709, _) => (
             [
                 1.1644, 1.1644, 1.1644, 0.0, 0.0, -0.2132, 2.1124, 0.0, 1.7927, -0.5329, 0.0, 0.0,
             ],
             [-16.0 / 255.0, -0.5, -0.5, 0.0],
         ),
-        (_, color::Range::JPEG) => (
+        (_, ColorRange::Full) => (
             [
                 1.0, 1.0, 1.0, 0.0, 0.0, -0.3441, 1.7720, 0.0, 1.4020, -0.7141, 0.0, 0.0,
             ],
@@ -686,16 +687,16 @@ pub(super) fn yuv_color_parameters(space: color::Space, range: color::Range) -> 
 #[cfg(feature = "desktop-gpu")]
 fn color_render_parameters(video: &VideoSurface) -> [f32; 4] {
     let transfer = match video.color_transfer {
-        color::TransferCharacteristic::SMPTE2084 => 1.0,
-        color::TransferCharacteristic::ARIB_STD_B67 => 2.0,
-        color::TransferCharacteristic::Linear => 3.0,
-        color::TransferCharacteristic::IEC61966_2_1 => 4.0,
+        ColorTransfer::Pq => 1.0,
+        ColorTransfer::Hlg => 2.0,
+        ColorTransfer::Linear => 3.0,
+        ColorTransfer::Srgb => 4.0,
         _ => 0.0,
     };
-    let bt2020 = matches!(video.color_primaries, color::Primaries::BT2020)
+    let bt2020 = matches!(video.color_primaries, ColorPrimaries::Bt2020)
         || matches!(
             video.color_space,
-            color::Space::BT2020NCL | color::Space::BT2020CL
+            ColorSpace::Bt2020Ncl | ColorSpace::Bt2020Cl
         );
     [
         transfer,

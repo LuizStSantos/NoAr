@@ -35,7 +35,6 @@ jobs:
           set -eu
           apt-get update
           apt-get install -y --no-install-recommends \
-            clang \
             cmake \
             curl \
             ffmpeg \
@@ -48,22 +47,13 @@ jobs:
             gstreamer1.0-plugins-bad \
             gstreamer1.0-plugins-ugly \
             gstreamer1.0-libav \
-            libavcodec-dev \
-            libavdevice-dev \
-            libavfilter-dev \
-            libavformat-dev \
-            libavutil-dev \
-            libclang-dev \
             libgnutls28-dev \
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
             libgstreamer-plugins-bad1.0-dev \
-            libswresample-dev \
-            libswscale-dev \
             make \
             pkg-config
           ffmpeg -version
-          test "$(pkg-config --modversion libavformat | cut -d. -f1)" -ge 61
           for library in gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0 \
             gstreamer-video-1.0 gstreamer-pbutils-1.0 gstreamer-mpegts-1.0; do
             pkg-config --atleast-version=1.26 "$library"
@@ -128,6 +118,10 @@ jobs:
             fi
           }
 
+          # The engine's tests run real GStreamer pipelines against wall-clock
+          # deadlines; two at a time keeps the 4-CPU runner from starving them.
+          # Test binaries with a harness of their own ignore this variable.
+          export RUST_TEST_THREADS=2
           check "cargo test" cargo test --no-default-features
           check "cargo clippy" cargo clippy --no-default-features --all-targets -- --deny warnings
           check "cargo fmt" cargo fmt --all -- --check

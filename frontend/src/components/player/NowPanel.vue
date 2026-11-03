@@ -16,7 +16,7 @@ const configStore = useConfig()
 const indexStore = useIndex()
 const playlistStore = usePlaylist()
 const scheduleStore = useSchedule()
-const { channelNow, playlistNow, clipLength, clipPosition, clipRemaining, currentTitle, nextGroup, onAirIndex } =
+const { channelNow, listNow, airsAt, clipLength, clipPosition, clipRemaining, currentTitle, nextGroup, onAirIndex } =
     useOnAir()
 
 const stopping = ref(false)
@@ -50,7 +50,7 @@ const dateLabel = computed(() => {
 
 const progress = computed(() => (clipLength.value > 0 ? (clipPosition.value / clipLength.value) * 100 : 0))
 
-const nextIn = computed(() => (nextGroup.value ? Math.max(0, nextGroup.value.start - playlistNow.value) : 0))
+const nextIn = computed(() => (nextGroup.value ? Math.max(0, nextGroup.value.start - listNow.value) : 0))
 
 const sync = computed(() => {
     const shift = playlistStore.shift ?? 0
@@ -263,7 +263,8 @@ async function backToProgramme() {
                 <template v-if="nextGroup">
                     <div class="font-semibold line-clamp-2 break-words">{{ nextGroup.title }}</div>
                     <div class="font-mono text-xs text-muted">
-                        {{ clockShort(nextGroup.start) }} · {{ t('onair.inTime', { time: lengthLabel(nextIn) }) }}
+                        {{ clockShort(airsAt(nextGroup.start)) }} ·
+                        {{ t('onair.inTime', { time: lengthLabel(nextIn) }) }}
                     </div>
                 </template>
                 <div v-else class="text-muted">—</div>

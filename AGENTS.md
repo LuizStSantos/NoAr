@@ -25,7 +25,7 @@ Small tasks need no subagent or audit council by default. Keep official document
 ## Compatibility limits
 
 - GStreamer is the sole playout engine on this integration branch. For media runtime questions read `.agents/skills/noar-gstreamer/SKILL.md` and the canonical references it links. Confirm Cargo.lock and native plugin versions; use `gst-inspect-1.0` for actual properties/caps/units.
-- FFmpeg remains a frame-memory adapter and test/codec dependency. Its manuals do not define GStreamer pipeline, seek, state, transport or encoder-property behavior. NoAr pulls live URLs from external servers such as MediaMTX; it does not host RTMP/SRT input listeners.
+- NoAr does not link FFmpeg: the engine keeps frames in its own types (`backend/engine/src/frame.rs`) and time bases in `time_base.rs`. FFmpeg remains only as GStreamer codecs (`gstreamer1.0-libav`) and `ffmpeg`/`ffprobe` test tools. Its manuals do not define GStreamer pipeline, seek, state, transport or encoder-property behavior. NoAr pulls live URLs from external servers such as MediaMTX; it does not host RTMP/SRT input listeners.
 
 Claude-specific agent definitions under `.claude/agents/` are **not** Codex subagents. If independent five-reviewer councils cannot run, report NOT_RUN and do not fabricate any ballots or 3/5 approvals. For risky tasks consult `.claude/audit/QUALITY_GATES.md`.
 

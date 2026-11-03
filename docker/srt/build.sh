@@ -1,5 +1,6 @@
 #!/bin/sh
-# Build the corrected native SRT lifecycle without changing FFmpeg's SRT ABI.
+# Build the corrected native SRT lifecycle without changing the SRT ABI that
+# Debian's packages (and GStreamer's SRT plugin) expect.
 set -eu
 
 prefix=${1:-/usr/local}

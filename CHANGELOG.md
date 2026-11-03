@@ -11,6 +11,66 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-03
+
+### Added
+
+- *Ident or promo* in a video's marks (*Storage › trim, logo, breaks and
+  L-shape*): a marked clip airs inside the program before it, so the Player
+  keeps that program's name and the XMLTV guide does not list it. Saved as
+  `"insert": true` in the video's `<name>.marks.json`, not in a sheet, so a
+  clip in a series folder keeps using the folder's `.nfo`. The report items
+  gain an `insert` field.
+- Assembled programs (`.program`, made with *Storage › New program*) are
+  listed in the Scheduler's storage panel and in the event dialog, so they
+  can be scheduled.
+- `docker/ndi/enable-ndi.sh --test` sets NDI up for the isolated GStreamer
+  test project, and `--compose-only` writes only the Compose settings when the
+  runtime is already installed.
+
+### Changed
+
+- NoAr no longer links the FFmpeg libraries: the engine keeps video and audio
+  in its own frames and time bases, and GStreamer does all decoding, encoding
+  and muxing. Output is unchanged (decoded frames are identical to the
+  previous release's with lossless encoding). Building needs neither the
+  `libav*-dev`/`libsw*-dev` packages nor clang; the `ffmpeg-filter` and
+  `ffmpeg-device` Cargo features are gone. The image still carries
+  `gstreamer1.0-libav` for codecs GStreamer has no native decoder for.
+- The log level of the media engine's messages is `logging.media_level` in the
+  configuration API and the database (migration 00027 renames the column).
+  The API still accepts `ffmpeg_level` and returns it as a deprecated copy,
+  so older clients keep working. Internal names follow (`MediaCapabilities`,
+  `OutputTarget`, `media_log_level`, `log_ignore_lines`), and three unused
+  `ffmpeg_*` fields of the general settings are gone.
+- Idents are no longer guessed. Short clips without a sheet used to count as
+  idents of the program before them, so a playlist of music videos aired in
+  the Player and the guide under one clip's name. Every clip is now a program
+  under its own name unless its marks say *Ident or promo*. **On updating:**
+  mark the idents and promos that should stay inside their programs.
+- `index` in the playout status (`media/current` and the event stream) is the
+  entry of the saved playlist on air; the clips of an assembled program share
+  their entry, and `elapsed` counts from its start. During a scheduled event
+  `media` covers the whole event.
+
+### Fixed
+
+- NDI output is announced to receivers when NoAr runs in Docker:
+  `docker/ndi/enable-ndi.sh` mounts the server's `/run/dbus`, through which
+  the NDI library registers its sources with avahi-daemon. **On updating:**
+  run the script again (or add the line from docs/ndi.md) and recreate the
+  container. NDI output was verified on a real network (picture and sound on
+  a receiver).
+- NDI and SDI outputs that fall behind for a moment drop frames and catch up
+  instead of taking the channel off air; they hold up to a second of video,
+  and the playout restarts them only after five seconds without taking any.
+- The Player keeps the clip on air (name and progress) after an assembled
+  program in the playlist, the progress of a scheduled program runs over the
+  whole program instead of restarting with each block, and *Up next* and the
+  playlist's past and coming entries take the time shift into account.
+- `docker/ndi/enable-ndi.sh` run with sudo gives the Compose file it writes
+  to the user who ran it.
+
 ## [2.0.0] - 2026-11-02
 
 ### Added
@@ -822,7 +882,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/LuizStSantos/NoAr/compare/v1.11.0...v2.0.0
 [1.11.0]: https://github.com/LuizStSantos/NoAr/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/LuizStSantos/NoAr/compare/v1.10.0...v1.10.1
