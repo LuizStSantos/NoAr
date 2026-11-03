@@ -11,6 +11,15 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- An RTMP live from a server that sends sound before the picture's first key
+  frame (MediaMTX relaying an SRT or MPEG-TS source) dropped and reconnected
+  every few seconds: the source opened as sound only, its picture branch was
+  removed as for a file without a picture, and the picture arriving next
+  stopped the whole source. Network sources now keep both branches, and a
+  live follows a track announced late.
+
 ## [2.1.2] - 2026-11-03
 
 ### Changed

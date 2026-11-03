@@ -467,7 +467,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
     }
     debug!(channel = cfg.channel_id.unwrap_or_default();
         "GStreamer source opened in {:?}; output video={}, audio={}", opening_started.elapsed(), timeline.video_pts, timeline.audio_pts);
-    let info = opened.input.info();
+    let mut info = opened.input.info();
     let duration =
         duration_seconds.or_else(|| info.duration.map(|v| (v - seek.unwrap_or(0.0)).max(0.0)));
     let end_video = duration.map(|v| origin_video + (v * f64::from(cfg.fps)).ceil() as i64);
@@ -550,6 +550,11 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                     && end_audio.is_some_and(|end| timeline.audio_pts >= end)
                 {
                     break;
+                }
+                // A live may announce a track late (an RTMP server sends sound
+                // before the picture's first key frame): follow what it has.
+                if live {
+                    info = opened.input.info();
                 }
                 // Sound alone does not keep a live with a picture on air: the
                 // output would stop with the picture (a stalled decoder after

@@ -376,9 +376,11 @@ impl Source {
         // picture leaves that branch unlinked. A seek must reach every sink of
         // the pipeline, and an unlinked one refuses it, so resuming such a
         // clip in its middle failed. Once the file has announced all its
-        // tracks, the missing branch leaves. NDI and cards keep theirs: their
-        // sound can still come.
-        if ndi.is_none() && card.is_none() {
+        // tracks, the missing branch leaves. NDI, cards and network sources
+        // keep theirs: a live is not sought, and its other track can still
+        // come (an RTMP server sends sound before the first key frame of the
+        // picture), which an unlinked pad would stop the whole source for.
+        if ndi.is_none() && card.is_none() && !is_network_url(path) {
             let info = source.info();
             let all_announced = complete.load(Ordering::Acquire);
             // The selected streams tell which tracks the file has, even before
