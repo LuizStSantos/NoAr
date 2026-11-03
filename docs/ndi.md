@@ -54,18 +54,27 @@ stops and asks you to add the lines below to it. Docker Compose 2.24 or newer
 is needed. To turn NDI off: delete `docker-compose.override.yml` and run
 `docker compose up -d`.
 
-For the isolated test project, write its settings to a file of its own and
-pass it with the other `-f` files:
+For the isolated test project, run it from the test checkout with `--test`.
+It writes `qa/gstreamer/compose.ndi.yaml`, which keeps the test interface on
+port 18787 (it does not take the installation's 8787) and leaves out the
+updater the test project does not have. Pass that file with the other `-f`
+files:
 
 ```sh
-sudo sh docker/ndi/enable-ndi.sh --compose-file qa/gstreamer/compose.ndi.yaml
+cd ~/NoAr-gstreamer-test
+sudo sh docker/ndi/enable-ndi.sh --test
 docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml \
   -f qa/gstreamer/compose.ndi.yaml up -d --no-build
 ```
 
-With host networking the test UI is on port 8787 and the `mediamtx` service
-name does not resolve inside NoAr; use `127.0.0.1` with the published test
-ports (for example `srt://127.0.0.1:19890?streamid=read:input`).
+When the runtime is already in `/opt/ndi` (from an earlier run, or the
+installation), `sh docker/ndi/enable-ndi.sh --test --compose-only` only writes
+the file, without downloading anything or needing sudo.
+
+With host networking the `mediamtx` service name does not resolve inside
+NoAr; use `127.0.0.1` with the published test ports (for example
+`srt://127.0.0.1:19890?streamid=read:input`). Without NDI, start the test as
+usual, without `-f qa/gstreamer/compose.ndi.yaml`.
 
 ## Docker settings by hand
 
