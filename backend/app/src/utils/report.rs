@@ -145,6 +145,9 @@ pub struct ReportItem {
     pub planned_seconds: f64,
     /// What a filler stood in for.
     pub replaces: Option<String>,
+    /// The clip's sheet marks it as an ident or promo, which airs inside the
+    /// programme around it.
+    pub insert: bool,
 }
 
 /// Build the report of the playlist days `from` to `to`, both included.
@@ -618,6 +621,7 @@ impl Describer {
 
         item.title = title;
         item.sub_title = sub_title;
+        item.insert = clip.insert;
         item.program = clip
             .program
             .is_some()

@@ -11,7 +11,7 @@ Machine-generated navigation index; verify behavior against current source code.
 - `.github/`: 7 indexed files
 - `.vscode/`: 2 indexed files
 - `assets/`: 1 indexed files
-- `backend/`: 196 indexed files
+- `backend/`: 197 indexed files
 - `docker/`: 3 indexed files
 - `docs/`: 28 indexed files
 - `frontend/`: 143 indexed files
@@ -21,7 +21,7 @@ Machine-generated navigation index; verify behavior against current source code.
 
 ## Languages and formats
 
-- Rust: 192
+- Rust: 193
 - Vue: 90
 - Markdown: 82
 - TypeScript: 51

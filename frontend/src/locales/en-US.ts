@@ -385,7 +385,8 @@ export default {
             title: 'Title (guide and playlist)',
             fileName: 'File name',
             storage: 'Storage',
-            storageHint: 'Drag a clip to where it goes in the program, or press + to add it at the end: a clip becomes the next block, a commercial goes into the break at the end. Click a live (folder with the broadcast icon) to add it for its usual length.',
+            storageHint:
+                'Drag a clip to where it goes in the program, or press + to add it at the end: a clip becomes the next block, a commercial goes into the break at the end. Click a live (folder with the broadcast icon) to add it for its usual length.',
             dragToMove: 'Drag to move',
             emptyBreakHint: 'Drag commercials here.',
             dropHere: 'Drop here to add at the end',
@@ -410,7 +411,8 @@ export default {
         live: {
             runtime: 'Default length',
             runtimePlaceholder: 'e.g. 60',
-            runtimeHint: 'When the live is scheduled, its end is proposed with this length (12:00 with 60 min ends at 13:00); it can be changed when scheduling.',
+            runtimeHint:
+                'When the live is scheduled, its end is proposed with this length (12:00 with 60 min ends at 13:00); it can be changed when scheduling.',
             creditsLater: 'Credits (hosts, cast and crew) can be edited once the live is saved.',
             new: 'New live',
             newTitle: 'New live',
@@ -567,6 +569,9 @@ export default {
                 movie: 'Movie',
                 episode: 'Episode',
             },
+            insert: 'Ident or promo',
+            insertHint:
+                "Airs inside the program before it: the player and the guide keep that program's name instead of listing this video.",
             title: 'Title in the guide',
             episodeTitle: 'Episode title',
             season: 'Season',
@@ -1070,7 +1075,8 @@ export default {
         signalFailed: 'No signal: {error}',
         cardTab: 'Video card',
         findCards: 'Find video cards',
-        noCards: 'No video card input found. Install the card driver (Blackmagic Desktop Video or the V4L2 driver), pass the card to Docker and restart NoAr.',
+        noCards:
+            'No video card input found. Install the card driver (Blackmagic Desktop Video or the V4L2 driver), pass the card to Docker and restart NoAr.',
         findNdi: 'Find NDI sources',
         noNdiSources: 'No NDI source found. Check that the server sees the network (mDNS or an NDI Discovery Server).',
         needAddress: 'Enter the signal address.',
@@ -1151,7 +1157,8 @@ export default {
             intro: 'An encoder, a Stream Deck or a script can extend the live on air or end it and go back to the programme, without logging in, with the key below. It applies to the airing on air only; the event in the Scheduler keeps its times.',
             key: 'Live key for encoders and scripts',
             noKey: 'No key: only from the Player or the API with a login',
-            keyHint: 'Send it as ?key= or in the X-Live-Key header. It works as soon as it is created; make a new one if it leaks (the previous one stops working).',
+            keyHint:
+                'Send it as ?key= or in the X-Live-Key header. It works as soon as it is created; make a new one if it leaks (the previous one stops working).',
             keyPlaceholder: 'YOUR_KEY',
             howTo: 'How to extend or end the live from your encoder or script (tutorial)',
             step1: 'Create the key above. It only acts while a live from the Scheduler is on air.',
@@ -2135,7 +2142,8 @@ export default {
             sdiHint:
                 'Blackmagic DeckLink and UltraStudio cards. Choosing a mode sets the size and frame rate below. Needs Blackmagic Desktop Video on the server and the card passed to Docker.',
             sdiSearching: 'Looking for video cards…',
-            sdiNoDevice: 'No DeckLink output found. Install Blackmagic Desktop Video on the server, pass the card to Docker and restart NoAr.',
+            sdiNoDevice:
+                'No DeckLink output found. Install Blackmagic Desktop Video on the server, pass the card to Docker and restart NoAr.',
             ndiName: 'NDI source name',
             ndiHint:
                 'Receivers list the source as "SERVER (name)". Needs the NDI Runtime on the server; NoAr in Docker also needs host networking for discovery.',

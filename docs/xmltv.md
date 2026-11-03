@@ -104,6 +104,7 @@ itself (useful for a movie next to `movie-name.nfo`), unless it is an
 | `director`, `credits`, `writer`, `actor` | `credits` (see below) |
 | `country` | `country` |
 | `thumb`, `fanart` | images, when the folder has no matching image file |
+| `noar_insert` | NoAr only: `true` marks the clip as an ident or promo (see below) |
 
 ### Credits
 
@@ -180,6 +181,11 @@ that goes missing falls back to the video logo.
 - Ads (`"ad": true` in the playlist), clips from a
   [commercials folder](commercials.md) and the configured filler are not
   listed: their time is added to the program they interrupt.
+- Idents and promos are marked by hand: in *Storage*, edit the video's sheet
+  and tick **Ident or promo** (`<noar_insert>true</noar_insert>` in its
+  `.nfo`). A marked clip is not listed either; its time goes to the program
+  before it, and the Player keeps that program's name while it airs. Clips
+  that are not marked are programs of their own, whatever their length.
 - Without an `.nfo`, the title comes from the playlist item title or the file
   name.
 

@@ -267,8 +267,10 @@ pub struct ClipQuery {
     pub title: Option<String>,
     #[serde(default)]
     pub ad: bool,
-    /// Seconds the clip plays (`out - in`).
+    /// Seconds the clip plays (`out - in`). Accepted for compatibility;
+    /// inserts are now the clips their sheet marks.
     #[serde(default)]
+    #[allow(dead_code)]
     pub length: f64,
 }
 
@@ -288,70 +290,36 @@ pub struct ClipProgramme {
     pub commercial: bool,
 }
 
-/// Longest run of clips without a sheet or title that counts as an insert,
-/// like a station ident or a promo: it extends the programme it interrupts
-/// instead of starting a guide entry of its own.
-pub const INSERT_MAX_SECONDS: f64 = 300.0;
-
 /// What [`insert_runs`] needs to know about one clip.
 struct RunClip {
     key: String,
-    /// Has a `.nfo` or a playlist title, so it is meant to be seen.
-    described: bool,
+    /// Marked as an ident or promo in its sheet.
+    insert: bool,
     is_break: bool,
-    length: f64,
 }
 
-/// Which clips are inserts: runs of consecutive clips with the same key, no
-/// description and at most [`INSERT_MAX_SECONDS`] in total, after a
-/// programme with another key. Breaks do not start or end a programme.
-///
-/// Only a programme that is described or longer than an insert takes
-/// inserts: in a playlist of short clips without sheets (music videos), each
-/// clip stays a programme of its own under its own name.
+/// Which clips are inserts: clips their sheet marks as an ident or promo,
+/// after a programme with another key. Breaks do not start or end a
+/// programme; a marked clip with no programme before it stands alone.
 fn insert_runs(clips: &[RunClip]) -> Vec<bool> {
-    let mut inserts = vec![false; clips.len()];
-    // The programme on air: its key, whether it is described, and its length
-    // so far across its breaks and inserts.
-    let mut programme: Option<(&str, bool, f64)> = None;
-    let mut index = 0;
+    let mut programme: Option<&str> = None;
 
-    while index < clips.len() {
-        let first = &clips[index];
+    clips
+        .iter()
+        .map(|clip| {
+            if clip.is_break {
+                return false;
+            }
 
-        if first.is_break {
-            index += 1;
-            continue;
-        }
+            let is_insert = clip.insert && programme.is_some_and(|key| key != clip.key);
 
-        let mut end = index + 1;
+            if !is_insert {
+                programme = Some(&clip.key);
+            }
 
-        while end < clips.len() && !clips[end].is_break && clips[end].key == first.key {
-            end += 1;
-        }
-
-        let length: f64 = clips[index..end].iter().map(|clip| clip.length).sum();
-        let takes_inserts = programme.is_some_and(|(key, described, so_far)| {
-            key != first.key && (described || so_far > INSERT_MAX_SECONDS)
-        });
-        let is_insert = takes_inserts && !first.described && length <= INSERT_MAX_SECONDS;
-
-        if is_insert {
-            inserts[index..end].fill(true);
-        } else {
-            programme = match programme {
-                // The programme continues after a break or an insert.
-                Some((key, described, so_far)) if key == first.key => {
-                    Some((key, described || first.described, so_far + length))
-                }
-                _ => Some((&first.key, first.described, length)),
-            };
-        }
-
-        index = end;
-    }
-
-    inserts
+            is_insert
+        })
+        .collect()
 }
 
 /// Key of the guide entry a clip belongs to.
@@ -365,10 +333,6 @@ fn programme_key(clip: &ClipMetadata, playlist_title: Option<&str>) -> String {
             .unwrap_or_default(),
         playlist_title.unwrap_or_default()
     )
-}
-
-fn is_described(clip: &ClipMetadata, playlist_title: Option<&str>) -> bool {
-    clip.program.is_some() || clip.episode.is_some() || playlist_title.is_some()
 }
 
 /// Program names of playlist clips, as the guide will show them. The player
@@ -396,9 +360,8 @@ pub async fn clip_programmes(config: &PlayoutConfig, clips: Vec<ClipQuery>) -> V
 
         runs.push(RunClip {
             key: key.clone(),
-            described: is_described(&clip, playlist_title.as_deref()),
+            insert: clip.insert,
             is_break,
-            length: query.length,
         });
 
         let programme = Programme {
@@ -538,18 +501,16 @@ async fn group_programmes(config: &PlayoutConfig, slots: Vec<Slot>) -> Vec<Progr
 
     let runs: Vec<RunClip> = entries
         .iter()
-        .map(|(slot, entry)| match entry {
+        .map(|(_, entry)| match entry {
             Some((clip, title)) => RunClip {
                 key: programme_key(clip, title.as_deref()),
-                described: is_described(clip, title.as_deref()),
+                insert: clip.insert,
                 is_break: false,
-                length: (slot.stop - slot.start).num_milliseconds() as f64 / 1000.0,
             },
             None => RunClip {
                 key: String::new(),
-                described: false,
+                insert: false,
                 is_break: true,
-                length: 0.0,
             },
         })
         .collect();

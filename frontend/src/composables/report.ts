@@ -8,12 +8,6 @@ dayjs.extend(timezone)
 /** Kinds the type filter offers; gaps always show. */
 export const REPORT_KINDS: Exclude<ReportKind, 'gap'>[] = ['program', 'commercial', 'live', 'filler', 'ingest']
 
-/**
- * Longest clip without a sheet that counts as an insert (an ident, a promo)
- * rather than a programme, as in the guide.
- */
-const INSERT_MAX_SECONDS = 300
-
 /** Which part of the time: all of it, what already aired, or what is to come. */
 export type ReportPart = 'all' | 'aired' | 'planned'
 
@@ -272,8 +266,7 @@ export function previousProgrammes(items: ReportItem[]): Map<ReportItem, ReportI
 
 /**
  * A programme, as opposed to what airs inside or between programmes: a
- * live, ingest, or a clip with a sheet or long enough to be a programme
- * (not a station ident).
+ * live, ingest, or a clip its sheet does not mark as an ident or promo.
  */
 function isProgramme(item: ReportItem): boolean {
     switch (item.kind) {
@@ -281,7 +274,7 @@ function isProgramme(item: ReportItem): boolean {
         case 'ingest':
             return true
         case 'program':
-            return item.program !== null || itemSeconds(item) >= INSERT_MAX_SECONDS
+            return !item.insert
         default:
             return false
     }

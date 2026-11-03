@@ -385,7 +385,8 @@ export default {
             title: 'Título (guia e playlist)',
             fileName: 'Nome do arquivo',
             storage: 'Armazenamento',
-            storageHint: 'Arraste um clipe para o lugar dele no programa, ou clique no + para adicionar no fim: um clipe vira o próximo bloco, um comercial entra no break do fim. Clique numa live (pasta com ícone de transmissão) para adicioná-la com a duração padrão dela.',
+            storageHint:
+                'Arraste um clipe para o lugar dele no programa, ou clique no + para adicionar no fim: um clipe vira o próximo bloco, um comercial entra no break do fim. Clique numa live (pasta com ícone de transmissão) para adicioná-la com a duração padrão dela.',
             dragToMove: 'Arraste para mover',
             emptyBreakHint: 'Arraste os comerciais para cá.',
             dropHere: 'Solte aqui para adicionar no fim',
@@ -410,7 +411,8 @@ export default {
         live: {
             runtime: 'Duração padrão',
             runtimePlaceholder: 'ex.: 60',
-            runtimeHint: 'Ao agendar a live, o fim é proposto com esta duração (começa 12:00 com 60 min, termina 13:00); dá para mudar no agendamento.',
+            runtimeHint:
+                'Ao agendar a live, o fim é proposto com esta duração (começa 12:00 com 60 min, termina 13:00); dá para mudar no agendamento.',
             creditsLater: 'Os créditos (apresentadores, elenco e equipe) podem ser editados depois de salvar a live.',
             new: 'Nova live',
             newTitle: 'Nova live',
@@ -567,6 +569,9 @@ export default {
                 movie: 'Filme',
                 episode: 'Episódio',
             },
+            insert: 'Vinheta ou chamada',
+            insertHint:
+                'Entra dentro do programa anterior: o player e o guia mantêm o nome desse programa em vez de listar este vídeo.',
             title: 'Título no guia',
             episodeTitle: 'Título do episódio',
             season: 'Temporada',
@@ -1070,9 +1075,11 @@ export default {
         signalFailed: 'Sem sinal: {error}',
         cardTab: 'Placa de vídeo',
         findCards: 'Procurar placas',
-        noCards: 'Nenhuma entrada de placa encontrada. Instale o driver da placa (Blackmagic Desktop Video ou o driver V4L2), libere a placa para o Docker e reinicie o NoAr.',
+        noCards:
+            'Nenhuma entrada de placa encontrada. Instale o driver da placa (Blackmagic Desktop Video ou o driver V4L2), libere a placa para o Docker e reinicie o NoAr.',
         findNdi: 'Procurar fontes NDI',
-        noNdiSources: 'Nenhuma fonte NDI encontrada. Verifique se o servidor enxerga a rede (mDNS ou um NDI Discovery Server).',
+        noNdiSources:
+            'Nenhuma fonte NDI encontrada. Verifique se o servidor enxerga a rede (mDNS ou um NDI Discovery Server).',
         needAddress: 'Informe o endereço do sinal.',
         starts: 'Começa',
         ends: 'Termina',
@@ -1152,7 +1159,8 @@ export default {
             intro: 'Um encoder, um Stream Deck ou um script pode estender a live no ar ou encerrá-la e voltar à grade, sem login, com a chave abaixo. Vale só para a exibição no ar; o evento no Agendador mantém seus horários.',
             key: 'Chave da live para encoders e scripts',
             noKey: 'Sem chave: só pelo Player ou pela API com login',
-            keyHint: 'Envie como ?key= ou no cabeçalho X-Live-Key. Funciona assim que é criada; gere outra se vazar (a anterior deixa de funcionar).',
+            keyHint:
+                'Envie como ?key= ou no cabeçalho X-Live-Key. Funciona assim que é criada; gere outra se vazar (a anterior deixa de funcionar).',
             keyPlaceholder: 'SUA_CHAVE',
             howTo: 'Como estender ou encerrar a live pelo seu encoder ou script (tutorial)',
             step1: 'Crie a chave acima. Ela só age enquanto uma live do Agendador está no ar.',
@@ -2138,7 +2146,8 @@ export default {
             sdiHint:
                 'Placas Blackmagic DeckLink e UltraStudio. Escolher o modo ajusta o tamanho e a taxa de quadros abaixo. Precisa do Blackmagic Desktop Video no servidor e da placa liberada para o Docker.',
             sdiSearching: 'Procurando placas de vídeo…',
-            sdiNoDevice: 'Nenhuma saída DeckLink encontrada. Instale o Blackmagic Desktop Video no servidor, libere a placa para o Docker e reinicie o NoAr.',
+            sdiNoDevice:
+                'Nenhuma saída DeckLink encontrada. Instale o Blackmagic Desktop Video no servidor, libere a placa para o Docker e reinicie o NoAr.',
             ndiName: 'Nome da fonte NDI',
             ndiHint:
                 'Os receptores mostram a fonte como "SERVIDOR (nome)". Precisa do NDI Runtime no servidor; o NoAr em Docker também precisa da rede do host para a descoberta.',

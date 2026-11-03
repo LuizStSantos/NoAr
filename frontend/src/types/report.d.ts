@@ -46,6 +46,8 @@ declare global {
         planned_seconds: number
         /** What a filler stood in for. */
         replaces: string | null
+        /** The clip's sheet marks it as an ident or promo. */
+        insert: boolean
     }
 
     interface Report {

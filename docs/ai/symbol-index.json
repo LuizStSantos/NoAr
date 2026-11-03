@@ -969,9 +969,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "fe6f89ed5ff8cd10a244671cc3af8fdf2d5208418e5388fba761fb6faa187f7e",
+      "sha256": "9c46a7b0a2bfdadea1dbdd4eaf78242e4f66d2c97bf2a0ca8cba79e508a5a37c",
       "language": "Markdown",
-      "bytes": 44751,
+      "bytes": 45422,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -8457,9 +8457,9 @@
       ]
     },
     "backend/app/src/utils/report.rs": {
-      "sha256": "cc53c9fd1619802edccb82c17d0ef637363e49c803884bb1aca5961224725796",
+      "sha256": "677724ea24a5cc24505eb9a5c1ef4b9c152c005b7c63c9374a514f4bcac3c52b",
       "language": "Rust",
-      "bytes": 22504,
+      "bytes": 22668,
       "symbols": [
         {
           "name": "ReportQuery",
@@ -8491,115 +8491,115 @@
         },
         {
           "name": "build_report",
-          "line": 151
+          "line": 154
         },
         {
           "name": "Clock",
-          "line": 291
+          "line": 294
         },
         {
           "name": "Clock",
-          "line": 296
+          "line": 299
         },
         {
           "name": "millis",
-          "line": 297
+          "line": 300
         },
         {
           "name": "local",
-          "line": 301
+          "line": 304
         },
         {
           "name": "day_start",
-          "line": 307
+          "line": 310
         },
         {
           "name": "day_end",
-          "line": 312
+          "line": 315
         },
         {
           "name": "day_of",
-          "line": 320
+          "line": 323
         },
         {
           "name": "report_days",
-          "line": 332
+          "line": 335
         },
         {
           "name": "is_finished",
-          "line": 357
+          "line": 360
         },
         {
           "name": "gaps",
-          "line": 367
+          "line": 370
         },
         {
           "name": "Plan",
-          "line": 397
+          "line": 400
         },
         {
           "name": "Plan",
-          "line": 406
+          "line": 409
         },
         {
           "name": "items",
-          "line": 407
+          "line": 410
         },
         {
           "name": "Describer",
-          "line": 451
+          "line": 454
         },
         {
           "name": "Describer",
-          "line": 461
+          "line": 464
         },
         {
           "name": "new",
-          "line": 462
+          "line": 465
         },
         {
           "name": "aired",
-          "line": 476
+          "line": 479
         },
         {
           "name": "clip",
-          "line": 501
+          "line": 504
         },
         {
           "name": "event",
-          "line": 531
+          "line": 534
         },
         {
           "name": "duration",
-          "line": 589
+          "line": 592
         },
         {
           "name": "describe",
-          "line": 602
+          "line": 605
         },
         {
           "name": "tests",
-          "line": 629
+          "line": 633
         },
         {
           "name": "aired",
-          "line": 632
+          "line": 636
         },
         {
           "name": "stretches_without_a_record_are_gaps",
-          "line": 642
+          "line": 646
         },
         {
           "name": "the_item_on_air_leaves_no_gap_up_to_now",
-          "line": 660
+          "line": 664
         },
         {
           "name": "a_day_runs_from_its_playlist_start",
-          "line": 667
+          "line": 671
         },
         {
           "name": "a_report_covers_whole_days_up_to_a_limit",
-          "line": 693
+          "line": 697
         }
       ]
     },
@@ -9418,9 +9418,9 @@
       ]
     },
     "backend/app/src/utils/xmltv/library.rs": {
-      "sha256": "b9037c62cce4d1563482752bff4854bf3cf9a78000fefd47cb39aa7cb46a640b",
+      "sha256": "bab1bda57e0098b03e1b102a1f18ff7ccaf5d07ddfba87914d4d73061df468f7",
       "language": "Rust",
-      "bytes": 22789,
+      "bytes": 22973,
       "symbols": [
         {
           "name": "Image",
@@ -9440,158 +9440,158 @@
         },
         {
           "name": "ClipMetadata",
-          "line": 93
+          "line": 95
         },
         {
           "name": "bare",
-          "line": 94
+          "line": 96
         },
         {
           "name": "Listing",
-          "line": 108
+          "line": 111
         },
         {
           "name": "Listing",
-          "line": 113
+          "line": 116
         },
         {
           "name": "names",
-          "line": 115
+          "line": 118
         },
         {
           "name": "find",
-          "line": 119
+          "line": 122
         },
         {
           "name": "find_image",
-          "line": 123
+          "line": 126
         },
         {
           "name": "find_any_image",
-          "line": 129
+          "line": 132
         },
         {
           "name": "program_nfo",
-          "line": 135
+          "line": 138
         },
         {
           "name": "read_listing",
-          "line": 168
+          "line": 171
         },
         {
           "name": "program_title",
-          "line": 186
+          "line": 189
         },
         {
           "name": "photo_stem",
-          "line": 196
+          "line": 199
         },
         {
           "name": "photo_key",
-          "line": 212
+          "line": 215
         },
         {
           "name": "photo_index",
-          "line": 218
+          "line": 221
         },
         {
           "name": "has_image_extension",
-          "line": 240
+          "line": 243
         },
         {
           "name": "ProgramNfo",
-          "line": 250
+          "line": 253
         },
         {
           "name": "NfoLibrary",
-          "line": 258
+          "line": 261
         },
         {
           "name": "NfoLibrary",
-          "line": 264
+          "line": 267
         },
         {
           "name": "new",
-          "line": 265
+          "line": 268
         },
         {
           "name": "lookup",
-          "line": 273
+          "line": 276
         },
         {
           "name": "storage_path",
-          "line": 388
+          "line": 392
         },
         {
           "name": "program_nfo",
-          "line": 403
+          "line": 407
         },
         {
           "name": "listing",
-          "line": 425
+          "line": 429
         },
         {
           "name": "nfo",
-          "line": 436
+          "line": 440
         },
         {
           "name": "guide_credits",
-          "line": 457
+          "line": 461
         },
         {
           "name": "resolve_thumb",
-          "line": 497
+          "line": 501
         },
         {
           "name": "tests",
-          "line": 515
+          "line": 519
         },
         {
           "name": "TempStorage",
-          "line": 518
+          "line": 522
         },
         {
           "name": "TempStorage",
-          "line": 520
+          "line": 524
         },
         {
           "name": "new",
-          "line": 521
+          "line": 525
         },
         {
           "name": "file",
-          "line": 528
+          "line": 532
         },
         {
           "name": "Drop",
-          "line": 537
+          "line": 541
         },
         {
           "name": "drop",
-          "line": 538
+          "line": 542
         },
         {
           "name": "program_folder_nfo_applies_to_clips_in_season_subfolders",
-          "line": 544
+          "line": 548
         },
         {
           "name": "clip_nfo_becomes_the_program_without_a_program_folder",
-          "line": 594
+          "line": 598
         },
         {
           "name": "ignores_remote_sources_files_outside_storage_and_unsafe_thumbs",
-          "line": 626
+          "line": 630
         },
         {
           "name": "program_nfo_prefers_known_names_and_skips_clip_nfos",
-          "line": 646
+          "line": 650
         }
       ]
     },
     "backend/app/src/utils/xmltv/mod.rs": {
-      "sha256": "cc99bedab9cc442082aa20df1d5a4fc03eb97e853acb9050ca46724e6cdaa96d",
+      "sha256": "24acce7c73bc8e9437fb268660aedb5e96c9d62f5e320dcc987781fc9c3e0ee9",
       "language": "Rust",
-      "bytes": 36675,
+      "bytes": 35666,
       "symbols": [
         {
           "name": "library",
@@ -9659,178 +9659,174 @@
         },
         {
           "name": "ClipProgramme",
-          "line": 277
+          "line": 279
         },
         {
           "name": "RunClip",
-          "line": 297
+          "line": 294
         },
         {
           "name": "insert_runs",
-          "line": 308
+          "line": 304
         },
         {
           "name": "programme_key",
-          "line": 345
-        },
-        {
-          "name": "is_described",
-          "line": 357
+          "line": 326
         },
         {
           "name": "clip_programmes",
-          "line": 363
+          "line": 340
         },
         {
           "name": "collect_slots",
-          "line": 423
+          "line": 399
         },
         {
           "name": "cut_at",
-          "line": 490
+          "line": 466
         },
         {
           "name": "group_programmes",
-          "line": 501
+          "line": 477
         },
         {
           "name": "is_contiguous",
-          "line": 582
+          "line": 556
         },
         {
           "name": "PlannedSlot",
-          "line": 589
+          "line": 563
         },
         {
           "name": "planned_slots",
-          "line": 604
+          "line": 578
         },
         {
           "name": "filler_path",
-          "line": 639
+          "line": 613
         },
         {
           "name": "is_break",
-          "line": 647
+          "line": 621
         },
         {
           "name": "apply_schedule",
-          "line": 656
+          "line": 630
         },
         {
           "name": "cover",
-          "line": 705
+          "line": 679
         },
         {
           "name": "delay",
-          "line": 731
+          "line": 705
         },
         {
           "name": "channel_icon",
-          "line": 768
+          "line": 742
         },
         {
           "name": "write_programme",
-          "line": 791
+          "line": 765
         },
         {
           "name": "write_credits",
-          "line": 892
+          "line": 866
         },
         {
           "name": "unique",
-          "line": 921
+          "line": 895
         },
         {
           "name": "xmltv_date",
-          "line": 934
+          "line": 908
         },
         {
           "name": "episode_numbers",
-          "line": 956
+          "line": 930
         },
         {
           "name": "ratings",
-          "line": 975
+          "line": 949
         },
         {
           "name": "title_from_file_name",
-          "line": 989
+          "line": 963
         },
         {
           "name": "ImageUrls",
-          "line": 1005
+          "line": 979
         },
         {
           "name": "ImageUrls",
-          "line": 1010
+          "line": 984
         },
         {
           "name": "url",
-          "line": 1011
+          "line": 985
         },
         {
           "name": "percent_encode",
-          "line": 1033
+          "line": 1007
         },
         {
           "name": "XmlWriter",
-          "line": 1051
+          "line": 1025
         },
         {
           "name": "XmlWriter",
-          "line": 1056
+          "line": 1030
         },
         {
           "name": "new",
-          "line": 1057
+          "line": 1031
         },
         {
           "name": "raw",
-          "line": 1064
+          "line": 1038
         },
         {
           "name": "start_tag",
-          "line": 1068
+          "line": 1042
         },
         {
           "name": "open",
-          "line": 1082
+          "line": 1056
         },
         {
           "name": "close",
-          "line": 1087
+          "line": 1061
         },
         {
           "name": "element",
-          "line": 1095
+          "line": 1069
         },
         {
           "name": "person",
-          "line": 1118
+          "line": 1092
         },
         {
           "name": "localized",
-          "line": 1141
+          "line": 1115
         },
         {
           "name": "finish",
-          "line": 1151
+          "line": 1125
         },
         {
           "name": "xml_safe",
-          "line": 1158
+          "line": 1132
         },
         {
           "name": "tests",
-          "line": 1167
+          "line": 1141
         }
       ]
     },
     "backend/app/src/utils/xmltv/nfo.rs": {
-      "sha256": "ac2281156669f975d3629b17e596b5dce483c1adb69aab54676cbabddf1f7b78",
+      "sha256": "57e80d0efef0f0f0bd64a765552fb45fd69971a2601459fba5c3676173787d54",
       "language": "Rust",
-      "bytes": 21412,
+      "bytes": 21714,
       "symbols": [
         {
           "name": "NfoKind",
@@ -9902,337 +9898,341 @@
         },
         {
           "name": "Nfo",
-          "line": 204
+          "line": 207
         },
         {
           "name": "description",
-          "line": 206
+          "line": 209
         },
         {
           "name": "poster_thumb",
-          "line": 212
+          "line": 215
         },
         {
           "name": "backdrop_thumb",
-          "line": 220
+          "line": 223
         },
         {
           "name": "set_field",
-          "line": 228
+          "line": 231
         },
         {
           "name": "add_people",
-          "line": 262
+          "line": 268
         },
         {
           "name": "add_credit",
-          "line": 273
+          "line": 279
         },
         {
           "name": "set_once",
-          "line": 282
+          "line": 288
         },
         {
           "name": "push_split",
-          "line": 290
+          "line": 296
         },
         {
           "name": "OpenElement",
-          "line": 298
+          "line": 304
         },
         {
           "name": "parse_nfo",
-          "line": 308
+          "line": 314
         },
         {
           "name": "open_element",
-          "line": 403
+          "line": 409
         },
         {
           "name": "push_reference",
-          "line": 423
+          "line": 429
         },
         {
           "name": "decode_nfo_bytes",
-          "line": 450
+          "line": 456
         },
         {
           "name": "decode_utf16",
-          "line": 469
+          "line": 475
         },
         {
           "name": "windows_1252_char",
-          "line": 480
+          "line": 486
         },
         {
           "name": "tests",
-          "line": 496
+          "line": 502
         },
         {
           "name": "reads_tvshow_fields_and_artwork",
-          "line": 500
+          "line": 506
         },
         {
           "name": "reads_kodi_and_jellyfin_credits",
-          "line": 540
+          "line": 546
         },
         {
           "name": "reads_the_first_episode_of_a_multi_episode_file",
-          "line": 587
+          "line": 593
         },
         {
           "name": "tolerates_broken_and_non_xml_files",
-          "line": 602
+          "line": 608
         },
         {
           "name": "decodes_common_nfo_encodings",
-          "line": 614
+          "line": 620
         }
       ]
     },
     "backend/app/src/utils/xmltv/sheet.rs": {
-      "sha256": "a607f40a9d647b2e38b179eef93ffaf63634d1020f8a5cdfd6d4d90b141bf42e",
+      "sha256": "c957af7836d8b96cdad11397eee35f729359d3139f40968629c4279569c51cdb",
       "language": "Rust",
-      "bytes": 36532,
+      "bytes": 37467,
       "symbols": [
         {
           "name": "SheetKind",
-          "line": 61
+          "line": 62
         },
         {
           "name": "SheetKind",
-          "line": 71
-        },
-        {
-          "name": "root",
           "line": 72
         },
         {
+          "name": "root",
+          "line": 73
+        },
+        {
           "name": "from_nfo",
-          "line": 80
+          "line": 81
         },
         {
           "name": "ArtworkKind",
-          "line": 93
+          "line": 94
         },
         {
           "name": "SheetFields",
-          "line": 105
+          "line": 106
         },
         {
           "name": "MediaSheet",
-          "line": 125
+          "line": 129
         },
         {
           "name": "SheetUpdate",
-          "line": 155
+          "line": 159
         },
         {
           "name": "Target",
-          "line": 165
+          "line": 169
         },
         {
           "name": "Target",
-          "line": 171
+          "line": 175
         },
         {
           "name": "new",
-          "line": 172
+          "line": 176
         },
         {
           "name": "nfo_name",
-          "line": 197
+          "line": 201
         },
         {
           "name": "new_nfo_name",
-          "line": 205
+          "line": 209
         },
         {
           "name": "artwork_stems",
-          "line": 215
+          "line": 219
         },
         {
           "name": "artwork",
-          "line": 239
+          "line": 243
         },
         {
           "name": "read_sheet",
-          "line": 250
+          "line": 254
         },
         {
           "name": "photos_in",
-          "line": 326
-        },
-        {
-          "name": "program_credits",
           "line": 331
         },
         {
+          "name": "program_credits",
+          "line": 336
+        },
+        {
           "name": "save_photo",
-          "line": 346
+          "line": 351
         },
         {
           "name": "save_sheet",
-          "line": 379
+          "line": 384
         },
         {
           "name": "save_artwork",
-          "line": 421
+          "line": 426
         },
         {
           "name": "remove_artwork",
-          "line": 446
+          "line": 451
         },
         {
           "name": "remove_artwork_files",
-          "line": 458
+          "line": 463
         },
         {
           "name": "remove_images",
-          "line": 466
+          "line": 471
         },
         {
           "name": "has_program_sheet",
-          "line": 489
+          "line": 494
         },
         {
           "name": "program_sheet_kind",
-          "line": 495
+          "line": 500
         },
         {
           "name": "inherited_program",
-          "line": 510
+          "line": 515
         },
         {
           "name": "nearest_program",
-          "line": 516
+          "line": 521
         },
         {
           "name": "storage_path",
-          "line": 532
+          "line": 537
         },
         {
           "name": "image_extension",
-          "line": 540
+          "line": 545
         },
         {
           "name": "check_xml",
-          "line": 555
+          "line": 560
         },
         {
           "name": "sheet_document",
-          "line": 594
+          "line": 599
         },
         {
           "name": "write_document",
-          "line": 602
+          "line": 607
         },
         {
           "name": "write_credits",
-          "line": 661
+          "line": 670
         },
         {
           "name": "sorted_credits",
-          "line": 705
+          "line": 714
         },
         {
           "name": "write_text",
-          "line": 713
+          "line": 722
         },
         {
           "name": "write_number",
-          "line": 725
+          "line": 734
         },
         {
           "name": "other_elements",
-          "line": 738
+          "line": 747
         },
         {
           "name": "element_name",
-          "line": 776
+          "line": 785
         },
         {
           "name": "tests",
-          "line": 781
+          "line": 790
         },
         {
           "name": "TempStorage",
-          "line": 784
+          "line": 793
         },
         {
           "name": "TempStorage",
-          "line": 786
+          "line": 795
         },
         {
           "name": "new",
-          "line": 787
+          "line": 796
         },
         {
           "name": "file",
-          "line": 794
-        },
-        {
-          "name": "Drop",
           "line": 803
         },
         {
-          "name": "drop",
-          "line": 804
-        },
-        {
-          "name": "fields",
+          "name": "Drop",
           "line": 812
         },
         {
-          "name": "person",
-          "line": 824
+          "name": "drop",
+          "line": 813
         },
         {
-          "name": "a_new_sheet_is_a_kodi_file_the_reader_understands",
+          "name": "fields",
+          "line": 821
+        },
+        {
+          "name": "person",
           "line": 833
         },
         {
-          "name": "a_sheet_keeps_the_usual_length_in_minutes",
-          "line": 847
+          "name": "a_new_sheet_is_a_kodi_file_the_reader_understands",
+          "line": 842
         },
         {
-          "name": "saving_keeps_what_the_form_does_not_edit",
+          "name": "a_clip_sheet_marks_and_unmarks_an_insert",
+          "line": 856
+        },
+        {
+          "name": "a_sheet_keeps_the_usual_length_in_minutes",
           "line": 872
         },
         {
+          "name": "saving_keeps_what_the_form_does_not_edit",
+          "line": 897
+        },
+        {
           "name": "credits_are_written_the_way_kodi_and_jellyfin_read_them",
-          "line": 908
+          "line": 933
         },
         {
           "name": "episodes_get_season_episode_and_air_date",
-          "line": 952
+          "line": 977
         },
         {
           "name": "raw_sheets_must_be_xml_with_a_root",
-          "line": 967
-        },
-        {
-          "name": "folder_sheets_tell_series_from_films",
-          "line": 974
-        },
-        {
-          "name": "folder_sheets_are_created_found_and_inherited",
           "line": 992
         },
         {
+          "name": "folder_sheets_tell_series_from_films",
+          "line": 999
+        },
+        {
+          "name": "folder_sheets_are_created_found_and_inherited",
+          "line": 1017
+        },
+        {
           "name": "photos_live_in_the_program_folder_and_clips_see_its_people",
-          "line": 1034
+          "line": 1059
         },
         {
           "name": "new_artwork_replaces_what_the_guide_would_pick_first",
-          "line": 1077
+          "line": 1102
         }
       ]
     },
     "backend/app/src/utils/xmltv/tests.rs": {
-      "sha256": "2e18b0fb051a852680c8f37b8dd15beefbf029826a4b24b2eee635a7ca12a87b",
+      "sha256": "bbf79490a05b58ab7239c6887e4a8cbcf7741f165e737ddb9568c925614d5b19",
       "language": "Rust",
-      "bytes": 22683,
+      "bytes": 23084,
       "symbols": [
         {
           "name": "TempDir",
@@ -10335,16 +10335,16 @@
           "line": 537
         },
         {
-          "name": "short_clips_without_a_sheet_are_inserts_of_the_programme",
+          "name": "clips_marked_in_their_sheet_are_inserts_of_the_programme",
           "line": 554
         },
         {
-          "name": "insert_runs_count_the_whole_run_and_skip_breaks",
-          "line": 596
+          "name": "insert_runs_follow_the_marks_and_skip_breaks",
+          "line": 608
         },
         {
-          "name": "guide_folds_short_idents_into_the_programme_they_interrupt",
-          "line": 629
+          "name": "guide_folds_marked_idents_into_the_programme_they_interrupt",
+          "line": 640
         }
       ]
     },
@@ -14651,6 +14651,53 @@
         }
       ]
     },
+    "backend/engine/src/output/backlog.rs": {
+      "sha256": "1e65008528081476750a390080ce3973d32db9cb41b678bf14cdc88dcfb91be6",
+      "language": "Rust",
+      "bytes": 3844,
+      "symbols": [
+        {
+          "name": "video_backlog_bytes",
+          "line": 20
+        },
+        {
+          "name": "Backlog",
+          "line": 27
+        },
+        {
+          "name": "Backlog",
+          "line": 35
+        },
+        {
+          "name": "new",
+          "line": 36
+        },
+        {
+          "name": "limit",
+          "line": 45
+        },
+        {
+          "name": "admit",
+          "line": 52
+        },
+        {
+          "name": "tests",
+          "line": 88
+        },
+        {
+          "name": "a_short_stall_drops_buffers_and_recovers",
+          "line": 92
+        },
+        {
+          "name": "an_output_that_takes_nothing_for_the_limit_fails",
+          "line": 103
+        },
+        {
+          "name": "the_video_backlog_holds_a_second_of_frames",
+          "line": 114
+        }
+      ]
+    },
     "backend/engine/src/output/desktop/audio.rs": {
       "sha256": "96877630353131c32923f71544d0027d8c4c0e4778cbce469213d6bb7ae25a2a",
       "language": "Rust",
@@ -16971,332 +17018,336 @@
       ]
     },
     "backend/engine/src/output/mod.rs": {
-      "sha256": "b74451568531cc03cafd0f6bec99b95b835b81de3e0a0d016bc711777662f811",
+      "sha256": "a59f23fa7856f729558fef5dfbc24c80110995e842706a1a90b671f933fac8d1",
       "language": "Rust",
-      "bytes": 11072,
+      "bytes": 11085,
       "symbols": [
         {
+          "name": "backlog",
+          "line": 8
+        },
+        {
           "name": "desktop",
-          "line": 9
+          "line": 10
         },
         {
           "name": "encoded",
-          "line": 11
-        },
-        {
-          "name": "gst_hls",
           "line": 12
         },
         {
-          "name": "gst_metadata",
+          "name": "gst_hls",
           "line": 13
         },
         {
-          "name": "hls",
+          "name": "gst_metadata",
           "line": 14
         },
         {
-          "name": "link",
+          "name": "hls",
           "line": 15
         },
         {
-          "name": "ndi",
+          "name": "link",
           "line": 16
         },
         {
-          "name": "pipeline",
+          "name": "ndi",
           "line": 17
         },
         {
-          "name": "recording_native",
+          "name": "pipeline",
           "line": 18
         },
         {
-          "name": "recording_retention",
+          "name": "recording_native",
           "line": 19
         },
         {
-          "name": "scte35",
+          "name": "recording_retention",
           "line": 20
         },
         {
-          "name": "video_card",
+          "name": "scte35",
           "line": 21
         },
         {
-          "name": "vtt",
+          "name": "video_card",
           "line": 22
         },
         {
-          "name": "PlaybackStopped",
-          "line": 38
+          "name": "vtt",
+          "line": 23
         },
         {
-          "name": "fmt",
-          "line": 40
+          "name": "PlaybackStopped",
+          "line": 39
         },
         {
           "name": "fmt",
           "line": 41
         },
         {
+          "name": "fmt",
+          "line": 42
+        },
+        {
           "name": "Error",
-          "line": 46
+          "line": 47
         },
         {
           "name": "FrameOutput",
-          "line": 48
-        },
-        {
-          "name": "audio_frame_size",
           "line": 49
         },
         {
+          "name": "audio_frame_size",
+          "line": 50
+        },
+        {
           "name": "encode_video",
-          "line": 51
+          "line": 52
         },
         {
           "name": "held_video_frame",
-          "line": 55
+          "line": 56
         },
         {
           "name": "encode_audio",
-          "line": 59
+          "line": 60
         },
         {
           "name": "encode_processed_audio",
-          "line": 62
+          "line": 63
         },
         {
           "name": "encode_live_audio",
-          "line": 66
+          "line": 67
         },
         {
           "name": "encode_audio_with_gain_hold",
-          "line": 70
+          "line": 71
         },
         {
           "name": "reset_after_skip",
-          "line": 77
+          "line": 78
         },
         {
           "name": "apply_logo_overlay",
-          "line": 81
+          "line": 82
         },
         {
           "name": "benchmarks_logo_overlay",
-          "line": 90
+          "line": 91
         },
         {
           "name": "set_video_end",
-          "line": 94
+          "line": 95
         },
         {
           "name": "video_decoded",
-          "line": 100
+          "line": 101
         },
         {
           "name": "video_finished",
-          "line": 104
+          "line": 105
         },
         {
           "name": "pad_audio",
-          "line": 110
+          "line": 111
         },
         {
           "name": "write_vtt_subtitles",
-          "line": 114
+          "line": 115
         },
         {
           "name": "clear_vtt_subtitles",
-          "line": 125
+          "line": 126
         },
         {
           "name": "advance_vtt_subtitles",
-          "line": 131
+          "line": 132
         },
         {
           "name": "Output",
-          "line": 136
+          "line": 137
         },
         {
           "name": "OutputKind",
-          "line": 140
+          "line": 141
         },
         {
           "name": "Output",
-          "line": 146
-        },
-        {
-          "name": "open",
           "line": 147
         },
         {
+          "name": "open",
+          "line": 148
+        },
+        {
           "name": "open_stream",
-          "line": 157
+          "line": 158
         },
         {
           "name": "open_hls",
-          "line": 169
+          "line": 170
         },
         {
           "name": "open_ndi",
-          "line": 194
+          "line": 195
         },
         {
           "name": "open_decklink",
-          "line": 207
+          "line": 208
         },
         {
           "name": "open_desktop",
-          "line": 220
+          "line": 221
         },
         {
           "name": "audio_frame_size",
-          "line": 226
+          "line": 227
         },
         {
           "name": "encode_video",
-          "line": 234
+          "line": 235
         },
         {
           "name": "encode_audio",
-          "line": 242
+          "line": 243
         },
         {
           "name": "set_playout_rate",
-          "line": 250
+          "line": 251
         },
         {
           "name": "finish",
-          "line": 258
+          "line": 259
         },
         {
           "name": "is_desktop",
-          "line": 267
+          "line": 268
         },
         {
           "name": "run_desktop",
-          "line": 272
+          "line": 273
         },
         {
           "name": "FrameOutput",
-          "line": 284
-        },
-        {
-          "name": "audio_frame_size",
           "line": 285
         },
         {
+          "name": "audio_frame_size",
+          "line": 286
+        },
+        {
           "name": "held_video_frame",
-          "line": 289
+          "line": 290
         },
         {
           "name": "encode_video",
-          "line": 297
+          "line": 298
         },
         {
           "name": "encode_audio",
-          "line": 301
+          "line": 302
         },
         {
           "name": "encode_processed_audio",
-          "line": 305
+          "line": 306
         },
         {
           "name": "apply_logo_overlay",
-          "line": 313
+          "line": 314
         },
         {
           "name": "benchmarks_logo_overlay",
-          "line": 326
+          "line": 327
         },
         {
           "name": "write_vtt_subtitles",
-          "line": 334
+          "line": 335
         },
         {
           "name": "clear_vtt_subtitles",
-          "line": 349
+          "line": 350
         },
         {
           "name": "advance_vtt_subtitles",
-          "line": 361
+          "line": 362
         }
       ]
     },
     "backend/engine/src/output/ndi.rs": {
-      "sha256": "f410d0f6b56d05fa0a60ad9abc03fe0cbcc8659651bb10c66f07a6e97fb42976",
+      "sha256": "9c48048e084df83306eebc179373273788cab3816f5ed460df9c0c7e7c14d1b9",
       "language": "Rust",
-      "bytes": 10621,
+      "bytes": 10878,
       "symbols": [
         {
           "name": "ndi_unavailable_reason",
-          "line": 29
+          "line": 30
         },
         {
           "name": "runtime_loadable",
-          "line": 48
+          "line": 49
         },
         {
           "name": "discover_ndi_sources",
-          "line": 69
+          "line": 70
         },
         {
           "name": "validate_ndi_name",
-          "line": 99
+          "line": 100
         },
         {
           "name": "NdiSink",
-          "line": 115
+          "line": 116
         },
         {
           "name": "NdiSink",
-          "line": 122
+          "line": 125
         },
         {
           "name": "open",
-          "line": 123
+          "line": 126
         },
         {
           "name": "poll",
-          "line": 217
+          "line": 224
         },
         {
           "name": "push_video",
-          "line": 226
+          "line": 233
         },
         {
           "name": "push_audio",
-          "line": 235
+          "line": 241
         },
         {
           "name": "finish",
-          "line": 244
+          "line": 249
         },
         {
           "name": "Drop",
-          "line": 267
+          "line": 272
         },
         {
           "name": "drop",
-          "line": 268
+          "line": 273
         },
         {
           "name": "tests",
-          "line": 274
+          "line": 279
         },
         {
           "name": "ndi_names_are_checked",
-          "line": 278
+          "line": 283
         },
         {
           "name": "ndi_elements_are_compiled_in",
-          "line": 286
+          "line": 291
         },
         {
           "name": "without_the_runtime_ndi_is_refused_with_a_reason",
-          "line": 294
+          "line": 299
         }
       ]
     },
@@ -17829,117 +17880,117 @@
       ]
     },
     "backend/engine/src/output/video_card.rs": {
-      "sha256": "0fadb81cdf3f532a1028b587ebe4352efbf21e46d0efade3ece8f7a2f304aaaf",
+      "sha256": "f1ec14ba509f05507a8e8331a09db1666adfce3560cda7f316158b21164356da",
       "language": "Rust",
-      "bytes": 20469,
+      "bytes": 20726,
       "symbols": [
         {
           "name": "VideoMode",
-          "line": 41
+          "line": 42
         },
         {
           "name": "mode",
-          "line": 79
+          "line": 80
         },
         {
           "name": "video_mode",
-          "line": 97
+          "line": 98
         },
         {
           "name": "DeckLinkAddress",
-          "line": 103
+          "line": 104
         },
         {
           "name": "V4l2Address",
-          "line": 112
+          "line": 113
         },
         {
           "name": "query",
-          "line": 117
+          "line": 118
         },
         {
           "name": "strip_scheme",
-          "line": 129
+          "line": 130
         },
         {
           "name": "parse_decklink",
-          "line": 138
+          "line": 139
         },
         {
           "name": "parse_v4l2",
-          "line": 177
+          "line": 178
         },
         {
           "name": "VideoDevice",
-          "line": 212
+          "line": 213
         },
         {
           "name": "discover_video_devices",
-          "line": 225
+          "line": 226
         },
         {
           "name": "make",
-          "line": 273
+          "line": 274
         },
         {
           "name": "DeckLinkSink",
-          "line": 280
+          "line": 281
         },
         {
           "name": "DeckLinkSink",
-          "line": 287
+          "line": 290
         },
         {
           "name": "open",
-          "line": 288
+          "line": 291
         },
         {
           "name": "poll",
-          "line": 433
+          "line": 440
         },
         {
           "name": "push_video",
-          "line": 442
+          "line": 449
         },
         {
           "name": "push_audio",
-          "line": 457
+          "line": 463
         },
         {
           "name": "finish",
-          "line": 471
+          "line": 476
         },
         {
           "name": "Drop",
-          "line": 494
+          "line": 499
         },
         {
           "name": "drop",
-          "line": 495
+          "line": 500
         },
         {
           "name": "tests",
-          "line": 501
+          "line": 506
         },
         {
           "name": "modes_match_the_card_names_and_rates",
-          "line": 505
+          "line": 510
         },
         {
           "name": "glib_enum_nick",
-          "line": 527
-        },
-        {
-          "name": "decklink_addresses_are_checked",
           "line": 532
         },
         {
+          "name": "decklink_addresses_are_checked",
+          "line": 537
+        },
+        {
           "name": "v4l2_addresses_are_checked",
-          "line": 554
+          "line": 559
         },
         {
           "name": "without_a_card_sdi_output_fails_with_a_reason",
-          "line": 571
+          "line": 576
         }
       ]
     },
@@ -19737,9 +19788,9 @@
       "symbols": []
     },
     "docs/report.md": {
-      "sha256": "76512d4490b5ddf0a02e5d87cef8dd97329edfcb5df8bacad016658514becdbb",
+      "sha256": "a2ddab07fe5fe3d5746ba7344d224320b9d00b4a827fa9f642f522da044c4eac",
       "language": "Markdown",
-      "bytes": 5263,
+      "bytes": 5352,
       "symbols": []
     },
     "docs/scheduler.md": {
@@ -19773,9 +19824,9 @@
       "symbols": []
     },
     "docs/xmltv.md": {
-      "sha256": "78aea1a28eac8d998833766fa59808a01f18c6a9db41a0f9a28adf2f53c2ada6",
+      "sha256": "0289a78236269063763519810a499032a817d9117013ff05676dcdea5df1c3cf",
       "language": "Markdown",
-      "bytes": 8065,
+      "bytes": 8523,
       "symbols": []
     },
     "frontend/README.md": {
@@ -27343,9 +27394,9 @@
       ]
     },
     "frontend/src/components/storage/SheetEditor.vue": {
-      "sha256": "0003dd5a06b61b006fc2391c17c57d99a9c58ad73bf0428fc367c93153c965fb",
+      "sha256": "855f8a2875b21f6fa8249c63e80fd65137365da326f776b31ae6d747d2a1109c",
       "language": "Vue",
-      "bytes": 23505,
+      "bytes": 24251,
       "symbols": [
         {
           "name": "props",
@@ -28554,177 +28605,177 @@
       ]
     },
     "frontend/src/composables/report.ts": {
-      "sha256": "f2a0d8b49756cb1117615f8f539cac924e5ae6f2dd422b98a8b2dd93d321a664",
+      "sha256": "284c3d3c80d22da64a33b1065474ed3eb8c7c6343f9e67570b476b8b8427384a",
       "language": "TypeScript",
-      "bytes": 19511,
+      "bytes": 19271,
       "symbols": [
         {
           "name": "ReportPart",
-          "line": 18
+          "line": 12
         },
         {
           "name": "ReportFilter",
-          "line": 20
+          "line": 14
         },
         {
           "name": "Translate",
-          "line": 27
+          "line": 21
         },
         {
           "name": "isPast",
-          "line": 30
+          "line": 24
         },
         {
           "name": "itemSeconds",
-          "line": 35
+          "line": 29
         },
         {
           "name": "matchesPick",
-          "line": 39
+          "line": 33
         },
         {
           "name": "filterItems",
-          "line": 55
+          "line": 49
         },
         {
           "name": "Totals",
-          "line": 90
+          "line": 84
         },
         {
           "name": "ReportSummary",
-          "line": 95
+          "line": 89
         },
         {
           "name": "summarize",
-          "line": 107
+          "line": 101
         },
         {
           "name": "sameOccurrence",
-          "line": 186
+          "line": 180
         },
         {
           "name": "DaySummary",
-          "line": 190
+          "line": 184
         },
         {
           "name": "summarizeDays",
-          "line": 203
+          "line": 197
         },
         {
           "name": "count",
-          "line": 206
+          "line": 200
         },
         {
           "name": "dayText",
-          "line": 222
+          "line": 216
         },
         {
           "name": "previousProgrammes",
-          "line": 252
+          "line": 246
         },
         {
           "name": "isProgramme",
-          "line": 278
+          "line": 271
         },
         {
           "name": "displayTitle",
-          "line": 291
+          "line": 284
         },
         {
           "name": "fileName",
-          "line": 295
+          "line": 288
         },
         {
           "name": "parentFolder",
-          "line": 299
+          "line": 292
         },
         {
           "name": "clock",
-          "line": 303
+          "line": 296
         },
         {
           "name": "duration",
-          "line": 308
+          "line": 301
         },
         {
           "name": "fullDuration",
-          "line": 318
+          "line": 311
         },
         {
           "name": "pad",
-          "line": 320
+          "line": 313
         },
         {
           "name": "validDay",
-          "line": 326
+          "line": 319
         },
         {
           "name": "dayLabel",
-          "line": 331
+          "line": 324
         },
         {
           "name": "part",
-          "line": 343
+          "line": 336
         },
         {
           "name": "shortDate",
-          "line": 357
+          "line": 350
         },
         {
           "name": "StatusTone",
-          "line": 366
+          "line": 359
         },
         {
           "name": "StatusText",
-          "line": 368
+          "line": 361
         },
         {
           "name": "statusText",
-          "line": 376
+          "line": 369
         },
         {
           "name": "cutNote",
-          "line": 428
+          "line": 421
         },
         {
           "name": "why",
-          "line": 430
+          "line": 423
         },
         {
           "name": "kindText",
-          "line": 449
+          "line": 442
         },
         {
           "name": "originText",
-          "line": 454
+          "line": 447
         },
         {
           "name": "itemTitle",
-          "line": 470
+          "line": 463
         },
         {
           "name": "itemDetail",
-          "line": 482
+          "line": 475
         },
         {
           "name": "PickOption",
-          "line": 495
+          "line": 488
         },
         {
           "name": "PickGroups",
-          "line": 502
+          "line": 495
         },
         {
           "name": "pickGroups",
-          "line": 510
+          "line": 503
         },
         {
           "name": "add",
-          "line": 512
+          "line": 505
         },
         {
           "name": "byName",
-          "line": 593
+          "line": 586
         }
       ]
     },
@@ -28945,9 +28996,9 @@
       ]
     },
     "frontend/src/composables/storage.ts": {
-      "sha256": "b659d03762ca271dbcc6dfa34893c19c1a72bcc1024f1ba17a9c560c863f2b87",
+      "sha256": "73fd75b1df71ce116288727205866abf50d44b190c22b45c8b789092089b74bf",
       "language": "TypeScript",
-      "bytes": 10246,
+      "bytes": 10269,
       "symbols": [
         {
           "name": "storageJoin",
@@ -29080,15 +29131,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "0a58f50da8f9c94dee0638f25cb8bf7ca34204e62a547bd8352ab99cd29ea655",
+      "sha256": "6d0481d2b4e87a0f8379fe517672a65fff205559e5142f345e84d838d438e772",
       "language": "TypeScript",
-      "bytes": 126418,
+      "bytes": 126691,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "2e5c332fa9ee1bf14235d557fd63f86d4f5f1a67c53d2935dd96fe7d6aaeadaf",
+      "sha256": "7ed94c884423a3ddae7afe310e13ac061314626856aae577032e24417e0d2792",
       "language": "TypeScript",
-      "bytes": 131579,
+      "bytes": 131865,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -29472,9 +29523,9 @@
       ]
     },
     "frontend/src/types/index.d.ts": {
-      "sha256": "66c63195cfdfc504df0af5ff3fdbe951508f5f053b239962232cc2f937ea8f8b",
+      "sha256": "20ecdf21357bd63ef797e62859ab26060441a707ab6252d17703655630238f56",
       "language": "TypeScript",
-      "bytes": 12004,
+      "bytes": 12119,
       "symbols": [
         {
           "name": "JwtPayloadExt",
@@ -29606,67 +29657,67 @@
         },
         {
           "name": "MediaSheet",
-          "line": 296
+          "line": 298
         },
         {
           "name": "FolderObject",
-          "line": 317
+          "line": 319
         },
         {
           "name": "SourceObject",
-          "line": 323
+          "line": 325
         },
         {
           "name": "TemplateItem",
-          "line": 328
+          "line": 330
         },
         {
           "name": "Template",
-          "line": 335
+          "line": 337
         },
         {
           "name": "BodyObject",
-          "line": 339
+          "line": 341
         },
         {
           "name": "SystemStatistics",
-          "line": 345
+          "line": 347
         },
         {
           "name": "PlayoutStatus",
-          "line": 355
+          "line": 357
         },
         {
           "name": "PlayoutFailure",
-          "line": 372
+          "line": 374
         },
         {
           "name": "OutputLinkStatus",
-          "line": 382
+          "line": 384
         },
         {
           "name": "ClipProgramme",
-          "line": 393
+          "line": 395
         },
         {
           "name": "AudioLevel",
-          "line": 404
+          "line": 406
         },
         {
           "name": "LiveLoudnessMetrics",
-          "line": 409
+          "line": 411
         },
         {
           "name": "SplitTime",
-          "line": 418
+          "line": 420
         },
         {
           "name": "Key",
-          "line": 424
+          "line": 426
         },
         {
           "name": "supportedValuesOf",
-          "line": 426
+          "line": 428
         }
       ]
     },
@@ -29766,9 +29817,9 @@
       ]
     },
     "frontend/src/types/report.d.ts": {
-      "sha256": "44d5470f2021347b01b3bd510b9d90b7789321f0e7967509513180e00dd32f49",
+      "sha256": "b95989125b24afc92ce36dc4720f6f75e093bbad0316acc17c42c87376ae2042",
       "language": "TypeScript",
-      "bytes": 2512,
+      "bytes": 2599,
       "symbols": [
         {
           "name": "ReportKind",
@@ -29788,11 +29839,11 @@
         },
         {
           "name": "Report",
-          "line": 51
+          "line": 53
         },
         {
           "name": "ReportPick",
-          "line": 64
+          "line": 66
         }
       ]
     },

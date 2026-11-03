@@ -551,7 +551,7 @@ fn delays_stop_at_the_end_of_the_playlist_day() {
 }
 
 #[tokio::test]
-async fn short_clips_without_a_sheet_are_inserts_of_the_programme() {
+async fn clips_marked_in_their_sheet_are_inserts_of_the_programme() {
     let storage = TempDir::new();
 
     storage.file(
@@ -561,7 +561,13 @@ async fn short_clips_without_a_sheet_are_inserts_of_the_programme() {
     let block_1 = storage.file("Jornal/bloco1.mp4", "");
     let block_2 = storage.file("Jornal/bloco2.mp4", "");
     let ident = storage.file("00-assets/vinheta.mp4", "");
+    storage.file(
+        "00-assets/vinheta.nfo",
+        "<movie><noar_insert>true</noar_insert></movie>",
+    );
     let film = storage.file("Filmes/longa.mp4", "");
+    let song_1 = storage.file("Clipes/alone.mp4", "");
+    let song_2 = storage.file("Clipes/tuca.mp4", "");
 
     let mut config = PlayoutConfig::default();
     config.channel.storage = storage.0.clone();
@@ -582,71 +588,56 @@ async fn short_clips_without_a_sheet_are_inserts_of_the_programme() {
             query(&block_2, 600.0),
             query(&film, 5400.0),
             query(&ident, 10.0),
+            query(&song_1, 163.0),
+            query(&song_2, 78.0),
         ],
     )
     .await;
     let inserts: Vec<bool> = programmes.iter().map(|p| p.insert).collect();
 
-    // Nothing before the first ident to extend; the film has no sheet but is
-    // long, so it is a programme of its own.
-    assert_eq!(inserts, [false, false, true, true, false, false, true]);
+    // Nothing before the first ident to extend; short clips that are not
+    // marked are programmes of their own, whatever their length.
+    assert_eq!(
+        inserts,
+        [false, false, true, true, false, false, true, false, false]
+    );
+    assert_eq!(programmes[8].title, "tuca");
 }
 
 #[test]
-fn insert_runs_count_the_whole_run_and_skip_breaks() {
-    let clip = |key: &str, described: bool, is_break: bool, length: f64| RunClip {
+fn insert_runs_follow_the_marks_and_skip_breaks() {
+    let clip = |key: &str, insert: bool, is_break: bool| RunClip {
         key: key.to_string(),
-        described,
+        insert,
         is_break,
-        length,
     };
 
     assert_eq!(
         insert_runs(&[
-            clip("show", true, false, 600.0),
-            clip("", false, true, 30.0),
-            clip("promo", false, false, 200.0),
-            clip("promo", false, false, 200.0),
-            clip("show", true, false, 600.0),
-            clip("short show", true, false, 60.0),
+            clip("show", false, false),
+            clip("", false, true),
+            clip("promo", true, false),
+            clip("promo", true, false),
+            clip("show", false, false),
+            clip("song", false, false),
         ]),
-        [false, false, false, false, false, false],
-        "400 s of promos are too long for an insert; described clips never are"
+        [false, false, true, true, false, false],
+        "marked promos join the show; an unmarked clip is a programme"
     );
     assert_eq!(
         insert_runs(&[
-            clip("show", false, false, 1200.0),
-            clip("", false, true, 30.0),
-            clip("show", false, false, 60.0),
-            clip("ident", false, false, 5.0),
-        ]),
-        [false, false, false, true],
-        "the programme continuing after a break is not an insert"
-    );
-    assert_eq!(
-        insert_runs(&[
-            clip("alone.mp4", false, false, 163.0),
-            clip("tuca.mp4", false, false, 78.0),
-            clip("faded.mp4", false, false, 212.0),
-            clip("ident", false, false, 5.0),
+            clip("ident", true, false),
+            clip("", false, true),
+            clip("ident", true, false),
+            clip("song", false, false),
         ]),
         [false, false, false, false],
-        "short clips without sheets (music videos) are each a programme of their own"
-    );
-    assert_eq!(
-        insert_runs(&[
-            clip("show", false, false, 200.0),
-            clip("", false, true, 30.0),
-            clip("show", false, false, 200.0),
-            clip("ident", false, false, 5.0),
-        ]),
-        [false, false, false, true],
-        "a programme longer than an insert across its breaks takes inserts"
+        "a marked clip with nothing before it, or after itself, stands alone"
     );
 }
 
 #[tokio::test]
-async fn guide_folds_short_idents_into_the_programme_they_interrupt() {
+async fn guide_folds_marked_idents_into_the_programme_they_interrupt() {
     let storage = TempDir::new();
     let playlists = TempDir::new();
     let timezone = Tz::America__Sao_Paulo;
@@ -659,6 +650,10 @@ async fn guide_folds_short_idents_into_the_programme_they_interrupt() {
     let block_1 = storage.file("Jornal/bloco1.mp4", "");
     let block_2 = storage.file("Jornal/bloco2.mp4", "");
     let ident = storage.file("00-assets/vinheta.mp4", "");
+    storage.file(
+        "00-assets/vinheta.nfo",
+        "<movie><noar_insert>true</noar_insert></movie>",
+    );
     let film = storage.file("Filmes/longa.mp4", "");
     let playlist = serde_json::json!({
         "date": today.format("%Y-%m-%d").to_string(),

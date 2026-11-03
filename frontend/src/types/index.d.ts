@@ -290,6 +290,8 @@ declare global {
         episode: number | null
         /** Usual length in minutes (`<runtime>`); a live's default airtime. */
         runtime: number | null
+        /** A clip marked as an ident or promo: it airs inside the programme around it. */
+        insert: boolean
     }
 
     /** The `.nfo` sheet of a program folder or a clip, with its artwork. */

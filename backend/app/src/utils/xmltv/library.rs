@@ -88,6 +88,8 @@ pub struct ClipMetadata {
     /// The people of the program and of the clip, each once, in the order
     /// of the XMLTV DTD.
     pub credits: Vec<GuideCredit>,
+    /// The clip's own sheet marks it as an ident or promo.
+    pub insert: bool,
 }
 
 impl ClipMetadata {
@@ -99,6 +101,7 @@ impl ClipMetadata {
             episode_key: None,
             artwork: Artwork::default(),
             credits: vec![],
+            insert: false,
         }
     }
 }
@@ -293,6 +296,7 @@ impl NfoLibrary {
         };
         let program = self.program_nfo(&dir).await;
         let mut metadata = ClipMetadata::bare(clip.clone());
+        metadata.insert = clip_nfo.as_ref().is_some_and(|nfo| nfo.insert);
 
         match program {
             Some(program) => {

@@ -33,10 +33,11 @@ one is tagged.
   the NDI library registers its sources with avahi-daemon. Run the script
   again (or add the line from docs/ndi.md) and recreate the container.
 - The Player and the XMLTV guide no longer show the name of a neighbouring
-  clip for short clips without a sheet: only a programme with a sheet or a
-  playlist title, or one longer than five minutes, takes such clips in as
-  idents or promos. A playlist of music videos now shows each clip under its
-  own name.
+  clip: short clips without a sheet were guessed to be idents of the
+  programme before them, so a playlist of music videos aired under one
+  clip's name. Nothing is guessed now: mark idents and promos in the video's
+  sheet (*Storage › edit › Ident or promo*); every other clip is a programme
+  under its own name. Idents that relied on the guess need the mark.
 - NDI and SDI outputs that fall behind for a moment drop frames and catch up
   instead of taking the channel off air; they hold up to a second of video,
   and the playout restarts them only after five seconds without taking any.

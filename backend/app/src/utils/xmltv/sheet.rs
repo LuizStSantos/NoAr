@@ -34,7 +34,7 @@ const MAX_SHEET_BYTES: usize = 512 * 1024;
 
 /// Elements the form fills in. Other elements of an existing file (ids,
 /// ratings of other sites, thumbs, ...) are kept as they are.
-const FORM_ELEMENTS: [&str; 18] = [
+const FORM_ELEMENTS: [&str; 19] = [
     "title",
     "plot",
     "genre",
@@ -53,6 +53,7 @@ const FORM_ELEMENTS: [&str; 18] = [
     "episode",
     "showtitle",
     "runtime",
+    "noar_insert",
 ];
 
 /// What a sheet describes, which sets the root element of the `.nfo`.
@@ -118,6 +119,9 @@ pub struct SheetFields {
     pub episode: Option<u32>,
     /// Usual length in minutes (`<runtime>`); a live's default airtime.
     pub runtime: Option<u32>,
+    /// A clip marked as an ident or promo (`<noar_insert>`): the guide and
+    /// the player count it inside the programme around it.
+    pub insert: bool,
 }
 
 /// The sheet of a folder or clip, as shown in the web interface.
@@ -297,6 +301,7 @@ pub async fn read_sheet(storage: &Path, path: &Path) -> Result<MediaSheet, Servi
             season: nfo.season,
             episode: nfo.episode,
             runtime: nfo.runtime,
+            insert: nfo.insert,
         },
         raw,
         poster: target.artwork(&listing, ArtworkKind::Poster).map(relative),
@@ -642,6 +647,10 @@ fn write_document(
 
     write_credits(&mut writer, &fields.credits)?;
 
+    if fields.insert {
+        write_text(&mut writer, "noar_insert", "true")?;
+    }
+
     for element in kept {
         writer.write_indent()?;
         writer.get_mut().extend_from_slice(element.as_bytes());
@@ -841,6 +850,22 @@ mod tests {
         assert_eq!(nfo.genres, ["Variedades", "Entrevistas"]);
         assert_eq!(nfo.rating.as_deref(), Some("Livre"));
         assert_eq!(nfo.credits, [person(CreditRole::Actor, "Ana")]);
+    }
+
+    #[test]
+    fn a_clip_sheet_marks_and_unmarks_an_insert() {
+        let marked = SheetFields {
+            insert: true,
+            ..SheetFields::default()
+        };
+        let text = sheet_document(None, SheetKind::Movie, &marked);
+        assert!(text.contains("<noar_insert>true</noar_insert>"), "{text}");
+        assert!(parse_nfo(&text).insert);
+
+        // Saved again without the mark, the element goes and nothing doubles.
+        let text = sheet_document(Some(&text), SheetKind::Movie, &SheetFields::default());
+        assert!(!text.contains("noar_insert"), "{text}");
+        assert!(!parse_nfo(&text).insert);
     }
 
     #[test]

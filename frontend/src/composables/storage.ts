@@ -306,5 +306,6 @@ export function emptyFields(): SheetFields {
         season: null,
         episode: null,
         runtime: null,
+        insert: false,
     }
 }

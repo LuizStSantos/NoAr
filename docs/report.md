@@ -107,7 +107,8 @@ All routes need a login with access to the channel.
     "reason": "skipped",
     "detail": null,
     "planned_seconds": 316.9,
-    "replaces": null
+    "replaces": null,
+    "insert": false
   }]
 }
 ```
@@ -116,4 +117,5 @@ Times are Unix milliseconds. `state` is `aired`, `on_air` (its `end` is when
 it is due to end), `planned`, or `unrecorded` for the plan of a time before the
 first record. A stretch of more than a minute without any record, while the
 playout was stopped, shows as an item of kind `gap`. `program` is the storage
-folder of the program the clip belongs to, when a `.nfo` describes it.
+folder of the program the clip belongs to, when a `.nfo` describes it. `insert`
+is `true` for a clip its sheet marks as an ident or promo.
