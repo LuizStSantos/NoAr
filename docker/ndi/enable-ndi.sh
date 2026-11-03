@@ -189,6 +189,11 @@ services:
       - "127.0.0.1:18080:8080"
 EOF
     fi
+    # Under sudo, give the file to the user who ran it, so a later run
+    # without sudo (--compose-only) can rewrite it.
+    if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_UID:-}" ] && [ -n "${SUDO_GID:-}" ]; then
+        chown "$SUDO_UID:$SUDO_GID" "$compose_file" || true
+    fi
     cat "$compose_file"
 fi
 
