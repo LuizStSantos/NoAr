@@ -11,6 +11,12 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- `GET /health` for uptime monitors: `200` when every channel set to run is
+  on air, `503` when one is down, failed or frozen (running, but its output
+  carried nothing for over 10 s). See [docs/api.md](docs/api.md#health-check).
+
 ## [2.1.4] - 2026-11-04
 
 ### Fixed

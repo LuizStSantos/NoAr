@@ -179,6 +179,9 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     if let Ok(mut audio_level) = manager.audio_level.lock() {
         *audio_level = None;
     }
+    if let Ok(mut last_output) = manager.last_output.lock() {
+        *last_output = None;
+    }
     manager.logo_control.set_transitions(
         config
             .processing
@@ -192,6 +195,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         manager.live_loudness.clone(),
         manager.loudness_meter.clone(),
         manager.audio_level.clone(),
+        manager.last_output.clone(),
         desktop_control_callback(manager.clone()),
     )?
     .with_preview_url(Some(manager.preview.url().to_string()))
@@ -770,6 +774,7 @@ fn engine_output_config(
     live_loudness: noar_engine::LiveLoudnessControl,
     loudness_meter: noar_engine::LoudnessMeterControl,
     audio_level: std::sync::Arc<std::sync::Mutex<Option<noar_engine::AudioLevel>>>,
+    last_output: std::sync::Arc<std::sync::Mutex<Option<std::time::Instant>>>,
     desktop_control_callback: noar_engine::DesktopControlCallback,
 ) -> Result<OutputConfig, ServiceError> {
     let width = config.output.width;
@@ -818,6 +823,9 @@ fn engine_output_config(
             .with_audio_level_callback(Some(AudioLevelCallback::new(move |level| {
                 if let Ok(mut audio_level) = audio_level.lock() {
                     *audio_level = Some(level);
+                }
+                if let Ok(mut last_output) = last_output.lock() {
+                    *last_output = Some(std::time::Instant::now());
                 }
             })))
             .with_logo(logo)

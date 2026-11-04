@@ -124,6 +124,10 @@ pub struct ChannelManager {
     /// Uploaded videos being converted to the output format.
     pub conversions: crate::utils::convert::Conversions,
     pub audio_level: Arc<StdMutex<Option<AudioLevel>>>,
+    /// When the output last carried sound (silence included), which it does
+    /// as long as it airs anything: how the health check tells a frozen
+    /// playout from one on air.
+    pub last_output: Arc<StdMutex<Option<std::time::Instant>>>,
     pub playback_control: Arc<Mutex<PlaybackControl>>,
     /// Opens the next clip, live or event ahead of its turn.
     pub preloader: Arc<Mutex<Preloader>>,
@@ -242,6 +246,7 @@ impl ChannelManager {
             playout_failure: Arc::new(StdMutex::new(None)),
             conversions,
             audio_level: Arc::new(StdMutex::new(None)),
+            last_output: Arc::new(StdMutex::new(None)),
             playback_control: Arc::new(Mutex::new(PlaybackControl::default())),
             preloader: Arc::new(Mutex::new(Preloader::default())),
             schedule: Arc::new(ScheduleState::default()),
@@ -429,6 +434,14 @@ impl ChannelManager {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
+    }
+
+    /// How long ago the output last carried sound; `None` before it has.
+    pub fn output_age(&self) -> Option<std::time::Duration> {
+        self.last_output
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .map(|at| at.elapsed())
     }
 
     pub fn uptime(&self) -> Option<i64> {
