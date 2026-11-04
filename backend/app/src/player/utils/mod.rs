@@ -131,9 +131,10 @@ pub async fn detect_audio_silence(
 
 /// map media struct to json object
 pub fn get_media_map(media: Media) -> Value {
+    let (seek, out) = media.planned.unwrap_or((media.seek, media.out));
     let mut obj = json!({
-        "in": media.seek,
-        "out": media.out,
+        "in": seek,
+        "out": out,
         "duration": media.duration,
         "ad": media.ad,
         "source": media.source,
@@ -320,6 +321,12 @@ pub struct Media {
     #[serde(default, skip_serializing, skip_deserializing)]
     pub replaces: Option<String>,
 
+    /// The clip's planned in and out points, when the playout started it
+    /// part way (after a start or restart): the status still reports the
+    /// whole clip, not just the rest that airs.
+    #[serde(default, skip_serializing, skip_deserializing)]
+    pub planned: Option<(f64, f64)>,
+
     #[serde(default, skip_serializing)]
     pub unit: ProcessUnit,
 }
@@ -369,6 +376,7 @@ impl Media {
             skip: false,
             is_placeholder: false,
             replaces: None,
+            planned: None,
             unit: Decoder,
         }
     }
@@ -491,6 +499,7 @@ impl Default for Media {
             skip: false,
             is_placeholder: false,
             replaces: None,
+            planned: None,
             unit: Decoder,
         }
     }

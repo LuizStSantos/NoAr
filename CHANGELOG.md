@@ -11,6 +11,13 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- After the playout started or restarted in the middle of a clip, the Player
+  showed only the rest of the clip as its length (for example "0:12 of 0:13"
+  for a 20 s clip) and the wrong time left. The status reports the whole clip
+  again.
+
 ## [2.1.3] - 2026-11-03
 
 ### Changed

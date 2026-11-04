@@ -852,6 +852,8 @@ impl CurrentProgram {
 /// starts in the middle of their scheduled slot. Still images keep their first
 /// frame for the remaining slot; live transports start at their current edge.
 fn apply_init_seek(node: &mut Media, elapsed: f64) {
+    node.planned = Some((node.seek, node.out));
+
     if is_live_source(&node.source) || is_image_source(&node.source) {
         node.out = (node.out - node.seek - elapsed).max(0.0);
         node.seek = 0.0;
@@ -913,6 +915,20 @@ mod tests {
 
         assert_eq!(node.seek, 0.0);
         assert_eq!(node.out, 18.0);
+        assert_eq!(node.planned, Some((12.0, 60.0)));
+    }
+
+    #[test]
+    fn starting_midway_keeps_the_planned_clip_for_the_status() {
+        let mut node = media(5.0, 65.0, 70.0);
+
+        apply_init_seek(&mut node, 20.0);
+
+        assert_eq!(node.seek, 25.0);
+        assert_eq!(node.planned, Some((5.0, 65.0)));
+        let map = crate::player::utils::get_media_map(node);
+        assert_eq!(map["in"], 5.0);
+        assert_eq!(map["out"], 65.0);
     }
 
     #[test]
