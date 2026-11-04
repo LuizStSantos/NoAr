@@ -48,6 +48,7 @@ RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     apt-get install -y --no-install-recommends \
         bison ca-certificates curl flex g++ gcc meson ninja-build pkg-config xz-utils \
         libglib2.0-dev \
+        libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev \
         libogg-dev libopus-dev liborc-0.4-dev libpango1.0-dev libtheora-dev libvorbis-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/noar-apt.conf
 COPY docker/gstreamer /src/gstreamer
@@ -164,6 +165,7 @@ RUN ldconfig && \
     export GST_REGISTRY=/tmp/noar-gstreamer-registry.bin && \
     gst-inspect-1.0 --version | grep -q 'GStreamer 1.26.11' && \
     gst-inspect-1.0 uridecodebin3 | grep -q 'Version.*1.26.11' && \
+    gst-inspect-1.0 avdec_h264 | grep -q 'Version.*1.26.11' && \
     for factory in appsrc appsink uridecodebin uridecodebin3 hlsdemux2 videoconvert videoscale videorate \
         audioconvert audioresample audiorate x264enc avenc_aac h264parse aacparse \
         mpegtsmux tsdemux srtsrc srtsink rtmp2src rtmp2sink flvmux \

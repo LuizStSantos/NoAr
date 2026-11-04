@@ -19,6 +19,13 @@ one is tagged.
   on air, `503` when one is down, failed or frozen (running, but its output
   carried nothing for over 10 s). See [docs/api.md](docs/api.md#health-check).
 
+### Fixed
+
+- NoAr aborted while playing an H.264 video whose width is not a multiple of
+  16, such as 854×480 (`video meta uses 864x480 instead of 854x480`): a fault
+  of gst-libav 1.26.2's decoder. The image's gst-libav is now 1.26.11, built
+  from the release sources like its GStreamer core. Found by the new soak test.
+
 ## [2.1.4] - 2026-11-04
 
 ### Fixed
