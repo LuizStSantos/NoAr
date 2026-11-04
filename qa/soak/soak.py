@@ -81,7 +81,7 @@ AUDIO = ('audiotestsrc is-live=true freq=440 ! audio/x-raw,rate=48000,channels=2
          '! audioconvert ! avenc_aac ! aacparse ! mux. ')
 PUBLISHERS = {
     'srt-av': VIDEO + AUDIO + 'mpegtsmux name=mux alignment=7 '
-              '! srtsink uri=srt://127.0.0.1:8890 streamid=publish:live1 latency=200',
+              '! srtsink uri=srt://127.0.0.1:8890 streamid=publish:live/feed latency=200',
     'udp-av': VIDEO + AUDIO + 'mpegtsmux name=mux alignment=7 ! udpsink host=127.0.0.1 port=5004',
     'udp-audio': AUDIO + 'mpegtsmux name=mux alignment=7 ! udpsink host=127.0.0.1 port=5004',
 }
@@ -221,8 +221,8 @@ def set_up():
         api('/api/playlist/1', playlist(str(today + dt.timedelta(days=day))), 'POST')
 
     lives = {}
-    for name, url in [('srt', 'srt://127.0.0.1:8890?streamid=read:live1&latency=200000'),
-                      ('rtmp', 'rtmp://127.0.0.1:1935/live1'),
+    for name, url in [('srt', 'srt://127.0.0.1:8890?streamid=read:live/feed&latency=200000'),
+                      ('rtmp', 'rtmp://127.0.0.1:1935/live/feed'),
                       ('udp', 'udp://127.0.0.1:5004')]:
         lives[name] = api('/api/schedule/1/lives', {'name': f'Soak {name}', 'url': url}, 'POST')['path']
 
@@ -369,7 +369,11 @@ def main():
         lines = channel_log.splitlines()
         report['events_on_air'] = sum('Scheduled event' in line and line.endswith('on air') for line in lines)
         report['live_waits'] = sum('waiting for the signal' in line for line in lines)
-        report['errors_logged'] = sum('[ERROR]' in line for line in lines)
+        errors = [line for line in lines if '[ERROR]' in line]
+        report['errors_logged'] = len(errors)
+        if errors:
+            report['incidents'].append({'at': None, 'what': f'{len(errors)} error(s) in the channel log',
+                                        'first': errors[0][:300]})
         for name in ['publisher', 'noar', 'mediamtx']:
             docker('rm', '-f', PREFIX + name, check=False)
 
@@ -381,6 +385,7 @@ def main():
                f'{report["restarts"]} restarts, {report["errors_logged"]} errors in the channel log, '
                f'{report["samples"]} samples.', '']
     summary += [f'- {incident["what"]}' + (f' (at {incident["at"]} s)' if incident['at'] is not None else '')
+                + (f': `{incident["first"]}`' if incident.get('first') else '')
                 for incident in report['incidents']] or ['No incidents: the output never stopped.']
     (WORK / 'summary.md').write_text('\n'.join(summary) + '\n')
     if os.environ.get('GITHUB_STEP_SUMMARY'):

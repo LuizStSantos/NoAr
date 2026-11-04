@@ -34,6 +34,7 @@ clip on air. It fails when:
 
 - NoAr exits;
 - the output stops growing for more than 12 s;
+- the channel log has an error (a live that did not air, for example);
 - `/health` is not ok for more than 20 s;
 - NoAr's output has `panicked`, `CRITICAL`, `assertion` or a decoder stream
   switch error.
