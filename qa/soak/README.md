@@ -4,7 +4,8 @@
 synthetic media and the faults that have taken channels off air before, and
 fails when the output stops. GitHub Actions runs it every night on `main`
 (`.github/workflows/soak.yml`); run it by hand from the Actions tab
-(**Soak test → Run workflow**, any branch and length).
+(**Soak test → Run workflow**, any branch and length). A pull request that
+changes the soak test runs a 15-minute one.
 
 ## What it does
 

@@ -7,6 +7,11 @@ on:
   schedule:
     # Every night, on main.
     - cron: '17 3 * * *'
+  # A change to the soak test itself runs a short one.
+  pull_request:
+    paths:
+      - 'qa/soak/**'
+      - '.github/workflows/soak.yml'
   workflow_dispatch:
     inputs:
       minutes:
@@ -47,7 +52,7 @@ jobs:
         env:
           NOAR_SOAK: '1'
           NOAR_SOAK_IMAGE: noar-soak:ci
-          NOAR_SOAK_MINUTES: ${{ inputs.minutes || '90' }}
+          NOAR_SOAK_MINUTES: ${{ inputs.minutes || (github.event_name == 'pull_request' && '15') || '90' }}
           NOAR_SOAK_DIR: ${{ runner.temp }}/soak
         run: python3 qa/soak/soak.py
 
