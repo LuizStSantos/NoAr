@@ -41,7 +41,12 @@ The loader selects `/usr/local/lib/libsrt-gnutls.so.1.5`; the distribution
 package version can still report 1.5.4. Build provenance is recorded in
 `/usr/local/share/noar/srt-build.txt`. Native GStreamer SRT plugins use this
 library. The image includes GStreamer 1.26, codec/container plugins and TLS
-support. NoAr itself does not link the FFmpeg libraries; they are present
+support. Its GStreamer core and gst-plugins-base are 1.26.11, built from the
+release sources over Debian's 1.26.2 (`docker/gstreamer/build.sh`): in
+1.26.2, `decodebin3` aborted the whole process when a live MPEG-TS source
+changed its streams, such as an encoder dropping its video. The other plugin
+sets stay Debian's packages. Build provenance is recorded in
+`/usr/local/share/noar/gstreamer-build.txt`. NoAr itself does not link the FFmpeg libraries; they are present
 only through `gstreamer1.0-libav`, GStreamer's plugin for the codecs it does
 not have natively (MPEG-2, ProRes and others).
 

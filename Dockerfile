@@ -34,6 +34,29 @@ RUN --mount=type=secret,id=proxy_ca,mode=0444 \
         -Wl,-rpath,/opt/noar-srt/lib -lsrt-gnutls -o /tmp/test-srt-lifecycle && \
     timeout 30 /tmp/test-srt-lifecycle
 
+# GStreamer core and gst-plugins-base 1.26.11 over Debian's 1.26.2: in 1.26.2,
+# decodebin3 aborts the process when a live MPEG-TS source changes its streams
+# (an encoder dropping its video). The other plugin sets stay Debian's.
+FROM ${RUNTIME_IMAGE} AS gstreamer-build
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export APT_CONFIG=/tmp/noar-apt.conf; \
+        printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bison ca-certificates curl flex g++ gcc meson ninja-build pkg-config xz-utils \
+        libglib2.0-dev \
+        libogg-dev libopus-dev liborc-0.4-dev libpango1.0-dev libtheora-dev libvorbis-dev && \
+    rm -rf /var/lib/apt/lists/* /tmp/noar-apt.conf
+COPY docker/gstreamer /src/gstreamer
+RUN --mount=type=secret,id=proxy_ca,mode=0444 \
+    if [ -f /run/secrets/proxy_ca ]; then \
+        export CURL_CA_BUNDLE=/run/secrets/proxy_ca; \
+    fi; \
+    sh /src/gstreamer/build.sh /opt/noar-gst
+
 # --- Web interface -----------------------------------------------------------
 FROM ${NODE_IMAGE} AS frontend
 WORKDIR /src
@@ -129,6 +152,9 @@ RUN --mount=type=secret,id=proxy_ca,mode=0444 \
         $(cat /tmp/runtime-packages.txt) && \
     rm -rf /var/lib/apt/lists/* /tmp/runtime-packages.txt /tmp/noar-apt.conf
 
+# GStreamer core and base 1.26.11 replace Debian's 1.26.2 files in place.
+COPY --from=gstreamer-build /opt/noar-gst/usr/ /usr/
+
 # Prefer the corrected GnuTLS library over Debian's affected build.
 # Keep the package-provided dependencies installed and record its provenance.
 COPY --from=srt-build /opt/noar-srt/lib/libsrt-gnutls.so* /usr/local/lib/
@@ -136,6 +162,8 @@ COPY --from=srt-build /opt/noar-srt/share/noar/srt-build.txt /usr/local/share/no
 COPY --from=srt-build /opt/noar-srt/share/licenses/noar-srt /usr/local/share/licenses/noar-srt
 RUN ldconfig && \
     export GST_REGISTRY=/tmp/noar-gstreamer-registry.bin && \
+    gst-inspect-1.0 --version | grep -q 'GStreamer 1.26.11' && \
+    gst-inspect-1.0 uridecodebin3 | grep -q 'Version.*1.26.11' && \
     for factory in appsrc appsink uridecodebin uridecodebin3 hlsdemux2 videoconvert videoscale videorate \
         audioconvert audioresample audiorate x264enc avenc_aac h264parse aacparse \
         mpegtsmux tsdemux srtsrc srtsink rtmp2src rtmp2sink flvmux \

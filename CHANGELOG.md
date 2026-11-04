@@ -11,6 +11,31 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-11-03
+
+### Changed
+
+- The image's GStreamer core and gst-plugins-base are 1.26.11, built from the
+  release sources over Debian trixie's 1.26.2; the other plugin sets stay
+  Debian's packages. Provenance: `/usr/local/share/noar/gstreamer-build.txt`.
+
+### Fixed
+
+- NoAr no longer stops when a live MPEG-TS source changes its streams (an
+  encoder that drops its video, say): GStreamer 1.26.2's `decodebin3` aborted
+  the process ("Stream switch requested for future collection"), which
+  1.26.11 handles.
+- Starting a clip or a source could hang for good, freezing the channel
+  until the playout was restarted: an appsink waiting for room in its full
+  queue held the lock that the change to playing needed, while nobody pulled
+  its samples. The queues have no limit for the moment of that change.
+- An RTMP live from a server that sends sound before the picture's first key
+  frame (MediaMTX relaying an SRT or MPEG-TS source) dropped and reconnected
+  every few seconds: the source opened as sound only, its picture branch was
+  removed as for a file without a picture, and the picture arriving next
+  stopped the whole source. Network sources now keep both branches, and a
+  live follows a track announced late.
+
 ## [2.1.2] - 2026-11-03
 
 ### Changed
@@ -914,7 +939,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.2...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.3...HEAD
+[2.1.3]: https://github.com/LuizStSantos/NoAr/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/LuizStSantos/NoAr/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/LuizStSantos/NoAr/compare/v2.0.0...v2.1.0
