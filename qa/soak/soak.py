@@ -356,6 +356,9 @@ def main():
         logs = docker('logs', PREFIX + 'noar', check=False)
         noar_log = (logs.stdout or '') + (logs.stderr or '')
         (WORK / 'noar.log').write_text(noar_log)
+        if any(incident['what'] == 'NoAr exited' for incident in report['incidents']):
+            tail = [line for line in noar_log.splitlines() if '"GET /' not in line][-25:]
+            print('Last lines of NoAr before it exited:\n' + '\n'.join(tail), flush=True)
         for marker in ['panicked', 'Stream switch requested', 'CRITICAL', 'assertion']:
             hits = [line for line in noar_log.splitlines() if marker in line]
             if hits:
