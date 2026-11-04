@@ -1,0 +1,63 @@
+name: Soak test
+
+# Runs NoAr on air for a long time with synthetic clips and lives that drop
+# out, lose their video and come back, and playout restarts, and fails when
+# its output stops. See qa/soak/README.md.
+on:
+  schedule:
+    # Every night, on main.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: Minutes on air
+        default: '90'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # The same image the release publishes, from the same build cache.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: noar-soak:ci
+          build-args: |
+            NOAR_COMMIT=${{ github.sha }}
+          cache-from: type=gha
+
+      - name: Pull MediaMTX
+        run: docker pull bluenviron/mediamtx:1.15.3
+
+      - name: Soak
+        env:
+          NOAR_SOAK: '1'
+          NOAR_SOAK_IMAGE: noar-soak:ci
+          NOAR_SOAK_MINUTES: ${{ inputs.minutes || '90' }}
+          NOAR_SOAK_DIR: ${{ runner.temp }}/soak
+        run: python3 qa/soak/soak.py
+
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/soak/*.log
+            ${{ runner.temp }}/soak/*.json
+            ${{ runner.temp }}/soak/*.md
+          retention-days: 14

@@ -1,0 +1,25 @@
+# MediaMTX for the soak test: receives NoAr's output and relays the
+# synthetic live that the test publishes over SRT (read back over SRT and
+# RTMP). Loopback only, no authentication beyond the defaults below.
+logLevel: warn
+api: yes
+apiAddress: 127.0.0.1:9997
+authInternalUsers:
+  - user: any
+    ips: ['127.0.0.1']
+    permissions:
+      - action: api
+      - action: publish
+      - action: read
+rtsp: no
+hls: no
+webrtc: no
+rtmp: yes
+rtmpAddress: 127.0.0.1:1935
+srt: yes
+srtAddress: 127.0.0.1:8890
+paths:
+  output:
+    source: publisher
+  live1:
+    source: publisher
