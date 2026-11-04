@@ -1050,13 +1050,11 @@ const uploadAccept = computed(() =>
         <div class="flex flex-wrap gap-5 items-start">
             <aside
                 :aria-label="t('storage.folders')"
-                class="flex-[1_1_240px] w-full lg:max-w-[280px] flex flex-col gap-3.5"
+                class="flex-[1_1_280px] w-full lg:max-w-[340px] lg:self-stretch flex flex-col gap-3.5"
             >
-                <nav class="card-box p-2.5">
-                    <div class="text-[11px] text-subtle tracking-[0.08em] uppercase px-2.5 py-1.5">
-                        {{ t('storage.folders') }}
-                    </div>
-                    <ul v-if="channelId" class="m-0 p-0 max-h-[60vh] overflow-y-auto">
+                <nav class="card-box p-3.5 flex flex-col gap-2.5 lg:flex-1 min-h-0">
+                    <h2 class="m-0 text-[15px] font-semibold">{{ t('storage.folders') }}</h2>
+                    <ul v-if="channelId" class="m-0 p-0 max-h-[60vh] lg:max-h-none lg:flex-1 overflow-y-auto">
                         <FolderTree
                             :key="channelId"
                             :channel-id="channelId"
@@ -1070,9 +1068,9 @@ const uploadAccept = computed(() =>
                     </ul>
                 </nav>
                 <section v-if="disk" :aria-label="t('storage.disk')" class="card-box px-4 py-3.5 flex flex-col gap-2">
-                    <div class="flex justify-between gap-2 text-[13px]">
-                        <span class="text-muted">{{ t('storage.disk') }}</span>
-                        <span class="font-mono">
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-0.5 text-[13px]">
+                        <span class="text-muted whitespace-nowrap">{{ t('storage.disk') }}</span>
+                        <span class="font-mono whitespace-nowrap">
                             {{
                                 t('storage.diskFree', { free: fileSize(disk.free, 1), total: fileSize(disk.total, 1) })
                             }}

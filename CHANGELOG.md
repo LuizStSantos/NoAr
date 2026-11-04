@@ -11,6 +11,12 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Storage page's folder panel matches the Playlist page's library: the
+  same width, a title like the library's, and it runs as tall as the files
+  next to it. The disk space no longer breaks into a column of short lines.
+
 ## [2.2.0] - 2026-11-04
 
 ### Added
