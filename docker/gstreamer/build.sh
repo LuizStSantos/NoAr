@@ -73,4 +73,7 @@ rm -rf "$destdir/usr/include" "$destdir/usr/share/gir-1.0" \
 mkdir -p "$destdir/usr/local/share/noar" "$destdir/usr/local/share/licenses/noar-gstreamer"
 printf 'GStreamer core, gst-plugins-base and gst-libav %s over Debian 1.26.2 (decodebin3 collection and avdec_h264 alignment fixes)\nSource SHA256: %s (core), %s (base), %s (libav)\n' \
     "$version" "$core_sha256" "$base_sha256" "$libav_sha256" > "$destdir/usr/local/share/noar/gstreamer-build.txt"
-cp "$build_dir/gstreamer-$version/COPYING" "$destdir/usr/local/share/licenses/noar-gstreamer/COPYING"
+# Each part's own license (all LGPL-2.1-or-later), next to its sources' hashes.
+for part in gstreamer gst-plugins-base gst-libav; do
+    cp "$build_dir/$part-$version/COPYING" "$destdir/usr/local/share/licenses/noar-gstreamer/COPYING.$part"
+done
