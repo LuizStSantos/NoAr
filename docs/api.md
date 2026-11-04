@@ -155,6 +155,35 @@ Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 After a restart the channels that were running start again by themselves. A
 client can wait for `started_at` to change to know the new run is up.
 
+### Health check
+
+`GET /health` needs no login, for uptime monitors (Uptime Kuma, Zabbix,
+Nagios…). It answers `200` when every channel set to run is on air and `503`
+when one is not:
+
+```json
+{
+  "status": "ok",
+  "version": "2.2.0",
+  "channels": [{ "id": 1, "state": "on_air", "uptime": 3600, "output_age": 0.2 }]
+}
+```
+
+| `state` | Meaning | Healthy |
+| --- | --- | --- |
+| `on_air` | Running, and the output carried something in the last 10 s. | yes |
+| `starting` | Running for less than 30 s, nothing output yet. | yes |
+| `stopped` | Stopped on purpose. | yes |
+| `frozen` | Running, but the output carried nothing for over 10 s. | no |
+| `failed` | Off air after an error, being retried. | no |
+| `down` | Set to run, not running. | no |
+
+`output_age` is the seconds since the output last carried sound (it carries
+silence too, so black or a filler counts as on air); `uptime` the seconds
+since the playout started. Only channel ids and states are shown. A manual
+restart reads `down` or `starting` for a moment, so let the monitor retry
+before it alerts.
+
 ## Playout control
 
 | Method | Endpoint | Access | Request body |

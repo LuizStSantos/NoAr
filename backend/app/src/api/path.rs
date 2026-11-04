@@ -152,6 +152,7 @@ pub fn routes() -> Router<AppState> {
         )
         .nest("/data", sse::routes::data_routes())
         .route("/file/{id}/{*filename}", get(get_file))
+        .route("/health", get(get_health))
         .route("/public/{id}/{public}/{*file_stem}", get(get_public))
         .route("/xmltv/{id}/guide.xml", get(get_xmltv))
         .route(
