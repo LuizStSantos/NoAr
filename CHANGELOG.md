@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-11-04
+
 ### Fixed
 
 - After the playout started or restarted in the middle of a clip, the Player
@@ -946,7 +948,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.3...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.1.4...HEAD
+[2.1.4]: https://github.com/LuizStSantos/NoAr/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/LuizStSantos/NoAr/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/LuizStSantos/NoAr/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/LuizStSantos/NoAr/compare/v2.1.0...v2.1.1
