@@ -124,6 +124,8 @@ def request(path, data=None, method=None, base=BASE, timeout=10):
             return response.status, parse(response.read())
     except urllib.error.HTTPError as error:
         return error.code, parse(error.read())
+    except OSError as error:  # Refused, reset or timed out: no answer.
+        return 0, str(error)
 
 
 def parse(raw):
@@ -135,7 +137,7 @@ def parse(raw):
 
 def api(path, data=None, method=None, base=BASE):
     code, body = request(path, data, method, base)
-    if code >= 400:
+    if code == 0 or code >= 400:
         raise RuntimeError(f'{method or "GET"} {path}: {code} {body}')
     return body
 
