@@ -23,6 +23,9 @@ one is tagged.
   (fade, slide, wipe). They are drawn under the L-shape, so a lower third
   follows the picture into the L-shape's corner; a template can also wait
   for the L-shape to end or skip it.
+- Graphics › Live now lists the channel's templates by group: pick one, fill
+  in its fields, set its time on air and put it on air; what is on air is
+  listed with a button to take each graphic out, or all of them.
 
 ### Changed
 
