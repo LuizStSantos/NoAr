@@ -6,7 +6,12 @@ existing channel graphics into templates remains pending. See the
 [implementation handoff](graphics-handoff/README.md) for scope and test evidence.
 A scoped synthetic HLS run now verifies template L-shape take/out and a
 `follow` GC inside its picture window; captures and limits are in the handoff.
-Always-on conversion and removal of the legacy menu are awaiting approval.
+Always-on work is approved in stages: engine/DB infrastructure first, then
+normal sqlx migration 00029 with automatic conversion of every channel and
+redirected legacy page writes. Compatibility and HLS parity must pass before
+removing the legacy menu. Clock support is outside this delivery. Stage a is complete: permanent-role
+engine support and DB handles have passed tests, but only test fixtures have
+the new binding table; application conversion is not installed yet.
 This document records the
 agreed design for the new Graphics tab, so the work can land in small releases
 without breaking what operators use today.

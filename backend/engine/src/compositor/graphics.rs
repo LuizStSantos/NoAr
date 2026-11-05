@@ -427,7 +427,17 @@ fn blend_layer(
     level: f64,
     animation: GraphicAnimation,
 ) {
-    if level <= 0.0 {
+    blend_layer_with_visibility(target, layer, level, animation, 1.0);
+}
+
+fn blend_layer_with_visibility(
+    target: &mut VideoFrame,
+    layer: &RenderedLayer,
+    level: f64,
+    animation: GraphicAnimation,
+    visibility: f64,
+) {
+    if level <= 0.0 || visibility <= 0.0 {
         return;
     }
 
@@ -469,7 +479,7 @@ fn blend_layer(
             height: layer.height,
             opacity: layer.opacity,
         },
-        opacity,
+        opacity * visibility,
     );
 }
 
@@ -502,9 +512,32 @@ impl OnAir {
     }
 }
 
+/// Stable channel roles, independent of the temporary take queue. A picture
+/// window is deliberately not permanent: an L-shape is taken in and out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlwaysOnSlot {
+    Logo,
+    Ticker,
+}
+
+impl AlwaysOnSlot {
+    fn index(self) -> usize {
+        match self {
+            Self::Logo => 0,
+            Self::Ticker => 1,
+        }
+    }
+}
+
+struct AlwaysOn {
+    graphic: OnAir,
+    visible: bool,
+}
+
 #[derive(Default)]
 struct GraphicsState {
     on_air: Vec<OnAir>,
+    always_on: [Option<AlwaysOn>; 2],
     next_id: u64,
 }
 
@@ -533,6 +566,118 @@ impl std::fmt::Debug for GraphicsControl {
 impl GraphicsControl {
     fn state(&self) -> std::sync::MutexGuard<'_, GraphicsState> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Configure a permanent role. It has no expiry and does not consume a
+    /// temporary take id. Reject picture windows before changing the role.
+    pub fn set_always_on(
+        &self,
+        slot: AlwaysOnSlot,
+        graphic: RenderedGraphic,
+        visible: bool,
+    ) -> Result<()> {
+        if graphic.picture.is_some() {
+            return Err(anyhow!(
+                "an always-on graphic cannot contain a picture window"
+            ));
+        }
+
+        self.state().always_on[slot.index()] = Some(AlwaysOn {
+            graphic: OnAir {
+                id: 0,
+                graphic: Arc::new(graphic),
+                taken_at: Instant::now(),
+                out_after: None,
+                taken_out_at: None,
+            },
+            visible,
+        });
+
+        Ok(())
+    }
+
+    /// Hide or restore a configured role explicitly. Repeating a command
+    /// does not restart its transition; hidden roles retain their definition.
+    pub fn set_always_on_visible(&self, slot: AlwaysOnSlot, visible: bool) -> bool {
+        let mut state = self.state();
+        let Some(always_on) = &mut state.always_on[slot.index()] else {
+            return false;
+        };
+
+        if always_on.visible != visible {
+            let now = Instant::now();
+            always_on.visible = visible;
+
+            if visible {
+                always_on.graphic.taken_at = now;
+                always_on.graphic.taken_out_at = None;
+            } else {
+                always_on.graphic.taken_out_at = Some(now);
+            }
+        }
+
+        true
+    }
+
+    pub fn always_on_visible(&self, slot: AlwaysOnSlot) -> Option<bool> {
+        self.state().always_on[slot.index()]
+            .as_ref()
+            .map(|always_on| always_on.visible)
+    }
+
+    /// Remove a role's definition, for a configuration change rather than
+    /// an operator's ordinary take-out command.
+    pub fn clear_always_on(&self, slot: AlwaysOnSlot) {
+        self.state().always_on[slot.index()] = None;
+    }
+
+    /// Blend channel roles in full-frame space, after the L-shape. Clip
+    /// logo gaps and the L-shape's logo fade affect only the logo role.
+    pub(crate) fn blend_always_on(&self, frame: &mut VideoFrame, logo_visibility: f64) {
+        self.blend_always_on_at(frame, logo_visibility, Instant::now());
+    }
+
+    fn blend_always_on_at(&self, frame: &mut VideoFrame, logo_visibility: f64, now: Instant) {
+        let graphics: Vec<_> = {
+            let state = self.state();
+
+            [AlwaysOnSlot::Logo, AlwaysOnSlot::Ticker]
+                .into_iter()
+                .filter_map(|slot| {
+                    let entry = state.always_on[slot.index()].as_ref()?;
+
+                    if !entry.visible && entry.graphic.taken_out_at.is_none() {
+                        return None;
+                    }
+
+                    Some((
+                        slot,
+                        entry.graphic.graphic.clone(),
+                        now.saturating_duration_since(entry.graphic.taken_at),
+                        entry.graphic.out_since(now),
+                    ))
+                })
+                .collect()
+        };
+
+        for (slot, graphic, since_take, since_out) in graphics {
+            if graphic.frame_width != frame.width() || graphic.frame_height != frame.height() {
+                continue;
+            }
+
+            let visibility = match slot {
+                AlwaysOnSlot::Logo => logo_visibility.clamp(0.0, 1.0),
+                AlwaysOnSlot::Ticker => 1.0,
+            };
+
+            for layer in &graphic.layers {
+                let (level, animation) = layer_level(layer, since_take, since_out);
+
+                // Apply visibility to final opacity, not animation progress:
+                // hiding the logo must not move a completed slide backwards.
+                blend_layer_with_visibility(frame, layer, level, animation, visibility);
+            }
+        }
     }
 
     /// Put a graphic on air; `duration` takes it out by itself. Answers its
@@ -588,7 +733,7 @@ impl GraphicsControl {
         }
     }
 
-    /// Start the exit of every graphic on air.
+    /// Start the exit of every temporary graphic. Permanent roles are unchanged.
     pub fn take_all_out(&self) {
         let now = Instant::now();
 
@@ -744,6 +889,208 @@ mod tests {
             animation_ms: 400,
             delay_ms: 0,
         }
+    }
+
+    #[test]
+    fn permanent_roles_survive_expiry_queue_pressure_and_take_all_out() {
+        let control = GraphicsControl::default();
+        let spec = |x, y| GraphicSpec {
+            picture: None,
+            layers: vec![white_box(x, y, GraphicAnimation::None)],
+        };
+        control
+            .set_always_on(
+                AlwaysOnSlot::Logo,
+                render_graphic(&spec(0.0, 0.0), 320, 180).unwrap(),
+                true,
+            )
+            .unwrap();
+        control
+            .set_always_on(
+                AlwaysOnSlot::Ticker,
+                render_graphic(&spec(0.0, 50.0), 320, 180).unwrap(),
+                true,
+            )
+            .unwrap();
+        let taken = control.state().always_on[0]
+            .as_ref()
+            .unwrap()
+            .graphic
+            .taken_at;
+
+        for _ in 0..MAX_GRAPHICS_ON_AIR + 5 {
+            control.take(
+                render_graphic(&spec(50.0, 0.0), 320, 180).unwrap(),
+                Some(Duration::from_secs(1)),
+            );
+        }
+
+        control.take_all_out();
+        let mut frame = black_frame(320, 180);
+        let later = taken + Duration::from_secs(86_400);
+        control.blend_at(&mut frame, later);
+        assert_eq!(luma(&frame, 170, 10), 16, "temporary graphics left");
+        control.blend_always_on_at(&mut frame, 1.0, later);
+        assert!(luma(&frame, 10, 10) > 230, "permanent logo survived");
+        assert!(luma(&frame, 10, 100) > 230, "permanent ticker survived");
+        assert!(control.on_air().is_empty());
+    }
+
+    #[test]
+    fn permanent_visibility_is_explicit_and_does_not_reset_on_repeated_commands() {
+        let control = GraphicsControl::default();
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![white_box(0.0, 0.0, GraphicAnimation::Fade)],
+        };
+        control
+            .set_always_on(
+                AlwaysOnSlot::Logo,
+                render_graphic(&spec, 320, 180).unwrap(),
+                false,
+            )
+            .unwrap();
+        let mut frame = black_frame(320, 180);
+        control.blend_always_on(&mut frame, 1.0);
+        assert_eq!(luma(&frame, 10, 10), 16, "configured but disabled");
+        assert!(control.set_always_on_visible(AlwaysOnSlot::Logo, true));
+        let entered = control.state().always_on[0]
+            .as_ref()
+            .unwrap()
+            .graphic
+            .taken_at;
+        assert!(control.set_always_on_visible(AlwaysOnSlot::Logo, true));
+        assert_eq!(
+            control.state().always_on[0]
+                .as_ref()
+                .unwrap()
+                .graphic
+                .taken_at,
+            entered
+        );
+        control.blend_always_on_at(&mut frame, 1.0, entered + Duration::from_secs(1));
+        assert!(luma(&frame, 10, 10) > 230);
+
+        assert!(control.set_always_on_visible(AlwaysOnSlot::Logo, false));
+        let left = control.state().always_on[0]
+            .as_ref()
+            .unwrap()
+            .graphic
+            .taken_out_at
+            .unwrap();
+        let mut hidden = black_frame(320, 180);
+        control.blend_always_on_at(&mut hidden, 1.0, left + Duration::from_secs(1));
+        assert_eq!(luma(&hidden, 10, 10), 16);
+        assert_eq!(control.always_on_visible(AlwaysOnSlot::Logo), Some(false));
+        assert!(control.set_always_on_visible(AlwaysOnSlot::Logo, true));
+        control.clear_always_on(AlwaysOnSlot::Logo);
+        assert_eq!(control.always_on_visible(AlwaysOnSlot::Logo), None);
+        assert!(!control.set_always_on_visible(AlwaysOnSlot::Logo, true));
+    }
+
+    #[test]
+    fn suppressing_a_permanent_logo_never_suppresses_the_ticker_or_moves_a_slide() {
+        let control = GraphicsControl::default();
+        let spec = |x, y, animation| GraphicSpec {
+            picture: None,
+            layers: vec![white_box(x, y, animation)],
+        };
+        control
+            .set_always_on(
+                AlwaysOnSlot::Logo,
+                render_graphic(&spec(50.0, 0.0, GraphicAnimation::SlideLeft), 320, 180).unwrap(),
+                true,
+            )
+            .unwrap();
+        control
+            .set_always_on(
+                AlwaysOnSlot::Ticker,
+                render_graphic(&spec(0.0, 50.0, GraphicAnimation::None), 320, 180).unwrap(),
+                true,
+            )
+            .unwrap();
+        let now = Instant::now() + Duration::from_secs(1);
+        let mut frame = black_frame(320, 180);
+        control.blend_always_on_at(&mut frame, 0.0, now);
+        assert_eq!(
+            luma(&frame, 170, 10),
+            16,
+            "logo suppressed for clip/L-shape"
+        );
+        assert!(
+            luma(&frame, 10, 100) > 230,
+            "ticker stays in full-frame space"
+        );
+        let mut partial = black_frame(320, 180);
+        control.blend_always_on_at(&mut partial, 0.5, now);
+        assert_eq!(
+            luma(&partial, 150, 10),
+            16,
+            "suppression must not rewind the slide"
+        );
+        assert!((80..200).contains(&luma(&partial, 170, 10)));
+    }
+
+    #[test]
+    fn a_picture_window_cannot_replace_a_permanent_role() {
+        let control = GraphicsControl::default();
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![white_box(0.0, 0.0, GraphicAnimation::None)],
+        };
+        control
+            .set_always_on(
+                AlwaysOnSlot::Logo,
+                render_graphic(&spec, 320, 180).unwrap(),
+                true,
+            )
+            .unwrap();
+        let picture = GraphicSpec {
+            picture: Some(PictureWindow {
+                x: 0.0,
+                y: 0.0,
+                width: 70.0,
+                height: 70.0,
+            }),
+            ..spec
+        };
+        assert!(
+            control
+                .set_always_on(
+                    AlwaysOnSlot::Logo,
+                    render_graphic(&picture, 320, 180).unwrap(),
+                    true
+                )
+                .is_err()
+        );
+        let mut frame = black_frame(320, 180);
+        control.blend_always_on(&mut frame, 1.0);
+        assert!(
+            luma(&frame, 10, 10) > 230,
+            "invalid replacement kept the old role"
+        );
+        assert!(!control.picture_on_air());
+    }
+
+    #[test]
+    fn empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged() {
+        let control = GraphicsControl::default();
+        let mut frame = black_frame(320, 180);
+        control.blend_always_on(&mut frame, 1.0);
+        assert!(frame.data(0).iter().all(|sample| *sample == 16));
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![white_box(0.0, 0.0, GraphicAnimation::None)],
+        };
+        control
+            .set_always_on(
+                AlwaysOnSlot::Logo,
+                render_graphic(&spec, 640, 360).unwrap(),
+                true,
+            )
+            .unwrap();
+        control.blend_always_on(&mut frame, 1.0);
+        assert!(frame.data(0).iter().all(|sample| *sample == 16));
     }
 
     #[test]

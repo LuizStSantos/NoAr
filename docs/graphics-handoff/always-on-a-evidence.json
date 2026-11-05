@@ -1,0 +1,145 @@
+{
+  "scope": "Stage a engine-only HLS runner; application conversion is not installed",
+  "runner": "backend/engine/examples/graphics.rs",
+  "gstreamer": "1.26.2",
+  "video": {
+    "width": 640,
+    "height": 360,
+    "fps": 25
+  },
+  "legacy_configured_logo_roi": [
+    565,
+    20,
+    32,
+    16
+  ],
+  "legacy_logo_mean_absolute_rgb_difference": {
+    "legacy-only": 0.0,
+    "permanent": 0.0,
+    "temporary-gc": 0.0,
+    "after-all-out": 0.0,
+    "hidden-logo": 0.0,
+    "restored-logo": 0.0
+  },
+  "white_pixel_fractions": {
+    "legacy-only": {
+      "logo_white": 0.0,
+      "ticker_white": 0.0,
+      "temporary_white": 0.0
+    },
+    "permanent": {
+      "logo_white": 0.9025,
+      "ticker_white": 0.9596,
+      "temporary_white": 0.0
+    },
+    "temporary-gc": {
+      "logo_white": 0.9027,
+      "ticker_white": 0.9599,
+      "temporary_white": 0.9341
+    },
+    "after-all-out": {
+      "logo_white": 0.9025,
+      "ticker_white": 0.9596,
+      "temporary_white": 0.0
+    },
+    "hidden-logo": {
+      "logo_white": 0.0,
+      "ticker_white": 0.9596,
+      "temporary_white": 0.0
+    },
+    "restored-logo": {
+      "logo_white": 0.9025,
+      "ticker_white": 0.9596,
+      "temporary_white": 0.0
+    }
+  },
+  "stages": [
+    {
+      "stage": "legacy-only",
+      "sample_at_seconds": 6,
+      "segment_interval_seconds": [
+        6.0,
+        8.0
+      ],
+      "segment": "permanent_1793901990168827990_14531_3.ts",
+      "segment_sha256": "de68ae15e3d4d5d040824f39a4447686c368acb2491c2e548c42d5855adf275b",
+      "capture": "always-on-a-legacy-only.jpg"
+    },
+    {
+      "stage": "permanent",
+      "sample_at_seconds": 14,
+      "segment_interval_seconds": [
+        14.0,
+        16.0
+      ],
+      "segment": "permanent_1793901990168827990_14531_7.ts",
+      "segment_sha256": "49717216ccf123152483e41806fc411d4daca4e775130c63d6ae20665fd315a3",
+      "capture": "always-on-a-permanent.jpg"
+    },
+    {
+      "stage": "temporary-gc",
+      "sample_at_seconds": 22,
+      "segment_interval_seconds": [
+        22.0,
+        24.0
+      ],
+      "segment": "permanent_1793901990168827990_14531_11.ts",
+      "segment_sha256": "bccb1ab0d07ded6d3ff9f6328108a6d20af994e10a0202252aa2c928549c55d4",
+      "capture": "always-on-a-temporary-gc.jpg"
+    },
+    {
+      "stage": "after-all-out",
+      "sample_at_seconds": 30,
+      "segment_interval_seconds": [
+        30.0,
+        32.0
+      ],
+      "segment": "permanent_1793901990168827990_14531_15.ts",
+      "segment_sha256": "ea2b1d106420f23d0afb3ae752e7e73ea4ad2d3095d966554e41c09fa28071f8",
+      "capture": "always-on-a-after-all-out.jpg"
+    },
+    {
+      "stage": "hidden-logo",
+      "sample_at_seconds": 38,
+      "segment_interval_seconds": [
+        38.0,
+        40.0
+      ],
+      "segment": "permanent_1793901990168827990_14531_19.ts",
+      "segment_sha256": "094a3d327432a9b89f3a075f3843020304dd5682a3a6de7bcd8258e156bb2c3b",
+      "capture": "always-on-a-hidden-logo.jpg"
+    },
+    {
+      "stage": "restored-logo",
+      "sample_at_seconds": 46,
+      "segment_interval_seconds": [
+        46.0,
+        47.96
+      ],
+      "segment": "permanent_1793901990168827990_14531_23.ts",
+      "segment_sha256": "3805804291e1b902c9cce2be1bd8a57d5bc8d549f5029cf79d56d0941dbef5f1",
+      "capture": "always-on-a-restored-logo.jpg"
+    }
+  ],
+  "rust_checks": {
+    "fmt": "PASS",
+    "clippy_no_default_all_targets": "PASS",
+    "cargo_test_no_default": {
+      "passed": 674,
+      "ignored": 14,
+      "failed": 0
+    }
+  },
+  "limitations": [
+    "Binding DDL exists only in tests",
+    "No application binding load or migration in stage a",
+    "No desktop, rollback, all-channel conversion or legacy route redirection tested in this stage",
+    "The permanent text sample is static; scrolling compatibility belongs to later integration"
+  ],
+  "runner_source_result": "All six stages returned ClipResult::Played; fallback is rejected",
+  "native_warnings": [
+    "video-info: RGB input reports matrix 0; using RGB",
+    "splitmuxsink: could not request a keyframe",
+    "audioencoder at finish: cannot copy metadata from disappeared input buffer"
+  ]
+}

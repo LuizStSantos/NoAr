@@ -2977,37 +2977,73 @@
       ]
     },
     "backend/app/src/db/handles/graphics.rs": {
-      "sha256": "59eb57797dc586b1393b58128e9a14b0e20f774e3f4ad1bde16a1a00a89f2527",
+      "sha256": "0c640fef4b33ecc738c4b6ce2e7d4cc7bd9d9e99c0b068b009c45c20d74cd04f",
       "language": "Rust",
-      "bytes": 3340,
+      "bytes": 10976,
       "symbols": [
         {
           "name": "layers_json",
-          "line": 5
+          "line": 8
         },
         {
           "name": "select_graphics_templates",
-          "line": 9
+          "line": 12
         },
         {
           "name": "select_graphics_template",
-          "line": 23
+          "line": 26
         },
         {
           "name": "graphics_template_name_taken",
-          "line": 40
+          "line": 43
         },
         {
           "name": "insert_graphics_template",
-          "line": 57
+          "line": 60
         },
         {
           "name": "update_graphics_template",
-          "line": 78
+          "line": 81
         },
         {
           "name": "delete_graphics_template",
-          "line": 101
+          "line": 104
+        },
+        {
+          "name": "select_graphics_bindings",
+          "line": 120
+        },
+        {
+          "name": "save_graphics_binding",
+          "line": 135
+        },
+        {
+          "name": "delete_graphics_binding",
+          "line": 155
+        },
+        {
+          "name": "tests",
+          "line": 171
+        },
+        {
+          "name": "install_fixture",
+          "line": 178
+        },
+        {
+          "name": "template",
+          "line": 194
+        },
+        {
+          "name": "permanent_bindings_survive_reopen_without_changing_the_legacy_logo",
+          "line": 208
+        },
+        {
+          "name": "a_binding_cannot_read_or_replace_another_channels_template",
+          "line": 276
+        },
+        {
+          "name": "ordinary_startup_has_no_bindings_table_or_data_conversion_in_stage_a",
+          "line": 314
         }
       ]
     },
@@ -3599,9 +3635,9 @@
       ]
     },
     "backend/app/src/db/models.rs": {
-      "sha256": "d9315ac01ce05f300d68f8055e8297f2b5949001b39d0f8cef8f15d5c29ecfca",
+      "sha256": "a977794dc39ecc8067c169a7b262d3208be25326c99547a535e9e6de2b4574a5",
       "language": "Rust",
-      "bytes": 31062,
+      "bytes": 32313,
       "symbols": [
         {
           "name": "GlobalSettings",
@@ -3800,64 +3836,80 @@
           "line": 669
         },
         {
-          "name": "GraphicsTemplate",
+          "name": "GraphicsRole",
           "line": 692
         },
         {
+          "name": "GraphicsChannelBinding",
+          "line": 703
+        },
+        {
           "name": "FromRow",
-          "line": 705
+          "line": 710
         },
         {
           "name": "from_row",
-          "line": 706
+          "line": 711
         },
         {
-          "name": "ScheduleEvent",
+          "name": "GraphicsTemplate",
           "line": 731
         },
         {
           "name": "FromRow",
-          "line": 755
+          "line": 744
         },
         {
           "name": "from_row",
-          "line": 756
+          "line": 745
+        },
+        {
+          "name": "ScheduleEvent",
+          "line": 770
+        },
+        {
+          "name": "FromRow",
+          "line": 794
+        },
+        {
+          "name": "from_row",
+          "line": 795
         },
         {
           "name": "ScheduleRun",
-          "line": 793
-        },
-        {
-          "name": "UnfinishedRun",
-          "line": 806
-        },
-        {
-          "name": "UpdateSettings",
-          "line": 819
-        },
-        {
-          "name": "AsRunEntry",
           "line": 832
         },
         {
+          "name": "UnfinishedRun",
+          "line": 845
+        },
+        {
+          "name": "UpdateSettings",
+          "line": 858
+        },
+        {
+          "name": "AsRunEntry",
+          "line": 871
+        },
+        {
           "name": "NewAsRunEntry",
-          "line": 857
+          "line": 896
         },
         {
           "name": "default_logo_transition",
-          "line": 870
+          "line": 909
         },
         {
           "name": "default_lshape_scale",
-          "line": 874
+          "line": 913
         },
         {
           "name": "default_lshape_corner",
-          "line": 878
+          "line": 917
         },
         {
           "name": "default_graphics_scenes",
-          "line": 882
+          "line": 921
         }
       ]
     },
@@ -11385,6 +11437,25 @@
         }
       ]
     },
+    "backend/engine/examples/graphics.rs": {
+      "sha256": "05dcbf8821590bfed0c167a84559e21fac502049bb7338f74d81a1498082ad3e",
+      "language": "Rust",
+      "bytes": 3759,
+      "symbols": [
+        {
+          "name": "label",
+          "line": 13
+        },
+        {
+          "name": "play_stage",
+          "line": 40
+        },
+        {
+          "name": "main",
+          "line": 51
+        }
+      ]
+    },
     "backend/engine/examples/live_loudness.rs": {
       "sha256": "ce62b097c42c61f4eb21e9ee77d243d7012ec8daef4e7eca2c6083eacfbf3751",
       "language": "Rust",
@@ -13033,9 +13104,9 @@
       ]
     },
     "backend/engine/src/compositor/graphics.rs": {
-      "sha256": "5b89632c47d75c72a4fd4f2c6530793bb6bdd142be73c56b9f0a964d6f305954",
+      "sha256": "430fc1cfd2fd3a4748c98c7a55d973417cd95d4e32a2f17f0d8c6a082f949c00",
       "language": "Rust",
-      "bytes": 35742,
+      "bytes": 47554,
       "symbols": [
         {
           "name": "GraphicAnimation",
@@ -13118,140 +13189,204 @@
           "line": 424
         },
         {
-          "name": "OnAir",
-          "line": 476
+          "name": "blend_layer_with_visibility",
+          "line": 433
         },
         {
           "name": "OnAir",
-          "line": 485
-        },
-        {
-          "name": "out_since",
           "line": 486
         },
         {
+          "name": "OnAir",
+          "line": 495
+        },
+        {
+          "name": "out_since",
+          "line": 496
+        },
+        {
           "name": "finished",
-          "line": 499
+          "line": 509
         },
         {
-          "name": "GraphicsState",
-          "line": 506
+          "name": "AlwaysOnSlot",
+          "line": 518
         },
         {
-          "name": "GraphicOnAir",
-          "line": 513
-        },
-        {
-          "name": "GraphicsControl",
+          "name": "AlwaysOnSlot",
           "line": 523
         },
         {
-          "name": "std",
-          "line": 525
+          "name": "index",
+          "line": 524
         },
         {
-          "name": "fmt",
-          "line": 526
+          "name": "AlwaysOn",
+          "line": 532
+        },
+        {
+          "name": "GraphicsState",
+          "line": 538
+        },
+        {
+          "name": "GraphicOnAir",
+          "line": 546
         },
         {
           "name": "GraphicsControl",
-          "line": 533
+          "line": 556
+        },
+        {
+          "name": "std",
+          "line": 558
+        },
+        {
+          "name": "fmt",
+          "line": 559
+        },
+        {
+          "name": "GraphicsControl",
+          "line": 566
         },
         {
           "name": "state",
-          "line": 534
+          "line": 567
+        },
+        {
+          "name": "set_always_on",
+          "line": 573
+        },
+        {
+          "name": "set_always_on_visible",
+          "line": 601
+        },
+        {
+          "name": "always_on_visible",
+          "line": 622
+        },
+        {
+          "name": "clear_always_on",
+          "line": 630
+        },
+        {
+          "name": "blend_always_on",
+          "line": 636
+        },
+        {
+          "name": "blend_always_on_at",
+          "line": 640
         },
         {
           "name": "take",
-          "line": 540
+          "line": 685
         },
         {
           "name": "take_out",
-          "line": 574
+          "line": 719
         },
         {
           "name": "take_all_out",
-          "line": 592
+          "line": 737
         },
         {
           "name": "on_air",
-          "line": 602
+          "line": 747
         },
         {
           "name": "picture_on_air",
-          "line": 618
+          "line": 763
         },
         {
           "name": "picture",
-          "line": 629
+          "line": 774
         },
         {
           "name": "picture_at",
-          "line": 633
+          "line": 778
         },
         {
           "name": "blend",
-          "line": 667
+          "line": 812
         },
         {
           "name": "blend_at",
-          "line": 671
+          "line": 816
         },
         {
           "name": "tests",
-          "line": 711
+          "line": 856
         },
         {
           "name": "black_frame",
-          "line": 721
+          "line": 866
         },
         {
           "name": "luma",
-          "line": 729
-        },
-        {
-          "name": "white_box",
-          "line": 733
-        },
-        {
-          "name": "a_box_lands_where_its_percentages_say",
-          "line": 750
-        },
-        {
-          "name": "a_fade_comes_in_and_goes_out_over_its_time",
-          "line": 773
-        },
-        {
-          "name": "a_duration_takes_the_graphic_out_by_itself",
-          "line": 805
-        },
-        {
-          "name": "a_slide_starts_off_its_place_and_ends_on_it",
-          "line": 827
-        },
-        {
-          "name": "taking_out_and_listing",
-          "line": 850
-        },
-        {
-          "name": "a_graphic_for_another_frame_size_is_not_drawn",
           "line": 874
         },
         {
+          "name": "white_box",
+          "line": 878
+        },
+        {
+          "name": "permanent_roles_survive_expiry_queue_pressure_and_take_all_out",
+          "line": 895
+        },
+        {
+          "name": "permanent_visibility_is_explicit_and_does_not_reset_on_repeated_commands",
+          "line": 940
+        },
+        {
+          "name": "suppressing_a_permanent_logo_never_suppresses_the_ticker_or_moves_a_slide",
+          "line": 992
+        },
+        {
+          "name": "a_picture_window_cannot_replace_a_permanent_role",
+          "line": 1035
+        },
+        {
+          "name": "empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged",
+          "line": 1076
+        },
+        {
+          "name": "a_box_lands_where_its_percentages_say",
+          "line": 1097
+        },
+        {
+          "name": "a_fade_comes_in_and_goes_out_over_its_time",
+          "line": 1120
+        },
+        {
+          "name": "a_duration_takes_the_graphic_out_by_itself",
+          "line": 1152
+        },
+        {
+          "name": "a_slide_starts_off_its_place_and_ends_on_it",
+          "line": 1174
+        },
+        {
+          "name": "taking_out_and_listing",
+          "line": 1197
+        },
+        {
+          "name": "a_graphic_for_another_frame_size_is_not_drawn",
+          "line": 1221
+        },
+        {
           "name": "rounded_corners_are_cut",
-          "line": 889
+          "line": 1236
         },
         {
           "name": "a_text_layer_draws_letters_on_its_fill",
-          "line": 897
+          "line": 1244
         },
         {
           "name": "a_picture_template_is_an_lshape_with_its_layers_as_art",
-          "line": 941
+          "line": 1288
         },
         {
           "name": "graphics_preview",
-          "line": 1006
+          "line": 1353
         }
       ]
     },
@@ -14869,9 +15004,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "a629afc59e3f24053227f15f63bac5e6df538de6e5c1fe209560a900f58eb29e",
+      "sha256": "a755464664fbb5f3dc912f9a1ff093780830566ae71e3a630548631e1e1c3f82",
       "language": "Rust",
-      "bytes": 45920,
+      "bytes": 45934,
       "symbols": [
         {
           "name": "analysis",
@@ -19007,9 +19142,9 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "dde7768f208ce73f31db5720b522ebaefd229706a7bd517ae55f135e166bb2d4",
+      "sha256": "704a030984a92509f00d8301b74a9a30449aebeee13bd18414438cf04297e901",
       "language": "Rust",
-      "bytes": 64371,
+      "bytes": 64760,
       "symbols": [
         {
           "name": "PlaybackSkipped",
@@ -19241,127 +19376,127 @@
         },
         {
           "name": "draw_logo",
-          "line": 1382
+          "line": 1390
         },
         {
           "name": "apply_video_fade",
-          "line": 1399
+          "line": 1407
         },
         {
           "name": "apply_audio_fade",
-          "line": 1427
+          "line": 1435
         },
         {
           "name": "write_fallback",
-          "line": 1439
+          "line": 1447
         },
         {
           "name": "synchronize_timeline",
-          "line": 1476
+          "line": 1484
         },
         {
           "name": "synchronize_silence_to_video",
-          "line": 1511
+          "line": 1519
         },
         {
           "name": "synchronize_live_tracks",
-          "line": 1533
+          "line": 1541
         },
         {
           "name": "synchronize_after_skip",
-          "line": 1559
+          "line": 1567
         },
         {
           "name": "padding_to_sync",
-          "line": 1584
+          "line": 1592
         },
         {
           "name": "div_ceil",
-          "line": 1620
+          "line": 1628
         },
         {
           "name": "write_black_frames",
-          "line": 1624
+          "line": 1632
         },
         {
           "name": "FallbackOverlays",
-          "line": 1645
+          "line": 1653
         },
         {
           "name": "FallbackOverlays",
-          "line": 1650
+          "line": 1658
         },
         {
           "name": "new",
-          "line": 1651
+          "line": 1659
         },
         {
           "name": "apply",
-          "line": 1688
+          "line": 1696
         },
         {
           "name": "write_padding_video_frames",
-          "line": 1702
+          "line": 1710
         },
         {
           "name": "black_video_frame_for_config",
-          "line": 1725
+          "line": 1733
         },
         {
           "name": "black_video_frame",
-          "line": 1729
-        },
-        {
-          "name": "fill_plane",
           "line": 1737
         },
         {
+          "name": "fill_plane",
+          "line": 1745
+        },
+        {
           "name": "write_silence_frame",
-          "line": 1757
+          "line": 1765
         },
         {
           "name": "write_silence",
-          "line": 1776
+          "line": 1784
         },
         {
           "name": "live_interleave_tests",
-          "line": 1800
+          "line": 1808
         },
         {
           "name": "live_source_failures_preserve_playback_control_signals",
-          "line": 1804
-        },
-        {
-          "name": "Capture",
           "line": 1812
         },
         {
+          "name": "Capture",
+          "line": 1820
+        },
+        {
           "name": "FrameOutput",
-          "line": 1817
+          "line": 1825
         },
         {
           "name": "audio_frame_size",
-          "line": 1818
+          "line": 1826
         },
         {
           "name": "encode_video",
-          "line": 1822
+          "line": 1830
         },
         {
           "name": "encode_audio",
-          "line": 1828
+          "line": 1836
         },
         {
           "name": "missing_live_video_holds_a_picture_while_audio_continues",
-          "line": 1837
+          "line": 1845
         },
         {
           "name": "missing_live_audio_inserts_silence_without_exceeding_the_event_end",
-          "line": 1850
+          "line": 1858
         },
         {
           "name": "healthy_live_tracks_are_not_padded",
-          "line": 1884
+          "line": 1892
         }
       ]
     },
@@ -20556,9 +20691,15 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "2ea94893cfd2878ff0174a0c5509dd75074aba52ed07abefe269d0d88d7485bc",
+      "sha256": "70acc9555b419613ef72eaaa1841b471206fdff25c86ed2de9fe0d508b19ded2",
       "language": "Markdown",
-      "bytes": 8914,
+      "bytes": 16930,
+      "symbols": []
+    },
+    "docs/graphics-handoff/always-on-a-evidence.json": {
+      "sha256": "8da115f8485bf7b41c000c4cfa9e8193a69cf28d6a78307b6f0d1176eca72c63",
+      "language": "JSON",
+      "bytes": 4141,
       "symbols": []
     },
     "docs/graphics-handoff/composer-design.html": {
@@ -20598,9 +20739,9 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "6cbface46463aecc85dc9455fed911ecaa6740e8f362a608df983acb0ba2a6bb",
+      "sha256": "ad974a0421203f3ce14371826a10e11f2abde91d27b85046d78dbedb05178dbe",
       "language": "Markdown",
-      "bytes": 4444,
+      "bytes": 5069,
       "symbols": []
     },
     "docs/gstreamer-integration.md": {

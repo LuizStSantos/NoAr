@@ -686,6 +686,45 @@ impl FromRow<'_, SqliteRow> for GraphicsEvent {
     }
 }
 
+/// A stable channel binding. L-shape is a manual role, never always on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GraphicsRole {
+    Logo,
+    Ticker,
+    Lshape,
+}
+
+text_enum!(GraphicsRole { Logo => "logo", Ticker => "ticker", Lshape => "lshape" });
+
+/// Saved association between a channel role and a template. The table is
+/// introduced by the later conversion migration, not created by these handles.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GraphicsChannelBinding {
+    pub channel_id: i32,
+    pub role: GraphicsRole,
+    pub template_id: i32,
+    pub enabled: bool,
+}
+
+impl FromRow<'_, SqliteRow> for GraphicsChannelBinding {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let role: String = row.try_get("role")?;
+
+        Ok(Self {
+            channel_id: row.try_get("channel_id")?,
+            role: role
+                .parse()
+                .map_err(|error: String| sqlx::Error::ColumnDecode {
+                    index: "role".to_string(),
+                    source: error.into(),
+                })?,
+            template_id: row.try_get("template_id")?,
+            enabled: row.try_get("enabled")?,
+        })
+    }
+}
+
 /// A row of `graphics_templates`: a graphic a channel designed once and
 /// puts on air many times.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]

@@ -161,20 +161,109 @@ and the channel log captured for this run. These five frames verify the
 requested HLS transitions; they do not establish a long soak, A/V sync,
 hardware outputs or every animation preset.
 
-## Follow-up part 3 — plan awaiting approval
+## Follow-up part 3 — approved stages a–e
 
-No migration, always-on implementation or legacy menu removal has started.
-The proposed work must preserve logo/ticker composition in full-frame space,
-ordinary `follow` graphics inside the picture, existing scene actions and
-scheduled references, and the legacy logo/L-shape/scene API contracts.
-Only a new migration may be added after explicit user approval. Logo,
-L-shape and Quick scenes remain in the menu until that migration and its
-compatibility tests are complete.
+The approved implementation uses a normal sqlx migration `00029_...`.
+There is no separate migration registry. Conversion runs automatically after
+`MIGRATOR.run` for every channel. Once conversion is installed, the engine
+must read models/bindings only; the old columns remain unchanged, without
+per-field fallback. Conversion and redirecting the old settings pages to
+models/bindings must land together so saving a logo still changes the output.
+
+Rollback means restoring the pre-migration copy made by
+`backup_before_migrations` **and** the previous image. It does not mean opening
+the upgraded schema with the previous binary. Stage b must demonstrate that
+restore using a disposable installation of the exact 2.2.1 binary and document
+the operator procedure in `docs/docker.md` or `docs/releasing.md`.
+
+The agreed stages, each with its own commit, tests, captures and handoff:
+
+- **a — completed:** permanent logo/ticker infrastructure in engine and DB
+  handles; schema exists only in test fixtures. No conversion and the current
+  application's logo path stays unchanged. Evidence is recorded below.
+- **b — pending:** normal 00029 schema migration plus automatic, idempotent
+  conversion of all channels after sqlx migration, redirected legacy page
+  writes, restart and backup/image rollback. Include saving a new logo from
+  the old page and observing it in real output.
+- **c — pending:** complete compatibility coverage for clip logo/L-shape
+  marks, graphics events and scene reversal, keyed and authenticated routes,
+  external replacement/placement and transitions, desktop output and XMLTV.
+- **d — pending:** aligned before/after HLS frame comparisons in logo and
+  L-shape regions, including transitions, health and channel logs.
+- **e — pending:** only after migration and compatibility validation, remove
+  Logo, L-shape and Quick scenes from the menu.
+
+Only logo and ticker are always on in this delivery. Clock support is out
+of scope. L-shape remains a manual picture-window graphic. Full-frame logo
+and ticker composition must remain distinct from picture-follow ordinary GCs.
+
+## Stage a — permanent-role infrastructure, without migration
+
+Implemented stable `AlwaysOnSlot::Logo` and `AlwaysOnSlot::Ticker` roles in
+`GraphicsControl`. They have no duration, do not consume the temporary take
+queue and survive `take_all_out`, expiry and queue eviction. They can be
+hidden/restored explicitly without discarding the definition. Picture-window
+models are rejected as permanent roles. No clock role was added.
+
+Permanent roles blend in full-frame space after the L-shape. Clip-logo gaps
+and L-shape logo suppression affect the logo role only, not the ticker. The
+normal application does **not** load these roles yet; its configured logo,
+clip marks, controls and pages remain on their unchanged path in this stage.
+The HLS runner deliberately shows the configured legacy logo at top-right
+and test permanent models elsewhere to make their independence visible.
+
+Added DB models and scoped handles for `graphics_channel_bindings`. The table
+is created **only inside test fixtures**, not on application startup. There
+is no 00029 migration or production DDL in this commit. Tests cover persisted
+bindings after closing/reopening SQLite, repeated saves without duplication,
+channel isolation, bound-template deletion protection, unchanged legacy logo
+values, and unchanged startup with no bindings table or data conversion.
+
+Verification with GStreamer 1.26.2 and Rust 1.99.1:
+
+- `cargo fmt --all` — passed.
+- `cargo clippy --no-default-features --all-targets -- --deny warnings` — passed.
+- `cargo test --no-default-features` — 674 passed, 0 failed, 14 ignored.
+- `backend/engine/examples/graphics.rs` — six 8-second stages encoded as real
+  HLS using the same engine. Each source must return `ClipResult::Played`;
+  fallback fails the runner. The captured legacy-logo ROI is byte-identical
+  in decoded RGB in all six stages. The GC disappears after take-all-out;
+  permanent models remain. Explicit logo hide leaves the ticker visible,
+  and show restores the logo.
+
+Captures from actual HLS segments:
+
+| Stage | Capture |
+| --- | --- |
+| Configured legacy logo alone | [Legacy path unchanged](always-on-a-legacy-only.jpg) |
+| Permanent logo and text enabled | [Permanent roles](always-on-a-permanent.jpg) |
+| Temporary GC alongside permanent roles | [Temporary GC](always-on-a-temporary-gc.jpg) |
+| Take all temporary graphics out | [Permanent roles remain](always-on-a-after-all-out.jpg) |
+| Explicitly hide the permanent logo | [Ticker stays visible](always-on-a-hidden-logo.jpg) |
+| Restore the permanent logo | [Logo restored](always-on-a-restored-logo.jpg) |
+
+[Evidence and pixel measurements](always-on-a-evidence.json) include source
+segment hashes and check results. Reproduce the isolated engine run with:
+
+```sh
+cargo run --no-default-features -p noar-engine --example graphics -- \
+  /path/to/synthetic.mp4 /tmp/noar-permanent-proof /path/to/test-logo.png
+```
+
+This is an engine runner, not application/API integration of the bindings.
+Its ticker sample is static text; scrolling compatibility is not established
+by these captures. Native GStreamer warnings were observed for RGB matrix
+metadata, splitmux keyframe requests and audio metadata at finish; all stages
+played and the segments decoded successfully. This is not a clean-log soak
+or proof of A/V sync. Desktop, full clip/scene/keyed-route compatibility,
+XMLTV, automatic conversion and backup/image rollback remain for stages b–d.
+No menu was removed.
 
 ## What is left, in order
 
-1. **Logo and L-shape as templates**: an "always on" flag on templates (logo,
-   clock, ticker) drawn on every frame, and a migration that turns each
+1. **Logo and L-shape as templates**: always-on channel bindings (logo and
+   ticker; clock is outside this delivery) drawn on every frame, and a
+   migration that turns each
    channel's logo, L-shape graphic and quick scenes into templates without
    changing what is on air. Keep the old `/api/control/{id}/logo|lshape|scene`
    routes working.

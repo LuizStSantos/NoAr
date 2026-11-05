@@ -1311,6 +1311,8 @@ fn apply_overlays(
     let logo = video.logo_control.frame();
     // The logo is off for the L-shape: it goes before the picture shrinks
     // and comes back after the picture grew back.
+    let permanent_logo_visibility =
+        opacity * logo_fade_plan.gap_factor(timeline.video_pts) * (1.0 - logo_off.clamp(0.0, 1.0));
     let opacity = opacity
         * logo.visibility
         * logo_fade_plan.gap_factor(timeline.video_pts)
@@ -1375,6 +1377,12 @@ fn apply_overlays(
             text.blend(frame, timeline.video_pts, timeline.text_pts);
         });
     }
+
+    // No roles are populated by the application until the legacy conversion
+    // is installed. The existing logo/text path remains intact in this stage.
+    video
+        .graphics_control
+        .blend_always_on(frame, permanent_logo_visibility);
 
     timeline.text_pts += 1;
 }
