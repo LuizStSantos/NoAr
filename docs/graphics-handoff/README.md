@@ -24,8 +24,10 @@ engine 252. `vue-tsc`, ESLint and Prettier pass on the frontend commits.
 
 ## In progress (last commit on the branch, "WIP")
 
-Composer, step 1 of 4 (backend). The work is uncommitted-quality: check it
-compiles and passes before building on it.
+Composer, step 1 of 4 (backend). Checked after the commit: `cargo clippy
+--no-default-features --all-targets -- --deny warnings` is clean and the app's
+`utils::graphics` tests pass (8). The engine tests and the full suite were not
+re-run on this commit; run them first.
 
 - `LayerKind::Video` in `backend/app/src/utils/graphics.rs`: at most one per
   template. A template with it is an **L-shape**: its other layers are the art
