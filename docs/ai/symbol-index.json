@@ -975,9 +975,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "f6185c61cbd7e9bddd1d091e7614a995d6be5c09149f94199349458d493f24b2",
+      "sha256": "d8f3a6cdb51a123e81013269e67f206336ed3385c2e900fce9f53ab8ae5b6fe5",
       "language": "Markdown",
-      "bytes": 54131,
+      "bytes": 54538,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1703,9 +1703,9 @@
       ]
     },
     "backend/app/src/api/routes/graphics.rs": {
-      "sha256": "2dcca68fc3e14a5decd817584ff6856bd29b632b3f8060e02e903f2873422d8d",
+      "sha256": "e1a2ded662365a748c7c426ecc62a184ae4c7e0b3bd7fea464f3dda71cfb1aca",
       "language": "Rust",
-      "bytes": 8878,
+      "bytes": 9949,
       "symbols": [
         {
           "name": "authorized",
@@ -1737,35 +1737,35 @@
         },
         {
           "name": "delete_graphics_template",
-          "line": 166
+          "line": 178
         },
         {
           "name": "TakeRequest",
-          "line": 182
-        },
-        {
-          "name": "OutRequest",
-          "line": 193
-        },
-        {
-          "name": "OutStatus",
           "line": 200
         },
         {
+          "name": "OutRequest",
+          "line": 211
+        },
+        {
+          "name": "OutStatus",
+          "line": 218
+        },
+        {
           "name": "take_graphic",
-          "line": 215
+          "line": 233
         },
         {
           "name": "take_graphic_out",
-          "line": 236
+          "line": 261
         },
         {
           "name": "get_graphics_on_air",
-          "line": 262
+          "line": 287
         },
         {
           "name": "get_graphics_fonts",
-          "line": 276
+          "line": 301
         }
       ]
     },
@@ -2205,9 +2205,9 @@
       ]
     },
     "backend/app/src/api/routes/playout_config.rs": {
-      "sha256": "21d1ba1d1a3fcfd3bfafd91bcf5f8efe65bbf60269c540663be9dcb7db9f38a3",
+      "sha256": "406411a773ef1e592ec987c21c3230d1b2869f484fd919cf1854afada0002839",
       "language": "Rust",
-      "bytes": 41185,
+      "bytes": 41191,
       "symbols": [
         {
           "name": "CodecOption",
@@ -2883,9 +2883,9 @@
       ]
     },
     "backend/app/src/db/handles/configuration.rs": {
-      "sha256": "849f3861ddeb88fecaac89755f74ec4ad63d8158cbfb82bd337e1efef2ab3304",
+      "sha256": "07fa40ec2e054255b1f41f77ab56b5e120204a6528a3ed2a65a1a44b8d24eabc",
       "language": "Rust",
-      "bytes": 32804,
+      "bytes": 31972,
       "symbols": [
         {
           "name": "select_configuration",
@@ -2893,63 +2893,63 @@
         },
         {
           "name": "insert_configuration",
-          "line": 98
+          "line": 100
         },
         {
           "name": "update_configuration",
-          "line": 128
+          "line": 132
         },
         {
           "name": "update_configuration_on",
-          "line": 139
+          "line": 143
         },
         {
           "name": "activate_output",
-          "line": 232
+          "line": 229
         },
         {
           "name": "update_configuration_volume",
-          "line": 259
+          "line": 256
         },
         {
           "name": "tests",
-          "line": 274
+          "line": 271
         },
         {
           "name": "pool",
-          "line": 280
+          "line": 277
         },
         {
           "name": "loudness_migration_preserves_existing_scope_and_defaults_new_rows_to_all",
-          "line": 291
+          "line": 288
         },
         {
           "name": "migration_preserves_non_default_configuration_data",
-          "line": 344
+          "line": 341
         },
         {
           "name": "migration_preserves_one_active_output_and_enforces_uniqueness",
-          "line": 445
+          "line": 442
         },
         {
           "name": "future_pipeline_configuration_has_safe_defaults_and_audio_tracks_are_ordered",
-          "line": 463
+          "line": 460
         },
         {
           "name": "output_selection_is_switched_atomically",
-          "line": 639
+          "line": 636
         },
         {
           "name": "complete_configuration_update_rolls_back_all_topics_on_error",
-          "line": 657
+          "line": 654
         },
         {
           "name": "logo_transitions_are_saved_and_default_to_fades",
-          "line": 688
+          "line": 685
         },
         {
           "name": "saving_configuration_leaves_legacy_listener_rows_inert_and_unchanged",
-          "line": 723
+          "line": 720
         }
       ]
     },
@@ -2977,9 +2977,9 @@
       ]
     },
     "backend/app/src/db/handles/graphics.rs": {
-      "sha256": "0c640fef4b33ecc738c4b6ce2e7d4cc7bd9d9e99c0b068b009c45c20d74cd04f",
+      "sha256": "8b10787d37b5e10e0d840bcfb535f98bc9c207961d1dd42ca4180b158b257196",
       "language": "Rust",
-      "bytes": 10976,
+      "bytes": 41417,
       "symbols": [
         {
           "name": "layers_json",
@@ -3007,43 +3007,91 @@
         },
         {
           "name": "delete_graphics_template",
-          "line": 104
+          "line": 169
+        },
+        {
+          "name": "graphics_template_is_bound",
+          "line": 184
         },
         {
           "name": "select_graphics_bindings",
-          "line": 120
+          "line": 195
         },
         {
           "name": "save_graphics_binding",
-          "line": 135
+          "line": 210
         },
         {
           "name": "delete_graphics_binding",
-          "line": 155
+          "line": 230
+        },
+        {
+          "name": "convert_channel_graphics",
+          "line": 247
+        },
+        {
+          "name": "convert_channel_graphics_on",
+          "line": 262
+        },
+        {
+          "name": "image_layers",
+          "line": 354
+        },
+        {
+          "name": "native_model_layers",
+          "line": 364
+        },
+        {
+          "name": "insert_converted_model",
+          "line": 445
+        },
+        {
+          "name": "project_channel_graphics",
+          "line": 468
+        },
+        {
+          "name": "save_channel_graphics_on",
+          "line": 539
         },
         {
           "name": "tests",
-          "line": 171
+          "line": 698
         },
         {
           "name": "install_fixture",
-          "line": 178
+          "line": 703
         },
         {
           "name": "template",
-          "line": 194
+          "line": 707
+        },
+        {
+          "name": "conversion_keeps_native_even_pixel_rounding_for_fractional_lshape_scales",
+          "line": 721
+        },
+        {
+          "name": "conversion_keeps_existing_names_and_never_reads_frozen_data_again",
+          "line": 752
+        },
+        {
+          "name": "conversion_preserves_frozen_columns_and_edited_models_across_restart",
+          "line": 795
+        },
+        {
+          "name": "conversion_rolls_back_all_channels_when_one_has_invalid_scenes",
+          "line": 899
         },
         {
           "name": "permanent_bindings_survive_reopen_without_changing_the_legacy_logo",
-          "line": 208
+          "line": 924
         },
         {
           "name": "a_binding_cannot_read_or_replace_another_channels_template",
-          "line": 276
+          "line": 992
         },
         {
-          "name": "ordinary_startup_has_no_bindings_table_or_data_conversion_in_stage_a",
-          "line": 314
+          "name": "migration_installs_bindings_before_conversion",
+          "line": 1030
         }
       ]
     },
@@ -3075,9 +3123,9 @@
       ]
     },
     "backend/app/src/db/handles/init.rs": {
-      "sha256": "050d1b8266fbd77305353192de302d6e1f3871ad7e24b89ac9166fa3f9a69d30",
+      "sha256": "d2c95649aabb0b642d4cd2f6e903b2b2ad59ea9a00e9fdb749f36cc5bbe6c3cf",
       "language": "Rust",
-      "bytes": 11340,
+      "bytes": 11390,
       "symbols": [
         {
           "name": "db_migrate",
@@ -3085,35 +3133,35 @@
         },
         {
           "name": "backup_before_migrations",
-          "line": 86
+          "line": 87
         },
         {
           "name": "prune_backups",
-          "line": 133
+          "line": 134
         },
         {
           "name": "tests",
-          "line": 164
+          "line": 165
         },
         {
           "name": "a_first_start_cut_short_after_the_trigger_still_initializes",
-          "line": 170
+          "line": 171
         },
         {
           "name": "fresh_installation_normalizes_all_sources_and_keeps_user_selection_on_restart",
-          "line": 194
+          "line": 195
         },
         {
           "name": "file_pool",
-          "line": 220
+          "line": 221
         },
         {
           "name": "an_update_keeps_a_copy_of_the_database_from_before",
-          "line": 237
+          "line": 238
         },
         {
           "name": "only_the_newest_copies_are_kept",
-          "line": 305
+          "line": 306
         }
       ]
     },
@@ -3635,9 +3683,9 @@
       ]
     },
     "backend/app/src/db/models.rs": {
-      "sha256": "a977794dc39ecc8067c169a7b262d3208be25326c99547a535e9e6de2b4574a5",
+      "sha256": "4acb025f4414a3f8c95f2afbb9a69f3bf02e61c090aec4507d20613082c0f9c3",
       "language": "Rust",
-      "bytes": 32313,
+      "bytes": 32311,
       "symbols": [
         {
           "name": "GlobalSettings",
@@ -4496,9 +4544,9 @@
       ]
     },
     "backend/app/src/player/controller.rs": {
-      "sha256": "01ff07baa972578d1f64d78ef3b4adec651b3f847b4f0d0f35b8ee25b9775567",
+      "sha256": "643e7bbfc40bf7e549a4e501c5223cf46519feebb2864397ce7949a86c5fbbd6",
       "language": "Rust",
-      "bytes": 39939,
+      "bytes": 39966,
       "symbols": [
         {
           "name": "loudness_config",
@@ -4550,223 +4598,223 @@
         },
         {
           "name": "update_channel",
-          "line": 265
+          "line": 266
         },
         {
           "name": "update_config",
-          "line": 293
+          "line": 294
         },
         {
           "name": "track_running_config",
-          "line": 298
+          "line": 299
         },
         {
           "name": "running_config",
-          "line": 311
+          "line": 312
         },
         {
           "name": "start",
-          "line": 318
+          "line": 319
         },
         {
           "name": "foreground_start",
-          "line": 348
+          "line": 349
         },
         {
           "name": "begin_processing",
-          "line": 398
+          "line": 399
         },
         {
           "name": "mark_started",
-          "line": 405
+          "line": 406
         },
         {
           "name": "record_failure",
-          "line": 412
+          "line": 413
         },
         {
           "name": "clear_failure",
-          "line": 431
+          "line": 432
         },
         {
           "name": "failure",
-          "line": 438
+          "line": 439
         },
         {
           "name": "output_age",
-          "line": 446
+          "line": 447
         },
         {
           "name": "uptime",
-          "line": 453
+          "line": 454
         },
         {
           "name": "next_task_generation",
-          "line": 460
+          "line": 461
         },
         {
           "name": "log_dev_task",
-          "line": 464
+          "line": 465
         },
         {
           "name": "replace_token",
-          "line": 470
+          "line": 471
         },
         {
           "name": "spawn_dev_metrics_snapshot",
-          "line": 481
+          "line": 482
         },
         {
           "name": "stop_task",
-          "line": 501
+          "line": 502
         },
         {
           "name": "abort_supervisor",
-          "line": 532
+          "line": 533
         },
         {
           "name": "stop_supervisor",
-          "line": 546
+          "line": 547
         },
         {
           "name": "stop_validation",
-          "line": 570
+          "line": 571
         },
         {
           "name": "stop_dev_metrics_snapshot",
-          "line": 575
+          "line": 576
         },
         {
           "name": "spawn_task_runner",
-          "line": 580
+          "line": 581
         },
         {
           "name": "spawn_validation",
-          "line": 596
+          "line": 597
         },
         {
           "name": "stop",
-          "line": 630
+          "line": 631
         },
         {
           "name": "wait",
-          "line": 650
+          "line": 651
         },
         {
           "name": "stop_all",
-          "line": 686
+          "line": 687
         },
         {
           "name": "ChannelController",
-          "line": 721
+          "line": 722
         },
         {
           "name": "ChannelController",
-          "line": 725
-        },
-        {
-          "name": "new",
           "line": 726
         },
         {
+          "name": "new",
+          "line": 727
+        },
+        {
           "name": "add",
-          "line": 730
+          "line": 731
         },
         {
           "name": "get",
-          "line": 734
+          "line": 735
         },
         {
           "name": "remove",
-          "line": 738
+          "line": 739
         },
         {
           "name": "ProcessingGuard",
-          "line": 757
+          "line": 758
         },
         {
           "name": "Drop",
-          "line": 759
-        },
-        {
-          "name": "drop",
           "line": 760
         },
         {
+          "name": "drop",
+          "line": 761
+        },
+        {
           "name": "AbortOnDrop",
-          "line": 766
+          "line": 767
         },
         {
           "name": "Drop",
-          "line": 768
-        },
-        {
-          "name": "drop",
           "line": 769
         },
         {
+          "name": "drop",
+          "line": 770
+        },
+        {
           "name": "run_supervised",
-          "line": 777
+          "line": 778
         },
         {
           "name": "supervisor_loop",
-          "line": 804
+          "line": 805
         },
         {
           "name": "metrics_snapshot_loop",
-          "line": 902
+          "line": 903
         },
         {
           "name": "run_channel",
-          "line": 945
+          "line": 946
         },
         {
           "name": "tests",
-          "line": 976
+          "line": 977
         },
         {
           "name": "failure_messages_keep_only_the_host_of_addresses",
-          "line": 982
+          "line": 983
         },
         {
           "name": "a_failure_is_kept_across_retries_until_the_playout_airs",
-          "line": 1000
+          "line": 1001
         },
         {
           "name": "failed_start_restores_not_running_state",
-          "line": 1023
+          "line": 1024
         },
         {
           "name": "only_one_channel_command_runs_at_a_time",
-          "line": 1036
+          "line": 1037
         },
         {
           "name": "a_failed_channel_command_releases_its_claim",
-          "line": 1051
+          "line": 1052
         },
         {
           "name": "a_panicking_playout_comes_back_as_an_error",
-          "line": 1068
+          "line": 1069
         },
         {
           "name": "a_finished_playout_keeps_its_result",
-          "line": 1078
+          "line": 1079
         },
         {
           "name": "dropping_the_supervisor_stops_the_playout_task",
-          "line": 1087
-        },
-        {
-          "name": "Flag",
           "line": 1088
         },
         {
+          "name": "Flag",
+          "line": 1089
+        },
+        {
           "name": "Drop",
-          "line": 1090
+          "line": 1091
         },
         {
           "name": "drop",
-          "line": 1091
+          "line": 1092
         }
       ]
     },
@@ -5069,9 +5117,9 @@
       ]
     },
     "backend/app/src/player/output/playout.rs": {
-      "sha256": "e8c42b823cd95b8b528ffcc0900ab8aa9a0011e326b3019848da6483334ee210",
+      "sha256": "0f1edd662bcc569669beaa463b3118a169b98efafff662e1c193e09be84b9cc7",
       "language": "Rust",
-      "bytes": 43108,
+      "bytes": 45006,
       "symbols": [
         {
           "name": "channel_logo",
@@ -5086,168 +5134,172 @@
           "line": 68
         },
         {
+          "name": "load",
+          "line": 69
+        },
+        {
           "name": "set_clip_lshape",
-          "line": 90
+          "line": 132
         },
         {
           "name": "player",
-          "line": 170
+          "line": 212
         },
         {
           "name": "play_hls",
-          "line": 253
+          "line": 297
         },
         {
           "name": "hls_watchdog",
-          "line": 285
-        },
-        {
-          "name": "play_loop",
           "line": 329
         },
         {
+          "name": "play_loop",
+          "line": 373
+        },
+        {
           "name": "playlist_breaks",
-          "line": 556
+          "line": 600
         },
         {
           "name": "next_source",
-          "line": 623
+          "line": 667
         },
         {
           "name": "preload_later",
-          "line": 634
+          "line": 678
         },
         {
           "name": "hls_playout_rate",
-          "line": 643
+          "line": 687
         },
         {
           "name": "hls_rate_correction",
-          "line": 671
+          "line": 715
         },
         {
           "name": "open_playout",
-          "line": 694
+          "line": 738
         },
         {
           "name": "open_desktop_playout",
-          "line": 752
+          "line": 796
         },
         {
           "name": "open_desktop_playout",
-          "line": 762
+          "line": 806
         },
         {
           "name": "engine_output_config",
-          "line": 772
+          "line": 816
         },
         {
           "name": "recording_config",
-          "line": 856
+          "line": 898
         },
         {
           "name": "disable_incompatible_recording",
-          "line": 939
+          "line": 981
         },
         {
           "name": "desktop_control_callback",
-          "line": 950
+          "line": 992
         },
         {
           "name": "validate_supported_config",
-          "line": 976
+          "line": 1018
         },
         {
           "name": "subtitle_media_path",
-          "line": 988
+          "line": 1030
         },
         {
           "name": "output_url",
-          "line": 1006
+          "line": 1048
         },
         {
           "name": "hls_playlist_path",
-          "line": 1017
+          "line": 1059
         },
         {
           "name": "play_plain",
-          "line": 1033
+          "line": 1075
         },
         {
           "name": "play_plain_from",
-          "line": 1044
+          "line": 1086
         },
         {
           "name": "playout_duration",
-          "line": 1076
+          "line": 1118
         },
         {
           "name": "engine_error",
-          "line": 1081
+          "line": 1123
         },
         {
           "name": "request_shutdown",
-          "line": 1085
-        },
-        {
-          "name": "tests",
-          "line": 1090
-        },
-        {
-          "name": "recording_test_config",
-          "line": 1096
-        },
-        {
-          "name": "full_placeholder_keeps_explicit_duration",
-          "line": 1115
-        },
-        {
-          "name": "shorter_placeholder_slot_is_trimmed",
           "line": 1127
         },
         {
+          "name": "tests",
+          "line": 1132
+        },
+        {
+          "name": "recording_test_config",
+          "line": 1138
+        },
+        {
+          "name": "full_placeholder_keeps_explicit_duration",
+          "line": 1157
+        },
+        {
+          "name": "shorter_placeholder_slot_is_trimmed",
+          "line": 1169
+        },
+        {
           "name": "regular_clip_keeps_loop_duration",
-          "line": 1139
+          "line": 1181
         },
         {
           "name": "hls_rate_correction_slows_down_when_playout_is_early",
-          "line": 1150
+          "line": 1192
         },
         {
           "name": "hls_rate_correction_speeds_up_when_playout_is_late",
-          "line": 1155
+          "line": 1197
         },
         {
           "name": "hls_rate_correction_ignores_tiny_delta",
-          "line": 1160
+          "line": 1202
         },
         {
           "name": "hls_rate_correction_is_clamped",
-          "line": 1165
+          "line": 1207
         },
         {
           "name": "hls_rate_correction_ignores_delta_larger_than_clip",
-          "line": 1171
+          "line": 1213
         },
         {
           "name": "desktop_stop_requests_process_shutdown",
-          "line": 1177
+          "line": 1219
         },
         {
           "name": "desktop_override_disables_stream_copy_recording",
-          "line": 1186
+          "line": 1228
         },
         {
           "name": "desktop_override_disables_hls_variant_recording",
-          "line": 1193
+          "line": 1235
         },
         {
           "name": "desktop_override_keeps_dedicated_recording_encode",
-          "line": 1200
+          "line": 1242
         },
         {
           "name": "inactive_copy_source_disables_recording",
-          "line": 1208
+          "line": 1250
         }
       ]
     },
@@ -7906,201 +7958,205 @@
       ]
     },
     "backend/app/src/utils/graphics.rs": {
-      "sha256": "99e4e8c323e66ac7b86f7015a6d7f9d46f0f6bb1124deaf063793a6b67cbca31",
+      "sha256": "5cec61cf7ed03b638e233447d023c2799db92335fd48bc1958d07bb5b9ab7999",
       "language": "Rust",
-      "bytes": 30014,
+      "bytes": 31744,
       "symbols": [
         {
+          "name": "load_channel_ticker",
+          "line": 25
+        },
+        {
           "name": "LayerKind",
-          "line": 30
+          "line": 72
         },
         {
           "name": "Animation",
-          "line": 43
+          "line": 85
         },
         {
           "name": "TextAlign",
-          "line": 57
+          "line": 99
         },
         {
           "name": "DuringLShape",
-          "line": 67
+          "line": 109
         },
         {
           "name": "DuringLShape",
-          "line": 77
+          "line": 119
         },
         {
           "name": "as_str",
-          "line": 78
+          "line": 120
         },
         {
           "name": "parse",
-          "line": 86
+          "line": 128
         },
         {
           "name": "default_true",
-          "line": 96
+          "line": 138
         },
         {
           "name": "default_opacity",
-          "line": 100
+          "line": 142
         },
         {
           "name": "default_font_size",
-          "line": 104
+          "line": 146
         },
         {
           "name": "default_color",
-          "line": 108
+          "line": 150
         },
         {
           "name": "default_animation_ms",
-          "line": 112
+          "line": 154
         },
         {
           "name": "default_duration",
-          "line": 116
+          "line": 158
         },
         {
           "name": "TemplateLayer",
-          "line": 123
+          "line": 165
         },
         {
           "name": "TemplateInput",
-          "line": 173
+          "line": 215
         },
         {
           "name": "template_fields",
-          "line": 186
+          "line": 228
         },
         {
           "name": "is_field_char",
-          "line": 208
+          "line": 250
         },
         {
           "name": "placeholders",
-          "line": 213
+          "line": 255
         },
         {
           "name": "whole_placeholder",
-          "line": 238
+          "line": 280
         },
         {
           "name": "is_color",
-          "line": 245
+          "line": 287
         },
         {
           "name": "check_layer",
-          "line": 253
+          "line": 295
         },
         {
           "name": "prepare_template",
-          "line": 338
+          "line": 380
         },
         {
           "name": "parse_color",
-          "line": 416
+          "line": 458
         },
         {
           "name": "fill_fields",
-          "line": 437
+          "line": 479
         },
         {
           "name": "layer_image",
-          "line": 467
+          "line": 509
         },
         {
           "name": "engine_animation",
-          "line": 490
+          "line": 532
         },
         {
           "name": "graphic_spec",
-          "line": 507
+          "line": 549
         },
         {
           "name": "GraphicsTakes",
-          "line": 577
+          "line": 619
         },
         {
           "name": "TakeRecord",
-          "line": 580
+          "line": 622
         },
         {
           "name": "GraphicsTakes",
-          "line": 586
+          "line": 628
         },
         {
           "name": "records",
-          "line": 587
+          "line": 629
         },
         {
           "name": "add",
-          "line": 591
+          "line": 633
         },
         {
           "name": "keep_only",
-          "line": 596
+          "line": 638
         },
         {
           "name": "GraphicOnAirView",
-          "line": 606
+          "line": 648
         },
         {
           "name": "graphics_on_air",
-          "line": 615
+          "line": 657
         },
         {
           "name": "TakeOutcome",
-          "line": 639
+          "line": 681
         },
         {
           "name": "draw_and_take",
-          "line": 651
+          "line": 693
         },
         {
           "name": "take_template",
-          "line": 684
+          "line": 726
         },
         {
           "name": "tests",
-          "line": 749
+          "line": 791
         },
         {
           "name": "text_layer",
-          "line": 752
+          "line": 794
         },
         {
           "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
-          "line": 760
+          "line": 802
         },
         {
           "name": "layers_take_defaults_and_are_checked",
-          "line": 784
-        },
-        {
-          "name": "during_lshape_reads_back_what_it_writes",
-          "line": 817
-        },
-        {
-          "name": "prepare_template_trims_and_keeps_field_images",
           "line": 826
         },
         {
+          "name": "during_lshape_reads_back_what_it_writes",
+          "line": 859
+        },
+        {
+          "name": "prepare_template_trims_and_keeps_field_images",
+          "line": 868
+        },
+        {
           "name": "fields_are_filled_and_unknown_braces_stay",
-          "line": 858
+          "line": 900
         },
         {
           "name": "colors_are_read_in_every_hex_form",
-          "line": 870
+          "line": 912
         },
         {
           "name": "a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields",
-          "line": 881
+          "line": 923
         },
         {
           "name": "a_video_layer_makes_the_template_an_lshape",
-          "line": 918
+          "line": 960
         }
       ]
     },
@@ -10990,9 +11046,9 @@
       ]
     },
     "backend/app/tests/api/graphics.rs": {
-      "sha256": "f66438585b296462b0e89f83306bbbfe4c7977ebee8df9aa5806ab6310ec6bab",
+      "sha256": "51bb5f424b6ca9cc30cb99fed1af8d1ffb2d350a047bd2fa8206dfc24983cf4a",
       "language": "Rust",
-      "bytes": 10875,
+      "bytes": 11839,
       "symbols": [
         {
           "name": "send",
@@ -11008,11 +11064,11 @@
         },
         {
           "name": "graphics_go_on_and_off_air_and_follow_their_lshape_rule",
-          "line": 235
+          "line": 272
         },
         {
           "name": "futures_free_manager",
-          "line": 390
+          "line": 427
         }
       ]
     },
@@ -13104,289 +13160,309 @@
       ]
     },
     "backend/engine/src/compositor/graphics.rs": {
-      "sha256": "430fc1cfd2fd3a4748c98c7a55d973417cd95d4e32a2f17f0d8c6a082f949c00",
+      "sha256": "4f86273fb8a336b62076688e2490f0ad0d20a8b2a8cd7b51a4f97d3d26b6c0e1",
       "language": "Rust",
-      "bytes": 47554,
+      "bytes": 49687,
       "symbols": [
         {
-          "name": "GraphicAnimation",
-          "line": 31
+          "name": "logo_layer_geometry",
+          "line": 32
         },
         {
-          "name": "GraphicContent",
+          "name": "crate",
           "line": 48
         },
         {
+          "name": "set_template",
+          "line": 51
+        },
+        {
+          "name": "GraphicAnimation",
+          "line": 63
+        },
+        {
+          "name": "GraphicContent",
+          "line": 80
+        },
+        {
           "name": "GraphicLayerSpec",
-          "line": 70
+          "line": 102
         },
         {
           "name": "PictureWindow",
-          "line": 88
+          "line": 120
         },
         {
           "name": "GraphicSpec",
-          "line": 97
-        },
-        {
-          "name": "RenderedLayer",
-          "line": 104
-        },
-        {
-          "name": "RenderedGraphic",
-          "line": 119
-        },
-        {
-          "name": "picture_switch",
           "line": 129
         },
         {
+          "name": "RenderedLayer",
+          "line": 136
+        },
+        {
           "name": "RenderedGraphic",
-          "line": 133
+          "line": 151
+        },
+        {
+          "name": "picture_switch",
+          "line": 161
+        },
+        {
+          "name": "RenderedGraphic",
+          "line": 165
         },
         {
           "name": "exit_time",
-          "line": 135
+          "line": 167
         },
         {
           "name": "even_down",
-          "line": 150
+          "line": 182
         },
         {
           "name": "percent_px",
-          "line": 155
-        },
-        {
-          "name": "inside_rounded",
-          "line": 160
-        },
-        {
-          "name": "fill_rounded",
-          "line": 173
-        },
-        {
-          "name": "cut_corners",
           "line": 187
         },
         {
+          "name": "inside_rounded",
+          "line": 192
+        },
+        {
+          "name": "fill_rounded",
+          "line": 205
+        },
+        {
+          "name": "cut_corners",
+          "line": 219
+        },
+        {
           "name": "render_layer",
-          "line": 204
+          "line": 236
         },
         {
           "name": "render_graphic",
-          "line": 318
+          "line": 350
         },
         {
           "name": "ease",
-          "line": 375
+          "line": 407
         },
         {
           "name": "layer_level",
-          "line": 383
+          "line": 415
         },
         {
           "name": "blend_layer",
-          "line": 424
+          "line": 456
         },
         {
           "name": "blend_layer_with_visibility",
-          "line": 433
+          "line": 465
         },
         {
           "name": "OnAir",
-          "line": 486
-        },
-        {
-          "name": "OnAir",
-          "line": 495
-        },
-        {
-          "name": "out_since",
-          "line": 496
-        },
-        {
-          "name": "finished",
-          "line": 509
-        },
-        {
-          "name": "AlwaysOnSlot",
           "line": 518
         },
         {
+          "name": "OnAir",
+          "line": 527
+        },
+        {
+          "name": "out_since",
+          "line": 528
+        },
+        {
+          "name": "finished",
+          "line": 541
+        },
+        {
           "name": "AlwaysOnSlot",
-          "line": 523
+          "line": 550
+        },
+        {
+          "name": "AlwaysOnSlot",
+          "line": 555
         },
         {
           "name": "index",
-          "line": 524
-        },
-        {
-          "name": "AlwaysOn",
-          "line": 532
-        },
-        {
-          "name": "GraphicsState",
-          "line": 538
-        },
-        {
-          "name": "GraphicOnAir",
-          "line": 546
-        },
-        {
-          "name": "GraphicsControl",
           "line": 556
         },
         {
-          "name": "std",
-          "line": 558
+          "name": "AlwaysOn",
+          "line": 564
         },
         {
-          "name": "fmt",
-          "line": 559
+          "name": "GraphicsState",
+          "line": 570
+        },
+        {
+          "name": "GraphicOnAir",
+          "line": 580
         },
         {
           "name": "GraphicsControl",
-          "line": 566
+          "line": 590
+        },
+        {
+          "name": "std",
+          "line": 592
+        },
+        {
+          "name": "fmt",
+          "line": 593
+        },
+        {
+          "name": "GraphicsControl",
+          "line": 600
+        },
+        {
+          "name": "channel_logo",
+          "line": 603
+        },
+        {
+          "name": "set_channel_logo",
+          "line": 613
         },
         {
           "name": "state",
-          "line": 567
+          "line": 624
         },
         {
           "name": "set_always_on",
-          "line": 573
-        },
-        {
-          "name": "set_always_on_visible",
-          "line": 601
-        },
-        {
-          "name": "always_on_visible",
-          "line": 622
-        },
-        {
-          "name": "clear_always_on",
           "line": 630
         },
         {
+          "name": "set_always_on_visible",
+          "line": 658
+        },
+        {
+          "name": "always_on_visible",
+          "line": 679
+        },
+        {
+          "name": "clear_always_on",
+          "line": 687
+        },
+        {
           "name": "blend_always_on",
-          "line": 636
+          "line": 693
         },
         {
           "name": "blend_always_on_at",
-          "line": 640
+          "line": 697
         },
         {
           "name": "take",
-          "line": 685
+          "line": 742
         },
         {
           "name": "take_out",
-          "line": 719
+          "line": 776
         },
         {
           "name": "take_all_out",
-          "line": 737
+          "line": 794
         },
         {
           "name": "on_air",
-          "line": 747
+          "line": 804
         },
         {
           "name": "picture_on_air",
-          "line": 763
+          "line": 820
         },
         {
           "name": "picture",
-          "line": 774
+          "line": 831
         },
         {
           "name": "picture_at",
-          "line": 778
+          "line": 835
         },
         {
           "name": "blend",
-          "line": 812
+          "line": 869
         },
         {
           "name": "blend_at",
-          "line": 816
+          "line": 873
         },
         {
           "name": "tests",
-          "line": 856
+          "line": 913
         },
         {
           "name": "black_frame",
-          "line": 866
+          "line": 923
         },
         {
           "name": "luma",
-          "line": 874
+          "line": 931
         },
         {
           "name": "white_box",
-          "line": 878
+          "line": 935
         },
         {
           "name": "permanent_roles_survive_expiry_queue_pressure_and_take_all_out",
-          "line": 895
+          "line": 952
         },
         {
           "name": "permanent_visibility_is_explicit_and_does_not_reset_on_repeated_commands",
-          "line": 940
+          "line": 997
         },
         {
           "name": "suppressing_a_permanent_logo_never_suppresses_the_ticker_or_moves_a_slide",
-          "line": 992
+          "line": 1049
         },
         {
           "name": "a_picture_window_cannot_replace_a_permanent_role",
-          "line": 1035
+          "line": 1092
         },
         {
           "name": "empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged",
-          "line": 1076
+          "line": 1133
         },
         {
           "name": "a_box_lands_where_its_percentages_say",
-          "line": 1097
+          "line": 1154
         },
         {
           "name": "a_fade_comes_in_and_goes_out_over_its_time",
-          "line": 1120
+          "line": 1177
         },
         {
           "name": "a_duration_takes_the_graphic_out_by_itself",
-          "line": 1152
+          "line": 1209
         },
         {
           "name": "a_slide_starts_off_its_place_and_ends_on_it",
-          "line": 1174
+          "line": 1231
         },
         {
           "name": "taking_out_and_listing",
-          "line": 1197
+          "line": 1254
         },
         {
           "name": "a_graphic_for_another_frame_size_is_not_drawn",
-          "line": 1221
+          "line": 1278
         },
         {
           "name": "rounded_corners_are_cut",
-          "line": 1236
+          "line": 1293
         },
         {
           "name": "a_text_layer_draws_letters_on_its_fill",
-          "line": 1244
+          "line": 1301
         },
         {
           "name": "a_picture_template_is_an_lshape_with_its_layers_as_art",
-          "line": 1288
+          "line": 1345
         },
         {
           "name": "graphics_preview",
-          "line": 1353
+          "line": 1410
         }
       ]
     },
@@ -13622,9 +13698,9 @@
       ]
     },
     "backend/engine/src/compositor/lshape.rs": {
-      "sha256": "9fa254c96d5eff3acee24d8a21396159a2b54c4221f00c89ce33dd4be9c414f7",
+      "sha256": "1b200f974ab24dd8a3e12887a0d8edcd9dd58df41b1b84d373b5b30981e3b291",
       "language": "Rust",
-      "bytes": 26608,
+      "bytes": 28501,
       "symbols": [
         {
           "name": "lshape_phases",
@@ -13727,124 +13803,132 @@
           "line": 283
         },
         {
+          "name": "set_rendered_graphic",
+          "line": 286
+        },
+        {
           "name": "lock",
-          "line": 284
+          "line": 293
         },
         {
           "name": "set_graphic",
-          "line": 290
+          "line": 299
         },
         {
           "name": "replace",
-          "line": 310
+          "line": 319
         },
         {
           "name": "place",
-          "line": 328
+          "line": 337
         },
         {
           "name": "placement",
-          "line": 352
+          "line": 361
         },
         {
           "name": "reset",
-          "line": 357
+          "line": 366
         },
         {
           "name": "set_clip_graphic",
-          "line": 364
+          "line": 373
         },
         {
           "name": "replacement",
-          "line": 400
+          "line": 409
         },
         {
           "name": "on",
-          "line": 408
+          "line": 417
         },
         {
           "name": "off",
-          "line": 413
+          "line": 422
         },
         {
           "name": "is_on",
-          "line": 418
+          "line": 427
         },
         {
           "name": "is_ready",
-          "line": 423
+          "line": 432
         },
         {
           "name": "frame",
-          "line": 433
+          "line": 442
         },
         {
           "name": "level_after",
-          "line": 452
+          "line": 461
         },
         {
           "name": "LShapeScaler",
-          "line": 463
+          "line": 472
         },
         {
           "name": "ScaleKey",
-          "line": 466
+          "line": 475
         },
         {
           "name": "apply_lshape",
-          "line": 470
+          "line": 479
         },
         {
           "name": "paste",
-          "line": 517
+          "line": 526
         },
         {
           "name": "marked_level",
-          "line": 541
+          "line": 550
         },
         {
           "name": "tests",
-          "line": 558
+          "line": 567
+        },
+        {
+          "name": "loading_a_model_preserves_free_picture_geometry_and_on_air_state",
+          "line": 573
         },
         {
           "name": "graphic",
-          "line": 563
+          "line": 622
         },
         {
           "name": "the_window_sits_in_its_corner",
-          "line": 586
+          "line": 645
         },
         {
           "name": "a_corner_reads_back_as_its_name",
-          "line": 619
-        },
-        {
-          "name": "a_move_from_outside_places_every_graphic_until_it_is_undone",
-          "line": 632
-        },
-        {
-          "name": "the_picture_moves_from_the_full_screen_to_the_window",
           "line": 678
         },
         {
+          "name": "a_move_from_outside_places_every_graphic_until_it_is_undone",
+          "line": 691
+        },
+        {
+          "name": "the_picture_moves_from_the_full_screen_to_the_window",
+          "line": 737
+        },
+        {
           "name": "the_frame_is_drawn_into_the_window_over_the_graphic",
-          "line": 697
+          "line": 756
         },
         {
           "name": "switching_animates_both_ways",
-          "line": 725
+          "line": 784
         },
         {
           "name": "a_swapped_or_clip_graphic_takes_the_channels_place",
-          "line": 746
+          "line": 805
         },
         {
           "name": "the_logo_goes_off_before_the_picture_shrinks",
-          "line": 794
+          "line": 853
         },
         {
           "name": "marked_stretches_ease_in_and_out",
-          "line": 807
+          "line": 866
         }
       ]
     },
@@ -15004,9 +15088,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "a755464664fbb5f3dc912f9a1ff093780830566ae71e3a630548631e1e1c3f82",
+      "sha256": "75ff45551bc732f266827a3b2ac58c33d219b087f36ce1d7162e6b3cd646513b",
       "language": "Rust",
-      "bytes": 45934,
+      "bytes": 45959,
       "symbols": [
         {
           "name": "analysis",
@@ -15070,295 +15154,295 @@
         },
         {
           "name": "available_font_families",
-          "line": 101
+          "line": 102
         },
         {
           "name": "set_processing_bench_interval",
-          "line": 107
+          "line": 108
         },
         {
           "name": "ClipResult",
-          "line": 112
+          "line": 113
         },
         {
           "name": "LogoFade",
-          "line": 121
+          "line": 122
         },
         {
           "name": "LogoGaps",
-          "line": 140
+          "line": 141
         },
         {
           "name": "LogoGaps",
-          "line": 145
+          "line": 146
         },
         {
           "name": "new",
-          "line": 149
+          "line": 150
         },
         {
           "name": "is_empty",
-          "line": 178
+          "line": 179
         },
         {
           "name": "iter",
-          "line": 183
+          "line": 184
         },
         {
           "name": "Playout",
-          "line": 188
+          "line": 189
         },
         {
           "name": "HlsHealth",
-          "line": 199
+          "line": 200
         },
         {
           "name": "HlsHealth",
-          "line": 203
-        },
-        {
-          "name": "new",
           "line": 204
         },
         {
+          "name": "new",
+          "line": 205
+        },
+        {
           "name": "last_muxed_age",
-          "line": 210
+          "line": 211
         },
         {
           "name": "mark_muxed",
-          "line": 217
+          "line": 218
         },
         {
           "name": "PlayOptions",
-          "line": 226
+          "line": 227
         },
         {
           "name": "AsyncPlayout",
-          "line": 235
+          "line": 236
         },
         {
           "name": "WorkerCompletion",
-          "line": 249
+          "line": 250
         },
         {
           "name": "AsyncPlayout",
-          "line": 254
-        },
-        {
-          "name": "open",
           "line": 255
         },
         {
+          "name": "open",
+          "line": 256
+        },
+        {
           "name": "open_stream",
-          "line": 264
+          "line": 265
         },
         {
           "name": "open_hls",
-          "line": 273
+          "line": 274
         },
         {
           "name": "open_decklink",
-          "line": 304
+          "line": 305
         },
         {
           "name": "open_ndi",
-          "line": 314
+          "line": 315
         },
         {
           "name": "open_desktop",
-          "line": 324
+          "line": 325
         },
         {
           "name": "open_with",
-          "line": 328
+          "line": 329
         },
         {
           "name": "lshape_control",
-          "line": 373
+          "line": 374
         },
         {
           "name": "logo_control",
-          "line": 379
+          "line": 380
         },
         {
           "name": "playback_control",
-          "line": 383
+          "line": 384
         },
         {
           "name": "hls_health",
-          "line": 387
+          "line": 388
         },
         {
           "name": "preloader",
-          "line": 392
+          "line": 393
         },
         {
           "name": "play",
-          "line": 396
+          "line": 397
         },
         {
           "name": "play_with_seek",
-          "line": 400
+          "line": 401
         },
         {
           "name": "play_with_timing_and_logo_fade",
-          "line": 423
+          "line": 424
         },
         {
           "name": "play_with_timing_logo_fade_and_rate",
-          "line": 442
+          "line": 443
         },
         {
           "name": "play_with_timing_logo_fade_rate_and_audio",
-          "line": 464
+          "line": 465
         },
         {
           "name": "finish",
-          "line": 492
+          "line": 493
         },
         {
           "name": "Drop",
-          "line": 515
-        },
-        {
-          "name": "drop",
           "line": 516
         },
         {
+          "name": "drop",
+          "line": 517
+        },
+        {
           "name": "AsyncCommand",
-          "line": 526
+          "line": 527
         },
         {
           "name": "run_async_playout_worker",
-          "line": 544
+          "line": 545
         },
         {
           "name": "Playout",
-          "line": 596
-        },
-        {
-          "name": "open",
           "line": 597
         },
         {
+          "name": "open",
+          "line": 598
+        },
+        {
           "name": "open_stream",
-          "line": 605
+          "line": 606
         },
         {
           "name": "open_decklink",
-          "line": 617
+          "line": 618
         },
         {
           "name": "open_ndi",
-          "line": 629
+          "line": 630
         },
         {
           "name": "open_desktop",
-          "line": 638
+          "line": 639
         },
         {
           "name": "open_hls",
-          "line": 646
+          "line": 647
         },
         {
           "name": "open_hls_with_health",
-          "line": 668
+          "line": 669
         },
         {
           "name": "validate_fallback_duration",
-          "line": 693
+          "line": 694
         },
         {
           "name": "with_output",
-          "line": 701
+          "line": 702
         },
         {
           "name": "play",
-          "line": 723
+          "line": 724
         },
         {
           "name": "play_with_loudness_preview",
-          "line": 732
+          "line": 733
         },
         {
           "name": "play_with_seek",
-          "line": 805
+          "line": 806
         },
         {
           "name": "play_with_timing_and_logo_fade",
-          "line": 817
+          "line": 818
         },
         {
           "name": "play_timed",
-          "line": 836
+          "line": 837
         },
         {
           "name": "finish",
-          "line": 924
+          "line": 925
         },
         {
           "name": "init_media",
-          "line": 932
+          "line": 933
         },
         {
           "name": "play_program_clip",
-          "line": 946
+          "line": 947
         },
         {
           "name": "play_to_output",
-          "line": 980
+          "line": 981
         },
         {
           "name": "played_seconds",
-          "line": 1035
+          "line": 1036
         },
         {
           "name": "classify_fallback_error",
-          "line": 1043
+          "line": 1044
         },
         {
           "name": "tests",
-          "line": 1056
+          "line": 1057
         },
         {
           "name": "failed_live_connection_returns_control_without_filling_the_event_slot",
-          "line": 1066
+          "line": 1067
         },
         {
           "name": "clips_take_exactly_their_duration_on_the_output",
-          "line": 1111
+          "line": 1112
         },
         {
           "name": "preloaded_clip_trim_after_a_previous_clip_completes_its_slot",
-          "line": 1146
+          "line": 1147
         },
         {
           "name": "damaged_clip",
-          "line": 1190
+          "line": 1191
         },
         {
           "name": "damaged_data_in_a_clip_keeps_its_slot_length",
-          "line": 1209
+          "line": 1210
         },
         {
           "name": "a_clip_failing_midway_counts_what_already_went_out",
-          "line": 1240
+          "line": 1241
         },
         {
           "name": "restart_during_fallback_remains_a_playout_restart",
-          "line": 1259
+          "line": 1260
         },
         {
           "name": "playlist_reset_during_fallback_reinitializes_playout",
-          "line": 1267
+          "line": 1268
         },
         {
           "name": "restart_request_is_independent_from_skip_request",
-          "line": 1275
+          "line": 1276
         },
         {
           "name": "dropping_async_playout_discards_queued_work_and_finishes_worker",
-          "line": 1286
+          "line": 1287
         }
       ]
     },
@@ -19142,7 +19226,7 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "704a030984a92509f00d8301b74a9a30449aebeee13bd18414438cf04297e901",
+      "sha256": "637d8f0dc6000b89429f7e9fb5c9c1a51828d757928669cdcba838a33ce5a65e",
       "language": "Rust",
       "bytes": 64760,
       "symbols": [
@@ -20649,9 +20733,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "79a4f46c6d9b455e14de9c983c6533324fe9a04d85d23f5392fd8d97d197c0cb",
+      "sha256": "0c74cabe7e36212d0586abd108d3f44a5b8c969958c0f18f310e0cccc3cf8ce3",
       "language": "Markdown",
-      "bytes": 35574,
+      "bytes": 36077,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -20673,9 +20757,9 @@
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "ecaa4fa789e77f4b987fb05b8379fe5afa4705cdb2971edb7df1643a3da63100",
+      "sha256": "091c49520e20e04c674bb76384dd4c37c9d3d2ff06c071aa7ba2c2ff18ccd0c7",
       "language": "Markdown",
-      "bytes": 11716,
+      "bytes": 14357,
       "symbols": []
     },
     "docs/external_tasks.md": {
@@ -20691,9 +20775,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "70acc9555b419613ef72eaaa1841b471206fdff25c86ed2de9fe0d508b19ded2",
+      "sha256": "813c166760634d927dd6b01f9046f0fae54ce5133c69bc7f7d92a64ffc7aad3a",
       "language": "Markdown",
-      "bytes": 16930,
+      "bytes": 23875,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -20720,6 +20804,12 @@
       "bytes": 12015,
       "symbols": []
     },
+    "docs/graphics-handoff/migration-b-evidence.json": {
+      "sha256": "42d7c1f81aee8731bc5f2b4c75efadfe13bdd3ae440c56783e2963dc160a6701",
+      "language": "JSON",
+      "bytes": 9727,
+      "symbols": []
+    },
     "docs/graphics-handoff/on-air-design.html": {
       "sha256": "aa5f97edc9c0051c4ed7c018336746f84441760429984b4b9137f6ab32c42225",
       "language": "HTML",
@@ -20739,9 +20829,9 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "ad974a0421203f3ce14371826a10e11f2abde91d27b85046d78dbedb05178dbe",
+      "sha256": "4b073268870f70956021e8c539c8b553df1f6392f23c6bbfc35a02d310c330a1",
       "language": "Markdown",
-      "bytes": 5069,
+      "bytes": 5256,
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
@@ -34252,6 +34342,12 @@
       "sha256": "8f90bf04ef83a5f7efd0672e71e2b3a28afdd85f830068cb0a540bd7e7db65a4",
       "language": "SQL",
       "bytes": 1131,
+      "symbols": []
+    },
+    "migrations/00029_graphics_channel_bindings.sql": {
+      "sha256": "29042bb749a9e8dfdae103b250f5566d9ad5808923a7c080e8955748e26df3d7",
+      "language": "SQL",
+      "bytes": 867,
       "symbols": []
     },
     "package-lock.json": {

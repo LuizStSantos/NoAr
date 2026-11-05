@@ -35,6 +35,7 @@ pub async fn db_migrate(pool: &SqlitePool) -> Result<bool, ProcessError> {
     }
 
     MIGRATOR.run(pool).await?;
+    super::convert_channel_graphics(pool).await?;
 
     if !existing_schema {
         // Earlier migrations seed the initial channel. It is a new configuration,

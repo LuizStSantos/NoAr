@@ -27,6 +27,38 @@ use crate::{
 /// the oldest out.
 pub const MAX_GRAPHICS_ON_AIR: usize = 16;
 
+/// Resolve a native logo's layout for its editable template canvas, using the
+/// same image dimensions, expression parser and chroma rounding as playout.
+pub fn logo_layer_geometry(
+    config: &crate::LogoConfig,
+    width: u32,
+    height: u32,
+) -> Result<(f64, f64, f64, f64)> {
+    anyhow::ensure!(width > 0 && height > 0, "output size must be positive");
+    let logo = crate::compositor::logo::LogoOverlay::load(config, width, height)?;
+
+    Ok((
+        f64::from(logo.x) * 100.0 / f64::from(width),
+        f64::from(logo.y) * 100.0 / f64::from(height),
+        f64::from(logo.width) * 100.0 / f64::from(width),
+        f64::from(logo.height) * 100.0 / f64::from(height),
+    ))
+}
+
+impl crate::LShapeControl {
+    /// Draw a bound L-shape model, preserving its complete picture geometry.
+    /// Loading it does not take it on or off air.
+    pub fn set_template(&self, spec: &GraphicSpec, width: u32, height: u32) -> Result<()> {
+        let rendered = render_graphic(spec, width, height)?;
+        anyhow::ensure!(
+            rendered.picture.is_some(),
+            "channel L-shape needs a video layer"
+        );
+        self.set_rendered_graphic(rendered.picture);
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum GraphicAnimation {
     None,
@@ -538,6 +570,8 @@ struct AlwaysOn {
 struct GraphicsState {
     on_air: Vec<OnAir>,
     always_on: [Option<AlwaysOn>; 2],
+    // Native logo composition preserves clip marks, remote placement and desktop overlays.
+    channel_logo: crate::LogoControl,
     next_id: u64,
 }
 
@@ -564,6 +598,29 @@ impl std::fmt::Debug for GraphicsControl {
 }
 
 impl GraphicsControl {
+    /// The native compositor for the channel's bound logo model. Compatibility
+    /// controls share this handle rather than creating a second logo plane.
+    pub fn channel_logo(&self) -> crate::LogoControl {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .channel_logo
+            .clone()
+    }
+
+    /// Install the native image model in the permanent logo role. Its fade and
+    /// external overrides are independent of the temporary take queue.
+    pub fn set_channel_logo(
+        &self,
+        config: Option<&crate::LogoConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.channel_logo().set_configured(config, width, height)?;
+        self.clear_always_on(AlwaysOnSlot::Logo);
+        Ok(())
+    }
+
     fn state(&self) -> std::sync::MutexGuard<'_, GraphicsState> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }

@@ -13,6 +13,11 @@ one is tagged.
 
 ### Added
 
+- Channel graphics conversion: sqlx migration `00029` and automatic, atomic
+  conversion to bound logo, ticker and L-shape templates and quick-scene models.
+  Existing graphics settings pages save these models; legacy columns stay
+  unchanged. Returning to an older image requires restoring the pre-update
+  database backup. See [Docker rollback](docs/docker.md#restoring-before-graphics-conversion-00029).
 - Graphics Composer: admins can create and edit templates from Templates or
   On air, arrange and resize layers in percent or output pixels, lock proportions,
   undo edits, choose fonts and fields, upload or select storage artwork, set a

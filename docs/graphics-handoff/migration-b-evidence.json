@@ -1,0 +1,342 @@
+{
+  "scope": "Stage b disposable application migration, legacy-page writes, playout/backend restart and backup/image restoration; no deployment",
+  "release_image": "ghcr.io/luizstsantos/noar@sha256:5da200e079fa8ec94d8ae126bc9a4cd0a93be6e38aba586a7eb1506af6ae1332",
+  "release_tag": "v2.2.1",
+  "release_commit": "d4a1a0a8a41f39b90de23844910998431fd42510",
+  "gstreamer": "1.26.2",
+  "video": {
+    "width": 640,
+    "height": 360,
+    "fps": 25
+  },
+  "database": {
+    "before": 27,
+    "after": 29,
+    "unchanged_prior_migrations": [
+      "00001_create_tables.sql",
+      "00002_recording.sql",
+      "00003_split_config.sql",
+      "00004_pipeline_options.sql",
+      "00005_output_live_inputs_and_audio_processing.sql",
+      "00006_schedule.sql",
+      "00007_noar_defaults.sql",
+      "00008_noar_cleanup.sql",
+      "00009_schedule_resume.sql",
+      "00010_direct_preview.sql",
+      "00011_as_run.sql",
+      "00012_update_check.sql",
+      "00013_updater.sql",
+      "00014_logo_control.sql",
+      "00015_scte35.sql",
+      "00016_logo_transitions.sql",
+      "00017_as_run_archive.sql",
+      "00018_scte35_key.sql",
+      "00019_convert_uploads.sql",
+      "00020_lshape.sql",
+      "00021_graphics_scenes.sql",
+      "00022_graphics_events.sql",
+      "00023_output_audio_sample_rate.sql",
+      "00024_ndi_output.sql",
+      "00025_sdi_output.sql",
+      "00026_live_key.sql",
+      "00027_rename_ffmpeg_level.sql",
+      "00028_graphics_templates.sql"
+    ],
+    "frozen_processing_columns": "PASS: exact row equality after conversion, page saves and restart",
+    "binding_ids_after_restart": "PASS: unchanged",
+    "all_channel_transaction_rollback": "PASS: unit fixture with two channels",
+    "idempotence_and_edited_model_preservation": "PASS",
+    "native_fractional_lshape_rounding": "PASS: real migrations in unit fixture",
+    "final_binary_fresh_27_to_29_startup": "PASS: separate fresh copy, automatic backup, frozen-row equality and real HLS",
+    "converted_models_after_e2e_fixture_cleanup": 4
+  },
+  "rollback": {
+    "status": "PASS",
+    "image": "ghcr.io/luizstsantos/noar:2.2.1",
+    "database_migration": 27,
+    "authenticated_login": "PASS",
+    "logo": "old-logo.png",
+    "logo_opacity": 0.6,
+    "scene": "Migration break",
+    "graphics_binding_table_absent": true,
+    "backup": "noar.db.pre-update-20261105-223344-v27.bak",
+    "sha256": "93c5c2e8c7e6570da99731178de37b7e8c21811ff7804eb0b92e633ce731cc64",
+    "restored_file_sha256": "93c5c2e8c7e6570da99731178de37b7e8c21811ff7804eb0b92e633ce731cc64"
+  },
+  "browser": {
+    "engine": "Chromium",
+    "old_logo_page_save_reload": "PASS",
+    "image_saved": "new-logo.png",
+    "composer_regressions": 3,
+    "viewport_width": 1440,
+    "assigned_logo_duplicate_take": "PASS: final binary returned HTTP 409"
+  },
+  "hls_measurements": {
+    "logo_opacity": 0.6,
+    "logo_roi": [
+      554,
+      18,
+      68,
+      36
+    ],
+    "logo_median_rgb": {
+      "before-logo": [
+        144.0,
+        187.0,
+        120.0
+      ],
+      "after-logo": [
+        144.0,
+        187.0,
+        120.0
+      ],
+      "old-page-logo": [
+        18.0,
+        201.0,
+        251.0
+      ],
+      "backend-restart-logo": [
+        18.0,
+        201.0,
+        251.0
+      ],
+      "rollback-logo": [
+        144.0,
+        187.0,
+        120.0
+      ]
+    },
+    "lshape_art_roi": [
+      16,
+      270,
+      150,
+      70
+    ],
+    "lshape_art_median_rgb": {
+      "before-lshape": [
+        15.0,
+        48.0,
+        83.0
+      ],
+      "after-lshape": [
+        15.0,
+        48.0,
+        83.0
+      ]
+    },
+    "method": "Median RGB in stable color-bar/art regions. Semitransparent logo detects duplicate blending. These are settled samples, not aligned frame-by-frame comparisons."
+  },
+  "free_window": {
+    "x": 10,
+    "y": 10,
+    "width": 70,
+    "height": 50,
+    "after_legacy_page_save": "PASS: persisted geometry and real HLS",
+    "after_playout_restart": "PASS: real HLS"
+  },
+  "rust": {
+    "fmt": "PASS",
+    "clippy_no_default_all_targets_deny_warnings": "PASS",
+    "test_no_default": {
+      "passed": 679,
+      "failed": 0,
+      "ignored": 14
+    },
+    "build_no_default": "PASS"
+  },
+  "console_log_error_lines": {
+    "server.log": 0,
+    "rollback-server.log": 0
+  },
+  "console_log_warnings": {
+    "server.log": [
+      "No Two-factor authentication!",
+      "Update check failed: GitHub did not answer: error sending request for url (https://api.github.com/repos/LuizStSantos/NoAr/releases/latest): client error (Connect): tunnel error: unsuccessful"
+    ],
+    "rollback-server.log": [
+      "No Two-factor authentication!",
+      "Update check failed: GitHub did not answer: error sending request for url (https://api.github.com/repos/LuizStSantos/NoAr/releases/latest): client error (Connect): tunnel error: unsuccessful"
+    ]
+  },
+  "stages": [
+    {
+      "stage": "after-logo",
+      "capture": "output-migration-b-after-logo.jpg",
+      "hls_segment_sha256": "c2e58a92879207ac58b9c1af8e9d57c37f66166b23f048ddf05aa1f9dbfefa2a",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 43,
+            "output_age": 0.2
+          }
+        ]
+      }
+    },
+    {
+      "stage": "after-lshape",
+      "capture": "output-migration-b-after-lshape.jpg",
+      "hls_segment_sha256": "a2534c501394972009a13330db54c4c445a8137b2670d7480942180e1e3e348a",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 64,
+            "output_age": 0.4
+          }
+        ]
+      }
+    },
+    {
+      "stage": "after-old-page-lshape",
+      "capture": "output-migration-b-after-old-page-lshape.jpg",
+      "hls_segment_sha256": "91efad7228936bf9df984a49327c5179f6df0844131b40405c18e41eb6751ff2",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 169,
+            "output_age": 0.2
+          }
+        ]
+      }
+    },
+    {
+      "stage": "backend-restart-logo",
+      "capture": "output-migration-b-backend-restart-logo.jpg",
+      "hls_segment_sha256": "681718cb4387f114051c2e74b01a816b4003eab39253cdaae7bb5e0051c4f3d3",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 33,
+            "output_age": 0.4
+          }
+        ]
+      }
+    },
+    {
+      "stage": "before-logo",
+      "capture": "output-migration-b-before-logo.jpg",
+      "hls_segment_sha256": "33159f5b6c3411cbf41c2e9f32d84bdd352f212be19a1b7dccb71ccbb6d4a70b",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 380,
+            "output_age": 0.4
+          }
+        ]
+      }
+    },
+    {
+      "stage": "before-lshape",
+      "capture": "output-migration-b-before-lshape.jpg",
+      "hls_segment_sha256": "aaaeee84bba7ad9a1bafe75fac8ba2c3f097a34132f98c8e79c64ff4075d5932",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 386,
+            "output_age": 0.1
+          }
+        ]
+      }
+    },
+    {
+      "stage": "free-lshape",
+      "capture": "output-migration-b-free-lshape.jpg",
+      "hls_segment_sha256": "394c48784c257a65e3364665f866731a7be764594ef318f4578d9021b27591c7",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 87,
+            "output_age": 0.2
+          }
+        ]
+      }
+    },
+    {
+      "stage": "old-page-logo",
+      "capture": "output-migration-b-old-page-logo.jpg",
+      "hls_segment_sha256": "1be877145e3083f984b4797247e382236d426f72d231eca9cb6fd9798d71f6a7",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 89,
+            "output_age": 0.3
+          }
+        ]
+      }
+    },
+    {
+      "stage": "playout-restart-lshape",
+      "capture": "output-migration-b-playout-restart-lshape.jpg",
+      "hls_segment_sha256": "3617da04cd3cacdc5bc55dec609e86ecf077b9f1709e2d14131215df6b6d18c9",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 7,
+            "output_age": 0.3
+          }
+        ]
+      }
+    },
+    {
+      "stage": "rollback-logo",
+      "capture": "output-migration-b-rollback-logo.jpg",
+      "hls_segment_sha256": "74f3cc9e083dc13555c869445e96cd8b85ac72495bd9e9e9d499d79610463aa2",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 17,
+            "output_age": 0.2
+          }
+        ]
+      }
+    }
+  ],
+  "not_tested_in_stage_b": [
+    "Desktop hardware/window output",
+    "Full clip logo_marks/L-shape and scheduled-event compatibility matrix",
+    "All keyed-route, replacement/placement and transition combinations",
+    "XMLTV-specific live runtime coverage",
+    "Aligned before/after frame-by-frame parity and long-running soak",
+    "Scrolling ticker migration: released 2.2.1 has no persisted application ticker configuration",
+    "Clock: outside scope"
+  ]
+}

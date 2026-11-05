@@ -25,11 +25,11 @@ pub async fn select_configuration(
         logging.detect_silence AS logging_detect_silence,
         logging.ignore_lines AS logging_ignore,
         processing.mode AS processing_mode,
-        processing.add_logo AS processing_add_logo,
-        processing.logo AS processing_logo,
-        processing.logo_scale AS processing_logo_scale,
-        processing.logo_opacity AS processing_logo_opacity,
-        processing.logo_position AS processing_logo_position,
+        0 AS processing_add_logo,
+        '' AS processing_logo,
+        '' AS processing_logo_scale,
+        1.0 AS processing_logo_opacity,
+        '' AS processing_logo_position,
         audio.volume AS processing_volume,
         audio.loudness_scope AS processing_loudness_scope,
         audio.compressor_ratio AS processing_compressor_ratio,
@@ -63,13 +63,13 @@ pub async fn select_configuration(
         processing.guide_logo AS processing_guide_logo,
         processing.logo_key AS processing_logo_key,
         processing.live_key AS processing_live_key,
-        processing.logo_transition_in AS processing_logo_transition_in,
-        processing.logo_transition_out AS processing_logo_transition_out,
-        processing.logo_transition_seconds AS processing_logo_transition_seconds,
-        processing.lshape AS processing_lshape,
-        processing.lshape_scale AS processing_lshape_scale,
-        processing.lshape_corner AS processing_lshape_corner,
-        processing.graphics_scenes AS processing_graphics_scenes,
+        'fade' AS processing_logo_transition_in,
+        'fade' AS processing_logo_transition_out,
+        NULL AS processing_logo_transition_seconds,
+        '' AS processing_lshape,
+        75.0 AS processing_lshape_scale,
+        'top-right' AS processing_lshape_corner,
+        '[]' AS processing_graphics_scenes,
         playlist.day_start AS playlist_day_start,
         playlist.length AS playlist_length,
         playlist.infinit AS playlist_infinit,
@@ -92,7 +92,9 @@ pub async fn select_configuration(
     JOIN config_output output ON output.config_id = c.id AND output.active = 1
     WHERE c.channel_id = $1";
 
-    Ok(sqlx::query_as(QUERY).bind(channel).fetch_one(pool).await?)
+    let mut configuration = sqlx::query_as(QUERY).bind(channel).fetch_one(pool).await?;
+    super::project_channel_graphics(pool, &mut configuration).await?;
+    Ok(configuration)
 }
 
 pub async fn insert_configuration(
@@ -121,6 +123,8 @@ pub async fn insert_configuration(
             .execute(&mut *connection)
             .await?;
     }
+
+    super::convert_channel_graphics_on(connection, channel_id).await?;
 
     Ok(config_id)
 }
@@ -163,20 +167,13 @@ pub async fn update_configuration_on(
         .bind(id).bind(config.logging.media_level).bind(config.logging.ingest_level)
         .bind(config.logging.detect_silence).bind(config.logging.ignore_lines.join(";"))
         .execute(&mut *connection).await?;
-    sqlx::query("UPDATE config_processing SET mode = $2, add_logo = $3, logo = $4, logo_scale = $5, logo_opacity = $6, logo_position = $7, vtt_enable = $8, vtt_dummy = $9, vtt_name = $10, vtt_language = $11, vtt_default = $12, guide_logo = $13, logo_key = $14, logo_transition_in = $15, logo_transition_out = $16, logo_transition_seconds = $17, lshape = $18, lshape_scale = $19, lshape_corner = $20, graphics_scenes = $21 WHERE config_id = $1")
-        .bind(id).bind(config.processing.mode.to_string()).bind(config.processing.add_logo)
-        .bind(config.processing.logo).bind(config.processing.logo_scale)
-        .bind(config.processing.logo_opacity).bind(config.processing.logo_position)
+    super::save_channel_graphics_on(connection, id, &config.processing).await?;
+    sqlx::query("UPDATE config_processing SET mode = $2, vtt_enable = $3, vtt_dummy = $4, vtt_name = $5, vtt_language = $6, vtt_default = $7, guide_logo = $8, logo_key = $9 WHERE config_id = $1")
+        .bind(id).bind(config.processing.mode.to_string())
         .bind(config.processing.vtt_enable).bind(config.processing.vtt_dummy)
         .bind(config.processing.vtt_name).bind(config.processing.vtt_language)
         .bind(config.processing.vtt_default).bind(config.processing.guide_logo)
         .bind(config.processing.logo_key)
-        .bind(config.processing.logo_transition_in.to_string())
-        .bind(config.processing.logo_transition_out.to_string())
-        .bind(config.processing.logo_transition_seconds)
-        .bind(config.processing.lshape).bind(config.processing.lshape_scale)
-        .bind(config.processing.lshape_corner)
-        .bind(serde_json::to_string(&config.processing.graphics_scenes).unwrap_or_else(|_| "[]".to_string()))
         .execute(&mut *connection).await?;
     sqlx::query("UPDATE config_audio SET volume = $2, loudness_enable = $3, loudness_target_lufs = $4, loudness_dead_band_lu = $5, loudness_max_gain_db = $6, loudness_max_attenuation_db = $7, loudness_gain_up_db_per_second = $8, loudness_gain_down_db_per_second = $9, loudness_silence_gate_lufs = $10, loudness_true_peak_ceiling_dbtp = $11, loudness_scope = $12, compressor_ratio = $13, compressor_threshold_dbfs = $14, pause_threshold_dbfs = $15, compressor_attack_ms = $16, compressor_hold_ms = $17, compressor_release_ms = $18, compressor_strong_release_ms = $19, compressor_knee_db = $20, pause_hold_ms = $21, pause_return_delay_ms = $22, loudness_output_max_correction_db = $23, loudness_output_gain_up_db_per_second = $24, loudness_output_gain_down_db_per_second = $25 WHERE config_id = $1")
         .bind(id).bind(config.audio.volume).bind(config.audio.loudness_scope != "off")

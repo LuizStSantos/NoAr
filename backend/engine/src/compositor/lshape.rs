@@ -281,6 +281,15 @@ impl fmt::Debug for LShapeControl {
 }
 
 impl LShapeControl {
+    /// Replace the channel model without changing its on/off phase, remote
+    /// replacement, placement or clip override.
+    pub(crate) fn set_rendered_graphic(&self, graphic: Option<Arc<LShapeGraphic>>) {
+        let mut state = self.lock();
+        let placement = state.placement;
+
+        state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
+    }
+
     fn lock(&self) -> MutexGuard<'_, LShapeState> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }
@@ -559,6 +568,56 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
+
+    #[test]
+    fn loading_a_model_preserves_free_picture_geometry_and_on_air_state() {
+        let control = LShapeControl::default();
+        let spec = crate::GraphicSpec {
+            picture: Some(crate::PictureWindow {
+                x: 10.0,
+                y: 20.0,
+                width: 70.0,
+                height: 50.0,
+            }),
+            layers: Vec::new(),
+        };
+        control.set_template(&spec, 640, 360).unwrap();
+        assert!(!control.is_on());
+        let (graphic, _) = control.frame(0.0).unwrap();
+        assert_eq!(
+            graphic.window,
+            Rect {
+                x: 64,
+                y: 72,
+                width: 448,
+                height: 180
+            }
+        );
+        control.on();
+        control.set_template(&spec, 640, 360).unwrap();
+        assert!(control.is_on());
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::BottomLeft,
+                scale: None,
+            }))
+            .unwrap();
+        control.set_template(&spec, 640, 360).unwrap();
+        let (graphic, _) = control.frame(0.0).unwrap();
+        assert_eq!(graphic.window.x, 0);
+        assert_eq!(graphic.window.y, 108);
+        control.place(None).unwrap();
+        let (graphic, _) = control.frame(0.0).unwrap();
+        assert_eq!(
+            graphic.window,
+            Rect {
+                x: 64,
+                y: 72,
+                width: 448,
+                height: 180
+            }
+        );
+    }
 
     fn graphic(corner: LShapeCorner) -> LShapeGraphic {
         let mut background = VideoFrame::new(PixelFormat::Yuv420p, 1920, 1080);

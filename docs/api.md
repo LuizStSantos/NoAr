@@ -328,9 +328,10 @@ The logo goes off while the picture is in the L-shape and comes back after.
 
 ### Quick scenes
 
-A scene is a named set of logo and L-shape changes saved in the channel
-configuration (`processing.graphics_scenes`, at most 24, unique names) and
-applied in one go ([docs](logo.md#quick-scenes)).
+A scene is a named set of logo and L-shape changes applied in one go.
+After migration 00029, it is stored in a bound template and exposed through
+`processing.graphics_scenes` in the compatibility configuration API (at most
+24, unique names) ([docs](logo.md#quick-scenes)).
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
@@ -352,6 +353,11 @@ A template is a graphic a channel designs once and puts on air many times:
 layers placed in percent of the frame, with `{field}` names filled in on
 air ([roadmap](graphics-roadmap.md)).
 
+Models assigned to channel logo, ticker, L-shape or quick-scene bindings are
+operated through the channel graphics controls. `POST /take` returns 409 for
+these models: it must not stack a second logo or silently ignore scene actions.
+Ordinary unbound templates retain their take/out behavior.
+
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
 | `GET` | `/api/graphics/{id}/fonts` | `GA, CA, U` | Available font family names for text layers. |
@@ -359,8 +365,8 @@ air ([roadmap](graphics-roadmap.md)).
 | `GET` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA, U` | One template; 404 when the channel has no such template. |
 | `POST` | `/api/graphics/{id}/templates` | `GA, CA` | A template (below). 409 when the channel already has that name, ignoring case. |
 | `PUT` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | The whole template again. |
-| `DELETE` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | |
-| `POST` | `/api/graphics/{id}/take` | `GA, CA, U` | `{ "template_id", "fields": { "name": "Maria" }, "duration" }`. `duration` (seconds) replaces the template's; 0 stays until taken out. Answers `{ "state": "on_air", "take_id" }`, or `{ "state": "waiting" }` when the template waits for the L-shape on air to end. 409 when it skips L-shapes and one is on; 400 when an image is not in the storage. |
+| `DELETE` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | 409 while bound to a channel role or quick scene. Remove quick scenes through their settings page. |
+| `POST` | `/api/graphics/{id}/take` | `GA, CA, U` | `{ "template_id", "fields": { "name": "Maria" }, "duration" }`. `duration` (seconds) replaces the template's; 0 stays until taken out. Answers `{ "state": "on_air", "take_id" }`, or `{ "state": "waiting" }` when the template waits for the L-shape on air to end. 409 for an assigned channel model, or when it skips L-shapes and one is on; 400 when an image is not in the storage. |
 | `POST` | `/api/graphics/{id}/out` | `GA, CA, U` | `{ "take_id" }` takes that graphic out, `{}` every graphic. Each plays its exit animation. Answers `{ "on_air": [...] }`; 404 for a graphic not on air. |
 | `GET` | `/api/graphics/{id}/on-air` | `GA, CA, U` | `[{ "take_id", "template_id", "name", "since", "leaving" }]`, `since` in seconds. |
 

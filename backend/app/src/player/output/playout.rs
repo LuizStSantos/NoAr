@@ -58,25 +58,67 @@ pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, h
     let logo = channel_logo(config);
 
     if let Err(error) = manager
-        .logo_control
-        .set_configured(logo.as_ref(), width, height)
+        .graphics_control
+        .set_channel_logo(logo.as_ref(), width, height)
     {
         warn!(channel = config.general.channel_id; "Logo not changed on air: {error:#}");
     }
 }
 
-pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
-    let loaded = config
-        .processing
-        .lshape_config(&config.channel.storage)
-        .and_then(|lshape| {
-            manager
-                .lshape_control
-                .set_graphic(lshape.as_ref(), config.output.width, config.output.height)
-                .map_err(|error| format!("{error:#}"))
+pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
+    async fn load(manager: &ChannelManager, config: &PlayoutConfig) -> Result<(), ServiceError> {
+        use crate::{
+            db::{handles, models::GraphicsRole},
+            utils::graphics::{LayerKind, graphic_spec},
+        };
+
+        let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
+        let binding = bindings
+            .iter()
+            .find(|binding| binding.role == GraphicsRole::Lshape)
+            .ok_or_else(|| ServiceError::Conflict("Missing channel L-shape binding".to_string()))?;
+        let template =
+            handles::select_graphics_template(&manager.db_pool, manager.id, binding.template_id)
+                .await?
+                .ok_or_else(|| {
+                    ServiceError::Conflict("Missing channel L-shape model".to_string())
+                })?;
+        let has_art = template.layers.iter().any(|layer| {
+            layer.visible
+                && match layer.kind {
+                    LayerKind::Video => false,
+                    LayerKind::Image => layer
+                        .image
+                        .as_deref()
+                        .is_some_and(|image| !image.is_empty()),
+                    LayerKind::Text => !layer.text.is_empty(),
+                    LayerKind::Box => layer.fill.is_some(),
+                }
         });
 
-    if let Err(error) = loaded {
+        if !has_art {
+            manager
+                .lshape_control
+                .set_graphic(None, 0, 0)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            return Ok(());
+        }
+
+        let spec = graphic_spec(
+            &template,
+            &std::collections::HashMap::new(),
+            &config.channel.storage,
+        )?;
+        let control = manager.lshape_control.clone();
+        let (width, height) = (config.output.width, config.output.height);
+        tokio::task::spawn_blocking(move || control.set_template(&spec, width, height))
+            .await
+            .map_err(|_| ServiceError::InternalServerError)?
+            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+        Ok(())
+    }
+
+    if let Err(error) = load(manager, config).await {
         let _ = manager.lshape_control.set_graphic(None, 0, 0);
         warn!(channel = config.general.channel_id; "L-shape off: {error}");
     }
@@ -188,7 +230,9 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
             .logo_transitions()
             .map_err(ServiceError::Conflict)?,
     );
-    load_lshape(&manager, &config);
+    load_logo(&manager, &config, config.output.width, config.output.height);
+    load_lshape(&manager, &config).await;
+    crate::utils::graphics::load_channel_ticker(&manager).await?;
     let output_config = engine_output_config(
         &config,
         manager.audio_effects.clone(),
@@ -792,7 +836,6 @@ fn engine_output_config(
     }
     let fps = config.output.fps.round() as u32;
 
-    let logo = channel_logo(config);
     let media_log_level = config
         .logging
         .media_level
@@ -829,7 +872,6 @@ fn engine_output_config(
                     *last_output = Some(std::time::Instant::now());
                 }
             })))
-            .with_logo(logo)
             .with_desktop_fullscreen(config.output.desktop_fullscreen)
             .with_desktop_control_callback(desktop_control_callback)
             .with_logging(media_log_level, ingest_log_level)

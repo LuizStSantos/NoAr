@@ -181,10 +181,9 @@ The agreed stages, each with its own commit, tests, captures and handoff:
 - **a — completed:** permanent logo/ticker infrastructure in engine and DB
   handles; schema exists only in test fixtures. No conversion and the current
   application's logo path stays unchanged. Evidence is recorded below.
-- **b — pending:** normal 00029 schema migration plus automatic, idempotent
-  conversion of all channels after sqlx migration, redirected legacy page
-  writes, restart and backup/image rollback. Include saving a new logo from
-  the old page and observing it in real output.
+- **b — completed:** normal 00029 migration, automatic all-channel conversion,
+  redirected legacy page writes, real HLS, playout/backend restarts and rollback
+  using the automatic backup with the exact released 2.2.1 image. Evidence below.
 - **c — pending:** complete compatibility coverage for clip logo/L-shape
   marks, graphics events and scene reversal, keyed and authenticated routes,
   external replacement/placement and transitions, desktop output and XMLTV.
@@ -198,6 +197,8 @@ of scope. L-shape remains a manual picture-window graphic. Full-frame logo
 and ticker composition must remain distinct from picture-follow ordinary GCs.
 
 ## Stage a — permanent-role infrastructure, without migration
+
+This section describes commit `65c6892f`, before the stage-b migration below.
 
 Implemented stable `AlwaysOnSlot::Logo` and `AlwaysOnSlot::Ticker` roles in
 `GraphicsControl`. They have no duration, do not consume the temporary take
@@ -259,14 +260,104 @@ or proof of A/V sync. Desktop, full clip/scene/keyed-route compatibility,
 XMLTV, automatic conversion and backup/image rollback remain for stages b–d.
 No menu was removed.
 
+## Stage b — automatic conversion and compatibility-page writes
+
+Migration `00029_graphics_channel_bindings.sql` adds `graphics_channel_bindings`,
+`graphics_scene_bindings` and template `settings`. Tests install the real
+migration; the handwritten stage-a fixture schema is gone. Released migrations
+`00001`–`00027` match tag `v2.2.1` byte for byte; `00028` is unchanged as well.
+There is no separate migration registry or opt-in switch.
+
+Immediately after `MIGRATOR.run`, startup converts all configured channels in
+one transaction before initializing their managers. Three complete role
+bindings mark a converted channel: startup skips it before reading any frozen
+column. Incomplete bindings or invalid legacy scene JSON abort the conversion
+transaction. Existing library-name collisions receive numeric suffixes;
+compatibility scene names remain in their action payload. New channel creation
+installs its models in the configuration transaction too. Conversion does not
+issue take/out, logo hide/show or L-shape on/off commands.
+
+The source of truth after conversion is:
+
+| Item | Persisted source | Runtime |
+| --- | --- | --- |
+| Logo | `graphics_channel_bindings` (`logo`, enabled), bound template image/opacity in `layers`, native scale/position/transitions in `settings` | `GraphicsControl.channel_logo()` owns the native compositor handle; compatibility controls share that exact handle. Application output no longer sets `OutputConfig.logo`, so there is no configured-legacy fallback plane. |
+| L-shape | Bound `lshape` template: art layers and complete video-window geometry | The template renderer installs the art/window in `LShapeControl` without changing its phase, replacement or placement. The window is not snapped to a corner. |
+| Quick scenes | Ordered `graphics_scene_bindings` and each bound template's `settings.scene` | Existing scene controls receive the projected action DTO. Scheduled event snapshots remain unchanged. |
+| Ticker | `ticker` binding and its template layers | Loaded into the permanent ticker slot when enabled. Released 2.2.1 has no persisted application ticker configuration: conversion creates an empty, disabled model. It does not import or claim scrolling text support. |
+
+`Processing` fields in the compatibility API are projections of these models.
+The Logo, L-shape and Quick scenes pages continue using their existing endpoint,
+but that endpoint writes templates/bindings in its settings transaction. It
+never writes the frozen logo/L-shape/scene columns. Unchanged native settings
+leave model layers untouched, including freely placed picture windows; an image
+save selects the visible image layer rather than assuming index zero. Editing
+bound templates reloads the runtime model. Bound-template deletion returns
+HTTP 409 rather than a database error; quick scenes can be removed through the
+old scene page. Assigned models are operated through channel graphics controls;
+temporary `/take` returns 409 for them to prevent a second logo or ignored scene
+actions. Unbound Composer templates retain their take/out behavior. Native clip controls, transient replacement/placement and
+XMLTV's separate guide-icon setting retain their existing interfaces.
+
+Rollback requires the automatic pre-update backup plus the previous image,
+not an old binary opening the migrated database. The concrete operator steps
+are in [Docker rollback](../docker.md#restoring-before-graphics-conversion-00029).
+
+Validation used GStreamer 1.26.2 and an actual disposable installation of
+`ghcr.io/luizstsantos/noar:2.2.1` (revision
+`d4a1a0a8a41f39b90de23844910998431fd42510`, pinned image digest in the evidence).
+Its database at migration 00027 was copied, upgraded automatically through
+00029, and the automatic pre-update backup was restored into a separate database.
+The exact released image opened that restored file, authenticated the account,
+read the original logo and scene, and generated healthy HLS. The restored
+schema remained at 00027 with no graphics binding table.
+
+- `cargo fmt --all`, the exact no-default/all-target Clippy command and
+  `cargo test --no-default-features` passed: 679 passed, zero failed and 14
+  ignored. Full results are in the [evidence JSON](migration-b-evidence.json).
+- Three retained Composer Playwright tests passed in Chromium against the
+  running backend. Actual clicks in the old Logo page saved `new-logo.png`,
+  reloaded it and showed the new image in emitted HLS.
+- DB tests cover all-channel rollback, name collisions, real-migration schema,
+  idempotence, edited models, frozen-column isolation, reordered image layers
+  and native even-pixel rounding at fractional L-shape scales.
+- The running app preserved a freely positioned 10/10/70/50 video window through
+  an old-page save and playout restart. A full backend restart preserved model
+  binding IDs and the edited logo without reimporting old columns. Frozen
+  `config_processing` rows stayed exactly equal as complete rows.
+- The 60%-opacity logo's stable-region RGB median matches before/after migration
+  and after rollback, detecting an accidental duplicate blend. The L-shape art
+  region also matches. These are settled samples, not aligned frame-by-frame
+  comparisons. Two buffered transition samples were discarded and recaptured.
+- Every retained HLS stage reported `/health` = `ok`, channel `on_air`.
+  The captured channel console logs contain zero ERROR entries. The updater
+  emitted network-access warnings while checking GitHub; this is not a soak test.
+
+| Evidence | Capture |
+| --- | --- |
+| Logo on released 2.2.1 | [Before migration](output-migration-b-before-logo.jpg) |
+| Logo after conversion (60% opacity, one blend) | [After migration](output-migration-b-after-logo.jpg) |
+| L-shape on released 2.2.1 | [Before migration](output-migration-b-before-lshape.jpg) |
+| Bound L-shape model after conversion | [After migration](output-migration-b-after-lshape.jpg) |
+| Edited free picture window | [Template window](output-migration-b-free-lshape.jpg) |
+| Old page save preserves that window | [After old-page save](output-migration-b-after-old-page-lshape.jpg) |
+| New image saved through the old Logo page | [Real output](output-migration-b-old-page-logo.jpg) |
+| Playout restart preserves the model | [Restarted L-shape](output-migration-b-playout-restart-lshape.jpg) |
+| Backend restart preserves the new logo | [Restarted logo](output-migration-b-backend-restart-logo.jpg) |
+| Restored backup opened by official 2.2.1 | [Rollback output](output-migration-b-rollback-logo.jpg) |
+| Legacy Logo page before/after saving | [Before](migration-b-legacy-logo-before.jpg), [Saved](migration-b-legacy-logo-saved.jpg) |
+| Converted models in the library | [Models](migration-b-converted-models.jpg) |
+
+Full compatibility coverage, desktop output and aligned frame-by-frame parity
+remain stages c/d. No menu has been removed; clock support remains out of scope.
+
 ## What is left, in order
 
-1. **Logo and L-shape as templates**: always-on channel bindings (logo and
-   ticker; clock is outside this delivery) drawn on every frame, and a
-   migration that turns each
-   channel's logo, L-shape graphic and quick scenes into templates without
-   changing what is on air. Keep the old `/api/control/{id}/logo|lshape|scene`
-   routes working.
+1. **Complete stages c/d for logo and L-shape models**: the conversion and
+   compatibility-page writes are installed. Still verify the complete clip,
+   event, keyed/authenticated-route, remote-state, transition, desktop and
+   XMLTV matrix, then aligned before/after HLS frame comparisons. Clock remains
+   outside this delivery.
 2. **Remove** Logo, L-shape and Quick scenes from the Graphics menu once 1 is
    in.
 3. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics

@@ -159,6 +159,18 @@ pub async fn update_graphics_template(
         return Err(template_not_found(template_id));
     }
 
+    let config = crate::utils::config::get_config(&state.pool, id).await?;
+    let running = manager.running_config();
+    let (width, height) = running
+        .as_deref()
+        .map_or((config.output.width, config.output.height), |running| {
+            (running.output.width, running.output.height)
+        });
+    crate::player::output::load_logo(&manager, &config, width, height);
+    crate::player::output::load_lshape(&manager, &config).await;
+    manager.update_config(config).await;
+    crate::utils::graphics::load_channel_ticker(&manager).await?;
+
     Ok(Json(template))
 }
 
@@ -170,6 +182,12 @@ pub async fn delete_graphics_template(
     details: AuthDetails<Role>,
 ) -> Result<Json<&'static str>, ServiceError> {
     authorized(&state, id, &user, &details, true).await?;
+
+    if handles::graphics_template_is_bound(&state.pool, id, template_id).await? {
+        return Err(ServiceError::Conflict(
+            "This template is bound to channel graphics and cannot be deleted".to_string(),
+        ));
+    }
 
     if !handles::delete_graphics_template(&state.pool, id, template_id).await? {
         return Err(template_not_found(template_id));
@@ -223,6 +241,13 @@ pub async fn take_graphic(
     let template = handles::select_graphics_template(&state.pool, id, request.template_id)
         .await?
         .ok_or_else(|| template_not_found(request.template_id))?;
+
+    if handles::graphics_template_is_bound(&state.pool, id, request.template_id).await? {
+        return Err(ServiceError::Conflict(
+            "Use the channel logo, L-shape or quick-scene controls for this assigned model"
+                .to_string(),
+        ));
+    }
 
     Ok(Json(
         take_template(&manager, template, request.fields, request.duration).await?,

@@ -534,7 +534,7 @@ pub async fn update_playout_config(
         crate::player::controller::loudness_config(&new_config.audio),
     );
     manager.logo_control.set_transitions(logo_transitions);
-    crate::player::output::load_lshape(&manager, &new_config);
+    crate::player::output::load_lshape(&manager, &new_config).await;
     // Sized for the output on air; a new output size restarts anyway.
     let (logo_width, logo_height) = running_config.as_deref().map_or(
         (new_config.output.width, new_config.output.height),

@@ -697,8 +697,8 @@ pub enum GraphicsRole {
 
 text_enum!(GraphicsRole { Logo => "logo", Ticker => "ticker", Lshape => "lshape" });
 
-/// Saved association between a channel role and a template. The table is
-/// introduced by the later conversion migration, not created by these handles.
+/// Saved association between a channel role and a template, installed by
+/// migration 00029 and populated transactionally before channels initialize.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct GraphicsChannelBinding {
     pub channel_id: i32,

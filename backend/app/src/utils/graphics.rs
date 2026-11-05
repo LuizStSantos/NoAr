@@ -19,6 +19,48 @@ use crate::{
 };
 
 pub const MAX_LAYERS: usize = 64;
+
+/// Restore the bound permanent text model. Released 2.2.1 has no persisted
+/// ticker settings, so conversion creates an empty, disabled binding.
+pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), ServiceError> {
+    let bindings =
+        crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
+    let binding = bindings
+        .iter()
+        .find(|binding| binding.role == crate::db::models::GraphicsRole::Ticker)
+        .ok_or_else(|| ServiceError::Conflict("Missing channel ticker binding".to_string()))?;
+
+    if !binding.enabled {
+        manager
+            .graphics_control
+            .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
+        return Ok(());
+    }
+
+    let template = crate::db::handles::select_graphics_template(
+        &manager.db_pool,
+        manager.id,
+        binding.template_id,
+    )
+    .await?
+    .ok_or_else(|| ServiceError::Conflict("Missing channel ticker model".to_string()))?;
+    let config = manager.config.read().await;
+    let spec = graphic_spec(&template, &HashMap::new(), &config.channel.storage)?;
+    let (width, height) = (config.output.width, config.output.height);
+    drop(config);
+    let graphic =
+        tokio::task::spawn_blocking(move || noar_engine::render_graphic(&spec, width, height))
+            .await
+            .map_err(|_| ServiceError::InternalServerError)?
+            .map_err(|error| {
+                ServiceError::Conflict(format!("Channel ticker cannot be rendered: {error:#}"))
+            })?;
+    manager
+        .graphics_control
+        .set_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic, true)
+        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+    Ok(())
+}
 const MAX_NAME_CHARS: usize = 100;
 const MAX_TEXT_CHARS: usize = 1000;
 const MAX_ANIMATION_MS: u32 = 10_000;

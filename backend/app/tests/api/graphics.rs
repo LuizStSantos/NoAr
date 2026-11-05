@@ -66,6 +66,36 @@ async fn graphics_templates_are_read_by_the_channel_and_changed_by_admins() {
         "a regular user does not design templates"
     );
 
+    let bound = handles::select_graphics_bindings(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    let (status, message) = send(
+        &fixture,
+        "DELETE",
+        &format!("/api/graphics/1/templates/{}", bound[0].template_id),
+        Some(&admin),
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert!(message.as_str().unwrap().contains("bound"));
+
+    for binding in &bound {
+        let (status, _) = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/take",
+            Some(&user),
+            json!({"template_id": binding.template_id}),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::CONFLICT,
+            "assigned graphics must not stack a second logo or L-shape"
+        );
+    }
+
     let (status, created) = send(
         &fixture,
         "POST",
@@ -119,8 +149,15 @@ async fn graphics_templates_are_read_by_the_channel_and_changed_by_admins() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(list.as_array().unwrap().len(), 1);
-    assert_eq!(list[0]["fields"], json!(["name", "role"]));
+    assert_eq!(list.as_array().unwrap().len(), 4);
+    assert_eq!(
+        list.as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["id"] == id)
+            .unwrap()["fields"],
+        json!(["name", "role"])
+    );
 
     let (status, _) = send(
         &fixture,
@@ -227,7 +264,7 @@ async fn graphics_templates_are_read_by_the_channel_and_changed_by_admins() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert!(list.as_array().unwrap().is_empty());
+    assert_eq!(list.as_array().unwrap().len(), 3);
 }
 
 #[tokio::test]

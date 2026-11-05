@@ -1378,8 +1378,8 @@ fn apply_overlays(
         });
     }
 
-    // No roles are populated by the application until the legacy conversion
-    // is installed. The existing logo/text path remains intact in this stage.
+    // Permanent text models live above the picture. The channel logo uses
+    // the shared native model control above for clip and desktop compatibility.
     video
         .graphics_control
         .blend_always_on(frame, permanent_logo_visibility);

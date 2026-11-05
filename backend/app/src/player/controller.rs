@@ -210,6 +210,7 @@ impl ChannelManager {
             loudness_config(&config.audio),
         );
         let preview = PreviewFeed::bind(channel.id, shutdown.clone()).await?;
+        let graphics_control = noar_engine::GraphicsControl::default();
 
         Ok(Self {
             id: channel.id,
@@ -243,9 +244,9 @@ impl ChannelManager {
             audio_effects,
             live_loudness,
             loudness_meter: noar_engine::LoudnessMeterControl::default(),
-            logo_control: noar_engine::LogoControl::default(),
+            logo_control: graphics_control.channel_logo(),
             lshape_control: noar_engine::LShapeControl::default(),
-            graphics_control: noar_engine::GraphicsControl::default(),
+            graphics_control,
             graphics_takes: Default::default(),
             splice_control: noar_engine::SpliceControl::default(),
             output_link: noar_engine::OutputLink::default(),

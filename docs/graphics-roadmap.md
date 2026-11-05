@@ -2,16 +2,19 @@
 
 Status: **in progress**. Template storage, rendering, the take / out API,
 On air, the library and the Composer UI are implemented. Migration of the
-existing channel graphics into templates remains pending. See the
+existing channel graphics into templates is implemented in stage b;
+complete compatibility and aligned output parity remain pending. See the
 [implementation handoff](graphics-handoff/README.md) for scope and test evidence.
 A scoped synthetic HLS run now verifies template L-shape take/out and a
 `follow` GC inside its picture window; captures and limits are in the handoff.
 Always-on work is approved in stages: engine/DB infrastructure first, then
 normal sqlx migration 00029 with automatic conversion of every channel and
 redirected legacy page writes. Compatibility and HLS parity must pass before
-removing the legacy menu. Clock support is outside this delivery. Stage a is complete: permanent-role
-engine support and DB handles have passed tests, but only test fixtures have
-the new binding table; application conversion is not installed yet.
+removing the legacy menu. Clock support is outside this delivery. Stage a is
+complete: permanent-role engine support and DB handles have passed tests.
+Stage b now installs the normal 00029 migration, converts every channel,
+redirects legacy page writes, and verifies backup/image restoration. Its exact
+scope and runtime evidence are recorded in the handoff.
 This document records the
 agreed design for the new Graphics tab, so the work can land in small releases
 without breaking what operators use today.
