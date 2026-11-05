@@ -13,6 +13,12 @@ one is tagged.
 
 ### Fixed
 
+- Generating a day from folders of long programmes left a gap at its end
+  (for example 18 minutes when the next episode was an hour long), since a
+  programme that did not fit was left out and only a filler could close the
+  day. Without a filler, a short day made the channel start the next day's
+  playlist early. The next programme now closes the day, cut where the day
+  ends.
 - The Storage page's folder panel matches the Playlist page's library: the
   same width and a title like the library's. The disk space no longer breaks
   into a column of short lines.
