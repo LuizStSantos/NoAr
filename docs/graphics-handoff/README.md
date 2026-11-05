@@ -89,7 +89,7 @@ viewport were exercised. Frontend build/type checks and ESLint pass.
 The browser preview illustrates presets rather than proving on-air output.
 The existing engine renders `scale` as a fade, and picture-window templates
 use the L-shape transition. Images use the engine's existing PNG, JPEG, WebP
-and GIF formats. This UI validation did not exercise a real playout output.
+and GIF formats. Browser checks are distinct from the real HLS proof below.
 
 ## Follow-up part 1 — Composer refactor and safe upload
 
@@ -119,6 +119,57 @@ Screenshots: [new template](composer-new.jpg), [edit](composer-edit.jpg),
 
 No Rust changed in this part, so the Rust suite was not rerun. The real HLS
 proof and the approval-gated legacy migration are separate parts below.
+
+## Follow-up part 2 — real template L-shape HLS proof
+
+Completed with the existing NoAr binary, Rust 1.99.1 and GStreamer 1.26.2;
+no Rust or migration changes were required. A second fresh SQLite database,
+synthetic 640x360/25 fps H.264/AAC clip, local HLS output and real channel file
+logging were used. No production data or destination was involved.
+
+The L-shape template has blue full-frame box artwork and a video window at
+`x=10%, y=10%, width=70%, height=70%`. A separate GC template has a white box
+and text, with `during_lshape=follow`. Both were taken and removed through
+`/api/graphics/1/take` and `/api/graphics/1/out`.
+
+Frames decoded from newly completed `.ts` segments, after each transition:
+
+| Stage | Real output capture |
+| --- | --- |
+| Before taking the template | [Baseline](output-template-lshape-baseline.jpg) |
+| Template L-shape on air | [Blue artwork and picture window](output-template-lshape-on.jpg) |
+| GC follows the picture inside the L-shape | [GC inside the corner](output-template-lshape-with-gc.jpg) |
+| L-shape removed, GC still on air | [GC returns to full-frame coordinates](output-template-lshape-out-with-gc.jpg) |
+| GC removed too | [Original picture restored](output-template-lshape-out.jpg) |
+
+The decoded-pixel check locates the GC at approximately `(86,225)` in the
+448x252 picture window instead of its full-frame `(32,270)` position. After
+removing the L-shape it returns to `(32,270)`. The white-pixel fractions in
+those respective regions were 0.8685 and 0.894; the old full-frame region had
+0 white pixels while the corner was active. Visual inspection agrees.
+
+All five `/health` samples returned `status=ok`, channel `state=on_air` and
+fresh output (see per-stage `output_age`). The nonempty `noar_1.log` had zero
+errors. The final server log had zero errors, with two unrelated warnings:
+the disposable account has no 2FA, and the release update check cannot reach
+`api.github.com`. An initial environment-only UID/name mapping issue was
+corrected before this fresh final run.
+
+[Machine-readable evidence](output-template-lshape-evidence.json) includes
+health samples, take state, source segment SHA-256 hashes, pixel measurements
+and the channel log captured for this run. These five frames verify the
+requested HLS transitions; they do not establish a long soak, A/V sync,
+hardware outputs or every animation preset.
+
+## Follow-up part 3 — plan awaiting approval
+
+No migration, always-on implementation or legacy menu removal has started.
+The proposed work must preserve logo/ticker composition in full-frame space,
+ordinary `follow` graphics inside the picture, existing scene actions and
+scheduled references, and the legacy logo/L-shape/scene API contracts.
+Only a new migration may be added after explicit user approval. Logo,
+L-shape and Quick scenes remain in the menu until that migration and its
+compatibility tests are complete.
 
 ## What is left, in order
 

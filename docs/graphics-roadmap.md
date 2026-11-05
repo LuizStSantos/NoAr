@@ -4,6 +4,9 @@ Status: **in progress**. Template storage, rendering, the take / out API,
 On air, the library and the Composer UI are implemented. Migration of the
 existing channel graphics into templates remains pending. See the
 [implementation handoff](graphics-handoff/README.md) for scope and test evidence.
+A scoped synthetic HLS run now verifies template L-shape take/out and a
+`follow` GC inside its picture window; captures and limits are in the handoff.
+Always-on conversion and removal of the legacy menu are awaiting approval.
 This document records the
 agreed design for the new Graphics tab, so the work can land in small releases
 without breaking what operators use today.

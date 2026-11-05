@@ -1,0 +1,170 @@
+{
+  "scope": "Isolated synthetic HLS proof; no production data or outputs",
+  "gstreamer": "1.26.2",
+  "video": {
+    "codec": "h264",
+    "width": 640,
+    "height": 360,
+    "fps": 25
+  },
+  "audio": {
+    "codec": "aac",
+    "sample_rate": 48000
+  },
+  "picture_window_percent": {
+    "x": 10,
+    "y": 10,
+    "width": 70,
+    "height": 70
+  },
+  "gc_source_percent": {
+    "x": 5,
+    "y": 75,
+    "width": 45,
+    "height": 15
+  },
+  "white_pixel_fractions": {
+    "gc_in_video_corner": 0.8685,
+    "gc_at_full_frame_position_while_lshape_on": 0.0,
+    "gc_full_frame_after_lshape_out": 0.894
+  },
+  "channel_log": {
+    "file": "noar_1.log",
+    "bytes": 1791,
+    "error_count": 0,
+    "content": "<span class=\"log-gray\">[2026-11-05 17:36:50.468272+00:00]</span> <span class=\"level-debug\">[DEBUG]</span> Start NoAr v2.2.1, channel: <span class=\"log-number\">1</span>\n<span class=\"log-gray\">[2026-11-05 17:36:50.500993+00:00]</span> <span class=\"level-info\">[ INFO]</span> Output connected to udp://127.0.0.1:53667\n<span class=\"log-gray\">[2026-11-05 17:36:50.501616+00:00]</span> <span class=\"level-info\">[ INFO]</span> Playout in playlist mode\n<span class=\"log-gray\">[2026-11-05 17:36:50.507038+00:00]</span> <span class=\"level-info\">[ INFO]</span> Read playlist: <span class=\"log-addr\">/workspace/noar-cloud/hls-proof-final/playlists/2026/11/2026-11-05.json</span>\n<span class=\"log-gray\">[2026-11-05 17:36:50.507760+00:00]</span> <span class=\"level-debug\">[DEBUG]</span> Validate playlist from: <span class=\"log-number\">2026-11-05</span>\n<span class=\"log-gray\">[2026-11-05 17:36:50.508066+00:00]</span> <span class=\"level-debug\">[DEBUG]</span> Playlist init\n<span class=\"log-gray\">[2026-11-05 17:36:50.543544+00:00]</span> <span class=\"level-info\">[ INFO]</span> Play for <span class=\"log-number\">00:02:09.492</span>: <span class=\"log-addr\">/workspace/noar-cloud/hls-proof-final/media/test-pattern.mp4</span>\n<span class=\"log-gray\">[2026-11-05 17:36:50.730855+00:00]</span> <span class=\"level-debug\">[DEBUG]</span> Validation done, in <span class=\"log-number\">222.912ms</span>, playlist length: <span class=\"log-number\">24:03:00.000</span> ...\n<span class=\"log-gray\">[2026-11-05 17:36:50.769363+00:00]</span> <span class=\"level-debug\">[DEBUG]</span> GStreamer source opened in 35.970324ms; output video=0, audio=0\n<span class=\"log-gray\">[2026-11-05 17:36:50.771502+00:00]</span> <span class=\"level-debug\">[DEBUG]</span> GStreamer source started in 1.908063ms; seek=Some(50.50798211000074)\n"
+  },
+  "server_errors": 0,
+  "server_warnings": [
+    "No two-factor authentication on throwaway account",
+    "Release update check cannot reach api.github.com"
+  ],
+  "stages": [
+    {
+      "stage": "baseline",
+      "segment": "public/live/proof_1793900210495867296_7418_3.ts",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 9,
+            "output_age": 0.2
+          }
+        ]
+      },
+      "on_air": [],
+      "segment_sha256": "4e72f3edc0577fda883c6d57b37aec358836d1cf467192bcdc5e6fd2549b872f",
+      "image": "output-template-lshape-baseline.jpg"
+    },
+    {
+      "stage": "on",
+      "segment": "public/live/proof_1793900210495867296_7418_6.ts",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 15,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "on_air": [
+        {
+          "take_id": 1,
+          "template_id": 1,
+          "name": "HLS template L-shape proof",
+          "since": 6.028740184,
+          "leaving": false
+        }
+      ],
+      "segment_sha256": "e3368f15172a61cad4ecdcb2b4cb9dfa443e47b2e401b0a0705392a4ae0e28cd",
+      "image": "output-template-lshape-on.jpg"
+    },
+    {
+      "stage": "with-gc",
+      "segment": "public/live/proof_1793900210495867296_7418_9.ts",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 21,
+            "output_age": 0.4
+          }
+        ]
+      },
+      "on_air": [
+        {
+          "take_id": 1,
+          "template_id": 1,
+          "name": "HLS template L-shape proof",
+          "since": 12.100316084,
+          "leaving": false
+        },
+        {
+          "take_id": 2,
+          "template_id": 2,
+          "name": "HLS follow-picture GC",
+          "since": 6.038768206,
+          "leaving": false
+        }
+      ],
+      "segment_sha256": "af27cc9aa8cafde3ecb843035537d43ed07df052873e014129acf45236c8aa9f",
+      "image": "output-template-lshape-with-gc.jpg"
+    },
+    {
+      "stage": "out-with-gc",
+      "segment": "public/live/proof_1793900210495867296_7418_12.ts",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 27,
+            "output_age": 0.4
+          }
+        ]
+      },
+      "on_air": [
+        {
+          "take_id": 2,
+          "template_id": 2,
+          "name": "HLS follow-picture GC",
+          "since": 12.088713323,
+          "leaving": false
+        }
+      ],
+      "segment_sha256": "c08a215521ad57123c099c86d335eba5c9801251c18c9ff2ba0f9f79ed500ca0",
+      "image": "output-template-lshape-out-with-gc.jpg"
+    },
+    {
+      "stage": "out",
+      "segment": "public/live/proof_1793900210495867296_7418_15.ts",
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 33,
+            "output_age": 0.5
+          }
+        ]
+      },
+      "on_air": [],
+      "segment_sha256": "fd28c08e8f28bd4ebdba10f7afc8ef9d23265361a76a2e483d1b076901fa7167",
+      "image": "output-template-lshape-out.jpg"
+    }
+  ]
+}
