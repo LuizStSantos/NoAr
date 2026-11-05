@@ -14,8 +14,11 @@ one is tagged.
 ### Fixed
 
 - The Storage page's folder panel matches the Playlist page's library: the
-  same width, a title like the library's, and it runs as tall as the files
-  next to it. The disk space no longer breaks into a column of short lines.
+  same width and a title like the library's. The disk space no longer breaks
+  into a column of short lines.
+- The Playlist page's library no longer stretches to the bottom of the screen
+  with nothing in it: it is as tall as its folders and files, at most as tall
+  as the playlist, and scrolls inside.
 
 ## [2.2.0] - 2026-11-04
 

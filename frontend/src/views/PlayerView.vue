@@ -184,8 +184,9 @@ async function openPreview(source: string) {
         </template>
 
         <!--
-            Live: the air only. Building: the library and the playlist fill
-            the screen; only the list scrolls. The editor stays mounted while
+            Live: the air only. Building: the playlist fills the screen and
+            the library is as tall as its folders, at most as tall as the
+            playlist; only the lists scroll. The editor stays mounted while
             hidden, since the clock and "up next" read the list it loads.
         -->
         <div
@@ -197,7 +198,7 @@ async function openPreview(source: string) {
                 class="flex-[1_1_280px] w-full lg:max-w-[340px] max-h-[70vh]"
                 :class="
                     building && playlistMode
-                        ? 'lg:max-h-none lg:h-full'
+                        ? 'lg:max-h-full lg:self-start'
                         : 'lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-96px)]'
                 "
                 :allow-add="playlistMode"

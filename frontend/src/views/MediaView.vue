@@ -1050,11 +1050,11 @@ const uploadAccept = computed(() =>
         <div class="flex flex-wrap gap-5 items-start">
             <aside
                 :aria-label="t('storage.folders')"
-                class="flex-[1_1_280px] w-full lg:max-w-[340px] lg:self-stretch flex flex-col gap-3.5"
+                class="flex-[1_1_280px] w-full lg:max-w-[340px] flex flex-col gap-3.5"
             >
-                <nav class="card-box p-3.5 flex flex-col gap-2.5 lg:flex-1 min-h-0">
+                <nav class="card-box p-3.5 flex flex-col gap-2.5">
                     <h2 class="m-0 text-[15px] font-semibold">{{ t('storage.folders') }}</h2>
-                    <ul v-if="channelId" class="m-0 p-0 max-h-[60vh] lg:max-h-none lg:flex-1 overflow-y-auto">
+                    <ul v-if="channelId" class="m-0 p-0 max-h-[60vh] overflow-y-auto">
                         <FolderTree
                             :key="channelId"
                             :channel-id="channelId"
