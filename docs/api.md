@@ -346,6 +346,46 @@ A scene in `graphics_scenes` is
 curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
 ```
 
+### Graphics templates
+
+A template is a graphic a channel designs once and puts on air many times:
+layers placed in percent of the frame, with `{field}` names filled in on
+air. Templates are stored, listed and checked here; putting them on air comes
+in a later release ([roadmap](graphics-roadmap.md)).
+
+| Method | Endpoint | Access | Request body |
+| --- | --- | --- | --- |
+| `GET` | `/api/graphics/{id}/templates` | `GA, CA, U` | Every template of the channel, sorted by group and name. |
+| `GET` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA, U` | One template; 404 when the channel has no such template. |
+| `POST` | `/api/graphics/{id}/templates` | `GA, CA` | A template (below). 409 when the channel already has that name, ignoring case. |
+| `PUT` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | The whole template again. |
+| `DELETE` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | |
+
+A template is
+`{ "name", "group", "duration", "during_lshape": "follow" | "wait" | "skip", "layers": [...] }`.
+`duration` is in seconds (default 8; 0 stays until taken out).
+`during_lshape` says what happens when the template is due while an L-shape is
+on air: drawn inside the shrunk picture, going on air when the L-shape ends,
+or not going on air. Answers add `id`, `channel_id` and `fields`, the `{field}`
+names in the order they first appear.
+
+A layer is
+`{ "id", "name", "kind": "text" | "image" | "box", "visible", "x", "y", "width", "height", "opacity", "text", "font_family", "font_size", "bold", "color", "align": "left" | "center" | "right", "image", "fill", "radius", "animation_in", "animation_out", "animation_ms", "delay_ms" }`.
+Position and size are percent of the frame and must stay inside it;
+`font_size` and `radius` are percent of the frame height; colors are `#rgb`,
+`#rrggbb` or `#rrggbbaa`. `image` is a storage path, or a whole `{field}` to
+choose the image on air. Animations are `none`, `fade` (default),
+`slide_left`, `slide_right`, `slide_up`, `slide_down`, `wipe` or `scale`.
+Layer ids are unique within the template; a template has at most 64 layers.
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/graphics/1/templates -H 'Content-Type: application/json' \
+-d '{"name": "Guest", "group": "Lower thirds", "layers": [
+      {"id": "bar", "kind": "box", "x": 5, "y": 75, "width": 45, "height": 12, "fill": "#f39223"},
+      {"id": "name", "kind": "text", "x": 7, "y": 76, "width": 41, "height": 6, "text": "{name}"}]}' \
+-H 'Authorization: Bearer <TOKEN>'
+```
+
 ### Ad breaks (SCTE-35)
 
 Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md). The

@@ -11,6 +11,14 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- Graphics templates: channels store their own graphics (layers of text,
+  images and boxes in percent of the frame, with `{field}` names) through
+  `/api/graphics/{id}/templates`. Admins create and change them; everyone on
+  the channel can read them. They do not go on air yet. See
+  [docs/graphics-roadmap.md](docs/graphics-roadmap.md).
+
 ### Changed
 
 - The soak test checks decoded moving pictures as well as transport progress,

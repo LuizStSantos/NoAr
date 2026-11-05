@@ -32,6 +32,16 @@ pub fn routes() -> Router<AppState> {
                 .route("/channels", get(get_all_channels))
                 .route("/global", get(get_global).put(update_global))
                 .route("/global/test-mail", post(send_global_test_mail))
+                .route(
+                    "/graphics/{id}/templates",
+                    get(get_graphics_templates).post(add_graphics_template),
+                )
+                .route(
+                    "/graphics/{id}/templates/{template_id}",
+                    get(get_graphics_template)
+                        .put(update_graphics_template)
+                        .delete(delete_graphics_template),
+                )
                 .route("/control/{id}/playout", post(control_playout))
                 .route("/control/{id}/audio", put(update_audio_effects))
                 .route("/control/{id}/media/current", get(media_current))

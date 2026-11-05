@@ -686,6 +686,46 @@ impl FromRow<'_, SqliteRow> for GraphicsEvent {
     }
 }
 
+/// A row of `graphics_templates`: a graphic a channel designed once and
+/// puts on air many times.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct GraphicsTemplate {
+    pub id: i32,
+    pub channel_id: i32,
+    pub name: String,
+    pub group: String,
+    /// Seconds on air before it goes out by itself; 0 stays until taken out.
+    pub duration: f64,
+    pub during_lshape: crate::utils::graphics_template::DuringLShape,
+    pub layers: Vec<crate::utils::graphics_template::TemplateLayer>,
+    /// The `{field}` names to fill in on air, read from the layers.
+    pub fields: Vec<String>,
+}
+
+impl FromRow<'_, SqliteRow> for GraphicsTemplate {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let layers: String = row.try_get("layers")?;
+        let layers: Vec<crate::utils::graphics_template::TemplateLayer> =
+            serde_json::from_str(&layers).map_err(|e| sqlx::Error::ColumnDecode {
+                index: "layers".to_string(),
+                source: e.to_string().into(),
+            })?;
+        let during_lshape: String = row.try_get("during_lshape")?;
+
+        Ok(Self {
+            id: row.try_get("id")?,
+            channel_id: row.try_get("channel_id")?,
+            name: row.try_get("name")?,
+            group: row.try_get("group_name")?,
+            duration: row.try_get("duration")?,
+            during_lshape: crate::utils::graphics_template::DuringLShape::parse(&during_lshape)
+                .unwrap_or_default(),
+            fields: crate::utils::graphics_template::template_fields(&layers),
+            layers,
+        })
+    }
+}
+
 /// A row of `schedule_events`. Times are in the channel time zone.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct ScheduleEvent {

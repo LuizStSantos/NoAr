@@ -20,6 +20,8 @@ mod auth;
 mod configuration;
 #[path = "api/files.rs"]
 mod files;
+#[path = "api/graphics.rs"]
+mod graphics;
 #[path = "api/playlists.rs"]
 mod playlists;
 #[path = "api/preview.rs"]
