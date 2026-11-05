@@ -1245,10 +1245,18 @@ fn encode_composited_frame<O: FrameOutput>(
     // going off before the picture shrinks and back after it grew back.
     let mut logo_off = 0.0;
 
-    if let Some((graphic, progress)) = video
-        .lshape_control
-        .frame(logo_fade_plan.lshape_level(timeline.video_pts))
-    {
+    // An L-shape template on air takes the place of the channel's L-shape.
+    let template_lshape = video
+        .graphics_control
+        .picture(frame.width(), frame.height());
+    let channel_lshape = match template_lshape {
+        Some(_) => None,
+        None => video
+            .lshape_control
+            .frame(logo_fade_plan.lshape_level(timeline.video_pts)),
+    };
+
+    if let Some((graphic, progress)) = template_lshape.or(channel_lshape) {
         let (gone, picture) = crate::compositor::lshape::lshape_phases(progress);
         logo_off = gone;
 

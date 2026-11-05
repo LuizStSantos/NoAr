@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Grafismo: API de controle</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#141517}
+a{color:#f5a04a}a:hover{color:#ffc27e}
+button{font:inherit}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #141517; color: #e8e8ea; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+<nav aria-label="Principal" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 10px 20px; border-bottom: 1px solid #2b2c30; background: #1a1b1e">
+<span style="display: inline-flex; align-items: center; gap: 8px; margin-right: 12px; font-weight: 700; font-size: 16px"><span style="width: 26px; height: 26px; border-radius: 7px; background: #f39223; display: inline-flex; align-items: center; justify-content: center"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z" fill="#141517"></path></svg></span>NoAr</span>
+<a href="#" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 8px; color: #c9cacf; text-decoration: none">Player</a>
+<a href="#" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 8px; color: #c9cacf; text-decoration: none">Playlist</a>
+<a href="#" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 8px; color: #c9cacf; text-decoration: none">Scheduler</a>
+<a href="Grafismo.dc.html" aria-current="page" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 8px; background: #2a241d; color: #ffc27e; text-decoration: none; font-weight: 600">Grafismo</a>
+<a href="#" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 8px; color: #c9cacf; text-decoration: none">Armazenamento</a>
+<a href="#" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 8px; color: #c9cacf; text-decoration: none">Configurações</a>
+</nav>
+
+<div style="width: 100%; max-width: 1400px; margin: 0 auto; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+<div style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 700">Grafismo</h1>
+<p style="margin: 0; color: #a3a4aa">Controle os modelos de fora do NoAr: Stream Deck, Bitfocus Companion, vMix, OBS ou um script.</p>
+</div>
+<a href="Main.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 18px; border-radius: 8px; background: #f39223; color: #141517; font-weight: 600; text-decoration: none">+ Novo modelo</a>
+</div>
+
+<nav aria-label="Grafismo" style="display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid #2b2c30; padding-bottom: 8px">
+<a href="Operator.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 8px; color: #c9cacf; text-decoration: none"><span style="width: 8px; height: 8px; border-radius: 50%; background: #ff5c6a"></span>No ar</a>
+<a href="Grafismo.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 8px; color: #c9cacf; text-decoration: none">Modelos</a>
+<a href="Operator.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 8px; color: #c9cacf; text-decoration: none">Roteiro</a>
+<a href="#" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 8px; color: #c9cacf; text-decoration: none">Fontes de dados</a>
+<a href="#" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 8px; color: #c9cacf; text-decoration: none">Legendas</a>
+<a href="#" aria-current="page" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 8px; background: #26272b; color: #e8e8ea; text-decoration: none; font-weight: 600">API de controle</a>
+</nav>
+
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+
+<div style="flex: 999 1 620px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+
+<section aria-label="Chave" style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600; flex: 1 1 200px">Chave de grafismo do canal</h2>
+<span style="font-size: 12px; color: #7fc99a">ativa · a mesma da logo e do L-shape</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<input aria-label="Chave" value="noar-gfx-••••••••••••3f9a" readonly style="flex: 1 1 280px; min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 12px; font-family: 'IBM Plex Mono', monospace">
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #3a3b40; background: #26272b; color: #e8e8ea; cursor: pointer">Copiar</button>
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #3a3b40; background: transparent; color: #e8e8ea; cursor: pointer">Gerar nova</button>
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #5a2a2f; background: transparent; color: #ff9aa2; cursor: pointer">Desligar</button>
+</div>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa">Quem tem a chave controla o grafismo sem entrar no NoAr. Ela não dá acesso a playlists, arquivos nem configurações.</p>
+</section>
+
+<section aria-label="Endereços" style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Endereços prontos</h2>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa; max-width: 360px">Modelo
+<select onChange="{{ pickTemplate }}" style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px">
+<sc-for list="{{ templates }}" as="tp" hint-placeholder-count="4"><option value="{{ tp.id }}">{{ tp.name }}</option></sc-for>
+</select>
+</label>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{ actions }}" as="act" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: #141517; border: 1px solid #2b2c30">
+<span style="width: 150px; flex-shrink: 0; font-weight: 600">{{ act.label }}</span>
+<code style="flex: 1 1 360px; min-width: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #ffc27e; overflow-wrap: anywhere">{{ act.url }}</code>
+<button type="button" aria-label="Copiar endereço" style="min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid #3a3b40; background: #26272b; color: #e8e8ea; cursor: pointer">Copiar</button>
+</div>
+</sc-for>
+</div>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa">Campos vão no próprio endereço (<code style="font-family: 'IBM Plex Mono', monospace">&amp;nome=…</code>); o que não for enviado usa o texto do modelo.</p>
+</section>
+
+<section aria-label="Exemplos" style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600; flex: 1 1 200px">Como ligar</h2>
+<sc-for list="{{ tools }}" as="tool" hint-placeholder-count="4">
+<button type="button" onClick="{{ tool.pick }}" aria-pressed="{{ tool.pressed }}" style="{{ tool.style }}">{{ tool.label }}</button>
+</sc-for>
+</div>
+<pre style="margin: 0; padding: 14px; border-radius: 8px; background: #101113; border: 1px solid #2b2c30; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.6; color: #d6d7db; white-space: pre-wrap; overflow-wrap: anywhere">{{ example }}</pre>
+</section>
+
+</div>
+
+<aside aria-label="Atividade" style="flex: 1 1 320px; max-width: 440px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+
+<section style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Últimos comandos</h2>
+<sc-for list="{{ log }}" as="row" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 0; border-bottom: 1px solid #232428">
+<span style="font-family: 'IBM Plex Mono', monospace; color: #a3a4aa">{{ row.time }}</span>
+<span style="display: flex; flex-direction: column; min-width: 0"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ row.what }}</span><span style="font-size: 12px; color: #8c8d93">{{ row.from }}</span></span>
+<span style="{{ row.style }}">{{ row.result }}</span>
+</div>
+</sc-for>
+</section>
+
+<section style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Endereços antigos</h2>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa; line-height: 1.5">Continuam valendo, sem trocar nada no Stream Deck:</p>
+<code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #c9cacf">/logo/1/hide · show · replace · move</code>
+<code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #c9cacf">/lshape/1/on · off · replace · move</code>
+<code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #c9cacf">/scene/1/&lt;cena&gt;</code>
+</section>
+
+<section style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Avisar outro sistema</h2>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa; line-height: 1.5">O NoAr chama um endereço seu quando um modelo entra ou sai do ar.</p>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Endereço<input placeholder="https://[seu-servidor]/noar" style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 12px"></label>
+</section>
+
+</aside>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { template: 'tarja-entrevistado', tool: 'deck' };
+  }
+  renderVals() {
+    const base = 'http://[servidor]:8787/graphics/1';
+    const templates = [
+      { id: 'tarja-entrevistado', name: 'Tarja de entrevistado', fields: '&nome=Maria%20Souza&cargo=Produtora%20rural' },
+      { id: 'letreiro-noticias', name: 'Letreiro de notícias', fields: '&texto=Chuva%20forte%20no%20oeste' },
+      { id: 'quadro-cotacoes', name: 'Quadro de cotações', fields: '&soja=128,40&milho=61,20&boi=312,00' },
+      { id: 'selo-patrocinio', name: 'Selo de patrocínio', fields: '' },
+    ];
+    const tp = templates.find((t) => t.id === this.state.template) || templates[0];
+    const k = '?key=<CHAVE>';
+    const actions = [
+      { label: 'Pôr no ar', url: `${base}/take/${tp.id}${k}${tp.fields}` },
+      { label: 'Tirar do ar', url: `${base}/out/${tp.id}${k}` },
+      { label: 'Trocar o texto no ar', url: `${base}/update/${tp.id}${k}${tp.fields}` },
+      { label: 'Próximo do roteiro', url: `${base}/next${k}` },
+      { label: 'Ler o estado (JSON)', url: `${base}/state${k}` },
+    ];
+    const examples = {
+      deck: `Stream Deck / Bitfocus Companion\n1. Adicione um botão com a ação "HTTP request" (POST).\n2. Cole o endereço "Pôr no ar" do modelo.\n3. Num segundo botão, cole "Tirar do ar".\nO botão pode mostrar o estado lendo ${base}/state.`,
+      vmix: `vMix (Shortcut com Web Controller ou script)\nFunction: WebRequest\nValue: ${base}/take/${tp.id}${k}${tp.fields}\nUse um Shortcut por modelo, ou um script VB.NET para mandar o nome do convidado do título do vMix.`,
+      obs: `OBS (plugin Advanced Scene Switcher)\nAção: Web request · POST\nURL: ${base}/take/${tp.id}${k}${tp.fields}\nDispare ao mudar para a cena "Entrevista".`,
+      curl: `curl -X POST '${base}/take/${tp.id}${k}${tp.fields}'\ncurl -X POST '${base}/out/${tp.id}${k}'\ncurl '${base}/state${k}'\n\nResposta de /state:\n{ "on_air": ["logo-do-canal", "${tp.id}"], "preview": "selo-patrocinio" }`,
+    };
+    const tools = [
+      { id: 'deck', label: 'Stream Deck' }, { id: 'vmix', label: 'vMix' }, { id: 'obs', label: 'OBS' }, { id: 'curl', label: 'Script (curl)' },
+    ].map((t) => {
+      const on = t.id === this.state.tool;
+      return {
+        ...t,
+        pressed: on ? 'true' : 'false',
+        pick: () => this.setState({ tool: t.id }),
+        style: `min-height: 40px; padding: 0 12px; border-radius: 999px; cursor: pointer; border: 1px solid ${on ? '#f39223' : '#3a3b40'}; background: ${on ? '#2a241d' : 'transparent'}; color: ${on ? '#ffc27e' : '#c9cacf'}`,
+      };
+    });
+    const ok = 'font-size: 12px; font-weight: 600; color: #7fc99a';
+    const bad = 'font-size: 12px; font-weight: 600; color: #ff9aa2';
+    const log = [
+      { time: '06:04', what: 'Pôr no ar · Tarja de entrevistado', from: 'Stream Deck · 192.168.0.41', result: 'ok', style: ok },
+      { time: '06:04', what: 'Trocar o texto · nome=[Nome]', from: 'Stream Deck · 192.168.0.41', result: 'ok', style: ok },
+      { time: '06:12', what: 'Tirar do ar · Tarja de entrevistado', from: 'Sai sozinho (8 s)', result: 'ok', style: ok },
+      { time: '06:30', what: 'Cena · Intervalo comercial', from: 'vMix · 192.168.0.20', result: 'ok', style: ok },
+      { time: '06:31', what: 'Pôr no ar · Selo de patrocínio', from: 'Roteiro (volta do intervalo)', result: 'ok', style: ok },
+      { time: '06:40', what: 'Pôr no ar · Quadro de cotações', from: 'Script · 10.0.0.7', result: 'chave errada', style: bad },
+    ];
+    return {
+      templates,
+      actions,
+      tools,
+      log,
+      example: examples[this.state.tool],
+      pickTemplate: (e) => this.setState({ template: e.target.value }),
+    };
+  }
+}
+</script>
+</body>
+</html>

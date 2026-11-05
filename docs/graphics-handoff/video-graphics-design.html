@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Grafismo do vídeo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#141517}
+a{color:#f5a04a}a:hover{color:#ffc27e}
+button{font:inherit}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #141517; color: #e8e8ea; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #2b2c30; background: #1a1b1e">
+<div style="display: flex; flex-direction: column; flex: 1 1 360px; min-width: 0">
+<span style="font-size: 12px; color: #a3a4aa">Armazenamento › Sucesso no Campo</span>
+<span style="font-weight: 600; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">pgm-SucessoNoCampo-30.10.26.mp4 · grafismo do vídeo</span>
+</div>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #a3a4aa; border: 1px solid #34353a; border-radius: 6px; padding: 2px 8px">1:05:46 · {{ cueCount }} pontos</span>
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #3a3b40; background: transparent; color: #e8e8ea; cursor: pointer">Importar (.srt, capítulos, CSV)</button>
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 0; background: #f39223; color: #141517; font-weight: 600; cursor: pointer">Salvar marcas</button>
+</header>
+
+<div style="flex: 1; display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; box-sizing: border-box">
+
+<main style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+
+<div style="position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #2d3d33; border: 1px solid #34353a">
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 44%; background: #24322a"></div>
+<span style="position: absolute; left: 50%; top: 40%; transform: translateX(-50%); color: rgba(255,255,255,0.4); font-size: 14px">[imagem do vídeo em {{ timeLabel }}]</span>
+<sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><span style="position: absolute; left: 5%; top: 6%; padding: 4px 10px; border-radius: 5px; background: rgba(0,0,0,0.35); color: #ffffff; font-weight: 700; font-size: 13px">[LOGO]</span></sc-if>
+<sc-if value="{{ showLshape }}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; display: flex">
+<div style="width: 30%; background: #f39223; display: flex; align-items: flex-end; padding: 16px; box-sizing: border-box; color: #141517; font-weight: 700">[Intervalo · oferecimento]</div>
+<div style="flex: 1; display: flex; flex-direction: column"><div style="height: 70%; border: 3px solid #141517; box-sizing: border-box; background: #2d3d33"></div><div style="flex: 1; background: #f39223"></div></div>
+</div>
+</sc-if>
+<sc-if value="{{ showLower }}" hint-placeholder-val="{{ true }}">
+<div style="{{ lowerBox }}"><div style="position: absolute; left: 5%; bottom: 17%; display: flex; transform: scale({{ lowerScale }}); transform-origin: left bottom"><div style="width: 7px; background: #f39223"></div><div style="background: #ffffff; padding: 8px 18px 8px 12px; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 20px; color: #141517">{{ lowerName }}</span><span style="font-size: 13px; color: #3a3b40">{{ lowerRole }}</span></div></div>
+</div>
+</sc-if>
+<sc-if value="{{ showSponsor }}" hint-placeholder-val="{{ false }}"><span style="position: absolute; right: 6%; bottom: 17%; padding: 10px 16px; border-radius: 8px; background: rgba(255,255,255,0.9); color: #141517; font-weight: 700">[Selo do patrocinador]</span></sc-if>
+<sc-if value="{{ showQr }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; right: 6%; top: 8%; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: 8px; background: rgba(255,255,255,0.92); color: #141517"><span style="width: 56px; height: 56px; background: repeating-conic-gradient(#141517 0 25%, #ffffff 0 50%) 0 0 / 14px 14px"></span><span style="font-weight: 700; font-size: 13px; max-width: 160px">{{ qrText }}</span></div></sc-if>
+<sc-if value="{{ showTicker }}" hint-placeholder-val="{{ true }}"><div style="position: absolute; left: 0; right: 0; bottom: 4%; height: 28px; background: rgba(20,21,23,0.88); display: flex"><span style="background: #f39223; color: #141517; font-weight: 700; font-size: 12px; padding: 0 12px; display: flex; align-items: center">AGRO</span><span style="color: #ffffff; font-size: 12px; padding-left: 10px; display: flex; align-items: center">[Manchetes do RSS]</span></div></sc-if>
+<span style="position: absolute; right: 10px; top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #ffffff; background: rgba(20,21,23,0.7); padding: 2px 8px; border-radius: 4px">{{ timeLabel }}</span>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<button type="button" onClick="{{ back10 }}" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #3a3b40; background: transparent; color: #e8e8ea; cursor: pointer">−10 s</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #3a3b40; background: #26272b; color: #e8e8ea; cursor: pointer">Tocar</button>
+<button type="button" onClick="{{ fwd10 }}" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #3a3b40; background: transparent; color: #e8e8ea; cursor: pointer">+10 s</button>
+<button type="button" onClick="{{ markIn }}" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #4fd1ff; background: #16262d; color: #bfefff; cursor: pointer">[ Entra aqui</button>
+<button type="button" onClick="{{ markOut }}" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #4fd1ff; background: #16262d; color: #bfefff; cursor: pointer">Sai aqui ]</button>
+<button type="button" onClick="{{ toggleMenu }}" aria-expanded="{{ menuAttr }}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #f39223; background: #2a241d; color: #ffc27e; font-weight: 600; cursor: pointer">+ Grafismo em {{ timeShort }}</button>
+</div>
+<sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+<div role="group" aria-label="Que grafismo pôr aqui" style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid #3a3b40; background: #1a1b1e">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: #a3a4aa">Pôr em <b style="color: #e8e8ea; font-family: 'IBM Plex Mono', monospace">{{ timeShort }}</b> na trilha
+<select onChange="{{ pickMenuTrack }}" style="min-height: 40px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px">
+<sc-for list="{{ menuTrackOptions }}" as="mt" hint-placeholder-count="4"><option value="{{ mt.value }}" selected="{{ mt.selected }}">{{ mt.label }}</option></sc-for>
+</select>
+<span style="flex: 1"></span>
+<input placeholder="Procurar modelo…" value="{{ menuQuery }}" onInput="{{ editMenuQuery }}" style="min-height: 40px; width: 200px; max-width: 100%; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px">
+</div>
+<sc-for list="{{ addGroups }}" as="ag" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="width: 92px; font-size: 11px; color: #8c8d93; text-transform: uppercase; letter-spacing: 0.08em">{{ ag.group }}</span>
+<sc-for list="{{ ag.items }}" as="ao" hint-placeholder-count="2"><button type="button" onClick="{{ ao.add }}" style="{{ ao.style }}">{{ ao.label }}</button></sc-for>
+</div>
+</sc-for>
+<sc-if value="{{ noMatch }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #a3a4aa">Nenhum modelo com esse nome.</span></sc-if>
+<span style="font-size: 12px; color: #8c8d93">A lista vem da biblioteca do Grafismo. Um modelo novo feito no Composer aparece aqui sozinho. <a href="#">+ Novo modelo</a></span>
+</div>
+</sc-if>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa; line-height: 1.5">Como marcar: leve a agulha até o ponto (clique nas miniaturas ou use ±10 s) e clique em <b style="color: #e8e8ea">+ Grafismo</b>, ou clique numa trilha vazia e escolha o modelo. Depois ajuste com <b style="color: #bfefff">[ Entra aqui</b> e <b style="color: #bfefff">Sai aqui ]</b>, ou digite os tempos à direita.</p>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa; line-height: 1.5">As trilhas são suas: <b style="color: #e8e8ea">crie, renomeie ou apague</b> do jeito que o programa pede. Os nomes abaixo são só um exemplo. Qualquer modelo entra em qualquer trilha, e a cor vem do grupo do modelo.</p>
+
+<section aria-label="Linha do tempo" style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); column-gap: 12px; row-gap: 8px; align-items: center; font-size: 12px">
+<span></span>
+<div onClick="{{ seek }}" ref="{{ rulerRef }}" style="position: relative; height: 40px; border-radius: 6px; overflow: hidden; background: #232428; cursor: pointer">
+<div style="position: absolute; inset: 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; padding: 3px">
+<sc-for list="{{ thumbs }}" as="th" hint-placeholder-count="12"><div style="{{ th.style }}"></div></sc-for>
+</div>
+<div style="{{ playheadStyle }}"></div>
+</div>
+<span></span>
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; color: #8c8d93"><span>0:00</span><span>15:00</span><span>30:00</span><span>45:00</span><span>1:00:00</span><span>1:05:46</span></div>
+<sc-for list="{{ tracks }}" as="tr" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<input value="{{ tr.name }}" onInput="{{ tr.rename }}" aria-label="Nome da trilha" style="min-width: 0; flex: 1; min-height: 32px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #c9cacf; padding: 0 6px; font-size: 12px">
+<button type="button" onClick="{{ tr.remove }}" title="Apagar a trilha {{ tr.name }}" aria-label="Apagar a trilha {{ tr.name }}" style="width: 28px; height: 28px; flex: none; border-radius: 6px; border: 1px solid #3a3b40; background: transparent; color: #a3a4aa; cursor: pointer">×</button>
+</div>
+<div onClick="{{ tr.addHere }}" title="Clique para pôr um grafismo nesta trilha" style="position: relative; height: 30px; background: #232428; border-radius: 6px; cursor: copy">
+<sc-for list="{{ tr.cues }}" as="c" hint-placeholder-count="2">
+<button type="button" onClick="{{ c.pick }}" title="{{ c.title }}" aria-label="{{ c.title }}" style="{{ c.style }}">{{ c.short }}</button>
+</sc-for>
+<sc-if value="{{ tr.empty }}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #6c6d73; pointer-events: none">Trilha vazia: clique para pôr um grafismo</span></sc-if>
+<div style="{{ playheadLine }}"></div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 4px">
+<button type="button" onClick="{{ addTrack }}" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px dashed #4a4b50; background: transparent; color: #e8e8ea; cursor: pointer">+ Nova trilha</button>
+<button type="button" onClick="{{ saveTrackSet }}" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #3a3b40; background: transparent; color: #c9cacf; cursor: pointer">Guardar estas trilhas como padrão do canal</button>
+<sc-if value="{{ undoNote }}" hint-placeholder-val="{{ false }}"><span role="status" style="font-size: 13px; color: #c9cacf">{{ undoNote }} <button type="button" onClick="{{ undo }}" style="min-height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid #3a3b40; background: #26272b; color: #e8e8ea; cursor: pointer">Desfazer</button></span></sc-if>
+<sc-if value="{{ trackSetNote }}" hint-placeholder-val="{{ false }}"><span role="status" style="font-size: 13px; color: #7fc99a">{{ trackSetNote }}</span></sc-if>
+</div>
+</section>
+
+</main>
+
+<aside aria-label="Ponto selecionado" style="flex: 1 1 320px; max-width: 400px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+
+<section style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; color: #a3a4aa">Ponto selecionado</span>
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">{{ sel.model }}</h2>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Modelo<select onChange="{{ pickModel }}" style="min-height: 44px; min-width: 0; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px">
+<sc-for list="{{ modelOptions }}" as="mo" hint-placeholder-count="7"><option value="{{ mo.value }}" selected="{{ mo.selected }}">{{ mo.label }}</option></sc-for>
+</select></label>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Trilha<select onChange="{{ pickTrack }}" style="min-height: 44px; min-width: 0; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px">
+<sc-for list="{{ selTrackOptions }}" as="so" hint-placeholder-count="4"><option value="{{ so.value }}" selected="{{ so.selected }}">{{ so.label }}</option></sc-for>
+</select></label>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Entra em<input value="{{ sel.startLabel }}" onChange="{{ editStart }}" style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px; font-family: 'IBM Plex Mono', monospace"></label>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Sai em<input value="{{ sel.endLabel }}" onChange="{{ editEnd }}" style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px; font-family: 'IBM Plex Mono', monospace"></label>
+</div>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Contado a partir de<select style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px"><option>{{ sel.anchor }}</option><option>Início do vídeo</option><option>Fim da abertura</option><option>Meio do vídeo</option><option>Fim do vídeo</option></select></label>
+<sc-if value="{{ sel.canClash }}" hint-placeholder-val="{{ true }}">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Se cair junto com um L-shape<select onChange="{{ pickClash }}" style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px">
+<sc-for list="{{ clashOptions }}" as="co" hint-placeholder-count="3"><option value="{{ co.value }}" selected="{{ co.selected }}">{{ co.label }}</option></sc-for>
+</select></label>
+</sc-if>
+<sc-if value="{{ sel.clashNote }}" hint-placeholder-val="{{ false }}"><div role="status" style="border-radius: 8px; border: 1px solid #6b5520; background: #2a2418; padding: 10px 12px; font-size: 13px; color: #ffd98a; line-height: 1.5">{{ sel.clashNote }}</div></sc-if>
+<sc-if value="{{ sel.hasFields }}" hint-placeholder-val="{{ true }}">
+<span style="font-size: 12px; color: #a3a4aa; text-transform: uppercase; letter-spacing: 0.08em">Campos do modelo</span>
+<sc-for list="{{ sel.fields }}" as="f" hint-placeholder-count="2">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">{{ f.label }}<input value="{{ f.value }}" onInput="{{ f.edit }}" style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 12px"></label>
+</sc-for>
+<span style="font-size: 12px; color: #8c8d93">Estes campos são os {campos} que quem criou o modelo pôs no Composer. Outro modelo, outros campos.</span>
+</sc-if>
+<sc-if value="{{ sel.isLshape }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 12px; color: #a3a4aa; text-transform: uppercase; letter-spacing: 0.08em">L-shape</span>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Arte<select style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px"><option>A do canal (Grafismo › L-shape)</option><option>lshape-patrocinador.png</option><option>Escolher no Armazenamento…</option></select></label>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Vídeo no canto<select style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px"><option>Superior direito</option><option>Superior esquerdo</option><option>Inferior direito</option><option>Inferior esquerdo</option></select></label>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Tamanho do vídeo<span style="display: flex; align-items: center; border-radius: 8px; border: 1px solid #3a3b40; background: #141517"><input value="70" inputmode="decimal" style="min-height: 44px; min-width: 0; flex: 1; border: 0; background: transparent; color: #e8e8ea; padding: 0 10px; font-family: 'IBM Plex Mono', monospace"><span style="padding-right: 10px; color: #8c8d93">%</span></span></label>
+</div>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 44px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #f39223">Tirar a logo enquanto o L-shape estiver no ar</label>
+</sc-if>
+<sc-if value="{{ sel.isSponsor }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 12px; color: #a3a4aa; text-transform: uppercase; letter-spacing: 0.08em">Selo</span>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Imagem do patrocinador<select style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px"><option>[patrocinador-1.png]</option><option>[patrocinador-2.png]</option><option>Enviar ou escolher no Armazenamento…</option></select></label>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a3a4aa">Lugar<select style="min-height: 44px; border-radius: 8px; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; padding: 0 10px"><option>O do modelo (inferior direito)</option><option>Superior direito</option><option>Centro</option></select></label>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 44px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #f39223">Contar no relatório de patrocínio</label>
+</sc-if>
+<sc-if value="{{ sel.isCommand }}" hint-placeholder-val="{{ false }}">
+<div style="border-radius: 8px; background: #141517; border: 1px solid #2b2c30; padding: 10px 12px; font-size: 13px; color: #c9cacf; line-height: 1.5">{{ sel.commandText }}</div>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 44px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #f39223">Volta sozinho no fim do tempo marcado</label>
+</sc-if>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{ goToSel }}" style="min-height: 40px; flex: 1; border-radius: 8px; border: 1px solid #3a3b40; background: transparent; color: #e8e8ea; cursor: pointer">Ver na prévia</button>
+<button type="button" onClick="{{ removeSel }}" style="min-height: 40px; flex: 1; border-radius: 8px; border: 1px solid #5a2a2f; background: transparent; color: #ff9aa2; cursor: pointer">Apagar ponto</button>
+</div>
+</section>
+
+<section style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Série</h2>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa; line-height: 1.5">Use estas marcas como molde para os outros episódios da pasta. Os tempos contados da abertura, do meio ou do fim se ajustam ao tamanho de cada episódio; nomes ficam para preencher.</p>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 44px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #f39223">Também nos próximos episódios que chegarem</label>
+<button type="button" onClick="{{ applySeries }}" style="min-height: 44px; border-radius: 8px; border: 0; background: #26272b; color: #e8e8ea; font-weight: 600; cursor: pointer">Aplicar aos 11 episódios da pasta</button>
+<sc-if value="{{ seriesNote }}" hint-placeholder-val="{{ false }}"><span role="status" style="font-size: 13px; color: #7fc99a">{{ seriesNote }}</span></sc-if>
+</section>
+
+<section style="border: 1px solid #2b2c30; border-radius: 10px; background: #1a1b1e; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">No ar</h2>
+<p style="margin: 0; font-size: 13px; color: #a3a4aa; line-height: 1.5">Estes pontos entram sozinhos sempre que o vídeo toca, em qualquer playlist ou horário. O operador na tela No ar manda mais: se tirar o letreiro, o vídeo não o põe de volta. Cada ponto que entrou fica no relatório (as-run).</p>
+</section>
+
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":980}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.total = 3946;
+    this.lib = [
+      { id: 'tarja', name: 'Tarja de entrevistado', group: 'Tarjas', color: '#f39223', kind: 'lower', dur: 8, fields: [['nome', 'Nome'], ['cargo', 'Cargo']] },
+      { id: 'tema', name: 'Tarja de tema', group: 'Tarjas', color: '#e8b04a', kind: 'topic', dur: 10, fields: [['titulo', 'Título'], ['linha', 'Linha de baixo']] },
+      { id: 'lshape', name: 'L-shape de intervalo', group: 'Intervalo', color: '#7d8fd9', kind: 'lshape', dur: 180, fields: [] },
+      { id: 'selo', name: 'Selo de patrocínio', group: 'Patrocínio', color: '#4fb38a', kind: 'sponsor', dur: 10, fields: [['patrocinador', 'Patrocinador']] },
+      { id: 'qr', name: 'QR code com chamada', group: 'Interação', color: '#5bc0c9', kind: 'qr', dur: 20, fields: [['chamada', 'Chamada'], ['link', 'Link do QR']] },
+      { id: 'semletreiro', name: 'Tirar o letreiro', group: 'Comandos', color: '#b07cc6', kind: 'command', target: 'ticker', dur: 180, fields: [] },
+      { id: 'semlogo', name: 'Tirar a logo', group: 'Comandos', color: '#b07cc6', kind: 'command', target: 'logo', dur: 180, fields: [] },
+    ];
+    this.state = {
+      t: 204,
+      selected: 'c2',
+      seriesApplied: false,
+      menu: false,
+      menuTrack: 't1',
+      menuTime: null,
+      query: '',
+      undo: null,
+      trackSetSaved: false,
+      nextId: 1,
+      tracks: [
+        { id: 't1', name: 'Tarjas' },
+        { id: 't2', name: 'Intervalo' },
+        { id: 't3', name: 'Logo e letreiro' },
+        { id: 't4', name: 'Patrocínio e QR' },
+      ],
+      cues: [
+        { id: 'c1', track: 't1', model: 'tarja', start: 40, dur: 8, anchor: 'Fim da abertura', values: { nome: '[Apresentador]', cargo: 'Apresentação' } },
+        { id: 'c2', track: 't1', model: 'tarja', start: 200, dur: 8, anchor: 'Início do vídeo', values: { nome: '[Nome do produtor]', cargo: '[Fazenda · cidade]' } },
+        { id: 'c8', track: 't1', model: 'tema', start: 1200, dur: 12, anchor: 'Início do vídeo', values: { titulo: '[Colheita da soja]', linha: '[Bloco 2]' } },
+        { id: 'c3', track: 't2', model: 'lshape', start: 1870, dur: 210, anchor: 'Meio do vídeo', values: {} },
+        { id: 'c4', track: 't3', model: 'semletreiro', start: 1870, dur: 210, anchor: 'Meio do vídeo', values: {} },
+        { id: 'c10', track: 't1', model: 'tarja', start: 1950, dur: 10, anchor: 'Meio do vídeo', values: { nome: '[Patrocinador fala]', cargo: '[Empresa]' } },
+        { id: 'c5', track: 't4', model: 'selo', start: 2080, dur: 10, anchor: 'Meio do vídeo', values: { patrocinador: '[Patrocinador 1]' } },
+        { id: 'c6', track: 't1', model: 'tarja', start: 2465, dur: 8, anchor: 'Início do vídeo', values: { nome: '[Convidado]', cargo: '[Agrônomo · instituição]' } },
+        { id: 'c9', track: 't4', model: 'qr', start: 3000, dur: 20, anchor: 'Início do vídeo', values: { chamada: '[Fale com o programa]', link: '[https://…]' } },
+        { id: 'c7', track: 't4', model: 'selo', start: 3886, dur: 10, anchor: 'Fim do vídeo', values: { patrocinador: '[Patrocinador 2]' } },
+      ],
+    };
+    this.rulerEl = null;
+  }
+  renderVals() {
+    const st = this.state;
+    const total = this.total;
+    const fmt = (s) => {
+      s = Math.max(0, Math.round(s));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      const mm = String(m).padStart(2, '0');
+      const ss = String(sec).padStart(2, '0');
+      return h ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+    };
+    const parseTime = (text) => {
+      const parts = String(text).trim().split(':').map((x) => parseFloat(x.replace(',', '.')));
+      if (!parts.length || parts.some((x) => !isFinite(x) || x < 0)) return null;
+      return parts.reduce((acc, x) => acc * 60 + x, 0);
+    };
+    const lib = this.lib;
+    const modelOf = (c) => lib.find((m) => m.id === c.model) || lib[0];
+    const cues = st.cues;
+    const at = (c) => st.t >= c.start && st.t < c.start + c.dur;
+    const onAir = (pred) => cues.filter((c) => at(c) && pred(modelOf(c)));
+    const pct = (s) => `${(s / total) * 100}%`;
+    const firstTrack = st.tracks[0] ? st.tracks[0].id : null;
+    const menuTrack = st.tracks.some((tr) => tr.id === st.menuTrack) ? st.menuTrack : firstTrack;
+    const menuTime = st.menuTime === null ? st.t : st.menuTime;
+    const addAt = (track, time, modelId) => {
+      const m = lib.find((x) => x.id === modelId);
+      if (!m || !track) return;
+      const id = `n${st.nextId}`;
+      const start = Math.max(0, Math.min(total - 1, Math.round(time)));
+      const values = {};
+      m.fields.forEach(([k, label]) => { values[k] = `[${label}]`; });
+      const cue = { id, track, model: m.id, anchor: 'Início do vídeo', start, dur: Math.min(m.dur, total - start), values };
+      this.setState({ cues: cues.concat([cue]), nextId: st.nextId + 1, selected: id, menu: false, menuTime: null, query: '', t: start + Math.min(2, cue.dur / 2) });
+    };
+    const tracks = st.tracks.map((tr) => {
+      const own = cues.filter((c) => c.track === tr.id);
+      return {
+        name: tr.name,
+        empty: own.length === 0,
+        rename: (e) => this.setState({ tracks: st.tracks.map((x) => (x.id === tr.id ? { ...x, name: e.target.value } : x)) }),
+        remove: () => this.setState({
+          tracks: st.tracks.filter((x) => x.id !== tr.id),
+          cues: cues.filter((c) => c.track !== tr.id),
+          undo: { tracks: st.tracks, cues, label: `Trilha “${tr.name}” apagada${own.length ? ` com ${own.length} ${own.length === 1 ? 'ponto' : 'pontos'}` : ''}.` },
+        }),
+        addHere: (e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          const time = ((e.clientX - r.left) / r.width) * total;
+          this.setState({ menu: true, menuTrack: tr.id, menuTime: Math.round(time), t: Math.max(0, Math.min(total, time)) });
+        },
+        cues: own.map((c) => {
+          const m = modelOf(c);
+          const on = c.id === st.selected;
+          return {
+            title: `${m.name} · ${fmt(c.start)} por ${fmt(c.dur)}`,
+            short: c.dur >= 120 ? m.name : '',
+            pick: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ selected: c.id, t: c.start + Math.min(2, c.dur / 2) }); },
+            style: `position: absolute; top: 3px; bottom: 3px; left: ${pct(c.start)}; width: max(10px, ${pct(c.dur)}); border-radius: 4px; border: 2px solid ${on ? '#ffffff' : 'transparent'}; background: ${m.color}; color: #141517; font-size: 11px; font-weight: 600; overflow: hidden; white-space: nowrap; padding: 0 4px; cursor: pointer; text-align: left`,
+          };
+        }),
+      };
+    });
+    const selCue = cues.find((c) => c.id === st.selected);
+    const sel = selCue || { model: null, start: 0, dur: 0, anchor: '', values: {}, track: null };
+    const selModel = selCue ? modelOf(selCue) : null;
+    const update = (patch) => {
+      if (!sel.id) return;
+      this.setState({ cues: cues.map((c) => (c.id === sel.id ? { ...c, ...patch } : c)) });
+    };
+    const lshapeCues = cues.filter((c) => modelOf(c).kind === 'lshape');
+    const clashWith = (c) => lshapeCues.find((l) => l.id !== c.id && c.start < l.start + l.dur && l.start < c.start + c.dur);
+    const clashLabels = { follow: 'Acompanha o vídeo no canto (diminui junto)', wait: 'Espera o L-shape sair e entra depois', skip: 'Não entra enquanto o L-shape estiver no ar' };
+    const lshapeOnNow = onAir((m) => m.kind === 'lshape').length > 0;
+    const lowerNow = onAir((m) => m.kind === 'lower' || m.kind === 'topic').filter((c) => !lshapeOnNow || (c.onLshape || 'follow') === 'follow')[0];
+    const lowerVals = lowerNow ? lowerNow.values : {};
+    const lowerIsTopic = lowerNow ? modelOf(lowerNow).kind === 'topic' : false;
+    const lshapeOn = onAir((m) => m.kind === 'lshape').length > 0;
+    const q = st.query.trim().toLowerCase();
+    const groups = [];
+    lib.filter((m) => !q || m.name.toLowerCase().includes(q) || m.group.toLowerCase().includes(q)).forEach((m) => {
+      let g = groups.find((x) => x.group === m.group);
+      if (!g) { g = { group: m.group, items: [] }; groups.push(g); }
+      g.items.push({
+        label: m.name,
+        add: () => addAt(menuTrack, menuTime, m.id),
+        style: `min-height: 40px; padding: 0 14px; border-radius: 8px; cursor: pointer; border: 1px solid #3a3b40; background: #141517; color: #e8e8ea; border-left: 4px solid ${m.color}`,
+      });
+    });
+    const shades = ['#3a4a3f', '#425346', '#2f3d34', '#4b5a40', '#38463d', '#4a4f3b', '#33433a', '#46513f', '#3c4a41', '#2e3a33', '#475241', '#3a463e'];
+    const pos = (st.t / total) * 100;
+    return {
+      cueCount: String(cues.length),
+      timeLabel: fmt(st.t),
+      timeShort: fmt(menuTime),
+      showLogo: !lshapeOn && onAir((m) => m.kind === 'command' && m.target === 'logo').length === 0,
+      showLshape: lshapeOn,
+      showLower: !!lowerNow,
+      lowerBox: lshapeOnNow ? 'position: absolute; left: 30%; top: 0; width: 70%; height: 70%; pointer-events: none' : 'position: absolute; inset: 0; pointer-events: none',
+      lowerScale: lshapeOnNow ? '0.7' : '1',
+      lowerName: lowerNow ? (lowerIsTopic ? lowerVals.titulo : lowerVals.nome) || '' : '',
+      lowerRole: lowerNow ? (lowerIsTopic ? lowerVals.linha : lowerVals.cargo) || '' : '',
+      showSponsor: onAir((m) => m.kind === 'sponsor').length > 0,
+      showQr: onAir((m) => m.kind === 'qr').length > 0,
+      qrText: (onAir((m) => m.kind === 'qr')[0] || { values: {} }).values.chamada || '',
+      showTicker: !lshapeOn && onAir((m) => m.kind === 'command' && m.target === 'ticker').length === 0,
+      thumbs: shades.map((c) => ({ style: `border-radius: 3px; background: ${c}` })),
+      rulerRef: (el) => { this.rulerEl = el; },
+      seek: (e) => {
+        if (!this.rulerEl) return;
+        const r = this.rulerEl.getBoundingClientRect();
+        this.setState({ t: Math.max(0, Math.min(total, ((e.clientX - r.left) / r.width) * total)) });
+      },
+      playheadStyle: `position: absolute; top: 0; bottom: 0; left: ${pos}%; width: 2px; background: #ffffff; box-shadow: 0 0 0 1px #141517`,
+      playheadLine: `position: absolute; top: 0; bottom: 0; left: ${pos}%; width: 1px; background: rgba(255,255,255,0.6); pointer-events: none`,
+      tracks,
+      addTrack: () => {
+        const id = `t${st.nextId}`;
+        this.setState({ tracks: st.tracks.concat([{ id, name: `Trilha ${st.tracks.length + 1}` }]), nextId: st.nextId + 1, trackSetSaved: false });
+      },
+      saveTrackSet: () => this.setState({ trackSetSaved: true }),
+      trackSetNote: st.trackSetSaved ? `Padrão salvo: ${st.tracks.map((x) => x.name).join(', ')}. Vídeos novos já abrem com estas trilhas; cada vídeo pode mudar as suas.` : '',
+      undoNote: st.undo ? st.undo.label : '',
+      undo: () => st.undo && this.setState({ tracks: st.undo.tracks, cues: st.undo.cues, undo: null }),
+      back10: () => this.setState({ t: Math.max(0, st.t - 10) }),
+      fwd10: () => this.setState({ t: Math.min(total, st.t + 10) }),
+      menuOpen: st.menu,
+      menuAttr: st.menu ? 'true' : 'false',
+      toggleMenu: () => this.setState({ menu: !st.menu, menuTime: null }),
+      menuTrackOptions: st.tracks.map((tr) => ({ value: tr.id, label: tr.name || '(sem nome)', selected: tr.id === menuTrack })),
+      pickMenuTrack: (e) => this.setState({ menuTrack: e.target.value }),
+      menuQuery: st.query,
+      editMenuQuery: (e) => this.setState({ query: e.target.value }),
+      addGroups: groups,
+      noMatch: groups.length === 0,
+      markIn: () => {
+        if (!sel.id) return;
+        const end = sel.start + sel.dur;
+        const start = Math.round(st.t);
+        update(start < end ? { start, dur: end - start } : { start, dur: sel.dur });
+      },
+      markOut: () => {
+        if (!sel.id) return;
+        const end = Math.round(st.t);
+        if (end > sel.start) update({ dur: end - sel.start });
+      },
+      editStart: (e) => {
+        const v = parseTime(e.target.value);
+        if (v !== null) update({ start: Math.min(v, total - 1) });
+      },
+      editEnd: (e) => {
+        const v = parseTime(e.target.value);
+        if (v !== null && v > sel.start) update({ dur: Math.min(v, total) - sel.start });
+      },
+      modelOptions: lib.map((m) => ({ value: m.id, label: `${m.group} · ${m.name}`, selected: selModel && m.id === selModel.id })),
+      pickModel: (e) => {
+        const m = lib.find((x) => x.id === e.target.value);
+        if (!m) return;
+        const values = {};
+        m.fields.forEach(([k, label]) => { values[k] = (sel.values && sel.values[k]) || `[${label}]`; });
+        update({ model: m.id, values, dur: sel.dur > m.dur * 3 ? m.dur : sel.dur });
+      },
+      clashOptions: Object.keys(clashLabels).map((k) => ({ value: k, label: clashLabels[k], selected: (sel.onLshape || 'follow') === k })),
+      pickClash: (e) => update({ onLshape: e.target.value }),
+      selTrackOptions: st.tracks.map((tr) => ({ value: tr.id, label: tr.name || '(sem nome)', selected: tr.id === sel.track })),
+      pickTrack: (e) => update({ track: e.target.value }),
+      sel: {
+        hasFields: !!selModel && selModel.fields.length > 0,
+        fields: selModel ? selModel.fields.map(([k, label]) => ({
+          label: `${label} · {${k}}`,
+          value: (sel.values && sel.values[k]) || '',
+          edit: (e) => update({ values: { ...sel.values, [k]: e.target.value } }),
+        })) : [],
+        canClash: !!selModel && selModel.kind !== 'lshape' && selModel.kind !== 'command',
+        clashNote: (() => {
+          if (!selCue || !selModel || selModel.kind === 'lshape' || selModel.kind === 'command') return '';
+          const l = clashWith(selCue);
+          if (!l) return '';
+          const span = `${fmt(l.start)} a ${fmt(l.start + l.dur)}`;
+          const how = { follow: 'vai aparecer dentro do vídeo no canto, menor', wait: `vai entrar em ${fmt(l.start + l.dur)}, quando o L-shape sair`, skip: 'não vai entrar' }[selCue.onLshape || 'follow'];
+          return `Cai junto com o L-shape (${span}). Do jeito escolhido, ela ${how}.`;
+        })(),
+        isLshape: !!selModel && selModel.kind === 'lshape',
+        isSponsor: !!selModel && selModel.kind === 'sponsor',
+        isCommand: !!selModel && selModel.kind === 'command',
+        commandText: selModel && selModel.target === 'logo' ? 'Sem campos: a logo do canal sai durante o tempo marcado.' : 'Sem campos: o letreiro de notícias sai durante o tempo marcado.',
+        model: selModel ? selModel.name : 'Nenhum ponto selecionado',
+        startLabel: fmt(sel.start),
+        endLabel: fmt(sel.start + sel.dur),
+        anchor: sel.anchor,
+      },
+      goToSel: () => this.setState({ t: sel.start + Math.min(2, sel.dur / 2) }),
+      removeSel: () => sel.id && this.setState({ cues: cues.filter((c) => c.id !== sel.id), selected: null, undo: { tracks: st.tracks, cues, label: `Ponto “${selModel.name}” apagado.` } }),
+      applySeries: () => this.setState({ seriesApplied: true }),
+      seriesNote: st.seriesApplied ? `${cues.length} pontos copiados para 11 episódios. Faltam nomes em 22 tarjas: veja a lista em cada episódio.` : '',
+    };
+  }
+}
+</script>
+</body>
+</html>

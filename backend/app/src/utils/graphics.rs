@@ -32,6 +32,9 @@ pub enum LayerKind {
     Text,
     Image,
     Box,
+    /// Where the picture goes: a template with one is an L-shape, its
+    /// other layers the art around the picture.
+    Video,
 }
 
 /// How a layer comes on and goes off.
@@ -189,7 +192,7 @@ pub fn template_fields(layers: &[TemplateLayer]) -> Vec<String> {
         match layer.kind {
             LayerKind::Text => found.extend(placeholders(&layer.text)),
             LayerKind::Image => found.extend(layer.image.as_deref().and_then(whole_placeholder)),
-            LayerKind::Box => {}
+            LayerKind::Box | LayerKind::Video => {}
         }
 
         for field in found {
@@ -377,6 +380,17 @@ pub fn prepare_template(
         };
     }
 
+    if layers
+        .iter()
+        .filter(|layer| layer.kind == LayerKind::Video)
+        .count()
+        > 1
+    {
+        return Err(bad_request(
+            "a template has at most one picture (video) layer".to_string(),
+        ));
+    }
+
     for (index, layer) in layers.iter().enumerate() {
         if layers[..index].iter().any(|other| other.id == layer.id) {
             return Err(bad_request(format!(
@@ -496,10 +510,20 @@ pub fn graphic_spec(
     storage: &std::path::Path,
 ) -> Result<noar_engine::GraphicSpec, ServiceError> {
     let mut layers = Vec::with_capacity(template.layers.len());
+    let mut picture = None;
 
     for layer in template.layers.iter().filter(|layer| layer.visible) {
         let fill = layer.fill.as_deref().and_then(parse_color);
         let content = match layer.kind {
+            LayerKind::Video => {
+                picture = Some(noar_engine::PictureWindow {
+                    x: layer.x,
+                    y: layer.y,
+                    width: layer.width,
+                    height: layer.height,
+                });
+                continue;
+            }
             LayerKind::Box => match fill {
                 Some(fill) => noar_engine::GraphicContent::Box { fill },
                 None => continue,
@@ -545,7 +569,7 @@ pub fn graphic_spec(
         });
     }
 
-    Ok(noar_engine::GraphicSpec { layers })
+    Ok(noar_engine::GraphicSpec { layers, picture })
 }
 
 /// Which template each graphic on air came from.
@@ -675,7 +699,13 @@ pub async fn take_template(
     let storage = manager.config.read().await.channel.storage.clone();
     let spec = graphic_spec(&template, &values, &storage)?;
 
-    if manager.lshape_control.is_on() {
+    let lshape_on = |manager: &ChannelManager| {
+        manager.lshape_control.is_on() || manager.graphics_control.picture_on_air()
+    };
+
+    // An L-shape template replaces the L-shape on air; the rule is for the
+    // graphics that go over the picture.
+    if spec.picture.is_none() && lshape_on(manager) {
         match template.during_lshape {
             DuringLShape::Follow => {}
             DuringLShape::Skip => {
@@ -690,7 +720,7 @@ pub async fn take_template(
                 tokio::spawn(async move {
                     let mut waited = Duration::ZERO;
 
-                    while manager.lshape_control.is_on() && waited < MAX_LSHAPE_WAIT {
+                    while lshape_on(&manager) && waited < MAX_LSHAPE_WAIT {
                         tokio::time::sleep(LSHAPE_WAIT_STEP).await;
                         waited += LSHAPE_WAIT_STEP;
                     }
@@ -882,5 +912,48 @@ mod tests {
             graphic_spec(&template, &missing, &storage).is_err(),
             "a missing image"
         );
+    }
+
+    #[test]
+    fn a_video_layer_makes_the_template_an_lshape() {
+        let storage = std::env::temp_dir();
+        let mut art = text_layer("art", "");
+        art.kind = LayerKind::Box;
+        art.fill = Some("#f39223".to_string());
+        let mut picture = text_layer("picture", "");
+        picture.kind = LayerKind::Video;
+        (picture.x, picture.y, picture.width, picture.height) = (30.0, 0.0, 70.0, 70.0);
+
+        let template = GraphicsTemplate {
+            layers: vec![art, picture.clone()],
+            ..Default::default()
+        };
+        let spec = graphic_spec(&template, &HashMap::new(), &storage).unwrap();
+
+        assert_eq!(
+            spec.layers.len(),
+            1,
+            "the video layer is the window, not a layer"
+        );
+        assert_eq!(
+            spec.picture,
+            Some(noar_engine::PictureWindow {
+                x: 30.0,
+                y: 0.0,
+                width: 70.0,
+                height: 70.0
+            })
+        );
+
+        let mut second = picture.clone();
+        second.id = "second".to_string();
+        let input = TemplateInput {
+            name: "Two pictures".to_string(),
+            group: String::new(),
+            duration: 0.0,
+            during_lshape: DuringLShape::Follow,
+            layers: vec![picture, second],
+        };
+        assert!(prepare_template(&storage, 1, 0, input).is_err());
     }
 }

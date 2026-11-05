@@ -269,3 +269,21 @@ pub async fn get_graphics_on_air(
 
     Ok(Json(graphics_on_air(&manager)))
 }
+
+/// **Font families the graphics can use**
+///
+/// The families installed for the engine, for the text layers of templates.
+pub async fn get_graphics_fonts(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<String>>, ServiceError> {
+    authorized(&state, id, &user, &details, false).await?;
+
+    Ok(Json(
+        tokio::task::spawn_blocking(noar_engine::available_font_families)
+            .await
+            .map_err(|_| ServiceError::InternalServerError)?,
+    ))
+}

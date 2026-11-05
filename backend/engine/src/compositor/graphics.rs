@@ -15,6 +15,7 @@ use anyhow::{Context, Result, anyhow};
 
 use crate::{
     compositor::{
+        lshape::{LSHAPE_SWITCH_SECONDS, LShapeGraphic},
         overlay::{OverlayRef, blend_overlay, chroma_alpha},
         text::{BlockAlign, TextStyle, alpha_composite, render_text_block, rgba_to_yuva420p},
     },
@@ -81,10 +82,23 @@ pub struct GraphicLayerSpec {
     pub delay_ms: u32,
 }
 
+/// Where the picture goes in a template that is an L-shape, in percent of
+/// the frame.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct PictureWindow {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
 /// A template with its fields filled in, ready to draw.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GraphicSpec {
     pub layers: Vec<GraphicLayerSpec>,
+    /// With a picture window the template is an L-shape: its layers are the
+    /// art around the picture, which shrinks into the window.
+    pub picture: Option<PictureWindow>,
 }
 
 struct RenderedLayer {
@@ -106,11 +120,23 @@ pub struct RenderedGraphic {
     layers: Vec<RenderedLayer>,
     frame_width: u32,
     frame_height: u32,
+    /// For an L-shape template: its art and the window of the picture.
+    picture: Option<Arc<LShapeGraphic>>,
+}
+
+/// How long an L-shape template takes to go in or out: as long as the
+/// channel's L-shape.
+fn picture_switch() -> Duration {
+    Duration::from_secs_f64(LSHAPE_SWITCH_SECONDS)
 }
 
 impl RenderedGraphic {
     /// How long its exit takes, from the moment it is taken out.
     fn exit_time(&self) -> Duration {
+        if self.picture.is_some() {
+            return picture_switch();
+        }
+
         self.layers
             .iter()
             .filter(|layer| layer.animation_out != GraphicAnimation::None)
@@ -308,10 +334,40 @@ pub fn render_graphic(
         }
     }
 
+    let Some(window) = spec.picture else {
+        return Ok(RenderedGraphic {
+            layers,
+            frame_width,
+            frame_height,
+            picture: None,
+        });
+    };
+
+    // The art is the layers drawn once, fully in, over black; the picture
+    // covers the window and the art shows around it.
+    let mut background = VideoFrame::new(PixelFormat::Yuv420p, frame_width, frame_height);
+    background.data_mut(0).fill(16);
+    background.data_mut(1).fill(128);
+    background.data_mut(2).fill(128);
+
+    for layer in &layers {
+        blend_layer(&mut background, layer, 1.0, GraphicAnimation::None);
+    }
+
+    let px = |percent: f64, total: u32| percent_px(percent, total).max(0) as u32;
+    let graphic = LShapeGraphic::from_parts(
+        background,
+        px(window.x, frame_width),
+        px(window.y, frame_height),
+        px(window.width, frame_width),
+        px(window.height, frame_height),
+    );
+
     Ok(RenderedGraphic {
-        layers,
+        layers: Vec::new(),
         frame_width,
         frame_height,
+        picture: Some(Arc::new(graphic)),
     })
 }
 
@@ -487,6 +543,15 @@ impl GraphicsControl {
 
         state.on_air.retain(|graphic| !graphic.finished(now));
 
+        // One L-shape at a time: a new one takes the one on air out.
+        if graphic.picture.is_some() {
+            for other in &mut state.on_air {
+                if other.graphic.picture.is_some() && other.out_since(now).is_none() {
+                    other.taken_out_at = Some(now);
+                }
+            }
+        }
+
         while state.on_air.len() >= MAX_GRAPHICS_ON_AIR {
             state.on_air.remove(0);
         }
@@ -549,6 +614,55 @@ impl GraphicsControl {
             .collect()
     }
 
+    /// Whether an L-shape template is on air, going in or out.
+    pub fn picture_on_air(&self) -> bool {
+        let now = Instant::now();
+
+        self.state()
+            .on_air
+            .iter()
+            .any(|graphic| graphic.graphic.picture.is_some() && !graphic.finished(now))
+    }
+
+    /// The L-shape template on air and how far it is in (0 to 1), for a
+    /// frame of `width` x `height`.
+    pub(crate) fn picture(&self, width: u32, height: u32) -> Option<(Arc<LShapeGraphic>, f64)> {
+        self.picture_at(width, height, Instant::now())
+    }
+
+    fn picture_at(
+        &self,
+        width: u32,
+        height: u32,
+        now: Instant,
+    ) -> Option<(Arc<LShapeGraphic>, f64)> {
+        let state = self.state();
+        let switch = picture_switch().as_secs_f64();
+
+        state.on_air.iter().rev().find_map(|graphic| {
+            let picture = graphic.graphic.picture.as_ref()?;
+
+            if graphic.finished(now)
+                || graphic.graphic.frame_width != width
+                || graphic.graphic.frame_height != height
+            {
+                return None;
+            }
+
+            let entered = (now
+                .saturating_duration_since(graphic.taken_at)
+                .as_secs_f64()
+                / switch)
+                .min(1.0);
+            let left = graphic
+                .out_since(now)
+                .map_or(0.0, |since| (since.as_secs_f64() / switch).min(1.0));
+            let level = entered.min(1.0 - left);
+
+            (level > 0.0).then(|| (picture.clone(), level))
+        })
+    }
+
     /// Blend every graphic on air onto `frame`, oldest first.
     pub(crate) fn blend(&self, frame: &mut VideoFrame) {
         self.blend_at(frame, Instant::now());
@@ -577,6 +691,10 @@ impl GraphicsControl {
         };
 
         for (graphic, since_take, since_out) in graphics {
+            if graphic.picture.is_some() {
+                continue;
+            }
+
             if graphic.frame_width != frame.width() || graphic.frame_height != frame.height() {
                 continue;
             }
@@ -631,6 +749,7 @@ mod tests {
     #[test]
     fn a_box_lands_where_its_percentages_say() {
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![white_box(50.0, 50.0, GraphicAnimation::None)],
         };
         let graphic = render_graphic(&spec, 320, 180).unwrap();
@@ -653,6 +772,7 @@ mod tests {
     #[test]
     fn a_fade_comes_in_and_goes_out_over_its_time() {
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![white_box(0.0, 0.0, GraphicAnimation::Fade)],
         };
         let control = GraphicsControl::default();
@@ -684,6 +804,7 @@ mod tests {
     #[test]
     fn a_duration_takes_the_graphic_out_by_itself() {
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![white_box(0.0, 0.0, GraphicAnimation::None)],
         };
         let control = GraphicsControl::default();
@@ -705,6 +826,7 @@ mod tests {
     #[test]
     fn a_slide_starts_off_its_place_and_ends_on_it() {
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![white_box(50.0, 0.0, GraphicAnimation::SlideLeft)],
         };
         let control = GraphicsControl::default();
@@ -727,6 +849,7 @@ mod tests {
     #[test]
     fn taking_out_and_listing() {
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![white_box(0.0, 0.0, GraphicAnimation::Fade)],
         };
         let control = GraphicsControl::default();
@@ -750,6 +873,7 @@ mod tests {
     #[test]
     fn a_graphic_for_another_frame_size_is_not_drawn() {
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![white_box(0.0, 0.0, GraphicAnimation::None)],
         };
         let control = GraphicsControl::default();
@@ -772,6 +896,7 @@ mod tests {
     #[test]
     fn a_text_layer_draws_letters_on_its_fill() {
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![GraphicLayerSpec {
                 content: GraphicContent::Text {
                     text: "NoAr".to_string(),
@@ -812,6 +937,66 @@ mod tests {
         assert!(dark > 50, "black letters on it: {dark}");
     }
 
+    #[test]
+    fn a_picture_template_is_an_lshape_with_its_layers_as_art() {
+        let spec = GraphicSpec {
+            layers: vec![GraphicLayerSpec {
+                width: 100.0,
+                height: 100.0,
+                ..white_box(0.0, 0.0, GraphicAnimation::Fade)
+            }],
+            picture: Some(PictureWindow {
+                x: 25.0,
+                y: 0.0,
+                width: 75.0,
+                height: 75.0,
+            }),
+        };
+        let control = GraphicsControl::default();
+        let first = control.take(render_graphic(&spec, 320, 180).unwrap(), None);
+        let taken = control.state().on_air[0].taken_at;
+
+        assert!(control.picture_on_air());
+
+        let mut frame = black_frame(320, 180);
+        control.blend_at(&mut frame, taken + Duration::from_secs(5));
+        assert_eq!(
+            luma(&frame, 10, 10),
+            16,
+            "its layers are not drawn over the picture"
+        );
+
+        let (graphic, level) = control
+            .picture_at(320, 180, taken + Duration::from_millis(600))
+            .unwrap();
+        assert!(level > 0.4 && level < 0.6, "half way in: {level}");
+
+        let mut frame = black_frame(320, 180);
+        frame.data_mut(0).fill(50);
+        crate::compositor::lshape::apply_lshape(&mut frame, &graphic, 1.0, &mut Default::default())
+            .unwrap();
+        assert!(
+            luma(&frame, 10, 170) > 230,
+            "the art shows around the window"
+        );
+        assert_eq!(luma(&frame, 200, 60), 50, "the picture fills the window");
+
+        assert!(
+            control.picture_at(320, 640, taken).is_none(),
+            "another frame size"
+        );
+
+        control.take(render_graphic(&spec, 320, 180).unwrap(), None);
+        let on_air = control.on_air();
+        assert!(
+            on_air
+                .iter()
+                .find(|graphic| graphic.id == first)
+                .unwrap()
+                .leaving
+        );
+    }
+
     /// Writes what a lower third looks like on a synthetic picture, alone
     /// and during an L-shape, as raw YUV 4:2:0 1280x720 files:
     /// `NOAR_GRAPHICS_PREVIEW=<dir> NOAR_GRAPHICS_PREVIEW_LSHAPE=<png>
@@ -846,6 +1031,7 @@ mod tests {
             fill: Some(fill),
         };
         let spec = GraphicSpec {
+            picture: None,
             layers: vec![
                 layer(
                     GraphicContent::Box {

@@ -103,6 +103,33 @@ struct Rect {
 }
 
 impl LShapeGraphic {
+    /// A graphic from a background already at the output's size and the
+    /// window the picture takes in it, in pixels.
+    pub(crate) fn from_parts(
+        background: VideoFrame,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> Self {
+        let frame_width = background.width();
+        let frame_height = background.height();
+        let x = even(x.min(frame_width.saturating_sub(2)));
+        let y = even(y.min(frame_height.saturating_sub(2)));
+        let window = Rect {
+            x,
+            y,
+            width: even(width.min(frame_width - x)).max(2),
+            height: even(height.min(frame_height - y)).max(2),
+        };
+
+        Self {
+            background: Arc::new(background),
+            window,
+            home: window,
+        }
+    }
+
     pub fn load(config: &LShapeConfig, width: u32, height: u32) -> Result<Self> {
         if !(LSHAPE_MIN_SCALE..=LSHAPE_MAX_SCALE).contains(&config.scale) {
             return Err(anyhow!(

@@ -43,7 +43,7 @@ pub use audio_mixer::{
 };
 pub use compositor::graphics::{
     GraphicAnimation, GraphicContent, GraphicLayerSpec, GraphicOnAir, GraphicSpec, GraphicsControl,
-    MAX_GRAPHICS_ON_AIR, RenderedGraphic, render_graphic,
+    MAX_GRAPHICS_ON_AIR, PictureWindow, RenderedGraphic, render_graphic,
 };
 pub use compositor::logo::{
     LogoControl, LogoState, LogoTransition, LogoTransitions, MAX_LOGO_TRANSITION_SECONDS,
