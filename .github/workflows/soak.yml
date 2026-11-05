@@ -2,7 +2,7 @@ name: Soak test
 
 # Runs NoAr on air for a long time with synthetic clips and lives that drop
 # out, lose their video and come back, and playout restarts, and fails when
-# its output stops. See qa/soak/README.md.
+# transport or decoded moving picture stops. See qa/soak/README.md.
 on:
   schedule:
     # Every night, on main.
@@ -27,10 +27,20 @@ concurrency:
 
 jobs:
   soak:
+    strategy:
+      fail-fast: false
+      matrix:
+        output: [srt, hls]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check the picture observer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python3 -m unittest discover -s qa/soak -p 'test_*.py'
 
       - uses: docker/setup-buildx-action@v3
 
@@ -52,6 +62,7 @@ jobs:
         env:
           NOAR_SOAK: '1'
           NOAR_SOAK_IMAGE: noar-soak:ci
+          NOAR_SOAK_OUTPUT: ${{ matrix.output }}
           NOAR_SOAK_MINUTES: ${{ inputs.minutes || (github.event_name == 'pull_request' && '15') || '90' }}
           NOAR_SOAK_DIR: ${{ runner.temp }}/soak
         run: python3 qa/soak/soak.py
@@ -60,9 +71,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: soak-${{ github.run_id }}
+          name: soak-${{ matrix.output }}-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/soak/*.log
             ${{ runner.temp }}/soak/*.json
+            ${{ runner.temp }}/soak/*.jsonl
             ${{ runner.temp }}/soak/*.md
           retention-days: 14

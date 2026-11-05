@@ -1,0 +1,850 @@
+{
+  "source_commit": "d4a1a0a8a41f39b90de23844910998431fd42510",
+  "date": "2026-11-05",
+  "method": "Single-reviewer source revalidation plus the explicitly listed browser tests; no renewed council ballots.",
+  "council": "NOT_RUN",
+  "overall": "NEEDS_TESTING",
+  "counts": {
+    "FIX_PRESENT": 20,
+    "PARTIAL": 11,
+    "OBSOLETE": 3,
+    "OPEN_STATIC": 24,
+    "NEEDS_REVALIDATION": 6,
+    "DISMISSED": 2
+  },
+  "findings": [
+    {
+      "scope": "backend",
+      "id": "F-001",
+      "original_title": "Playlist date unvalidated: User can write/delete arbitrary *.json via path traversal; short date panics",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "Dates are parsed/canonicalized and write/delete paths use playlist_file_path; old raw path construction is gone.",
+      "current_evidence": [
+        "backend/app/src/utils/playlist.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-002",
+      "original_title": "Rate limiter runs before RealIpLayer/GrantsLayer: spoofable or shared IP key, authenticated bypass never applies",
+      "original_severity": "HIGH",
+      "status": "PARTIAL",
+      "note": "Layer order now identifies the client and user first. client_ip still trusts every private/link-local peer, so LAN clients or a Docker gateway require a separate trust-boundary review.",
+      "current_evidence": [
+        "backend/app/src/main.rs",
+        "backend/app/src/middleware/client_ip.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-003",
+      "original_title": "Panic in run_channel kills supervisor silently; is_alive stays true, no restart or alarm",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "run_supervised converts a child-task panic to an error; supervisor_loop resets state and retries with backoff. Native aborts remain outside Rust panic recovery.",
+      "current_evidence": [
+        "backend/app/src/player/controller.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-004",
+      "original_title": "process_control busy flag racy (load then store) and not cancellation-safe; client disconnect can wedge channel",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "begin_processing uses compare_exchange and an RAII guard; process_control spawns the command so dropping the request does not drop the command.",
+      "current_evidence": [
+        "backend/app/src/player/controller.rs",
+        "backend/app/src/api/routes/control.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-005",
+      "original_title": "Mid-clip failure writes filler for the whole clip duration, not the remainder",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "play_to_output subtracts played_seconds from the slot before writing fallback; a focused regression test exists.",
+      "current_evidence": [
+        "backend/engine/src/lib.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-006",
+      "original_title": "Single bad packet (send_packet ?) aborts clip or live session; receive_frame errors not distinguished",
+      "original_severity": "HIGH",
+      "status": "OBSOLETE",
+      "note": "The FFmpeg send_packet/receive_frame implementation cited by the audit has been replaced by GStreamer. This does not establish damaged-live recovery for every GStreamer decoder.",
+      "current_evidence": [
+        "backend/engine/src/input/gstreamer.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-007",
+      "original_title": "Docker/release workflows publish without depending on validate; published feature set never tested",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "Docker and Release now call Validate and publication depends on that job. Validate builds the server feature set, not desktop features.",
+      "current_evidence": [
+        ".github/workflows/docker.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/validate.yml"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-008",
+      "original_title": "Scheduled auto-update restarts container with no on-air guard (opt-in)",
+      "original_severity": "HIGH",
+      "status": "OPEN_STATIC",
+      "note": "Opt-in scheduled/automatic updates call install_when_due without consulting active playout. Treat the chosen update time as an interruption window.",
+      "current_evidence": [
+        "backend/app/src/utils/updater.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-009",
+      "original_title": "Failed schedule update returns early before invalidate(); ticker keeps stale events",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "The saved event revises the queue and invalidates the ticker before propagating later bookkeeping errors.",
+      "current_evidence": [
+        "backend/app/src/api/routes/schedule.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-010",
+      "original_title": "Occurrence marked seen before claim; transient DB error drops it permanently",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "A failed claim removes the seen key and is retried; a database-error regression test exists.",
+      "current_evidence": [
+        "backend/app/src/player/schedule.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-011",
+      "original_title": "DST spring-forward silently skips Media events in the gap",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "wall_clock_time moves a nonexistent local time to the end of the DST gap; the old silent skip path was replaced. Repeated-hour live behavior is not proven here.",
+      "current_evidence": [
+        "backend/app/src/player/schedule.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-012",
+      "original_title": "Error from a scheduled event tears down and restarts the whole playout",
+      "original_severity": "MEDIUM",
+      "status": "NEEDS_REVALIDATION",
+      "note": "The historical reviewers disagreed; media error handling has changed substantially. Exercise scheduled corrupt media and lost live sources before closing the continuity claim.",
+      "current_evidence": [
+        "backend/app/src/player/schedule.rs",
+        "backend/app/src/player/output/playout.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-013",
+      "original_title": "Pacing clock never re-anchors after a stall: unthrottled burst catch-up",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "PlayoutClock reanchors after MAX_CATCH_UP or MAX_WAIT rather than sending an unlimited backlog.",
+      "current_evidence": [
+        "backend/engine/src/utils/clock.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-014",
+      "original_title": "No hardware-encoder fallback; VAAPI device hard-wired",
+      "original_severity": "MEDIUM",
+      "status": "NEEDS_REVALIDATION",
+      "note": "Encoder construction is now GStreamer-based. Hardware failure/fallback requires actual GPU devices and output-policy review; no GPU was tested.",
+      "current_evidence": [
+        "backend/engine/src/output/pipeline.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-015",
+      "original_title": "Live reader permits can wedge (2 per input) until process restart; fixed 1s retry",
+      "original_severity": "MEDIUM",
+      "status": "OBSOLETE",
+      "note": "The cited FFmpeg live reader/semaphore implementation no longer exists. GStreamer source teardown needs its own fault-injection evidence.",
+      "current_evidence": [
+        "backend/engine/src/input/gstreamer.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-016",
+      "original_title": "SCTE-35 injector fails open: one bad sync byte stops all signalling, no return/cancel",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "TsInjector sets failed on invalid TS framing and passes subsequent data through without signaling; control.fail exposes an error, but it does not resynchronize automatically.",
+      "current_evidence": [
+        "backend/engine/src/output/scte35.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-017",
+      "original_title": "2FA /auth/verify has no attempt limit or lockout",
+      "original_severity": "MEDIUM",
+      "status": "PARTIAL",
+      "note": "The auth path has an IP rate limit, but verify still returns an invalid-code response without a per-code attempt counter. IP limiting alone is not per-challenge lockout.",
+      "current_evidence": [
+        "backend/app/src/api/auth.rs",
+        "backend/app/src/main.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-018",
+      "original_title": "ChannelAdmin can set custom output URL to a local file path",
+      "original_severity": "MEDIUM",
+      "status": "NEEDS_REVALIDATION",
+      "note": "Custom-output storage and the GStreamer link builder differ from the original FFmpeg path. No file-output authorization exploit was attempted in this review.",
+      "current_evidence": [
+        "backend/app/src/api/routes/playout_config.rs",
+        "backend/engine/src/output/link.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-019",
+      "original_title": "Console request log records full URIs incl. access/key/uuid secrets",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "Request URI and Referer query values are passed through redact_address for known secret parameters; regression tests exist.",
+      "current_evidence": [
+        "backend/app/src/utils/logging.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-020",
+      "original_title": "Playlist import writes user-named file in shared temp dir; no cleanup on error",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "Imports use UUID temporary names, create_new, and remove the temporary file after import or write failure.",
+      "current_evidence": [
+        "backend/app/src/api/routes/file.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-021",
+      "original_title": "config_global init trigger+insert not atomic, CREATE TRIGGER without IF NOT EXISTS",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "The initialization trigger uses IF NOT EXISTS and the trigger/insert execute in one transaction.",
+      "current_evidence": [
+        "backend/app/src/db/handles/init.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-022",
+      "original_title": "create_channel_records deferred transaction reads before writing (SQLITE_BUSY_SNAPSHOT)",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "Channel creation uses BEGIN IMMEDIATE before reading/writing related records.",
+      "current_evidence": [
+        "backend/app/src/db/handles/channel.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-023",
+      "original_title": "Deleting a channel cascades away its as-run history",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "Channel deletion archives as-run rows with the channel name in the same transaction before cascading deletion.",
+      "current_evidence": [
+        "backend/app/src/db/handles/channel.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-024",
+      "original_title": "No backup/snapshot before migrations or self-update; forward-only migrations",
+      "original_severity": "MEDIUM",
+      "status": "PARTIAL",
+      "note": "Pending migrations now trigger VACUUM INTO backups with retention and tests. Backup failure is logged and migration proceeds; full self-update rollback was not exercised.",
+      "current_evidence": [
+        "backend/app/src/db/handles/init.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-025",
+      "original_title": "Critical-path test gaps: SCTE-35 integration, DST fall-back, restart, migration upgrade fixtures, 401/403 matrix",
+      "original_severity": "MEDIUM",
+      "status": "PARTIAL",
+      "note": "API authorization tests, scheduler tests and a soak harness now exist. This change adds browser CRUD/persistence evidence; full SCTE-35, DST fall-back and old-schema upgrade coverage still need runtime evidence.",
+      "current_evidence": [
+        "backend/app/tests/api_routes.rs",
+        "backend/app/src/player/schedule.rs",
+        "qa/soak/README.md"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-026",
+      "original_title": "Container runs as root with no healthcheck or health route",
+      "original_severity": "MEDIUM",
+      "status": "PARTIAL",
+      "note": "GET /health now exists with channel/output-age checks. The runtime Dockerfile still has no USER or HEALTHCHECK instruction.",
+      "current_evidence": [
+        "backend/app/src/api/routes/health.rs",
+        "Dockerfile"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-027",
+      "original_title": "Unpinned base images, mixed action majors, untagged watchtower with docker socket",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "Base images remain tag-based; the optional updater image is unversioned and mounts the Docker socket. Its opt-in profile reduces exposure but does not pin it.",
+      "current_evidence": [
+        "Dockerfile",
+        "docker-compose.yml"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-028",
+      "original_title": "Released-migration immutability not provable (no tags/checksum gate)",
+      "original_severity": "LOW",
+      "status": "NEEDS_REVALIDATION",
+      "note": "SQLx migration checksums protect applied databases, but this review did not compare every released tag against current migration files.",
+      "current_evidence": [
+        "backend/app/src/db/handles/init.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-029",
+      "original_title": "Migration 00003 INNER JOIN copies can drop orphan legacy rows",
+      "original_severity": "LOW",
+      "status": "NEEDS_REVALIDATION",
+      "note": "The historical INNER JOIN migration needs an orphaned legacy-data upgrade fixture. Fresh installation does not validate that scenario.",
+      "current_evidence": [
+        "migrations/00003_split_config.sql"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-030",
+      "original_title": "Graceful shutdown does not drain HTTP/SSE",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "axum::serve is selected against shutdown without with_graceful_shutdown; draining HTTP/SSE is not established.",
+      "current_evidence": [
+        "backend/app/src/main.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-031",
+      "original_title": "Logs rotate daily without a size cap",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "File logs rotate by Age::Day and count retention; no size criterion is configured.",
+      "current_evidence": [
+        "backend/app/src/utils/logging.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-032",
+      "original_title": "Manual trigger unbounded/duplicable; plain User may trigger and stop events",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "ScheduleState::trigger pushes into a VecDeque without a queue cap or deduplication. User trigger permissions are a product policy, not independently an authorization bug.",
+      "current_evidence": [
+        "backend/app/src/player/schedule.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-033",
+      "original_title": "SSE broadcaster does serial per-client work, no client cap",
+      "original_severity": "LOW",
+      "status": "PARTIAL",
+      "note": "Client sends use try_send and full queues are removed. Per-client status work is still serial and there is no explicit total client cap.",
+      "current_evidence": [
+        "backend/app/src/sse/broadcast.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-034",
+      "original_title": "Role/channel/password changes not applied to live sessions (JWT claims trusted; refresh not revoked)",
+      "original_severity": "LOW",
+      "status": "PARTIAL",
+      "note": "Refresh reloads the user from the DB, but an already-issued access JWT still supplies role/channels until it expires. Immediate revocation on role/password change is not established.",
+      "current_evidence": [
+        "backend/app/src/api/auth.rs",
+        "backend/app/src/api/routes/mod.rs",
+        "backend/app/src/api/routes/user.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "backend",
+      "id": "F-035",
+      "original_title": "Setup endpoint unauthenticated until first-run completes; port published on all interfaces",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "First-run setup remains unauthenticated until completion and Compose publishes port 8787 on all interfaces; deployment must protect the initial setup window.",
+      "current_evidence": [
+        "backend/app/src/api/routes/setup.rs",
+        "docker-compose.yml"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-001",
+      "original_title": "Playlist load errors swallowed; empty playlist marked as saved",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "getPlaylist exposes loadFailed and save is disabled/guarded after failed loading; the new browser regression verifies stored content is not overwritten.",
+      "current_evidence": [
+        "frontend/src/stores/playlist.ts",
+        "frontend/src/components/player/PlaylistPanel.vue"
+      ],
+      "runtime": "PASS",
+      "runtime_scope": "Playlist failed-load protection",
+      "runtime_evidence": [
+        "browser-run.txt",
+        "../../../../qa/e2e/tests/operator.spec.ts"
+      ]
+    },
+    {
+      "scope": "frontend",
+      "id": "F-002",
+      "original_title": "Any token-refresh failure (incl. 5xx/network) logs out all tabs",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "refreshToken clears the session for rejected credentials, while temporary failures retain refresh state. Network/5xx multi-tab behavior was reviewed statically, not exercised in this run.",
+      "current_evidence": [
+        "frontend/src/stores/auth.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-003",
+      "original_title": "Modal dialogs lack focus move/trap/restore; Schedule/Live dialogs ignore Escape (WCAG 2.4.3, 2.1.1)",
+      "original_severity": "HIGH",
+      "status": "FIX_PRESENT",
+      "note": "useDialogFocus moves/traps/restores focus and handles Escape in the schedule/live/generic dialogs. The new browser test exercises ScheduleDialog; other modal families need separate coverage.",
+      "current_evidence": [
+        "frontend/src/composables/dialogFocus.ts",
+        "frontend/src/components/schedule/ScheduleDialog.vue",
+        "frontend/src/components/schedule/LiveDialog.vue"
+      ],
+      "runtime": "PASS",
+      "runtime_scope": "ScheduleDialog focus, Tab wrapping, Escape and focus restoration only",
+      "runtime_evidence": [
+        "browser-run.txt",
+        "../../../../qa/e2e/tests/operator.spec.ts"
+      ]
+    },
+    {
+      "scope": "frontend",
+      "id": "F-004",
+      "original_title": "<html lang> fixed to 'en' regardless of locale (WCAG 3.1.1)",
+      "original_severity": "HIGH",
+      "status": "DISMISSED",
+      "note": "The original audit dismissed this claim. App.vue still computes html lang from the active locale with useHead.",
+      "current_evidence": [
+        "frontend/src/App.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-005",
+      "original_title": "Destructive buttons hard-code #ff9da0 text: ~2:1 contrast in light theme",
+      "original_severity": "HIGH",
+      "status": "OPEN_STATIC",
+      "note": "The destructive UserEditor/SettingsGeneral controls still hard-code #ff9da0. Exact contrast in all rendered themes has not been measured in this revalidation.",
+      "current_evidence": [
+        "frontend/src/components/settings/UserEditor.vue",
+        "frontend/src/components/settings/SettingsGeneral.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-006",
+      "original_title": "SCTE-35 error and config warning share style; error dot same red as on-air",
+      "original_severity": "HIGH",
+      "status": "PARTIAL",
+      "note": "SCTE errors and mismatch warnings still share accent text; on-state now uses bg-ok and errors use a separate red dot. The original claim is only partly current.",
+      "current_evidence": [
+        "frontend/src/components/settings/SettingsBreaks.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-007",
+      "original_title": "obtainUuid 401 check never fires; failed uuid fetch leaves SSE status stream dead",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "AuthFetchError now exposes status and obtainUuid checks it; transient failures preserve the previous UUID. Long-running reconnect behavior is not covered by the CRUD suite.",
+      "current_evidence": [
+        "frontend/src/composables/authFetch.ts",
+        "frontend/src/stores/auth.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-008",
+      "original_title": "Channel-list failure falls back to fabricated 'Channel 1'",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "getChannelConfig still fabricates a Channel 1 entry after channel-list failure.",
+      "current_evidence": [
+        "frontend/src/stores/config.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-009",
+      "original_title": "Chunked upload: sibling workers not aborted on chunk failure; retry can race same batch",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "Promise.all rejects on the first chunk worker failure without aborting or awaiting sibling work; sibling workers can keep consuming the queue.",
+      "current_evidence": [
+        "frontend/src/composables/chunkedUpload.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-010",
+      "original_title": "Concurrent playlist loads unguarded; stale response overwrites state and save snapshot",
+      "original_severity": "MEDIUM",
+      "status": "FIX_PRESENT",
+      "note": "A monotonically increasing loadRequest prevents older playlist responses from replacing the latest state. Concurrency fault injection is not part of this run.",
+      "current_evidence": [
+        "frontend/src/stores/playlist.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-011",
+      "original_title": "Media browse store applies stale responses; isLoading reset by first finisher",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "getTree still commits each completed response and clears isLoading without a request generation guard.",
+      "current_evidence": [
+        "frontend/src/stores/media.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-012",
+      "original_title": "msgAlert overlapping timers hide newer alerts early",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "msgAlert creates independent hide timers without cancelling the previous timer, so an old timer can hide a new message.",
+      "current_evidence": [
+        "frontend/src/stores/index.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-013",
+      "original_title": "de-DE/ru-RU ~1561 keys missing; pt-BR missing a few keys and has orphan keys",
+      "original_severity": "MEDIUM",
+      "status": "OBSOLETE",
+      "note": "The supported locale list is now English and Brazilian Portuguese; the cited de-DE/ru-RU files are gone. Full parity of the current two catalogs was not checked here.",
+      "current_evidence": [
+        "frontend/src/i18n.ts",
+        "frontend/src/locales/en-US.ts",
+        "frontend/src/locales/pt-BR.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-014",
+      "original_title": "No unsaved-changes guard on in-app route navigation",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "PlaylistPanel protects beforeunload, but no in-app route-leave confirmation was found in the current router/panel.",
+      "current_evidence": [
+        "frontend/src/components/player/PlaylistPanel.vue",
+        "frontend/src/router/index.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-015",
+      "original_title": "On-air state changes not in live region; error alerts time out in 3-4s (WCAG 4.1.3)",
+      "original_severity": "MEDIUM",
+      "status": "PARTIAL",
+      "note": "Alerts have role=alert, but they remain timed and ordinary on-air status has no live-region marker; the off-air failure badge does have role=status.",
+      "current_evidence": [
+        "frontend/src/components/utils/AlertMsg.vue",
+        "frontend/src/components/HeaderMenu.vue",
+        "frontend/src/stores/index.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-016",
+      "original_title": "Login password label wraps show/hide button; compound accessible name",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "The password label still wraps the visibility button. The runtime snapshot exposes the input as Password Show password, confirming the compound accessible name.",
+      "current_evidence": [
+        "frontend/src/views/LoginView.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-017",
+      "original_title": "Logging error-count pill styled identically to ON AIR badge",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "The log error count and on-air badge still share bg-on-air-soft/text-on-air-text styling, despite separate text labels.",
+      "current_evidence": [
+        "frontend/src/views/LoggingView.vue",
+        "frontend/src/components/HeaderMenu.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-018",
+      "original_title": "Live protocol selection #1c1c1c on --live ~3.15:1 in light; timeline live colour differs",
+      "original_severity": "MEDIUM",
+      "status": "NEEDS_REVALIDATION",
+      "note": "Protocol and timeline styling changed; exact rendered light-theme contrast and consistent live colors need a visual/a11y pass. No contrast ratio is asserted here.",
+      "current_evidence": [
+        "frontend/src/components/live/LiveFields.vue",
+        "frontend/src/composables/schedule.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-019",
+      "original_title": "On-air/warning colours bypass theme tokens (two reds, yellow vs orange)",
+      "original_severity": "MEDIUM",
+      "status": "OPEN_STATIC",
+      "note": "HeaderMenu and other on-air controls still contain literal warning/error colors outside shared tokens; this is design consistency, not a demonstrated transmission defect.",
+      "current_evidence": [
+        "frontend/src/components/HeaderMenu.vue",
+        "frontend/src/components/player/LivePreview.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-020",
+      "original_title": "Playlist table min-w 760px; actions off-screen on narrow viewports",
+      "original_severity": "MEDIUM",
+      "status": "PARTIAL",
+      "note": "The table still has min-w 640px / md:min-w 760px; narrowTable makes the inline editor sticky, but small-screen action reachability was not tested.",
+      "current_evidence": [
+        "frontend/src/components/player/PlaylistPanel.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-021",
+      "original_title": "Arbitrary text sizes; on-air marker at 10px below --text-xs floor",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "Several on-air/timeline markers still explicitly use text-[10px].",
+      "current_evidence": [
+        "frontend/src/components/player/PlaylistPanel.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-022",
+      "original_title": "authFetchRaw returns second 401 after refresh without ending session",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "authFetchRaw retries once after refresh and returns the second response without ending the session on a second 401.",
+      "current_evidence": [
+        "frontend/src/composables/authFetch.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-023",
+      "original_title": "Tokens in localStorage/BroadcastChannel; SSE uuid and access token in URL query",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "Tokens remain in localStorage/BroadcastChannel and bearer-like media/SSE URLs remain part of the design. This is an exposure surface, not proof of an exploit.",
+      "current_evidence": [
+        "frontend/src/stores/auth.ts",
+        "frontend/src/composables/storage.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-024",
+      "original_title": "uploadPhoto bypasses authFetch (no refresh/retry); unguarded JSON.parse",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "uploadPhoto still uses XMLHttpRequest without authFetch retry and parses responseText without a catch inside onload.",
+      "current_evidence": [
+        "frontend/src/composables/storage.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-025",
+      "original_title": "Updates poller interval never stopped",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "watchStatus clears a previous interval when starting, but exports no stop/dispose hook for the interval.",
+      "current_evidence": [
+        "frontend/src/stores/updates.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-026",
+      "original_title": "App.vue global listeners never removed; theme localStorage read without try/catch",
+      "original_severity": "LOW",
+      "status": "PARTIAL",
+      "note": "Root listeners still lack teardown. Language storage reads are guarded, but theme access and global listener cleanup remain separate follow-ups.",
+      "current_evidence": [
+        "frontend/src/App.vue"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-027",
+      "original_title": "'any' on config payloads and auth responses",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "Config/browse code still has any payloads. This is typing debt, not a demonstrated runtime error.",
+      "current_evidence": [
+        "frontend/src/stores/config.ts",
+        "frontend/src/stores/media.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-028",
+      "original_title": "No catch-all route",
+      "original_severity": "LOW",
+      "status": "FIX_PRESENT",
+      "note": "The router now redirects /:pathMatch(.*)* to home.",
+      "current_evidence": [
+        "frontend/src/router/index.ts"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-029",
+      "original_title": "Role gating only on /configure; operator views ungated client-side",
+      "original_severity": "LOW",
+      "status": "DISMISSED",
+      "note": "The original audit dismissed this as a vulnerability: server authorization is authoritative. The client now also gates graphics/settings subroutes by role.",
+      "current_evidence": [
+        "frontend/src/router/index.ts",
+        "backend/app/tests/api_routes.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-030",
+      "original_title": "Setup redirect check only on home and fails open",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "The setup redirect check still runs only for home and catches fetch failure; the backend setup lock is the real initialization guard.",
+      "current_evidence": [
+        "frontend/src/router/index.ts",
+        "backend/app/src/utils/setup.rs"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "scope": "frontend",
+      "id": "F-031",
+      "original_title": "UserEditor password-mismatch error not linked to fields",
+      "original_severity": "LOW",
+      "status": "OPEN_STATIC",
+      "note": "UserEditor presents role=alert for errors, but password fields still lack aria-describedby/aria-invalid bindings to the mismatch message.",
+      "current_evidence": [
+        "frontend/src/components/settings/UserEditor.vue"
+      ],
+      "runtime": "NOT_RUN"
+    }
+  ]
+}

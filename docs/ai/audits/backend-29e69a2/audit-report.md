@@ -1,5 +1,10 @@
 # NoAr full backend audit — ref 29e69a2 (backend identical to adc2061)
 
+> Historical report: its verdict and ballots apply only to the commit above.
+> See the [2.2.1 revalidation](../revalidation-2.2.1/README.md) for current-source
+> status, remaining risks and explicitly scoped runtime evidence. The original
+> council has not been rerun.
+
 Council: BACKEND (5 voters: backend, media-engine, security, database, reliability). Lead facilitated, non-voting; Round B relayed by lead (no direct agent messaging).
 Tally: `tally_audit_votes.py --council backend` → readiness **BLOCKED** (deny 5/0/0); confirmed blockers F-001, F-002.
 

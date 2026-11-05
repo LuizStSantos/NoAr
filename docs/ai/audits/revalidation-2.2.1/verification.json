@@ -1,0 +1,44 @@
+{
+  "changed_paths": [
+    ".gitignore",
+    "docs/ai/README.md",
+    "docs/ai/audits/backend-29e69a2/audit-report.md",
+    "docs/ai/audits/frontend-adc2061/audit-report.md",
+    "docs/ai/audits/revalidation-2.2.1/README.md",
+    "docs/ai/audits/revalidation-2.2.1/browser-run.txt",
+    "docs/ai/audits/revalidation-2.2.1/evidence.md",
+    "docs/ai/audits/revalidation-2.2.1/findings.json",
+    "docs/ai/audits/revalidation-2.2.1/integration-evidence.json",
+    "docs/ai/audits/revalidation-2.2.1/restart-result.json",
+    "docs/ai/audits/revalidation-2.2.1/verification.json",
+    "docs/developer.md",
+    "qa/e2e/README.md",
+    "qa/e2e/global-setup.ts",
+    "qa/e2e/package-lock.json",
+    "qa/e2e/package.json",
+    "qa/e2e/playwright.config.ts",
+    "qa/e2e/run_staging.py",
+    "qa/e2e/tests/operator.spec.ts",
+    "qa/e2e/tsconfig.json"
+  ],
+  "checks": [
+    {
+      "name": "toolkit-unit-tests",
+      "status": "PASS",
+      "returncode": 0,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".claude/scripts",
+        "-p",
+        "test_*.py"
+      ],
+      "summary": ""
+    }
+  ],
+  "manual_staging_gates": [],
+  "note": "PASS means the specific command exited successfully, never production readiness."
+}

@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "playlist_dates": [
+    "2026-11-05",
+    "2026-11-06"
+  ],
+  "scheduled_events": 1,
+  "checks": [
+    "/api/schedule/1/events",
+    "/api/playlist/1?date=2026-11-05",
+    "/api/playlist/1?date=2026-11-06"
+  ]
+}

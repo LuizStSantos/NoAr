@@ -15,6 +15,7 @@ if (!loopback && process.env.NOAR_E2E_ALLOW_REMOTE !== '1') {
 }
 
 export default defineConfig({
+  globalSetup: './global-setup.ts',
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: true,
@@ -22,7 +23,17 @@ export default defineConfig({
   workers: 1,
   timeout: 30_000,
   reporter: [['list'], ['html', { open: 'never', outputFolder: './playwright-report' }]],
-  use: { baseURL, trace: 'retain-on-failure', screenshot: 'only-on-failure' },
+  use: {
+    baseURL,
+    locale: 'en-US',
+    timezoneId: 'America/Sao_Paulo',
+    viewport: { width: 1440, height: 1000 },
+    launchOptions: process.env.NOAR_E2E_CHROMIUM
+      ? { executablePath: process.env.NOAR_E2E_CHROMIUM }
+      : {},
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+  },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   outputDir: './test-results',
 })

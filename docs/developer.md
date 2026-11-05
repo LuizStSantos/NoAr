@@ -90,6 +90,19 @@ GStreamer plugin, driver and accessible device. Software-only validation does
 not establish that a GPU is available; unsupported encoder settings are
 rejected instead of falling back to another encoder.
 
+## Browser integration tests
+
+The [isolated Playwright harness](../qa/e2e/README.md) checks authenticated
+playlist editing, save/load errors, scheduler CRUD and recurrence, modal
+keyboard focus, and storage persistence across a backend restart. Its runner
+creates and removes its own database and synthetic media; never target an
+on-air instance. These checks do not establish scheduled execution or media
+output continuity.
+
+The separate [soak harness](../qa/soak/README.md) exercises synthetic playout
+faults on SRT and HLS and observes decoded moving pictures, including a negative
+test with intentionally static material. Hardware outputs need separate fixtures.
+
 ## Generate types for Frontend
 The frontend uses TypeScript, to generate types for the rust structs run: `cargo test`.
 
