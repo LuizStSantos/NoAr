@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import GraphicsTemplates from '@/components/graphics/GraphicsTemplates.vue'
 import SceneButtons from '@/components/graphics/SceneButtons.vue'
 import LogoRemote from '@/components/settings/LogoRemote.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
@@ -24,8 +23,6 @@ const isAdmin = ['global_admin', 'channel_admin'].includes(authStore.role)
     </div>
 
     <template v-if="configStore.playout?.processing">
-        <GraphicsTemplates />
-
         <LogoRemote ref="remote" part="live" />
 
         <SectionCard :title="t('graphics.sections.scenes')" :description="t('graphics.scenes.liveIntro')">

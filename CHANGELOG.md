@@ -23,9 +23,12 @@ one is tagged.
   (fade, slide, wipe). They are drawn under the L-shape, so a lower third
   follows the picture into the L-shape's corner; a template can also wait
   for the L-shape to end or skip it.
-- Graphics › Live now lists the channel's templates by group: pick one, fill
-  in its fields, set its time on air and put it on air; what is on air is
-  listed with a button to take each graphic out, or all of them.
+- The Graphics tab opens on **On air**, the operator's screen: a preview
+  that draws the picked template with what is typed in its fields, a program
+  monitor with the real output, Put on air / Take out / Next, the graphics on
+  air, and the logo as an always-on toggle. **Templates** shows the library
+  as cards, filtered by group. The former Live now page is now "Live logo and
+  L-shape", unchanged.
 
 ### Changed
 

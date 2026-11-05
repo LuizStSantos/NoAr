@@ -15,6 +15,8 @@ import { useSettings } from '@/stores/settings'
  * subtitles, quick scenes and control from outside NoAr.
  */
 const PAGES = [
+    { name: 'onair', icon: 'bi-record-circle', admins: false },
+    { name: 'templates', icon: 'bi-grid-1x2', admins: false },
     { name: 'live', icon: 'bi-broadcast', admins: false },
     { name: 'logo', icon: 'bi-badge-tm', admins: true },
     { name: 'lshape', icon: 'bi-aspect-ratio', admins: true },

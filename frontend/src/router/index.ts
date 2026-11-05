@@ -68,8 +68,20 @@ const router = createRouter({
             name: 'graphics',
             component: () => import('@/views/GraphicsView.vue'),
             meta: { showHeader: true },
-            redirect: (to) => ({ path: '/graphics/live', query: to.query }),
+            redirect: (to) => ({ path: '/graphics/onair', query: to.query }),
             children: [
+                {
+                    path: 'onair',
+                    name: 'graphics-onair',
+                    component: () => import('@/components/graphics/GraphicsOnAir.vue'),
+                    meta: { showHeader: true, roles: ALL },
+                },
+                {
+                    path: 'templates',
+                    name: 'graphics-templates',
+                    component: () => import('@/components/graphics/GraphicsLibrary.vue'),
+                    meta: { showHeader: true, roles: ALL },
+                },
                 {
                     path: 'live',
                     name: 'graphics-live',
@@ -275,7 +287,7 @@ router.beforeEach(async (to) => {
     const allowedRoles = to.meta.roles as string[] | undefined
 
     if (allowedRoles && !allowedRoles.includes(auth.role)) {
-        return { name: to.path.startsWith('/graphics') ? 'graphics-live' : 'settings-general', query: to.query }
+        return { name: to.path.startsWith('/graphics') ? 'graphics-onair' : 'settings-general', query: to.query }
     }
 
     return
