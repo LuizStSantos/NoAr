@@ -11,6 +11,17 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-11-05
+
+### Changed
+
+- The Docker documentation explains how to encode on an NVIDIA card (NVENC),
+  and `docker-compose.yml` carries the settings, commented out. Not yet
+  tested on NVIDIA hardware.
+- `Cargo.toml` names the license `GPL-3.0-only` (the current identifier of
+  the same GPL v3), and the image keeps the license of each GStreamer part it
+  builds.
+
 ### Fixed
 
 - Generating a day from folders of long programmes left a gap at its end
@@ -983,7 +994,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/LuizStSantos/NoAr/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/LuizStSantos/NoAr/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/LuizStSantos/NoAr/compare/v2.1.2...v2.1.3
