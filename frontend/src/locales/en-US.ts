@@ -714,8 +714,8 @@ export default {
         level: 'Lowest level',
         levels: {
             ERROR: 'Errors only',
-            WARN: 'Warnings',
-            INFO: 'Information',
+            WARN: 'Errors + warnings',
+            INFO: 'No debug',
             DEBUG: 'Everything',
         },
         search: 'Filter messages (file, event, error…)',

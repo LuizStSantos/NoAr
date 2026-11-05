@@ -19,6 +19,9 @@ one is tagged.
 - The Playlist page's library no longer stretches to the bottom of the screen
   with nothing in it: it is as tall as its folders and files, at most as tall
   as the playlist, and scrolls inside.
+- The Log page's level buttons say what they include: "Errors + warnings"
+  and "No debug" instead of "Warnings" and "Information", which looked like
+  they showed only that level while they also showed the levels above.
 
 ## [2.2.0] - 2026-11-04
 
