@@ -709,7 +709,7 @@ watch(zoom, scrollToFocus)
         <div class="flex flex-wrap gap-4 items-start">
             <aside
                 :aria-label="t('schedule.materials')"
-                class="card-box flex-[1_1_280px] w-full lg:max-w-[320px] flex flex-col lg:sticky lg:top-[72px] max-h-[70vh] lg:max-h-[calc(100vh-96px)]"
+                class="card-box flex-[1_1_280px] w-full lg:max-w-[340px] flex flex-col lg:sticky lg:top-[72px] max-h-[70vh] lg:max-h-[calc(100vh-96px)]"
             >
                 <div role="tablist" class="grid grid-cols-2 border-b border-line">
                     <button
