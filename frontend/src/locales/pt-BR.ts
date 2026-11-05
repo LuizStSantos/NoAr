@@ -1485,13 +1485,17 @@ export default {
                 skip: 'Com L-shape: não entra',
             },
         },
+        groups: {
+            main: 'Grafismo',
+            channel: 'Ajustes do canal',
+            channelHint: 'A logo, a arte do L-shape e as cenas do grafismo anterior. Viram modelos quando o grafismo antigo for migrado.',
+        },
         sectionsLabel: 'Páginas do grafismo',
         page: 'Página',
         marksHint: 'Marcações dentro de um vídeo (logo, L-shape, breaks) continuam em Armazenamento › Marcações.',
         sections: {
             onair: 'No ar',
             templates: 'Modelos',
-            live: 'Logo e L-shape ao vivo',
             logo: 'Logo',
             lshape: 'L-shape',
             subtitles: 'Legendas',

@@ -234,7 +234,7 @@ watch(channelId, () => {
             <input v-model="locked" type="checkbox" role="switch" class="toggle toggle-sm toggle-accent" />
         </label>
         <RouterLink
-            :to="{ name: 'graphics-live', query: { channel: channelId } }"
+            :to="{ name: 'graphics-onair', query: { channel: channelId } }"
             class="link-accent text-sm inline-flex items-center gap-1"
         >
             {{ t('graphics.quick.open') }} <i class="bi bi-arrow-right" aria-hidden="true" />

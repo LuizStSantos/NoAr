@@ -26,9 +26,10 @@ one is tagged.
 - The Graphics tab opens on **On air**, the operator's screen: a preview
   that draws the picked template with what is typed in its fields, a program
   monitor with the real output, Put on air / Take out / Next, the graphics on
-  air, and the logo as an always-on toggle. **Templates** shows the library
-  as cards, filtered by group. The former Live now page is now "Live logo and
-  L-shape", unchanged.
+  air, and below them the live logo, L-shape and quick scene controls of the
+  former Live now page, which now opens On air. **Templates** shows the
+  library as cards, filtered by group. The menu keeps Logo, L-shape and Quick
+  scenes apart, as channel settings, until they move over to templates.
 
 ### Changed
 

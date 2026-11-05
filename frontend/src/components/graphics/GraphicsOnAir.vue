@@ -4,8 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
 import LiveVideo from '@/components/player/LiveVideo.vue'
+import SceneButtons from '@/components/graphics/SceneButtons.vue'
+import LogoRemote from '@/components/settings/LogoRemote.vue'
+import SectionCard from '@/components/settings/SectionCard.vue'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
-import { AuthFetchError, authFetch } from '@/composables/authFetch'
+import { AuthFetchError } from '@/composables/authFetch'
 import {
     type GraphicOnAir,
     type GraphicsTemplate,
@@ -28,6 +31,7 @@ const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const graphicsApi = useGraphicsApi()
+const isAdmin = ['global_admin', 'channel_admin'].includes(authStore.role)
 
 const templates = ref<GraphicsTemplate[]>([])
 const onAir = ref<GraphicOnAir[]>([])
@@ -36,7 +40,7 @@ const selectedId = ref<number | null>(null)
 const values = reactive<Record<string, Record<string, string>>>({})
 const duration = ref('')
 const busy = ref(false)
-const logoHidden = ref<boolean | null>(null)
+const remote = ref<InstanceType<typeof LogoRemote> | null>(null)
 const muted = ref(true)
 let timer: ReturnType<typeof setInterval> | undefined
 
@@ -60,26 +64,11 @@ function message(error: unknown, fallback: string): string {
     return error instanceof AuthFetchError && typeof error.data === 'string' && error.data ? error.data : fallback
 }
 
-function headers() {
-    return { ...configStore.contentType, ...authStore.authHeader }
-}
-
 async function loadOnAir() {
     try {
         onAir.value = await graphicsApi.onAir()
     } catch {
         // The next poll tries again.
-    }
-}
-
-async function loadLogo() {
-    try {
-        const state = await authFetch<{ hidden: boolean }>(`/api/control/${channel.value?.id}/logo`, {
-            headers: headers(),
-        })
-        logoHidden.value = state.hidden
-    } catch {
-        logoHidden.value = null
     }
 }
 
@@ -105,7 +94,7 @@ async function load() {
         select(first)
     }
 
-    await Promise.all([loadOnAir(), loadLogo()])
+    await loadOnAir()
 }
 
 async function take() {
@@ -163,19 +152,6 @@ function next() {
 
     if (following) {
         select(following)
-    }
-}
-
-async function toggleLogo() {
-    try {
-        const state = await authFetch<{ hidden: boolean }>(`/api/control/${channel.value?.id}/logo`, {
-            method: 'POST',
-            headers: headers(),
-            body: JSON.stringify({ action: logoHidden.value ? 'show' : 'hide' }),
-        })
-        logoHidden.value = state.hidden
-    } catch (error) {
-        indexStore.msgAlert('error', message(error, t('graphics.onAir.logoFailed')), 4)
     }
 }
 
@@ -332,32 +308,26 @@ onBeforeUnmount(() => clearInterval(timer))
                 </ul>
             </section>
 
-            <section class="card-box px-5 py-4 flex flex-col gap-3">
-                <div class="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 class="m-0 text-base font-semibold">{{ t('graphics.onAir.always') }}</h2>
-                    <span class="text-xs text-muted">{{ t('graphics.onAir.alwaysHint') }}</span>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        class="min-h-11 px-4 rounded-field border cursor-pointer flex items-center gap-2 bg-base-100 disabled:opacity-50"
-                        :class="logoHidden === false ? 'border-success' : 'border-line-strong'"
-                        :aria-pressed="logoHidden === false"
-                        :disabled="logoHidden === null"
-                        @click="toggleLogo"
+            <template v-if="configStore.playout?.processing">
+                <LogoRemote ref="remote" part="live" />
+
+                <SectionCard :title="t('graphics.sections.scenes')" :description="t('graphics.scenes.liveIntro')">
+                    <SceneButtons @applied="remote?.load()" />
+                    <p
+                        v-if="!configStore.playoutSaved?.processing?.graphics_scenes?.length"
+                        class="m-0 text-muted text-sm"
                     >
-                        <span
-                            class="dot"
-                            :class="logoHidden === false ? 'bg-success' : 'bg-muted'"
-                            aria-hidden="true"
-                        />
-                        {{ t('graphics.onAir.logo') }}
-                        <span class="text-xs text-muted">
-                            {{ logoHidden === false ? t('graphics.onAir.shown') : t('graphics.onAir.hidden') }}
-                        </span>
-                    </button>
-                </div>
-            </section>
+                        {{ t('graphics.scenes.none') }}
+                        <RouterLink
+                            v-if="isAdmin"
+                            :to="{ name: 'graphics-scenes', query: { channel: channel?.id } }"
+                            class="link-accent"
+                        >
+                            {{ t('graphics.scenes.create') }}
+                        </RouterLink>
+                    </p>
+                </SectionCard>
+            </template>
         </section>
 
         <aside

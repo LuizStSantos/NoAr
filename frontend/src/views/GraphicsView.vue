@@ -15,15 +15,17 @@ import { useSettings } from '@/stores/settings'
  * subtitles, quick scenes and control from outside NoAr.
  */
 const PAGES = [
-    { name: 'onair', icon: 'bi-record-circle', admins: false },
-    { name: 'templates', icon: 'bi-grid-1x2', admins: false },
-    { name: 'live', icon: 'bi-broadcast', admins: false },
-    { name: 'logo', icon: 'bi-badge-tm', admins: true },
-    { name: 'lshape', icon: 'bi-aspect-ratio', admins: true },
-    { name: 'subtitles', icon: 'bi-badge-cc', admins: true },
-    { name: 'scenes', icon: 'bi-collection-play', admins: true },
-    { name: 'api', icon: 'bi-plug', admins: true },
+    { name: 'onair', icon: 'bi-record-circle', admins: false, group: 'main' },
+    { name: 'templates', icon: 'bi-grid-1x2', admins: false, group: 'main' },
+    { name: 'subtitles', icon: 'bi-badge-cc', admins: true, group: 'main' },
+    { name: 'api', icon: 'bi-plug', admins: true, group: 'main' },
+    // Channel settings that become templates when the old graphics move over.
+    { name: 'logo', icon: 'bi-badge-tm', admins: true, group: 'channel' },
+    { name: 'lshape', icon: 'bi-aspect-ratio', admins: true, group: 'channel' },
+    { name: 'scenes', icon: 'bi-collection-play', admins: true, group: 'channel' },
 ] as const
+
+const GROUPS = ['main', 'channel'] as const
 
 type PageName = (typeof PAGES)[number]['name']
 
@@ -40,6 +42,11 @@ const channelId = computed(() => configStore.channels[configStore.i]?.id)
 const current = computed(() => String(route.name ?? '').replace('graphics-', '') as PageName)
 const pages = computed(() =>
     PAGES.filter((page) => !page.admins || ['global_admin', 'channel_admin'].includes(authStore.role)),
+)
+const groupedPages = computed(() =>
+    GROUPS.map((group) => ({ group, pages: pages.value.filter((page) => page.group === group) })).filter(
+        (entry) => entry.pages.length,
+    ),
 )
 
 useHead({
@@ -104,36 +111,50 @@ function confirmChannel(discard: boolean) {
             <label class="field-label lg:hidden">
                 {{ t('graphics.page') }}
                 <select class="field-input bg-base-100!" :value="current" @change="selectPage">
-                    <option v-for="page in pages" :key="page.name" :value="page.name">
-                        {{ t(`graphics.sections.${page.name}`) }}
-                    </option>
+                    <optgroup
+                        v-for="entry in groupedPages"
+                        :key="entry.group"
+                        :label="t(`graphics.groups.${entry.group}`)"
+                    >
+                        <option v-for="page in entry.pages" :key="page.name" :value="page.name">
+                            {{ t(`graphics.sections.${page.name}`) }}
+                        </option>
+                    </optgroup>
                 </select>
             </label>
 
             <nav class="hidden lg:flex flex-col gap-0.5">
-                <div class="text-[11px] text-subtle tracking-[0.08em] uppercase px-2.5 pt-1.5 pb-1.5">
-                    {{ t('nav.graphics') }}
-                </div>
-                <RouterLink
-                    v-for="page in pages"
-                    :key="page.name"
-                    :to="link(page.name)"
-                    :aria-current="current === page.name ? 'page' : undefined"
-                    class="flex items-center gap-2.5 px-2.5 py-2 rounded-field"
-                    :class="
-                        current === page.name
-                            ? 'bg-base-300 text-base-content'
-                            : 'text-muted hover:bg-raised hover:text-base-content'
-                    "
-                >
-                    <i class="bi" :class="page.icon" aria-hidden="true" />
-                    <span class="flex-auto">{{ t(`graphics.sections.${page.name}`) }}</span>
-                    <span
-                        v-if="page.admins && settings.changedSections.includes('logo')"
-                        class="dot bg-accent"
-                        :title="t('settings.hasChanges')"
-                    />
-                </RouterLink>
+                <template v-for="entry in groupedPages" :key="entry.group">
+                    <div
+                        class="text-[11px] text-subtle tracking-[0.08em] uppercase px-2.5 pb-1.5"
+                        :class="entry.group === 'main' ? 'pt-1.5' : 'pt-5'"
+                    >
+                        {{ t(`graphics.groups.${entry.group}`) }}
+                    </div>
+                    <RouterLink
+                        v-for="page in entry.pages"
+                        :key="page.name"
+                        :to="link(page.name)"
+                        :aria-current="current === page.name ? 'page' : undefined"
+                        class="flex items-center gap-2.5 px-2.5 py-2 rounded-field"
+                        :class="
+                            current === page.name
+                                ? 'bg-base-300 text-base-content'
+                                : 'text-muted hover:bg-raised hover:text-base-content'
+                        "
+                    >
+                        <i class="bi" :class="page.icon" aria-hidden="true" />
+                        <span class="flex-auto">{{ t(`graphics.sections.${page.name}`) }}</span>
+                        <span
+                            v-if="page.admins && page.group === 'channel' && settings.changedSections.includes('logo')"
+                            class="dot bg-accent"
+                            :title="t('settings.hasChanges')"
+                        />
+                    </RouterLink>
+                    <p v-if="entry.group === 'channel'" class="m-0 mt-1.5 px-2.5 text-xs text-muted leading-relaxed">
+                        {{ t('graphics.groups.channelHint') }}
+                    </p>
+                </template>
                 <p class="m-0 mt-3 px-2.5 text-xs text-muted leading-relaxed">{{ t('graphics.marksHint') }}</p>
             </nav>
         </aside>

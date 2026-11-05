@@ -1481,13 +1481,17 @@ export default {
                 skip: 'With an L-shape: does not go on air',
             },
         },
+        groups: {
+            main: 'Graphics',
+            channel: 'Channel settings',
+            channelHint: 'The logo, the L-shape graphic and the scenes of the former graphics. They become templates when the old graphics move over.',
+        },
         sectionsLabel: 'Graphics pages',
         page: 'Page',
         marksHint: 'Marks inside a video (logo, L-shape, breaks) stay in Storage › Marks.',
         sections: {
             onair: 'On air',
             templates: 'Templates',
-            live: 'Live logo and L-shape',
             logo: 'Logo',
             lshape: 'L-shape',
             subtitles: 'Subtitles',

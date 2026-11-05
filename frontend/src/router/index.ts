@@ -83,10 +83,10 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ALL },
                 },
                 {
+                    // The former Live now page: its controls are in On air.
                     path: 'live',
                     name: 'graphics-live',
-                    component: () => import('@/components/graphics/GraphicsLive.vue'),
-                    meta: { showHeader: true, roles: ALL },
+                    redirect: (to) => ({ name: 'graphics-onair', query: to.query }),
                 },
                 {
                     path: 'logo',
