@@ -9,7 +9,7 @@ import { useRouter } from 'vue-router'
 
 import { authFetchRaw } from '@/composables/authFetch'
 import { copyText } from '@/composables/browser'
-import { LEVEL_RANK, foldRepeats, parseLog, type LogLevel, type LogLine, type LogRow } from '@/composables/logLines'
+import { foldRepeats, showsLevel, parseLog, type LogLevel, type LogLine, type LogRow } from '@/composables/logLines'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
@@ -36,7 +36,7 @@ const day = ref(today())
 const lines = ref<LogLine[]>([])
 const next = ref(0)
 const loading = ref(false)
-const level = ref<LogLevel>(readSetting('error_level', 'INFO') as LogLevel)
+const level = ref<LogLevel>(readSetting('error_level', 'DEBUG') as LogLevel)
 const search = ref('')
 const fold = ref(readSetting('log-fold', 'true') === 'true')
 const live = ref(readSetting('log-live', 'true') === 'true')
@@ -71,13 +71,10 @@ const counts = computed(() => ({
 }))
 
 const visible = computed(() => {
-    const minimum = LEVEL_RANK[level.value] ?? 1
     const needle = search.value.trim().toLowerCase()
 
     return lines.value.filter(
-        (line) =>
-            (line.level === null || LEVEL_RANK[line.level] >= minimum) &&
-            (!needle || line.plain.toLowerCase().includes(needle)),
+        (line) => showsLevel(level.value, line.level) && (!needle || line.plain.toLowerCase().includes(needle)),
     )
 })
 
