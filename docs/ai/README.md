@@ -13,6 +13,7 @@ Navigation only. Prefer the project skills and the small files below; do not loa
 - **Deterministic checks:** `.claude/scripts/verify_changes.py` chooses relevant local verification by changed paths
 - **Voting and QA:** `ROLES_AND_VOTING.md`, `INTEGRATION_TEST_PLAN.md`, `.claude/audit/`
 - **Historical audit evidence:** `audits/`
+- **2.2.1 audit revalidation:** [current source findings and browser evidence](audits/revalidation-2.2.1/README.md)
 - **Tool maintenance:** `TOOLKIT_MAINTENANCE.md`
 
 Historical findings are revision-scoped. Recheck against current source before acting.

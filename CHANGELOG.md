@@ -11,6 +11,13 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- The soak test checks decoded moving pictures as well as transport progress,
+  detecting frozen video even while output bytes and `/health` keep advancing.
+  Its CI matrix covers SRT and HLS separately, with bounded allowances for the
+  intentional live-source faults. NDI and SDI still require separate fixtures.
+
 ## [2.2.1] - 2026-11-05
 
 ### Changed

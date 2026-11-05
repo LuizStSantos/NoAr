@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run NoAr on air for a long time with synthetic media and faults, and check
-that its output never stops.
+that its transport and decoded moving pictures never stop.
 
 Everything runs in disposable Docker containers on the loopback interface: a
 MediaMTX that receives NoAr's output and relays a synthetic live, the NoAr
@@ -15,10 +15,10 @@ sizes and frame rates, and three scheduled lives:
 
 and then restarts the playout in the middle of a clip.
 
-Every 2 s it reads NoAr's /health, the bytes MediaMTX receives from NoAr and
-the clip on air. It fails when NoAr exits, when the output stops growing for
-more than 12 s, or when /health is not ok for more than 20 s (outside the
-moments right after the deliberate restart).
+Every 2 s it reads NoAr's /health, SRT receiver bytes or the HLS media playlist,
+and the clip on air. An independent FFmpeg receiver continuously decodes the
+actual output to grayscale frames. Missing frames or a frozen picture for more
+than 12 s fail too, even when transport bytes and /health keep advancing.
 
     NOAR_SOAK=1 NOAR_SOAK_IMAGE=noar-soak:ci NOAR_SOAK_MINUTES=90 \\
         python3 qa/soak/soak.py
@@ -28,6 +28,7 @@ in a development image). NOAR_SOAK_DIR sets where logs and the report go.
 """
 
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -40,6 +41,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from picture import PictureMonitor
+
 if os.environ.get('NOAR_SOAK') != '1':
     raise SystemExit('Refusing to run without NOAR_SOAK=1: it starts containers and binds loopback ports')
 
@@ -47,9 +50,12 @@ HERE = Path(__file__).resolve().parent
 IMAGE = os.environ.get('NOAR_SOAK_IMAGE', 'noar-soak:ci')
 BINARY = os.environ.get('NOAR_SOAK_BINARY')
 MINUTES = float(os.environ.get('NOAR_SOAK_MINUTES', '90'))
+OUTPUT = os.environ.get('NOAR_SOAK_OUTPUT', 'srt')
+if OUTPUT not in {'srt', 'hls'}:
+    raise SystemExit('NOAR_SOAK_OUTPUT must be srt or hls; NDI/SDI need separate hardware evidence')
 WORK = Path(os.environ.get('NOAR_SOAK_DIR', HERE / 'artifacts' / 'run')).resolve()
 MEDIAMTX = 'bluenviron/mediamtx:1.15.3'
-PREFIX = 'noar-soak-'
+PREFIX = 'noar-soak-' + secrets.token_hex(4) + '-'
 BASE = 'http://127.0.0.1:18787'
 MTX = 'http://127.0.0.1:9997/v3/'
 
@@ -74,7 +80,7 @@ ACTIONS = [
     (630, 'restart'),
 ]
 
-VIDEO = ('videotestsrc is-live=true pattern=ball ! video/x-raw,width=640,height=360,framerate=25/1 '
+VIDEO = ('videotestsrc is-live=true pattern=smpte horizontal-speed=3 ! video/x-raw,width=640,height=360,framerate=25/1 '
          '! x264enc tune=zerolatency speed-preset=ultrafast bitrate=800 key-int-max=50 '
          '! h264parse config-interval=-1 ! mux. ')
 AUDIO = ('audiotestsrc is-live=true freq=440 ! audio/x-raw,rate=48000,channels=2 '
@@ -152,7 +158,7 @@ def make_clips(media):
     media.mkdir(parents=True, exist_ok=True)
     for name, seconds, width, height, fps, audio in CLIPS:
         frames = seconds * fps
-        pipeline = (f'videotestsrc num-buffers={frames} pattern=smpte ! video/x-raw,width={width},height={height},'
+        pipeline = (f'videotestsrc num-buffers={frames} pattern=smpte horizontal-speed=3 ! video/x-raw,width={width},height={height},'
                     f'framerate={fps}/1 ! x264enc speed-preset=ultrafast key-int-max={fps * 2} ! h264parse ! mux. ')
         if audio:
             pipeline += (f'audiotestsrc num-buffers={seconds * 25} samplesperbuffer=1920 freq=660 '
@@ -204,12 +210,16 @@ def set_up():
     login(password)
 
     config = api('/api/playout/config/1')
-    stream = next(output for output in api('/api/playout/outputs/1') if output['name'] == 'stream')
+    stream = next(output for output in api('/api/playout/outputs/1')
+                  if output['name'] == ('hls' if OUTPUT == 'hls' else 'stream'))
     config['output'].update({
         'id': stream['id'], 'mode': 'stream', 'stream_type': 'srt',
         'stream_url': 'srt://127.0.0.1:8890?streamid=publish:output&latency=200000',
         'width': 640, 'height': 360, 'fps': 25, 'video_codec': 'libx264', 'audio_codec': 'aac',
         'audio_bitrate': 128, 'muxer_options': {}, 'metadata_options': {}, 'protocol_options': {}})
+    if OUTPUT == 'hls':
+        config['output'].update({'mode': 'hls', 'hls_playlist_name': 'stream',
+                                 'hls_segment_duration': 2, 'hls_list_size': 6, 'hls_variants': []})
     config['processing']['add_logo'] = False
     config['playlist'].update({'day_start': '00:00:00', 'length': '24:00:00', 'infinit': True})
     if 'recording' in config:
@@ -256,10 +266,30 @@ def act(action):
 
 
 def output_bytes():
+    if OUTPUT == 'hls':
+        # Segment rotation can keep total bytes constant. Observe the actual
+        # media playlist/sequence advancing instead of summing directory size.
+        code, body = request('/public/1/live/stream.m3u8', timeout=5)
+        if code != 200 or not isinstance(body, str) or '#EXTINF:' not in body:
+            return None
+        return hashlib.sha256(body.encode()).hexdigest()
     code, body = request('paths/get/output', base=MTX, timeout=5)
     if code != 200 or not isinstance(body, dict):
         return None
     return body.get('bytesReceived')
+
+
+def picture_url():
+    if OUTPUT == 'hls':
+        return BASE + '/public/1/live/stream.m3u8'
+    return 'srt://127.0.0.1:8890?streamid=read:output&latency=200000'
+
+
+def picture_grace(action, now, previous):
+    # Deliberate encoder faults may air the static waiting card. Suppress
+    # only the known fault interval plus a bounded signal-recovery allowance.
+    seconds = {'unpublish': 40, 'publish udp-audio': 50, 'restart': RESTART_GRACE}.get(action, 0)
+    return max(previous, now + seconds) if seconds else previous
 
 
 def running(name):
@@ -270,16 +300,27 @@ def running(name):
 def main():
     WORK.mkdir(parents=True, exist_ok=True)
     (WORK / 'soak.log').write_text('')
-    report = {'image': IMAGE, 'minutes': MINUTES, 'incidents': [], 'cycles': 0, 'clips': 0,
-              'restarts': 0, 'samples': 0}
+    report = {'image': IMAGE, 'output': OUTPUT, 'minutes': MINUTES, 'incidents': [], 'cycles': 0, 'clips': 0,
+              'restarts': 0, 'samples': 0, 'picture_checks': 0,
+              'output_coverage': {'srt': 'NOT_RUN', 'hls': 'NOT_RUN',
+                                  'ndi': 'NOT_AVAILABLE', 'sdi': 'NOT_AVAILABLE'},
+              'coverage_notes': {'ndi': 'No NDI runtime/receiver fixture configured',
+                                 'sdi': 'No DeckLink output/capture hardware fixture configured'}}
+    picture = None
+    picture_grace_until = 0
     try:
+        # Fail before starting containers if the independent receiver is absent.
+        picture = PictureMonitor(picture_url(), WORK)
         password, lives = set_up()
+        picture.start()
         end = time.monotonic() + MINUTES * 60
         next_login = time.monotonic() + 1800
         cycle, cycle_mono, pending = 0, None, []
         last_bytes, bytes_changed = None, time.monotonic()
         unhealthy_since, stalled_since = None, None
         grace_until = time.monotonic() + 60
+        picture_grace_until = grace_until
+        last_picture_problem = None
         last_source = None
 
         while time.monotonic() < end:
@@ -292,8 +333,10 @@ def main():
                 report['cycles'] = cycle
                 log(f'Cycle {cycle} scheduled')
             while pending and now - cycle_mono >= pending[0][0]:
-                action = pending.pop(0)[1]
+                offset, action = pending.pop(0)
                 act(action)
+                if action != 'unpublish' or offset == 90:
+                    picture_grace_until = picture_grace(action, time.monotonic(), picture_grace_until)
                 if action == 'restart':
                     report['restarts'] += 1
                     grace_until = time.monotonic() + RESTART_GRACE
@@ -315,6 +358,14 @@ def main():
                 report['clips'] += 1
                 last_source = source
             report['samples'] += 1
+            visual = picture.sample(picture_grace_until)
+            if time.monotonic() >= picture_grace_until:
+                report['picture_checks'] += 1
+            if visual['problem'] and visual['problem'] != last_picture_problem:
+                report['incidents'].append({'at': round(now - started), 'what': visual['problem'],
+                                            'decoded_frames': visual['frames'], 'output_progress': current})
+                log(f'Picture check: {visual["problem"]} ({visual["frames"]} frames received)')
+            last_picture_problem = visual['problem']
 
             if current is not None and current != last_bytes:
                 last_bytes, bytes_changed = current, now
@@ -345,14 +396,26 @@ def main():
 
             time.sleep(POLL)
 
-        for since, what in [(stalled_since, 'output stalled'), (unhealthy_since, 'health not ok')]:
-            if since is not None and time.monotonic() - since > STALL_LIMIT:
+        for since, what, limit in [(stalled_since, 'output stalled', STALL_LIMIT),
+                                   (unhealthy_since, 'health not ok', UNHEALTHY_LIMIT)]:
+            if since is not None and time.monotonic() - since > limit:
                 report['incidents'].append({'at': round(since - started),
                                             'what': f'{what} at the end, for {time.monotonic() - since:.0f} s'})
     except Exception as error:  # A broken harness fails the run too, with its reason.
         report['incidents'].append({'at': round(time.monotonic() - started), 'what': f'test error: {error}'})
         log(f'Test error: {error}')
     finally:
+        if picture is not None:
+            report['picture'] = picture.sample(picture_grace_until)
+            if report['picture']['problem'] and not any(
+                    incident['what'] == report['picture']['problem'] for incident in report['incidents']):
+                report['incidents'].append({'at': round(time.monotonic() - started),
+                                            'what': report['picture']['problem']})
+            picture.close()
+            if picture.tracker.frames < 5 or picture.tracker.changes < 2:
+                report['incidents'].append({'at': None, 'what': 'insufficient decoded moving-picture evidence'})
+            if not report['picture_checks']:
+                report['incidents'].append({'at': None, 'what': 'no picture checks outside startup/fault grace'})
         logs = docker('logs', PREFIX + 'noar', check=False)
         noar_log = (logs.stdout or '') + (logs.stderr or '')
         (WORK / 'noar.log').write_text(noar_log)
@@ -381,15 +444,16 @@ def main():
             docker('rm', '-f', PREFIX + name, check=False)
 
     report['passed'] = not report['incidents']
+    report['output_coverage'][OUTPUT] = 'PASS' if report['passed'] else 'FAIL'
     (WORK / 'report.json').write_text(json.dumps(report, indent=2))
     summary = [f'## NoAr soak test: {"PASS" if report["passed"] else "FAIL"}', '',
-               f'{MINUTES:g} min, {report["cycles"]} cycles, {report["clips"]} clips seen on air, '
+               f'{OUTPUT.upper()}, {MINUTES:g} min, {report["cycles"]} cycles, {report["clips"]} clips seen on air, '
                f'{report["events_on_air"]} scheduled lives on air ({report["live_waits"]} waits for a lost signal), '
                f'{report["restarts"]} restarts, {report["errors_logged"]} errors in the channel log, '
                f'{report["samples"]} samples.', '']
     summary += [f'- {incident["what"]}' + (f' (at {incident["at"]} s)' if incident['at'] is not None else '')
                 + (f': `{incident["first"]}`' if incident.get('first') else '')
-                for incident in report['incidents']] or ['No incidents: the output never stopped.']
+                for incident in report['incidents']] or ['No incidents: transport and decoded moving pictures passed.']
     (WORK / 'summary.md').write_text('\n'.join(summary) + '\n')
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:

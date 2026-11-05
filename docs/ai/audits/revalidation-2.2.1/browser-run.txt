@@ -1,0 +1,28 @@
+Disposable staging evidence: /workspace/NoAr/work/e2e-mymzl7uw
+
+> noar-isolated-e2e@0.1.0 test
+> playwright test
+
+
+Running 15 tests using 1 worker
+
+(node:17107) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/login-navigation.spec.ts:3:5 › login shows credentials fields and password toggle works (873ms)
+  ✓   2 [chromium] › tests/login-navigation.spec.ts:15:5 › protected schedule page sends unauthenticated user to login (692ms)
+  ✓   3 [chromium] › tests/operator.spec.ts:14:5 › playlist edits, undo/redo and save survive a full reload (3.5s)
+  ✓   4 [chromium] › tests/operator.spec.ts:53:5 › schedule create, edit and delete persist through the real API and reload (3.7s)
+  ✓   5 [chromium] › tests/operator.spec.ts:97:5 › a failed playlist load cannot overwrite the saved day (1.8s)
+  ✓   6 [chromium] › tests/operator.spec.ts:134:5 › schedule modal moves, traps and restores keyboard focus and closes on Escape (1.2s)
+  ✓   7 [chromium] › tests/operator.spec.ts:149:5 › a scheduled event is stored for the backend restart check (1.4s)
+  ✓   8 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /player (721ms)
+  ✓   9 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /playlist (753ms)
+  ✓  10 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /schedule (712ms)
+  ✓  11 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /graphics (727ms)
+  ✓  12 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /media (723ms)
+  ✓  13 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /report (766ms)
+  ✓  14 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /configure (712ms)
+  ✓  15 [chromium] › tests/public-api.spec.ts:4:5 › setup endpoint exposes expected public contract (19ms)
+
+  15 passed (21.2s)
+PASS: both playlists and the scheduled event survive a backend restart.

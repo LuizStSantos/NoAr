@@ -1,0 +1,141 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "output": "srt",
+      "fixture": "moving",
+      "passed": true,
+      "picture": {
+        "frames": 46,
+        "changes": 45,
+        "frame_age": 0.377,
+        "change_age": 0.377,
+        "mean_pixel_delta": 8.288,
+        "attempts": 1,
+        "problem": null
+      },
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 23,
+            "output_age": 0.4
+          }
+        ]
+      },
+      "problems": [],
+      "observation_seconds": 18
+    },
+    {
+      "output": "srt",
+      "fixture": "frozen",
+      "passed": true,
+      "picture": {
+        "frames": 46,
+        "changes": 0,
+        "frame_age": 0.419,
+        "change_age": 18.101,
+        "mean_pixel_delta": 0.0,
+        "attempts": 1,
+        "problem": "decoded picture frozen"
+      },
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 23,
+            "output_age": 0.5
+          }
+        ]
+      },
+      "problems": [
+        "decoded picture frozen"
+      ],
+      "observation_seconds": 18
+    },
+    {
+      "output": "hls",
+      "fixture": "moving",
+      "passed": true,
+      "picture": {
+        "frames": 36,
+        "changes": 35,
+        "frame_age": 1.927,
+        "change_age": 1.927,
+        "mean_pixel_delta": 8.816,
+        "attempts": 5,
+        "problem": null
+      },
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 22,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "problems": [],
+      "observation_seconds": 18
+    },
+    {
+      "output": "hls",
+      "fixture": "frozen",
+      "passed": true,
+      "picture": {
+        "frames": 36,
+        "changes": 0,
+        "frame_age": 1.984,
+        "change_age": 18.149,
+        "mean_pixel_delta": 0.0,
+        "attempts": 5,
+        "problem": "decoded picture frozen"
+      },
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 23,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "problems": [
+        "decoded picture frozen"
+      ],
+      "observation_seconds": 18
+    }
+  ],
+  "ndi": {
+    "status": "NOT_AVAILABLE",
+    "reason": "NDI runtime/receiver not provided"
+  },
+  "sdi": {
+    "status": "NOT_AVAILABLE",
+    "reason": "DeckLink output/capture hardware not provided"
+  },
+  "scope": "Short native observer verification, not a 90-minute release-image soak",
+  "source_commit": "d4a1a0a8a41f39b90de23844910998431fd42510",
+  "runtime": {
+    "gstreamer_core": "1.26.2",
+    "gstreamer_libav": "1.26.2",
+    "gstreamer_rust": "0.24.5",
+    "ffmpeg": "7.1.5-0+deb13u1",
+    "build_features": "no-default-features"
+  },
+  "release_image_soak": "NOT_RUN",
+  "full_90_minute_fault_cycle": "NOT_RUN",
+  "note": "Native verification used a stricter 2 s final-frame freshness assertion; the committed assertion allows 4 s for 2 s HLS segment delivery."
+}
