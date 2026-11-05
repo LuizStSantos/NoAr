@@ -14,6 +14,8 @@ import { useConfig } from '@/stores/config'
 const props = defineProps({
     /** Items can be dragged onto the scheduler timeline. */
     draggable: { type: Boolean, default: false },
+    /** Show storage artwork independently of the channel's playable extensions. */
+    imagesOnly: { type: Boolean, default: false },
     /** Leave the lives out: they have a list of their own. */
     hideLives: { type: Boolean, default: false },
     /** Keep the add button on draggable items, to add with a click too. */
@@ -67,7 +69,9 @@ const crumbs = computed(() => source.value.split('/').filter(Boolean))
 const shownFiles = computed(() =>
     files.value.filter(
         (file) =>
-            (['video', 'audio', 'image'].includes(mediaType(file.name) ?? '') ||
+            ((props.imagesOnly
+                ? /\.(png|jpe?g|webp|gif)$/i.test(file.name)
+                : ['video', 'audio', 'image'].includes(mediaType(file.name) ?? '')) ||
                 (props.programs && Boolean(file.program))) &&
             file.name.toLowerCase().includes(search.value.trim().toLowerCase()),
     ),
@@ -115,7 +119,7 @@ async function open(path: string) {
         const data = await authFetch<BrowseResult>(`/api/file/${id}/browse`, {
             method: 'POST',
             headers: { ...configStore.contentType, ...authStore.authHeader },
-            body: JSON.stringify({ source: `/${path}`, folders_only: false }),
+            body: JSON.stringify({ source: `/${path}`, folders_only: false, all_files: props.imagesOnly }),
         })
 
         source.value = joinPath(data.source ?? path)

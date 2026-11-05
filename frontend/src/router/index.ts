@@ -71,6 +71,12 @@ const router = createRouter({
             redirect: (to) => ({ path: '/graphics/onair', query: to.query }),
             children: [
                 {
+                    path: 'composer',
+                    name: 'graphics-composer',
+                    component: () => import('@/components/graphics/GraphicsLibrary.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
                     path: 'onair',
                     name: 'graphics-onair',
                     component: () => import('@/components/graphics/GraphicsOnAir.vue'),

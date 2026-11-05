@@ -6,7 +6,7 @@ import { useConfig } from '@/stores/config'
 export interface TemplateLayer {
     id: string
     name: string
-    kind: 'text' | 'image' | 'box'
+    kind: 'text' | 'image' | 'box' | 'video'
     visible: boolean
     x: number
     y: number
@@ -23,6 +23,65 @@ export interface TemplateLayer {
     image: string | null
     fill: string | null
     radius: number
+    animation_in: LayerAnimation
+    animation_out: LayerAnimation
+    animation_ms: number
+    delay_ms: number
+}
+
+export type LayerAnimation =
+    'none' | 'fade' | 'slide_left' | 'slide_right' | 'slide_up' | 'slide_down' | 'wipe' | 'scale'
+export const LAYER_ANIMATIONS: LayerAnimation[] = [
+    'none',
+    'fade',
+    'slide_left',
+    'slide_right',
+    'slide_up',
+    'slide_down',
+    'wipe',
+    'scale',
+]
+export type TemplateInput = Omit<GraphicsTemplate, 'id' | 'fields'>
+
+/** Keep geometry inside the frame, including when a locked resize reaches an edge. */
+export function fitLayer(
+    layer: TemplateLayer,
+    patch: Partial<TemplateLayer>,
+    proportional = false,
+): Partial<TemplateLayer> {
+    let width = Math.max(0.1, patch.width ?? layer.width)
+    let height = Math.max(0.1, patch.height ?? layer.height)
+    if (proportional && (patch.width !== undefined || patch.height !== undefined)) {
+        const factor = patch.width !== undefined ? width / layer.width : height / layer.height
+        width = layer.width * factor
+        height = layer.height * factor
+    }
+    const resizing = patch.width !== undefined || patch.height !== undefined
+    const x = Math.max(0, Math.min(patch.x ?? layer.x, resizing ? 99.9 : 100 - width))
+    const y = Math.max(0, Math.min(patch.y ?? layer.y, resizing ? 99.9 : 100 - height))
+    if (proportional) {
+        const factor = Math.min(1, (100 - x) / width, (100 - y) / height)
+        width *= factor
+        height *= factor
+    } else {
+        width = Math.min(width, 100 - x)
+        height = Math.min(height, 100 - y)
+    }
+    return { ...patch, x, y, width, height }
+}
+
+/** Derive the same operator fields that the API discovers in text and image layers. */
+export function templateFields(layers: TemplateLayer[]): string[] {
+    const fields = layers.flatMap((layer) => {
+        const source =
+            layer.kind === 'text'
+                ? layer.text
+                : layer.kind === 'image' && /^\{[\p{L}\p{N}_-]+\}$/u.test(layer.image?.trim() ?? '')
+                  ? layer.image!
+                  : ''
+        return [...source.matchAll(/\{([\p{L}\p{N}_-]+)\}/gu)].map((match) => match[1]!)
+    })
+    return [...new Set(fields)]
 }
 
 export interface GraphicsTemplate {
@@ -70,6 +129,14 @@ export function useGraphicsApi() {
     const headers = () => ({ ...configStore.contentType, ...authStore.authHeader })
 
     return {
+        template: (id: number) => authFetch<GraphicsTemplate>(`${base()}/templates/${id}`, { headers: headers() }),
+        fonts: () => authFetch<string[]>(`${base()}/fonts`, { headers: headers() }),
+        save: (input: TemplateInput, id?: number) =>
+            authFetch<GraphicsTemplate>(`${base()}/templates${id === undefined ? '' : `/${id}`}`, {
+                method: id === undefined ? 'POST' : 'PUT',
+                headers: headers(),
+                body: JSON.stringify(input),
+            }),
         templates: () => authFetch<GraphicsTemplate[]>(`${base()}/templates`, { headers: headers() }),
         onAir: () => authFetch<GraphicOnAir[]>(`${base()}/on-air`, { headers: headers() }),
         take: (templateId: number, fields: Record<string, string>, duration?: number) =>

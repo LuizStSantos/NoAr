@@ -13,6 +13,11 @@ one is tagged.
 
 ### Added
 
+- Graphics Composer: admins can create and edit templates from Templates or
+  On air, arrange and resize layers in percent or output pixels, lock proportions,
+  undo edits, choose fonts and fields, upload or select storage artwork, set a
+  video corner, preview animation timing and save a named template in a group.
+  Failed loads cannot overwrite a template; failed saves preserve the draft.
 - Graphics templates: channels store their own graphics (layers of text,
   images and boxes in percent of the frame, with `{field}` names) through
   `/api/graphics/{id}/templates`. Admins create and change them; everyone on

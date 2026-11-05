@@ -22,12 +22,12 @@ Evidence (real NoAr, HLS output, synthetic clip):
 Full suite passed at `e25f693b`: app 374 lib + 33 api_routes + 5 as_run,
 engine 252. `vue-tsc`, ESLint and Prettier pass on the frontend commits.
 
-## In progress (last commit on the branch, "WIP")
+## Composer backend (WIP base, revalidated)
 
-Composer, step 1 of 4 (backend). Checked after the commit: `cargo clippy
---no-default-features --all-targets -- --deny warnings` is clean and the app's
-`utils::graphics` tests pass (8). The engine tests and the full suite were not
-re-run on this commit; run them first.
+The Composer backend was the last WIP commit. It has now been revalidated
+with GStreamer 1.26.2 and Rust 1.99.1: the exact server Clippy command below
+passes, and the full suite passes (375 app library, 33 API, 5 as-run and
+253 engine tests; ignored cases remain ignored).
 
 - `LayerKind::Video` in `backend/app/src/utils/graphics.rs`: at most one per
   template. A template with it is an **L-shape**: its other layers are the art
@@ -41,13 +41,17 @@ re-run on this commit; run them first.
   air.
 - `GET /api/graphics/{id}/fonts`: font families for text layers.
 - Tests added: engine `a_picture_template_is_an_lshape_with_its_layers_as_art`,
-  app `a_video_layer_makes_the_template_an_lshape`. Check their result first.
+  app `a_video_layer_makes_the_template_an_lshape`. Both passed in the full suite.
 
-## What is left, in order
+## Composer UI (implemented)
 
-1. **Composer UI (Vue)**, route `graphics-composer` (`/graphics/composer?template=<id>`,
+The visual editor is implemented in the existing `GraphicsLibrary.vue`,
+shared by the library and Composer routes, with `TemplatePreview.vue` drawing
+its canvas. No migration or engine change is needed for these UI changes.
+
+**Composer UI (Vue)**, route `graphics-composer` (`/graphics/composer?template=<id>`,
    no id = new). Follow `composer-design.html` (open it in a browser; it is a
-   static mockup). It needs:
+   static mockup). It includes:
    - Top bar: template name, Undo, Play entry, **Save template** (name, group,
      fields shown read-only), Open in On air.
    - Left: layer list (kind, name, field chips, eye to hide, x to delete with
@@ -70,14 +74,32 @@ re-run on this commit; run them first.
    - Wire: Templates cards get **Edit**, the **+ New template** button opens
      the Composer (admins only; API refuses others), On air gets "Edit
      template". Saving uses POST / PUT; 409 = name taken.
-2. **Logo and L-shape as templates**: an "always on" flag on templates (logo,
+
+Browser evidence on a disposable local SQLite instance covers drag and all
+three resize handles, proportional geometry, percent/pixel conversion at the
+channel output size, scale, centering, visibility, deletion and undo; image
+upload to `Graphics/`, decoded storage preview and image selection; fields,
+font and colour; one video window; animation controls and timeline scrubbing;
+POST/PUT persistence and reload. Three retained Playwright regressions in
+`qa/e2e/tests/operator.spec.ts` also cover admin entry points, name conflicts,
+failed saves and failed loads. English, Brazilian Portuguese and a 390 px
+viewport were exercised. Frontend build/type checks and ESLint pass.
+
+The browser preview illustrates presets rather than proving on-air output.
+The existing engine renders `scale` as a fade, and picture-window templates
+use the L-shape transition. Images use the engine's existing PNG, JPEG, WebP
+and GIF formats. This UI validation did not exercise a real playout output.
+
+## What is left, in order
+
+1. **Logo and L-shape as templates**: an "always on" flag on templates (logo,
    clock, ticker) drawn on every frame, and a migration that turns each
    channel's logo, L-shape graphic and quick scenes into templates without
    changing what is on air. Keep the old `/api/control/{id}/logo|lshape|scene`
    routes working.
-3. **Remove** Logo, L-shape and Quick scenes from the Graphics menu once 2 is
+2. **Remove** Logo, L-shape and Quick scenes from the Graphics menu once 1 is
    in.
-4. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics
+3. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics
    inside clips with open tracks 2.6 (`video-graphics-design.html`), control API
    with key and webhooks 2.7 (`control-api-design.html`).
 

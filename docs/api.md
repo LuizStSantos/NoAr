@@ -354,6 +354,7 @@ air ([roadmap](graphics-roadmap.md)).
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
+| `GET` | `/api/graphics/{id}/fonts` | `GA, CA, U` | Available font family names for text layers. |
 | `GET` | `/api/graphics/{id}/templates` | `GA, CA, U` | Every template of the channel, sorted by group and name. |
 | `GET` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA, U` | One template; 404 when the channel has no such template. |
 | `POST` | `/api/graphics/{id}/templates` | `GA, CA` | A template (below). 409 when the channel already has that name, ignoring case. |
@@ -372,13 +373,19 @@ or not going on air. Answers add `id`, `channel_id` and `fields`, the `{field}`
 names in the order they first appear.
 
 A layer is
-`{ "id", "name", "kind": "text" | "image" | "box", "visible", "x", "y", "width", "height", "opacity", "text", "font_family", "font_size", "bold", "color", "align": "left" | "center" | "right", "image", "fill", "radius", "animation_in", "animation_out", "animation_ms", "delay_ms" }`.
+`{ "id", "name", "kind": "text" | "image" | "box" | "video", "visible", "x", "y", "width", "height", "opacity", "text", "font_family", "font_size", "bold", "color", "align": "left" | "center" | "right", "image", "fill", "radius", "animation_in", "animation_out", "animation_ms", "delay_ms" }`.
 Position and size are percent of the frame and must stay inside it;
 `font_size` and `radius` are percent of the frame height; colors are `#rgb`,
 `#rrggbb` or `#rrggbbaa`. `image` is a storage path, or a whole `{field}` to
 choose the image on air. Animations are `none`, `fade` (default),
 `slide_left`, `slide_right`, `slide_up`, `slide_down`, `wipe` or `scale`.
 Layer ids are unique within the template; a template has at most 64 layers.
+At most one layer can be `video`: it is the program picture window, not a
+video file. A template with a visible video layer becomes an L-shape: its
+other layers form the artwork around that window. It uses the existing
+L-shape transition; per-layer animation controls do not change that transition.
+Admins can author these templates at `/graphics/composer?channel={id}`;
+adding `&template={template_id}` edits an existing template.
 
 On air, a template is drawn once at the output size and blended onto the
 picture before the L-shape, so with `follow` it shrinks with the picture into

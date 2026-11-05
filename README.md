@@ -77,6 +77,11 @@ and the Report for what aired.
 
 **Graphics**
 
+- **Templates and Composer**: admins design graphics with text, images,
+  shapes and a video corner, drag and resize layers, set fields and animation
+  timing, and save them in groups. Open **Edit** or **+ New template** from
+  Templates or On air; operators fill in the fields and take the templates
+  on air ([roadmap and status](docs/graphics-roadmap.md)).
 - Its own menu tab for the logo, the L-shape and the subtitles. The logo comes
   up and goes off with a fade or a cut, cross-fades when swapped, and goes
   anywhere on the screen (`X% × Y%`).

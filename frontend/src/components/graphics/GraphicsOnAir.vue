@@ -174,9 +174,25 @@ onBeforeUnmount(() => clearInterval(timer))
             <h1 class="m-0 text-xl font-semibold">{{ t('graphics.sections.onair') }}</h1>
             <p class="mt-1 mb-0 text-muted">{{ t('graphics.intro.onair') }}</p>
         </div>
-        <RouterLink :to="{ name: 'graphics-templates', query: { channel: channel?.id } }" class="btn-quiet min-h-11">
-            {{ t('graphics.onAir.library') }}
-        </RouterLink>
+        <div class="flex flex-wrap gap-2">
+            <RouterLink
+                v-if="isAdmin"
+                :to="{ name: 'graphics-composer', query: { channel: channel?.id } }"
+                class="btn-main"
+                >+ {{ t('graphics.library.new') }}</RouterLink
+            ><RouterLink
+                v-if="isAdmin && selected"
+                :to="{ name: 'graphics-composer', query: { channel: channel?.id, template: selected.id } }"
+                class="btn-quiet"
+                >{{ t('graphics.composer.edit') }}</RouterLink
+            >
+            <RouterLink
+                :to="{ name: 'graphics-templates', query: { channel: channel?.id } }"
+                class="btn-quiet min-h-11"
+            >
+                {{ t('graphics.onAir.library') }}
+            </RouterLink>
+        </div>
     </div>
 
     <div class="flex flex-wrap gap-4 items-start">

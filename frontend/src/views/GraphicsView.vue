@@ -27,7 +27,7 @@ const PAGES = [
 
 const GROUPS = ['main', 'channel'] as const
 
-type PageName = (typeof PAGES)[number]['name']
+type PageName = (typeof PAGES)[number]['name'] | 'composer'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -87,8 +87,12 @@ function confirmChannel(discard: boolean) {
 }
 </script>
 <template>
-    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 flex flex-wrap gap-6 items-start">
+    <div
+        class="mx-auto px-4 sm:px-6 py-6 flex flex-wrap gap-6 items-start"
+        :class="current === 'composer' ? 'max-w-[1920px]' : 'max-w-[1440px]'"
+    >
         <aside
+            v-if="current !== 'composer'"
             :aria-label="t('graphics.sectionsLabel')"
             class="flex-[1_1_240px] w-full lg:max-w-[280px] flex flex-col gap-4 lg:sticky lg:top-16"
         >

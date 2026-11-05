@@ -1,7 +1,10 @@
 # Graphics roadmap
 
-Status: **in progress**. Template storage and the take / out API of 2.3 are
-in; the On air screen and the migration are not. This document records the
+Status: **in progress**. Template storage, rendering, the take / out API,
+On air, the library and the Composer UI are implemented. Migration of the
+existing channel graphics into templates remains pending. See the
+[implementation handoff](graphics-handoff/README.md) for scope and test evidence.
+This document records the
 agreed design for the new Graphics tab, so the work can land in small releases
 without breaking what operators use today.
 
@@ -59,7 +62,7 @@ without breaking what operators use today.
 | Release | Scope |
 | --- | --- |
 | 2.3 | Templates and On air: template storage and API, engine renderer for text/image/box layers with fields and animation presets, operator rundown with take/out, migration of the current logo, L-shape and ticker settings into the new tab. |
-| 2.4 | Composer: visual editor with drag, resize in % or px, proportional lock, layers list (rename, hide, delete, undo), image upload and animations. |
+| 2.4 (UI implemented) | Composer: visual editor with drag, resize in % or px, proportional lock, layers list (rename, hide, delete, undo), image upload and animations. |
 | 2.5 | Rundowns: several rundowns per channel, guests list and CSV import for fields, duplicate, "when to use". |
 | 2.6 | Graphics inside clips and series: open tracks, in/out marks anchored to start, end of opening, middle or end, apply to a folder of episodes, L-shape overlap rule. |
 | 2.7 | Data and API: control API, webhooks, data sources (RSS, CSV, HTTP) for fields, command log and as-run entries. |
