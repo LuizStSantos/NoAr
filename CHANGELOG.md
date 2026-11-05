@@ -11,6 +11,37 @@ one is tagged.
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-11-05
+
+### Changed
+
+- The Docker documentation explains how to encode on an NVIDIA card (NVENC),
+  and `docker-compose.yml` carries the settings, commented out. Not yet
+  tested on NVIDIA hardware.
+- `Cargo.toml` names the license `GPL-3.0-only` (the current identifier of
+  the same GPL v3), and the image keeps the license of each GStreamer part it
+  builds.
+
+### Fixed
+
+- Generating a day from folders of long programmes left a gap at its end
+  (for example 18 minutes when the next episode was an hour long), since a
+  programme that did not fit was left out and only a filler could close the
+  day. Without a filler, a short day made the channel start the next day's
+  playlist early. The next programme now closes the day, cut where the day
+  ends.
+- The Storage page's folder panel matches the Playlist page's library: the
+  same width and a title like the library's. The disk space no longer breaks
+  into a column of short lines.
+- The Playlist page's library no longer stretches to the bottom of the screen
+  with nothing in it: it is as tall as its folders and files, at most as tall
+  as the playlist, and scrolls inside.
+- The Log page's level buttons show their own level only: Information shows
+  information lines, Warnings warnings, Errors errors, and Everything shows
+  all. Before, each also showed the levels above it, so filtering by
+  Information still listed warnings and errors. The page opens on
+  Everything.
+
 ## [2.2.0] - 2026-11-04
 
 ### Added
@@ -963,7 +994,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/LuizStSantos/NoAr/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/LuizStSantos/NoAr/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/LuizStSantos/NoAr/compare/v2.1.2...v2.1.3

@@ -711,9 +711,9 @@ export default {
         nextDay: 'Próximo dia',
         today: 'Hoje',
         day: 'Dia',
-        level: 'Nível mínimo',
+        level: 'Nível',
         levels: {
-            ERROR: 'Só erros',
+            ERROR: 'Erros',
             WARN: 'Avisos',
             INFO: 'Informações',
             DEBUG: 'Tudo',

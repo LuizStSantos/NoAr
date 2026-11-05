@@ -33,6 +33,22 @@ export interface LogRow {
 
 export const LEVEL_RANK: Record<LogLevel, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, FATAL: 4 }
 
+/**
+ * Whether the log filter `filter` shows a line of `level`: each filter shows
+ * its own level only (errors include fatal ones), and DEBUG ("Everything")
+ * shows every line. A line without a level always shows.
+ */
+export function showsLevel(filter: LogLevel, level: LogLevel | null): boolean {
+    if (level === null || filter === 'DEBUG') {
+        return true
+    }
+    if (filter === 'ERROR') {
+        return level === 'ERROR' || level === 'FATAL'
+    }
+
+    return level === filter
+}
+
 const LINE = /^<span class="log-gray">\[([^\]]+)\]<\/span> <span class="level-[\w-]+">\[\s*(\w+)\]<\/span> ?(.*)$/
 const PART = /<span class="(log-[\w-]+)">([\s\S]*?)<\/span>/g
 

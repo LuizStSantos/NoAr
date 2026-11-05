@@ -113,6 +113,45 @@ After the setup, each channel uses the paths saved for it; change them in
 the channel settings. Do not set `STORAGE`, `PLAYLISTS`, `PUBLIC` or `LOGS`:
 they override the paths of every channel.
 
+## NVIDIA encoding (NVENC)
+
+With an NVIDIA card, NoAr can encode its output on the card instead of the
+processor: choose **H.264 · NVIDIA** (`h264_nvenc`) or **H.265 · NVIDIA**
+(`hevc_nvenc`) as the video codec in Settings › Output. The image already has
+GStreamer's NVIDIA plugin (`nvh264enc`, `nvh265enc`, from
+`gstreamer1.0-plugins-bad`); the card's driver libraries come from the host
+when the container is given the card. Decoding the clips, the logo and the
+L-shape stay on the processor.
+
+1. On the server, install the NVIDIA driver (`nvidia-smi` must work) and the
+   [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html),
+   then let Docker use it:
+
+   ```sh
+   sudo nvidia-ctk runtime configure --runtime=docker
+   sudo systemctl restart docker
+   ```
+
+2. In `docker-compose.yml`, uncomment the NVIDIA lines of the `noar` service
+   (the `NVIDIA_DRIVER_CAPABILITIES` variable and the `deploy` block). The
+   `video` capability gives the container the encoder library.
+
+3. Recreate the container and check that GStreamer sees the card:
+
+   ```sh
+   docker compose up -d --no-build
+   docker exec noar nvidia-smi
+   docker exec noar gst-inspect-1.0 nvh264enc | head -5
+   ```
+
+   The NVIDIA codecs appear in Settings › Output only when the last command
+   finds the element.
+
+GeForce cards limit how many encodes run at once (8 on current drivers);
+professional cards do not. Run a new encoder on a test server for a while
+before airing with it. The project has not been tested on NVIDIA hardware
+yet; report what you find.
+
 ## Prebuilt image
 
 Each release publishes `ghcr.io/luizstsantos/noar:X.Y.Z`, `:X.Y` and

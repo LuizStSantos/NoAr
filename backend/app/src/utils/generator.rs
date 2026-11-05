@@ -216,6 +216,17 @@ pub async fn generate_from_template(
     FolderSource::from_list(manager, media_list).await
 }
 
+/// Ends `program` exactly at `total_length` seconds with `next`, cut short,
+/// when it ends earlier by more than a second.
+fn close_the_day(program: &mut Vec<Media>, mut next: Media, total_length: f64) {
+    let left = total_length - sum_durations(program);
+
+    if left >= 1.0 {
+        next.out = (next.seek + left).min(next.out);
+        program.push(next);
+    }
+}
+
 /// Generate playlists. With `write`, each one is saved unless the day already
 /// has a playlist; without, they are only returned (a draft to review).
 pub async fn playlist_generator(
@@ -348,6 +359,22 @@ pub async fn playlist_generator(
 
                 playlist.program.append(&mut fillers);
             }
+
+            // Still short (no filler, and the next clip is longer than what
+            // is left): the next clip closes the day, cut at its end, so
+            // the day is full and the playout does not start the next one
+            // early.
+            if !playlist.program.is_empty() {
+                for _ in 0..=list_length {
+                    let Some(item) = folder_iter.next().await else {
+                        break;
+                    };
+                    if plays(&item) {
+                        close_the_day(&mut playlist.program, item, total_length);
+                        break;
+                    }
+                }
+            }
         }
 
         if write {
@@ -380,6 +407,25 @@ mod tests {
             ..Media::default()
         })
         .collect()
+    }
+
+    #[test]
+    fn a_day_shorter_than_its_length_ends_with_a_cut_clip() {
+        let mut program = clips();
+        let total = sum_durations(&program);
+        let next = clips().remove(0);
+
+        close_the_day(&mut program, next, total + 18.0);
+
+        let last = program.last().unwrap();
+        assert_eq!(last.source, "first");
+        assert_eq!(last.out, 18.0);
+        assert_eq!(sum_durations(&program), total + 18.0);
+
+        // A day already full, or short by less than a second, stays as it is.
+        let mut full = clips();
+        close_the_day(&mut full, clips().remove(0), total + 0.5);
+        assert_eq!(full.len(), clips().len());
     }
 
     #[test]
