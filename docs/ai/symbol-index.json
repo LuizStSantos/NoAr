@@ -914,6 +914,12 @@
       "bytes": 1631,
       "symbols": []
     },
+    ".github/workflows/soak.yml": {
+      "sha256": "40444aee7dcd49100becbef1e86506cc380e0fc6ba54119c870507cd65cdcc96",
+      "language": "YAML",
+      "bytes": 2246,
+      "symbols": []
+    },
     ".github/workflows/tag-release.yml": {
       "sha256": "35ee83bb78c4d3dbccc08c53f913d3593f754a2738cd9023f43c0e54cc6c5d82",
       "language": "YAML",
@@ -921,15 +927,15 @@
       "symbols": []
     },
     ".github/workflows/validate.yml": {
-      "sha256": "98e2ef83fd7712bcc5c73e52f121d76e40dabc73c923f6f2c8f39d184de0dd38",
+      "sha256": "78225d8bff5ea9896e8f2e3d6e2f4831271ba54a2ee00cfb4d3a900380c05c77",
       "language": "YAML",
-      "bytes": 4067,
+      "bytes": 4339,
       "symbols": []
     },
     ".gitignore": {
-      "sha256": "af18cea3231d71895a4e386fc757d327d1f4370ed3ea6561276b2fc184742e54",
+      "sha256": "a60f946bff92668a6af4b48e09b562f0728586c2ebdfc5d233e2e7f65fe7a655",
       "language": "Other",
-      "bytes": 769,
+      "bytes": 776,
       "symbols": []
     },
     ".prettierignore": {
@@ -969,9 +975,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "901a5a141ab8f77bf58b7f8bb3988fc350ff41ba96a74665c3df0b580fb6e06b",
+      "sha256": "d2021596dfafc8398f8980f526ad4b427d9839931160f2280694544269ed3411",
       "language": "Markdown",
-      "bytes": 46202,
+      "bytes": 52561,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -981,15 +987,15 @@
       "symbols": []
     },
     "Cargo.toml": {
-      "sha256": "ad09b591a39685c2a42d4952424e77b4a4d5b67831fd39bf3a2a1cd92eb0d401",
+      "sha256": "8f73541b67e2ad0df6a745b4c765e2400dbe89703d2184d0723ce4320a305e24",
       "language": "TOML",
-      "bytes": 1218,
+      "bytes": 1223,
       "symbols": []
     },
     "Dockerfile": {
-      "sha256": "d9fb5cae9e63e4c0fceccbcfe98e6e47e1e0d7c82f0703b0487a5c2a28089823",
+      "sha256": "2e1ae4dbe5f58dafc7d8b0363bc3e87b4d260da1aac39bc9dce390e050c8e3ee",
       "language": "Build",
-      "bytes": 7430,
+      "bytes": 9014,
       "symbols": []
     },
     "LICENSE": {
@@ -999,9 +1005,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "7e2ceffe8ce94b50a2cf9b875e02230f6b9fa85ba8a5437cce2d6303423c0aba",
+      "sha256": "4b41ce598aa632853a4bbf601fb21412a417c78837b578b580b7084071d4afbb",
       "language": "Markdown",
-      "bytes": 12163,
+      "bytes": 12456,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -1021,6 +1027,116 @@
       "language": "TOML",
       "bytes": 3398,
       "symbols": []
+    },
+    "backend/app/bindings/playout_config.d.ts": {
+      "sha256": "108b3d1f2f0c52b4057f84478b1afbbceddee8854c4362f242d24e8c6b66e21f",
+      "language": "TypeScript",
+      "bytes": 7415,
+      "symbols": [
+        {
+          "name": "Audio",
+          "line": 3
+        },
+        {
+          "name": "General",
+          "line": 5
+        },
+        {
+          "name": "GraphicsScene",
+          "line": 10
+        },
+        {
+          "name": "Logging",
+          "line": 36
+        },
+        {
+          "name": "LogoTransition",
+          "line": 45
+        },
+        {
+          "name": "Mail",
+          "line": 47
+        },
+        {
+          "name": "Notification",
+          "line": 49
+        },
+        {
+          "name": "NotificationLevel",
+          "line": 51
+        },
+        {
+          "name": "Output",
+          "line": 53
+        },
+        {
+          "name": "OutputMode",
+          "line": 84
+        },
+        {
+          "name": "Playlist",
+          "line": 86
+        },
+        {
+          "name": "PlayoutConfig",
+          "line": 93
+        },
+        {
+          "name": "ProcessMode",
+          "line": 95
+        },
+        {
+          "name": "Processing",
+          "line": 97
+        },
+        {
+          "name": "Recording",
+          "line": 147
+        },
+        {
+          "name": "RecordingSource",
+          "line": 149
+        },
+        {
+          "name": "SceneLShape",
+          "line": 154
+        },
+        {
+          "name": "SceneLogo",
+          "line": 159
+        },
+        {
+          "name": "Scte35",
+          "line": 165
+        },
+        {
+          "name": "Storage",
+          "line": 185
+        },
+        {
+          "name": "StreamType",
+          "line": 192
+        },
+        {
+          "name": "Task",
+          "line": 194
+        }
+      ]
+    },
+    "backend/app/bindings/sse.d.ts": {
+      "sha256": "8605e7b99440be0dcbc9ff74ee22a83ef3e44c23f340c6e7fc58c6ecd6ef2657",
+      "language": "TypeScript",
+      "bytes": 240,
+      "symbols": [
+        {
+          "name": "SSELevel",
+          "line": 3
+        },
+        {
+          "name": "SSEMessage",
+          "line": 5
+        }
+      ]
     },
     "backend/app/build.rs": {
       "sha256": "0dc716741860eb9141ab4f852bc624a64657060b1f15c7c304a47db9b2a9fb99",
@@ -1336,9 +1452,9 @@
       ]
     },
     "backend/app/src/api/path.rs": {
-      "sha256": "f2e6af61921b34f5cc23b20a2b0652434ee285df951771809a576ae7ba15a215",
+      "sha256": "f3f7af691061df81f65be4b166f041a548afad82178fbabd3a55cc8e6da6f303",
       "language": "Rust",
-      "bytes": 8240,
+      "bytes": 8283,
       "symbols": [
         {
           "name": "auth_routes",
@@ -1586,6 +1702,61 @@
         }
       ]
     },
+    "backend/app/src/api/routes/health.rs": {
+      "sha256": "922c39c2a913fc59354735e17c6a334f781fc69a10a9d6911f130923991e1d8d",
+      "language": "Rust",
+      "bytes": 4741,
+      "symbols": [
+        {
+          "name": "HealthReport",
+          "line": 15
+        },
+        {
+          "name": "ChannelHealth",
+          "line": 23
+        },
+        {
+          "name": "ChannelHealth",
+          "line": 35
+        },
+        {
+          "name": "healthy",
+          "line": 36
+        },
+        {
+          "name": "channel_state",
+          "line": 42
+        },
+        {
+          "name": "channel_health",
+          "line": 63
+        },
+        {
+          "name": "get_health",
+          "line": 91
+        },
+        {
+          "name": "tests",
+          "line": 115
+        },
+        {
+          "name": "a_running_playout_with_output_is_on_air",
+          "line": 121
+        },
+        {
+          "name": "a_running_playout_without_output_is_frozen_after_the_grace",
+          "line": 129
+        },
+        {
+          "name": "a_stopped_channel_is_healthy_unless_it_should_run",
+          "line": 139
+        },
+        {
+          "name": "only_problems_make_the_report_unhealthy",
+          "line": 146
+        }
+      ]
+    },
     "backend/app/src/api/routes/log.rs": {
       "sha256": "dcf7b9cb8ca7b39639fca23e8d11b7b17c55a7e4ea47784641161ecdef7f1188",
       "language": "Rust",
@@ -1761,9 +1932,9 @@
       ]
     },
     "backend/app/src/api/routes/mod.rs": {
-      "sha256": "c48364e7844dd61618d5cd5d1fa7a03256eaf055b638e2427b34525803decf8e",
+      "sha256": "02c71f7c8737abd924d4f539391b3f2b3599523862bce62937a9960fbb3701c8",
       "language": "Rust",
-      "bytes": 12861,
+      "bytes": 12892,
       "symbols": [
         {
           "name": "channel",
@@ -1782,144 +1953,148 @@
           "line": 31
         },
         {
-          "name": "log",
+          "name": "health",
           "line": 32
         },
         {
-          "name": "logo",
+          "name": "log",
           "line": 33
         },
         {
-          "name": "playlist",
+          "name": "logo",
           "line": 34
         },
         {
-          "name": "playout_config",
+          "name": "playlist",
           "line": 35
         },
         {
-          "name": "preview",
+          "name": "playout_config",
           "line": 36
         },
         {
-          "name": "program",
+          "name": "preview",
           "line": 37
         },
         {
-          "name": "public",
+          "name": "program",
           "line": 38
         },
         {
-          "name": "report",
+          "name": "public",
           "line": 39
         },
         {
-          "name": "schedule",
+          "name": "report",
           "line": 40
         },
         {
-          "name": "scte35",
+          "name": "schedule",
           "line": 41
         },
         {
-          "name": "setup",
+          "name": "scte35",
           "line": 42
         },
         {
-          "name": "system",
+          "name": "setup",
           "line": 43
         },
         {
-          "name": "user",
+          "name": "system",
           "line": 44
         },
         {
-          "name": "xmltv",
+          "name": "user",
           "line": 45
         },
         {
+          "name": "xmltv",
+          "line": 46
+        },
+        {
           "name": "MailQueues",
-          "line": 73
+          "line": 75
         },
         {
           "name": "stream_file",
-          "line": 79
+          "line": 81
         },
         {
           "name": "RangeSelection",
-          "line": 136
+          "line": 138
         },
         {
           "name": "parse_range",
-          "line": 144
+          "line": 146
         },
         {
           "name": "ensure_any_authority",
-          "line": 198
+          "line": 200
         },
         {
           "name": "AuthUser",
-          "line": 212
+          "line": 214
         },
         {
           "name": "AuthUser",
-          "line": 218
+          "line": 220
         },
         {
           "name": "is_global_admin",
-          "line": 219
+          "line": 221
         },
         {
           "name": "ensure_channel_or_admin",
-          "line": 223
+          "line": 225
         },
         {
           "name": "ensure_self_or_admin",
-          "line": 231
+          "line": 233
         },
         {
           "name": "FromRequestParts",
-          "line": 240
+          "line": 242
         },
         {
           "name": "Rejection",
-          "line": 244
-        },
-        {
-          "name": "from_request_parts",
           "line": 246
         },
         {
+          "name": "from_request_parts",
+          "line": 248
+        },
+        {
           "name": "DateObj",
-          "line": 284
+          "line": 286
         },
         {
           "name": "PathsObj",
-          "line": 290
+          "line": 292
         },
         {
           "name": "FileObj",
-          "line": 302
+          "line": 304
         },
         {
           "name": "LogReq",
-          "line": 308
+          "line": 310
         },
         {
           "name": "ImportObj",
-          "line": 321
+          "line": 323
         },
         {
           "name": "tests",
-          "line": 329
+          "line": 331
         },
         {
           "name": "parses_closed_open_and_suffix_ranges_and_ignores_unsupported_headers",
-          "line": 335
+          "line": 337
         },
         {
           "name": "streams_exact_range_bytes_headers_and_empty_responses",
-          "line": 358
+          "line": 360
         }
       ]
     },
@@ -4147,9 +4322,9 @@
       ]
     },
     "backend/app/src/player/controller.rs": {
-      "sha256": "b28b842b862aad72fcfb05688014d43827657a50cc0ea9b92f8933f60479dc35",
+      "sha256": "a5124186bcedbf92a413ffc24f144eb72e449915d53c2878592e56ea70291fcf",
       "language": "Rust",
-      "bytes": 39003,
+      "bytes": 39583,
       "symbols": [
         {
           "name": "loudness_config",
@@ -4173,247 +4348,251 @@
         },
         {
           "name": "RunningConfigGuard",
-          "line": 137
+          "line": 141
         },
         {
           "name": "Drop",
-          "line": 142
+          "line": 146
         },
         {
           "name": "drop",
-          "line": 143
+          "line": 147
         },
         {
           "name": "PlayoutFailure",
-          "line": 158
+          "line": 162
         },
         {
           "name": "redact_addresses",
-          "line": 170
+          "line": 174
         },
         {
           "name": "ChannelManager",
-          "line": 179
+          "line": 183
         },
         {
           "name": "new",
-          "line": 180
+          "line": 184
         },
         {
           "name": "update_channel",
-          "line": 254
+          "line": 259
         },
         {
           "name": "update_config",
-          "line": 282
-        },
-        {
-          "name": "track_running_config",
           "line": 287
         },
         {
+          "name": "track_running_config",
+          "line": 292
+        },
+        {
           "name": "running_config",
-          "line": 300
+          "line": 305
         },
         {
           "name": "start",
-          "line": 307
+          "line": 312
         },
         {
           "name": "foreground_start",
-          "line": 337
+          "line": 342
         },
         {
           "name": "begin_processing",
-          "line": 387
+          "line": 392
         },
         {
           "name": "mark_started",
-          "line": 394
+          "line": 399
         },
         {
           "name": "record_failure",
-          "line": 401
+          "line": 406
         },
         {
           "name": "clear_failure",
-          "line": 420
+          "line": 425
         },
         {
           "name": "failure",
-          "line": 427
+          "line": 432
+        },
+        {
+          "name": "output_age",
+          "line": 440
         },
         {
           "name": "uptime",
-          "line": 434
+          "line": 447
         },
         {
           "name": "next_task_generation",
-          "line": 441
+          "line": 454
         },
         {
           "name": "log_dev_task",
-          "line": 445
+          "line": 458
         },
         {
           "name": "replace_token",
-          "line": 451
+          "line": 464
         },
         {
           "name": "spawn_dev_metrics_snapshot",
-          "line": 462
+          "line": 475
         },
         {
           "name": "stop_task",
-          "line": 482
+          "line": 495
         },
         {
           "name": "abort_supervisor",
-          "line": 513
+          "line": 526
         },
         {
           "name": "stop_supervisor",
-          "line": 527
+          "line": 540
         },
         {
           "name": "stop_validation",
-          "line": 551
+          "line": 564
         },
         {
           "name": "stop_dev_metrics_snapshot",
-          "line": 556
+          "line": 569
         },
         {
           "name": "spawn_task_runner",
-          "line": 561
+          "line": 574
         },
         {
           "name": "spawn_validation",
-          "line": 577
+          "line": 590
         },
         {
           "name": "stop",
-          "line": 611
+          "line": 624
         },
         {
           "name": "wait",
-          "line": 631
+          "line": 644
         },
         {
           "name": "stop_all",
-          "line": 667
+          "line": 680
         },
         {
           "name": "ChannelController",
-          "line": 702
-        },
-        {
-          "name": "ChannelController",
-          "line": 706
-        },
-        {
-          "name": "new",
-          "line": 707
-        },
-        {
-          "name": "add",
-          "line": 711
-        },
-        {
-          "name": "get",
           "line": 715
         },
         {
-          "name": "remove",
+          "name": "ChannelController",
           "line": 719
         },
         {
+          "name": "new",
+          "line": 720
+        },
+        {
+          "name": "add",
+          "line": 724
+        },
+        {
+          "name": "get",
+          "line": 728
+        },
+        {
+          "name": "remove",
+          "line": 732
+        },
+        {
           "name": "ProcessingGuard",
-          "line": 738
+          "line": 751
         },
         {
           "name": "Drop",
-          "line": 740
+          "line": 753
         },
         {
           "name": "drop",
-          "line": 741
+          "line": 754
         },
         {
           "name": "AbortOnDrop",
-          "line": 747
+          "line": 760
         },
         {
           "name": "Drop",
-          "line": 749
+          "line": 762
         },
         {
           "name": "drop",
-          "line": 750
+          "line": 763
         },
         {
           "name": "run_supervised",
-          "line": 758
+          "line": 771
         },
         {
           "name": "supervisor_loop",
-          "line": 785
+          "line": 798
         },
         {
           "name": "metrics_snapshot_loop",
-          "line": 883
+          "line": 896
         },
         {
           "name": "run_channel",
-          "line": 926
+          "line": 939
         },
         {
           "name": "tests",
-          "line": 957
+          "line": 970
         },
         {
           "name": "failure_messages_keep_only_the_host_of_addresses",
-          "line": 963
+          "line": 976
         },
         {
           "name": "a_failure_is_kept_across_retries_until_the_playout_airs",
-          "line": 981
+          "line": 994
         },
         {
           "name": "failed_start_restores_not_running_state",
-          "line": 1004
-        },
-        {
-          "name": "only_one_channel_command_runs_at_a_time",
           "line": 1017
         },
         {
+          "name": "only_one_channel_command_runs_at_a_time",
+          "line": 1030
+        },
+        {
           "name": "a_failed_channel_command_releases_its_claim",
-          "line": 1032
+          "line": 1045
         },
         {
           "name": "a_panicking_playout_comes_back_as_an_error",
-          "line": 1049
+          "line": 1062
         },
         {
           "name": "a_finished_playout_keeps_its_result",
-          "line": 1059
+          "line": 1072
         },
         {
           "name": "dropping_the_supervisor_stops_the_playout_task",
-          "line": 1068
+          "line": 1081
         },
         {
           "name": "Flag",
-          "line": 1069
+          "line": 1082
         },
         {
           "name": "Drop",
-          "line": 1071
+          "line": 1084
         },
         {
           "name": "drop",
-          "line": 1072
+          "line": 1085
         }
       ]
     },
@@ -4507,9 +4686,9 @@
       ]
     },
     "backend/app/src/player/input/playlist.rs": {
-      "sha256": "0644ab86101b786a7482bcf76f2c6ab91b1e4bbde19e6e1fc3a796e8b116fe5a",
+      "sha256": "c0ed2b3fbcddab1ac5460d7bb159fd703ce2c8a0d3552cbf3b866101fd5bf771",
       "language": "Rust",
-      "bytes": 34584,
+      "bytes": 35087,
       "symbols": [
         {
           "name": "LastClipEnd",
@@ -4605,55 +4784,59 @@
         },
         {
           "name": "tests",
-          "line": 864
+          "line": 866
         },
         {
           "name": "media",
-          "line": 868
+          "line": 870
         },
         {
           "name": "placeholder_never_exceeds_its_natural_duration",
-          "line": 878
+          "line": 880
         },
         {
           "name": "placeholder_can_be_trimmed_to_a_shorter_missing_slot",
-          "line": 883
+          "line": 885
         },
         {
           "name": "missing_playlist_uses_one_natural_placeholder_duration",
-          "line": 888
+          "line": 890
         },
         {
           "name": "starting_midway_through_image_keeps_it_at_first_frame",
-          "line": 893
+          "line": 895
         },
         {
           "name": "starting_midway_through_live_source_does_not_seek_it",
-          "line": 908
+          "line": 910
+        },
+        {
+          "name": "starting_midway_keeps_the_planned_clip_for_the_status",
+          "line": 922
         },
         {
           "name": "last_clip_is_trimmed_to_the_remaining_playlist_time",
-          "line": 919
+          "line": 935
         },
         {
           "name": "last_clip_preserves_its_seek_offset_when_trimmed",
-          "line": 932
+          "line": 948
         },
         {
           "name": "last_clip_is_not_trimmed_within_duration_tolerance",
-          "line": 945
+          "line": 961
         },
         {
           "name": "last_clip_can_use_its_available_duration_to_fill_the_remaining_time",
-          "line": 952
+          "line": 968
         },
         {
           "name": "last_clip_is_not_adjusted_for_one_second_or_less",
-          "line": 965
+          "line": 981
         },
         {
           "name": "last_clip_reports_when_it_cannot_fill_the_remaining_time",
-          "line": 972
+          "line": 988
         }
       ]
     },
@@ -4712,9 +4895,9 @@
       ]
     },
     "backend/app/src/player/output/playout.rs": {
-      "sha256": "4f991a00519f31e6981ab3da29e7ef9f5bc64a7955e41aa60d164f90fc114bc5",
+      "sha256": "35ac04017f470e36ba2d3c69280279d7acd35b02871c9e248ae5af5f5437f098",
       "language": "Rust",
-      "bytes": 42682,
+      "bytes": 43047,
       "symbols": [
         {
           "name": "channel_logo",
@@ -4738,159 +4921,159 @@
         },
         {
           "name": "play_hls",
-          "line": 248
+          "line": 252
         },
         {
           "name": "hls_watchdog",
-          "line": 280
+          "line": 284
         },
         {
           "name": "play_loop",
-          "line": 324
+          "line": 328
         },
         {
           "name": "playlist_breaks",
-          "line": 551
+          "line": 555
         },
         {
           "name": "next_source",
-          "line": 618
+          "line": 622
         },
         {
           "name": "preload_later",
-          "line": 629
+          "line": 633
         },
         {
           "name": "hls_playout_rate",
-          "line": 638
+          "line": 642
         },
         {
           "name": "hls_rate_correction",
-          "line": 666
+          "line": 670
         },
         {
           "name": "open_playout",
-          "line": 689
+          "line": 693
         },
         {
           "name": "open_desktop_playout",
-          "line": 747
+          "line": 751
         },
         {
           "name": "open_desktop_playout",
-          "line": 757
+          "line": 761
         },
         {
           "name": "engine_output_config",
-          "line": 767
+          "line": 771
         },
         {
           "name": "recording_config",
-          "line": 847
+          "line": 855
         },
         {
           "name": "disable_incompatible_recording",
-          "line": 930
+          "line": 938
         },
         {
           "name": "desktop_control_callback",
-          "line": 941
+          "line": 949
         },
         {
           "name": "validate_supported_config",
-          "line": 967
+          "line": 975
         },
         {
           "name": "subtitle_media_path",
-          "line": 979
+          "line": 987
         },
         {
           "name": "output_url",
-          "line": 997
+          "line": 1005
         },
         {
           "name": "hls_playlist_path",
-          "line": 1008
+          "line": 1016
         },
         {
           "name": "play_plain",
-          "line": 1024
+          "line": 1032
         },
         {
           "name": "play_plain_from",
-          "line": 1035
+          "line": 1043
         },
         {
           "name": "playout_duration",
-          "line": 1067
+          "line": 1075
         },
         {
           "name": "engine_error",
-          "line": 1072
+          "line": 1080
         },
         {
           "name": "request_shutdown",
-          "line": 1076
+          "line": 1084
         },
         {
           "name": "tests",
-          "line": 1081
+          "line": 1089
         },
         {
           "name": "recording_test_config",
-          "line": 1087
+          "line": 1095
         },
         {
           "name": "full_placeholder_keeps_explicit_duration",
-          "line": 1106
+          "line": 1114
         },
         {
           "name": "shorter_placeholder_slot_is_trimmed",
-          "line": 1118
+          "line": 1126
         },
         {
           "name": "regular_clip_keeps_loop_duration",
-          "line": 1130
+          "line": 1138
         },
         {
           "name": "hls_rate_correction_slows_down_when_playout_is_early",
-          "line": 1141
+          "line": 1149
         },
         {
           "name": "hls_rate_correction_speeds_up_when_playout_is_late",
-          "line": 1146
+          "line": 1154
         },
         {
           "name": "hls_rate_correction_ignores_tiny_delta",
-          "line": 1151
+          "line": 1159
         },
         {
           "name": "hls_rate_correction_is_clamped",
-          "line": 1156
+          "line": 1164
         },
         {
           "name": "hls_rate_correction_ignores_delta_larger_than_clip",
-          "line": 1162
+          "line": 1170
         },
         {
           "name": "desktop_stop_requests_process_shutdown",
-          "line": 1168
+          "line": 1176
         },
         {
           "name": "desktop_override_disables_stream_copy_recording",
-          "line": 1177
+          "line": 1185
         },
         {
           "name": "desktop_override_disables_hls_variant_recording",
-          "line": 1184
+          "line": 1192
         },
         {
           "name": "desktop_override_keeps_dedicated_recording_encode",
-          "line": 1191
+          "line": 1199
         },
         {
           "name": "inactive_copy_source_disables_recording",
-          "line": 1199
+          "line": 1207
         }
       ]
     },
@@ -4950,9 +5133,9 @@
       ]
     },
     "backend/app/src/player/schedule.rs": {
-      "sha256": "aeebb94f82fd3ccf4c830aa6fb7090130fdc945d5ad2594160c9b9fe4b00c443",
+      "sha256": "a57f9b57b57de3205d03aa66ee066818937f490ecd7aec27d40f84e88bc093e3",
       "language": "Rust",
-      "bytes": 68932,
+      "bytes": 69446,
       "symbols": [
         {
           "name": "InterruptedClip",
@@ -5188,135 +5371,135 @@
         },
         {
           "name": "preload_event",
-          "line": 1438
+          "line": 1452
         },
         {
           "name": "preload_return",
-          "line": 1470
+          "line": 1484
         },
         {
           "name": "forget_live",
-          "line": 1519
+          "line": 1533
         },
         {
           "name": "Drop",
-          "line": 1530
+          "line": 1544
         },
         {
           "name": "drop",
-          "line": 1531
+          "line": 1545
         },
         {
           "name": "wait_on_air",
-          "line": 1539
+          "line": 1553
         },
         {
           "name": "end_waiting",
-          "line": 1583
+          "line": 1597
         },
         {
           "name": "shifted_now",
-          "line": 1596
+          "line": 1610
         },
         {
           "name": "show_on_air",
-          "line": 1606
+          "line": 1620
         },
         {
           "name": "waiting_source",
-          "line": 1621
+          "line": 1635
         },
         {
           "name": "stopping",
-          "line": 1633
+          "line": 1647
         },
         {
           "name": "finish_run",
-          "line": 1637
+          "line": 1651
         },
         {
           "name": "tests",
-          "line": 1642
+          "line": 1656
         },
         {
           "name": "occurrence",
-          "line": 1646
+          "line": 1660
         },
         {
           "name": "at",
-          "line": 1663
+          "line": 1677
         },
         {
           "name": "run",
-          "line": 1667
+          "line": 1681
         },
         {
           "name": "on_air",
-          "line": 1676
+          "line": 1690
         },
         {
           "name": "a_live_on_air_is_extended_for_this_airing",
-          "line": 1695
+          "line": 1709
         },
         {
           "name": "a_removed_event_leaves_the_queue",
-          "line": 1733
-        },
-        {
-          "name": "a_changed_event_airs_as_it_is_now_or_leaves_the_queue",
           "line": 1747
         },
         {
+          "name": "a_changed_event_airs_as_it_is_now_or_leaves_the_queue",
+          "line": 1761
+        },
+        {
           "name": "an_event_started_by_hand_keeps_its_time_when_changed",
-          "line": 1772
+          "line": 1786
         },
         {
           "name": "a_cut_clip_event_resumes_only_inside_its_length",
-          "line": 1787
+          "line": 1801
         },
         {
           "name": "a_cut_live_resumes_until_its_end_time",
-          "line": 1814
+          "line": 1828
         },
         {
           "name": "a_restart_outdates_work_of_the_earlier_start",
-          "line": 1831
+          "line": 1845
         },
         {
           "name": "queue_keeps_order_and_asks_to_interrupt_only_when_needed",
-          "line": 1855
+          "line": 1869
         },
         {
           "name": "manual_triggers_interrupt_and_abort_needs_an_active_event",
-          "line": 1873
+          "line": 1887
         },
         {
           "name": "a_second_end_while_the_event_closes_does_not_reach_what_follows",
-          "line": 1885
+          "line": 1899
         },
         {
           "name": "waiting_screen_uses_the_filler_only_when_it_exists",
-          "line": 1903
+          "line": 1917
         },
         {
           "name": "media_event_at",
-          "line": 1914
+          "line": 1928
         },
         {
           "name": "an_event_cut_by_the_output_stays_open_to_resume",
-          "line": 1929
+          "line": 1943
         },
         {
           "name": "a_time_the_clock_skips_comes_when_the_gap_ends",
-          "line": 1938
+          "line": 1952
         },
         {
           "name": "a_clip_in_the_summer_time_gap_starts_when_the_gap_ends",
-          "line": 1962
+          "line": 1976
         },
         {
           "name": "a_database_error_while_claiming_is_retried_on_the_next_tick",
-          "line": 1986
+          "line": 2000
         }
       ]
     },
@@ -5442,9 +5625,9 @@
       ]
     },
     "backend/app/src/player/utils/mod.rs": {
-      "sha256": "da87affdda62534920e91715323295f2a36f3983fde01d0468b41f20b8a89814",
+      "sha256": "6d30c5d2c8de661f1c418c9f8123b714973bac5bd4efa93369dc081565f6e31e",
       "language": "Rust",
-      "bytes": 37486,
+      "bytes": 37895,
       "symbols": [
         {
           "name": "import",
@@ -5492,223 +5675,223 @@
         },
         {
           "name": "output_link_map",
-          "line": 153
+          "line": 154
         },
         {
           "name": "get_data_map",
-          "line": 175
+          "line": 176
         },
         {
           "name": "Media",
-          "line": 253
+          "line": 254
         },
         {
           "name": "Media",
-          "line": 327
+          "line": 334
         },
         {
           "name": "new",
-          "line": 328
+          "line": 335
         },
         {
           "name": "length",
-          "line": 377
+          "line": 385
         },
         {
           "name": "apply_saved_trim",
-          "line": 383
+          "line": 391
         },
         {
           "name": "add_probe",
-          "line": 410
+          "line": 418
         },
         {
           "name": "Default",
-          "line": 471
+          "line": 479
         },
         {
           "name": "default",
-          "line": 472
+          "line": 480
         },
         {
           "name": "PartialEq",
-          "line": 499
+          "line": 508
         },
         {
           "name": "eq",
-          "line": 500
+          "line": 509
         },
         {
           "name": "Eq",
-          "line": 513
-        },
-        {
-          "name": "null_string",
-          "line": 515
-        },
-        {
-          "name": "deserialize_ad",
           "line": 522
         },
         {
+          "name": "null_string",
+          "line": 524
+        },
+        {
+          "name": "deserialize_ad",
+          "line": 531
+        },
+        {
           "name": "is_false",
-          "line": 536
+          "line": 545
         },
         {
           "name": "is_empty_string",
-          "line": 541
-        },
-        {
-          "name": "playlist_file_path",
           "line": 550
         },
         {
+          "name": "playlist_file_path",
+          "line": 559
+        },
+        {
           "name": "json_reader",
-          "line": 560
+          "line": 569
         },
         {
           "name": "json_writer",
-          "line": 574
+          "line": 583
         },
         {
           "name": "time_in_seconds",
-          "line": 599
+          "line": 608
         },
         {
           "name": "get_date",
-          "line": 610
+          "line": 619
         },
         {
           "name": "time_from_header",
-          "line": 642
+          "line": 651
         },
         {
           "name": "modified_time",
-          "line": 655
+          "line": 664
         },
         {
           "name": "time_to_sec",
-          "line": 681
+          "line": 690
         },
         {
           "name": "sec_to_time",
-          "line": 692
+          "line": 701
         },
         {
           "name": "file_extension",
-          "line": 704
+          "line": 713
         },
         {
           "name": "is_close",
-          "line": 710
+          "line": 719
         },
         {
           "name": "sum_durations",
-          "line": 715
+          "line": 724
         },
         {
           "name": "get_delta",
-          "line": 723
+          "line": 732
         },
         {
           "name": "is_remote",
-          "line": 758
+          "line": 767
         },
         {
           "name": "include_file_extension",
-          "line": 768
+          "line": 777
         },
         {
           "name": "get_date_range",
-          "line": 800
+          "line": 809
         },
         {
           "name": "custom_format",
-          "line": 833
+          "line": 842
         },
         {
           "name": "tests",
-          "line": 906
+          "line": 915
         },
         {
           "name": "an_entry_keeps_marks_of_its_own",
-          "line": 909
+          "line": 918
         },
         {
           "name": "get_date_yesterday_before_the_playlist_start",
-          "line": 941
+          "line": 950
         },
         {
           "name": "get_date_tomorrow_near_midnight",
-          "line": 951
+          "line": 960
         },
         {
           "name": "delta_tracks_a_clip_across_midnight",
-          "line": 961
+          "line": 970
         },
         {
           "name": "images_receive_a_default_playout_duration",
-          "line": 974
+          "line": 983
         },
         {
           "name": "live_sources_receive_a_bounded_default_without_probing",
-          "line": 982
-        },
-        {
-          "name": "live_sources_ignore_playlist_seek_and_keep_explicit_out",
           "line": 991
         },
         {
+          "name": "live_sources_ignore_playlist_seek_and_keep_explicit_out",
+          "line": 1000
+        },
+        {
           "name": "rist_sources_are_treated_as_remote_urls",
-          "line": 1007
+          "line": 1016
         },
         {
           "name": "add_probe_checks_external_audio_when_main_probe_is_cached",
-          "line": 1012
+          "line": 1021
         },
         {
           "name": "legacy_advertisement_category_is_serialized_as_ad",
-          "line": 1026
+          "line": 1035
         },
         {
           "name": "non_advertisement_legacy_category_is_not_an_ad",
-          "line": 1044
+          "line": 1053
         },
         {
           "name": "custom_format_keeps_escaped_braces_without_args",
-          "line": 1062
+          "line": 1071
         },
         {
           "name": "custom_format_replaces_automatic_placeholders",
-          "line": 1067
+          "line": 1076
         },
         {
           "name": "custom_format_replaces_indexed_placeholders",
-          "line": 1072
-        },
-        {
-          "name": "custom_format_keeps_out_of_range_placeholders",
           "line": 1081
         },
         {
+          "name": "custom_format_keeps_out_of_range_placeholders",
+          "line": 1090
+        },
+        {
           "name": "playlist_file_path_builds_year_month_and_date",
-          "line": 1087
+          "line": 1096
         },
         {
           "name": "playlist_file_path_rejects_anything_but_a_date",
-          "line": 1095
+          "line": 1104
         },
         {
           "name": "a_last_modified_header_that_is_not_a_date_is_no_date",
-          "line": 1113
+          "line": 1122
         },
         {
           "name": "custom_format_keeps_invalid_or_unclosed_placeholders",
-          "line": 1126
+          "line": 1135
         },
         {
           "name": "a_video_plays_its_saved_trim_unless_the_clip_sets_its_own",
-          "line": 1133
+          "line": 1142
         }
       ]
     },
@@ -7490,9 +7673,9 @@
       ]
     },
     "backend/app/src/utils/generator.rs": {
-      "sha256": "d6d02f80a9f855ec72b43669cd87c8e98984613d84dc2865f936b7a54c6a5b26",
+      "sha256": "a325660c0e6bc3f3615385470f156288abcfc3c70484b71d0ae1279ca73f4ee4",
       "language": "Rust",
-      "bytes": 13445,
+      "bytes": 15147,
       "symbols": [
         {
           "name": "plays",
@@ -7515,28 +7698,36 @@
           "line": 149
         },
         {
-          "name": "playlist_generator",
+          "name": "close_the_day",
           "line": 221
         },
         {
+          "name": "playlist_generator",
+          "line": 232
+        },
+        {
           "name": "tests",
-          "line": 365
+          "line": 392
         },
         {
           "name": "clips",
-          "line": 368
+          "line": 395
+        },
+        {
+          "name": "a_day_shorter_than_its_length_ends_with_a_cut_clip",
+          "line": 413
         },
         {
           "name": "empty_or_lengthless_sources_give_an_empty_list",
-          "line": 386
+          "line": 432
         },
         {
           "name": "random_list_stays_within_the_requested_duration",
-          "line": 410
+          "line": 456
         },
         {
           "name": "ordered_list_fills_the_duration_in_source_order",
-          "line": 422
+          "line": 468
         }
       ]
     },
@@ -13602,201 +13793,229 @@
       ]
     },
     "backend/engine/src/input/gstreamer.rs": {
-      "sha256": "1f0a46a4a8bed9f3a0e3881376655c2569559d391a5f307fd7f39751ff43bdc9",
+      "sha256": "1ee2aa734c5b2bbb98f60058fd561f6513ca577b9fe9fce45949f2fc24bb9085",
       "language": "Rust",
-      "bytes": 53840,
+      "bytes": 59297,
       "symbols": [
         {
+          "name": "OpenStalled",
+          "line": 48
+        },
+        {
+          "name": "std",
+          "line": 50
+        },
+        {
+          "name": "fmt",
+          "line": 51
+        },
+        {
+          "name": "std",
+          "line": 59
+        },
+        {
           "name": "SourceInfo",
-          "line": 40
+          "line": 62
         },
         {
           "name": "FrameEvent",
-          "line": 49
-        },
-        {
-          "name": "Source",
-          "line": 54
-        },
-        {
-          "name": "Source",
-          "line": 70
-        },
-        {
-          "name": "open",
           "line": 71
         },
         {
+          "name": "Source",
+          "line": 76
+        },
+        {
+          "name": "Source",
+          "line": 92
+        },
+        {
+          "name": "open",
+          "line": 93
+        },
+        {
           "name": "open_with_options",
-          "line": 75
+          "line": 97
         },
         {
           "name": "open_with_options_and_cancel",
-          "line": 90
+          "line": 112
+        },
+        {
+          "name": "open_attempt",
+          "line": 157
         },
         {
           "name": "info",
-          "line": 341
+          "line": 416
         },
         {
           "name": "start",
-          "line": 348
+          "line": 423
+        },
+        {
+          "name": "set_state_with_room",
+          "line": 448
         },
         {
           "name": "seek_when_ready",
-          "line": 371
+          "line": 470
         },
         {
           "name": "pause",
-          "line": 409
+          "line": 508
         },
         {
           "name": "next",
-          "line": 415
+          "line": 514
         },
         {
           "name": "video_ended",
-          "line": 487
+          "line": 586
         },
         {
           "name": "log_first_sample",
-          "line": 491
+          "line": 590
         },
         {
           "name": "audio_ended",
-          "line": 502
+          "line": 601
         },
         {
           "name": "is_eos",
-          "line": 506
+          "line": 605
         },
         {
           "name": "check_bus",
-          "line": 515
+          "line": 614
         },
         {
           "name": "CardSource",
-          "line": 554
+          "line": 653
         },
         {
           "name": "CardSource",
-          "line": 559
+          "line": 658
         },
         {
           "name": "parse",
-          "line": 560
+          "line": 659
         },
         {
           "name": "build",
-          "line": 573
+          "line": 672
         },
         {
           "name": "ndi_source_name",
-          "line": 625
+          "line": 724
         },
         {
           "name": "source_uri",
-          "line": 637
+          "line": 736
         },
         {
           "name": "Drop",
-          "line": 690
+          "line": 789
         },
         {
           "name": "drop",
-          "line": 691
+          "line": 790
         },
         {
           "name": "normalized_audio_bin",
-          "line": 696
+          "line": 795
         },
         {
           "name": "guard_hls_transport_rollover",
-          "line": 712
+          "line": 811
         },
         {
           "name": "unwrap_hls_buffer",
-          "line": 767
+          "line": 866
         },
         {
           "name": "unwrap_hls_timestamp",
-          "line": 772
+          "line": 871
         },
         {
           "name": "sample_pts",
-          "line": 787
+          "line": 886
         },
         {
           "name": "sample_timestamp",
-          "line": 791
+          "line": 890
         },
         {
           "name": "video_frame",
-          "line": 805
+          "line": 904
         },
         {
           "name": "audio_frame",
-          "line": 847
+          "line": 946
         },
         {
           "name": "configure_source",
-          "line": 878
+          "line": 977
         },
         {
           "name": "loopback_proxy_exception",
-          "line": 929
+          "line": 1028
         },
         {
           "name": "set_property",
-          "line": 953
+          "line": 1052
         },
         {
           "name": "tests",
-          "line": 965
+          "line": 1064
         },
         {
           "name": "a_clip_without_audio_seeks",
-          "line": 973
+          "line": 1072
+        },
+        {
+          "name": "a_source_left_paused_still_starts",
+          "line": 1099
         },
         {
           "name": "a_seek_on_a_source_that_is_not_ready_yet_waits_for_it",
-          "line": 998
-        },
-        {
-          "name": "ndi_addresses_name_the_source_as_receivers_list_it",
-          "line": 1021
-        },
-        {
-          "name": "ndi_input_without_the_runtime_is_refused_with_a_reason",
-          "line": 1040
-        },
-        {
-          "name": "asynchronous_tracks_are_ordered_before_advancing_the_playout",
-          "line": 1055
-        },
-        {
-          "name": "hls_transport_rollover_uses_the_current_segment_cycle",
           "line": 1127
         },
         {
+          "name": "ndi_addresses_name_the_source_as_receivers_list_it",
+          "line": 1150
+        },
+        {
+          "name": "ndi_input_without_the_runtime_is_refused_with_a_reason",
+          "line": 1169
+        },
+        {
+          "name": "asynchronous_tracks_are_ordered_before_advancing_the_playout",
+          "line": 1184
+        },
+        {
+          "name": "hls_transport_rollover_uses_the_current_segment_cycle",
+          "line": 1256
+        },
+        {
           "name": "hls_rollover_preserves_payload_duration_and_composition_offset",
-          "line": 1149
+          "line": 1278
         },
         {
           "name": "decoded_frames_use_stream_time_across_adaptive_timestamp_origins_and_file_seeks",
-          "line": 1167
+          "line": 1296
         },
         {
           "name": "native_audio_normalization_preserves_samples_through_timestamp_jitter",
-          "line": 1209
+          "line": 1338
         },
         {
           "name": "stream_selection_opens_sources_with_only_one_track",
-          "line": 1286
+          "line": 1415
         },
         {
           "name": "explicit_proxy_exceptions_are_limited_to_exact_loopback_hosts",
-          "line": 1348
+          "line": 1477
         }
       ]
     },
@@ -13816,9 +14035,9 @@
       ]
     },
     "backend/engine/src/input/preload.rs": {
-      "sha256": "1f3140d3cf6a97981e9eca018e0a4386d44c8ffe628241099c2a5121014a618a",
+      "sha256": "c61e4802df401163a4ccba176a761c804849c835e62cddd60c6fc75d6af7adcf",
       "language": "Rust",
-      "bytes": 19663,
+      "bytes": 19911,
       "symbols": [
         {
           "name": "OpenedInput",
@@ -13986,74 +14205,74 @@
         },
         {
           "name": "Preroll",
-          "line": 423
+          "line": 427
         },
         {
           "name": "Preroll",
-          "line": 428
+          "line": 432
         },
         {
           "name": "push",
-          "line": 429
+          "line": 433
         },
         {
           "name": "into_frames",
-          "line": 447
+          "line": 451
         },
         {
           "name": "frame_bytes",
-          "line": 452
+          "line": 456
         },
         {
           "name": "tests",
-          "line": 468
+          "line": 472
         },
         {
           "name": "video",
-          "line": 473
+          "line": 477
         },
         {
           "name": "cancellation_interrupts_a_source_still_opening",
-          "line": 478
+          "line": 482
         },
         {
           "name": "cleanup_does_not_cancel_a_source_already_handed_to_playout",
-          "line": 487
+          "line": 491
         },
         {
           "name": "failed_http_live_preload_preserves_live_context_for_reopening",
-          "line": 497
+          "line": 501
         },
         {
           "name": "decoded_preroll_keeps_only_its_recent_window",
-          "line": 521
+          "line": 525
         },
         {
           "name": "decoded_preroll_has_a_hard_frame_bound",
-          "line": 532
+          "line": 536
         },
         {
           "name": "a_missing_file_fails_and_is_not_taken",
-          "line": 543
+          "line": 547
         },
         {
           "name": "a_file_is_open_before_its_turn",
-          "line": 562
+          "line": 566
         },
         {
           "name": "a_preloaded_file_seeks_without_blocking_the_next_clip",
-          "line": 589
+          "line": 593
         },
         {
           "name": "at_most_three_preloads_are_kept",
-          "line": 641
+          "line": 645
         }
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "20f5f375c4ca254c5d1584134e8bb84d824f64f4bbdccb9a8cd0c2b04c357811",
+      "sha256": "0a3bbe1b617669966c80ba5652706cc4d97e1d3fbab52a9ac4714605a0a49382",
       "language": "Rust",
-      "bytes": 45524,
+      "bytes": 45674,
       "symbols": [
         {
           "name": "analysis",
@@ -14381,31 +14600,31 @@
         },
         {
           "name": "damaged_clip",
-          "line": 1183
+          "line": 1185
         },
         {
           "name": "damaged_data_in_a_clip_keeps_its_slot_length",
-          "line": 1202
+          "line": 1204
         },
         {
           "name": "a_clip_failing_midway_counts_what_already_went_out",
-          "line": 1233
+          "line": 1235
         },
         {
           "name": "restart_during_fallback_remains_a_playout_restart",
-          "line": 1252
+          "line": 1254
         },
         {
           "name": "playlist_reset_during_fallback_reinitializes_playout",
-          "line": 1260
+          "line": 1262
         },
         {
           "name": "restart_request_is_independent_from_skip_request",
-          "line": 1268
+          "line": 1270
         },
         {
           "name": "dropping_async_playout_discards_queued_work_and_finishes_worker",
-          "line": 1279
+          "line": 1281
         }
       ]
     },
@@ -18189,361 +18408,361 @@
       ]
     },
     "backend/engine/src/playout.rs": {
-      "sha256": "ebb80352870c105bfe604bb81b9be820c6073d0d1360259a9bf1cd41d738bd84",
+      "sha256": "e2ded3a5d7142575a76b36a8c673f37a405a9f01e18ff0ce2480275af1d1d457",
       "language": "Rust",
-      "bytes": 61130,
+      "bytes": 63753,
       "symbols": [
         {
           "name": "PlaybackSkipped",
-          "line": 38
+          "line": 42
         },
         {
           "name": "fmt",
-          "line": 40
+          "line": 44
         },
         {
           "name": "fmt",
-          "line": 41
+          "line": 45
         },
         {
           "name": "Error",
-          "line": 46
+          "line": 50
         },
         {
           "name": "PlaybackRestart",
-          "line": 49
+          "line": 53
         },
         {
           "name": "fmt",
-          "line": 51
+          "line": 55
         },
         {
           "name": "fmt",
-          "line": 52
+          "line": 56
         },
         {
           "name": "Error",
-          "line": 57
+          "line": 61
         },
         {
           "name": "LiveSourceLost",
-          "line": 60
+          "line": 64
         },
         {
           "name": "fmt",
-          "line": 62
+          "line": 66
         },
         {
           "name": "fmt",
-          "line": 63
+          "line": 67
         },
         {
           "name": "Error",
-          "line": 68
+          "line": 72
         },
         {
           "name": "source_error",
-          "line": 70
+          "line": 74
         },
         {
           "name": "check_playback_control",
-          "line": 83
+          "line": 87
         },
         {
           "name": "Timeline",
-          "line": 96
+          "line": 100
         },
         {
           "name": "Timeline",
-          "line": 108
+          "line": 112
         },
         {
           "name": "new",
-          "line": 109
+          "line": 113
         },
         {
           "name": "video_pts",
-          "line": 119
-        },
-        {
-          "name": "audio_pts",
           "line": 123
         },
         {
+          "name": "audio_pts",
+          "line": 127
+        },
+        {
           "name": "at",
-          "line": 128
+          "line": 132
         },
         {
           "name": "resume_logo",
-          "line": 138
+          "line": 142
         },
         {
           "name": "finish_logo_fade",
-          "line": 149
+          "line": 153
         },
         {
           "name": "MediaFadePlan",
-          "line": 161
+          "line": 165
         },
         {
           "name": "MediaFadePlan",
-          "line": 168
+          "line": 172
         },
         {
           "name": "for_trimmed_clip",
-          "line": 169
+          "line": 173
         },
         {
           "name": "video_opacity_at",
-          "line": 211
+          "line": 215
         },
         {
           "name": "audio_gain_at",
-          "line": 217
+          "line": 221
         },
         {
           "name": "for_external_audio_trim",
-          "line": 223
+          "line": 227
         },
         {
           "name": "LogoFadePlan",
-          "line": 259
+          "line": 263
         },
         {
           "name": "LogoFadePlan",
-          "line": 278
+          "line": 282
         },
         {
           "name": "new",
-          "line": 281
+          "line": 285
         },
         {
           "name": "lshape_level",
-          "line": 338
+          "line": 342
         },
         {
           "name": "gap_factor",
-          "line": 349
+          "line": 353
         },
         {
           "name": "opacity_at",
-          "line": 364
+          "line": 368
         },
         {
           "name": "finish",
-          "line": 389
+          "line": 393
         },
         {
           "name": "ramp",
-          "line": 401
+          "line": 405
         },
         {
           "name": "play_clip_with_external_audio",
-          "line": 411
+          "line": 415
         },
         {
           "name": "seconds_to_microseconds",
-          "line": 788
-        },
-        {
-          "name": "send_audio",
-          "line": 793
-        },
-        {
-          "name": "ExternalAudioInput",
           "line": 837
         },
         {
+          "name": "send_audio",
+          "line": 842
+        },
+        {
           "name": "ExternalAudioInput",
-          "line": 845
+          "line": 886
+        },
+        {
+          "name": "ExternalAudioInput",
+          "line": 894
         },
         {
           "name": "open",
-          "line": 846
+          "line": 895
         },
         {
           "name": "until_video",
-          "line": 875
+          "line": 924
         },
         {
           "name": "VideoCompositor",
-          "line": 925
+          "line": 974
         },
         {
           "name": "VideoCompositor",
-          "line": 939
+          "line": 988
         },
         {
           "name": "new",
-          "line": 940
+          "line": 989
         },
         {
           "name": "open_input",
-          "line": 983
+          "line": 1032
         },
         {
           "name": "OpeningCancellation",
-          "line": 1035
+          "line": 1084
         },
         {
           "name": "Drop",
-          "line": 1037
+          "line": 1086
         },
         {
           "name": "drop",
-          "line": 1038
+          "line": 1087
         },
         {
           "name": "hold_until_open",
-          "line": 1046
-        },
-        {
-          "name": "RuntimeTextOverlay",
           "line": 1095
         },
         {
           "name": "RuntimeTextOverlay",
-          "line": 1107
+          "line": 1144
+        },
+        {
+          "name": "RuntimeTextOverlay",
+          "line": 1156
         },
         {
           "name": "new",
-          "line": 1108
+          "line": 1157
         },
         {
           "name": "update",
-          "line": 1147
+          "line": 1196
         },
         {
           "name": "encode_composited_frame",
-          "line": 1177
+          "line": 1226
         },
         {
           "name": "apply_overlays",
-          "line": 1235
+          "line": 1284
         },
         {
           "name": "draw_logo",
-          "line": 1319
+          "line": 1368
         },
         {
           "name": "apply_video_fade",
-          "line": 1336
+          "line": 1385
         },
         {
           "name": "apply_audio_fade",
-          "line": 1364
-        },
-        {
-          "name": "write_fallback",
-          "line": 1376
-        },
-        {
-          "name": "synchronize_timeline",
           "line": 1413
         },
         {
+          "name": "write_fallback",
+          "line": 1425
+        },
+        {
+          "name": "synchronize_timeline",
+          "line": 1462
+        },
+        {
           "name": "synchronize_silence_to_video",
-          "line": 1448
+          "line": 1497
         },
         {
           "name": "synchronize_live_tracks",
-          "line": 1470
+          "line": 1519
         },
         {
           "name": "synchronize_after_skip",
-          "line": 1496
+          "line": 1545
         },
         {
           "name": "padding_to_sync",
-          "line": 1521
+          "line": 1570
         },
         {
           "name": "div_ceil",
-          "line": 1557
+          "line": 1606
         },
         {
           "name": "write_black_frames",
-          "line": 1561
+          "line": 1610
         },
         {
           "name": "FallbackOverlays",
-          "line": 1582
+          "line": 1631
         },
         {
           "name": "FallbackOverlays",
-          "line": 1587
+          "line": 1636
         },
         {
           "name": "new",
-          "line": 1588
+          "line": 1637
         },
         {
           "name": "apply",
-          "line": 1625
-        },
-        {
-          "name": "write_padding_video_frames",
-          "line": 1639
-        },
-        {
-          "name": "black_video_frame_for_config",
-          "line": 1662
-        },
-        {
-          "name": "black_video_frame",
-          "line": 1666
-        },
-        {
-          "name": "fill_plane",
           "line": 1674
         },
         {
+          "name": "write_padding_video_frames",
+          "line": 1688
+        },
+        {
+          "name": "black_video_frame_for_config",
+          "line": 1711
+        },
+        {
+          "name": "black_video_frame",
+          "line": 1715
+        },
+        {
+          "name": "fill_plane",
+          "line": 1723
+        },
+        {
           "name": "write_silence_frame",
-          "line": 1694
+          "line": 1743
         },
         {
           "name": "write_silence",
-          "line": 1713
+          "line": 1762
         },
         {
           "name": "live_interleave_tests",
-          "line": 1737
+          "line": 1786
         },
         {
           "name": "live_source_failures_preserve_playback_control_signals",
-          "line": 1741
+          "line": 1790
         },
         {
           "name": "Capture",
-          "line": 1749
+          "line": 1798
         },
         {
           "name": "FrameOutput",
-          "line": 1754
+          "line": 1803
         },
         {
           "name": "audio_frame_size",
-          "line": 1755
+          "line": 1804
         },
         {
           "name": "encode_video",
-          "line": 1759
+          "line": 1808
         },
         {
           "name": "encode_audio",
-          "line": 1765
+          "line": 1814
         },
         {
           "name": "missing_live_video_holds_a_picture_while_audio_continues",
-          "line": 1774
+          "line": 1823
         },
         {
           "name": "missing_live_audio_inserts_silence_without_exceeding_the_event_end",
-          "line": 1787
+          "line": 1836
         },
         {
           "name": "healthy_live_tracks_are_not_padded",
-          "line": 1821
+          "line": 1870
         }
       ]
     },
@@ -19650,9 +19869,15 @@
       ]
     },
     "docker-compose.yml": {
-      "sha256": "d4f94d40b7c86584256468a151feb5e430c97c02a01cd967fb93946fa8c4587c",
+      "sha256": "9cf5a7afc83f178bc95c1518548fa1eedd57c9fbc51e24c3bca499a57231632c",
       "language": "YAML",
-      "bytes": 2523,
+      "bytes": 2975,
+      "symbols": []
+    },
+    "docker/gstreamer/build.sh": {
+      "sha256": "d2cd24b7da6a40fd37f71ce23ec8710d614f5fb43e1c0cade15778b1ecef9a03",
+      "language": "Shell",
+      "bytes": 4134,
       "symbols": []
     },
     "docker/ndi/enable-ndi.sh": {
@@ -19686,9 +19911,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "1f127053d80f8645a04004021965eb2a178149b70ca9f0b777fe5bc5433ce3f0",
+      "sha256": "98c44489b204a67290a9f4d0da88b06ceb681620ca4b1a97f883d7b05cce7a5e",
       "language": "Markdown",
-      "bytes": 30066,
+      "bytes": 31134,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -19704,15 +19929,15 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "603eb765f2673f36b1f97ddf954a0a29cf63f87e4ef892c50b1448eb221a2dab",
+      "sha256": "149bfa23441e75dc6961a3d14cc240d2f2d545838d78ff395ce7a5ace74ef4bd",
       "language": "Markdown",
-      "bytes": 6297,
+      "bytes": 6965,
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "4cc1c055f703cc30adfaf5ab6779c12d41e359cc8f825cbda8362cd68bd512b1",
+      "sha256": "ecaa4fa789e77f4b987fb05b8379fe5afa4705cdb2971edb7df1643a3da63100",
       "language": "Markdown",
-      "bytes": 8999,
+      "bytes": 11716,
       "symbols": []
     },
     "docs/external_tasks.md": {
@@ -28335,9 +28560,9 @@
       ]
     },
     "frontend/src/composables/logLines.ts": {
-      "sha256": "c31ea67adaa508a7724e4fc06db0c7390b357cbd4b40bd1d3ee5928526ad2ad5",
+      "sha256": "539f67122a744306e14329fc5ccf4643c841de5b1185413e337a06c435b1ce0d",
       "language": "TypeScript",
-      "bytes": 4878,
+      "bytes": 5374,
       "symbols": [
         {
           "name": "LogLevel",
@@ -28356,32 +28581,36 @@
           "line": 29
         },
         {
+          "name": "showsLevel",
+          "line": 41
+        },
+        {
           "name": "decodeEntities",
-          "line": 42
+          "line": 58
         },
         {
           "name": "plainText",
-          "line": 51
+          "line": 67
         },
         {
           "name": "levelOf",
-          "line": 55
+          "line": 71
         },
         {
           "name": "parts",
-          "line": 65
+          "line": 81
         },
         {
           "name": "parseLog",
-          "line": 91
+          "line": 107
         },
         {
           "name": "shape",
-          "line": 132
+          "line": 148
         },
         {
           "name": "foldRepeats",
-          "line": 138
+          "line": 154
         }
       ]
     },
@@ -29151,15 +29380,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "92a684082bd2be60818eed4249a0a83226d81d90638c712a6dbcbe6ed8737c8c",
+      "sha256": "13dc85d32a06485bbe9e423c3af30dc5c0825a6b3093d730a12ade550ffe2595",
       "language": "TypeScript",
-      "bytes": 126691,
+      "bytes": 126679,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "6822344c13a54b73fe3add9349ea899cfffbc8224e814ff8e05ea05778368335",
+      "sha256": "03b581003a4bf10afc39ebd7eeb7d18425a3c66adedd4c1474f32eaca17c97bb",
       "language": "TypeScript",
-      "bytes": 131865,
+      "bytes": 131853,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -30281,9 +30510,9 @@
       ]
     },
     "frontend/src/views/LoggingView.vue": {
-      "sha256": "ec26bc7a584cbd62e1073407172e55eca789512677993d621a59b8fc1f2fbd9d",
+      "sha256": "990fd6839b78381b45afec6dd6bcd53d7d220475371d3d35e4706d3404356ed3",
       "language": "Vue",
-      "bytes": 21426,
+      "bytes": 21331,
       "symbols": [
         {
           "name": "router",
@@ -30394,148 +30623,144 @@
           "line": 73
         },
         {
-          "name": "minimum",
+          "name": "needle",
           "line": 74
         },
         {
-          "name": "needle",
-          "line": 75
-        },
-        {
           "name": "rows",
-          "line": 84
+          "line": 81
         },
         {
           "name": "hiddenRows",
-          "line": 87
+          "line": 84
         },
         {
           "name": "drawnRows",
-          "line": 88
+          "line": 85
         },
         {
           "name": "lastLineAt",
-          "line": 91
+          "line": 88
         },
         {
           "name": "stamp",
-          "line": 92
+          "line": 89
         },
         {
           "name": "lastLineAge",
-          "line": 97
+          "line": 94
         },
         {
           "name": "seconds",
-          "line": 102
+          "line": 99
         },
         {
           "name": "logUrl",
-          "line": 107
+          "line": 104
         },
         {
           "name": "date",
-          "line": 108
+          "line": 105
         },
         {
           "name": "query",
-          "line": 109
+          "line": 106
         },
         {
           "name": "atBottom",
-          "line": 118
+          "line": 115
         },
         {
           "name": "element",
-          "line": 119
+          "line": 116
         },
         {
           "name": "toEnd",
-          "line": 124
+          "line": 121
         },
         {
           "name": "load",
-          "line": 132
+          "line": 129
         },
         {
           "name": "response",
-          "line": 142
+          "line": 139
         },
         {
           "name": "poll",
-          "line": 160
+          "line": 157
         },
         {
           "name": "response",
-          "line": 168
+          "line": 165
         },
         {
           "name": "text",
-          "line": 174
+          "line": 171
         },
         {
           "name": "offset",
-          "line": 175
+          "line": 172
         },
         {
           "name": "follow",
-          "line": 184
+          "line": 181
         },
         {
           "name": "lastId",
-          "line": 185
+          "line": 182
         },
         {
           "name": "shiftDay",
-          "line": 200
+          "line": 197
         },
         {
           "name": "target",
-          "line": 201
+          "line": 198
         },
         {
           "name": "download",
-          "line": 208
+          "line": 205
         },
         {
           "name": "response",
-          "line": 209
+          "line": 206
         },
         {
           "name": "url",
-          "line": 216
+          "line": 213
         },
         {
           "name": "link",
-          "line": 217
+          "line": 214
         },
         {
           "name": "copyLine",
-          "line": 227
+          "line": 224
         },
         {
           "name": "storageFolder",
-          "line": 237
+          "line": 234
         },
         {
           "name": "root",
-          "line": 238
+          "line": 235
         },
         {
           "name": "relative",
-          "line": 246
+          "line": 243
         },
         {
           "name": "openRun",
-          "line": 255
+          "line": 252
         },
         {
           "name": "rowClass",
-          "line": 259
+          "line": 256
         },
         {
           "name": "badgeClass",
-          "line": 267
+          "line": 264
         }
       ]
     },
@@ -30583,9 +30808,9 @@
       ]
     },
     "frontend/src/views/MediaView.vue": {
-      "sha256": "9bf389784974fe0b9dc6164a1efb94d4c44e33f7000c855ebe0eb727ed75723f",
+      "sha256": "d9ed87378c4b97cd7bcb4c80a0d8c802025eaa7fc27e827a6510d2225a32348a",
       "language": "Vue",
-      "bytes": 74956,
+      "bytes": 74952,
       "symbols": [
         {
           "name": "configStore",
@@ -31330,9 +31555,9 @@
       ]
     },
     "frontend/src/views/PlayerView.vue": {
-      "sha256": "db0823f22d507612dd95847ee2580bd0dadca991958873a7827f6420bcaba60b",
+      "sha256": "c3082e71b5a88827cfc6d3bdd672e3d13de43f8a80288e3a2d26e2bbb8fe63d4",
       "language": "Vue",
-      "bytes": 9592,
+      "bytes": 9668,
       "symbols": [
         {
           "name": "props",
@@ -31764,7 +31989,7 @@
       ]
     },
     "frontend/src/views/ScheduleView.vue": {
-      "sha256": "df0209c97b1d1b067e32f07263097a93a235946c5c540e80689a5404c9d5d72e",
+      "sha256": "84646d4024a9607fca06a6fc2bde2128037cfda907d401be30471f5e2ffec3e7",
       "language": "Vue",
       "bytes": 54629,
       "symbols": [
@@ -32492,13 +32717,13 @@
       "symbols": []
     },
     "package-lock.json": {
-      "sha256": "8fc4c6cab0df7d7c5a35812c051cb80fa6310780cffb36c2d3f5a18f4f1a7731",
+      "sha256": "26923cf06be3602cea8b1edeef2839769bb6f928f541bbb7c69e32b27c887cd7",
       "language": "JSON",
       "bytes": 215132,
       "symbols": []
     },
     "package.json": {
-      "sha256": "cacbad81fade4e64c5a60877b00a10e74cc19ffc3366d5d96d0eeaeea3e5c873",
+      "sha256": "ce5c9c9ec999af10a37334a09a6b55f30e26b4c52ed548f06c31aa465c8e5a50",
       "language": "JSON",
       "bytes": 1526,
       "symbols": []
@@ -32510,28 +32735,79 @@
       "symbols": []
     },
     "qa/e2e/README.md": {
-      "sha256": "f86fc0bc4124ba67bea4bf04e38721242d3d14c835d5d464c73b9add2e8722b0",
+      "sha256": "0644a3dbc17efa4c848de8e222e4867ca6315618cdc3d0e636487ac0621ab16f",
       "language": "Markdown",
-      "bytes": 2038,
+      "bytes": 5256,
+      "symbols": []
+    },
+    "qa/e2e/global-setup.ts": {
+      "sha256": "648ca574738529a2033fb92c747855a491cdff8b00287ded41bd1f39ffe8fa79",
+      "language": "TypeScript",
+      "bytes": 2343,
+      "symbols": [
+        {
+          "name": "setup",
+          "line": 5
+        }
+      ]
+    },
+    "qa/e2e/package-lock.json": {
+      "sha256": "66aeab6025423893d27bad111ebb2212d8d2d213be21c713bc659e421565bcc7",
+      "language": "JSON",
+      "bytes": 2919,
       "symbols": []
     },
     "qa/e2e/package.json": {
-      "sha256": "b41bb219609a51d2105b02c93873420829834c8ff52988620558f218bf501a4e",
+      "sha256": "e6b5d109facf8a9f2cbe4c43929380d6a0845a59f36ad3ff3fafd206621efbe4",
       "language": "JSON",
-      "bytes": 359,
+      "bytes": 426,
       "symbols": []
     },
     "qa/e2e/playwright.config.ts": {
-      "sha256": "0b0bd5dc620968f010c019e7e5da923bf6ed2613666f4d491e448879e6d8f1a1",
+      "sha256": "ebf4942744d7583817fa9aa116ceebfe3b43e674eab530dd37ccc16979689747",
       "language": "TypeScript",
-      "bytes": 1100,
+      "bytes": 1373,
       "symbols": []
+    },
+    "qa/e2e/run_staging.py": {
+      "sha256": "d9d7bbe9f971b082cce2cdaad61b76bb369a6dad85843df7e36f46df6db66c2b",
+      "language": "Python",
+      "bytes": 8963,
+      "symbols": [
+        {
+          "name": "wait_for",
+          "line": 26
+        },
+        {
+          "name": "read_api",
+          "line": 44
+        },
+        {
+          "name": "stop_backend",
+          "line": 52
+        },
+        {
+          "name": "main",
+          "line": 66
+        }
+      ]
     },
     "qa/e2e/tests/login-navigation.spec.ts": {
       "sha256": "31501770c65d399e40dbf12d04eb08515aa212cf74ee5f8c50c15ea156f66d73",
       "language": "TypeScript",
       "bytes": 869,
       "symbols": []
+    },
+    "qa/e2e/tests/operator.spec.ts": {
+      "sha256": "9beeedfe3b44f1237d172caab73eb7514f33073e9320769487f719261c718ee0",
+      "language": "TypeScript",
+      "bytes": 9924,
+      "symbols": [
+        {
+          "name": "api",
+          "line": 6
+        }
+      ]
     },
     "qa/e2e/tests/protected-routes.spec.ts": {
       "sha256": "d320e104ca9e9046550de915ec5a4a43e0da6550e46bb0926b4ae00a9a903bee",
@@ -32543,6 +32819,12 @@
       "sha256": "e1a40af57170ecbadae3573d236039e98a1ac0e848b916d9eb0c5f32a39e9526",
       "language": "TypeScript",
       "bytes": 478,
+      "symbols": []
+    },
+    "qa/e2e/tsconfig.json": {
+      "sha256": "4759e38531cd29980eb6590b90a0753fed7c8c30199abf29fcde8276bc08fdd8",
+      "language": "JSON",
+      "bytes": 254,
       "symbols": []
     },
     "qa/gstreamer/.gitignore": {
@@ -33134,6 +33416,281 @@
       "language": "Other",
       "bytes": 6227,
       "symbols": []
+    },
+    "qa/soak/.gitignore": {
+      "sha256": "2a911e37aae3b2dd409ac49b05e575096de85740b21e355b900f3426afb66ff6",
+      "language": "Other",
+      "bytes": 25,
+      "symbols": []
+    },
+    "qa/soak/README.md": {
+      "sha256": "2685492d3b4d9a0a5c3a002ee34634bff085886f55ec9ec8bc202b2e56bb82dc",
+      "language": "Markdown",
+      "bytes": 5787,
+      "symbols": []
+    },
+    "qa/soak/VALIDATION.md": {
+      "sha256": "046367429e653a723833803e68de4860cbdd02431c959955596a39b0fb3f900b",
+      "language": "Markdown",
+      "bytes": 3978,
+      "symbols": []
+    },
+    "qa/soak/evidence/native-picture-verification.json": {
+      "sha256": "0b424978508fead2b6b1e6fa190e62ade3f698fbb556edea33eee460091a3332",
+      "language": "JSON",
+      "bytes": 3309,
+      "symbols": []
+    },
+    "qa/soak/evidence/picture-tests.txt": {
+      "sha256": "2635739c21d09129d21e008ea9620b04b6fd7279bbfc387902db16bdb1dfb154",
+      "language": "Other",
+      "bytes": 111,
+      "symbols": []
+    },
+    "qa/soak/mediamtx.yml": {
+      "sha256": "fa29d9d3e6b620094c14d92a618be88c66daecea2fdfe1349987356a1cc437b5",
+      "language": "YAML",
+      "bytes": 576,
+      "symbols": []
+    },
+    "qa/soak/picture.py": {
+      "sha256": "e92d579c1c20580a69f95cbb22a151eeb71b2ed714c22aa6a87ec3332095a918",
+      "language": "Python",
+      "bytes": 6107,
+      "symbols": [
+        {
+          "name": "PictureTracker",
+          "line": 22
+        },
+        {
+          "name": "__init__",
+          "line": 23
+        },
+        {
+          "name": "observe",
+          "line": 33
+        },
+        {
+          "name": "problem",
+          "line": 50
+        },
+        {
+          "name": "snapshot",
+          "line": 61
+        },
+        {
+          "name": "PictureMonitor",
+          "line": 70
+        },
+        {
+          "name": "__init__",
+          "line": 73
+        },
+        {
+          "name": "start",
+          "line": 87
+        },
+        {
+          "name": "_run",
+          "line": 92
+        },
+        {
+          "name": "_end_process",
+          "line": 126
+        },
+        {
+          "name": "sample",
+          "line": 135
+        },
+        {
+          "name": "close",
+          "line": 141
+        }
+      ]
+    },
+    "qa/soak/soak.py": {
+      "sha256": "0a3f57ba7ead0ce552736fc84d6f6340ec88958ae1a9f8a53dd13b7a3f5f0e4e",
+      "language": "Python",
+      "bytes": 22363,
+      "symbols": [
+        {
+          "name": "log",
+          "line": 101
+        },
+        {
+          "name": "docker",
+          "line": 108
+        },
+        {
+          "name": "container",
+          "line": 112
+        },
+        {
+          "name": "request",
+          "line": 120
+        },
+        {
+          "name": "parse",
+          "line": 137
+        },
+        {
+          "name": "api",
+          "line": 144
+        },
+        {
+          "name": "login",
+          "line": 151
+        },
+        {
+          "name": "make_clips",
+          "line": 157
+        },
+        {
+          "name": "playlist",
+          "line": 172
+        },
+        {
+          "name": "set_up",
+          "line": 181
+        },
+        {
+          "name": "schedule_cycle",
+          "line": 244
+        },
+        {
+          "name": "act",
+          "line": 258
+        },
+        {
+          "name": "output_bytes",
+          "line": 268
+        },
+        {
+          "name": "picture_url",
+          "line": 282
+        },
+        {
+          "name": "picture_grace",
+          "line": 288
+        },
+        {
+          "name": "running",
+          "line": 295
+        },
+        {
+          "name": "main",
+          "line": 300
+        }
+      ]
+    },
+    "qa/soak/test_picture.py": {
+      "sha256": "acfe772da2a6a92b2e8b5c602248d7f64e941658fe7ce407e51c4758a21163f7",
+      "language": "Python",
+      "bytes": 4413,
+      "symbols": [
+        {
+          "name": "PictureTrackerTests",
+          "line": 11
+        },
+        {
+          "name": "test_frozen_frames_fail_even_while_new_frames_keep_arriving",
+          "line": 12
+        },
+        {
+          "name": "test_moving_frames_do_not_fail",
+          "line": 19
+        },
+        {
+          "name": "test_missing_video_is_distinct_from_a_frozen_image",
+          "line": 25
+        },
+        {
+          "name": "test_reconnection_does_not_reset_a_missing_frame_deadline",
+          "line": 29
+        },
+        {
+          "name": "test_only_a_bounded_grace_window_suppresses_a_failure",
+          "line": 34
+        },
+        {
+          "name": "test_low_per_frame_motion_accumulates_against_the_reference",
+          "line": 43
+        },
+        {
+          "name": "test_truncated_frame_is_not_counted_as_success",
+          "line": 53
+        },
+        {
+          "name": "PictureDecoderTests",
+          "line": 61
+        },
+        {
+          "name": "exercise",
+          "line": 62
+        },
+        {
+          "name": "test_real_decoder_detects_repeated_static_pictures_across_reconnects",
+          "line": 95
+        },
+        {
+          "name": "test_real_decoder_accepts_moving_pictures",
+          "line": 98
+        }
+      ]
+    },
+    "qa/soak/test_soak.py": {
+      "sha256": "41b488daa043d3d83f9040256574e4d1380c3bf8d36933992ade78d66b975b61",
+      "language": "Python",
+      "bytes": 1742,
+      "symbols": [
+        {
+          "name": "HlsProgressTests",
+          "line": 9
+        },
+        {
+          "name": "setUp",
+          "line": 10
+        },
+        {
+          "name": "test_rotating_media_sequence_counts_as_progress_with_constant_playlist_size",
+          "line": 17
+        },
+        {
+          "name": "test_master_playlist_without_media_does_not_count_as_output_progress",
+          "line": 26
+        },
+        {
+          "name": "test_error_page_does_not_count_as_hls_progress",
+          "line": 30
+        }
+      ]
+    },
+    "qa/soak/verify_picture.py": {
+      "sha256": "33e715433ba0212f4aa36d9e03a0bf938d325639dab08dc48d9d04285fab3155",
+      "language": "Python",
+      "bytes": 10810,
+      "symbols": [
+        {
+          "name": "Api",
+          "line": 30
+        },
+        {
+          "name": "__init__",
+          "line": 31
+        },
+        {
+          "name": "call",
+          "line": 35
+        },
+        {
+          "name": "scenario",
+          "line": 52
+        },
+        {
+          "name": "main",
+          "line": 162
+        }
+      ]
     },
     "tests_assets/playlists/2023/02/2023-02-08.json": {
       "sha256": "03338b7096293a231fba16118ba2d4d766864399f4d4f38061d730dbb66ebbcc",
