@@ -43,6 +43,54 @@ export const LAYER_ANIMATIONS: LayerAnimation[] = [
 ]
 export type TemplateInput = Omit<GraphicsTemplate, 'id' | 'fields'>
 
+/** Truncate at a UTF-8 boundary, as sanitize-filename does on the Linux server. */
+function truncateUploadFilename(value: string, bytes: number): string {
+    const encoder = new TextEncoder()
+    let length = 0
+    let result = ''
+
+    for (const character of value) {
+        const size = encoder.encode(character).length
+
+        if (length + size > bytes) {
+            break
+        }
+
+        result += character
+        length += size
+    }
+
+    return result
+}
+
+/** Match sanitize_upload_filename's Linux cleaning before naming the uploaded File. */
+export function sanitizeGraphicsUploadFilename(filename: string): string {
+    const legal = filename.replace(/[/\\?<>:*|"]/g, '')
+    const printable = Array.from(legal)
+        .filter((character) => {
+            const code = character.codePointAt(0)!
+
+            return code >= 0x20 && (code < 0x80 || code > 0x9f)
+        })
+        .join('')
+
+    return truncateUploadFilename(/^\.+$/.test(printable) ? '' : printable, 255)
+}
+
+/** Reserve room for the collision suffix so the server never truncates it away. */
+export function graphicsUploadFilename(cleanedName: string, number: number): string {
+    if (number === 1) {
+        return cleanedName
+    }
+
+    const dot = cleanedName.lastIndexOf('.')
+    const extension = cleanedName.slice(dot)
+    const suffix = `-${number}${extension}`
+    const budget = 255 - new TextEncoder().encode(suffix).length
+
+    return truncateUploadFilename(cleanedName.slice(0, dot), budget) + suffix
+}
+
 /** Keep geometry inside the frame, including when a locked resize reaches an edge. */
 export function fitLayer(
     layer: TemplateLayer,

@@ -73,7 +73,7 @@ const router = createRouter({
                 {
                     path: 'composer',
                     name: 'graphics-composer',
-                    component: () => import('@/components/graphics/GraphicsLibrary.vue'),
+                    component: () => import('@/components/graphics/GraphicsComposer.vue'),
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {

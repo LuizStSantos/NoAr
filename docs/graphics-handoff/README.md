@@ -45,9 +45,10 @@ passes, and the full suite passes (375 app library, 33 API, 5 as-run and
 
 ## Composer UI (implemented)
 
-The visual editor is implemented in the existing `GraphicsLibrary.vue`,
-shared by the library and Composer routes, with `TemplatePreview.vue` drawing
-its canvas. No migration or engine change is needed for these UI changes.
+The visual editor lives in `GraphicsComposer.vue`; route `graphics-composer`
+loads it directly. `GraphicsLibrary.vue` contains only the library.
+`TemplatePreview.vue` draws the canvas. No migration or engine change is
+needed for these UI changes.
 
 **Composer UI (Vue)**, route `graphics-composer` (`/graphics/composer?template=<id>`,
    no id = new). Follow `composer-design.html` (open it in a browser; it is a
@@ -90,6 +91,35 @@ The existing engine renders `scale` as a fade, and picture-window templates
 use the L-shape transition. Images use the engine's existing PNG, JPEG, WebP
 and GIF formats. This UI validation did not exercise a real playout output.
 
+## Follow-up part 1 — Composer refactor and safe upload
+
+Completed on the branch after `6c1cab86`:
+
+- Extracted `GraphicsComposer.vue` without changing the editor controls or
+  API contract. Functions use explicit blocks and separate logical steps.
+- Uploads construct the `File` using a name cleaned with the Linux server's
+  `sanitize_upload_filename` rules, including control characters and UTF-8
+  truncation. The saved layer uses that exact name.
+- A name conflict retries as `name-2.png`, `name-3.png`, and so on; it does
+  not overwrite an image another template may use. The backend still
+  atomically refuses an overwrite race.
+- Passed `npx vue-tsc --build`, ESLint on `frontend/src`, Prettier on the
+  changed code, and all three Composer tests in `qa/e2e/tests/operator.spec.ts`.
+  The upload test also checks cleaned names, different bytes at the new
+  path and unchanged bytes at the original path.
+- Tested against the real backend with a fresh disposable SQLite database.
+  Chromium verified creation, library Edit, dragging and resizing, duplicate
+  image upload, video corner, saving/reloading and a 390 px layout without
+  horizontal overflow. Desktop JPEGs are 1440 px wide; the phone is 390 px.
+
+Screenshots: [new template](composer-new.jpg), [edit](composer-edit.jpg),
+[drag and resize](composer-drag-resize.jpg), [image upload](composer-upload.jpg),
+[video corner](composer-video-corner.jpg), [save](composer-save.jpg),
+[phone](composer-phone.jpg).
+
+No Rust changed in this part, so the Rust suite was not rerun. The real HLS
+proof and the approval-gated legacy migration are separate parts below.
+
 ## What is left, in order
 
 1. **Logo and L-shape as templates**: an "always on" flag on templates (logo,
@@ -121,7 +151,7 @@ and GIF formats. This UI validation did not exercise a real playout output.
 
 - Repository text (code, commits, docs) in English; talk to the user in
   Portuguese.
-- New graphics files are all called `graphics.rs` in their folder.
+- New backend graphics files are called `graphics.rs` in their folder.
 - Design first, the user approves, then code; show screenshots of each
   finished part.
 - No push to `main`, no merge or release without the user asking.
