@@ -358,8 +358,24 @@ operated through the channel graphics controls. `POST /take` returns 409 for
 these models: it must not stack a second logo or silently ignore scene actions.
 Ordinary unbound templates retain their take/out behavior.
 
+Channel `on` is the requested runtime control state; clip-logo gaps and L-shape
+suppression can still hide a logo on a particular frame. Scene `on` is always
+false because Apply is a one-shot action, not a toggle or undo. For roles,
+`ready` checks saved content availability, not successful output decoding.
+Scenes are offered as saved actions; applying one still validates its assets. Thumbnails show
+saved models rather than the program monitor or all transient replacements.
+Showing a previously disabled logo/ticker enables its binding; hiding changes
+runtime visibility while retaining its definition. A full server restart resets
+these transient hide/show overrides and loads enabled definitions again, as for
+the legacy controls. A playout restart retains the shared control handles.
+The Logo page's `#ticker` section edits static ticker text; it does not implement
+scrolling text or a clock.
+
+
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
+| `GET` | `/api/graphics/{id}/channel` | `GA, CA, U` | Assigned models with `kind` (logo/ticker/lshape/scene), `template` (saved preview), requested `on`, content-availability `ready`, and nullable `scene_name`. |
+| `POST` | `/api/graphics/{id}/channel/{template_id}` | `GA, CA, U` | `{ "on": true/false }` controls the assigned model on this channel; returns the refreshed list above. 404 for an unassigned/other-channel model; 409 when content must first be configured. For scenes, `on:true` applies the action; `on:false` is 400. |
 | `GET` | `/api/graphics/{id}/fonts` | `GA, CA, U` | Available font family names for text layers. |
 | `GET` | `/api/graphics/{id}/templates` | `GA, CA, U` | Every template of the channel, sorted by group and name. |
 | `GET` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA, U` | One template; 404 when the channel has no such template. |

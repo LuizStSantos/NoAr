@@ -396,6 +396,17 @@ impl LogoControl {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    /// Requested visibility of a loaded channel image or override. Clip fades
+    /// and L-shape suppression are applied separately on each output frame.
+    pub fn is_visible(&self) -> bool {
+        let state = self.lock();
+        let loaded = state.configured.as_ref().is_some_and(Option::is_some)
+            || state.replacement.is_some()
+            || state.clip_image.is_some();
+
+        loaded && !state.hidden
+    }
+
     /// Fade the logo out, whichever image it is.
     pub fn hide(&self) {
         self.lock().set_hidden(true);

@@ -5,6 +5,30 @@ use crate::{
     utils::errors::ProcessError,
 };
 
+/// Scene identities stay independent of editable library labels.
+pub async fn select_graphics_scene_templates(
+    pool: &SqlitePool,
+    channel_id: i32,
+) -> Result<Vec<(i32, crate::utils::config::GraphicsScene)>, ProcessError> {
+    let rows: Vec<(i32, String)> = sqlx::query_as(
+        "SELECT t.id, json_extract(t.settings, '$.scene')
+         FROM graphics_scene_bindings b JOIN graphics_templates t
+         ON t.id = b.template_id AND t.channel_id = b.channel_id
+         WHERE b.channel_id = $1 ORDER BY b.position",
+    )
+    .bind(channel_id)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|(id, value)| {
+            serde_json::from_str(&value)
+                .map(|scene| (id, scene))
+                .map_err(|error| ProcessError::Custom(error.to_string()))
+        })
+        .collect()
+}
+
 fn layers_json(template: &GraphicsTemplate) -> Result<String, ProcessError> {
     serde_json::to_string(&template.layers).map_err(|error| ProcessError::Custom(error.to_string()))
 }

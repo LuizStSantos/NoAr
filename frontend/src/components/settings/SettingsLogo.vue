@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import GraphicsTicker from '@/components/graphics/GraphicsTicker.vue'
 import LShapeSettings from '@/components/settings/LShapeSettings.vue'
 import PositionPad, { type Shares } from '@/components/settings/PositionPad.vue'
 import SaveBar from '@/components/settings/SaveBar.vue'
@@ -559,6 +560,8 @@ function pick(file: { path: string }) {
             </div>
             <ToggleRow v-model="processing.vtt_default" :label="t('settings.logo.subtitleDefault')" />
         </SectionCard>
+
+        <GraphicsTicker v-if="props.part === 'logo'" />
 
         <SaveBar
             :changes="changes"

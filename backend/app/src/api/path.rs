@@ -32,6 +32,11 @@ pub fn routes() -> Router<AppState> {
                 .route("/channels", get(get_all_channels))
                 .route("/global", get(get_global).put(update_global))
                 .route("/global/test-mail", post(send_global_test_mail))
+                .route("/graphics/{id}/channel", get(get_channel_graphics))
+                .route(
+                    "/graphics/{id}/channel/{template_id}",
+                    post(control_channel_graphics),
+                )
                 .route("/graphics/{id}/take", post(take_graphic))
                 .route("/graphics/{id}/out", post(take_graphic_out))
                 .route("/graphics/{id}/on-air", get(get_graphics_on_air))

@@ -312,3 +312,37 @@ pub async fn get_graphics_fonts(
             .map_err(|_| ServiceError::InternalServerError)?,
     ))
 }
+
+/// Assigned channel models and their shared runtime control state.
+pub async fn get_channel_graphics(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<crate::utils::graphics::ChannelGraphicView>>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, false).await?;
+
+    Ok(Json(
+        crate::utils::graphics::channel_graphics(&manager).await?,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChannelGraphicRequest {
+    pub on: bool,
+}
+
+pub async fn control_channel_graphics(
+    State(state): State<AppState>,
+    Path((id, template_id)): Path<(i32, i32)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<ChannelGraphicRequest>,
+) -> Result<Json<Vec<crate::utils::graphics::ChannelGraphicView>>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, false).await?;
+    crate::utils::graphics::control_channel_graphic(&manager, template_id, request.on).await?;
+
+    Ok(Json(
+        crate::utils::graphics::channel_graphics(&manager).await?,
+    ))
+}

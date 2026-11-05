@@ -1,0 +1,51 @@
+{
+  "scope": "Assigned channel models library correction before stage c; owned disposable database",
+  "native_gstreamer": "1.26.2",
+  "browser": "Chromium",
+  "viewports": [
+    1440,
+    390
+  ],
+  "locale": "pt-BR",
+  "ui": [
+    "explicit binding-based groups and localized labels",
+    "configured logo image in saved position, artwork and picture-window preview, actual saved ticker text",
+    "legacy editor targets including Logo#ticker",
+    "logo/ticker visibility switches, L-shape enter/return, scene apply",
+    "legacy logo/L-shape state assertions after browser controls",
+    "no ordinary GC controls or Composer links on assigned cards",
+    "phone controls, scene apply and horizontal overflow check"
+  ],
+  "rust": {
+    "passed": 680,
+    "failed": 0,
+    "ignored": 14
+  },
+  "checks": {
+    "fmt": "PASS",
+    "clippy_no_default_all_targets_deny_warnings": "PASS",
+    "vue_tsc_build": "PASS",
+    "eslint_frontend": "PASS",
+    "prettier_changed": "PASS",
+    "playwright": {
+      "passed": 4,
+      "failed": 0
+    },
+    "qa_typescript": "PASS"
+  },
+  "captures": [
+    "library-channel-empty-pt-BR.jpg",
+    "library-channel-on-pt-BR.jpg",
+    "library-channel-phone-controls-pt-BR.jpg",
+    "library-channel-phone-scenes-pt-BR.jpg",
+    "library-channel-phone-top-pt-BR.jpg",
+    "library-scene-applied-pt-BR.jpg",
+    "library-ticker-edit-pt-BR.jpg"
+  ],
+  "limits": [
+    "Previews illustrate the saved model, not a program-monitor frame",
+    "on reports requested control state, not per-frame clip/L-shape suppression",
+    "Ticker text is static; no scrolling ticker or clock was added",
+    "Native desktop output and the complete compatibility matrix are stage c, not established by these UI captures"
+  ]
+}

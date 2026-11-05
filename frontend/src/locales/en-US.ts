@@ -1424,6 +1424,27 @@ export default {
         },
     },
     graphics: {
+        assigned: {
+            group: 'Channel graphics',
+            scenes: 'Scenes',
+            logo: 'Channel logo',
+            lshape: 'Channel L-shape',
+            ticker: 'Ticker',
+            on: 'On air',
+            off: 'Off air',
+            enter: 'Enter L-shape',
+            fullscreen: 'Return to full screen',
+            apply: 'Apply',
+            configure: 'Configure this graphic before putting it on air.',
+            tickerText: 'Ticker text',
+            saveTicker: 'Save ticker',
+            hint: {
+                logo: 'Permanent channel logo.',
+                ticker: 'Permanent text over the program.',
+                lshape: 'Channel artwork and picture window.',
+                scene: 'Logo and L-shape changes applied together.',
+            },
+        },
         composer: {
             previewHint:
                 'The preview illustrates the presets. On air, Scale currently fades; picture-window templates use the video transition.',
@@ -1585,8 +1606,7 @@ export default {
         groups: {
             main: 'Graphics',
             channel: 'Channel settings',
-            channelHint:
-                'The logo, the L-shape graphic and the scenes of the former graphics. They become templates when the old graphics move over.',
+            channelHint: 'Edit the channel logo, L-shape, ticker and quick scenes.',
         },
         sectionsLabel: 'Graphics pages',
         page: 'Page',

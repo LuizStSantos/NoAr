@@ -427,3 +427,88 @@ async fn graphics_go_on_and_off_air_and_follow_their_lshape_rule() {
 fn futures_free_manager(fixture: &SecurityFixture) -> noar::player::controller::ChannelManager {
     fixture.state.controller.try_read().unwrap().get(1).unwrap()
 }
+
+#[tokio::test]
+#[serial]
+async fn assigned_models_have_channel_controls_and_keep_hidden_tickers_hidden_on_save() {
+    let fixture = security_fixture().await;
+    let user = access_token(&fixture.state, 1).await;
+    let admin = access_token(&fixture.state, 2).await;
+    let uri = "/api/graphics/1/channel";
+    let (status, _) = send(&fixture, "GET", uri, None, json!(null)).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _) = send(
+        &fixture,
+        "GET",
+        "/api/graphics/2/channel",
+        Some(&user),
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, cards) = send(&fixture, "GET", uri, Some(&user), json!(null)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cards.as_array().unwrap().len(), 3);
+    let ticker = cards
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|card| card["kind"] == "ticker")
+        .unwrap();
+    assert_eq!(ticker["ready"], false);
+    let id = ticker["template"]["id"].as_i64().unwrap();
+    let control = format!("/api/graphics/1/channel/{id}");
+    let (status, _) = send(&fixture, "POST", &control, Some(&user), json!({"on":true})).await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    let model = json!({"name":"A renamed permanent model", "duration":0, "layers":[
+        {"id":"ticker", "kind":"text", "x":5, "y":85, "width":90, "height":10, "text":"Channel bulletin"}
+    ]});
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        &format!("/api/graphics/1/templates/{id}"),
+        Some(&admin),
+        model.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, cards) = send(&fixture, "POST", &control, Some(&user), json!({"on":true})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        cards
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|card| card["kind"] == "ticker")
+            .unwrap()["on"],
+        true
+    );
+    let (status, _) = send(&fixture, "POST", &control, Some(&user), json!({"on":false})).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = send(
+        &fixture,
+        "PUT",
+        &format!("/api/graphics/1/templates/{id}"),
+        Some(&admin),
+        model,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, cards) = send(&fixture, "GET", uri, Some(&user), json!(null)).await;
+    let ticker = cards
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|card| card["kind"] == "ticker")
+        .unwrap();
+    assert_eq!(
+        ticker["on"], false,
+        "saving a hidden permanent model must not put it back on air"
+    );
+    assert_eq!(ticker["template"]["layers"][0]["text"], "Channel bulletin");
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    assert!(
+        manager.graphics_control.on_air().is_empty(),
+        "permanent actions never enter the GC queue"
+    );
+}

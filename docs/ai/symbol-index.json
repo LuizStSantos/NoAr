@@ -975,9 +975,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "d8f3a6cdb51a123e81013269e67f206336ed3385c2e900fce9f53ab8ae5b6fe5",
+      "sha256": "4dff0985f50a528eea450fbac619a7963660b2a2f450c91bd34a747e29a246ea",
       "language": "Markdown",
-      "bytes": 54538,
+      "bytes": 54825,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1452,9 +1452,9 @@
       ]
     },
     "backend/app/src/api/path.rs": {
-      "sha256": "7f295cfae7b02c01dd4f988299e4d98dee9f6b4d96d27a8c4cbe723c771f5cc9",
+      "sha256": "caf5ca6d23a372e23fddd07f844cc272bb7117ff815e1c7b30602f4cbfe91322",
       "language": "Rust",
-      "bytes": 8996,
+      "bytes": 9226,
       "symbols": [
         {
           "name": "auth_routes",
@@ -1703,9 +1703,9 @@
       ]
     },
     "backend/app/src/api/routes/graphics.rs": {
-      "sha256": "e1a2ded662365a748c7c426ecc62a184ae4c7e0b3bd7fea464f3dda71cfb1aca",
+      "sha256": "8c1d28db38725a85685dde712fd27cb90afbcc8798553211f705ff79a88f3b77",
       "language": "Rust",
-      "bytes": 9949,
+      "bytes": 11060,
       "symbols": [
         {
           "name": "authorized",
@@ -1766,6 +1766,18 @@
         {
           "name": "get_graphics_fonts",
           "line": 301
+        },
+        {
+          "name": "get_channel_graphics",
+          "line": 317
+        },
+        {
+          "name": "ChannelGraphicRequest",
+          "line": 331
+        },
+        {
+          "name": "control_channel_graphics",
+          "line": 335
         }
       ]
     },
@@ -2977,121 +2989,125 @@
       ]
     },
     "backend/app/src/db/handles/graphics.rs": {
-      "sha256": "8b10787d37b5e10e0d840bcfb535f98bc9c207961d1dd42ca4180b158b257196",
+      "sha256": "ea775ad5b2c2ba16fc455ef0bc3992d446b73864f8bf77c2482477c073361b85",
       "language": "Rust",
-      "bytes": 41417,
+      "bytes": 42248,
       "symbols": [
         {
+          "name": "select_graphics_scene_templates",
+          "line": 9
+        },
+        {
           "name": "layers_json",
-          "line": 8
+          "line": 32
         },
         {
           "name": "select_graphics_templates",
-          "line": 12
+          "line": 36
         },
         {
           "name": "select_graphics_template",
-          "line": 26
+          "line": 50
         },
         {
           "name": "graphics_template_name_taken",
-          "line": 43
+          "line": 67
         },
         {
           "name": "insert_graphics_template",
-          "line": 60
+          "line": 84
         },
         {
           "name": "update_graphics_template",
-          "line": 81
+          "line": 105
         },
         {
           "name": "delete_graphics_template",
-          "line": 169
+          "line": 193
         },
         {
           "name": "graphics_template_is_bound",
-          "line": 184
+          "line": 208
         },
         {
           "name": "select_graphics_bindings",
-          "line": 195
+          "line": 219
         },
         {
           "name": "save_graphics_binding",
-          "line": 210
+          "line": 234
         },
         {
           "name": "delete_graphics_binding",
-          "line": 230
+          "line": 254
         },
         {
           "name": "convert_channel_graphics",
-          "line": 247
+          "line": 271
         },
         {
           "name": "convert_channel_graphics_on",
-          "line": 262
+          "line": 286
         },
         {
           "name": "image_layers",
-          "line": 354
+          "line": 378
         },
         {
           "name": "native_model_layers",
-          "line": 364
+          "line": 388
         },
         {
           "name": "insert_converted_model",
-          "line": 445
+          "line": 469
         },
         {
           "name": "project_channel_graphics",
-          "line": 468
+          "line": 492
         },
         {
           "name": "save_channel_graphics_on",
-          "line": 539
+          "line": 563
         },
         {
           "name": "tests",
-          "line": 698
+          "line": 722
         },
         {
           "name": "install_fixture",
-          "line": 703
+          "line": 727
         },
         {
           "name": "template",
-          "line": 707
+          "line": 731
         },
         {
           "name": "conversion_keeps_native_even_pixel_rounding_for_fractional_lshape_scales",
-          "line": 721
+          "line": 745
         },
         {
           "name": "conversion_keeps_existing_names_and_never_reads_frozen_data_again",
-          "line": 752
+          "line": 776
         },
         {
           "name": "conversion_preserves_frozen_columns_and_edited_models_across_restart",
-          "line": 795
+          "line": 819
         },
         {
           "name": "conversion_rolls_back_all_channels_when_one_has_invalid_scenes",
-          "line": 899
+          "line": 923
         },
         {
           "name": "permanent_bindings_survive_reopen_without_changing_the_legacy_logo",
-          "line": 924
+          "line": 948
         },
         {
           "name": "a_binding_cannot_read_or_replace_another_channels_template",
-          "line": 992
+          "line": 1016
         },
         {
           "name": "migration_installs_bindings_before_conversion",
-          "line": 1030
+          "line": 1054
         }
       ]
     },
@@ -7958,205 +7974,221 @@
       ]
     },
     "backend/app/src/utils/graphics.rs": {
-      "sha256": "5cec61cf7ed03b638e233447d023c2799db92335fd48bc1958d07bb5b9ab7999",
+      "sha256": "d90f25b8b36eaf18d2626b2cf6a3af5cf55b270971581d72010e423849fb36b3",
       "language": "Rust",
-      "bytes": 31744,
+      "bytes": 40530,
       "symbols": [
         {
+          "name": "graphic_has_content",
+          "line": 22
+        },
+        {
+          "name": "ChannelGraphicView",
+          "line": 39
+        },
+        {
+          "name": "channel_graphics",
+          "line": 47
+        },
+        {
+          "name": "control_channel_graphic",
+          "line": 140
+        },
+        {
           "name": "load_channel_ticker",
-          "line": 25
+          "line": 248
         },
         {
           "name": "LayerKind",
-          "line": 72
+          "line": 309
         },
         {
           "name": "Animation",
-          "line": 85
+          "line": 322
         },
         {
           "name": "TextAlign",
-          "line": 99
+          "line": 336
         },
         {
           "name": "DuringLShape",
-          "line": 109
+          "line": 346
         },
         {
           "name": "DuringLShape",
-          "line": 119
+          "line": 356
         },
         {
           "name": "as_str",
-          "line": 120
+          "line": 357
         },
         {
           "name": "parse",
-          "line": 128
+          "line": 365
         },
         {
           "name": "default_true",
-          "line": 138
+          "line": 375
         },
         {
           "name": "default_opacity",
-          "line": 142
+          "line": 379
         },
         {
           "name": "default_font_size",
-          "line": 146
+          "line": 383
         },
         {
           "name": "default_color",
-          "line": 150
+          "line": 387
         },
         {
           "name": "default_animation_ms",
-          "line": 154
+          "line": 391
         },
         {
           "name": "default_duration",
-          "line": 158
+          "line": 395
         },
         {
           "name": "TemplateLayer",
-          "line": 165
+          "line": 402
         },
         {
           "name": "TemplateInput",
-          "line": 215
+          "line": 452
         },
         {
           "name": "template_fields",
-          "line": 228
+          "line": 465
         },
         {
           "name": "is_field_char",
-          "line": 250
+          "line": 487
         },
         {
           "name": "placeholders",
-          "line": 255
+          "line": 492
         },
         {
           "name": "whole_placeholder",
-          "line": 280
+          "line": 517
         },
         {
           "name": "is_color",
-          "line": 287
+          "line": 524
         },
         {
           "name": "check_layer",
-          "line": 295
-        },
-        {
-          "name": "prepare_template",
-          "line": 380
-        },
-        {
-          "name": "parse_color",
-          "line": 458
-        },
-        {
-          "name": "fill_fields",
-          "line": 479
-        },
-        {
-          "name": "layer_image",
-          "line": 509
-        },
-        {
-          "name": "engine_animation",
           "line": 532
         },
         {
+          "name": "prepare_template",
+          "line": 617
+        },
+        {
+          "name": "parse_color",
+          "line": 695
+        },
+        {
+          "name": "fill_fields",
+          "line": 716
+        },
+        {
+          "name": "layer_image",
+          "line": 746
+        },
+        {
+          "name": "engine_animation",
+          "line": 769
+        },
+        {
           "name": "graphic_spec",
-          "line": 549
+          "line": 786
         },
         {
           "name": "GraphicsTakes",
-          "line": 619
+          "line": 856
         },
         {
           "name": "TakeRecord",
-          "line": 622
-        },
-        {
-          "name": "GraphicsTakes",
-          "line": 628
-        },
-        {
-          "name": "records",
-          "line": 629
-        },
-        {
-          "name": "add",
-          "line": 633
-        },
-        {
-          "name": "keep_only",
-          "line": 638
-        },
-        {
-          "name": "GraphicOnAirView",
-          "line": 648
-        },
-        {
-          "name": "graphics_on_air",
-          "line": 657
-        },
-        {
-          "name": "TakeOutcome",
-          "line": 681
-        },
-        {
-          "name": "draw_and_take",
-          "line": 693
-        },
-        {
-          "name": "take_template",
-          "line": 726
-        },
-        {
-          "name": "tests",
-          "line": 791
-        },
-        {
-          "name": "text_layer",
-          "line": 794
-        },
-        {
-          "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
-          "line": 802
-        },
-        {
-          "name": "layers_take_defaults_and_are_checked",
-          "line": 826
-        },
-        {
-          "name": "during_lshape_reads_back_what_it_writes",
           "line": 859
         },
         {
+          "name": "GraphicsTakes",
+          "line": 865
+        },
+        {
+          "name": "records",
+          "line": 866
+        },
+        {
+          "name": "add",
+          "line": 870
+        },
+        {
+          "name": "keep_only",
+          "line": 875
+        },
+        {
+          "name": "GraphicOnAirView",
+          "line": 885
+        },
+        {
+          "name": "graphics_on_air",
+          "line": 894
+        },
+        {
+          "name": "TakeOutcome",
+          "line": 918
+        },
+        {
+          "name": "draw_and_take",
+          "line": 930
+        },
+        {
+          "name": "take_template",
+          "line": 963
+        },
+        {
+          "name": "tests",
+          "line": 1028
+        },
+        {
+          "name": "text_layer",
+          "line": 1031
+        },
+        {
+          "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
+          "line": 1039
+        },
+        {
+          "name": "layers_take_defaults_and_are_checked",
+          "line": 1063
+        },
+        {
+          "name": "during_lshape_reads_back_what_it_writes",
+          "line": 1096
+        },
+        {
           "name": "prepare_template_trims_and_keeps_field_images",
-          "line": 868
+          "line": 1105
         },
         {
           "name": "fields_are_filled_and_unknown_braces_stay",
-          "line": 900
+          "line": 1137
         },
         {
           "name": "colors_are_read_in_every_hex_form",
-          "line": 912
+          "line": 1149
         },
         {
           "name": "a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields",
-          "line": 923
+          "line": 1160
         },
         {
           "name": "a_video_layer_makes_the_template_an_lshape",
-          "line": 960
+          "line": 1197
         }
       ]
     },
@@ -11046,9 +11078,9 @@
       ]
     },
     "backend/app/tests/api/graphics.rs": {
-      "sha256": "51bb5f424b6ca9cc30cb99fed1af8d1ffb2d350a047bd2fa8206dfc24983cf4a",
+      "sha256": "c8adb61e994277016c2118069e56ddb77c1904756fa2a20a43f24d53ba597f03",
       "language": "Rust",
-      "bytes": 11839,
+      "bytes": 14814,
       "symbols": [
         {
           "name": "send",
@@ -11069,6 +11101,10 @@
         {
           "name": "futures_free_manager",
           "line": 427
+        },
+        {
+          "name": "assigned_models_have_channel_controls_and_keep_hidden_tickers_hidden_on_save",
+          "line": 433
         }
       ]
     },
@@ -13467,9 +13503,9 @@
       ]
     },
     "backend/engine/src/compositor/logo.rs": {
-      "sha256": "258dc0f0690209b49dfdc0869d7ed57dab301fe785d43e156159bf995beede4b",
+      "sha256": "fda182a22ec2adf3bf39cc1443479d9aad629020ef0813f6ef04950299ca18ee",
       "language": "Rust",
-      "bytes": 31262,
+      "bytes": 31692,
       "symbols": [
         {
           "name": "LogoOverlay",
@@ -13588,112 +13624,116 @@
           "line": 395
         },
         {
+          "name": "is_visible",
+          "line": 401
+        },
+        {
           "name": "hide",
-          "line": 400
+          "line": 411
         },
         {
           "name": "show",
-          "line": 406
+          "line": 417
         },
         {
           "name": "set_transitions",
-          "line": 418
-        },
-        {
-          "name": "transitions",
-          "line": 422
-        },
-        {
-          "name": "replace",
           "line": 429
         },
         {
+          "name": "transitions",
+          "line": 433
+        },
+        {
+          "name": "replace",
+          "line": 440
+        },
+        {
           "name": "move_to",
-          "line": 448
+          "line": 459
         },
         {
           "name": "set_clip_position",
-          "line": 470
+          "line": 481
         },
         {
           "name": "set_clip_image",
-          "line": 484
+          "line": 495
         },
         {
           "name": "set_configured",
-          "line": 521
+          "line": 532
         },
         {
           "name": "state",
-          "line": 550
+          "line": 561
         },
         {
           "name": "has_replacement",
-          "line": 563
+          "line": 574
         },
         {
           "name": "frame",
-          "line": 573
+          "line": 584
         },
         {
           "name": "frame_at",
-          "line": 577
+          "line": 588
         },
         {
           "name": "tests",
-          "line": 611
+          "line": 622
         },
         {
           "name": "logo_asset",
-          "line": 619
+          "line": 630
         },
         {
           "name": "a_clip_logo_is_drawn_until_the_next_clip_has_none",
-          "line": 633
+          "line": 644
         },
         {
           "name": "hiding_the_logo_fades_it_out_and_showing_fades_it_back",
-          "line": 663
+          "line": 674
         },
         {
           "name": "a_cut_hides_and_shows_the_logo_at_once",
-          "line": 684
+          "line": 695
         },
         {
           "name": "the_channel_sets_how_long_a_switch_takes",
-          "line": 701
+          "line": 712
         },
         {
           "name": "a_new_image_cross_fades_with_the_one_on_air",
-          "line": 717
+          "line": 728
         },
         {
           "name": "a_saved_logo_goes_on_air_without_a_restart",
-          "line": 755
+          "line": 766
         },
         {
           "name": "a_replacement_shows_until_the_logo_is_shown_again",
-          "line": 792
+          "line": 803
         },
         {
           "name": "the_logo_can_be_moved_and_put_back",
-          "line": 828
+          "line": 839
         },
         {
           "name": "a_clip_places_the_logo_unless_it_was_moved_from_outside",
-          "line": 850
+          "line": 861
         },
         {
           "name": "logo_position_accepts_corners_and_centers",
-          "line": 871
+          "line": 882
         },
         {
           "name": "logo_scale_accepts_output_percentages",
-          "line": 894
+          "line": 905
         },
         {
           "name": "logo_scale_rejects_invalid_percentages",
-          "line": 906
+          "line": 917
         }
       ]
     },
@@ -20733,9 +20773,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "0c74cabe7e36212d0586abd108d3f44a5b8c969958c0f18f310e0cccc3cf8ce3",
+      "sha256": "41729c2399c7581fed15872240176ff8d551a9ee4dec1db4c9035741f81a44e7",
       "language": "Markdown",
-      "bytes": 36077,
+      "bytes": 37514,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -20775,9 +20815,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "813c166760634d927dd6b01f9046f0fae54ce5133c69bc7f7d92a64ffc7aad3a",
+      "sha256": "6a80e52420bf9e6e32ef3404f1c39b3c7416eb3c36d6c38ed7713e0f2b0324f3",
       "language": "Markdown",
-      "bytes": 23875,
+      "bytes": 26090,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -20798,6 +20838,12 @@
       "bytes": 15182,
       "symbols": []
     },
+    "docs/graphics-handoff/library-channel-evidence.json": {
+      "sha256": "bda2039169ee958bbc209bf14bf91a7d0e2a32bec356fa6712006a3495a6d908",
+      "language": "JSON",
+      "bytes": 1743,
+      "symbols": []
+    },
     "docs/graphics-handoff/library-design.html": {
       "sha256": "6ab4da89efe6912148823d518429fe3a77ed9780b0f1046e6a4d8f700c3f8e49",
       "language": "HTML",
@@ -20805,9 +20851,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/migration-b-evidence.json": {
-      "sha256": "42d7c1f81aee8731bc5f2b4c75efadfe13bdd3ae440c56783e2963dc160a6701",
+      "sha256": "0d9714743f203e5ed935c84ef89a64aedd64f77a6878d18f0dd24b7fbbab1b84",
       "language": "JSON",
-      "bytes": 9727,
+      "bytes": 9779,
       "symbols": []
     },
     "docs/graphics-handoff/on-air-design.html": {
@@ -21638,72 +21684,148 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsLibrary.vue": {
-      "sha256": "799a12815dceaff01120658083adf430493359bdb62a549a30a47479597eda1b",
+      "sha256": "bf5702d64310311ba70a758c0e7e1665e9203154ab728d74490cba6dd84be49c",
       "language": "Vue",
-      "bytes": 6005,
+      "bytes": 12979,
       "symbols": [
         {
           "name": "configStore",
-          "line": 14
-        },
-        {
-          "name": "indexStore",
-          "line": 15
-        },
-        {
-          "name": "graphicsApi",
-          "line": 16
-        },
-        {
-          "name": "authStore",
-          "line": 17
-        },
-        {
-          "name": "isAdmin",
-          "line": 18
-        },
-        {
-          "name": "channelId",
           "line": 19
         },
         {
-          "name": "templates",
+          "name": "indexStore",
+          "line": 20
+        },
+        {
+          "name": "graphicsApi",
           "line": 21
         },
         {
-          "name": "onAir",
+          "name": "authStore",
           "line": 22
         },
         {
-          "name": "loaded",
+          "name": "isAdmin",
           "line": 23
         },
         {
-          "name": "group",
+          "name": "channelId",
           "line": 24
         },
         {
-          "name": "groups",
+          "name": "templates",
+          "line": 25
+        },
+        {
+          "name": "onAir",
           "line": 26
         },
         {
-          "name": "shown",
+          "name": "channelModels",
           "line": 27
         },
         {
-          "name": "sample",
+          "name": "loaded",
+          "line": 28
+        },
+        {
+          "name": "group",
+          "line": 29
+        },
+        {
+          "name": "busy",
+          "line": 30
+        },
+        {
+          "name": "timer",
+          "line": 31
+        },
+        {
+          "name": "stateVersion",
           "line": 32
         },
         {
-          "name": "loadLibrary",
+          "name": "assignedIds",
+          "line": 34
+        },
+        {
+          "name": "ordinary",
+          "line": 35
+        },
+        {
+          "name": "groups",
           "line": 36
+        },
+        {
+          "name": "sections",
+          "line": 44
+        },
+        {
+          "name": "sample",
+          "line": 76
+        },
+        {
+          "name": "title",
+          "line": 80
+        },
+        {
+          "name": "editTarget",
+          "line": 88
+        },
+        {
+          "name": "name",
+          "line": 89
+        },
+        {
+          "name": "reportError",
+          "line": 102
+        },
+        {
+          "name": "loadLibrary",
+          "line": 112
+        },
+        {
+          "name": "requestedChannel",
+          "line": 113
+        },
+        {
+          "name": "version",
+          "line": 114
+        },
+        {
+          "name": "replaceChannelModels",
+          "line": 135
+        },
+        {
+          "name": "previous",
+          "line": 136
+        },
+        {
+          "name": "current",
+          "line": 137
+        },
+        {
+          "name": "refreshState",
+          "line": 143
+        },
+        {
+          "name": "version",
+          "line": 148
+        },
+        {
+          "name": "assigned",
+          "line": 151
+        },
+        {
+          "name": "control",
+          "line": 161
         }
       ]
     },
     "frontend/src/components/graphics/GraphicsOnAir.vue": {
-      "sha256": "ff96e0e2ce4df08fe8051c1b42ef3334bd7183295e743d1ae4d0f70cd10cc14f",
+      "sha256": "5e525ee02c35eff4dc4251e2cae08c6730dc6298eaa9874298a834b454694105",
       "language": "Vue",
-      "bytes": 16660,
+      "bytes": 16868,
       "symbols": [
         {
           "name": "route",
@@ -21818,52 +21940,56 @@
           "line": 81
         },
         {
+          "name": "assigned",
+          "line": 84
+        },
+        {
           "name": "wanted",
-          "line": 90
+          "line": 92
         },
         {
           "name": "first",
-          "line": 91
+          "line": 93
         },
         {
           "name": "take",
-          "line": 100
+          "line": 102
         },
         {
           "name": "template",
-          "line": 101
+          "line": 103
         },
         {
           "name": "seconds",
-          "line": 107
+          "line": 109
         },
         {
           "name": "fields",
-          "line": 108
+          "line": 110
         },
         {
           "name": "result",
-          "line": 112
+          "line": 114
         },
         {
           "name": "takeOut",
-          "line": 130
+          "line": 132
         },
         {
           "name": "takeAllOut",
-          "line": 139
+          "line": 141
         },
         {
           "name": "next",
-          "line": 149
+          "line": 151
         },
         {
           "name": "index",
-          "line": 150
+          "line": 152
         },
         {
           "name": "following",
-          "line": 151
+          "line": 153
         }
       ]
     },
@@ -21895,6 +22021,61 @@
         {
           "name": "pick",
           "line": 48
+        }
+      ]
+    },
+    "frontend/src/components/graphics/GraphicsTicker.vue": {
+      "sha256": "2eac05cf44d237155bd5b25a9dff136a3b51b2805347ff0f80e9860837863de9",
+      "language": "Vue",
+      "bytes": 3355,
+      "symbols": [
+        {
+          "name": "api",
+          "line": 11
+        },
+        {
+          "name": "config",
+          "line": 12
+        },
+        {
+          "name": "channelId",
+          "line": 13
+        },
+        {
+          "name": "index",
+          "line": 14
+        },
+        {
+          "name": "model",
+          "line": 15
+        },
+        {
+          "name": "text",
+          "line": 16
+        },
+        {
+          "name": "savedText",
+          "line": 17
+        },
+        {
+          "name": "saving",
+          "line": 18
+        },
+        {
+          "name": "ticker",
+          "line": 25
+        },
+        {
+          "name": "saveTicker",
+          "line": 45
+        },
+        {
+          "name": "draft",
+          "line": 53
+        },
+        {
+          "name": "layer",
+          "line": 54
         }
       ]
     },
@@ -26817,169 +26998,169 @@
       ]
     },
     "frontend/src/components/settings/SettingsLogo.vue": {
-      "sha256": "f5d1de52a810be286b7ba7f31eb798fb4e8b7676fc328d41bd6c13cd9a2d0c9a",
+      "sha256": "6a67227ebc7e061851c9ee310093a53e5c585f3690b36d522ee51d2af28d9017",
       "language": "Vue",
-      "bytes": 26374,
+      "bytes": 26501,
       "symbols": [
         {
           "name": "props",
-          "line": 19
+          "line": 20
         },
         {
           "name": "SIZES",
-          "line": 24
+          "line": 25
         },
         {
           "name": "picking",
-          "line": 26
-        },
-        {
-          "name": "showAdvanced",
           "line": 27
         },
         {
-          "name": "logoUrl",
+          "name": "showAdvanced",
           "line": 28
         },
         {
-          "name": "logoFailed",
+          "name": "logoUrl",
           "line": 29
         },
         {
+          "name": "logoFailed",
+          "line": 30
+        },
+        {
           "name": "logoImage",
-          "line": 31
+          "line": 32
         },
         {
           "name": "processing",
-          "line": 33
-        },
-        {
-          "name": "output",
           "line": 34
         },
         {
+          "name": "output",
+          "line": 35
+        },
+        {
           "name": "placement",
-          "line": 37
+          "line": 38
         },
         {
           "name": "margin",
-          "line": 39
+          "line": 40
         },
         {
           "name": "placeLogo",
-          "line": 49
+          "line": 50
         },
         {
           "name": "logoPadBox",
-          "line": 54
-        },
-        {
-          "name": "box",
           "line": 55
         },
         {
+          "name": "box",
+          "line": 56
+        },
+        {
           "name": "opacity",
-          "line": 60
+          "line": 61
         },
         {
           "name": "transitionOptions",
-          "line": 65
+          "line": 66
         },
         {
           "name": "transitionSeconds",
-          "line": 71
+          "line": 72
         },
         {
           "name": "seconds",
-          "line": 74
+          "line": 75
         },
         {
           "name": "sizeChoice",
-          "line": 80
+          "line": 81
         },
         {
           "name": "frameSize",
-          "line": 92
+          "line": 93
         },
         {
           "name": "safeAreas",
-          "line": 98
+          "line": 99
         },
         {
           "name": "GUIDES_KEY",
-          "line": 103
-        },
-        {
-          "name": "showGuides",
           "line": 104
         },
         {
+          "name": "showGuides",
+          "line": 105
+        },
+        {
           "name": "readGuides",
-          "line": 106
+          "line": 107
         },
         {
           "name": "previewStyle",
-          "line": 123
-        },
-        {
-          "name": "box",
           "line": 124
         },
         {
-          "name": "spot",
-          "line": 133
+          "name": "box",
+          "line": 125
         },
         {
-          "name": "size",
+          "name": "spot",
           "line": 134
         },
         {
-          "name": "boxWidth",
+          "name": "size",
           "line": 135
         },
         {
-          "name": "boxHeight",
+          "name": "boxWidth",
           "line": 136
         },
         {
-          "name": "along",
+          "name": "boxHeight",
           "line": 137
         },
         {
+          "name": "along",
+          "line": 138
+        },
+        {
           "name": "style",
-          "line": 139
+          "line": 140
         },
         {
           "name": "storageImageUrl",
-          "line": 150
+          "line": 151
         },
         {
           "name": "loadLogo",
-          "line": 154
+          "line": 155
         },
         {
           "name": "logoLoaded",
-          "line": 168
-        },
-        {
-          "name": "image",
           "line": 169
         },
         {
-          "name": "guideLogoUrl",
-          "line": 174
+          "name": "image",
+          "line": 170
         },
         {
-          "name": "guideLogoFailed",
+          "name": "guideLogoUrl",
           "line": 175
         },
         {
+          "name": "guideLogoFailed",
+          "line": 176
+        },
+        {
           "name": "loadGuideLogo",
-          "line": 177
+          "line": 178
         },
         {
           "name": "pick",
-          "line": 190
+          "line": 191
         }
       ]
     },
@@ -30024,9 +30205,9 @@
       ]
     },
     "frontend/src/composables/graphicsTemplates.ts": {
-      "sha256": "1df69b91eb6fed7fe8bece6f9b41b4289673e9646e5d175b1c42b394e068682c",
+      "sha256": "f17060d3690364fc366355281605971f192b749ca1575c6254c50b732197f5c7",
       "language": "TypeScript",
-      "bytes": 7094,
+      "bytes": 7625,
       "symbols": [
         {
           "name": "TemplateLayer",
@@ -30065,36 +30246,40 @@
           "line": 135
         },
         {
-          "name": "GraphicOnAir",
+          "name": "ChannelGraphic",
           "line": 145
         },
         {
-          "name": "TakeResult",
+          "name": "GraphicOnAir",
           "line": 153
         },
         {
-          "name": "fillFields",
-          "line": 156
-        },
-        {
-          "name": "fieldList",
+          "name": "TakeResult",
           "line": 161
         },
         {
+          "name": "fillFields",
+          "line": 164
+        },
+        {
+          "name": "fieldList",
+          "line": 169
+        },
+        {
           "name": "onAirSince",
-          "line": 165
+          "line": 173
         },
         {
           "name": "useGraphicsApi",
-          "line": 172
+          "line": 180
         },
         {
           "name": "base",
-          "line": 176
+          "line": 184
         },
         {
           "name": "headers",
-          "line": 177
+          "line": 185
         }
       ]
     },
@@ -30994,15 +31179,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "39e00315dcf0d96c92c277ec7f61db7f4612eaa03433fcd8f1678cea2ac6d77a",
+      "sha256": "563bd7c43a89df3d09537e662a53857be3c4641748e07933340e4abeab6ad4e7",
       "language": "TypeScript",
-      "bytes": 133561,
+      "bytes": 134277,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "888720d20b3aad36d9c5995da21306d3ecc355b57a588c163624b6b62568145d",
+      "sha256": "2d377aa179967034ffa7bd3349f37e402448331e498a36a01cae671741c5e35b",
       "language": "TypeScript",
-      "bytes": 138882,
+      "bytes": 139636,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -34433,9 +34618,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator.spec.ts": {
-      "sha256": "394cca44a70dccd0034c5dc8684ac8a472e6dcaeecb420f5a09b82311b481842",
+      "sha256": "eacfb420b46d3d329a206e267cb5eaed207a56fae7bbf3c4ee44c1e2b7de4a2b",
       "language": "TypeScript",
-      "bytes": 22392,
+      "bytes": 25014,
       "symbols": [
         {
           "name": "api",

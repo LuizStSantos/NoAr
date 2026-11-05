@@ -13,6 +13,10 @@ one is tagged.
 
 ### Added
 
+- Assigned channel graphics and scenes have separate library cards, localized
+  role names, saved-model previews, visibility/scene controls and legacy editor
+  links. Static ticker text can be edited from the Logo page. Assigned models
+  are excluded from the ordinary On air GC picker.
 - Channel graphics conversion: sqlx migration `00029` and automatic, atomic
   conversion to bound logo, ticker and L-shape templates and quick-scene models.
   Existing graphics settings pages save these models; legacy columns stay

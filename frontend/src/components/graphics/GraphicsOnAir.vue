@@ -80,7 +80,9 @@ function select(template: GraphicsTemplate) {
 
 async function load() {
     try {
-        templates.value = await graphicsApi.templates()
+        const [models, channelModels] = await Promise.all([graphicsApi.templates(), graphicsApi.channel()])
+        const assigned = new Set(channelModels.map((view) => view.template.id))
+        templates.value = models.filter((model) => !assigned.has(model.id))
     } catch (error) {
         indexStore.msgAlert('error', message(error, t('graphics.templates.loadFailed')), 4)
     } finally {

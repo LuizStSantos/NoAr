@@ -1428,6 +1428,27 @@ export default {
         },
     },
     graphics: {
+        assigned: {
+            group: 'Grafismo do canal',
+            scenes: 'Cenas',
+            logo: 'Logo do canal',
+            lshape: 'L-shape do canal',
+            ticker: 'Letreiro',
+            on: 'No ar',
+            off: 'Fora',
+            enter: 'Entrar no L-shape',
+            fullscreen: 'Voltar à tela cheia',
+            apply: 'Aplicar',
+            configure: 'Configure este grafismo para usar no ar.',
+            tickerText: 'Texto do letreiro',
+            saveTicker: 'Salvar letreiro',
+            hint: {
+                logo: 'Logo permanente do canal.',
+                ticker: 'Texto permanente sobre o programa.',
+                lshape: 'Arte e janela de vídeo do canal.',
+                scene: 'Mudanças na logo e no L-shape, aplicadas juntas.',
+            },
+        },
         composer: {
             previewHint:
                 'A prévia ilustra os efeitos. No ar, Escala usa Surgir; modelos com janela de vídeo usam a transição do vídeo.',
@@ -1589,8 +1610,7 @@ export default {
         groups: {
             main: 'Grafismo',
             channel: 'Ajustes do canal',
-            channelHint:
-                'A logo, a arte do L-shape e as cenas do grafismo anterior. Viram modelos quando o grafismo antigo for migrado.',
+            channelHint: 'Edite a logo, o L-shape, o letreiro e as cenas rápidas do canal.',
         },
         sectionsLabel: 'Páginas do grafismo',
         page: 'Página',

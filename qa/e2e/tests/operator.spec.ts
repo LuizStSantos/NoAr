@@ -379,3 +379,48 @@ test('graphics Composer cannot overwrite a template after a failed load', async 
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(template.name)
     await expect(page.getByRole('button', { name: 'Save template', exact: true })).toBeEnabled()
 })
+
+test('assigned channel models use dedicated controls and legacy editors', async ({ page }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const channel = page.getByRole('region', { name: 'Channel graphics', exact: true })
+    await expect(channel.getByRole('heading', { name: 'Channel logo', exact: true })).toBeVisible()
+
+    for (const kind of ['logo', 'ticker', 'lshape']) {
+        const card = channel.locator(`article[data-kind="${kind}"]`)
+        await expect(card).not.toContainText('No fields')
+        await expect(card).not.toContainText('With L-shape:')
+        await expect(card.getByRole('link', { name: 'Put on air', exact: true })).toHaveCount(0)
+        await expect(card.getByRole('link', { name: 'Edit', exact: true })).not.toHaveAttribute('href', /composer/)
+    }
+
+    const models = await api(page, '/api/graphics/1/channel')
+    const originalName = models.find((view: { kind: string }) => view.kind === 'ticker').template.name
+    await channel.locator('article[data-kind="ticker"]').getByRole('link', { name: 'Edit', exact: true }).click()
+    await expect(page).toHaveURL(/graphics\/logo.*#ticker/)
+    const text = `E2E channel bulletin ${Date.now()}`
+    await page.getByLabel('Ticker text', { exact: true }).fill(text)
+    await page.getByRole('button', { name: 'Save ticker', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Save ticker', exact: true })).toBeDisabled()
+    await page.goto('/graphics/templates?channel=1')
+    const ticker = page.getByRole('switch', { name: 'Ticker', exact: true })
+
+    if (await ticker.isChecked()) {
+        await ticker.click()
+    }
+
+    await expect(ticker).not.toBeChecked()
+    await ticker.click()
+    await expect(ticker).toBeChecked()
+    await ticker.click()
+    await expect(ticker).not.toBeChecked()
+    await channel.locator('article[data-kind="ticker"]').getByRole('link', { name: 'Edit', exact: true }).click()
+    await page.getByLabel('Ticker text', { exact: true }).fill(`${text} updated`)
+    await page.getByRole('button', { name: 'Save ticker', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Save ticker', exact: true })).toBeDisabled()
+    await page.goto('/graphics/templates?channel=1')
+    await expect(ticker).not.toBeChecked()
+    const saved = await api(page, '/api/graphics/1/channel')
+    expect(saved.find((view: { kind: string }) => view.kind === 'ticker').template.name).toBe(originalName)
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})

@@ -142,6 +142,14 @@ export interface GraphicsTemplate {
     fields: string[]
 }
 
+export interface ChannelGraphic {
+    kind: 'logo' | 'ticker' | 'lshape' | 'scene'
+    template: GraphicsTemplate
+    on: boolean
+    ready: boolean
+    scene_name: string | null
+}
+
 export interface GraphicOnAir {
     take_id: number
     template_id: number
@@ -186,6 +194,13 @@ export function useGraphicsApi() {
                 body: JSON.stringify(input),
             }),
         templates: () => authFetch<GraphicsTemplate[]>(`${base()}/templates`, { headers: headers() }),
+        channel: () => authFetch<ChannelGraphic[]>(`${base()}/channel`, { headers: headers() }),
+        controlChannel: (id: number, on: boolean) =>
+            authFetch<ChannelGraphic[]>(`${base()}/channel/${id}`, {
+                method: 'POST',
+                headers: headers(),
+                body: JSON.stringify({ on }),
+            }),
         onAir: () => authFetch<GraphicOnAir[]>(`${base()}/on-air`, { headers: headers() }),
         take: (templateId: number, fields: Record<string, string>, duration?: number) =>
             authFetch<TakeResult>(`${base()}/take`, {

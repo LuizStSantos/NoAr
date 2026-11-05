@@ -351,6 +351,46 @@ schema remained at 00027 with no graphics binding table.
 Full compatibility coverage, desktop output and aligned frame-by-frame parity
 remain stages c/d. No menu has been removed; clock support remains out of scope.
 
+## Library correction before stage c
+
+Assigned channel models are identified by their actual bindings, never by a
+library name or group label. The library separates **Channel graphics** and
+**Scenes**, translates role names for display only, and shows their saved
+artwork, picture window and ticker text. Ordinary GC fields, duration/L-shape
+rules and take buttons are absent from these cards and their On air picker.
+
+Logo/ticker cards use visibility switches; L-shape uses Enter/Return; scenes
+use Apply. These controls share the existing engine handles. Edit opens Logo,
+L-shape or Quick scenes. Ticker editing is a static-text section at Logo
+`#ticker`; it preserves other layers. Empty tickers ask for configuration.
+Saving a hidden ticker does not restore it to air. Existing rows are not renamed
+for localization, and no migration was changed.
+
+The new channel-control API and its requested-visibility/restart semantics are
+in [the API reference](../api.md#graphics-templates). A scene is an action, not
+a permanent toggle. Thumbnails show the saved model, not the live program or
+all transient overrides. Native desktop-output compatibility is distinct from
+the browser viewport tests below.
+
+Verification: fmt, exact no-default Clippy, 680 Rust tests passed (14 ignored),
+Vue type build, frontend ESLint, changed-file Prettier, QA TypeScript and four
+Playwright regressions passed. The running disposable backend also passed a
+separate pt-BR browser interaction run at 1440 px and 390 px: role controls,
+legacy state responses, all edit targets, saved ticker text, scene application
+on mobile and no horizontal overflow.
+
+Captures: [initial empty ticker](library-channel-empty-pt-BR.jpg),
+[ticker editor](library-ticker-edit-pt-BR.jpg),
+[channel models](library-channel-on-pt-BR.jpg),
+[scene applied](library-scene-applied-pt-BR.jpg),
+[phone top](library-channel-phone-top-pt-BR.jpg),
+[phone controls](library-channel-phone-controls-pt-BR.jpg),
+[phone scenes](library-channel-phone-scenes-pt-BR.jpg).
+[Machine-readable evidence](library-channel-evidence.json).
+
+Stage c remains separate: full legacy-route, scheduled-event, clip-mark,
+replacement/placement, transition, native desktop and XMLTV coverage.
+
 ## What is left, in order
 
 1. **Complete stages c/d for logo and L-shape models**: the conversion and
