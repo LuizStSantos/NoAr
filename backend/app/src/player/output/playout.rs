@@ -201,6 +201,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     .with_preview_url(Some(manager.preview.url().to_string()))
     .with_logo_control(manager.logo_control.clone())
     .with_lshape_control(manager.lshape_control.clone())
+    .with_graphics_control(manager.graphics_control.clone())
     .with_splice_control(manager.splice_control.clone())
     .with_output_link(manager.output_link.clone());
     let playout = open_playout(&config, output_config.clone()).await?;

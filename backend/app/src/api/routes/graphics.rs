@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use axum::{
     Json,
     extract::{Path, State},
 };
 use protect_axum::authorities::AuthDetails;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{
@@ -16,7 +19,10 @@ use crate::{
     player::controller::ChannelManager,
     utils::{
         errors::ServiceError,
-        graphics_template::{TemplateInput, prepare_template},
+        graphics::{
+            GraphicOnAirView, TakeOutcome, TemplateInput, graphics_on_air, prepare_template,
+            take_template,
+        },
     },
 };
 
@@ -170,4 +176,96 @@ pub async fn delete_graphics_template(
     }
 
     Ok(Json("removed"))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TakeRequest {
+    pub template_id: i32,
+    /// Values for the template's `{field}` names.
+    #[serde(default)]
+    pub fields: HashMap<String, String>,
+    /// Seconds on air, in place of the template's; 0 stays until taken out.
+    #[serde(default)]
+    pub duration: Option<f64>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct OutRequest {
+    /// The graphic to take out; none takes every graphic out.
+    #[serde(default)]
+    pub take_id: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OutStatus {
+    pub on_air: Vec<GraphicOnAirView>,
+}
+
+/// **Put a template on air**
+///
+/// Answers `{"state": "on_air", "take_id"}`, or `{"state": "waiting"}` when
+/// the template waits for the L-shape on air to end. 409 when the template
+/// does not go on air during an L-shape and one is on.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/graphics/1/take -H 'Content-Type: application/json' \
+/// -d '{"template_id": 3, "fields": {"name": "Maria da Silva", "role": "Farmer"}}' \
+/// -H 'Authorization: Bearer <TOKEN>'
+/// ```
+pub async fn take_graphic(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<TakeRequest>,
+) -> Result<Json<TakeOutcome>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, false).await?;
+    let template = handles::select_graphics_template(&state.pool, id, request.template_id)
+        .await?
+        .ok_or_else(|| template_not_found(request.template_id))?;
+
+    Ok(Json(
+        take_template(&manager, template, request.fields, request.duration).await?,
+    ))
+}
+
+/// **Take graphics out of the air**
+///
+/// With `take_id`, that graphic; without it, every graphic. Each plays its
+/// exit animation. Answers what is still on air.
+pub async fn take_graphic_out(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<OutRequest>,
+) -> Result<Json<OutStatus>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, false).await?;
+
+    match request.take_id {
+        Some(take_id) => {
+            if !manager.graphics_control.take_out(take_id) {
+                return Err(ServiceError::NotFound(format!(
+                    "Graphic {take_id} is not on air"
+                )));
+            }
+        }
+        None => manager.graphics_control.take_all_out(),
+    }
+
+    Ok(Json(OutStatus {
+        on_air: graphics_on_air(&manager),
+    }))
+}
+
+/// **Graphics on air**
+pub async fn get_graphics_on_air(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<GraphicOnAirView>>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, false).await?;
+
+    Ok(Json(graphics_on_air(&manager)))
 }

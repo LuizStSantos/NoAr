@@ -696,8 +696,8 @@ pub struct GraphicsTemplate {
     pub group: String,
     /// Seconds on air before it goes out by itself; 0 stays until taken out.
     pub duration: f64,
-    pub during_lshape: crate::utils::graphics_template::DuringLShape,
-    pub layers: Vec<crate::utils::graphics_template::TemplateLayer>,
+    pub during_lshape: crate::utils::graphics::DuringLShape,
+    pub layers: Vec<crate::utils::graphics::TemplateLayer>,
     /// The `{field}` names to fill in on air, read from the layers.
     pub fields: Vec<String>,
 }
@@ -705,8 +705,8 @@ pub struct GraphicsTemplate {
 impl FromRow<'_, SqliteRow> for GraphicsTemplate {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         let layers: String = row.try_get("layers")?;
-        let layers: Vec<crate::utils::graphics_template::TemplateLayer> =
-            serde_json::from_str(&layers).map_err(|e| sqlx::Error::ColumnDecode {
+        let layers: Vec<crate::utils::graphics::TemplateLayer> = serde_json::from_str(&layers)
+            .map_err(|e| sqlx::Error::ColumnDecode {
                 index: "layers".to_string(),
                 source: e.to_string().into(),
             })?;
@@ -718,9 +718,9 @@ impl FromRow<'_, SqliteRow> for GraphicsTemplate {
             name: row.try_get("name")?,
             group: row.try_get("group_name")?,
             duration: row.try_get("duration")?,
-            during_lshape: crate::utils::graphics_template::DuringLShape::parse(&during_lshape)
+            during_lshape: crate::utils::graphics::DuringLShape::parse(&during_lshape)
                 .unwrap_or_default(),
-            fields: crate::utils::graphics_template::template_fields(&layers),
+            fields: crate::utils::graphics::template_fields(&layers),
             layers,
         })
     }

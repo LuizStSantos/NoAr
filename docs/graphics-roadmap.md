@@ -1,6 +1,7 @@
 # Graphics roadmap
 
-Status: **plan**. Nothing in this document is implemented yet. It records the
+Status: **in progress**. Template storage and the take / out API of 2.3 are
+in; the On air screen and the migration are not. This document records the
 agreed design for the new Graphics tab, so the work can land in small releases
 without breaking what operators use today.
 

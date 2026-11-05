@@ -259,6 +259,8 @@ pub struct OutputConfig {
     pub logo_control: LogoControl,
     /// Switches the L-shape on air from outside the playout.
     pub lshape_control: crate::LShapeControl,
+    /// Takes template graphics on and off air from outside the playout.
+    pub graphics_control: crate::GraphicsControl,
     pub text: Option<TextConfig>,
     pub text_overlay_state: TextOverlayState,
     pub stream_type: StreamType,
@@ -1267,6 +1269,7 @@ impl OutputConfig {
             logo: None,
             logo_control: LogoControl::default(),
             lshape_control: crate::LShapeControl::default(),
+            graphics_control: crate::GraphicsControl::default(),
             text: None,
             text_overlay_state: TextOverlayState::default(),
             stream_type: StreamType::Rtmp,
@@ -1357,6 +1360,11 @@ impl OutputConfig {
 
     pub fn with_lshape_control(mut self, lshape_control: crate::LShapeControl) -> Self {
         self.lshape_control = lshape_control;
+        self
+    }
+
+    pub fn with_graphics_control(mut self, graphics_control: crate::GraphicsControl) -> Self {
+        self.graphics_control = graphics_control;
         self
     }
 

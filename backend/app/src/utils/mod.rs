@@ -25,7 +25,7 @@ pub mod convert;
 pub mod episodes;
 pub mod errors;
 pub mod generator;
-pub mod graphics_template;
+pub mod graphics;
 pub mod logging;
 pub mod logo_marks;
 pub mod mail;

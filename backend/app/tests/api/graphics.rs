@@ -229,3 +229,164 @@ async fn graphics_templates_are_read_by_the_channel_and_changed_by_admins() {
     assert_eq!(status, StatusCode::OK);
     assert!(list.as_array().unwrap().is_empty());
 }
+
+#[tokio::test]
+#[serial]
+async fn graphics_go_on_and_off_air_and_follow_their_lshape_rule() {
+    let fixture = security_fixture().await;
+    let user = access_token(&fixture.state, 1).await;
+    let admin = access_token(&fixture.state, 2).await;
+    let mut template = lower_third("Guest");
+    template["layers"].as_array_mut().unwrap().pop();
+
+    let (status, created) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        template.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    let template_id = created["id"].as_i64().unwrap();
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        None,
+        json!({"template_id": template_id}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    let (status, taken) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template_id": template_id, "fields": {"name": "Maria", "role": "Farmer"}, "duration": 0}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{taken}");
+    assert_eq!(taken["state"], "on_air");
+    let take_id = taken["take_id"].as_u64().unwrap();
+
+    let (status, on_air) = send(
+        &fixture,
+        "GET",
+        "/api/graphics/1/on-air",
+        Some(&user),
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(on_air.as_array().unwrap().len(), 1);
+    assert_eq!(on_air[0]["take_id"], take_id);
+    assert_eq!(on_air[0]["name"], "Guest");
+    assert_eq!(on_air[0]["leaving"], false);
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template_id": 9999}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/out",
+        Some(&user),
+        json!({"take_id": 9999}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, out) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/out",
+        Some(&user),
+        json!({"take_id": take_id}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{out}");
+    assert_eq!(out["on_air"][0]["leaving"], true, "it plays its exit first");
+
+    // An L-shape on air: a template that skips it is refused, one that
+    // waits goes on air when it ends.
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    manager.lshape_control.on();
+
+    for (rule, name) in [("skip", "Skips"), ("wait", "Waits")] {
+        let mut ruled = template.clone();
+        ruled["name"] = json!(name);
+        ruled["during_lshape"] = json!(rule);
+        let (status, created) = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            ruled,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{created}");
+        let (status, taken) = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/take",
+            Some(&user),
+            json!({"template_id": created["id"]}),
+        )
+        .await;
+
+        if rule == "skip" {
+            assert_eq!(status, StatusCode::CONFLICT, "{taken}");
+        } else {
+            assert_eq!(status, StatusCode::OK, "{taken}");
+            assert_eq!(taken["state"], "waiting");
+        }
+    }
+
+    let on_air_names = |fixture: &SecurityFixture| {
+        let manager = futures_free_manager(fixture);
+        noar::utils::graphics::graphics_on_air(&manager)
+            .into_iter()
+            .filter(|graphic| !graphic.leaving)
+            .map(|graphic| graphic.name)
+            .collect::<Vec<_>>()
+    };
+    assert!(
+        on_air_names(&fixture).is_empty(),
+        "nothing new while the L-shape is on"
+    );
+
+    manager.lshape_control.off();
+    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+    assert_eq!(on_air_names(&fixture), ["Waits"]);
+
+    let (status, out) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/out",
+        Some(&user),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        out["on_air"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|graphic| graphic["leaving"] == true)
+    );
+}
+
+fn futures_free_manager(fixture: &SecurityFixture) -> noar::player::controller::ChannelManager {
+    fixture.state.controller.try_read().unwrap().get(1).unwrap()
+}

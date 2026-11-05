@@ -3,9 +3,20 @@
 //! layers placed in percent of the frame; `{field}` in a text, or as a whole
 //! image path, is filled in each time the template goes on air.
 
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex as StdMutex, PoisonError},
+    time::Duration,
+};
+
 use serde::{Deserialize, Serialize};
 
-use crate::{db::models::GraphicsTemplate, file::norm_abs_path, utils::errors::ServiceError};
+use crate::{
+    db::models::GraphicsTemplate,
+    file::norm_abs_path,
+    player::controller::ChannelManager,
+    utils::{errors::ServiceError, xmltv::library::has_image_extension},
+};
 
 pub const MAX_LAYERS: usize = 64;
 const MAX_NAME_CHARS: usize = 100;
@@ -387,6 +398,323 @@ pub fn prepare_template(
     })
 }
 
+/// `#rgb`, `#rrggbb` or `#rrggbbaa` as a color; anything else is none.
+fn parse_color(value: &str) -> Option<noar_engine::RgbaColor> {
+    let hex = value.strip_prefix('#')?;
+
+    if !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+
+    let digit = |index: usize| u8::from_str_radix(&hex[index..index + 1], 16).ok();
+    let pair = |index: usize| u8::from_str_radix(&hex[index..index + 2], 16).ok();
+    let color = |r, g, b, a| noar_engine::RgbaColor { r, g, b, a };
+
+    match hex.len() {
+        3 => Some(color(digit(0)? * 17, digit(1)? * 17, digit(2)? * 17, 255)),
+        6 => Some(color(pair(0)?, pair(2)?, pair(4)?, 255)),
+        8 => Some(color(pair(0)?, pair(2)?, pair(4)?, pair(6)?)),
+        _ => None,
+    }
+}
+
+/// `text` with every `{field}` replaced by its value; a field without a
+/// value is left empty.
+pub fn fill_fields(text: &str, values: &HashMap<String, String>) -> String {
+    let mut filled = String::with_capacity(text.len());
+    let mut rest = text;
+
+    while let Some(open) = rest.find('{') {
+        let after = &rest[open + 1..];
+
+        let Some(close) = after.find('}') else {
+            break;
+        };
+
+        let name = &after[..close];
+        filled.push_str(&rest[..open]);
+
+        if !name.is_empty() && name.chars().all(is_field_char) {
+            filled.push_str(values.get(name).map(String::as_str).unwrap_or_default());
+            rest = &after[close + 1..];
+        } else {
+            filled.push('{');
+            rest = after;
+        }
+    }
+
+    filled.push_str(rest);
+
+    filled
+}
+
+/// The image of a layer: its own storage path, or the path given for its
+/// field. A field left empty draws nothing.
+fn layer_image(
+    image: &str,
+    values: &HashMap<String, String>,
+    storage: &std::path::Path,
+) -> Result<Option<std::path::PathBuf>, ServiceError> {
+    let image = match whole_placeholder(image) {
+        Some(field) => match values.get(&field).map(|value| value.trim()) {
+            Some(value) if !value.is_empty() => value.to_string(),
+            _ => return Ok(None),
+        },
+        None => image.to_string(),
+    };
+    let (path, _, relative) = norm_abs_path(storage, &image)?;
+
+    if !path.is_file() || !has_image_extension(&path) {
+        return Err(ServiceError::BadRequest(format!(
+            "{relative} is not an image in the storage"
+        )));
+    }
+
+    Ok(Some(path))
+}
+
+fn engine_animation(animation: Animation) -> noar_engine::GraphicAnimation {
+    use noar_engine::GraphicAnimation as Engine;
+
+    match animation {
+        Animation::None => Engine::None,
+        Animation::Fade => Engine::Fade,
+        Animation::SlideLeft => Engine::SlideLeft,
+        Animation::SlideRight => Engine::SlideRight,
+        Animation::SlideUp => Engine::SlideUp,
+        Animation::SlideDown => Engine::SlideDown,
+        Animation::Wipe => Engine::Wipe,
+        Animation::Scale => Engine::Scale,
+    }
+}
+
+/// A template with `values` in its fields, as the engine draws it. Hidden
+/// layers are left out.
+pub fn graphic_spec(
+    template: &GraphicsTemplate,
+    values: &HashMap<String, String>,
+    storage: &std::path::Path,
+) -> Result<noar_engine::GraphicSpec, ServiceError> {
+    let mut layers = Vec::with_capacity(template.layers.len());
+
+    for layer in template.layers.iter().filter(|layer| layer.visible) {
+        let fill = layer.fill.as_deref().and_then(parse_color);
+        let content = match layer.kind {
+            LayerKind::Box => match fill {
+                Some(fill) => noar_engine::GraphicContent::Box { fill },
+                None => continue,
+            },
+            LayerKind::Text => noar_engine::GraphicContent::Text {
+                text: fill_fields(&layer.text, values),
+                font_family: layer.font_family.clone(),
+                font_size: layer.font_size,
+                bold: layer.bold,
+                color: parse_color(&layer.color).unwrap_or(noar_engine::RgbaColor {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                    a: 255,
+                }),
+                align: match layer.align {
+                    TextAlign::Left => noar_engine::BlockAlign::Left,
+                    TextAlign::Center => noar_engine::BlockAlign::Center,
+                    TextAlign::Right => noar_engine::BlockAlign::Right,
+                },
+                fill,
+            },
+            LayerKind::Image => {
+                match layer_image(layer.image.as_deref().unwrap_or_default(), values, storage)? {
+                    Some(path) => noar_engine::GraphicContent::Image { path },
+                    None => continue,
+                }
+            }
+        };
+
+        layers.push(noar_engine::GraphicLayerSpec {
+            content,
+            x: layer.x,
+            y: layer.y,
+            width: layer.width,
+            height: layer.height,
+            opacity: layer.opacity,
+            radius: layer.radius,
+            animation_in: engine_animation(layer.animation_in),
+            animation_out: engine_animation(layer.animation_out),
+            animation_ms: layer.animation_ms,
+            delay_ms: layer.delay_ms,
+        });
+    }
+
+    Ok(noar_engine::GraphicSpec { layers })
+}
+
+/// Which template each graphic on air came from.
+#[derive(Debug, Clone, Default)]
+pub struct GraphicsTakes(Arc<StdMutex<Vec<TakeRecord>>>);
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TakeRecord {
+    pub take_id: u64,
+    pub template_id: i32,
+    pub name: String,
+}
+
+impl GraphicsTakes {
+    fn records(&self) -> std::sync::MutexGuard<'_, Vec<TakeRecord>> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn add(&self, record: TakeRecord) {
+        self.records().push(record);
+    }
+
+    /// The record of each id still on air; the others are forgotten.
+    fn keep_only(&self, on_air: &[u64]) -> Vec<TakeRecord> {
+        let mut records = self.records();
+
+        records.retain(|record| on_air.contains(&record.take_id));
+        records.clone()
+    }
+}
+
+/// A graphic on air, as answered by the API.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct GraphicOnAirView {
+    pub take_id: u64,
+    pub template_id: i32,
+    pub name: String,
+    /// Seconds since it was taken.
+    pub since: f64,
+    pub leaving: bool,
+}
+
+pub fn graphics_on_air(manager: &ChannelManager) -> Vec<GraphicOnAirView> {
+    let on_air = manager.graphics_control.on_air();
+    let ids: Vec<u64> = on_air.iter().map(|graphic| graphic.id).collect();
+    let records = manager.graphics_takes.keep_only(&ids);
+
+    on_air
+        .into_iter()
+        .filter_map(|graphic| {
+            let record = records.iter().find(|record| record.take_id == graphic.id)?;
+
+            Some(GraphicOnAirView {
+                take_id: graphic.id,
+                template_id: record.template_id,
+                name: record.name.clone(),
+                since: graphic.since.as_secs_f64(),
+                leaving: graphic.leaving,
+            })
+        })
+        .collect()
+}
+
+/// What happened to a take.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum TakeOutcome {
+    OnAir {
+        take_id: u64,
+    },
+    /// It goes on air when the L-shape ends.
+    Waiting,
+}
+
+/// How long a take may wait for an L-shape to end.
+const MAX_LSHAPE_WAIT: Duration = Duration::from_secs(3600);
+const LSHAPE_WAIT_STEP: Duration = Duration::from_millis(200);
+
+async fn draw_and_take(
+    manager: &ChannelManager,
+    template: &GraphicsTemplate,
+    spec: noar_engine::GraphicSpec,
+    duration: Option<Duration>,
+) -> Result<u64, ServiceError> {
+    let (width, height) = {
+        let config = manager.config.read().await;
+        (config.output.width, config.output.height)
+    };
+    let graphic =
+        tokio::task::spawn_blocking(move || noar_engine::render_graphic(&spec, width, height))
+            .await
+            .map_err(|_| ServiceError::InternalServerError)?
+            .map_err(|error| {
+                ServiceError::BadRequest(format!(
+                    "the graphic cannot be drawn ({})",
+                    error.root_cause()
+                ))
+            })?;
+    let take_id = manager.graphics_control.take(graphic, duration);
+
+    manager.graphics_takes.add(TakeRecord {
+        take_id,
+        template_id: template.id,
+        name: template.name.clone(),
+    });
+
+    Ok(take_id)
+}
+
+/// Put `template` on air with `values` in its fields, following its rule
+/// for an L-shape on air. `duration` replaces the template's own.
+pub async fn take_template(
+    manager: &ChannelManager,
+    template: GraphicsTemplate,
+    values: HashMap<String, String>,
+    duration: Option<f64>,
+) -> Result<TakeOutcome, ServiceError> {
+    let seconds = duration.unwrap_or(template.duration);
+
+    if !seconds.is_finite() || !(0.0..=86_400.0).contains(&seconds) {
+        return Err(ServiceError::BadRequest(
+            "duration is in seconds, 0 (until taken out) up to a day".to_string(),
+        ));
+    }
+
+    let duration = (seconds > 0.0).then(|| Duration::from_secs_f64(seconds));
+    let storage = manager.config.read().await.channel.storage.clone();
+    let spec = graphic_spec(&template, &values, &storage)?;
+
+    if manager.lshape_control.is_on() {
+        match template.during_lshape {
+            DuringLShape::Follow => {}
+            DuringLShape::Skip => {
+                return Err(ServiceError::Conflict(format!(
+                    "'{}' does not go on air during an L-shape",
+                    template.name
+                )));
+            }
+            DuringLShape::Wait => {
+                let manager = manager.clone();
+
+                tokio::spawn(async move {
+                    let mut waited = Duration::ZERO;
+
+                    while manager.lshape_control.is_on() && waited < MAX_LSHAPE_WAIT {
+                        tokio::time::sleep(LSHAPE_WAIT_STEP).await;
+                        waited += LSHAPE_WAIT_STEP;
+                    }
+
+                    if waited < MAX_LSHAPE_WAIT
+                        && let Err(error) = draw_and_take(&manager, &template, spec, duration).await
+                    {
+                        log::warn!(
+                            "Graphic '{}' not taken after the L-shape: {error}",
+                            template.name
+                        );
+                    }
+                });
+
+                return Ok(TakeOutcome::Waiting);
+            }
+        }
+    }
+
+    let take_id = draw_and_take(manager, &template, spec, duration).await?;
+
+    Ok(TakeOutcome::OnAir { take_id })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -494,5 +822,65 @@ mod tests {
             layers: Vec::new(),
         };
         assert!(prepare_template(&storage, 3, 0, too_long).is_err());
+    }
+
+    #[test]
+    fn fields_are_filled_and_unknown_braces_stay() {
+        let values = HashMap::from([
+            ("name".to_string(), "Maria".to_string()),
+            ("role".to_string(), "Farmer".to_string()),
+        ]);
+
+        assert_eq!(fill_fields("{name} · {role}", &values), "Maria · Farmer");
+        assert_eq!(fill_fields("{name}{missing}!", &values), "Maria!");
+        assert_eq!(fill_fields("R$ {in cash} {", &values), "R$ {in cash} {");
+    }
+
+    #[test]
+    fn colors_are_read_in_every_hex_form() {
+        let color = |value| parse_color(value).map(|c| (c.r, c.g, c.b, c.a));
+
+        assert_eq!(color("#fa0"), Some((255, 170, 0, 255)));
+        assert_eq!(color("#f39223"), Some((243, 146, 35, 255)));
+        assert_eq!(color("#00000080"), Some((0, 0, 0, 128)));
+        assert_eq!(color("orange"), None);
+        assert_eq!(color("#12345"), None);
+    }
+
+    #[test]
+    fn a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields() {
+        let storage = std::env::temp_dir();
+        let mut hidden = text_layer("hidden", "secret");
+        hidden.visible = false;
+        let mut sponsor = text_layer("sponsor", "");
+        sponsor.kind = LayerKind::Image;
+        sponsor.image = Some("{sponsor}".to_string());
+        let mut bar = text_layer("bar", "");
+        bar.kind = LayerKind::Box;
+        bar.fill = Some("#f39223".to_string());
+
+        let template = GraphicsTemplate {
+            layers: vec![bar, text_layer("name", "{name}"), hidden, sponsor],
+            ..Default::default()
+        };
+        let values = HashMap::from([("name".to_string(), "Maria".to_string())]);
+        let spec = graphic_spec(&template, &values, &storage).unwrap();
+
+        assert_eq!(spec.layers.len(), 2);
+        assert!(matches!(
+            spec.layers[0].content,
+            noar_engine::GraphicContent::Box { .. }
+        ));
+
+        let noar_engine::GraphicContent::Text { text, .. } = &spec.layers[1].content else {
+            panic!("a text layer");
+        };
+        assert_eq!(text, "Maria");
+
+        let missing = HashMap::from([("sponsor".to_string(), "nowhere.png".to_string())]);
+        assert!(
+            graphic_spec(&template, &missing, &storage).is_err(),
+            "a missing image"
+        );
     }
 }

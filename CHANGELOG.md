@@ -16,8 +16,13 @@ one is tagged.
 - Graphics templates: channels store their own graphics (layers of text,
   images and boxes in percent of the frame, with `{field}` names) through
   `/api/graphics/{id}/templates`. Admins create and change them; everyone on
-  the channel can read them. They do not go on air yet. See
+  the channel can read them. See
   [docs/graphics-roadmap.md](docs/graphics-roadmap.md).
+- Templates go on air through `/api/graphics/{id}/take`, `/out` and
+  `/on-air`, with their fields filled in and entry and exit animations
+  (fade, slide, wipe). They are drawn under the L-shape, so a lower third
+  follows the picture into the L-shape's corner; a template can also wait
+  for the L-shape to end or skip it.
 
 ### Changed
 

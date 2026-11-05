@@ -7,7 +7,6 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-#[cfg(feature = "desktop-base")]
 use cosmic_text::{Align, Wrap};
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache, Weight};
 use regex::Regex;
@@ -559,7 +558,107 @@ fn render_width(config: &TextConfig, text: &str, output_width: u32, padding: u32
     even(estimated.max(output_width).min(max_width)).max(2)
 }
 
-fn rgba_to_yuva420p(rgba: &[u8], width: u32, height: u32) -> Result<VideoFrame> {
+/// How a text sits across its box.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum BlockAlign {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
+/// Draw `text` into a `width` x `height` RGBA block, wrapped to the width
+/// and centred top to bottom; what does not fit is cut off.
+pub(crate) struct TextStyle<'a> {
+    pub font_family: Option<&'a str>,
+    /// Pixels.
+    pub font_size: f32,
+    pub bold: bool,
+    pub color: RgbaColor,
+    pub align: BlockAlign,
+}
+
+pub(crate) fn render_text_block(
+    text: &str,
+    style: &TextStyle<'_>,
+    width: u32,
+    height: u32,
+) -> Result<Vec<u8>> {
+    let TextStyle {
+        font_family,
+        font_size,
+        bold,
+        color,
+        align,
+    } = *style;
+
+    if !font_size.is_finite() || font_size <= 0.0 {
+        return Err(anyhow!("text font size must be a positive number"));
+    }
+
+    let mut rgba = vec![0_u8; width as usize * height as usize * 4];
+
+    if text.trim().is_empty() || width < 2 || height < 2 {
+        return Ok(rgba);
+    }
+
+    let line_height = (font_size * 1.2).ceil();
+    let mut renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+    let TextRenderer {
+        font_system,
+        swash_cache,
+        cache_checked,
+    } = &mut *renderer;
+    let mut buffer = Buffer::new(font_system, Metrics::new(font_size, line_height));
+    let mut attrs = Attrs::new().weight(if bold { Weight::BOLD } else { Weight::NORMAL });
+
+    if let Some(family) = font_family.filter(|family| !family.trim().is_empty()) {
+        attrs = attrs.family(Family::Name(family));
+    }
+
+    buffer.set_size(Some(width as f32), None);
+    buffer.set_wrap(Wrap::WordOrGlyph);
+    buffer.set_text(
+        text,
+        &attrs,
+        Shaping::Advanced,
+        Some(match align {
+            BlockAlign::Left => Align::Left,
+            BlockAlign::Center => Align::Center,
+            BlockAlign::Right => Align::Right,
+        }),
+    );
+    buffer.shape_until_scroll(font_system, false);
+
+    let text_height: f32 = buffer.layout_runs().map(|run| run.line_height).sum();
+    let top = ((height as f32 - text_height) / 2.0).round() as i32;
+
+    buffer.draw(
+        font_system,
+        swash_cache,
+        Color::rgba(color.r, color.g, color.b, color.a),
+        |x, y, pixel_width, pixel_height, color| {
+            let color = rgba_color(color);
+            let Some(dest) = PixelRect::new(x, y + top, pixel_width, pixel_height, width, height)
+            else {
+                return;
+            };
+
+            for py in 0..dest.height {
+                for px in 0..dest.width {
+                    let idx = ((dest.y + py) * width as usize + dest.x + px) * 4;
+                    alpha_composite(&mut rgba[idx..idx + 4], color);
+                }
+            }
+        },
+    );
+
+    trim_glyph_cache(swash_cache, cache_checked);
+
+    Ok(rgba)
+}
+
+pub(crate) fn rgba_to_yuva420p(rgba: &[u8], width: u32, height: u32) -> Result<VideoFrame> {
     let mut frame = VideoFrame::new(PixelFormat::Yuva420p, width, height);
     let width = width as usize;
     let height = height as usize;
@@ -637,7 +736,7 @@ fn rgba_color(color: Color) -> RgbaColor {
     RgbaColor { r, g, b, a }
 }
 
-fn alpha_composite(dst: &mut [u8], src: RgbaColor) {
+pub(crate) fn alpha_composite(dst: &mut [u8], src: RgbaColor) {
     let alpha = src.a as u16;
     let inv_alpha = 255 - alpha;
     dst[0] = (((u16::from(dst[0]) * inv_alpha) + (u16::from(src.r) * alpha) + 127) / 255) as u8;

@@ -980,6 +980,7 @@ struct VideoCompositor {
     logo_control: LogoControl,
     lshape_control: crate::LShapeControl,
     lshape_scaler: crate::compositor::lshape::LShapeScaler,
+    graphics_control: crate::GraphicsControl,
     text: Option<TextOverlay>,
     runtime_text: RuntimeTextOverlay,
     last_composited_frame: Option<VideoFrame>,
@@ -1000,6 +1001,7 @@ impl VideoCompositor {
             logo_control: cfg.logo_control.clone(),
             lshape_control: cfg.lshape_control.clone(),
             lshape_scaler: Default::default(),
+            graphics_control: cfg.graphics_control.clone(),
             text: cfg
                 .text
                 .as_ref()
@@ -1235,6 +1237,10 @@ fn encode_composited_frame<O: FrameOutput>(
     video
         .runtime_text
         .update(timeline.video_pts, timeline.text_pts);
+    // Template graphics go on the picture before the L-shape shrinks it, so
+    // a lower third on air during an L-shape follows the picture.
+    video.graphics_control.blend(&mut frame);
+
     // The L-shape first: the texts go over it, and the logo gives way to it,
     // going off before the picture shrinks and back after it grew back.
     let mut logo_off = 0.0;

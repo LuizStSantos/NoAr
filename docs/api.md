@@ -350,8 +350,7 @@ curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
 
 A template is a graphic a channel designs once and puts on air many times:
 layers placed in percent of the frame, with `{field}` names filled in on
-air. Templates are stored, listed and checked here; putting them on air comes
-in a later release ([roadmap](graphics-roadmap.md)).
+air ([roadmap](graphics-roadmap.md)).
 
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
@@ -360,6 +359,9 @@ in a later release ([roadmap](graphics-roadmap.md)).
 | `POST` | `/api/graphics/{id}/templates` | `GA, CA` | A template (below). 409 when the channel already has that name, ignoring case. |
 | `PUT` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | The whole template again. |
 | `DELETE` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | |
+| `POST` | `/api/graphics/{id}/take` | `GA, CA, U` | `{ "template_id", "fields": { "name": "Maria" }, "duration" }`. `duration` (seconds) replaces the template's; 0 stays until taken out. Answers `{ "state": "on_air", "take_id" }`, or `{ "state": "waiting" }` when the template waits for the L-shape on air to end. 409 when it skips L-shapes and one is on; 400 when an image is not in the storage. |
+| `POST` | `/api/graphics/{id}/out` | `GA, CA, U` | `{ "take_id" }` takes that graphic out, `{}` every graphic. Each plays its exit animation. Answers `{ "on_air": [...] }`; 404 for a graphic not on air. |
+| `GET` | `/api/graphics/{id}/on-air` | `GA, CA, U` | `[{ "take_id", "template_id", "name", "since", "leaving" }]`, `since` in seconds. |
 
 A template is
 `{ "name", "group", "duration", "during_lshape": "follow" | "wait" | "skip", "layers": [...] }`.
@@ -378,12 +380,23 @@ choose the image on air. Animations are `none`, `fade` (default),
 `slide_left`, `slide_right`, `slide_up`, `slide_down`, `wipe` or `scale`.
 Layer ids are unique within the template; a template has at most 64 layers.
 
+On air, a template is drawn once at the output size and blended onto the
+picture before the L-shape, so with `follow` it shrinks with the picture into
+the L-shape's corner. Graphics on air are not drawn over filler frames between
+clips. At most 16 are on air at once; taking another takes the oldest out.
+`scale` animations are drawn as a fade for now. A waiting take gives up
+after an hour of L-shape.
+
 ```bash
 curl -X POST http://127.0.0.1:8787/api/graphics/1/templates -H 'Content-Type: application/json' \
 -d '{"name": "Guest", "group": "Lower thirds", "layers": [
       {"id": "bar", "kind": "box", "x": 5, "y": 75, "width": 45, "height": 12, "fill": "#f39223"},
       {"id": "name", "kind": "text", "x": 7, "y": 76, "width": 41, "height": 6, "text": "{name}"}]}' \
 -H 'Authorization: Bearer <TOKEN>'
+curl -X POST http://127.0.0.1:8787/api/graphics/1/take -H 'Content-Type: application/json' \
+-d '{"template_id": 1, "fields": {"name": "Maria da Silva"}}' -H 'Authorization: Bearer <TOKEN>'
+curl -X POST http://127.0.0.1:8787/api/graphics/1/out -H 'Content-Type: application/json' \
+-d '{}' -H 'Authorization: Bearer <TOKEN>'
 ```
 
 ### Ad breaks (SCTE-35)

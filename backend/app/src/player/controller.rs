@@ -115,6 +115,10 @@ pub struct ChannelManager {
     /// Hides or swaps the logo on air; kept across playout restarts.
     pub logo_control: noar_engine::LogoControl,
     pub lshape_control: noar_engine::LShapeControl,
+    /// Template graphics on air; kept across playout restarts.
+    pub graphics_control: noar_engine::GraphicsControl,
+    /// Which template each graphic on air came from.
+    pub graphics_takes: crate::utils::graphics::GraphicsTakes,
     /// The SCTE-35 ad breaks the channel signals.
     pub splice_control: noar_engine::SpliceControl,
     /// How the network output reaches its destination; outlasts restarts.
@@ -241,6 +245,8 @@ impl ChannelManager {
             loudness_meter: noar_engine::LoudnessMeterControl::default(),
             logo_control: noar_engine::LogoControl::default(),
             lshape_control: noar_engine::LShapeControl::default(),
+            graphics_control: noar_engine::GraphicsControl::default(),
+            graphics_takes: Default::default(),
             splice_control: noar_engine::SpliceControl::default(),
             output_link: noar_engine::OutputLink::default(),
             playout_failure: Arc::new(StdMutex::new(None)),
