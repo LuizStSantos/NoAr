@@ -6,8 +6,14 @@ import { useConfig } from '@/stores/config'
 export interface TemplateLayer {
     id: string
     name: string
-    kind: 'text' | 'image' | 'box' | 'video'
+    kind: 'text' | 'image' | 'box' | 'video' | 'clock'
     visible: boolean
+    shape?: 'rectangle' | 'rounded' | 'ellipse' | 'line'
+    stroke?: string | null
+    /** Percent of output height. */
+    stroke_width?: number
+    clock_format?: string | null
+    clock_timezone?: string | null
     x: number
     y: number
     width: number
@@ -198,6 +204,10 @@ export function useGraphicsApi() {
 
     return {
         template: (id: number) => authFetch<GraphicsTemplate>(`${base()}/templates/${id}`, { headers: headers() }),
+        clock: () =>
+            authFetch<{ unix_ms: number; timezone: string | null; offset_seconds: number }>(`${base()}/clock`, {
+                headers: headers(),
+            }),
         fonts: () => authFetch<string[]>(`${base()}/fonts`, { headers: headers() }),
         save: (input: TemplateInput, id?: number) =>
             authFetch<GraphicsTemplate>(`${base()}/templates${id === undefined ? '' : `/${id}`}`, {

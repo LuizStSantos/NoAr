@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import { useGraphicsClock } from '@/composables/graphicsClock'
 import { storageImageUrl } from '@/composables/logo'
 import { type GraphicsTemplate, type TemplateLayer, fillFields } from '@/composables/graphicsTemplates'
 import { useConfig } from '@/stores/config'
@@ -17,6 +18,7 @@ const props = defineProps<{
 }>()
 
 const configStore = useConfig()
+const { clockValue } = useGraphicsClock()
 const images = ref<Record<string, string>>({})
 let imageVersion = 0
 
@@ -83,7 +85,7 @@ function boxStyle(layer: TemplateLayer) {
         transform: elapsed === undefined ? undefined : transform,
         clipPath: elapsed !== undefined && animation === 'wipe' ? `inset(0 ${offset}% 0 0)` : undefined,
         borderRadius: `${layer.radius}cqh`,
-        background: layer.kind === 'image' ? undefined : (layer.fill ?? undefined),
+        background: layer.kind === 'image' || layer.kind === 'box' ? undefined : (layer.fill ?? undefined),
     }
 }
 
@@ -96,6 +98,15 @@ function textStyle(layer: TemplateLayer) {
         textAlign: layer.align,
         justifyContent: { left: 'flex-start', center: 'center', right: 'flex-end' }[layer.align],
         padding: layer.fill ? `0 ${layer.font_size * 0.4}cqh` : undefined,
+    }
+}
+function shapeSize(layer: TemplateLayer) {
+    const output = configStore.playout.output
+    return {
+        width: ((output?.width || 1920) * layer.width) / 100,
+        height: ((output?.height || 1080) * layer.height) / 100,
+        stroke: ((output?.height || 1080) * (layer.stroke_width ?? 0.25)) / 100,
+        radius: ((output?.height || 1080) * layer.radius) / 100,
     }
 }
 </script>
@@ -114,12 +125,50 @@ function textStyle(layer: TemplateLayer) {
                 >VIDEO</span
             >
             <span
-                v-if="layer.kind === 'text'"
+                v-if="layer.kind === 'text' || layer.kind === 'clock'"
                 class="w-full flex leading-[1.2] whitespace-pre-wrap break-words"
                 :style="textStyle(layer)"
             >
-                {{ fillFields(layer.text, props.values ?? {}) }}
+                {{ layer.kind === 'clock' ? clockValue(layer) : fillFields(layer.text, props.values ?? {}) }}
             </span>
+            <svg
+                v-if="layer.kind === 'box'"
+                class="w-full h-full"
+                :viewBox="`0 0 ${shapeSize(layer).width} ${shapeSize(layer).height}`"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+            >
+                <line
+                    v-if="layer.shape === 'line'"
+                    x1="0"
+                    :y1="shapeSize(layer).height / 2"
+                    :x2="shapeSize(layer).width"
+                    :y2="shapeSize(layer).height / 2"
+                    :stroke="layer.stroke || layer.fill || 'none'"
+                    :stroke-width="shapeSize(layer).stroke"
+                />
+                <ellipse
+                    v-else-if="layer.shape === 'ellipse'"
+                    :cx="shapeSize(layer).width / 2"
+                    :cy="shapeSize(layer).height / 2"
+                    :rx="Math.max(0, (shapeSize(layer).width - (layer.stroke ? shapeSize(layer).stroke : 0)) / 2)"
+                    :ry="Math.max(0, (shapeSize(layer).height - (layer.stroke ? shapeSize(layer).stroke : 0)) / 2)"
+                    :fill="layer.fill || 'none'"
+                    :stroke="layer.stroke || 'none'"
+                    :stroke-width="shapeSize(layer).stroke"
+                />
+                <rect
+                    v-else
+                    :x="layer.stroke ? shapeSize(layer).stroke / 2 : 0"
+                    :y="layer.stroke ? shapeSize(layer).stroke / 2 : 0"
+                    :width="Math.max(0, shapeSize(layer).width - (layer.stroke ? shapeSize(layer).stroke : 0))"
+                    :height="Math.max(0, shapeSize(layer).height - (layer.stroke ? shapeSize(layer).stroke : 0))"
+                    :rx="Math.max(0, shapeSize(layer).radius - (layer.stroke ? shapeSize(layer).stroke / 2 : 0))"
+                    :fill="layer.fill || 'none'"
+                    :stroke="layer.stroke || 'none'"
+                    :stroke-width="shapeSize(layer).stroke"
+                />
+            </svg>
             <img
                 v-else-if="layer.kind === 'image' && images[imagePath(layer)]"
                 :src="images[imagePath(layer)]"

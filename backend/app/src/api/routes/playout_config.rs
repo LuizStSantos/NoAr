@@ -295,6 +295,7 @@ pub async fn update_playout_config(
         guard.get(id)
     }
     .ok_or_else(|| ServiceError::BadRequest(format!("Channel {id} not found!")))?;
+    let _graphics_edit = manager.graphics_takes.begin_edit().await;
     let p = manager.channel.lock().await.storage.clone();
     let storage = Path::new(&p);
     let config = manager.config.read().await.clone();

@@ -647,3 +647,36 @@ and `.nfo` fields.
 | ------ | --------------------------- | ----------------------------------------------------------------------------------------------- |
 | `GET`  | `/xmltv/{id}/guide.xml`     | XMLTV guide. Optional query parameters: `days` (1-14, default 7), `lang`, `tvg_id`, `base_url`. |
 | `GET`  | `/xmltv/{id}/images/{path}` | Image file below the channel storage root. Other file types return `404`.                       |
+
+### Shape and clock layers
+
+A `box` layer accepts `shape`: `rectangle` (default), `rounded`, `ellipse` or
+`line`, optional `fill`/`stroke` colors and `stroke_width` in percent of output
+height. Rounded rectangles use the existing `radius`, also percent of height.
+Lines use the stroke color and width; fill is ignored. The original rectangle
+without stroke retains its original renderer. Geometry and opacity remain layer
+properties; circles require equal pixel width and height.
+
+A `clock` layer shares text font, color, alignment and animation properties.
+`clock_format` accepts `HH:mm:ss` (default), `HH:mm`, `hh:mm:ss A`, `DD/MM/YYYY`
+or `DD/MM/YYYY HH:mm:ss`. `clock_timezone` is an optional IANA timezone; omitted,
+null or empty follows the channel timezone, then the server local timezone.
+Unsupported formats/timezones return HTTP 400. Text exceeding its layer box is
+clipped rather than changing its position or scaling other layers. No clock is
+created automatically.
+
+`GET /api/graphics/{id}/clock` is available to GA, CA and U on the channel. It
+returns `{ "unix_ms": 1794000000000, "timezone": "America/Sao_Paulo",
+"offset_seconds": -10800 }`: UTC Unix milliseconds, nullable channel IANA name
+and current effective UTC offset in seconds. The browser extrapolates this
+reference with a monotonic clock, sampling again every 30 seconds; it does not
+use the operator computer's wall clock. Authentication/channel failures retain
+the usual 401/403/404 responses.
+
+Clock artwork refreshes nominally every 250 ms outside the playout frame thread.
+It follows civil time, not clip position, and does not reset take identity,
+duration, visibility or entry/exit animation. This is not a frame-precision time
+signal. Render errors retain the last frame and emit a throttled channel warning;
+that clock may be stale until rendering recovers. The browser initially shows
+`—` without a server sample and retains its last time reference on read failure.
+Stopping playout stops its background refresh; starting it renders current time.

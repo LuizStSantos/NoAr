@@ -98,3 +98,11 @@ this follow-up. See the handoff screenshot gallery for executed browser evidence
   L-shape overlap rule.
 - The soak test (`qa/soak`) stays green, and a staging run with real output
   confirms graphics appear on air without stalls before each release.
+
+### Approved open-template revision: shape and clock implementation
+
+Stage 2 adds rectangle, rounded rectangle, ellipse and line controls plus live
+clock layers (format and channel/explicit timezone) to Composer. Actual executed
+checks and output evidence are recorded in the graphics handoff. Clock is in
+scope for this approved revision, superseding the earlier exclusion. Font upload
+and data sources remain separate subsequent stages.

@@ -20,6 +20,9 @@ one is tagged.
 
 ### Added
 
+- Add Composer shape outlines, rounded rectangles, ellipses and lines, plus live
+  server-time clock layers with channel or explicit timezone and date formats.
+
 - Free template names/groups, optional compatibility assignments with explicit
   image targets, deletion of assigned models with a usage confirmation, and
   user-authored permanent compositions. Fresh installations/new channels start

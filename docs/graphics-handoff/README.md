@@ -4,7 +4,47 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
-## Open templates: stage 1 complete; shapes/clock/fonts/data pending
+## Open templates: stage 2 — shapes and live clock
+
+Composer now provides rectangle, rounded rectangle, ellipse/circle and line
+layers with fill, stroke and stroke width. Existing rectangle rendering without
+stroke remains unchanged. A real Clock layer offers five time/date formats and
+an explicit IANA timezone, following the channel timezone when left empty.
+Preview uses a server time reference; output uses server civil time independently
+of clip position. The refresh worker runs outside the frame thread and preserves
+take duration, animations and requested visibility. Render failures retain the
+last frame and warn in the channel log; this is not a precision time signal.
+No default clock or extra startup template is created.
+
+Verification with GStreamer 1.26.2: fmt, exact no-default Clippy, backend build,
+**697 Rust tests passed / 14 ignored**, Vue type build, full ESLint, Prettier,
+QA TypeScript and production build passed. **28 Playwright tests passed**.
+Two initial seek/SRT timing tests failed during concurrent browser activity;
+both passed individually, then the entire suite passed with one test thread.
+Scoped clock tests cover timezone, midnight and daylight-saving rollback;
+engine tests check exact shape pixels and preservation of take/fade state.
+
+Actual pt-BR desktop/phone browser interaction saved/reopened all four shapes
+and the clock, with advancing real Program video and no page exceptions.
+Decoded synthetic HLS shows changing seconds before and after a full backend
+restart, correct shape fill/exteriors and hide/show retaining requested state
+across refreshes. Capture health was OK; the restarted capture log has no ERROR
+entries. [Evidence and compression-aware pixel checks](shapes-clock-evidence.json).
+The retained output checks use color tolerance on decoded HLS; exact primitive
+pixel geometry is checked before encoding by unit tests. This stage has not
+repeated the historical 76-response/2.2.1 parity, desktop/physical or soak runs.
+No playout pause/seek control was exercised. Fonts and sources remain pending.
+
+| Part | Capture |
+| --- | --- |
+| Shape controls and composition | [Composer](composer-shapes-pt-BR.jpg) |
+| Live clock authoring | [Desktop](composer-clock-pt-BR.jpg), [phone](composer-clock-phone-pt-BR.jpg) |
+| Real Program | [Desktop](clock-onair-pt-BR.jpg), [phone](clock-onair-phone-pt-BR.jpg) |
+| Actual changing HLS | [First](output-clock-before-restart-first.jpg), [later](output-clock-before-restart-later.jpg) |
+| Visibility preserved during refresh | [Hidden](output-clock-hidden.jpg), [shown](output-clock-shown.jpg) |
+| Persistence and live refresh after restart | [First](output-clock-after-restart-first.jpg), [later](output-clock-after-restart-later.jpg) |
+
+## Open templates: stage 1 — templates and first-run defaults
 
 The user approved [the next revision](open-templates-plan.md), then required
 fresh installations and new channels to contain **only one removable Logo
@@ -945,9 +985,8 @@ desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. Finish the approved [open-templates revision](open-templates-plan.md): new
-   shapes and clock, font upload, then RSS/CSV/Sheets/JSON data sources. Stage 1
-   (models/groups/assignments/deletion and single-logo first run) is complete above.
+1. Finish the approved [open-templates revision](open-templates-plan.md): font upload, then RSS/CSV/Sheets/JSON data sources. Stages 1–2
+   (templates/first-run defaults, shapes and clock) are complete above.
 2. Repeat relevant compatibility/raw/HLS and browser evidence after renderer and
    live-data changes. Desktop audio stability, physical outputs and long-soak
    verification remain explicit limitations.

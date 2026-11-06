@@ -55,18 +55,26 @@ pub fn channel_logo(config: &PlayoutConfig) -> Option<LogoConfig> {
 /// without restarting, sized for the output the playout runs with. An image
 /// that cannot be read leaves the logo on air as it was.
 pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
-    use crate::utils::graphics::{Animation, graphic_spec};
+    load_logo_inner(manager, config, width, height, false);
+}
+
+pub fn refresh_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
+    load_logo_inner(manager, config, width, height, true);
+}
+
+fn load_logo_inner(
+    manager: &ChannelManager,
+    config: &PlayoutConfig,
+    width: u32,
+    height: u32,
+    refresh: bool,
+) {
+    use crate::utils::graphics::{Animation, graphic_spec_for_channel};
 
     let result = (|| -> Result<(), ServiceError> {
         let model = config.logo_model.as_ref();
         let spec = model
-            .map(|model| {
-                graphic_spec(
-                    model,
-                    &std::collections::HashMap::new(),
-                    &config.channel.storage,
-                )
-            })
+            .map(|model| graphic_spec_for_channel(model, &std::collections::HashMap::new(), config))
             .transpose()?;
         let image = model.and_then(|model| {
             model
@@ -101,17 +109,21 @@ pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, h
         }
 
         let spec = spec.as_ref().filter(|spec| !spec.layers.is_empty());
-        manager
-            .logo_control
-            .set_model(
-                spec,
-                primary,
-                image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms)),
-                model.is_some_and(|model| model.always_on == Some(true)),
-                width,
-                height,
-            )
-            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+        let set = if refresh {
+            noar_engine::LogoControl::refresh_model
+        } else {
+            noar_engine::LogoControl::set_model
+        };
+        set(
+            &manager.logo_control,
+            spec,
+            primary,
+            image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms)),
+            model.is_some_and(|model| model.always_on == Some(true)),
+            width,
+            height,
+        )
+        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
 
         Ok(())
     })();
@@ -125,7 +137,7 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     async fn load(manager: &ChannelManager, config: &PlayoutConfig) -> Result<(), ServiceError> {
         use crate::{
             db::{handles, models::GraphicsRole},
-            utils::graphics::{LayerKind, graphic_spec},
+            utils::graphics::{LayerKind, graphic_spec_for_channel},
         };
 
         let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
@@ -154,7 +166,8 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
                         .as_deref()
                         .is_some_and(|image| !image.is_empty()),
                     LayerKind::Text => !layer.text.is_empty(),
-                    LayerKind::Box => layer.fill.is_some(),
+                    LayerKind::Clock => true,
+                    LayerKind::Box => layer.fill.is_some() || layer.style.stroke.is_some(),
                 }
         });
 
@@ -166,11 +179,7 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
             return Ok(());
         }
 
-        let spec = graphic_spec(
-            &template,
-            &std::collections::HashMap::new(),
-            &config.channel.storage,
-        )?;
+        let spec = graphic_spec_for_channel(&template, &std::collections::HashMap::new(), config)?;
         let primary = template
             .layers
             .iter()
@@ -178,7 +187,12 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
             .position(|layer| Some(layer.id.as_str()) == template.control_layer_id.as_deref())
             .unwrap_or(usize::MAX);
         let control = manager.lshape_control.clone();
-        let (width, height) = (config.output.width, config.output.height);
+        let running = manager.running_config();
+        let (width, height) = running
+            .as_deref()
+            .map_or((config.output.width, config.output.height), |running| {
+                (running.output.width, running.output.height)
+            });
         tokio::task::spawn_blocking(move || {
             control.set_template_controlled(&spec, primary, width, height)
         })
@@ -355,6 +369,11 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         ticker_cancel.clone(),
     ));
 
+    let dynamic_graphics = tokio::spawn(crate::utils::graphics::run_dynamic_graphics(
+        manager.clone(),
+        ticker_cancel.clone(),
+    ));
+
     let result = match config.output.mode {
         OutputMode::HLS => play_hls(manager.clone(), &config, &playout).await,
         _ => play_loop(manager.clone(), &config, &playout, None).await,
@@ -363,6 +382,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     ticker_cancel.cancel();
     let _ = ticker.await;
     let _ = graphics_ticker.await;
+    let _ = dynamic_graphics.await;
 
     let finish_result = playout.finish().await.map_err(engine_error);
     result?;

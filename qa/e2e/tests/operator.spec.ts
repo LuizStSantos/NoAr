@@ -797,3 +797,58 @@ test('free template names and groups support permanent compositions and deletion
     await page.reload()
     await expect(page.getByRole('region', { name: 'My programme', exact: true })).toHaveCount(0)
 })
+
+test('Composer authors shape primitives and a live server-time clock', async ({ page }) => {
+    await page.goto('/graphics/composer?channel=1')
+    const add = async (kind: string) => {
+        await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+        await page
+            .getByRole('group', { name: 'Layer type', exact: true })
+            .getByRole('button', { name: kind, exact: true })
+            .click()
+    }
+    for (const shape of ['rectangle', 'rounded', 'ellipse', 'line']) {
+        await add('Shape')
+        await page.getByLabel('Shape type', { exact: true }).selectOption(shape)
+        await page.getByLabel('Layer name', { exact: true }).fill(shape)
+        await page.getByLabel('Layer name', { exact: true }).press('Tab')
+        await page.getByLabel('Stroke colour', { exact: true }).fill('#ffffff')
+        await page.getByLabel('Stroke colour', { exact: true }).press('Tab')
+        await page.getByLabel('Stroke width (%)', { exact: true }).fill('0.5')
+        await page.getByLabel('Stroke width (%)', { exact: true }).press('Tab')
+    }
+    await add('Clock')
+    await page.getByLabel('Clock format', { exact: true }).selectOption('HH:mm:ss')
+    await page.getByLabel('Clock timezone', { exact: true }).fill('UTC')
+    await page.getByLabel('Clock timezone', { exact: true }).press('Tab')
+    const clock = page
+        .locator('main span')
+        .filter({ hasText: /\d{2}:\d{2}:\d{2}/ })
+        .first()
+    await expect(clock).toBeVisible()
+    const first = await clock.textContent()
+    await expect.poll(() => clock.textContent()).not.toBe(first)
+    await page.getByLabel('Always on air', { exact: true }).check()
+    const name = `Shapes and clock ${Date.now()}`
+    await page.getByLabel('Template name', { exact: true }).fill(name)
+    await page.getByRole('button', { name: 'Save template', exact: true }).click()
+    const saving = page.waitForResponse(
+        (r) => r.url().endsWith('/api/graphics/1/templates') && r.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    const saved = await saving
+    expect(saved.ok()).toBeTruthy()
+    const template = await saved.json()
+    expect(template.layers.map((layer: { shape: string }) => layer.shape).slice(0, 4)).toEqual([
+        'rectangle',
+        'rounded',
+        'ellipse',
+        'line',
+    ])
+    expect(template.layers[4]).toMatchObject({ kind: 'clock', clock_timezone: 'UTC', clock_format: 'HH:mm:ss' })
+    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await page.reload()
+    await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})

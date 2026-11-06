@@ -1453,6 +1453,15 @@ export default {
             },
         },
         composer: {
+            shape: 'Shape type',
+            shapes: { rectangle: 'Rectangle', rounded: 'Rounded rectangle', ellipse: 'Ellipse / circle', line: 'Line' },
+            stroke: 'Stroke colour',
+            strokeWidth: 'Stroke width',
+            clockFormat: 'Clock format',
+            clockTimezone: 'Clock timezone',
+            channelTimezone: 'Use the channel timezone',
+            clockHint:
+                'Uses server time independently of video time. Leave the timezone empty to follow the channel.',
             permanentLimit:
                 'The channel supports up to 16 Always-on templates. Turn that option off on another template first.',
             controlImage: 'Image controlled by the API',
@@ -1542,6 +1551,7 @@ export default {
                 text: 'Text',
                 box: 'Shape',
                 video: 'Video in the corner',
+                clock: 'Clock',
             },
             dimensions: {
                 x: 'X',

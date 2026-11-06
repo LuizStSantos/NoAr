@@ -1457,6 +1457,20 @@ export default {
             },
         },
         composer: {
+            shape: 'Tipo de forma',
+            shapes: {
+                rectangle: 'Retângulo',
+                rounded: 'Retângulo arredondado',
+                ellipse: 'Elipse / círculo',
+                line: 'Linha',
+            },
+            stroke: 'Cor do contorno',
+            strokeWidth: 'Espessura do contorno',
+            clockFormat: 'Formato do relógio',
+            clockTimezone: 'Fuso do relógio',
+            channelTimezone: 'Usar o fuso do canal',
+            clockHint:
+                'Usa a hora do servidor, independente do tempo do vídeo. Deixe o fuso vazio para acompanhar o canal.',
             permanentLimit: 'O canal aceita até 16 modelos Sempre no ar. Desative essa opção em outro modelo primeiro.',
             controlImage: 'Imagem controlada pela API',
             firstImage: 'Primeira imagem do modelo',
@@ -1546,6 +1560,7 @@ export default {
                 text: 'Texto',
                 box: 'Forma',
                 video: 'Vídeo no canto',
+                clock: 'Relógio',
             },
             dimensions: {
                 x: 'X',

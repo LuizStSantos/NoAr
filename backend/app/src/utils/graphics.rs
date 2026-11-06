@@ -5,7 +5,10 @@
 
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex as StdMutex, PoisonError},
+    sync::{
+        Arc, Mutex as StdMutex, PoisonError,
+        atomic::{AtomicU64, Ordering},
+    },
     time::Duration,
 };
 
@@ -28,7 +31,8 @@ pub(crate) fn graphic_has_content(template: &GraphicsTemplate, storage: &std::pa
                         && norm_abs_path(storage, image).is_ok_and(|(path, _, _)| path.is_file())
                 }),
                 LayerKind::Text => !layer.text.trim().is_empty(),
-                LayerKind::Box => layer.fill.is_some(),
+                LayerKind::Clock => true,
+                LayerKind::Box => layer.fill.is_some() || layer.style.stroke.is_some(),
                 LayerKind::Video => false,
             }
     })
@@ -317,7 +321,7 @@ pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), Service
     let config = manager.config.read().await;
     let has_content = graphic_has_content(&template, &config.channel.storage);
     let spec = if has_content {
-        graphic_spec(&template, &HashMap::new(), &config.channel.storage)?
+        graphic_spec_for_channel(&template, &HashMap::new(), &config)?
     } else {
         // Preserve an explicit off state when text is cleared and later restored.
         noar_engine::GraphicSpec {
@@ -361,6 +365,7 @@ const EDGE_SLACK: f64 = 0.001;
 pub enum LayerKind {
     #[default]
     Text,
+    Clock,
     Image,
     Box,
     /// Where the picture goes: a template with one is an L-shape, its
@@ -448,10 +453,87 @@ fn default_duration() -> f64 {
     8.0
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShapeKind {
+    #[default]
+    Rectangle,
+    Rounded,
+    Ellipse,
+    Line,
+}
+
+fn default_stroke_width() -> f64 {
+    0.25
+}
+
+/// Optional new controls flatten into the existing layer JSON, preserving old layouts.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LayerStyle {
+    #[serde(default)]
+    pub shape: ShapeKind,
+    #[serde(default)]
+    pub stroke: Option<String>,
+    #[serde(default = "default_stroke_width")]
+    pub stroke_width: f64,
+    #[serde(default)]
+    pub clock_format: Option<String>,
+    #[serde(default)]
+    pub clock_timezone: Option<String>,
+}
+
+impl Default for LayerStyle {
+    fn default() -> Self {
+        Self {
+            shape: ShapeKind::Rectangle,
+            stroke: None,
+            stroke_width: default_stroke_width(),
+            clock_format: None,
+            clock_timezone: None,
+        }
+    }
+}
+
+/// Clock presets are explicit so malformed strftime input never panics on air.
+pub fn clock_value(
+    layer: &TemplateLayer,
+    now: chrono::DateTime<chrono::Utc>,
+    timezone: Option<chrono_tz::Tz>,
+) -> Result<String, ServiceError> {
+    let format = match layer.style.clock_format.as_deref().unwrap_or("HH:mm:ss") {
+        "HH:mm:ss" => "%H:%M:%S",
+        "HH:mm" => "%H:%M",
+        "hh:mm:ss A" => "%I:%M:%S %p",
+        "DD/MM/YYYY" => "%d/%m/%Y",
+        "DD/MM/YYYY HH:mm:ss" => "%d/%m/%Y %H:%M:%S",
+        _ => {
+            return Err(ServiceError::BadRequest(
+                "Unsupported clock format".to_string(),
+            ));
+        }
+    };
+    let zone = layer
+        .style
+        .clock_timezone
+        .as_deref()
+        .map(str::parse::<chrono_tz::Tz>)
+        .transpose()
+        .map_err(|_| ServiceError::BadRequest("Invalid clock timezone".to_string()))?
+        .or(timezone);
+    let time = zone.map_or_else(
+        || now.with_timezone(&chrono::Local).fixed_offset(),
+        |zone| now.with_timezone(&zone).fixed_offset(),
+    );
+
+    Ok(time.format(format).to_string())
+}
+
 /// One layer of a template. Positions and sizes are percent of the frame;
 /// the font size is percent of the frame height.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TemplateLayer {
+    #[serde(flatten)]
+    pub style: LayerStyle,
     /// Stable within the template, so a renamed layer keeps its place.
     pub id: String,
     #[serde(default)]
@@ -530,7 +612,7 @@ pub fn template_fields(layers: &[TemplateLayer]) -> Vec<String> {
         match layer.kind {
             LayerKind::Text => found.extend(placeholders(&layer.text)),
             LayerKind::Image => found.extend(layer.image.as_deref().and_then(whole_placeholder)),
-            LayerKind::Box | LayerKind::Video => {}
+            LayerKind::Box | LayerKind::Video | LayerKind::Clock => {}
         }
 
         for field in found {
@@ -589,6 +671,23 @@ fn is_color(value: &str) -> bool {
 }
 
 fn check_layer(layer: &TemplateLayer) -> Result<(), String> {
+    if !layer.style.stroke_width.is_finite() || !(0.0..=20.0).contains(&layer.style.stroke_width) {
+        return Err("stroke width is percent of output height, from 0 to 20".to_string());
+    }
+
+    if layer
+        .style
+        .stroke
+        .as_deref()
+        .is_some_and(|color| !is_color(color))
+    {
+        return Err("invalid shape stroke color".to_string());
+    }
+
+    if layer.kind == LayerKind::Clock {
+        clock_value(layer, chrono::Utc::now(), None).map_err(|error| error.to_string())?;
+    }
+
     let label = if layer.name.trim().is_empty() {
         layer.id.trim().to_string()
     } else {
@@ -856,6 +955,30 @@ pub fn graphic_spec(
     values: &HashMap<String, String>,
     storage: &std::path::Path,
 ) -> Result<noar_engine::GraphicSpec, ServiceError> {
+    graphic_spec_at(template, values, storage, chrono::Utc::now(), None)
+}
+
+pub fn graphic_spec_for_channel(
+    template: &GraphicsTemplate,
+    values: &HashMap<String, String>,
+    config: &crate::utils::config::PlayoutConfig,
+) -> Result<noar_engine::GraphicSpec, ServiceError> {
+    graphic_spec_at(
+        template,
+        values,
+        &config.channel.storage,
+        chrono::Utc::now(),
+        config.channel.timezone,
+    )
+}
+
+fn graphic_spec_at(
+    template: &GraphicsTemplate,
+    values: &HashMap<String, String>,
+    storage: &std::path::Path,
+    now: chrono::DateTime<chrono::Utc>,
+    timezone: Option<chrono_tz::Tz>,
+) -> Result<noar_engine::GraphicSpec, ServiceError> {
     let mut layers = Vec::with_capacity(template.layers.len());
     let mut picture = None;
 
@@ -871,12 +994,34 @@ pub fn graphic_spec(
                 });
                 continue;
             }
-            LayerKind::Box => match fill {
-                Some(fill) => noar_engine::GraphicContent::Box { fill },
-                None => continue,
-            },
-            LayerKind::Text => noar_engine::GraphicContent::Text {
-                text: fill_fields(&layer.text, values),
+            LayerKind::Box => {
+                let stroke = layer.style.stroke.as_deref().and_then(parse_color);
+
+                if layer.style.shape == ShapeKind::Rectangle && stroke.is_none() {
+                    match fill {
+                        Some(fill) => noar_engine::GraphicContent::Box { fill },
+                        None => continue,
+                    }
+                } else {
+                    noar_engine::GraphicContent::Shape {
+                        shape: match layer.style.shape {
+                            ShapeKind::Rectangle => noar_engine::GraphicShape::Rectangle,
+                            ShapeKind::Rounded => noar_engine::GraphicShape::Rounded,
+                            ShapeKind::Ellipse => noar_engine::GraphicShape::Ellipse,
+                            ShapeKind::Line => noar_engine::GraphicShape::Line,
+                        },
+                        fill,
+                        stroke,
+                        stroke_width: layer.style.stroke_width,
+                    }
+                }
+            }
+            LayerKind::Text | LayerKind::Clock => noar_engine::GraphicContent::Text {
+                text: if layer.kind == LayerKind::Clock {
+                    clock_value(layer, now, timezone)?
+                } else {
+                    fill_fields(&layer.text, values)
+                },
                 font_family: layer.font_family.clone(),
                 font_size: layer.font_size,
                 bold: layer.bold,
@@ -921,18 +1066,49 @@ pub fn graphic_spec(
 
 /// Which template each graphic on air came from.
 #[derive(Debug, Clone, Default)]
-pub struct GraphicsTakes(Arc<StdMutex<Vec<TakeRecord>>>);
+pub struct GraphicsTakes {
+    records: Arc<StdMutex<Vec<TakeRecord>>>,
+    version: Arc<AtomicU64>,
+    editing: Arc<tokio::sync::Mutex<()>>,
+}
+
+pub struct GraphicsEditGuard {
+    _guard: tokio::sync::OwnedMutexGuard<()>,
+    version: Arc<AtomicU64>,
+}
+
+impl Drop for GraphicsEditGuard {
+    fn drop(&mut self) {
+        self.version.fetch_add(1, Ordering::SeqCst);
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TakeRecord {
     pub take_id: u64,
     pub template_id: i32,
     pub name: String,
+    #[serde(skip)]
+    pub values: HashMap<String, String>,
 }
 
 impl GraphicsTakes {
+    pub async fn begin_edit(&self) -> GraphicsEditGuard {
+        let guard = self.editing.clone().lock_owned().await;
+        self.version.fetch_add(1, Ordering::SeqCst);
+
+        GraphicsEditGuard {
+            _guard: guard,
+            version: self.version.clone(),
+        }
+    }
+
+    pub fn invalidate(&self) {
+        self.version.fetch_add(2, Ordering::SeqCst);
+    }
+
     fn records(&self) -> std::sync::MutexGuard<'_, Vec<TakeRecord>> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+        self.records.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     fn add(&self, record: TakeRecord) {
@@ -1000,6 +1176,7 @@ async fn draw_and_take(
     template: &GraphicsTemplate,
     spec: noar_engine::GraphicSpec,
     duration: Option<Duration>,
+    values: HashMap<String, String>,
 ) -> Result<u64, ServiceError> {
     let (width, height) = {
         let config = manager.config.read().await;
@@ -1021,6 +1198,7 @@ async fn draw_and_take(
         take_id,
         template_id: template.id,
         name: template.name.clone(),
+        values,
     });
 
     Ok(take_id)
@@ -1043,8 +1221,8 @@ pub async fn take_template(
     }
 
     let duration = (seconds > 0.0).then(|| Duration::from_secs_f64(seconds));
-    let storage = manager.config.read().await.channel.storage.clone();
-    let spec = graphic_spec(&template, &values, &storage)?;
+    let config = manager.config.read().await.clone();
+    let spec = graphic_spec_for_channel(&template, &values, &config)?;
 
     let lshape_on = |manager: &ChannelManager| {
         manager.lshape_control.is_on() || manager.graphics_control.picture_on_air()
@@ -1073,7 +1251,8 @@ pub async fn take_template(
                     }
 
                     if waited < MAX_LSHAPE_WAIT
-                        && let Err(error) = draw_and_take(&manager, &template, spec, duration).await
+                        && let Err(error) =
+                            draw_and_take(&manager, &template, spec, duration, values.clone()).await
                     {
                         log::warn!(
                             "Graphic '{}' not taken after the L-shape: {error}",
@@ -1087,7 +1266,7 @@ pub async fn take_template(
         }
     }
 
-    let take_id = draw_and_take(manager, &template, spec, duration).await?;
+    let take_id = draw_and_take(manager, &template, spec, duration, values).await?;
 
     Ok(TakeOutcome::OnAir { take_id })
 }
@@ -1108,7 +1287,7 @@ pub async fn load_permanent_templates(manager: &ChannelManager) -> Result<(), Se
                 .any(|binding| binding.template_id == template.id)
     }) {
         let id = template.id as u64;
-        let spec = graphic_spec(&template, &HashMap::new(), &config.channel.storage)?;
+        let spec = graphic_spec_for_channel(&template, &HashMap::new(), &config)?;
         let running = manager.running_config();
         let (width, height) = running
             .as_deref()
@@ -1136,6 +1315,174 @@ pub async fn load_permanent_templates(manager: &ChannelManager) -> Result<(), Se
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum DynamicScope {
+    Role,
+    Permanent,
+    Take,
+}
+
+/// Dynamic values refresh off the frame thread and retain take/animation identity.
+pub async fn run_dynamic_graphics(
+    manager: ChannelManager,
+    cancel: tokio_util::sync::CancellationToken,
+) {
+    let mut rendered = HashMap::<(DynamicScope, u64), noar_engine::GraphicSpec>::new();
+    let mut last_warning = std::time::Instant::now() - Duration::from_secs(30);
+
+    loop {
+        tokio::select! {_=cancel.cancelled()=>break,_=tokio::time::sleep(Duration::from_millis(250))=>{}}
+
+        if let Err(error) = refresh_dynamic_graphics(&manager, &mut rendered).await
+            && last_warning.elapsed() >= Duration::from_secs(30)
+        {
+            log::warn!(channel=manager.id; "Dynamic graphics kept their last frame: {error}");
+            last_warning = std::time::Instant::now();
+        }
+    }
+}
+
+async fn refresh_dynamic_graphics(
+    manager: &ChannelManager,
+    rendered: &mut HashMap<(DynamicScope, u64), noar_engine::GraphicSpec>,
+) -> Result<(), ServiceError> {
+    let version = manager.graphics_takes.version.load(Ordering::SeqCst);
+
+    if !version.is_multiple_of(2) {
+        return Ok(());
+    }
+
+    let templates =
+        crate::db::handles::select_graphics_templates(&manager.db_pool, manager.id).await?;
+    let bindings =
+        crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
+    let config = manager.config.read().await.clone();
+    let running = manager.running_config();
+    let (width, height) = running
+        .as_deref()
+        .map_or((config.output.width, config.output.height), |running| {
+            (running.output.width, running.output.height)
+        });
+    let active = graphics_on_air(manager);
+    let takes = manager.graphics_takes.records().clone();
+    let mut retained = Vec::new();
+
+    for template in templates.iter().filter(|template| {
+        template
+            .layers
+            .iter()
+            .any(|layer| layer.visible && layer.kind == LayerKind::Clock)
+    }) {
+        let binding = bindings
+            .iter()
+            .find(|binding| binding.template_id == template.id);
+        let mut targets = Vec::new();
+
+        if let Some(binding) = binding {
+            targets.push((
+                DynamicScope::Role,
+                binding.template_id as u64,
+                HashMap::new(),
+            ));
+        } else if template.always_on == Some(true) {
+            targets.push((DynamicScope::Permanent, template.id as u64, HashMap::new()));
+        }
+
+        for take in active.iter().filter(|take| take.template_id == template.id) {
+            targets.push((
+                DynamicScope::Take,
+                take.take_id,
+                takes
+                    .iter()
+                    .find(|record| record.take_id == take.take_id)
+                    .map(|record| record.values.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        for (kind, id, values) in targets {
+            let key = (kind, id);
+            retained.push(key);
+            let spec = graphic_spec_for_channel(template, &values, &config)?;
+
+            if rendered.get(&key) == Some(&spec) {
+                continue;
+            }
+
+            let pixels = if kind == DynamicScope::Role {
+                None
+            } else {
+                let draw = spec.clone();
+                Some(
+                    tokio::task::spawn_blocking(move || {
+                        noar_engine::render_graphic(&draw, width, height)
+                    })
+                    .await
+                    .map_err(|_| ServiceError::InternalServerError)?
+                    .map_err(|error| ServiceError::Conflict(error.to_string()))?,
+                )
+            };
+            let _editing = manager.graphics_takes.editing.clone().lock_owned().await;
+
+            if manager.graphics_takes.version.load(Ordering::SeqCst) != version {
+                return Ok(());
+            }
+
+            match kind {
+                DynamicScope::Role => match binding.map(|binding| binding.role) {
+                    Some(crate::db::models::GraphicsRole::Logo) => {
+                        let mut updated = config.clone();
+                        updated.logo_model = Some(template.clone());
+                        let manager = manager.clone();
+                        tokio::task::spawn_blocking(move || {
+                            crate::player::output::refresh_logo(&manager, &updated, width, height);
+                        })
+                        .await
+                        .map_err(|_| ServiceError::InternalServerError)?;
+                    }
+                    Some(crate::db::models::GraphicsRole::Lshape) => {
+                        crate::player::output::load_lshape(manager, &config).await;
+                    }
+                    Some(crate::db::models::GraphicsRole::Ticker) => {
+                        let spec = spec.clone();
+                        let graphic = tokio::task::spawn_blocking(move || {
+                            noar_engine::render_graphic(&spec, width, height)
+                        })
+                        .await
+                        .map_err(|_| ServiceError::InternalServerError)?
+                        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                        manager
+                            .graphics_control
+                            .refresh_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic)
+                            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                    }
+                    None => {}
+                },
+                DynamicScope::Permanent => {
+                    manager
+                        .graphics_control
+                        .set_persistent(
+                            id,
+                            pixels.expect("pixels rendered for a persistent template"),
+                        )
+                        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                }
+                DynamicScope::Take => {
+                    manager
+                        .graphics_control
+                        .update_graphic(id, pixels.expect("pixels rendered for an active take"));
+                }
+            }
+
+            rendered.insert(key, spec);
+        }
+    }
+
+    rendered.retain(|key, _| retained.contains(key));
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1145,6 +1492,92 @@ mod tests {
             "id": id, "x": 5, "y": 80, "width": 40, "height": 8, "text": text
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn clock_formats_follow_channel_timezone_midnight_and_daylight_saving_time() {
+        let mut clock = text_layer("clock", "{not-an-operator-field}");
+        clock.kind = LayerKind::Clock;
+        let utc: chrono::DateTime<chrono::Utc> = "2026-11-06T23:59:59Z".parse().unwrap();
+        assert_eq!(
+            clock_value(&clock, utc, Some(chrono_tz::UTC)).unwrap(),
+            "23:59:59"
+        );
+        assert_eq!(
+            clock_value(&clock, utc, Some(chrono_tz::America::Sao_Paulo)).unwrap(),
+            "20:59:59"
+        );
+        clock.style.clock_format = Some("DD/MM/YYYY HH:mm:ss".to_string());
+        assert_eq!(
+            clock_value(
+                &clock,
+                utc + chrono::TimeDelta::seconds(1),
+                Some(chrono_tz::UTC)
+            )
+            .unwrap(),
+            "07/11/2026 00:00:00"
+        );
+        clock.style.clock_format = Some("HH:mm:ss".to_string());
+        clock.style.clock_timezone = Some("America/New_York".to_string());
+        let dst: chrono::DateTime<chrono::Utc> = "2026-11-01T05:59:59Z".parse().unwrap();
+        assert_eq!(clock_value(&clock, dst, None).unwrap(), "01:59:59");
+        assert_eq!(
+            clock_value(&clock, dst + chrono::TimeDelta::seconds(1), None).unwrap(),
+            "01:00:00"
+        );
+        assert!(template_fields(&[clock.clone()]).is_empty());
+        clock.style.clock_timezone = Some("invalid/zone".to_string());
+        assert!(check_layer(&clock).is_err());
+        clock.style.clock_timezone = None;
+        clock.style.clock_format = Some("%invalid".to_string());
+        assert!(check_layer(&clock).is_err());
+    }
+
+    #[test]
+    fn shape_and_clock_specs_keep_geometry_and_only_clock_pixels_change_with_time() {
+        let storage = std::env::temp_dir();
+        let mut clock = text_layer("clock", "");
+        clock.kind = LayerKind::Clock;
+        let mut shape = text_layer("shape", "");
+        shape.kind = LayerKind::Box;
+        shape.fill = Some("#ffffff".to_string());
+        shape.style.shape = ShapeKind::Ellipse;
+        shape.style.stroke = Some("#123456".to_string());
+        let template = GraphicsTemplate {
+            layers: vec![shape, clock],
+            ..Default::default()
+        };
+        let first: chrono::DateTime<chrono::Utc> = "2026-11-06T12:34:56Z".parse().unwrap();
+        let spec = graphic_spec_at(
+            &template,
+            &HashMap::new(),
+            &storage,
+            first,
+            Some(chrono_tz::UTC),
+        )
+        .unwrap();
+        let next = graphic_spec_at(
+            &template,
+            &HashMap::new(),
+            &storage,
+            first + chrono::TimeDelta::seconds(1),
+            Some(chrono_tz::UTC),
+        )
+        .unwrap();
+        assert_eq!(spec.layers[0], next.layers[0]);
+        assert_ne!(spec.layers[1].content, next.layers[1].content);
+        assert_eq!(
+            (
+                spec.layers[1].x,
+                spec.layers[1].y,
+                spec.layers[1].animation_ms
+            ),
+            (
+                next.layers[1].x,
+                next.layers[1].y,
+                next.layers[1].animation_ms
+            )
+        );
     }
 
     #[test]

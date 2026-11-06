@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "7be52c1ffca0f272f0db7a51e5de4c67e2e9d456db1f71698d2a995241dd9da5",
+      "sha256": "d38359383ae1e5a9cca90a65d2e05403acc8c664e6addeae9ff6b565f309424f",
       "language": "Markdown",
-      "bytes": 56345,
+      "bytes": 56506,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1458,9 +1458,9 @@
       ]
     },
     "backend/app/src/api/path.rs": {
-      "sha256": "91e228be819b26ac1b4bc3618f35cdbb82f30afec1ad2d5a0e67eb005c22377e",
+      "sha256": "a6d69e6387bedcc2f5cb2bf63fc4bd4757d9f162b9c980fcd925aabd042ed75e",
       "language": "Rust",
-      "bytes": 9552,
+      "bytes": 9620,
       "symbols": [
         {
           "name": "auth_routes",
@@ -1709,9 +1709,9 @@
       ]
     },
     "backend/app/src/api/routes/graphics.rs": {
-      "sha256": "b5362a46a066169b9fa5aa5fa543d4e6d93ea49d6d2b4e5b141c493f6ec40b11",
+      "sha256": "5d2f1d463cfcefb4ea18e0dea7b1cb404558e49771e161f83261eac01242490e",
       "language": "Rust",
-      "bytes": 18912,
+      "bytes": 20024,
       "symbols": [
         {
           "name": "authorized",
@@ -1739,71 +1739,75 @@
         },
         {
           "name": "update_graphics_template",
-          "line": 148
+          "line": 149
         },
         {
           "name": "delete_graphics_template",
-          "line": 223
+          "line": 226
         },
         {
           "name": "TakeRequest",
-          "line": 249
+          "line": 253
         },
         {
           "name": "OutRequest",
-          "line": 260
+          "line": 264
         },
         {
           "name": "OutStatus",
-          "line": 267
+          "line": 271
         },
         {
           "name": "take_graphic",
-          "line": 282
+          "line": 286
         },
         {
           "name": "take_graphic_out",
-          "line": 312
+          "line": 316
         },
         {
           "name": "get_graphics_on_air",
-          "line": 338
+          "line": 342
         },
         {
           "name": "get_graphics_fonts",
-          "line": 352
+          "line": 356
         },
         {
           "name": "get_channel_graphics",
-          "line": 368
+          "line": 372
         },
         {
           "name": "ChannelGraphicRequest",
-          "line": 382
-        },
-        {
-          "name": "control_channel_graphics",
           "line": 386
         },
         {
+          "name": "control_channel_graphics",
+          "line": 390
+        },
+        {
           "name": "validate_permanent_template",
-          "line": 401
+          "line": 406
         },
         {
           "name": "reload_graphics",
-          "line": 447
+          "line": 452
         },
         {
           "name": "GraphicsAssignmentRequest",
-          "line": 462
+          "line": 467
         },
         {
           "name": "assign_graphics_template",
-          "line": 468
+          "line": 473
         },
         {
           "name": "graphics_template_usage",
-          "line": 519
+          "line": 525
+        },
+        {
+          "name": "graphics_clock",
+          "line": 571
         }
       ]
     },
@@ -2243,9 +2247,9 @@
       ]
     },
     "backend/app/src/api/routes/playout_config.rs": {
-      "sha256": "3ca40654ae6f7d8395918fb471f950f99e7d09c12c8175236c29d8391274bc2f",
+      "sha256": "dedbf594a5b3a42b5dbf408ea9ed78f9cde4a0dda00348b1f8fbc413c9a34b34",
       "language": "Rust",
-      "bytes": 41611,
+      "bytes": 41679,
       "symbols": [
         {
           "name": "CodecOption",
@@ -2309,91 +2313,91 @@
         },
         {
           "name": "KeyRequest",
-          "line": 556
+          "line": 557
         },
         {
           "name": "KeyResponse",
-          "line": 562
+          "line": 563
         },
         {
           "name": "update_remote_key",
-          "line": 576
+          "line": 577
         },
         {
           "name": "validate_loudness",
-          "line": 620
+          "line": 621
         },
         {
           "name": "TestAlert",
-          "line": 694
+          "line": 695
         },
         {
           "name": "send_test_alert",
-          "line": 708
+          "line": 709
         },
         {
           "name": "get_playout_outputs",
-          "line": 765
+          "line": 766
         },
         {
           "name": "get_playout_codecs",
-          "line": 784
+          "line": 785
         },
         {
           "name": "get_video_devices",
-          "line": 814
+          "line": 815
         },
         {
           "name": "tests",
-          "line": 848
+          "line": 849
         },
         {
           "name": "changing_the_external_output_requires_playout_restart",
-          "line": 853
+          "line": 854
         },
         {
           "name": "later_volume_save_still_requires_restart_for_unapplied_output_change",
-          "line": 861
+          "line": 862
         },
         {
           "name": "notification_and_volume_changes_do_not_require_restart",
-          "line": 873
+          "line": 874
         },
         {
           "name": "guide_logo_and_logo_key_do_not_require_restart",
-          "line": 884
+          "line": 885
         },
         {
           "name": "channel_logo_changes_apply_without_restart",
-          "line": 894
+          "line": 895
         },
         {
           "name": "logo_transitions_apply_without_restart",
-          "line": 911
+          "line": 912
         },
         {
           "name": "logo_transition_length_must_be_a_sensible_number",
-          "line": 922
+          "line": 923
         },
         {
           "name": "the_lshape_is_off_without_a_graphic_and_checks_its_settings",
-          "line": 944
+          "line": 945
         },
         {
           "name": "loudness_parameter_changes_do_not_require_restart",
-          "line": 972
+          "line": 973
         },
         {
           "name": "scope_changes_require_restart_but_dynamics_parameters_do_not",
-          "line": 982
+          "line": 983
         },
         {
           "name": "dynamics_validation_rejects_invalid_scope_and_detector_parameters",
-          "line": 1006
+          "line": 1007
         },
         {
           "name": "output_change_requires_restart",
-          "line": 1090
+          "line": 1091
         }
       ]
     },
@@ -4638,9 +4642,9 @@
       ]
     },
     "backend/app/src/player/controller.rs": {
-      "sha256": "643e7bbfc40bf7e549a4e501c5223cf46519feebb2864397ce7949a86c5fbbd6",
+      "sha256": "5e3bace8b7c99d6e7a041c56e0919087186273d783f318ee220cb75ae12fa710",
       "language": "Rust",
-      "bytes": 39966,
+      "bytes": 40008,
       "symbols": [
         {
           "name": "loudness_config",
@@ -4700,215 +4704,215 @@
         },
         {
           "name": "track_running_config",
-          "line": 299
+          "line": 300
         },
         {
           "name": "running_config",
-          "line": 312
+          "line": 313
         },
         {
           "name": "start",
-          "line": 319
+          "line": 320
         },
         {
           "name": "foreground_start",
-          "line": 349
+          "line": 350
         },
         {
           "name": "begin_processing",
-          "line": 399
+          "line": 400
         },
         {
           "name": "mark_started",
-          "line": 406
+          "line": 407
         },
         {
           "name": "record_failure",
-          "line": 413
+          "line": 414
         },
         {
           "name": "clear_failure",
-          "line": 432
+          "line": 433
         },
         {
           "name": "failure",
-          "line": 439
+          "line": 440
         },
         {
           "name": "output_age",
-          "line": 447
+          "line": 448
         },
         {
           "name": "uptime",
-          "line": 454
+          "line": 455
         },
         {
           "name": "next_task_generation",
-          "line": 461
+          "line": 462
         },
         {
           "name": "log_dev_task",
-          "line": 465
+          "line": 466
         },
         {
           "name": "replace_token",
-          "line": 471
+          "line": 472
         },
         {
           "name": "spawn_dev_metrics_snapshot",
-          "line": 482
+          "line": 483
         },
         {
           "name": "stop_task",
-          "line": 502
+          "line": 503
         },
         {
           "name": "abort_supervisor",
-          "line": 533
+          "line": 534
         },
         {
           "name": "stop_supervisor",
-          "line": 547
+          "line": 548
         },
         {
           "name": "stop_validation",
-          "line": 571
+          "line": 572
         },
         {
           "name": "stop_dev_metrics_snapshot",
-          "line": 576
+          "line": 577
         },
         {
           "name": "spawn_task_runner",
-          "line": 581
+          "line": 582
         },
         {
           "name": "spawn_validation",
-          "line": 597
+          "line": 598
         },
         {
           "name": "stop",
-          "line": 631
+          "line": 632
         },
         {
           "name": "wait",
-          "line": 651
+          "line": 652
         },
         {
           "name": "stop_all",
-          "line": 687
+          "line": 688
         },
         {
           "name": "ChannelController",
-          "line": 722
+          "line": 723
         },
         {
           "name": "ChannelController",
-          "line": 726
-        },
-        {
-          "name": "new",
           "line": 727
         },
         {
+          "name": "new",
+          "line": 728
+        },
+        {
           "name": "add",
-          "line": 731
+          "line": 732
         },
         {
           "name": "get",
-          "line": 735
+          "line": 736
         },
         {
           "name": "remove",
-          "line": 739
+          "line": 740
         },
         {
           "name": "ProcessingGuard",
-          "line": 758
+          "line": 759
         },
         {
           "name": "Drop",
-          "line": 760
-        },
-        {
-          "name": "drop",
           "line": 761
         },
         {
+          "name": "drop",
+          "line": 762
+        },
+        {
           "name": "AbortOnDrop",
-          "line": 767
+          "line": 768
         },
         {
           "name": "Drop",
-          "line": 769
-        },
-        {
-          "name": "drop",
           "line": 770
         },
         {
+          "name": "drop",
+          "line": 771
+        },
+        {
           "name": "run_supervised",
-          "line": 778
+          "line": 779
         },
         {
           "name": "supervisor_loop",
-          "line": 805
+          "line": 806
         },
         {
           "name": "metrics_snapshot_loop",
-          "line": 903
+          "line": 904
         },
         {
           "name": "run_channel",
-          "line": 946
+          "line": 947
         },
         {
           "name": "tests",
-          "line": 977
+          "line": 978
         },
         {
           "name": "failure_messages_keep_only_the_host_of_addresses",
-          "line": 983
+          "line": 984
         },
         {
           "name": "a_failure_is_kept_across_retries_until_the_playout_airs",
-          "line": 1001
+          "line": 1002
         },
         {
           "name": "failed_start_restores_not_running_state",
-          "line": 1024
+          "line": 1025
         },
         {
           "name": "only_one_channel_command_runs_at_a_time",
-          "line": 1037
+          "line": 1038
         },
         {
           "name": "a_failed_channel_command_releases_its_claim",
-          "line": 1052
+          "line": 1053
         },
         {
           "name": "a_panicking_playout_comes_back_as_an_error",
-          "line": 1069
+          "line": 1070
         },
         {
           "name": "a_finished_playout_keeps_its_result",
-          "line": 1079
+          "line": 1080
         },
         {
           "name": "dropping_the_supervisor_stops_the_playout_task",
-          "line": 1088
-        },
-        {
-          "name": "Flag",
           "line": 1089
         },
         {
+          "name": "Flag",
+          "line": 1090
+        },
+        {
           "name": "Drop",
-          "line": 1091
+          "line": 1092
         },
         {
           "name": "drop",
-          "line": 1092
+          "line": 1093
         }
       ]
     },
@@ -5196,9 +5200,9 @@
       ]
     },
     "backend/app/src/player/output/mod.rs": {
-      "sha256": "f4f70e3e3b1facedb277452d96d8274e8b549b4c3d0450d7f84e1d4f42e37ef7",
+      "sha256": "022417c246bd46b700b683493c84aea2cf7c75ca7c6fc9636d2f773a209e496d",
       "language": "Rust",
-      "bytes": 370,
+      "bytes": 384,
       "symbols": [
         {
           "name": "playout",
@@ -5211,9 +5215,9 @@
       ]
     },
     "backend/app/src/player/output/playout.rs": {
-      "sha256": "6e2673091327b1e9dc92562155f2b766a3a85d70e8b05ec76bfa8f4ed29233ef",
+      "sha256": "689b289894fd9703b2fd9a1358fe10331d6284040e41a34895ed6a4e565d4bc2",
       "language": "Rust",
-      "bytes": 47961,
+      "bytes": 48737,
       "symbols": [
         {
           "name": "channel_logo",
@@ -5224,176 +5228,184 @@
           "line": 57
         },
         {
+          "name": "refresh_logo",
+          "line": 61
+        },
+        {
+          "name": "load_logo_inner",
+          "line": 65
+        },
+        {
           "name": "load_lshape",
-          "line": 124
+          "line": 136
         },
         {
           "name": "load",
-          "line": 125
+          "line": 137
         },
         {
           "name": "set_clip_lshape",
-          "line": 202
+          "line": 216
         },
         {
           "name": "player",
-          "line": 287
+          "line": 301
         },
         {
           "name": "play_hls",
-          "line": 372
+          "line": 392
         },
         {
           "name": "hls_watchdog",
-          "line": 404
+          "line": 424
         },
         {
           "name": "play_loop",
-          "line": 448
+          "line": 468
         },
         {
           "name": "playlist_breaks",
-          "line": 680
+          "line": 700
         },
         {
           "name": "next_source",
-          "line": 747
-        },
-        {
-          "name": "preload_later",
-          "line": 758
-        },
-        {
-          "name": "hls_playout_rate",
           "line": 767
         },
         {
+          "name": "preload_later",
+          "line": 778
+        },
+        {
+          "name": "hls_playout_rate",
+          "line": 787
+        },
+        {
           "name": "hls_rate_correction",
-          "line": 795
+          "line": 815
         },
         {
           "name": "open_playout",
-          "line": 818
+          "line": 838
         },
         {
           "name": "open_desktop_playout",
-          "line": 876
-        },
-        {
-          "name": "open_desktop_playout",
-          "line": 886
-        },
-        {
-          "name": "engine_output_config",
           "line": 896
         },
         {
+          "name": "open_desktop_playout",
+          "line": 906
+        },
+        {
+          "name": "engine_output_config",
+          "line": 916
+        },
+        {
           "name": "recording_config",
-          "line": 978
+          "line": 998
         },
         {
           "name": "disable_incompatible_recording",
-          "line": 1061
+          "line": 1081
         },
         {
           "name": "desktop_control_callback",
-          "line": 1072
+          "line": 1092
         },
         {
           "name": "validate_supported_config",
-          "line": 1098
+          "line": 1118
         },
         {
           "name": "subtitle_media_path",
-          "line": 1110
+          "line": 1130
         },
         {
           "name": "output_url",
-          "line": 1128
+          "line": 1148
         },
         {
           "name": "hls_playlist_path",
-          "line": 1139
+          "line": 1159
         },
         {
           "name": "play_plain",
-          "line": 1155
+          "line": 1175
         },
         {
           "name": "play_plain_from",
-          "line": 1166
+          "line": 1186
         },
         {
           "name": "playout_duration",
-          "line": 1198
-        },
-        {
-          "name": "engine_error",
-          "line": 1203
-        },
-        {
-          "name": "request_shutdown",
-          "line": 1207
-        },
-        {
-          "name": "tests",
-          "line": 1212
-        },
-        {
-          "name": "recording_test_config",
           "line": 1218
         },
         {
+          "name": "engine_error",
+          "line": 1223
+        },
+        {
+          "name": "request_shutdown",
+          "line": 1227
+        },
+        {
+          "name": "tests",
+          "line": 1232
+        },
+        {
+          "name": "recording_test_config",
+          "line": 1238
+        },
+        {
           "name": "full_placeholder_keeps_explicit_duration",
-          "line": 1237
+          "line": 1257
         },
         {
           "name": "shorter_placeholder_slot_is_trimmed",
-          "line": 1249
+          "line": 1269
         },
         {
           "name": "regular_clip_keeps_loop_duration",
-          "line": 1261
+          "line": 1281
         },
         {
           "name": "hls_rate_correction_slows_down_when_playout_is_early",
-          "line": 1272
+          "line": 1292
         },
         {
           "name": "hls_rate_correction_speeds_up_when_playout_is_late",
-          "line": 1277
+          "line": 1297
         },
         {
           "name": "hls_rate_correction_ignores_tiny_delta",
-          "line": 1282
+          "line": 1302
         },
         {
           "name": "hls_rate_correction_is_clamped",
-          "line": 1287
+          "line": 1307
         },
         {
           "name": "hls_rate_correction_ignores_delta_larger_than_clip",
-          "line": 1293
+          "line": 1313
         },
         {
           "name": "desktop_stop_requests_process_shutdown",
-          "line": 1299
+          "line": 1319
         },
         {
           "name": "desktop_override_disables_stream_copy_recording",
-          "line": 1308
+          "line": 1328
         },
         {
           "name": "desktop_override_disables_hls_variant_recording",
-          "line": 1315
+          "line": 1335
         },
         {
           "name": "desktop_override_keeps_dedicated_recording_encode",
-          "line": 1322
+          "line": 1342
         },
         {
           "name": "inactive_copy_source_disables_recording",
-          "line": 1330
+          "line": 1350
         }
       ]
     },
@@ -8056,225 +8068,297 @@
       ]
     },
     "backend/app/src/utils/graphics.rs": {
-      "sha256": "76ac2e312bc4f26825679158bd73d624d7bd6d7c5d8a078c31fb47da59f83b40",
+      "sha256": "9b24109b33c5cbada0d0c9341e9f5afd1f7c3b732ea9b9f887c19e7f145f9f3b",
       "language": "Rust",
-      "bytes": 44770,
+      "bytes": 59918,
       "symbols": [
         {
           "name": "graphic_has_content",
-          "line": 22
+          "line": 25
         },
         {
           "name": "ChannelGraphicView",
-          "line": 39
+          "line": 43
         },
         {
           "name": "channel_graphics",
-          "line": 47
+          "line": 51
         },
         {
           "name": "control_channel_graphic",
-          "line": 158
+          "line": 162
         },
         {
           "name": "load_channel_ticker",
-          "line": 290
+          "line": 294
         },
         {
           "name": "LayerKind",
-          "line": 361
+          "line": 365
         },
         {
           "name": "Animation",
-          "line": 374
+          "line": 379
         },
         {
           "name": "TextAlign",
-          "line": 388
+          "line": 393
         },
         {
           "name": "DuringLShape",
-          "line": 398
+          "line": 403
         },
         {
           "name": "DuringLShape",
-          "line": 408
+          "line": 413
         },
         {
           "name": "as_str",
-          "line": 409
+          "line": 414
         },
         {
           "name": "parse",
-          "line": 417
+          "line": 422
         },
         {
           "name": "default_true",
-          "line": 427
+          "line": 432
         },
         {
           "name": "default_opacity",
-          "line": 431
+          "line": 436
         },
         {
           "name": "default_font_size",
-          "line": 435
+          "line": 440
         },
         {
           "name": "default_color",
-          "line": 439
+          "line": 444
         },
         {
           "name": "default_animation_ms",
-          "line": 443
+          "line": 448
         },
         {
           "name": "default_duration",
-          "line": 447
+          "line": 452
+        },
+        {
+          "name": "ShapeKind",
+          "line": 458
+        },
+        {
+          "name": "default_stroke_width",
+          "line": 466
+        },
+        {
+          "name": "LayerStyle",
+          "line": 472
+        },
+        {
+          "name": "Default",
+          "line": 485
+        },
+        {
+          "name": "default",
+          "line": 486
+        },
+        {
+          "name": "clock_value",
+          "line": 498
         },
         {
           "name": "TemplateLayer",
-          "line": 454
+          "line": 534
         },
         {
           "name": "TemplateInput",
-          "line": 507
+          "line": 589
         },
         {
           "name": "template_fields",
-          "line": 524
+          "line": 606
         },
         {
           "name": "is_field_char",
-          "line": 546
+          "line": 628
         },
         {
           "name": "placeholders",
-          "line": 551
+          "line": 633
         },
         {
           "name": "whole_placeholder",
-          "line": 576
+          "line": 658
         },
         {
           "name": "is_color",
-          "line": 583
+          "line": 665
         },
         {
           "name": "check_layer",
-          "line": 591
+          "line": 673
         },
         {
           "name": "prepare_template",
-          "line": 683
+          "line": 782
         },
         {
           "name": "parse_color",
-          "line": 763
+          "line": 862
         },
         {
           "name": "fill_fields",
-          "line": 784
+          "line": 883
         },
         {
           "name": "layer_image",
-          "line": 814
+          "line": 913
         },
         {
           "name": "engine_animation",
-          "line": 837
+          "line": 936
         },
         {
           "name": "graphic_spec",
-          "line": 854
-        },
-        {
-          "name": "GraphicsTakes",
-          "line": 924
-        },
-        {
-          "name": "TakeRecord",
-          "line": 927
-        },
-        {
-          "name": "GraphicsTakes",
-          "line": 933
-        },
-        {
-          "name": "records",
-          "line": 934
-        },
-        {
-          "name": "add",
-          "line": 938
-        },
-        {
-          "name": "keep_only",
-          "line": 943
-        },
-        {
-          "name": "GraphicOnAirView",
           "line": 953
         },
         {
-          "name": "graphics_on_air",
-          "line": 962
+          "name": "graphic_spec_for_channel",
+          "line": 961
         },
         {
-          "name": "TakeOutcome",
-          "line": 986
+          "name": "graphic_spec_at",
+          "line": 975
         },
         {
-          "name": "draw_and_take",
-          "line": 998
+          "name": "GraphicsTakes",
+          "line": 1069
         },
         {
-          "name": "take_template",
-          "line": 1031
+          "name": "GraphicsEditGuard",
+          "line": 1075
         },
         {
-          "name": "load_permanent_templates",
+          "name": "Drop",
+          "line": 1080
+        },
+        {
+          "name": "drop",
+          "line": 1081
+        },
+        {
+          "name": "TakeRecord",
+          "line": 1087
+        },
+        {
+          "name": "GraphicsTakes",
+          "line": 1095
+        },
+        {
+          "name": "begin_edit",
           "line": 1096
         },
         {
+          "name": "invalidate",
+          "line": 1106
+        },
+        {
+          "name": "records",
+          "line": 1110
+        },
+        {
+          "name": "add",
+          "line": 1114
+        },
+        {
+          "name": "keep_only",
+          "line": 1119
+        },
+        {
+          "name": "GraphicOnAirView",
+          "line": 1129
+        },
+        {
+          "name": "graphics_on_air",
+          "line": 1138
+        },
+        {
+          "name": "TakeOutcome",
+          "line": 1162
+        },
+        {
+          "name": "draw_and_take",
+          "line": 1174
+        },
+        {
+          "name": "take_template",
+          "line": 1209
+        },
+        {
+          "name": "load_permanent_templates",
+          "line": 1275
+        },
+        {
+          "name": "DynamicScope",
+          "line": 1319
+        },
+        {
+          "name": "run_dynamic_graphics",
+          "line": 1326
+        },
+        {
+          "name": "refresh_dynamic_graphics",
+          "line": 1345
+        },
+        {
           "name": "tests",
-          "line": 1140
+          "line": 1487
         },
         {
           "name": "text_layer",
-          "line": 1143
+          "line": 1490
+        },
+        {
+          "name": "clock_formats_follow_channel_timezone_midnight_and_daylight_saving_time",
+          "line": 1498
+        },
+        {
+          "name": "shape_and_clock_specs_keep_geometry_and_only_clock_pixels_change_with_time",
+          "line": 1537
         },
         {
           "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
-          "line": 1151
+          "line": 1584
         },
         {
           "name": "layers_take_defaults_and_are_checked",
-          "line": 1175
+          "line": 1608
         },
         {
           "name": "during_lshape_reads_back_what_it_writes",
-          "line": 1208
+          "line": 1641
         },
         {
           "name": "prepare_template_trims_and_keeps_field_images",
-          "line": 1217
+          "line": 1650
         },
         {
           "name": "fields_are_filled_and_unknown_braces_stay",
-          "line": 1253
+          "line": 1686
         },
         {
           "name": "colors_are_read_in_every_hex_form",
-          "line": 1265
+          "line": 1698
         },
         {
           "name": "a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields",
-          "line": 1276
+          "line": 1709
         },
         {
           "name": "a_video_layer_makes_the_template_an_lshape",
-          "line": 1313
+          "line": 1746
         }
       ]
     },
@@ -11164,9 +11248,9 @@
       ]
     },
     "backend/app/tests/api/graphics.rs": {
-      "sha256": "0088940ea8aef7d4be57904da154663fc6a45d594ffa279cda65edf838229507",
+      "sha256": "891c9c99b1f19297d76bdf527f6eb28e86300530c72c7d6ef8081c24848e23ce",
       "language": "Rust",
-      "bytes": 21409,
+      "bytes": 24024,
       "symbols": [
         {
           "name": "send",
@@ -11203,6 +11287,10 @@
         {
           "name": "compatibility_assignment_preserves_an_explicit_image_target_and_authored_group",
           "line": 675
+        },
+        {
+          "name": "clock_layers_and_shape_styles_validate_and_do_not_create_default_models",
+          "line": 739
         }
       ]
     },
@@ -13294,9 +13382,9 @@
       ]
     },
     "backend/engine/src/compositor/graphics.rs": {
-      "sha256": "882bc3a106bee7fdac7fc03d5a257e0c5cb67399d472beb5f6cb256f91e58d88",
+      "sha256": "6e2ebb7f8c31ab8037cd7e2d308d0df2bfd9ff7adbbafd448fa727940c56a98e",
       "language": "Rust",
-      "bytes": 56259,
+      "bytes": 62697,
       "symbols": [
         {
           "name": "logo_layer_geometry",
@@ -13323,327 +13411,351 @@
           "line": 97
         },
         {
+          "name": "GraphicShape",
+          "line": 126
+        },
+        {
           "name": "GraphicLayerSpec",
-          "line": 119
+          "line": 135
         },
         {
           "name": "PictureWindow",
-          "line": 137
-        },
-        {
-          "name": "GraphicSpec",
-          "line": 146
-        },
-        {
-          "name": "RenderedLayer",
           "line": 153
         },
         {
+          "name": "GraphicSpec",
+          "line": 162
+        },
+        {
+          "name": "RenderedLayer",
+          "line": 169
+        },
+        {
           "name": "RenderedGraphic",
-          "line": 168
-        },
-        {
-          "name": "RoleImageBlend",
-          "line": 176
-        },
-        {
-          "name": "picture_switch",
           "line": 184
         },
         {
-          "name": "RenderedGraphic",
-          "line": 188
-        },
-        {
-          "name": "picture_graphic",
-          "line": 189
-        },
-        {
-          "name": "role_levels",
+          "name": "RoleImageBlend",
           "line": 192
         },
         {
+          "name": "picture_switch",
+          "line": 200
+        },
+        {
+          "name": "RenderedGraphic",
+          "line": 204
+        },
+        {
+          "name": "picture_graphic",
+          "line": 205
+        },
+        {
+          "name": "role_levels",
+          "line": 208
+        },
+        {
           "name": "blend_role",
-          "line": 231
+          "line": 247
         },
         {
           "name": "exit_time",
-          "line": 265
+          "line": 281
         },
         {
           "name": "even_down",
-          "line": 280
+          "line": 296
         },
         {
           "name": "percent_px",
-          "line": 285
+          "line": 301
         },
         {
           "name": "inside_rounded",
-          "line": 290
+          "line": 306
         },
         {
           "name": "fill_rounded",
-          "line": 303
+          "line": 319
         },
         {
           "name": "cut_corners",
-          "line": 317
+          "line": 333
+        },
+        {
+          "name": "render_shape",
+          "line": 351
         },
         {
           "name": "render_layer",
-          "line": 334
+          "line": 430
         },
         {
           "name": "render_graphic",
-          "line": 448
+          "line": 561
         },
         {
           "name": "ease",
-          "line": 505
+          "line": 618
         },
         {
           "name": "layer_level",
-          "line": 513
-        },
-        {
-          "name": "blend_layer",
-          "line": 554
-        },
-        {
-          "name": "blend_layer_with_visibility",
-          "line": 563
-        },
-        {
-          "name": "OnAir",
-          "line": 616
-        },
-        {
-          "name": "OnAir",
-          "line": 625
-        },
-        {
-          "name": "out_since",
           "line": 626
         },
         {
-          "name": "finished",
-          "line": 639
+          "name": "blend_layer",
+          "line": 667
         },
         {
-          "name": "AlwaysOnSlot",
-          "line": 648
+          "name": "blend_layer_with_visibility",
+          "line": 676
         },
         {
-          "name": "AlwaysOnSlot",
-          "line": 653
-        },
-        {
-          "name": "index",
-          "line": 654
-        },
-        {
-          "name": "AlwaysOn",
-          "line": 662
-        },
-        {
-          "name": "GraphicsState",
-          "line": 668
-        },
-        {
-          "name": "GraphicOnAir",
-          "line": 679
-        },
-        {
-          "name": "GraphicsControl",
-          "line": 689
-        },
-        {
-          "name": "std",
-          "line": 691
-        },
-        {
-          "name": "fmt",
-          "line": 692
-        },
-        {
-          "name": "GraphicsControl",
-          "line": 699
-        },
-        {
-          "name": "channel_logo",
-          "line": 702
-        },
-        {
-          "name": "set_channel_logo",
-          "line": 712
-        },
-        {
-          "name": "state",
-          "line": 723
-        },
-        {
-          "name": "set_always_on",
+          "name": "OnAir",
           "line": 729
         },
         {
-          "name": "set_always_on_visible",
-          "line": 757
+          "name": "OnAir",
+          "line": 738
         },
         {
-          "name": "always_on_visible",
-          "line": 778
+          "name": "out_since",
+          "line": 739
         },
         {
-          "name": "clear_always_on",
-          "line": 786
+          "name": "finished",
+          "line": 752
         },
         {
-          "name": "blend_always_on",
+          "name": "AlwaysOnSlot",
+          "line": 761
+        },
+        {
+          "name": "AlwaysOnSlot",
+          "line": 766
+        },
+        {
+          "name": "index",
+          "line": 767
+        },
+        {
+          "name": "AlwaysOn",
+          "line": 775
+        },
+        {
+          "name": "GraphicsState",
+          "line": 781
+        },
+        {
+          "name": "GraphicOnAir",
           "line": 792
         },
         {
-          "name": "blend_always_on_at",
-          "line": 796
+          "name": "GraphicsControl",
+          "line": 802
         },
         {
-          "name": "set_persistent",
-          "line": 852
+          "name": "std",
+          "line": 804
         },
         {
-          "name": "retain_persistent",
-          "line": 886
+          "name": "fmt",
+          "line": 805
         },
         {
-          "name": "persistent_visible",
-          "line": 890
+          "name": "GraphicsControl",
+          "line": 812
         },
         {
-          "name": "set_persistent_visible",
-          "line": 894
+          "name": "channel_logo",
+          "line": 815
         },
         {
-          "name": "take",
+          "name": "set_channel_logo",
+          "line": 825
+        },
+        {
+          "name": "state",
+          "line": 836
+        },
+        {
+          "name": "set_always_on",
+          "line": 842
+        },
+        {
+          "name": "refresh_always_on",
+          "line": 868
+        },
+        {
+          "name": "set_always_on_visible",
+          "line": 882
+        },
+        {
+          "name": "always_on_visible",
+          "line": 903
+        },
+        {
+          "name": "clear_always_on",
+          "line": 911
+        },
+        {
+          "name": "blend_always_on",
           "line": 917
         },
         {
+          "name": "blend_always_on_at",
+          "line": 921
+        },
+        {
+          "name": "set_persistent",
+          "line": 977
+        },
+        {
+          "name": "retain_persistent",
+          "line": 1011
+        },
+        {
+          "name": "persistent_visible",
+          "line": 1015
+        },
+        {
+          "name": "set_persistent_visible",
+          "line": 1019
+        },
+        {
+          "name": "take",
+          "line": 1042
+        },
+        {
+          "name": "update_graphic",
+          "line": 1076
+        },
+        {
           "name": "take_out",
-          "line": 951
+          "line": 1087
         },
         {
           "name": "take_all_out",
-          "line": 969
+          "line": 1105
         },
         {
           "name": "on_air",
-          "line": 979
+          "line": 1115
         },
         {
           "name": "picture_on_air",
-          "line": 995
+          "line": 1131
         },
         {
           "name": "picture",
-          "line": 1006
+          "line": 1142
         },
         {
           "name": "picture_at",
-          "line": 1010
+          "line": 1146
         },
         {
           "name": "blend",
-          "line": 1044
+          "line": 1180
         },
         {
           "name": "blend_at",
-          "line": 1048
+          "line": 1184
         },
         {
           "name": "tests",
-          "line": 1088
+          "line": 1224
         },
         {
           "name": "black_frame",
-          "line": 1098
+          "line": 1234
         },
         {
           "name": "luma",
-          "line": 1106
+          "line": 1242
         },
         {
           "name": "white_box",
-          "line": 1110
+          "line": 1246
+        },
+        {
+          "name": "new_shape_rasters_have_transparent_corners_correct_strokes_and_line_width",
+          "line": 1263
+        },
+        {
+          "name": "live_pixel_updates_preserve_take_duration_entry_and_exit_times",
+          "line": 1292
         },
         {
           "name": "user_permanent_models_preserve_time_visibility_and_deterministic_order",
-          "line": 1127
+          "line": 1313
         },
         {
           "name": "permanent_roles_survive_expiry_queue_pressure_and_take_all_out",
-          "line": 1154
+          "line": 1340
         },
         {
           "name": "permanent_visibility_is_explicit_and_does_not_reset_on_repeated_commands",
-          "line": 1199
+          "line": 1385
         },
         {
           "name": "suppressing_a_permanent_logo_never_suppresses_the_ticker_or_moves_a_slide",
-          "line": 1251
+          "line": 1437
         },
         {
           "name": "a_picture_window_cannot_replace_a_permanent_role",
-          "line": 1294
-        },
-        {
-          "name": "empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged",
-          "line": 1335
-        },
-        {
-          "name": "a_box_lands_where_its_percentages_say",
-          "line": 1356
-        },
-        {
-          "name": "a_fade_comes_in_and_goes_out_over_its_time",
-          "line": 1379
-        },
-        {
-          "name": "a_duration_takes_the_graphic_out_by_itself",
-          "line": 1411
-        },
-        {
-          "name": "a_slide_starts_off_its_place_and_ends_on_it",
-          "line": 1433
-        },
-        {
-          "name": "taking_out_and_listing",
-          "line": 1456
-        },
-        {
-          "name": "a_graphic_for_another_frame_size_is_not_drawn",
           "line": 1480
         },
         {
+          "name": "empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged",
+          "line": 1521
+        },
+        {
+          "name": "a_box_lands_where_its_percentages_say",
+          "line": 1542
+        },
+        {
+          "name": "a_fade_comes_in_and_goes_out_over_its_time",
+          "line": 1565
+        },
+        {
+          "name": "a_duration_takes_the_graphic_out_by_itself",
+          "line": 1597
+        },
+        {
+          "name": "a_slide_starts_off_its_place_and_ends_on_it",
+          "line": 1619
+        },
+        {
+          "name": "taking_out_and_listing",
+          "line": 1642
+        },
+        {
+          "name": "a_graphic_for_another_frame_size_is_not_drawn",
+          "line": 1666
+        },
+        {
           "name": "rounded_corners_are_cut",
-          "line": 1495
+          "line": 1681
         },
         {
           "name": "a_text_layer_draws_letters_on_its_fill",
-          "line": 1503
+          "line": 1689
         },
         {
           "name": "a_picture_template_is_an_lshape_with_its_layers_as_art",
-          "line": 1547
+          "line": 1733
         },
         {
           "name": "graphics_preview",
-          "line": 1612
+          "line": 1798
         }
       ]
     },
     "backend/engine/src/compositor/logo.rs": {
-      "sha256": "be816bfa4b722b21bc3efa10cff487328719187ca9409ecab222f066e9253751",
+      "sha256": "e6b3e0bd0d505111771cbdf58c5738a1acf5e708dd4c8842a586781e9c502f36",
       "language": "Rust",
-      "bytes": 44514,
+      "bytes": 47165,
       "symbols": [
         {
           "name": "LogoOverlay",
@@ -13830,84 +13942,96 @@
           "line": 736
         },
         {
+          "name": "refresh_model",
+          "line": 756
+        },
+        {
+          "name": "set_model_inner",
+          "line": 775
+        },
+        {
           "name": "clip_transitions",
-          "line": 815
+          "line": 857
         },
         {
           "name": "state",
-          "line": 843
+          "line": 885
         },
         {
           "name": "has_replacement",
-          "line": 856
+          "line": 898
         },
         {
           "name": "frame",
-          "line": 866
+          "line": 908
         },
         {
           "name": "frame_at",
-          "line": 870
+          "line": 912
         },
         {
           "name": "tests",
-          "line": 909
+          "line": 951
         },
         {
           "name": "logo_asset",
-          "line": 917
+          "line": 959
+        },
+        {
+          "name": "dynamic_role_refresh_preserves_the_active_fade_and_hidden_state",
+          "line": 973
         },
         {
           "name": "a_layer_logo_matches_native_pixels_and_keeps_other_layers_during_image_overrides",
-          "line": 931
+          "line": 1026
         },
         {
           "name": "a_clip_logo_is_drawn_until_the_next_clip_has_none",
-          "line": 1008
+          "line": 1103
         },
         {
           "name": "hiding_the_logo_fades_it_out_and_showing_fades_it_back",
-          "line": 1038
+          "line": 1133
         },
         {
           "name": "a_cut_hides_and_shows_the_logo_at_once",
-          "line": 1059
+          "line": 1154
         },
         {
           "name": "the_channel_sets_how_long_a_switch_takes",
-          "line": 1076
+          "line": 1171
         },
         {
           "name": "a_new_image_cross_fades_with_the_one_on_air",
-          "line": 1092
+          "line": 1187
         },
         {
           "name": "a_saved_logo_goes_on_air_without_a_restart",
-          "line": 1130
-        },
-        {
-          "name": "a_replacement_shows_until_the_logo_is_shown_again",
-          "line": 1167
-        },
-        {
-          "name": "the_logo_can_be_moved_and_put_back",
-          "line": 1203
-        },
-        {
-          "name": "a_clip_places_the_logo_unless_it_was_moved_from_outside",
           "line": 1225
         },
         {
+          "name": "a_replacement_shows_until_the_logo_is_shown_again",
+          "line": 1262
+        },
+        {
+          "name": "the_logo_can_be_moved_and_put_back",
+          "line": 1298
+        },
+        {
+          "name": "a_clip_places_the_logo_unless_it_was_moved_from_outside",
+          "line": 1320
+        },
+        {
           "name": "logo_position_accepts_corners_and_centers",
-          "line": 1246
+          "line": 1341
         },
         {
           "name": "logo_scale_accepts_output_percentages",
-          "line": 1269
+          "line": 1364
         },
         {
           "name": "logo_scale_rejects_invalid_percentages",
-          "line": 1281
+          "line": 1376
         }
       ]
     },
@@ -15330,9 +15454,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "75ff45551bc732f266827a3b2ac58c33d219b087f36ce1d7162e6b3cd646513b",
+      "sha256": "fe64988bc88c98a1abad5458c3c2bbd1ea7f631c5604c488d1568a800069e422",
       "language": "Rust",
-      "bytes": 45959,
+      "bytes": 45973,
       "symbols": [
         {
           "name": "analysis",
@@ -20981,9 +21105,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "63863d36d5481e9f39c2b1e4d2480dc9163422eacba7cfcce234286a6dac4ab0",
+      "sha256": "2a30e9ef0c1981b6d03c925173bd186c6290d2ac45657dd17774f3f0028c80b7",
       "language": "Markdown",
-      "bytes": 73401,
+      "bytes": 75438,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -21371,9 +21495,9 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "10cbe786285616160f6424c267273d9bfda7ab4b3f24fa1173ed381ef705fe09",
+      "sha256": "6f51d9d692096b57993353888ff6248196ea1b8477918a08e85dffd44dc254cb",
       "language": "Markdown",
-      "bytes": 7117,
+      "bytes": 7557,
       "symbols": []
     },
     "docs/graphics-testing.md": {
@@ -21994,453 +22118,457 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsComposer.vue": {
-      "sha256": "623920a9d880f7d35dbce6cd4fb6c7543d7abe93d32705403d140c0be6a04e00",
+      "sha256": "e5d050a64dbdd1b60ed0d0c1feaedfa9a4a12ff377114485b03e4e282d6321dc",
       "language": "Vue",
-      "bytes": 57080,
+      "bytes": 62280,
       "symbols": [
         {
           "name": "configStore",
-          "line": 29
-        },
-        {
-          "name": "graphicsApi",
           "line": 30
         },
         {
-          "name": "channelId",
+          "name": "graphicsApi",
           "line": 31
         },
         {
-          "name": "route",
+          "name": "channelId",
           "line": 32
         },
         {
-          "name": "router",
+          "name": "route",
           "line": 33
         },
         {
-          "name": "authStore",
+          "name": "router",
           "line": 34
         },
         {
-          "name": "draft",
+          "name": "authStore",
           "line": 35
         },
         {
-          "name": "selectedId",
-          "line": 43
+          "name": "draft",
+          "line": 36
         },
         {
-          "name": "selected",
+          "name": "selectedId",
           "line": 44
         },
         {
-          "name": "fields",
+          "name": "selected",
           "line": 45
         },
         {
-          "name": "preview",
+          "name": "fields",
           "line": 46
         },
         {
-          "name": "sampleValues",
+          "name": "preview",
           "line": 47
         },
         {
-          "name": "savedId",
+          "name": "sampleValues",
           "line": 48
         },
         {
-          "name": "baseline",
+          "name": "savedId",
           "line": 49
         },
         {
-          "name": "history",
+          "name": "baseline",
           "line": 50
         },
         {
-          "name": "fonts",
+          "name": "history",
           "line": 51
         },
         {
-          "name": "groups",
+          "name": "fonts",
           "line": 52
         },
         {
-          "name": "assignment",
+          "name": "groups",
           "line": 53
         },
         {
-          "name": "originalAssignment",
+          "name": "assignment",
           "line": 54
         },
         {
-          "name": "saving",
+          "name": "originalAssignment",
           "line": 55
         },
         {
-          "name": "busy",
+          "name": "saving",
           "line": 56
         },
         {
-          "name": "editorReady",
+          "name": "busy",
           "line": 57
         },
         {
-          "name": "error",
+          "name": "editorReady",
           "line": 58
         },
         {
-          "name": "note",
+          "name": "error",
           "line": 59
         },
         {
-          "name": "adding",
+          "name": "note",
           "line": 60
         },
         {
-          "name": "picking",
+          "name": "adding",
           "line": 61
         },
         {
-          "name": "proportional",
+          "name": "picking",
           "line": 62
         },
         {
-          "name": "unit",
+          "name": "proportional",
           "line": 63
         },
         {
-          "name": "canvas",
+          "name": "unit",
           "line": 64
         },
         {
-          "name": "guideV",
+          "name": "canvas",
           "line": 65
         },
         {
-          "name": "guideH",
+          "name": "guideV",
           "line": 66
         },
         {
-          "name": "scaleBases",
-          "line": 68
+          "name": "guideH",
+          "line": 67
         },
         {
-          "name": "output",
+          "name": "scaleBases",
           "line": 69
         },
         {
-          "name": "frame",
+          "name": "output",
           "line": 70
         },
         {
-          "name": "time",
+          "name": "frame",
           "line": 71
         },
         {
-          "name": "playing",
+          "name": "time",
           "line": 72
         },
         {
-          "name": "timelineEnd",
+          "name": "playing",
           "line": 73
         },
         {
-          "name": "animationFrame",
-          "line": 80
+          "name": "timelineEnd",
+          "line": 74
         },
         {
-          "name": "loadVersion",
+          "name": "animationFrame",
           "line": 81
         },
         {
-          "name": "drag",
+          "name": "loadVersion",
           "line": 82
         },
         {
+          "name": "drag",
+          "line": 83
+        },
+        {
           "name": "dirty",
-          "line": 85
+          "line": 86
         },
         {
           "name": "rememberDraft",
-          "line": 89
+          "line": 90
         },
         {
           "name": "undo",
-          "line": 99
-        },
-        {
-          "name": "previous",
           "line": 100
         },
         {
+          "name": "previous",
+          "line": 101
+        },
+        {
           "name": "updateSelectedLayer",
-          "line": 116
+          "line": 117
         },
         {
           "name": "setAlwaysOn",
-          "line": 130
+          "line": 131
         },
         {
           "name": "videoCorner",
-          "line": 136
-        },
-        {
-          "name": "layer",
           "line": 137
         },
         {
-          "name": "horizontal",
-          "line": 143
+          "name": "layer",
+          "line": 138
         },
         {
-          "name": "vertical",
+          "name": "horizontal",
           "line": 144
         },
         {
+          "name": "vertical",
+          "line": 145
+        },
+        {
           "name": "setVideoWindow",
-          "line": 149
+          "line": 150
         },
         {
           "name": "percent",
-          "line": 154
-        },
-        {
-          "name": "width",
           "line": 155
         },
         {
-          "name": "height",
+          "name": "width",
           "line": 156
         },
         {
-          "name": "x",
+          "name": "height",
           "line": 157
         },
         {
-          "name": "y",
+          "name": "x",
           "line": 158
         },
         {
+          "name": "y",
+          "line": 159
+        },
+        {
           "name": "setDimension",
-          "line": 167
+          "line": 168
         },
         {
           "name": "number",
-          "line": 172
+          "line": 173
         },
         {
           "name": "axis",
-          "line": 178
+          "line": 179
         },
         {
           "name": "formatDimension",
-          "line": 188
-        },
-        {
-          "name": "value",
           "line": 189
         },
         {
-          "name": "axis",
+          "name": "value",
           "line": 190
         },
         {
-          "name": "setScale",
-          "line": 194
+          "name": "axis",
+          "line": 191
         },
         {
-          "name": "layer",
+          "name": "setScale",
           "line": 195
         },
         {
+          "name": "layer",
+          "line": 196
+        },
+        {
           "name": "base",
-          "line": 201
+          "line": 202
         },
         {
           "name": "scaleValue",
-          "line": 207
+          "line": 208
         },
         {
           "name": "addLayer",
-          "line": 212
+          "line": 213
         },
         {
           "name": "layer",
-          "line": 222
+          "line": 223
+        },
+        {
+          "name": "setShape",
+          "line": 260
         },
         {
           "name": "removeLayer",
-          "line": 254
+          "line": 268
         },
         {
           "name": "layer",
-          "line": 255
+          "line": 269
         },
         {
           "name": "toggleLayer",
-          "line": 271
+          "line": 285
         },
         {
           "name": "startDrag",
-          "line": 276
+          "line": 290
         },
         {
           "name": "moveLayer",
-          "line": 297
+          "line": 311
         },
         {
           "name": "layer",
-          "line": 302
+          "line": 316
         },
         {
           "name": "original",
-          "line": 308
+          "line": 322
         },
         {
           "name": "dx",
-          "line": 309
-        },
-        {
-          "name": "dy",
-          "line": 310
-        },
-        {
-          "name": "snap",
-          "line": 313
-        },
-        {
-          "name": "targets",
-          "line": 314
-        },
-        {
-          "name": "patch",
           "line": 323
         },
         {
+          "name": "dy",
+          "line": 324
+        },
+        {
+          "name": "snap",
+          "line": 327
+        },
+        {
+          "name": "targets",
+          "line": 328
+        },
+        {
+          "name": "patch",
+          "line": 337
+        },
+        {
           "name": "endDrag",
-          "line": 333
+          "line": 347
         },
         {
           "name": "seekPreview",
-          "line": 343
+          "line": 357
         },
         {
           "name": "stopPreview",
-          "line": 348
-        },
-        {
-          "name": "playPreview",
-          "line": 354
-        },
-        {
-          "name": "start",
-          "line": 360
-        },
-        {
-          "name": "tick",
           "line": 362
         },
         {
-          "name": "loadEditor",
-          "line": 375
+          "name": "playPreview",
+          "line": 368
         },
         {
-          "name": "version",
+          "name": "start",
+          "line": 374
+        },
+        {
+          "name": "tick",
           "line": 376
         },
         {
+          "name": "loadEditor",
+          "line": 389
+        },
+        {
+          "name": "version",
+          "line": 390
+        },
+        {
           "name": "id",
-          "line": 384
+          "line": 398
         },
         {
           "name": "saveTemplate",
-          "line": 442
+          "line": 456
         },
         {
           "name": "result",
-          "line": 450
+          "line": 464
         },
         {
           "name": "uploadImage",
-          "line": 489
+          "line": 503
         },
         {
           "name": "input",
-          "line": 490
+          "line": 504
         },
         {
           "name": "original",
-          "line": 491
+          "line": 505
         },
         {
           "name": "layer",
-          "line": 492
+          "line": 506
         },
         {
           "name": "channel",
-          "line": 493
+          "line": 507
         },
         {
           "name": "cleanedName",
-          "line": 499
+          "line": 513
         },
         {
           "name": "number",
-          "line": 518
+          "line": 532
         },
         {
           "name": "name",
-          "line": 521
+          "line": 535
         },
         {
           "name": "file",
-          "line": 522
+          "line": 536
         },
         {
           "name": "restoreLogoPlacement",
-          "line": 557
+          "line": 571
         },
         {
           "name": "layer",
-          "line": 558
+          "line": 572
         },
         {
           "name": "source",
-          "line": 568
+          "line": 582
         },
         {
           "name": "image",
-          "line": 569
+          "line": 583
         },
         {
           "name": "availableWidth",
-          "line": 577
+          "line": 591
         },
         {
           "name": "availableHeight",
-          "line": 578
+          "line": 592
         },
         {
           "name": "factor",
-          "line": 579
+          "line": 593
         },
         {
           "name": "width",
-          "line": 580
+          "line": 594
         },
         {
           "name": "height",
-          "line": 581
+          "line": 595
         },
         {
           "name": "pickImage",
-          "line": 596
+          "line": 610
         },
         {
           "name": "confirmBeforeUnload",
-          "line": 606
+          "line": 620
         }
       ]
     },
@@ -23129,89 +23257,97 @@
       ]
     },
     "frontend/src/components/graphics/TemplatePreview.vue": {
-      "sha256": "ebd9723b47090580c208f3af138a40d50c1a8416681102e278c88fc55e2b6bcc",
+      "sha256": "cf020dabda581c36a69b7f29c6376c7bf2fff7b717716931990095d75090385d",
       "language": "Vue",
-      "bytes": 4969,
+      "bytes": 7566,
       "symbols": [
         {
           "name": "props",
-          "line": 13
+          "line": 14
         },
         {
           "name": "configStore",
-          "line": 19
-        },
-        {
-          "name": "images",
           "line": 20
         },
         {
-          "name": "imageVersion",
-          "line": 21
+          "name": "images",
+          "line": 22
         },
         {
-          "name": "layers",
+          "name": "imageVersion",
           "line": 23
         },
         {
-          "name": "imagePath",
+          "name": "layers",
           "line": 25
         },
         {
-          "name": "image",
-          "line": 26
-        },
-        {
-          "name": "field",
+          "name": "imagePath",
           "line": 27
         },
         {
+          "name": "image",
+          "line": 28
+        },
+        {
+          "name": "field",
+          "line": 29
+        },
+        {
           "name": "version",
-          "line": 35
+          "line": 37
         },
         {
           "name": "urls",
-          "line": 36
+          "line": 38
         },
         {
           "name": "boxStyle",
-          "line": 49
-        },
-        {
-          "name": "elapsed",
-          "line": 50
-        },
-        {
-          "name": "duration",
           "line": 51
         },
         {
-          "name": "progress",
+          "name": "elapsed",
           "line": 52
         },
         {
-          "name": "leaving",
+          "name": "duration",
           "line": 53
         },
         {
-          "name": "amount",
+          "name": "progress",
           "line": 54
         },
         {
-          "name": "animation",
+          "name": "leaving",
           "line": 55
         },
         {
-          "name": "offset",
+          "name": "amount",
           "line": 56
         },
         {
-          "name": "transform",
+          "name": "animation",
           "line": 57
         },
         {
+          "name": "offset",
+          "line": 58
+        },
+        {
+          "name": "transform",
+          "line": 59
+        },
+        {
           "name": "textStyle",
-          "line": 90
+          "line": 92
+        },
+        {
+          "name": "shapeSize",
+          "line": 103
+        },
+        {
+          "name": "output",
+          "line": 104
         }
       ]
     },
@@ -31023,10 +31159,41 @@
         }
       ]
     },
-    "frontend/src/composables/graphicsTemplates.ts": {
-      "sha256": "ce9bc6370633d438480edcfc65712688c39f32cfc8b74053d56663f6e2b0748b",
+    "frontend/src/composables/graphicsClock.ts": {
+      "sha256": "a3fd665fc98844f902497b3e6a896b9d81f87a17387aa93dd3f9d499a3441360",
       "language": "TypeScript",
-      "bytes": 8537,
+      "bytes": 4258,
+      "symbols": [
+        {
+          "name": "Snapshot",
+          "line": 6
+        },
+        {
+          "name": "useGraphicsClock",
+          "line": 17
+        },
+        {
+          "name": "tick",
+          "line": 20
+        },
+        {
+          "name": "refresh",
+          "line": 24
+        },
+        {
+          "name": "clockValue",
+          "line": 78
+        },
+        {
+          "name": "part",
+          "line": 97
+        }
+      ]
+    },
+    "frontend/src/composables/graphicsTemplates.ts": {
+      "sha256": "6870ac52eda0c6b56bee15e00f7ae22a70e608817595268dbf8ff4b61c20a719",
+      "language": "TypeScript",
+      "bytes": 8948,
       "symbols": [
         {
           "name": "TemplateLayer",
@@ -31034,75 +31201,75 @@
         },
         {
           "name": "LayerAnimation",
-          "line": 33
+          "line": 39
         },
         {
           "name": "TemplateInput",
-          "line": 45
+          "line": 51
         },
         {
           "name": "truncateUploadFilename",
-          "line": 48
+          "line": 54
         },
         {
           "name": "sanitizeGraphicsUploadFilename",
-          "line": 68
+          "line": 74
         },
         {
           "name": "graphicsUploadFilename",
-          "line": 82
+          "line": 88
         },
         {
           "name": "fitLayer",
-          "line": 96
+          "line": 102
         },
         {
           "name": "templateFields",
-          "line": 123
+          "line": 129
         },
         {
           "name": "GraphicsTemplate",
-          "line": 136
+          "line": 142
         },
         {
           "name": "ChannelGraphic",
-          "line": 148
+          "line": 154
         },
         {
           "name": "TemplateUsage",
-          "line": 156
+          "line": 162
         },
         {
           "name": "GraphicOnAir",
-          "line": 165
+          "line": 171
         },
         {
           "name": "TakeResult",
-          "line": 173
+          "line": 179
         },
         {
           "name": "fillFields",
-          "line": 176
+          "line": 182
         },
         {
           "name": "fieldList",
-          "line": 181
+          "line": 187
         },
         {
           "name": "onAirSince",
-          "line": 185
+          "line": 191
         },
         {
           "name": "useGraphicsApi",
-          "line": 192
+          "line": 198
         },
         {
           "name": "base",
-          "line": 196
+          "line": 202
         },
         {
           "name": "headers",
-          "line": 197
+          "line": 203
         }
       ]
     },
@@ -32002,15 +32169,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "c1d06c24fd95ac0d3ccda0974b1b104ffa9e63a631775278656cb3efa07710f2",
+      "sha256": "aaad389372a863f2deec94f9fffa59a46393f4b1a74ce34fea7ad78aae558bf9",
       "language": "TypeScript",
-      "bytes": 141584,
+      "bytes": 142134,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "ed60dd922ed107f0652bb886aabe95013251429976615f0c7be780118f51f2e9",
+      "sha256": "d1f645d6af07587031bf9a147963f58b0b738313c3bbd4e703907006ba530db8",
       "language": "TypeScript",
-      "bytes": 147256,
+      "bytes": 147913,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -35457,9 +35624,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator.spec.ts": {
-      "sha256": "fc4414d19764912d65fbda07f74863c2ebe52f1c3999619563ff6332f6adb14a",
+      "sha256": "c76b5fff6455a4a7eb5d5f36cb56801dd815e68f4cfc70afe6075dc0b1f2568f",
       "language": "TypeScript",
-      "bytes": 44808,
+      "bytes": 47667,
       "symbols": [
         {
           "name": "api",
@@ -35476,6 +35643,10 @@
         {
           "name": "save",
           "line": 539
+        },
+        {
+          "name": "add",
+          "line": 803
         }
       ]
     },

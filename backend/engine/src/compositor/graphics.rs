@@ -112,6 +112,22 @@ pub enum GraphicContent {
     Box {
         fill: RgbaColor,
     },
+    Shape {
+        shape: GraphicShape,
+        fill: Option<RgbaColor>,
+        stroke: Option<RgbaColor>,
+        /// Percent of output height, matching text and radius units.
+        stroke_width: f64,
+    },
+}
+
+/// Additional primitives share the same percent geometry and alpha plane.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GraphicShape {
+    Rectangle,
+    Rounded,
+    Ellipse,
+    Line,
 }
 
 /// One layer, with position and size in percent of the frame.
@@ -331,6 +347,86 @@ fn cut_corners(rgba: &mut [u8], width: u32, height: u32, radius: f64) {
     }
 }
 
+/// Supersample only newly authored shapes. The legacy Box path stays exact.
+fn render_shape(
+    shape: GraphicShape,
+    width: u32,
+    height: u32,
+    radius: f64,
+    stroke_width: f64,
+    fill: Option<RgbaColor>,
+    stroke: Option<RgbaColor>,
+) -> Vec<u8> {
+    let mut pixels = vec![0; width as usize * height as usize * 4];
+    let (w, h) = (f64::from(width), f64::from(height));
+    let line_width = stroke_width.max(0.0).min(w.min(h));
+    let inside = |x: f64, y: f64, inset: f64| {
+        let (iw, ih) = (w - inset * 2.0, h - inset * 2.0);
+
+        if iw <= 0.0 || ih <= 0.0 || x < inset || y < inset || x > w - inset || y > h - inset {
+            return false;
+        }
+
+        match shape {
+            GraphicShape::Ellipse => {
+                ((x - w / 2.0) / (iw / 2.0)).powi(2) + ((y - h / 2.0) / (ih / 2.0)).powi(2) <= 1.0
+            }
+            GraphicShape::Rounded => {
+                let r = (radius - inset).max(0.0).min(iw.min(ih) / 2.0);
+                let dx = ((x - w / 2.0).abs() - (iw / 2.0 - r)).max(0.0);
+                let dy = ((y - h / 2.0).abs() - (ih / 2.0 - r)).max(0.0);
+                dx * dx + dy * dy <= r * r
+            }
+            _ => true,
+        }
+    };
+
+    for row in 0..height {
+        for column in 0..width {
+            let mut sum = [0.0; 4];
+
+            for dy in [0.25, 0.75] {
+                for dx in [0.25, 0.75] {
+                    let (x, y) = (f64::from(column) + dx, f64::from(row) + dy);
+                    let color = if shape == GraphicShape::Line {
+                        if (y - h / 2.0).abs() <= line_width / 2.0 {
+                            stroke.or(fill)
+                        } else {
+                            None
+                        }
+                    } else if inside(x, y, 0.0) {
+                        if stroke.is_some() && line_width > 0.0 && !inside(x, y, line_width) {
+                            stroke
+                        } else {
+                            fill
+                        }
+                    } else {
+                        None
+                    };
+
+                    if let Some(color) = color {
+                        sum[0] += f64::from(color.r) * f64::from(color.a);
+                        sum[1] += f64::from(color.g) * f64::from(color.a);
+                        sum[2] += f64::from(color.b) * f64::from(color.a);
+                        sum[3] += f64::from(color.a);
+                    }
+                }
+            }
+
+            let offset = (row as usize * width as usize + column as usize) * 4;
+
+            if sum[3] > 0.0 {
+                for channel in 0..3 {
+                    pixels[offset + channel] = (sum[channel] / sum[3]).round() as u8;
+                }
+                pixels[offset + 3] = (sum[3] / 4.0).round() as u8;
+            }
+        }
+    }
+
+    pixels
+}
+
 fn render_layer(
     layer: &GraphicLayerSpec,
     frame_width: u32,
@@ -350,6 +446,23 @@ fn render_layer(
         GraphicContent::Box { fill } => {
             let mut rgba = vec![0_u8; width as usize * height as usize * 4];
             fill_rounded(&mut rgba, width, height, radius, *fill);
+            rgba_to_yuva420p(&rgba, width, height)?
+        }
+        GraphicContent::Shape {
+            shape,
+            fill,
+            stroke,
+            stroke_width,
+        } => {
+            let rgba = render_shape(
+                *shape,
+                width,
+                height,
+                radius,
+                stroke_width / 100.0 * f64::from(frame_height),
+                *fill,
+                *stroke,
+            );
             rgba_to_yuva420p(&rgba, width, height)?
         }
         GraphicContent::Text {
@@ -752,6 +865,18 @@ impl GraphicsControl {
         Ok(())
     }
 
+    pub fn refresh_always_on(&self, slot: AlwaysOnSlot, graphic: RenderedGraphic) -> Result<()> {
+        if graphic.picture.is_some() {
+            return Err(anyhow!("a permanent graphic cannot contain a video window"));
+        }
+
+        if let Some(current) = &mut self.state().always_on[slot.index()] {
+            current.graphic.graphic = Arc::new(graphic);
+        }
+
+        Ok(())
+    }
+
     /// Hide or restore a configured role explicitly. Repeating a command
     /// does not restart its transition; hidden roles retain their definition.
     pub fn set_always_on_visible(&self, slot: AlwaysOnSlot, visible: bool) -> bool {
@@ -947,6 +1072,17 @@ impl GraphicsControl {
         id
     }
 
+    /// Refresh pixels for a live clock/data value without restarting take/exit time.
+    pub fn update_graphic(&self, id: u64, graphic: RenderedGraphic) -> bool {
+        let mut state = self.state();
+        let Some(current) = state.on_air.iter_mut().find(|entry| entry.id == id) else {
+            return false;
+        };
+        current.graphic = Arc::new(graphic);
+
+        true
+    }
+
     /// Start a graphic's exit; `false` when it is not on air.
     pub fn take_out(&self, id: u64) -> bool {
         let now = Instant::now();
@@ -1121,6 +1257,56 @@ mod tests {
             animation_ms: 400,
             delay_ms: 0,
         }
+    }
+
+    #[test]
+    fn new_shape_rasters_have_transparent_corners_correct_strokes_and_line_width() {
+        let red = RgbaColor {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 255,
+        };
+        let ellipse = render_shape(
+            GraphicShape::Ellipse,
+            20,
+            20,
+            0.0,
+            2.0,
+            Some(WHITE),
+            Some(red),
+        );
+        let pixel = |x: usize, y: usize| &ellipse[(y * 20 + x) * 4..(y * 20 + x + 1) * 4];
+        assert_eq!(pixel(0, 0), [0, 0, 0, 0]);
+        assert_eq!(pixel(10, 10), [255, 255, 255, 255]);
+        assert_eq!(pixel(0, 10), [255, 0, 0, 255]);
+        let line = render_shape(GraphicShape::Line, 20, 20, 0.0, 2.0, None, Some(red));
+        assert_eq!(line[(9 * 20 + 10) * 4 + 3], 255);
+        assert_eq!(line[(8 * 20 + 10) * 4 + 3], 0);
+        let rounded = render_shape(GraphicShape::Rounded, 20, 20, 4.0, 0.0, Some(WHITE), None);
+        assert_eq!(rounded[3], 0);
+        assert_eq!(rounded[(10 * 20 + 10) * 4 + 3], 255);
+    }
+
+    #[test]
+    fn live_pixel_updates_preserve_take_duration_entry_and_exit_times() {
+        let control = GraphicsControl::default();
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![white_box(0.0, 0.0, GraphicAnimation::Fade)],
+        };
+        let id = control.take(
+            render_graphic(&spec, 320, 180).unwrap(),
+            Some(Duration::from_secs(3)),
+        );
+        let entered = control.state().on_air[0].taken_at;
+        control.take_out(id);
+        let leaving = control.state().on_air[0].taken_out_at;
+        assert!(control.update_graphic(id, render_graphic(&spec, 320, 180).unwrap()));
+        let state = control.state();
+        assert_eq!(state.on_air[0].taken_at, entered);
+        assert_eq!(state.on_air[0].taken_out_at, leaving);
+        assert_eq!(state.on_air[0].out_after, Some(Duration::from_secs(3)));
     }
 
     #[test]

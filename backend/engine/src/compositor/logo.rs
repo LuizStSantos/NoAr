@@ -742,6 +742,47 @@ impl LogoControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
+        self.set_model_inner(
+            spec,
+            primary,
+            clip_animation_ms,
+            enabled,
+            (width, height),
+            true,
+        )
+    }
+
+    /// Value refreshes must preserve active fades, visibility and placement overrides.
+    pub fn refresh_model(
+        &self,
+        spec: Option<&GraphicSpec>,
+        primary: usize,
+        clip_animation_ms: Option<u32>,
+        enabled: bool,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.set_model_inner(
+            spec,
+            primary,
+            clip_animation_ms,
+            enabled,
+            (width, height),
+            false,
+        )
+    }
+
+    fn set_model_inner(
+        &self,
+        spec: Option<&GraphicSpec>,
+        primary: usize,
+        clip_animation_ms: Option<u32>,
+        enabled: bool,
+        size: (u32, u32),
+        animate: bool,
+    ) -> Result<()> {
+        let (width, height) = size;
+
         {
             let state = self.lock();
             let current = state.model_definition.as_ref();
@@ -771,7 +812,8 @@ impl LogoControl {
             .map(Arc::new);
         let mut state = self.lock();
 
-        if !state.hidden
+        if animate
+            && !state.hidden
             && let Some(Some(previous)) = &state.configured
         {
             state.outgoing = Some(Outgoing {
@@ -925,6 +967,59 @@ mod tests {
             opacity: 1.0,
             position: "W-w-12:12".to_string(),
         }
+    }
+
+    #[test]
+    fn dynamic_role_refresh_preserves_the_active_fade_and_hidden_state() {
+        let control = LogoControl::default();
+        let spec = crate::GraphicSpec {
+            picture: None,
+            layers: vec![crate::GraphicLayerSpec {
+                content: crate::GraphicContent::Box {
+                    fill: crate::RgbaColor {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                        a: 255,
+                    },
+                },
+                x: 80.0,
+                y: 5.0,
+                width: 10.0,
+                height: 10.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: crate::GraphicAnimation::Fade,
+                animation_out: crate::GraphicAnimation::Fade,
+                animation_ms: 1000,
+                delay_ms: 0,
+            }],
+        };
+        control
+            .set_model(Some(&spec), 0, None, true, 320, 180)
+            .unwrap();
+        control.hide();
+        let switched = control.lock().switched_at;
+        let mut next = spec.clone();
+        next.layers[0].opacity = 0.7;
+        control
+            .refresh_model(Some(&next), 0, None, true, 320, 180)
+            .unwrap();
+        let state = control.lock();
+        assert!(state.hidden);
+        assert_eq!(state.switched_at, switched);
+        assert!(state.outgoing.is_none());
+        assert_eq!(
+            state
+                .model_definition
+                .as_ref()
+                .unwrap()
+                .model
+                .as_ref()
+                .unwrap()
+                .spec,
+            next
+        );
     }
 
     #[test]

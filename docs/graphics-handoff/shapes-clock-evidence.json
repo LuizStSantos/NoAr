@@ -1,0 +1,111 @@
+{
+    "status": "PASS",
+    "stage": "open-templates-2-shapes-clock",
+    "branch": "claude/branch-review-opz967",
+    "gstreamer": "1.26.2",
+    "rust": {
+        "passed": 697,
+        "ignored": 14,
+        "fmt": "PASS",
+        "clippy_exact_no_default": "PASS",
+        "initial_parallel_failures": [
+            "a_preloaded_file_seeks_without_blocking_the_next_clip",
+            "native_srt_eos_delivers_the_final_message_before_socket_close"
+        ],
+        "isolated_retries": "PASS",
+        "full_serial_suite": "PASS"
+    },
+    "playwright": {
+        "passed": 28,
+        "failed": 0
+    },
+    "browser": {
+        "status": "PASS",
+        "captures": [
+            "composer-shapes-pt-BR.jpg",
+            "composer-clock-pt-BR.jpg",
+            "composer-clock-phone-pt-BR.jpg",
+            "clock-onair-pt-BR.jpg",
+            "clock-onair-phone-pt-BR.jpg"
+        ],
+        "template_id": 16,
+        "page_errors": []
+    },
+    "hls": [
+        {
+            "status": "PASS",
+            "captures": [
+                {
+                    "capture": "output-clock-before-restart-first.jpg",
+                    "segment_sha256": "74697c5ee87729a53a0ed3066a7f498627f4ad4031de0e7a5adb2c7d2fbc24ed"
+                },
+                {
+                    "capture": "output-clock-before-restart-later.jpg",
+                    "segment_sha256": "cc08090d517fcc28c8fc9f98aaccc5b71a3a82e93f14359d9cb35be2d397b44b"
+                }
+            ],
+            "clock_roi_changed_pixels": 648,
+            "clock_white_pixels": [1187, 1233],
+            "health": {
+                "status": "ok",
+                "version": "2.2.1",
+                "channels": [
+                    {
+                        "id": 1,
+                        "state": "on_air",
+                        "uptime": 167,
+                        "output_age": 0.4
+                    }
+                ]
+            },
+            "template_id": 16,
+            "hidden_and_shown": [
+                {
+                    "capture": "output-clock-hidden.jpg",
+                    "segment_sha256": "4ab85b0d13ad36f6306187502fc304efc4bac73cfe846ceeb0eb3d784ee010b0"
+                },
+                {
+                    "capture": "output-clock-shown.jpg",
+                    "segment_sha256": "6cd6c2ebe99e24c096ed1acb7fcf9c008f068f5e2c41bdb9d6050e83901baacf"
+                }
+            ]
+        },
+        {
+            "status": "PASS",
+            "captures": [
+                {
+                    "capture": "output-clock-after-restart-first.jpg",
+                    "segment_sha256": "bce4235e64906d9f8551b3520da31cab293a050a21436cf21db51f723ab73d9c"
+                },
+                {
+                    "capture": "output-clock-after-restart-later.jpg",
+                    "segment_sha256": "bc2d7dedb17782bd77afb274be26befec9861bd1999f1459ebcba3d10eac30a1"
+                }
+            ],
+            "clock_roi_changed_pixels": 307,
+            "clock_white_pixels": [1165, 1182],
+            "health": {
+                "status": "ok",
+                "version": "2.2.1",
+                "channels": [
+                    {
+                        "id": 1,
+                        "state": "on_air",
+                        "uptime": 43,
+                        "output_age": 0.4
+                    }
+                ]
+            },
+            "template_id": 16
+        }
+    ],
+    "backend_sha256": "1e373ef616b8618453fac4bbeaaddccf7e8bdc254cdcf884fa7a576591fd7ce5",
+    "limits": [
+        "Historical 76-response and 2.2.1 raw/HLS parity not repeated in this stage.",
+        "No physical/desktop output or soak test.",
+        "Clock uses a nominal 250 ms refresh, not frame-accurate time delivery.",
+        "No playout pause/seek control was exercised; civil-time behavior is covered with scoped unit clocks.",
+        "The initial E2E setup logged missing previous-day playlists; the restarted capture run has no ERROR entries."
+    ],
+    "restarted_log_errors": 0
+}

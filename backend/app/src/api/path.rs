@@ -45,6 +45,7 @@ pub fn routes() -> Router<AppState> {
                 .route("/graphics/{id}/out", post(take_graphic_out))
                 .route("/graphics/{id}/on-air", get(get_graphics_on_air))
                 .route("/graphics/{id}/fonts", get(get_graphics_fonts))
+                .route("/graphics/{id}/clock", get(graphics_clock))
                 .route(
                     "/graphics/{id}/templates/{template_id}/assignment",
                     put(assign_graphics_template),

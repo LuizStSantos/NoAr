@@ -130,6 +130,7 @@ pub async fn add_graphics_template(
     Json(input): Json<TemplateInput>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
     let manager = authorized(&state, id, &user, &details, true).await?;
+    let _edit = manager.graphics_takes.begin_edit().await;
     let storage = manager.config.read().await.channel.storage.clone();
     let mut template = prepare_template(&storage, id, 0, input)?;
 
@@ -153,6 +154,7 @@ pub async fn update_graphics_template(
     Json(input): Json<TemplateInput>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
     let manager = authorized(&state, id, &user, &details, true).await?;
+    let _edit = manager.graphics_takes.begin_edit().await;
     let storage = manager.config.read().await.channel.storage.clone();
     let template = prepare_template(&storage, id, template_id, input)?;
 
@@ -163,7 +165,7 @@ pub async fn update_graphics_template(
     {
         use crate::{
             db::models::GraphicsRole,
-            utils::graphics::{LayerKind, graphic_spec},
+            utils::graphics::{LayerKind, graphic_spec_for_channel},
         };
 
         let video = template
@@ -181,7 +183,8 @@ pub async fn update_graphics_template(
             return Err(ServiceError::BadRequest("Channel models need literal content; operator fields belong to temporary templates".to_string()));
         }
 
-        let spec = graphic_spec(&template, &HashMap::new(), &storage)?;
+        let config = manager.config.read().await.clone();
+        let spec = graphic_spec_for_channel(&template, &HashMap::new(), &config)?;
         let output = manager.config.read().await.output.clone();
         tokio::task::spawn_blocking(move || {
             noar_engine::render_graphic(&spec, output.width, output.height)
@@ -227,6 +230,7 @@ pub async fn delete_graphics_template(
     details: AuthDetails<Role>,
 ) -> Result<Json<&'static str>, ServiceError> {
     let manager = authorized(&state, id, &user, &details, true).await?;
+    let _edit = manager.graphics_takes.begin_edit().await;
     let active = crate::utils::graphics::graphics_on_air(&manager);
 
     if !handles::delete_graphics_template(&state.pool, id, template_id).await? {
@@ -391,6 +395,7 @@ pub async fn control_channel_graphics(
     Json(request): Json<ChannelGraphicRequest>,
 ) -> Result<Json<Vec<crate::utils::graphics::ChannelGraphicView>>, ServiceError> {
     let manager = authorized(&state, id, &user, &details, false).await?;
+    let _edit = manager.graphics_takes.begin_edit().await;
     crate::utils::graphics::control_channel_graphic(&manager, template_id, request.on).await?;
 
     Ok(Json(
@@ -431,7 +436,7 @@ async fn validate_permanent_template(
 
     let config = manager.config.read().await.clone();
     let spec =
-        crate::utils::graphics::graphic_spec(template, &HashMap::new(), &config.channel.storage)?;
+        crate::utils::graphics::graphic_spec_for_channel(template, &HashMap::new(), &config)?;
     tokio::task::spawn_blocking(move || {
         noar_engine::render_graphic(&spec, config.output.width, config.output.height)
     })
@@ -473,6 +478,7 @@ pub async fn assign_graphics_template(
     Json(request): Json<GraphicsAssignmentRequest>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
     let manager = authorized(&state, id, &user, &details, true).await?;
+    let _edit = manager.graphics_takes.begin_edit().await;
     let template = handles::select_graphics_template(&state.pool, id, template_id)
         .await?
         .ok_or_else(|| template_not_found(template_id))?;
@@ -560,4 +566,24 @@ pub async fn graphics_template_usage(
         "events":events,
         "scheduled_actions_are_snapshots":true
     })))
+}
+
+pub async fn graphics_clock(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<serde_json::Value>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, false).await?;
+    let timezone = manager.config.read().await.channel.timezone;
+    let now = chrono::Utc::now();
+    let local = timezone.map_or_else(
+        || chrono::Local::now().fixed_offset(),
+        |zone| now.with_timezone(&zone).fixed_offset(),
+    );
+    let offset = local.offset().local_minus_utc();
+
+    Ok(Json(
+        serde_json::json!({"unix_ms":chrono::Utc::now().timestamp_millis(),"timezone":timezone.map(|zone|zone.to_string()),"offset_seconds":offset}),
+    ))
 }

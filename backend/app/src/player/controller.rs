@@ -292,6 +292,7 @@ impl ChannelManager {
     }
 
     pub async fn update_config(&self, new_config: PlayoutConfig) {
+        self.graphics_takes.invalidate();
         let mut config = self.config.write().await;
         *config = new_config;
     }

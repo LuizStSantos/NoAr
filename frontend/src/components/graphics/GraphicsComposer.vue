@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
+import { CLOCK_FORMATS } from '@/composables/graphicsClock'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import { sendFileInChunks } from '@/composables/chunkedUpload'
@@ -229,6 +230,11 @@ function addLayer(kind: TemplateLayer['kind']) {
         width: kind === 'video' ? 70 : 40,
         height: kind === 'video' ? 70 : 12,
         opacity: 1,
+        clock_format: kind === 'clock' ? 'HH:mm:ss' : null,
+        clock_timezone: null,
+        shape: 'rectangle',
+        stroke: null,
+        stroke_width: 0.25,
         text: kind === 'text' ? t('graphics.composer.sampleText') : '',
         font_family: null,
         font_size: 4,
@@ -249,6 +255,14 @@ function addLayer(kind: TemplateLayer['kind']) {
     selectedId.value = layer.id
     adding.value = false
     stopPreview()
+}
+
+function setShape(shape: NonNullable<TemplateLayer['shape']>) {
+    updateSelectedLayer({
+        shape,
+        ...(shape === 'rounded' ? { radius: 2 } : {}),
+        ...(shape === 'line' ? { stroke: selected.value?.stroke || '#ffffff', fill: null } : {}),
+    })
 }
 
 function removeLayer(id: string) {
@@ -768,7 +782,7 @@ onBeforeUnmount(() => {
                     :aria-label="t('graphics.composer.layerType')"
                 >
                     <button
-                        v-for="kind in ['image', 'text', 'box', 'video'] as const"
+                        v-for="kind in ['image', 'text', 'box', 'video', 'clock'] as const"
                         :key="kind"
                         class="btn-quiet text-left"
                         :disabled="
@@ -1051,8 +1065,40 @@ onBeforeUnmount(() => {
                             {{ t('graphics.composer.fullWidth') }}
                         </button>
                     </div>
-                    <template v-if="selected.kind === 'text'">
-                        <label class="field-label"
+                    <template v-if="selected.kind === 'text' || selected.kind === 'clock'">
+                        <template v-if="selected.kind === 'clock'">
+                            <label class="field-label"
+                                >{{ t('graphics.composer.clockFormat') }}
+                                <select
+                                    class="field-input"
+                                    :aria-label="t('graphics.composer.clockFormat')"
+                                    :value="selected.clock_format || 'HH:mm:ss'"
+                                    @change="
+                                        updateSelectedLayer({
+                                            clock_format: ($event.target as HTMLSelectElement).value,
+                                        })
+                                    "
+                                >
+                                    <option v-for="format in CLOCK_FORMATS" :key="format" :value="format">
+                                        {{ format }}
+                                    </option>
+                                </select>
+                            </label>
+                            <label class="field-label"
+                                >{{ t('graphics.composer.clockTimezone')
+                                }}<input
+                                    class="field-input"
+                                    :value="selected.clock_timezone || ''"
+                                    :placeholder="t('graphics.composer.channelTimezone')"
+                                    @change="
+                                        updateSelectedLayer({
+                                            clock_timezone: ($event.target as HTMLInputElement).value.trim() || null,
+                                        })
+                                    "
+                            /></label>
+                            <p class="text-xs text-muted m-0">{{ t('graphics.composer.clockHint') }}</p>
+                        </template>
+                        <label v-if="selected.kind === 'text'" class="field-label"
                             >{{ t('graphics.composer.text')
                             }}<textarea
                                 class="field-input min-h-20"
@@ -1061,7 +1107,9 @@ onBeforeUnmount(() => {
                                 @change="updateSelectedLayer({ text: ($event.target as HTMLTextAreaElement).value })"
                             />
                         </label>
-                        <p class="m-0 text-xs text-muted">{{ t('graphics.composer.fieldsHint') }}</p>
+                        <p v-if="selected.kind === 'text'" class="m-0 text-xs text-muted">
+                            {{ t('graphics.composer.fieldsHint') }}
+                        </p>
                         <label class="field-label"
                             >{{ t('graphics.composer.font')
                             }}<select
@@ -1204,6 +1252,55 @@ onBeforeUnmount(() => {
                         >
                             <StoragePicker class="h-full" hide-lives images-only @pick="pickImage" />
                         </div>
+                    </template>
+                    <template v-if="selected.kind === 'box'">
+                        <label class="field-label"
+                            >{{ t('graphics.composer.shape') }}
+                            <select
+                                class="field-input"
+                                :aria-label="t('graphics.composer.shape')"
+                                :value="selected.shape || 'rectangle'"
+                                @change="
+                                    setShape(
+                                        ($event.target as HTMLSelectElement).value as NonNullable<
+                                            TemplateLayer['shape']
+                                        >,
+                                    )
+                                "
+                            >
+                                <option
+                                    v-for="shape in ['rectangle', 'rounded', 'ellipse', 'line'] as const"
+                                    :key="shape"
+                                    :value="shape"
+                                >
+                                    {{ t(`graphics.composer.shapes.${shape}`) }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="field-label"
+                            >{{ t('graphics.composer.stroke')
+                            }}<input
+                                class="field-input"
+                                :value="selected.stroke || ''"
+                                placeholder="#rrggbb"
+                                @change="
+                                    updateSelectedLayer({ stroke: ($event.target as HTMLInputElement).value || null })
+                                "
+                        /></label>
+                        <label class="field-label"
+                            >{{ t('graphics.composer.strokeWidth') }} (%)<input
+                                class="field-input"
+                                type="number"
+                                min="0"
+                                max="20"
+                                step="0.1"
+                                :value="selected.stroke_width ?? 0.25"
+                                @change="
+                                    updateSelectedLayer({
+                                        stroke_width: Number(($event.target as HTMLInputElement).value),
+                                    })
+                                "
+                        /></label>
                     </template>
                     <template v-if="selected.kind !== 'video'">
                         <label class="field-label"

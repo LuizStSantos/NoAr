@@ -733,3 +733,93 @@ async fn compatibility_assignment_preserves_an_explicit_image_target_and_authore
             .any(|binding| binding.template_id == id as i32)
     );
 }
+
+#[tokio::test]
+#[serial]
+async fn clock_layers_and_shape_styles_validate_and_do_not_create_default_models() {
+    let fixture = security_fixture().await;
+    let user = access_token(&fixture.state, 1).await;
+    let admin = access_token(&fixture.state, 2).await;
+    assert_eq!(
+        send(&fixture, "GET", "/api/graphics/1/clock", None, json!(null))
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "GET",
+            "/api/graphics/2/clock",
+            Some(&user),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let clock = send(
+        &fixture,
+        "GET",
+        "/api/graphics/1/clock",
+        Some(&user),
+        json!(null),
+    )
+    .await;
+    assert_eq!(clock.0, StatusCode::OK);
+    assert!(
+        (clock.1["unix_ms"].as_i64().unwrap() - chrono::Utc::now().timestamp_millis()).abs() < 5000
+    );
+    assert_eq!(
+        handles::select_graphics_templates(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+    let body = json!({"name":"Studio clock","always_on":true,"layers":[
+        {"id":"clock","kind":"clock","x":70,"y":5,"width":25,"height":10,"clock_format":"HH:mm:ss","clock_timezone":"UTC"},
+        {"id":"ellipse","kind":"box","shape":"ellipse","x":5,"y":5,"width":10,"height":20,"fill":"#ffffff","stroke":"#123456","stroke_width":0.5}
+    ]});
+    let result = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        body.clone(),
+    )
+    .await;
+    assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+    assert_eq!(result.1["layers"][0]["kind"], "clock");
+    assert_eq!(result.1["layers"][1]["shape"], "ellipse");
+    assert!(result.1["fields"].as_array().unwrap().is_empty());
+    let mut invalid = body;
+    invalid["name"] = json!("Bad clock");
+    invalid["layers"][0]["clock_timezone"] = json!("Unknown/Zone");
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            invalid.clone()
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    invalid["layers"][0]["clock_timezone"] = json!("UTC");
+    invalid["layers"][0]["clock_format"] = json!("%arbitrary");
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            invalid
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+}
