@@ -38,7 +38,9 @@ pub async fn select_graphics_templates(
     channel_id: i32,
 ) -> Result<Vec<GraphicsTemplate>, ProcessError> {
     Ok(sqlx::query_as(
-        "SELECT id, channel_id, name, group_name, duration, during_lshape, layers
+        "SELECT id, channel_id, name, group_name, duration, during_lshape, layers,
+         (SELECT enabled FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id AND b.role IN ('logo','ticker')) AS always_on,
+         (SELECT control_layer_id FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id) AS control_layer_id
          FROM graphics_templates WHERE channel_id = $1
          ORDER BY group_name COLLATE NOCASE, name COLLATE NOCASE, id",
     )
@@ -53,7 +55,9 @@ pub async fn select_graphics_template(
     template_id: i32,
 ) -> Result<Option<GraphicsTemplate>, ProcessError> {
     Ok(sqlx::query_as(
-        "SELECT id, channel_id, name, group_name, duration, during_lshape, layers
+        "SELECT id, channel_id, name, group_name, duration, during_lshape, layers,
+         (SELECT enabled FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id AND b.role IN ('logo','ticker')) AS always_on,
+         (SELECT control_layer_id FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id) AS control_layer_id
          FROM graphics_templates WHERE channel_id = $1 AND id = $2",
     )
     .bind(channel_id)
@@ -107,71 +111,54 @@ pub async fn update_graphics_template(
     template: &GraphicsTemplate,
 ) -> Result<bool, ProcessError> {
     let mut transaction = pool.begin().await?;
-    let saved: Option<(String, String, Option<String>)> = sqlx::query_as(
-        "SELECT t.layers, t.settings, b.role FROM graphics_templates t
-         LEFT JOIN graphics_channel_bindings b ON b.template_id = t.id AND b.channel_id = t.channel_id
-         WHERE t.channel_id = $1 AND t.id = $2",
+    let role: Option<String> = sqlx::query_scalar(
+        "SELECT role FROM graphics_channel_bindings WHERE channel_id = $1 AND template_id = $2",
     )
-    .bind(template.channel_id).bind(template.id)
-    .fetch_optional(&mut *transaction).await?;
-    let Some((old_layers, settings, role)) = saved else {
-        return Ok(false);
-    };
-    let old_layers: Vec<crate::utils::graphics::TemplateLayer> = serde_json::from_str(&old_layers)
-        .map_err(|error| ProcessError::Custom(error.to_string()))?;
-    let mut settings: serde_json::Value =
-        serde_json::from_str(&settings).map_err(|error| ProcessError::Custom(error.to_string()))?;
-    use crate::utils::graphics::LayerKind;
+    .bind(template.channel_id)
+    .bind(template.id)
+    .fetch_optional(&mut *transaction)
+    .await?;
 
-    if role.as_deref() == Some("logo") {
-        let before = old_layers
-            .iter()
-            .find(|layer| layer.kind == LayerKind::Image && layer.visible);
-        let after = template
-            .layers
-            .iter()
-            .find(|layer| layer.kind == LayerKind::Image && layer.visible);
-
-        if let Some(after) = after {
-            let geometry_changed = before.is_none_or(|before| {
-                (before.x, before.y, before.width, before.height)
-                    != (after.x, after.y, after.width, after.height)
-            });
-
-            if geometry_changed {
-                let share = |position: f64, size: f64| {
-                    if size >= 100.0 {
-                        0.0
-                    } else {
-                        (position / (100.0 - size) * 100.0).clamp(0.0, 100.0)
-                    }
-                };
-                settings["position"] = format!(
-                    "{}%:{}%",
-                    share(after.x, after.width),
-                    share(after.y, after.height)
-                )
-                .into();
-                settings["scale"] = format!("{}%:{}%", after.width, after.height).into();
-            }
+    if let Some(always_on) = template.always_on {
+        if !matches!(role.as_deref(), Some("logo" | "ticker")) {
+            return Err(ProcessError::Custom(
+                "Always on requires a channel logo or ticker binding".to_string(),
+            ));
         }
+
+        sqlx::query("UPDATE graphics_channel_bindings SET enabled = $3 WHERE channel_id = $1 AND template_id = $2")
+            .bind(template.channel_id).bind(template.id).bind(always_on)
+            .execute(&mut *transaction).await?;
     }
 
-    if role.as_deref() == Some("lshape")
-        && let Some(picture) = template
-            .layers
-            .iter()
-            .find(|layer| layer.kind == LayerKind::Video)
-    {
-        settings["scale"] = picture.width.into();
-        let vertical = if picture.y > 0.0 { "bottom" } else { "top" };
-        let horizontal = if picture.x > 0.0 { "right" } else { "left" };
-        settings["corner"] = format!("{vertical}-{horizontal}").into();
+    if matches!(role.as_deref(), Some("logo" | "lshape")) {
+        let saved_target: Option<String> = sqlx::query_scalar(
+            "SELECT control_layer_id FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2",
+        ).bind(template.channel_id).bind(template.id).fetch_one(&mut *transaction).await?;
+        let target = template
+            .control_layer_id
+            .as_deref()
+            .or(saved_target.as_deref())
+            .and_then(|id| {
+                template.layers.iter().find(|layer| {
+                    layer.id == id && layer.kind == crate::utils::graphics::LayerKind::Image
+                })
+            })
+            .or_else(|| {
+                template
+                    .layers
+                    .iter()
+                    .find(|layer| layer.kind == crate::utils::graphics::LayerKind::Image)
+            })
+            .map(|layer| layer.id.as_str());
+        sqlx::query("UPDATE graphics_channel_bindings SET control_layer_id = $3 WHERE channel_id = $1 AND template_id = $2")
+            .bind(template.channel_id).bind(template.id).bind(target)
+            .execute(&mut *transaction).await?;
     }
 
     let result = sqlx::query(
         "UPDATE graphics_templates SET name = $3, group_name = $4, duration = $5,
-            during_lshape = $6, layers = $7, settings = $8, updated_at = CURRENT_TIMESTAMP
+            during_lshape = $6, layers = $7, updated_at = CURRENT_TIMESTAMP
          WHERE channel_id = $1 AND id = $2",
     )
     .bind(template.channel_id)
@@ -181,7 +168,6 @@ pub async fn update_graphics_template(
     .bind(template.duration)
     .bind(template.during_lshape.as_str())
     .bind(layers_json(template)?)
-    .bind(settings.to_string())
     .execute(&mut *transaction)
     .await?;
 
@@ -296,7 +282,7 @@ pub async fn convert_channel_graphics_on(
             .await?;
 
     if count == 3 {
-        return Ok(());
+        return upgrade_channel_layers_on(connection, channel).await;
     }
 
     if count != 0 {
@@ -372,7 +358,7 @@ pub async fn convert_channel_graphics_on(
             .execute(&mut *connection).await?;
     }
 
-    Ok(())
+    upgrade_channel_layers_on(connection, channel).await
 }
 
 fn image_layers(image: &str, opacity: f64) -> String {
@@ -383,6 +369,170 @@ fn image_layers(image: &str, opacity: f64) -> String {
         "animation_in": "none", "animation_out": "none"
     }])
     .to_string()
+}
+
+/// Upgrade 00029 definitions once, never importing frozen processing columns.
+async fn upgrade_channel_layers_on(
+    connection: &mut sqlx::SqliteConnection,
+    channel: i32,
+) -> Result<(), ProcessError> {
+    let rows: Vec<(i32, String, String, String)> = sqlx::query_as(
+        "SELECT t.id,b.role,t.layers,t.settings FROM graphics_channel_bindings b
+         JOIN graphics_templates t ON t.id=b.template_id AND t.channel_id=b.channel_id
+         WHERE b.channel_id=$1 AND b.layers_version=0",
+    )
+    .bind(channel)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    for (id, role, saved, settings) in rows {
+        use crate::utils::graphics::{Animation, LayerKind, TemplateLayer};
+
+        let mut layers: Vec<TemplateLayer> = serde_json::from_str(&saved)
+            .map_err(|error| ProcessError::Custom(error.to_string()))?;
+        let settings: serde_json::Value = serde_json::from_str(&settings)
+            .map_err(|error| ProcessError::Custom(error.to_string()))?;
+        let target = layers
+            .iter()
+            .position(|layer| layer.kind == LayerKind::Image);
+
+        if role == "logo"
+            && let Some(index) = target
+        {
+            let image = layers[index].image.clone().unwrap_or_default();
+            let native = native_model_layers(
+                connection,
+                channel,
+                &role,
+                &image,
+                layers[index].opacity,
+                &settings,
+            )
+            .await?;
+            let native: Vec<TemplateLayer> = serde_json::from_str(&native)
+                .map_err(|error| ProcessError::Custom(error.to_string()))?;
+            let layer = &mut layers[index];
+            layer.x = native[0].x;
+            layer.y = native[0].y;
+            layer.width = native[0].width;
+            layer.height = native[0].height;
+            layer.animation_in = if settings["transition_in"] == "cut" {
+                Animation::None
+            } else {
+                Animation::Fade
+            };
+            layer.animation_out = if settings["transition_out"] == "cut" {
+                Animation::None
+            } else {
+                Animation::Fade
+            };
+            let seconds = settings["transition_seconds"].as_f64();
+            layer.animation_ms = (seconds.unwrap_or(0.4) * 1000.0).round() as u32;
+            layer.clip_animation_ms = Some((seconds.unwrap_or(1.0) * 1000.0).round() as u32);
+        }
+
+        // 00029 already represented the actual (possibly freely edited)
+        // L-shape window in a video layer. Preserve that geometry and all art.
+        let target_id = target.map(|index| layers[index].id.clone());
+        let value = serde_json::to_string(&layers)
+            .map_err(|error| ProcessError::Custom(error.to_string()))?;
+        sqlx::query("UPDATE graphics_templates SET layers=$2, settings='{}' WHERE id=$1")
+            .bind(id)
+            .bind(value)
+            .execute(&mut *connection)
+            .await?;
+        sqlx::query("UPDATE graphics_channel_bindings SET layers_version=1,control_layer_id=$3 WHERE channel_id=$1 AND template_id=$2")
+            .bind(channel).bind(id).bind(target_id).execute(&mut *connection).await?;
+    }
+
+    Ok(())
+}
+
+fn controlled_image<'a>(
+    layers: &'a [crate::utils::graphics::TemplateLayer],
+    target: Option<&str>,
+) -> Option<&'a crate::utils::graphics::TemplateLayer> {
+    layers.iter().find(|layer| {
+        layer.kind == crate::utils::graphics::LayerKind::Image && Some(layer.id.as_str()) == target
+    })
+}
+
+fn layer_pixels(value: f64, total: u32) -> u32 {
+    ((value / 100.0 * f64::from(total)).round().max(0.0) as u32) & !1
+}
+
+/// Legacy DTOs are adapters computed from layers, never a second saved layout.
+fn project_layer_processing(
+    role: &str,
+    enabled: bool,
+    layers: &[crate::utils::graphics::TemplateLayer],
+    target: Option<&str>,
+    config: &mut crate::db::models::Configuration,
+    dimensions: (u32, u32),
+) {
+    use crate::utils::graphics::{Animation, LayerKind};
+
+    let image = controlled_image(layers, target);
+    let path = image
+        .and_then(|layer| layer.image.clone())
+        .unwrap_or_default();
+
+    if role == "logo" {
+        config.processing_add_logo = enabled;
+        config.processing_logo = path;
+        config.processing_logo_scale = "2:2".to_string();
+        config.processing_logo_position = "0:0".to_string();
+        config.processing_logo_opacity = 1.0;
+        config.processing_logo_transition_in = "cut".to_string();
+        config.processing_logo_transition_out = "cut".to_string();
+        config.processing_logo_transition_seconds = None;
+
+        if let Some(layer) = image {
+            let width = layer_pixels(layer.width, dimensions.0).max(2);
+            let height = layer_pixels(layer.height, dimensions.1).max(2);
+            config.processing_logo_scale = format!("{width}:{height}");
+            config.processing_logo_position = format!(
+                "{}:{}",
+                layer_pixels(layer.x, dimensions.0),
+                layer_pixels(layer.y, dimensions.1)
+            );
+            config.processing_logo_opacity = layer.opacity;
+            config.processing_logo_transition_in = if layer.animation_in == Animation::None {
+                "cut"
+            } else {
+                "fade"
+            }
+            .to_string();
+            config.processing_logo_transition_out = if layer.animation_out == Animation::None {
+                "cut"
+            } else {
+                "fade"
+            }
+            .to_string();
+            config.processing_logo_transition_seconds =
+                if layer.animation_ms == 400 && layer.clip_animation_ms == Some(1000) {
+                    None
+                } else {
+                    let milliseconds = layer.clip_animation_ms.unwrap_or(layer.animation_ms);
+                    if milliseconds == 0 {
+                        config.processing_logo_transition_in = "cut".to_string();
+                        config.processing_logo_transition_out = "cut".to_string();
+                        None
+                    } else {
+                        Some(f64::from(milliseconds) / 1000.0)
+                    }
+                };
+        }
+    } else if role == "lshape" {
+        config.processing_lshape = path;
+
+        if let Some(layer) = layers.iter().find(|layer| layer.kind == LayerKind::Video) {
+            config.processing_lshape_scale = layer.width;
+            let vertical = if layer.y > 0.0 { "bottom" } else { "top" };
+            let horizontal = if layer.x > 0.0 { "right" } else { "left" };
+            config.processing_lshape_corner = format!("{vertical}-{horizontal}");
+        }
+    }
 }
 
 async fn native_model_layers(
@@ -493,10 +643,15 @@ pub async fn project_channel_graphics(
     pool: &SqlitePool,
     config: &mut crate::db::models::Configuration,
 ) -> Result<(), ProcessError> {
-    use sqlx::Row;
-
-    let rows = sqlx::query("SELECT b.role, b.enabled, t.layers, t.settings FROM graphics_channel_bindings b JOIN graphics_templates t ON t.id = b.template_id AND t.channel_id = b.channel_id WHERE b.channel_id = $1")
-        .bind(config.channel_id).fetch_all(pool).await?;
+    let dimensions: (u32, u32) =
+        sqlx::query_as("SELECT width,height FROM config_output WHERE id=$1")
+            .bind(config.output_id)
+            .fetch_one(pool)
+            .await?;
+    let rows: Vec<(String, bool, String, Option<String>)> = sqlx::query_as(
+        "SELECT b.role,b.enabled,t.layers,b.control_layer_id FROM graphics_channel_bindings b
+         JOIN graphics_templates t ON t.id=b.template_id AND t.channel_id=b.channel_id WHERE b.channel_id=$1",
+    ).bind(config.channel_id).fetch_all(pool).await?;
 
     if rows.len() != 3 {
         return Err(ProcessError::Custom(format!(
@@ -505,52 +660,17 @@ pub async fn project_channel_graphics(
         )));
     }
 
-    for row in rows {
-        let role: String = row.try_get("role")?;
-        let settings: String = row.try_get("settings")?;
-        let settings: serde_json::Value = serde_json::from_str(&settings)
-            .map_err(|error| ProcessError::Custom(error.to_string()))?;
-        let layers: String = row.try_get("layers")?;
+    for (role, enabled, layers, target) in rows {
         let layers: Vec<crate::utils::graphics::TemplateLayer> = serde_json::from_str(&layers)
             .map_err(|error| ProcessError::Custom(error.to_string()))?;
-        let image = layers
-            .iter()
-            .find(|layer| layer.kind == crate::utils::graphics::LayerKind::Image && layer.visible);
-        let path = image
-            .and_then(|layer| layer.image.clone())
-            .unwrap_or_default();
-
-        match role.as_str() {
-            "logo" => {
-                config.processing_add_logo = row.try_get::<bool, _>("enabled")? && !path.is_empty();
-                config.processing_logo = path;
-                config.processing_logo_opacity = image.map_or(1.0, |layer| layer.opacity);
-                config.processing_logo_scale =
-                    settings["scale"].as_str().unwrap_or_default().to_string();
-                config.processing_logo_position = settings["position"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_string();
-                config.processing_logo_transition_in = settings["transition_in"]
-                    .as_str()
-                    .unwrap_or("fade")
-                    .to_string();
-                config.processing_logo_transition_out = settings["transition_out"]
-                    .as_str()
-                    .unwrap_or("fade")
-                    .to_string();
-                config.processing_logo_transition_seconds = settings["transition_seconds"].as_f64();
-            }
-            "lshape" => {
-                config.processing_lshape = path;
-                config.processing_lshape_scale = settings["scale"].as_f64().unwrap_or(75.0);
-                config.processing_lshape_corner = settings["corner"]
-                    .as_str()
-                    .unwrap_or("top-right")
-                    .to_string();
-            }
-            _ => {}
-        }
+        project_layer_processing(
+            &role,
+            enabled,
+            &layers,
+            target.as_deref(),
+            config,
+            dimensions,
+        );
     }
 
     let scenes: Vec<String> = sqlx::query_scalar("SELECT json_extract(t.settings, '$.scene') FROM graphics_scene_bindings b JOIN graphics_templates t ON t.id = b.template_id AND t.channel_id = b.channel_id WHERE b.channel_id = $1 ORDER BY b.position")
@@ -605,44 +725,80 @@ pub async fn save_channel_graphics_on(
         let mut layers: Vec<crate::utils::graphics::TemplateLayer> =
             serde_json::from_str(&saved)
                 .map_err(|error| ProcessError::Custom(error.to_string()))?;
-        let old_settings: String =
-            sqlx::query_scalar("SELECT settings FROM graphics_templates WHERE id = $1")
-                .bind(template_id)
-                .fetch_one(&mut *connection)
-                .await?;
-        let old_settings: serde_json::Value = serde_json::from_str(&old_settings)
-            .map_err(|error| ProcessError::Custom(error.to_string()))?;
-        let image = layers
-            .iter()
-            .find(|layer| layer.kind == crate::utils::graphics::LayerKind::Image && layer.visible);
-        let unchanged = image.map_or(path.is_empty(), |image| {
-            image.image.as_deref() == Some(path.as_str()) && image.opacity == opacity
-        }) && old_settings == settings;
-
-        if unchanged {
-            continue;
-        }
-
+        let target_id: Option<String> = sqlx::query_scalar("SELECT control_layer_id FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2")
+            .bind(channel).bind(template_id).fetch_one(&mut *connection).await?;
         let native =
             native_model_layers(connection, channel, role, path, opacity, &settings).await?;
         let native: Vec<crate::utils::graphics::TemplateLayer> = serde_json::from_str(&native)
             .map_err(|error| ProcessError::Custom(error.to_string()))?;
         let target = layers
             .iter_mut()
-            .find(|layer| layer.kind == crate::utils::graphics::LayerKind::Image && layer.visible);
+            .find(|layer| Some(layer.id.as_str()) == target_id.as_deref());
 
         if let Some(target) = target {
             let geometry = &native[0];
             target.image = Some(path.to_string());
-            target.opacity = opacity;
-            target.x = geometry.x;
-            target.y = geometry.y;
-            target.width = geometry.width;
-            target.height = geometry.height;
+            if role == "logo" {
+                target.opacity = opacity;
+                target.x = geometry.x;
+                target.y = geometry.y;
+                target.width = geometry.width;
+                target.height = geometry.height;
+            }
         } else if !path.is_empty() {
             let mut image = native[0].clone();
             image.id = uuid::Uuid::new_v4().to_string();
             layers.push(image);
+        }
+
+        if role == "logo"
+            && let Some(target) = layers.iter_mut().find(|layer| {
+                target_id.as_deref().map_or(
+                    layer.kind == crate::utils::graphics::LayerKind::Image,
+                    |id| layer.id == id,
+                )
+            })
+        {
+            use crate::utils::{config::LogoTransition, graphics::Animation};
+
+            let legacy_in = if target.animation_in == Animation::None {
+                LogoTransition::Cut
+            } else {
+                LogoTransition::Fade
+            };
+            let legacy_out = if target.animation_out == Animation::None {
+                LogoTransition::Cut
+            } else {
+                LogoTransition::Fade
+            };
+
+            if processing.logo_transition_in != legacy_in {
+                target.animation_in = if processing.logo_transition_in == LogoTransition::Cut {
+                    Animation::None
+                } else {
+                    Animation::Fade
+                };
+            }
+
+            if processing.logo_transition_out != legacy_out {
+                target.animation_out = if processing.logo_transition_out == LogoTransition::Cut {
+                    Animation::None
+                } else {
+                    Animation::Fade
+                };
+            }
+
+            let old_clip = target.clip_animation_ms.unwrap_or(target.animation_ms);
+            let clip = processing
+                .logo_transition_seconds
+                .map_or(1000, |seconds| (seconds * 1000.0).round() as u32);
+
+            if old_clip != clip {
+                target.animation_ms = processing
+                    .logo_transition_seconds
+                    .map_or(400, |seconds| (seconds * 1000.0).round() as u32);
+                target.clip_animation_ms = Some(clip);
+            }
         }
 
         if role == "lshape" {
@@ -650,16 +806,32 @@ pub async fn save_channel_graphics_on(
                 .iter_mut()
                 .find(|layer| layer.kind == crate::utils::graphics::LayerKind::Video)
             {
-                *picture = native[1].clone();
+                let vertical = if picture.y > 0.0 { "bottom" } else { "top" };
+                let horizontal = if picture.x > 0.0 { "right" } else { "left" };
+
+                if (picture.width - processing.lshape_scale).abs() > 0.000001
+                    || format!("{vertical}-{horizontal}") != processing.lshape_corner
+                {
+                    *picture = native[1].clone();
+                }
             } else {
                 layers.push(native[1].clone());
             }
         }
 
+        if target_id.is_none() {
+            let target = layers
+                .iter()
+                .find(|layer| layer.kind == crate::utils::graphics::LayerKind::Image)
+                .map(|layer| layer.id.as_str());
+            sqlx::query("UPDATE graphics_channel_bindings SET control_layer_id=$3 WHERE channel_id=$1 AND template_id=$2")
+                .bind(channel).bind(template_id).bind(target).execute(&mut *connection).await?;
+        }
+
         let layers = serde_json::to_string(&layers)
             .map_err(|error| ProcessError::Custom(error.to_string()))?;
-        let updated = sqlx::query("UPDATE graphics_templates SET layers = $3, settings = $4, updated_at = CURRENT_TIMESTAMP WHERE channel_id = $1 AND id = $2")
-            .bind(channel).bind(template_id).bind(layers).bind(settings.to_string())
+        let updated = sqlx::query("UPDATE graphics_templates SET layers = $3, updated_at = CURRENT_TIMESTAMP WHERE channel_id = $1 AND id = $2")
+            .bind(channel).bind(template_id).bind(layers)
             .execute(&mut *connection).await?;
 
         if updated.rows_affected() != 1 {
@@ -726,6 +898,181 @@ mod tests {
 
     async fn install_fixture(pool: &SqlitePool) {
         sqlx::migrate!("../../migrations").run(pool).await.unwrap();
+    }
+
+    async fn fixture_29() -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let migrations = sqlx::migrate!("../../migrations");
+        sqlx::migrate::Migrator::with_migrations(
+            migrations
+                .iter()
+                .filter(|migration| migration.version <= 29)
+                .cloned()
+                .collect::<Vec<_>>(),
+        )
+        .run(&pool)
+        .await
+        .unwrap();
+        let storage =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests_assets/storage");
+        sqlx::query("UPDATE channels SET storage=$1 WHERE id=1")
+            .bind(storage.to_string_lossy().to_string())
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE config_output SET width=640,height=360 WHERE active=1")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let mut connection = pool.acquire().await.unwrap();
+
+        for (role, enabled) in [("logo", true), ("ticker", false), ("lshape", false)] {
+            let settings = if role == "logo" {
+                serde_json::json!({"scale":"80:48","position":"12:12","transition_in":"fade","transition_out":"cut","transition_seconds":1.0})
+            } else {
+                serde_json::json!({"scale":70.0,"corner":"top-right"})
+            };
+            let layers = if role == "ticker" {
+                "[]".to_string()
+            } else {
+                native_model_layers(&mut connection, 1, role, "logo.png", 0.6, &settings)
+                    .await
+                    .unwrap()
+            };
+            let id = insert_converted_model(
+                &mut connection,
+                1,
+                role,
+                "Channel graphics",
+                &layers,
+                &settings,
+            )
+            .await
+            .unwrap();
+            sqlx::query("INSERT INTO graphics_channel_bindings(channel_id,role,template_id,enabled) VALUES(1,$1,$2,$3)")
+                .bind(role).bind(id).bind(enabled).execute(&mut *connection).await.unwrap();
+        }
+
+        drop(connection);
+        pool
+    }
+
+    #[tokio::test]
+    async fn layer_upgrade_converts_29_in_place_preserves_edits_and_never_reads_settings_again() {
+        let pool = fixture_29().await;
+        let ids: Vec<(String, i32, bool)> = sqlx::query_as(
+            "SELECT role,template_id,enabled FROM graphics_channel_bindings ORDER BY role",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        let frozen: String = sqlx::query_scalar("SELECT json_object('logo',logo,'lshape',lshape,'scenes',graphics_scenes) FROM config_processing LIMIT 1").fetch_one(&pool).await.unwrap();
+        sqlx::query("UPDATE graphics_templates SET layers=json_set(layers,'$[1].x',10.0,'$[1].y',10.0,'$[1].width',70.0,'$[1].height',50.0) WHERE name='lshape'")
+            .execute(&pool).await.unwrap();
+        super::super::db_migrate(&pool).await.unwrap();
+        let templates = select_graphics_templates(&pool, 1).await.unwrap();
+        let logo = templates
+            .iter()
+            .find(|template| template.name == "logo")
+            .unwrap();
+        let image = &logo.layers[0];
+        assert_eq!(
+            (image.x, image.y, image.width, image.height),
+            (1.875, 100.0 * 12.0 / 360.0, 12.5, 100.0 * 48.0 / 360.0)
+        );
+        assert_eq!(image.animation_in, crate::utils::graphics::Animation::Fade);
+        assert_eq!(image.animation_out, crate::utils::graphics::Animation::None);
+        assert_eq!(
+            (image.animation_ms, image.clip_animation_ms),
+            (1000, Some(1000))
+        );
+        assert_eq!(logo.control_layer_id.as_deref(), Some("image"));
+        assert_eq!(logo.always_on, Some(true));
+        let picture = &templates
+            .iter()
+            .find(|template| template.name == "lshape")
+            .unwrap()
+            .layers[1];
+        assert_eq!(
+            (picture.x, picture.y, picture.width, picture.height),
+            (10.0, 10.0, 70.0, 50.0)
+        );
+        sqlx::query("UPDATE graphics_templates SET settings='{\"position\":\"invalid\",\"scale\":\"invalid\"}' WHERE name='logo'").execute(&pool).await.unwrap();
+        convert_channel_graphics(&pool).await.unwrap();
+        assert_eq!(
+            select_graphics_templates(&pool, 1).await.unwrap(),
+            templates
+        );
+        let projected = super::super::select_configuration(&pool, 1).await.unwrap();
+        assert_eq!(projected.processing_logo_position, "12:12");
+        assert_eq!(projected.processing_logo_scale, "80:48");
+        assert_eq!(
+            sqlx::query_as::<_, (String, i32, bool)>(
+                "SELECT role,template_id,enabled FROM graphics_channel_bindings ORDER BY role"
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap(),
+            ids
+        );
+        assert_eq!(sqlx::query_scalar::<_,String>("SELECT json_object('logo',logo,'lshape',lshape,'scenes',graphics_scenes) FROM config_processing LIMIT 1").fetch_one(&pool).await.unwrap(),frozen);
+
+        // Older template clients omit binding metadata. Reordering layers must
+        // not redirect external image replacements to a different image.
+        let mut edited = logo.clone();
+        let mut second_image = edited.layers[0].clone();
+        second_image.id = "secondary-image".to_string();
+        edited.layers.insert(0, second_image);
+        edited.control_layer_id = None;
+        edited.layers[1].animation_ms = 0;
+        edited.layers[1].clip_animation_ms = None;
+        update_graphics_template(&pool, &edited).await.unwrap();
+        let saved = select_graphics_template(&pool, 1, edited.id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(saved.control_layer_id.as_deref(), Some("image"));
+        let projected = super::super::select_configuration(&pool, 1).await.unwrap();
+        assert_eq!(projected.processing_logo_transition_seconds, None);
+        assert_eq!(projected.processing_logo_transition_in, "cut");
+    }
+
+    #[tokio::test]
+    async fn layer_upgrade_rolls_back_every_definition_on_invalid_29_layers() {
+        let pool = fixture_29().await;
+        sqlx::query("UPDATE graphics_templates SET layers='{}' WHERE name='ticker'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::migrate!("../../migrations").run(&pool).await.unwrap();
+        assert!(convert_channel_graphics(&pool).await.is_err());
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM graphics_channel_bindings WHERE layers_version=1"
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            0
+        );
+        sqlx::query("UPDATE graphics_templates SET layers='[]' WHERE name='ticker'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        convert_channel_graphics(&pool).await.unwrap();
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM graphics_channel_bindings WHERE layers_version=1"
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            3
+        );
     }
 
     async fn template(pool: &SqlitePool, name: &str) -> i32 {
@@ -840,7 +1187,7 @@ mod tests {
         super::super::db_migrate(&pool).await.unwrap();
         let mut projected = super::super::select_configuration(&pool, 1).await.unwrap();
         assert_eq!(projected.processing_logo, "old.png");
-        assert_eq!(projected.processing_logo_scale, "64:-1");
+        assert_eq!(projected.processing_logo_scale, "1280:720");
         assert_eq!(projected.processing_logo_opacity, 0.7);
         assert_eq!(projected.processing_lshape, "art.png");
         assert_eq!(projected.processing_lshape_scale, 70.0);

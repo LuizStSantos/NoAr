@@ -380,7 +380,7 @@ test('graphics Composer cannot overwrite a template after a failed load', async 
     await expect(page.getByRole('button', { name: 'Save template', exact: true })).toBeEnabled()
 })
 
-test('assigned channel models use dedicated controls and graphics editors', async ({ page }) => {
+test('assigned channel models use dedicated controls and layered Composer', async ({ page }) => {
     await page.goto('/graphics/templates?channel=1')
     const channel = page.getByRole('region', { name: 'Channel graphics', exact: true })
     await expect(channel.getByRole('heading', { name: 'Channel logo', exact: true })).toBeVisible()
@@ -390,17 +390,22 @@ test('assigned channel models use dedicated controls and graphics editors', asyn
         await expect(card).not.toContainText('No fields')
         await expect(card).not.toContainText('With L-shape:')
         await expect(card.getByRole('link', { name: 'Put on air', exact: true })).toHaveCount(0)
-        await expect(card.getByRole('link', { name: 'Edit', exact: true })).not.toHaveAttribute('href', /composer/)
+        await expect(card.getByRole('link', { name: 'Edit', exact: true })).toHaveAttribute('href', /composer/)
     }
 
     const models = await api(page, '/api/graphics/1/channel')
     const originalName = models.find((view: { kind: string }) => view.kind === 'ticker').template.name
     await channel.locator('article[data-kind="ticker"]').getByRole('link', { name: 'Edit', exact: true }).click()
-    await expect(page).toHaveURL(/graphics\/channel\/ticker/)
+    await expect(page).toHaveURL(/graphics\/composer.*template=/)
     const text = `E2E channel bulletin ${Date.now()}`
-    await page.getByLabel('Ticker text', { exact: true }).fill(text)
-    await page.getByRole('button', { name: 'Save ticker', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Save ticker', exact: true })).toBeDisabled()
+    const add = page.getByRole('button', { name: 'Add layer', exact: true })
+    await add.click()
+    await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Text', exact: true }).click()
+    await page.getByLabel('Text', { exact: true }).fill(text)
+    await page.getByLabel('Always on air', { exact: true }).check()
+    await page.getByRole('button', { name: 'Save template', exact: true }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
     await page.goto('/graphics/templates?channel=1')
     const ticker = page.getByRole('switch', { name: 'Ticker', exact: true })
 
@@ -414,9 +419,10 @@ test('assigned channel models use dedicated controls and graphics editors', asyn
     await ticker.click()
     await expect(ticker).not.toBeChecked()
     await channel.locator('article[data-kind="ticker"]').getByRole('link', { name: 'Edit', exact: true }).click()
-    await page.getByLabel('Ticker text', { exact: true }).fill(`${text} updated`)
-    await page.getByRole('button', { name: 'Save ticker', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Save ticker', exact: true })).toBeDisabled()
+    await page.getByLabel('Text', { exact: true }).fill(`${text} updated`)
+    await page.getByRole('button', { name: 'Save template', exact: true }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
     await page.goto('/graphics/templates?channel=1')
     await expect(ticker).not.toBeChecked()
     const saved = await api(page, '/api/graphics/1/channel')
@@ -428,7 +434,7 @@ test('assigned channel models use dedicated controls and graphics editors', asyn
 test('channel graphics editors replace legacy navigation and retain bookmarked links', async ({ page }) => {
     await page.goto('/graphics/templates?channel=1')
     const navigation = page.getByRole('navigation', { name: 'Graphics', exact: true })
-    await expect(navigation.locator('a')).toHaveCount(4)
+    await expect(navigation.locator('a')).toHaveCount(5)
     await expect(
         navigation.locator('a[href*="/graphics/logo"], a[href*="/graphics/lshape"], a[href*="/graphics/scenes"]'),
     ).toHaveCount(0)
@@ -438,11 +444,19 @@ test('channel graphics editors replace legacy navigation and retain bookmarked l
             .locator(`article[data-kind="${kind}"]`)
             .first()
             .getByRole('link', { name: 'Edit', exact: true })
-        await expect(edit).toHaveAttribute('href', new RegExp(`/graphics/channel/${kind}`))
+        await expect(edit).toHaveAttribute(
+            'href',
+            kind === 'scene' ? /graphics\/channel\/scene/ : /graphics\/composer.*template=/,
+        )
         await edit.click()
-        await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
-        await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-        await page.getByRole('link', { name: 'Back to templates', exact: true }).click()
+        if (kind === 'scene') {
+            await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
+        } else {
+            await expect(page.getByLabel('Template name', { exact: true })).toBeVisible()
+        }
+        await page
+            .getByRole('link', { name: kind === 'scene' ? 'Back to templates' : 'See templates', exact: true })
+            .click()
         await expect(page).toHaveURL(/graphics\/templates\?channel=1/)
     }
 
@@ -454,13 +468,18 @@ test('channel graphics editors replace legacy navigation and retain bookmarked l
     ]) {
         const [path, hash] = legacy!.split('#')
         await page.goto(`/graphics/${path}?channel=1${hash ? `#${hash}` : ''}`)
-        await expect(page).toHaveURL(new RegExp(`/graphics/channel/${kind}\\?channel=1`))
-        await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
+        if (kind === 'scene') {
+            await expect(page).toHaveURL(/graphics\/channel\/scene/)
+            await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
+        } else {
+            await expect(page).toHaveURL(/graphics\/composer.*template=/)
+            await expect(page.getByLabel('Template name', { exact: true })).toBeVisible()
+        }
     }
 
     await page.setViewportSize({ width: 390, height: 844 })
     const selector = page.getByLabel('Page', { exact: true })
-    await expect(selector.locator('option')).toHaveCount(4)
+    await expect(selector.locator('option')).toHaveCount(5)
     await expect(selector.locator('option[value="logo"], option[value="lshape"], option[value="scenes"]')).toHaveCount(
         0,
     )
@@ -499,5 +518,41 @@ test('the library can create the first scene after legacy menu removal', async (
         const current = await response.json()
         current.processing.graphics_scenes = scenes
         expect((await request.put('/api/playout/config/1', { headers, data: current })).ok()).toBeTruthy()
+    }
+})
+
+test('the XMLTV logo tab saves its independent guide icon without changing layers', async ({ page }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const roles = await api(page, '/api/graphics/1/channel')
+    const logo = roles.find((view: { kind: string }) => view.kind === 'logo').template
+    const config = await api(page, '/api/playout/config/1')
+    const original = config.processing.guide_logo
+    await page.getByRole('link', { name: 'XMLTV logo', exact: true }).click()
+    await expect(page).toHaveURL(/graphics\/xmltv\?channel=1/)
+    const field = page.getByLabel('Logo in the guide (XMLTV)', { exact: true })
+    await expect(field).toHaveValue(original)
+    const save = async (path: string) => {
+        await field.fill(path)
+        const response = page.waitForResponse(
+            (item) => item.url().endsWith('/api/playout/config/1') && item.request().method() === 'PUT',
+        )
+        await page.getByRole('button', { name: 'Save guide icon', exact: true }).click()
+        expect((await response).ok()).toBeTruthy()
+        await expect(page.getByRole('status', { name: '' }).filter({ hasText: 'Guide icon saved.' })).toBeVisible()
+    }
+
+    try {
+        await save('guide-logo.png')
+        await page.reload()
+        await expect(field).toHaveValue('guide-logo.png')
+        const xml = await page.request.get('/xmltv/1/guide.xml?days=1')
+        expect(xml.ok()).toBeTruthy()
+        expect(await xml.text()).toContain('/guide-logo.png')
+        const saved = await api(page, `/api/graphics/1/templates/${logo.id}`)
+        expect(saved.layers).toEqual(logo.layers)
+    } finally {
+        if (original !== 'guide-logo.png') {
+            await save(original)
+        }
     }
 })

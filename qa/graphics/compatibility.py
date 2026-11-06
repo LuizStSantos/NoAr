@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare legacy graphics HTTP contracts against a disposable 2.2.1 baseline.
 
-Both servers must use synthetic media under --work-root. Credentials and keys
+Both servers must use synthetic media under their owned disposable work roots. Credentials and keys
 are kept in memory and are never included in the evidence file.
 """
 import argparse
@@ -118,6 +118,7 @@ def seed(client, root, baseline):
     client.ok("POST", "/api/control/1/logo", {"action": "show"})
     client.ok("POST", "/api/control/1/logo", {"action": "move", "position": "default"})
     client.ok("POST", "/api/control/1/lshape", {"action": "off"})
+    client.ok("POST", "/api/control/1/lshape", {"action": "reset"})
     client.ok("POST", "/api/control/1/lshape", {"action": "move", "position": "default"})
 
 
@@ -205,6 +206,7 @@ def main():
     parser.add_argument("--candidate", default="http://127.0.0.1:8787")
     parser.add_argument("--baseline", default="http://127.0.0.1:18787")
     parser.add_argument("--work-root", type=Path, required=True)
+    parser.add_argument("--baseline-work-root", type=Path)
     parser.add_argument("--auth-file", type=Path, required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     args = parser.parse_args()
@@ -215,7 +217,7 @@ def main():
     candidate = Client(args.candidate, credentials)
     baseline = Client(args.baseline, credentials)
     seed(candidate, root, False)
-    seed(baseline, root, True)
+    seed(baseline, args.baseline_work_root.resolve() if args.baseline_work_root else root, True)
     result = run(candidate, baseline, root)
     args.evidence.write_text(json.dumps(result, indent=2) + "\n")
     print(f"PASS: {result['case_count']} exact legacy HTTP comparisons and both XMLTV icon cases")

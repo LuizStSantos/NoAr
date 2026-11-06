@@ -3,7 +3,9 @@
 Reference: `origin/main` at `dd4529e2935b07d7a5bf8deb764421e4d201fc41`.
 Its `backend/`, `Cargo.toml` and `Cargo.lock` are identical to release revision
 `d4a1a0a8a41f39b90de23844910998431fd42510`; documentation/QA trees differ.
-Candidate starts at `ee2ad7cbc4ea98d48c26da755a99302770623ad7`.
+The original stage-d candidate starts at `ee2ad7cbc4ea98d48c26da755a99302770623ad7`.
+The layer-only channel-model revision repeats these unchanged criteria with
+migration 00030; its separate evidence is linked in the handoff.
 
 Both actual applications open independent copies of the same disposable 2.2.1
 database at sqlx 00027. Candidate startup runs the real migrations/conversion.
@@ -54,5 +56,5 @@ reference application has no channel ticker to import. Verify that region
 remains unchanged and that conversion creates an empty, disabled ticker.
 Do not claim historical parity for a newly authored nonempty ticker.
 
-Stage d remains pending until both exact and HLS gates pass. Stage e menu and
-editor changes must wait for that result.
+The original stage-d and later layer-model proofs must each pass both gates.
+Historical results do not substitute for rerunning the changed renderer.

@@ -143,7 +143,7 @@ def run(root, name, binary, credentials):
     assert "ERROR" not in log, f"{name}: channel log contains errors"
     database = sqlite3.connect(directory / "noar.db")
     version = database.execute("SELECT max(version) FROM _sqlx_migrations").fetchone()[0]
-    assert version == (27 if name == "main" else 29)
+    assert version == (27 if name == "main" else 30)
     if name == "branch":
         enabled, layers = database.execute(
             "SELECT b.enabled,t.layers FROM graphics_channel_bindings b JOIN graphics_templates t "
@@ -237,6 +237,16 @@ def compare(root, screenshots):
     evidence["regions"] = REGIONS
     evidence["segments"] = {name: {path.name: digest(path) for path in (root / name / "public/live").glob("*.ts")}
                             for name in ["main", "branch"]}
+    indexed_segments = {
+        name: {int(Path(path).stem.rsplit("_", 1)[1]): value for path, value in segments.items()}
+        for name, segments in evidence["segments"].items()
+    }
+    common = sorted(indexed_segments["main"].keys() & indexed_segments["branch"].keys())
+    evidence["segment_hash_comparison"] = {
+        "matching_indices": [index for index in common if indexed_segments["main"][index] == indexed_segments["branch"][index]],
+        "different_indices": [index for index in common if indexed_segments["main"][index] != indexed_segments["branch"][index]],
+        "tested_interval": "PTS 0-999, 40 seconds; post-roll flushing is outside this interval",
+    }
     (root / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
     print(evidence["status"], "exact raw frames and aligned HLS", flush=True)
     assert evidence["status"] == "PASS", (evidence["first_raw_divergence"], evidence["first_hls_divergence"])

@@ -87,9 +87,9 @@ function title(template: GraphicsTemplate, assigned?: ChannelGraphic): string {
 
 function editTarget(template: GraphicsTemplate, assigned?: ChannelGraphic) {
     return {
-        name: assigned ? 'graphics-channel-editor' : 'graphics-composer',
-        params: assigned ? { kind: assigned.kind } : {},
-        query: { channel: channelId.value, ...(!assigned ? { template: template.id } : {}) },
+        name: assigned?.kind === 'scene' ? 'graphics-channel-editor' : 'graphics-composer',
+        params: assigned?.kind === 'scene' ? { kind: 'scene' } : {},
+        query: { channel: channelId.value, ...(assigned?.kind !== 'scene' ? { template: template.id } : {}) },
     }
 }
 

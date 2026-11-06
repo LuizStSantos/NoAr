@@ -1,0 +1,157 @@
+{
+  "status": "PASS",
+  "captures": [
+    {
+      "stage": "saved-logo",
+      "screenshot": "output-composer-layers-saved-logo.jpg",
+      "samples": [
+        {
+          "x": 570,
+          "y": 25,
+          "rgb": [
+            50.0,
+            132.0,
+            182.0
+          ],
+          "expected": [
+            51,
+            132,
+            183
+          ],
+          "tolerance": 12
+        },
+        {
+          "x": 25,
+          "y": 25,
+          "rgb": [
+            80.0,
+            80.0,
+            80.0
+          ],
+          "expected": [
+            79,
+            79,
+            79
+          ],
+          "tolerance": 12
+        }
+      ],
+      "white_text_pixels": 0,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 551,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "segment_sha256": "5f6a297286f9a2fa758dd0d45268c2d624376bdd7aeb7c052c09a075cf09479b"
+    },
+    {
+      "stage": "saved-ticker",
+      "screenshot": "output-composer-layers-saved-ticker.jpg",
+      "samples": [
+        {
+          "x": 570,
+          "y": 25,
+          "rgb": [
+            50.0,
+            132.0,
+            182.0
+          ],
+          "expected": [
+            51,
+            132,
+            183
+          ],
+          "tolerance": 12
+        }
+      ],
+      "white_text_pixels": 1290,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 571,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "segment_sha256": "b50b7cd64001e6dcb313520022bc039a81c2857c235a419e1b3d420bf53aa00b"
+    },
+    {
+      "stage": "saved-lshape",
+      "screenshot": "output-composer-layers-saved-lshape.jpg",
+      "samples": [
+        {
+          "x": 25,
+          "y": 25,
+          "rgb": [
+            21.0,
+            54.0,
+            116.0
+          ],
+          "expected": [
+            24,
+            56,
+            120
+          ],
+          "tolerance": 12
+        },
+        {
+          "x": 250,
+          "y": 100,
+          "rgb": [
+            80.0,
+            80.0,
+            80.0
+          ],
+          "expected": [
+            79,
+            79,
+            79
+          ],
+          "tolerance": 12
+        },
+        {
+          "x": 570,
+          "y": 25,
+          "rgb": [
+            80.0,
+            80.0,
+            80.0
+          ],
+          "expected": [
+            79,
+            79,
+            79
+          ],
+          "tolerance": 12
+        }
+      ],
+      "white_text_pixels": 1292,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 590,
+            "output_age": 0.4
+          }
+        ]
+      },
+      "segment_sha256": "a9ee569aac6cde7d05e9bf99122b94ec248da1c3c547855c30ca474b1104e7b9"
+    }
+  ],
+  "channel_log_errors": 0,
+  "models_saved_from_pt_BR_Composer": true
+}

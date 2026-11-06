@@ -313,7 +313,7 @@ impl LogoFadePlan {
             lshape_count += 1;
         }
 
-        let transitions = cfg.logo_control.transitions();
+        let transitions = cfg.logo_control.clip_transitions();
         let frames = (transitions.fade_seconds(LOGO_FADE_SECONDS) * fps)
             .round()
             .max(1.0) as i64;
@@ -1355,13 +1355,21 @@ fn apply_overlays(
     // comes up.
     if let Some((image, left)) = &logo.outgoing {
         if let Some(old) = image.as_deref().or(configured) {
-            draw_logo(frame, old, opacity * left, output);
+            if old.is_model() {
+                old.blend_model(frame, &logo, permanent_logo_visibility * left, 1.0, true);
+            } else {
+                draw_logo(frame, old, opacity * left, output);
+            }
         }
         incoming = 1.0 - left;
     }
 
     if let Some(current) = logo.replacement.as_deref().or(configured) {
-        draw_logo(frame, current, opacity * incoming, output);
+        if current.is_model() {
+            current.blend_model(frame, &logo, permanent_logo_visibility, incoming, false);
+        } else {
+            draw_logo(frame, current, opacity * incoming, output);
+        }
     }
 
     if let Some(text) = &mut video.text {
@@ -1379,7 +1387,7 @@ fn apply_overlays(
     }
 
     // Permanent text models live above the picture. The channel logo uses
-    // the shared native model control above for clip and desktop compatibility.
+    // the shared layer model control above for clip and desktop compatibility.
     video
         .graphics_control
         .blend_always_on(frame, permanent_logo_visibility);

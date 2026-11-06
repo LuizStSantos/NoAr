@@ -1456,6 +1456,14 @@ export default {
             },
         },
         composer: {
+            saveGuideLogo: 'Salvar imagem do guia',
+            guideLogoSaved: 'Imagem do guia salva.',
+            alwaysOn: 'Sempre no ar',
+            alwaysOnHint:
+                'Carrega este modelo permanente ao iniciar. O interruptor em Modelos permite escondê-lo temporariamente.',
+            videoCorner: 'Canto do vídeo',
+            freeWindow: 'Posição livre',
+            videoSize: 'Tamanho da janela de vídeo',
             previewHint:
                 'A prévia ilustra os efeitos. No ar, Escala usa Surgir; modelos com janela de vídeo usam a transição do vídeo.',
             retry: 'Tentar novamente',
@@ -1622,6 +1630,7 @@ export default {
         page: 'Página',
         marksHint: 'Marcações dentro de um vídeo (logo, L-shape, breaks) continuam em Armazenamento › Marcações.',
         sections: {
+            xmltv: 'Logo XMLTV',
             composer: 'Composer',
             onair: 'No ar',
             templates: 'Modelos',

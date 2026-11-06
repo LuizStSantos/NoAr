@@ -26,6 +26,7 @@ export interface TemplateLayer {
     animation_in: LayerAnimation
     animation_out: LayerAnimation
     animation_ms: number
+    clip_animation_ms?: number | null
     delay_ms: number
 }
 
@@ -140,6 +141,8 @@ export interface GraphicsTemplate {
     during_lshape: 'follow' | 'wait' | 'skip'
     layers: TemplateLayer[]
     fields: string[]
+    always_on?: boolean | null
+    control_layer_id?: string | null
 }
 
 export interface ChannelGraphic {

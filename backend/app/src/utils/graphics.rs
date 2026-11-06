@@ -448,6 +448,9 @@ pub struct TemplateLayer {
     pub animation_out: Animation,
     #[serde(default = "default_animation_ms")]
     pub animation_ms: u32,
+    /// A separately configured clip fade; absent means use the layer duration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clip_animation_ms: Option<u32>,
     /// Wait before this layer comes on, to stagger the layers.
     #[serde(default)]
     pub delay_ms: u32,
@@ -456,7 +459,11 @@ pub struct TemplateLayer {
 /// A template as sent by the web interface or the API.
 #[derive(Debug, Clone, Deserialize)]
 pub struct TemplateInput {
+    #[serde(default)]
+    pub control_layer_id: Option<String>,
     pub name: String,
+    #[serde(default)]
+    pub always_on: Option<bool>,
     #[serde(default)]
     pub group: String,
     #[serde(default = "default_duration")]
@@ -542,6 +549,13 @@ fn check_layer(layer: &TemplateLayer) -> Result<(), String> {
         layer.name.trim().to_string()
     };
     let in_frame = |value: f64| (-EDGE_SLACK..=100.0 + EDGE_SLACK).contains(&value);
+
+    if layer
+        .clip_animation_ms
+        .is_some_and(|milliseconds| milliseconds > MAX_ANIMATION_MS)
+    {
+        return Err("clip animation duration exceeds 10000 ms".to_string());
+    }
 
     if layer.id.trim().is_empty() {
         return Err("every layer needs an id".to_string());
@@ -693,6 +707,8 @@ pub fn prepare_template(
         duration: input.duration,
         during_lshape: input.during_lshape,
         fields: template_fields(&layers),
+        always_on: input.always_on,
+        control_layer_id: input.control_layer_id,
         layers,
     })
 }
@@ -1115,6 +1131,8 @@ mod tests {
         sponsor.image = Some("{sponsor}".to_string());
 
         let input = TemplateInput {
+            always_on: None,
+            control_layer_id: None,
             name: "  Sponsor bug ".to_string(),
             group: " Sponsors ".to_string(),
             duration: 0.0,
@@ -1130,6 +1148,8 @@ mod tests {
         assert_eq!(template.fields, ["sponsor"]);
 
         let too_long = TemplateInput {
+            always_on: None,
+            control_layer_id: None,
             name: "Clock".to_string(),
             group: String::new(),
             duration: 90_000.0,
@@ -1233,6 +1253,8 @@ mod tests {
         let mut second = picture.clone();
         second.id = "second".to_string();
         let input = TemplateInput {
+            always_on: None,
+            control_layer_id: None,
             name: "Two pictures".to_string(),
             group: String::new(),
             duration: 0.0,

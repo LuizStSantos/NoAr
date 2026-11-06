@@ -82,12 +82,13 @@ and the Report for what aired.
   timing, and save them in groups. Open **Edit** or **+ New template** from
   Templates or On air; operators fill in the fields and take the templates
   on air ([roadmap and status](docs/graphics-roadmap.md)).
-- **On air**, **Templates**, **Subtitles** and **External control (API)** are
+- **On air**, **Templates**, **XMLTV logo**, **Subtitles** and **External control (API)** are
   the Graphics navigation. Templates groups channel logo, ticker and L-shape
-  models separately from ordinary GCs; Edit opens their dedicated editors.
+  models separately from ordinary GCs; Edit opens their layers in Composer.
+  Logo and ticker have Always on air; the L-shape has an editable video window.
   The logo fades or cuts, cross-fades when swapped and can go anywhere on screen.
 - **L-shape**: the picture shrinks into a corner over a full-screen graphic,
-  with a downloadable template.
+  with artwork layers and an editable video window.
 - **Quick scenes**: manage them from the Templates **Scenes** group, then
   apply their logo/L-shape changes from NoAr or an encoder.
 - Everything can be hidden, swapped, moved or applied on air from NoAr or by

@@ -184,6 +184,9 @@ pub struct PlayoutConfig {
     #[ts(skip)]
     #[serde(skip_serializing, skip_deserializing)]
     pub channel: Channel,
+    #[ts(skip)]
+    #[serde(skip)]
+    pub logo_model: Option<crate::db::models::GraphicsTemplate>,
     pub general: General,
     pub mail: Mail,
     #[serde(default)]
@@ -1694,15 +1697,23 @@ impl PlayoutConfig {
 
         let (logo_path, _, logo) = norm_abs_path(&channel.storage, &processing.logo)?;
 
-        if processing.add_logo && !logo_path.is_file() {
-            processing.add_logo = false;
-        }
-
         processing.logo = logo;
         processing.logo_path = logo_path.to_string_lossy().to_string();
 
+        let bindings = handles::select_graphics_bindings(pool, channel_id).await?;
+        let logo_model = match bindings
+            .iter()
+            .find(|binding| binding.role == crate::db::models::GraphicsRole::Logo)
+        {
+            Some(binding) => {
+                handles::select_graphics_template(pool, channel_id, binding.template_id).await?
+            }
+            None => None,
+        };
+
         Ok(Self {
             channel,
+            logo_model,
             general,
             mail,
             notification,

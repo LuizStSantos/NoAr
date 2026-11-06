@@ -20,15 +20,22 @@ one is tagged.
 
 ### Added
 
+- Channel logo, L-shape and ticker models are edited as Composer layers, with
+  permanent visibility and video-window corner/size controls. Migration `00030`
+  upgrades already converted layouts without duplicating models or changing
+  frozen legacy columns. Compatibility image/placement controls act on the
+  composed layers and retain additional artwork. The independent guide icon
+  has an XMLTV logo tab in Graphics.
+
 - Assigned channel graphics and scenes have separate library cards, localized
-  role names, saved-model previews, visibility/scene controls and dedicated model
-  editors. Logo, L-shape and Quick scenes no longer have separate menu entries;
+  role names, saved-model previews, visibility/scene controls and Composer editing for channel layers
+  (with a scene action editor). Logo, L-shape and Quick scenes no longer have separate menu entries;
   old browser URLs redirect with the channel preserved. Manage scenes remains
-  available in an empty library group. Static ticker text has its own editor. Assigned models
+  available in an empty library group. Static ticker text is edited in Composer. Assigned models
   are excluded from the ordinary On air GC picker.
 - Channel graphics conversion: sqlx migration `00029` and automatic, atomic
   conversion to bound logo, ticker and L-shape templates and quick-scene models.
-  Native graphics settings save these models; legacy columns stay
+  Compatibility configuration writes save these models; legacy columns stay
   unchanged. Returning to an older image requires restoring the pre-update
   database backup. See [Docker rollback](docs/docker.md#restoring-before-graphics-conversion-00029).
 - Graphics Composer: admins can create and edit templates from Templates or

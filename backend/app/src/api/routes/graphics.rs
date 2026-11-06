@@ -133,6 +133,12 @@ pub async fn add_graphics_template(
     let storage = manager.config.read().await.channel.storage.clone();
     let mut template = prepare_template(&storage, id, 0, input)?;
 
+    if template.always_on.is_some() {
+        return Err(ServiceError::BadRequest(
+            "Always on is configured on the channel logo or ticker model".to_string(),
+        ));
+    }
+
     ensure_unique_name(&state, &template).await?;
     template.id = handles::insert_graphics_template(&state.pool, &template).await?;
 
@@ -153,6 +159,43 @@ pub async fn update_graphics_template(
     let storage = manager.config.read().await.channel.storage.clone();
     let template = prepare_template(&storage, id, template_id, input)?;
 
+    if let Some(binding) = handles::select_graphics_bindings(&state.pool, id)
+        .await?
+        .into_iter()
+        .find(|binding| binding.template_id == template_id)
+    {
+        use crate::{
+            db::models::GraphicsRole,
+            utils::graphics::{LayerKind, graphic_spec},
+        };
+
+        let video = template
+            .layers
+            .iter()
+            .any(|layer| layer.visible && layer.kind == LayerKind::Video);
+
+        if (binding.role == GraphicsRole::Lshape) != video {
+            return Err(ServiceError::BadRequest(
+                "Only the channel L-shape model must contain a visible video window".to_string(),
+            ));
+        }
+
+        if !template.fields.is_empty() {
+            return Err(ServiceError::BadRequest("Channel models need literal content; operator fields belong to temporary templates".to_string()));
+        }
+
+        let spec = graphic_spec(&template, &HashMap::new(), &storage)?;
+        let output = manager.config.read().await.output.clone();
+        tokio::task::spawn_blocking(move || {
+            noar_engine::render_graphic(&spec, output.width, output.height)
+        })
+        .await
+        .map_err(|_| ServiceError::InternalServerError)?
+        .map_err(|error| {
+            ServiceError::BadRequest(format!("The model cannot be rendered: {error:#}"))
+        })?;
+    }
+
     ensure_unique_name(&state, &template).await?;
 
     if !handles::update_graphics_template(&state.pool, &template).await? {
@@ -171,7 +214,11 @@ pub async fn update_graphics_template(
     manager.update_config(config).await;
     crate::utils::graphics::load_channel_ticker(&manager).await?;
 
-    Ok(Json(template))
+    Ok(Json(
+        handles::select_graphics_template(&state.pool, id, template_id)
+            .await?
+            .ok_or_else(|| template_not_found(template_id))?,
+    ))
 }
 
 /// **Remove a graphics template**

@@ -12,7 +12,10 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 
-use crate::utils::helper::even;
+use crate::{
+    compositor::graphics::{GraphicContent, GraphicSpec, render_graphic},
+    utils::helper::even,
+};
 
 /// How long the picture takes to shrink or grow back.
 pub const LSHAPE_SECONDS: f64 = 0.8;
@@ -87,6 +90,7 @@ pub struct LShapeConfig {
 
 /// The graphic as drawn: the background at the output's size, and the
 /// window the picture takes in it.
+#[derive(Clone)]
 pub struct LShapeGraphic {
     background: Arc<VideoFrame>,
     window: Rect,
@@ -230,6 +234,11 @@ pub struct LShapeControl(Arc<Mutex<LShapeState>>);
 
 #[derive(Default)]
 struct LShapeState {
+    model: Option<(GraphicSpec, usize)>,
+    replacement_image: Option<String>,
+    replacement_uses_model: bool,
+    clip_uses_model: bool,
+    clip_inherits_window: bool,
     /// The channel's graphic.
     graphic: Option<Arc<LShapeGraphic>>,
     /// Another graphic swapped in from outside, and its name.
@@ -283,11 +292,45 @@ impl fmt::Debug for LShapeControl {
 impl LShapeControl {
     /// Replace the channel model without changing its on/off phase, remote
     /// replacement, placement or clip override.
-    pub(crate) fn set_rendered_graphic(&self, graphic: Option<Arc<LShapeGraphic>>) {
+    pub(crate) fn set_rendered_graphic(
+        &self,
+        graphic: Option<Arc<LShapeGraphic>>,
+        spec: &GraphicSpec,
+        primary: usize,
+    ) -> Result<()> {
         let mut state = self.lock();
         let placement = state.placement;
+        let model = (spec.clone(), primary);
+
+        if let Some(graphic) = &graphic {
+            let (width, height) = (graphic.background.width(), graphic.background.height());
+
+            if state.replacement_uses_model
+                && let Some(path) = &state.replacement_image
+                && let Some((label, _)) = &state.replacement
+            {
+                let replacement = render_model_art(&model, path, width, height)?;
+                state.replacement = Some((label.clone(), Arc::new(replacement.placed(placement))));
+            }
+
+            if state.clip_uses_model
+                && let Some((config, old)) = &state.clip
+            {
+                let mut clip = render_model_art(&model, &config.path, width, height)?;
+
+                if !state.clip_inherits_window {
+                    clip.home = old.home;
+                    clip.window = old.home;
+                }
+
+                state.clip = Some((config.clone(), Arc::new(clip)));
+            }
+        }
 
         state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
+        state.model = Some(model);
+
+        Ok(())
     }
 
     fn lock(&self) -> MutexGuard<'_, LShapeState> {
@@ -309,6 +352,7 @@ impl LShapeControl {
         let placement = state.placement;
 
         state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
+        state.model = None;
 
         Ok(())
     }
@@ -346,7 +390,11 @@ impl LShapeControl {
         height: u32,
         inherit_window: bool,
     ) -> Result<()> {
-        let mut graphic = LShapeGraphic::load(config, width, height)?;
+        let model = self.lock().model.clone().filter(|_| inherit_window);
+        let mut graphic = match model {
+            Some(model) => render_model_art(&model, &config.path, width, height)?,
+            None => LShapeGraphic::load(config, width, height)?,
+        };
         let mut state = self.lock();
         let placement = state.placement;
 
@@ -356,6 +404,8 @@ impl LShapeControl {
         }
 
         state.replacement = Some((label.to_string(), Arc::new(graphic.placed(placement))));
+        state.replacement_image = Some(config.path.clone());
+        state.replacement_uses_model = inherit_window;
 
         Ok(())
     }
@@ -392,7 +442,9 @@ impl LShapeControl {
 
     /// Back to the channel's graphic.
     pub fn reset(&self) {
-        self.lock().replacement = None;
+        let mut state = self.lock();
+        state.replacement = None;
+        state.replacement_image = None;
     }
 
     /// The graphic of the clip about to play, for the stretches marked in
@@ -404,7 +456,7 @@ impl LShapeControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
-        self.set_clip_graphic_with_window(config, width, height, false)
+        self.set_clip_graphic_with_window(config, width, height, false, false)
     }
 
     /// Clip image-only overrides inherit the assigned model's free window.
@@ -414,7 +466,16 @@ impl LShapeControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
-        self.set_clip_graphic_with_window(config, width, height, true)
+        self.set_clip_graphic_with_window(config, width, height, true, true)
+    }
+
+    pub fn set_clip_model_art_placed(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.set_clip_graphic_with_window(config, width, height, false, true)
     }
 
     fn set_clip_graphic_with_window(
@@ -423,6 +484,7 @@ impl LShapeControl {
         width: u32,
         height: u32,
         inherit_window: bool,
+        use_model: bool,
     ) -> Result<()> {
         let Some(config) = config else {
             self.lock().clip = None;
@@ -440,6 +502,8 @@ impl LShapeControl {
         };
         let cached = state.clip.as_ref().is_some_and(|(loaded, graphic)| {
             loaded == config
+                && state.clip_uses_model == use_model
+                && state.clip_inherits_window == inherit_window
                 && expected_home == Some(graphic.home)
                 && graphic.background.width() == width
                 && graphic.background.height() == height
@@ -450,10 +514,18 @@ impl LShapeControl {
             return Ok(());
         }
 
-        let graphic = LShapeGraphic::load(config, width, height).map(|mut graphic| {
+        let model = self.lock().model.clone().filter(|_| use_model);
+        let loaded = match model {
+            Some(model) => render_model_art(&model, &config.path, width, height),
+            None => LShapeGraphic::load(config, width, height),
+        };
+        let graphic = loaded.map(|mut graphic| {
             if inherit_window && let Some(home) = home {
                 graphic.home = home;
                 graphic.window = home;
+            } else if !inherit_window {
+                graphic.home = window(config, width, height);
+                graphic.window = graphic.home;
             }
 
             graphic
@@ -463,6 +535,8 @@ impl LShapeControl {
         match graphic {
             Ok(graphic) => {
                 state.clip = Some((config.clone(), Arc::new(graphic)));
+                state.clip_uses_model = use_model;
+                state.clip_inherits_window = inherit_window;
                 Ok(())
             }
             Err(error) => {
@@ -531,6 +605,43 @@ impl LShapeControl {
 
         state.level(at + elapsed)
     }
+}
+
+fn render_model_art(
+    model: &(GraphicSpec, usize),
+    path: &str,
+    width: u32,
+    height: u32,
+) -> Result<LShapeGraphic> {
+    let mut spec = model.0.clone();
+    if let Some(layer) = spec.layers.get_mut(model.1) {
+        layer.content = GraphicContent::Image { path: path.into() };
+    } else {
+        use crate::{GraphicAnimation, GraphicLayerSpec};
+
+        spec.layers.insert(
+            0,
+            GraphicLayerSpec {
+                content: GraphicContent::Image { path: path.into() },
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: GraphicAnimation::None,
+                animation_out: GraphicAnimation::None,
+                animation_ms: 0,
+                delay_ms: 0,
+            },
+        );
+    }
+    let rendered = render_graphic(&spec, width, height)?;
+
+    rendered
+        .picture_graphic()
+        .cloned()
+        .ok_or_else(|| anyhow!("model has no video window"))
 }
 
 /// Scales pictures into the L-shape window, reusing the scaler while the

@@ -3,20 +3,21 @@
 
 NoAr puts the channel logo over the picture of everything it plays: clips,
 scheduled lives and live ingest. Everything about it is in the **Graphics**
-tab of the main menu. Its navigation has four pages:
+tab of the main menu. Its navigation has five pages:
 
 - **On air**: live graphics, logo/L-shape controls and scene actions (every user);
 - **Templates**: ordinary templates plus separate **Channel graphics** and
   **Scenes** groups. Use **Edit** on Channel logo, Channel L-shape or Ticker
-  to open its dedicated editor inside Graphics. **Manage scenes** works even
+  to open its layers in Composer. **Manage scenes** works even
   before the first scene exists;
+- **XMLTV logo**: the independent guide icon, with storage selection and preview;
 - **Subtitles**: the WebVTT subtitles of the HLS output;
 - **External control (API)**: the graphics key and a tutorial for encoders.
 
 Logo, L-shape and Quick scenes are no longer separate menu entries. Existing
 `/graphics/logo`, `/graphics/lshape` and `/graphics/scenes` links redirect to
-these editors with the selected channel preserved. `/graphics/logo#ticker`
-opens the ticker editor. Existing API control URLs and responses are unchanged.
+Composer (or the scene action editor) with the selected channel preserved. `/graphics/logo#ticker`
+opens the ticker model in Composer. Existing API control URLs and responses are unchanged.
 
 The Player has the same at hand under its preview: the logo on and off and
 where it is, the L-shape in and out and its corner, the quick scenes, and a
@@ -30,38 +31,35 @@ in percent of the room around the logo (`50 × 1` is the top centre).
 
 ## Placing the logo
 
-- **File**: an image from the storage, PNG with transparency being the usual
-  choice.
-- **Position**: drag the logo on the small screen, click where it goes, or
-  type `X %` and `Y %` (0 is the left or top edge, 100 the other; it snaps to
-  the edges and the middle). The **margin** keeps it that many pixels of the
-  output clear of the edges. The edges and the middle are saved as before
-  (`W-w-12:12`); anywhere else as a share with the margin, such as
-  `25%+15:80%-18`. **Advanced** takes any position expression instead,
-  such as `W-w-30:30` (`W`/`H` are the output size, `w`/`h` the logo's).
-- **Size**: a share of the output width, or the image's own size; Advanced
-  takes `WIDTH:HEIGHT` in pixels or percent, with `-1` keeping the proportion.
-- **Opacity**.
+Open **Graphics › Templates › Channel logo › Edit**. The logo is a model with
+an image layer; add other image, text or shape layers if needed. Select the
+image to choose a storage path or upload to `Graphics/`, drag it and resize
+with the canvas handles, or type X/Y/width/height in percent of the output.
+The px toggle uses the actual channel output size. Proportional, scale,
+centering and opacity controls apply to the selected layer.
 
-The preview frame has the shape of the output (16:9 for 1920×1080, and so on)
-and can show reference lines: thirds and center, the action safe (93 %) and
-title safe (90 %) areas, and the margin.
+Enable **Always on air** to load the logo model at startup. The library's
+**On air / Off** switch hides or shows it during operation. Hiding does not
+delete the definition, and saving a temporarily hidden model keeps it hidden.
+Saving a model updates output without restarting playout.
+
+Legacy position/scale expressions remain accepted by the configuration API.
+Conversion evaluates them at the output size and stores the resulting layer
+geometry; the Composer does not maintain a second expression-based layout.
+Live/clip placement controls retain their legacy room-around-the-logo units.
 
 ## How the logo comes up and goes off
 
-**Logo animations**, in the same settings page, sets how the logo appears and
-disappears, each on its own:
+Select the image layer's entry and exit animation in Composer. **None** gives
+a cut; **Fade** gives a fade. Duration and delay are in milliseconds. Additional
+layer presets are available in the editor. The timeline previews their timing.
 
-- **Fade**: gradually (the default).
-- **Cut**: at once.
-
-It applies everywhere the logo comes and goes: at the start and end of clips,
-around commercials and marked stretches, and when it is hidden or shown live.
-**Length** sets how long a fade takes, up to 10 s; empty keeps the built-in
-lengths, 1 s on clips and 0.4 s when the logo is hidden, shown or swapped live.
-Swapping the logo for another image always cross-fades, the old image fading
-out as the new one fades in, over that length. Changes take effect at once,
-without restarting the playout.
+An imported logo without an explicit duration retains the legacy defaults:
+1000 ms for clip marks and 400 ms for external controls. Editing Duration in
+Composer makes the new duration apply to both. Swapping the primary image
+cross-fades that image and preserves other composed layers. External placement
+translates the composition relative to its controlled image. Commercial gaps
+and L-shape transitions still suppress the logo.
 
 ## Where the logo goes off by itself
 
@@ -142,22 +140,16 @@ top. Going in, the logo goes off first (0.4 s) and then the picture shrinks
 the logo returns. A stretch marked in a video starts this at its first mark
 and ends it at its second.
 
-Set it up in **Graphics › Templates › Channel L-shape › Edit**:
+Set it up in **Graphics › Templates › Channel L-shape › Edit**, which opens
+Composer. Add image, shape or text layers for the artwork and one **Video in
+the corner** layer for the programme picture. The picture covers the artwork
+inside its window. Select that video layer to choose a corner and size
+(30–95%), or drag/resize it to author a free window. Ordinary artwork layers
+retain the same editing controls as other templates.
 
-- **L-shape graphic**: an image in the storage, made for the whole screen
-  (1920×1080 for a 1080p output; another size is stretched to the output).
-  Draw the band and leave the video's space plain: the picture covers it.
-  **Download a base for the image editor** gives a PNG of the output's size
-  with that space marked in magenta, its size and place in pixels, and the
-  title safe area: open it in the editor, draw the band around it on a layer
-  above, and export the full image.
-- **Video corner**: top right, top left, bottom right or bottom left.
-- **Video size**: how much of the screen the picture keeps, from 30% to 95%
-  (75% by default), its aspect ratio kept.
-
-The preview there shows the graphic and the picture's rectangle as on air.
-Saving loads the graphic at once, without a restart; one that cannot be read
-is refused when saving. Without a graphic the L-shape stays off.
+Saving updates the model without restarting the channel. External/clip artwork
+replacements change its controlled image while preserving other art layers and
+the model window. Only an explicit corner/scale override changes that window.
 
 It goes on air:
 
@@ -261,6 +253,7 @@ A scene's changes can also be put on a timetable in the
 
 ## Logo in the guide
 
-The XMLTV guide shows the logo on the video as the channel icon, unless
+The XMLTV guide uses the configured model's controlled image as the channel icon, unless
 **Logo in the guide (XMLTV)** sets another image, such as a version in colour
-instead of a white one. See [xmltv.md](xmltv.md).
+instead of a white one. Set this independent guide path in **Graphics › XMLTV logo** and use **Save guide icon**. Transient on-air replacements do
+not change the guide icon. See [xmltv.md](xmltv.md).

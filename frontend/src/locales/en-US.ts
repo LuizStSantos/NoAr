@@ -1452,6 +1452,13 @@ export default {
             },
         },
         composer: {
+            saveGuideLogo: 'Save guide icon',
+            guideLogoSaved: 'Guide icon saved.',
+            alwaysOn: 'Always on air',
+            alwaysOnHint: 'Load this permanent channel model at startup. The library switch can temporarily hide it.',
+            videoCorner: 'Video corner',
+            freeWindow: 'Free position',
+            videoSize: 'Picture window size',
             previewHint:
                 'The preview illustrates the presets. On air, Scale currently fades; picture-window templates use the video transition.',
             retry: 'Retry',
@@ -1618,6 +1625,7 @@ export default {
         page: 'Page',
         marksHint: 'Marks inside a video (logo, L-shape, breaks) stay in Storage › Marks.',
         sections: {
+            xmltv: 'XMLTV logo',
             composer: 'Composer',
             onair: 'On air',
             templates: 'Templates',

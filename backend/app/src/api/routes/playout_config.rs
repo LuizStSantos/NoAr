@@ -311,7 +311,13 @@ pub async fn update_playout_config(
 
     // The logo goes on air when saved, so an image that cannot be read is
     // refused here rather than leaving the old one on air.
-    if data.processing.add_logo {
+    let logo_changed = data.processing.logo != config.processing.logo
+        || data.processing.logo_scale != config.processing.logo_scale
+        || data.processing.logo_position != config.processing.logo_position
+        || data.processing.logo_opacity != config.processing.logo_opacity
+        || (data.processing.add_logo && !config.processing.add_logo);
+
+    if logo_changed && data.processing.add_logo && !data.processing.logo.trim().is_empty() {
         let mut check = data.clone();
         check.processing.logo_path = logo_path.to_string_lossy().to_string();
         if let Some(config) = crate::player::output::channel_logo(&check) {

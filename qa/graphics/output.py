@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--screenshots", type=Path, required=True)
     parser.add_argument("--free-window-only", action="store_true")
+    parser.add_argument("--composite-only", action="store_true")
     args = parser.parse_args()
     root = args.work_root.resolve()
     if os.getenv("NOAR_E2E_STAGING") != "1" or os.getenv("NOAR_E2E_DISPOSABLE") != "1":
@@ -33,7 +34,9 @@ def main():
         raise SystemExit("Server storage must be inside the owned fixture")
     captures = []
     database = sqlite3.connect(root / "db/noar.db")
-    frozen_sql = "SELECT logo,lshape,graphics_scenes FROM config_processing WHERE config_id=1"
+    frozen_sql = ("SELECT add_logo,logo,logo_scale,logo_position,logo_opacity,logo_transition_in,"
+                  "logo_transition_out,logo_transition_seconds,lshape,lshape_scale,lshape_corner,"
+                  "graphics_scenes FROM config_processing WHERE config_id=1")
     frozen = database.execute(frozen_sql).fetchone()
 
     def control(kind, action, **data):
@@ -45,6 +48,9 @@ def main():
 
     def capture(name, samples):
         if args.free_window_only and not name.startswith("free-window-"):
+            return
+
+        if args.composite_only and not name.startswith("layer-"):
             return
 
         # Published HLS segments can still contain queued frames from the previous
@@ -133,6 +139,46 @@ def main():
     if args.free_window_only:
         assert database.execute(frozen_sql).fetchone() == frozen
         (root / "free-window-evidence.json").write_text(json.dumps({
+            "status": "PASS", "captures": captures, "frozen_legacy_columns_unchanged": True,
+        }, indent=2) + "\n")
+        return
+
+    # These extra layers have no equivalent in 2.2.1. Prove that legacy image
+    # controls change only the stable target and preserve the composed artwork.
+    roles = client.ok("GET", "/api/graphics/1/channel")
+    logo = next(item["template"] for item in roles if item["kind"] == "logo")
+    logo_original = json.loads(json.dumps(logo))
+    badge = {"id": "proof-badge", "kind": "box", "name": "Proof badge", "visible": True,
+             "x": 62.5, "y": 3.3333333333333335, "width": 6.25, "height": 5.555555555555555,
+             "opacity": 1, "fill": "#ffffff", "animation_in": "none", "animation_out": "none",
+             "animation_ms": 0, "delay_ms": 0}
+    logo["layers"].append(badge)
+    client.ok("PUT", f"/api/graphics/1/templates/{logo['id']}", logo)
+    control("logo", "replace", logo="replacement-logo.png")
+    capture("layer-logo-replacement", [(570, 25, blue), (405, 18, (255, 255, 255))])
+    control("logo", "move", position="bottom-right")
+    capture("layer-logo-move", [(570, 325, blue), (405, 305, (255, 255, 255)), (405, 18, gray)])
+    control("logo", "show")
+    control("logo", "move", position="default")
+    client.ok("PUT", f"/api/graphics/1/templates/{logo['id']}", logo_original)
+
+    artwork = json.loads(json.dumps(original))
+    badge.update({"x": 0, "y": 0})
+    artwork["layers"].insert(1, badge)
+    client.ok("PUT", f"/api/graphics/1/templates/{artwork['id']}", artwork)
+    control("lshape", "on")
+    control("lshape", "replace", graphic="replacement-art.png")
+    capture("layer-lshape-replacement", [(5, 5, (255, 255, 255)), (25, 50, (112, 40, 56)), (250, 100, gray)])
+    control("lshape", "off")
+    control("lshape", "reset")
+    marks(lshape=[{"from": 0, "to": 180}], lshape_graphic="clip-art.png")
+    capture("layer-lshape-clip", [(5, 5, (255, 255, 255)), (25, 50, (40, 80, 24)), (250, 100, gray)])
+    marks()
+    client.ok("PUT", f"/api/graphics/1/templates/{artwork['id']}", original)
+
+    if args.composite_only:
+        assert database.execute(frozen_sql).fetchone() == frozen
+        (root / "composite-evidence.json").write_text(json.dumps({
             "status": "PASS", "captures": captures, "frozen_legacy_columns_unchanged": True,
         }, indent=2) + "\n")
         return

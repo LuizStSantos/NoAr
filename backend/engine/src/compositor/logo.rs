@@ -8,12 +8,16 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 
 use crate::{
+    compositor::graphics::{
+        GraphicContent, GraphicSpec, RenderedGraphic, RoleImageBlend, render_graphic,
+    },
     compositor::overlay::{OverlayRef, blend_overlay, chroma_alpha},
     utils::{config::LogoConfig, helper::even},
 };
 
 #[derive(Clone)]
 pub struct LogoOverlay {
+    model: Option<Arc<LogoModel>>,
     pub frame: VideoFrame, // YUVA420P
     chroma_alpha: Vec<u8>,
     pub x: u32,
@@ -21,6 +25,13 @@ pub struct LogoOverlay {
     pub width: u32,
     pub height: u32,
     pub opacity: u8, // 0..255
+}
+
+struct LogoModel {
+    spec: GraphicSpec,
+    graphic: RenderedGraphic,
+    primary: usize,
+    frame_size: (u32, u32),
 }
 
 impl LogoOverlay {
@@ -44,6 +55,7 @@ impl LogoOverlay {
         let (x, y) = logo_position(&config.position, output_width, output_height, width, height)?;
 
         Ok(Self {
+            model: None,
             chroma_alpha: chroma_alpha(&frame, width, height),
             frame,
             x: even(x),
@@ -54,10 +66,129 @@ impl LogoOverlay {
         })
     }
 
+    fn from_model(spec: &GraphicSpec, primary: usize, width: u32, height: u32) -> Result<Self> {
+        let graphic = render_graphic(spec, width, height)?;
+        let layer = spec.layers.get(primary);
+        let pixels = |share: f64, total: u32| {
+            even((share * f64::from(total) / 100.0).round().max(0.0) as u32)
+        };
+        let (x, y, w, h) = layer.map_or((0, 0, width, height), |layer| {
+            (
+                pixels(layer.x, width),
+                pixels(layer.y, height),
+                pixels(layer.width, width).max(2),
+                pixels(layer.height, height).max(2),
+            )
+        });
+
+        Ok(Self {
+            model: Some(Arc::new(LogoModel {
+                spec: spec.clone(),
+                graphic,
+                primary,
+                frame_size: (width, height),
+            })),
+            frame: VideoFrame::new(PixelFormat::Yuva420p, 2, 2),
+            chroma_alpha: vec![0],
+            x,
+            y,
+            width: w,
+            height: h,
+            opacity: 255,
+        })
+    }
+
+    fn from_model_config(config: &LogoConfig, width: u32, height: u32) -> Result<Self> {
+        use crate::{GraphicAnimation, GraphicLayerSpec};
+
+        let native = Self::load(config, width, height)?;
+        let percent = |value: u32, total: u32| f64::from(value) * 100.0 / f64::from(total);
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![GraphicLayerSpec {
+                content: GraphicContent::Image {
+                    path: config.path.clone().into(),
+                },
+                x: percent(native.x, width),
+                y: percent(native.y, height),
+                width: percent(native.width, width),
+                height: percent(native.height, height),
+                opacity: config.opacity,
+                radius: 0.0,
+                animation_in: GraphicAnimation::None,
+                animation_out: GraphicAnimation::None,
+                animation_ms: 400,
+                delay_ms: 0,
+            }],
+        };
+
+        Self::from_model(&spec, 0, width, height)
+    }
+
+    fn replaced_image(&self, path: &str, width: u32, height: u32) -> Result<Self> {
+        let model = self
+            .model
+            .as_ref()
+            .ok_or_else(|| anyhow!("missing layer model"))?;
+        let mut spec = model.spec.clone();
+        let layer = spec
+            .layers
+            .get_mut(model.primary)
+            .ok_or_else(|| anyhow!("missing controlled image layer"))?;
+        layer.content = GraphicContent::Image { path: path.into() };
+
+        Self::from_model(&spec, model.primary, width, height)
+    }
+
+    pub(crate) fn is_model(&self) -> bool {
+        self.model.is_some()
+    }
+
+    pub(crate) fn blend_model(
+        &self,
+        frame: &mut VideoFrame,
+        timing: &LogoFrame,
+        mask: f64,
+        image_factor: f64,
+        primary_only: bool,
+    ) {
+        if let Some(model) = &self.model {
+            let levels = model.graphic.role_levels(
+                timing.model_elapsed,
+                timing.model_hidden,
+                &timing.model_from,
+            );
+            model.graphic.blend_role(
+                frame,
+                &levels,
+                timing.model_hidden,
+                mask,
+                RoleImageBlend {
+                    index: model.primary,
+                    opacity: image_factor,
+                    only: primary_only,
+                },
+            );
+        }
+    }
+
     /// The same image placed at `position` (an `X:Y` expression) in an
     /// output of `width` x `height`.
     pub(crate) fn moved_to(&self, position: &str, width: u32, height: u32) -> Result<Self> {
         let (x, y) = logo_position(position, width, height, self.width, self.height)?;
+
+        if let Some(model) = &self.model {
+            let mut spec = model.spec.clone();
+            let dx = (f64::from(even(x)) - f64::from(self.x)) * 100.0 / f64::from(width);
+            let dy = (f64::from(even(y)) - f64::from(self.y)) * 100.0 / f64::from(height);
+
+            for layer in &mut spec.layers {
+                layer.x += dx;
+                layer.y += dy;
+            }
+
+            return Self::from_model(&spec, model.primary, width, height);
+        }
         let mut moved = self.clone();
 
         moved.x = even(x);
@@ -225,6 +356,10 @@ fn eval_position_expr(expr: &str, main: u32, overlay: u32) -> Result<i64> {
 }
 
 pub fn blend_logo(target: &mut VideoFrame, logo: &LogoOverlay, opacity_factor: f64) {
+    if logo.is_model() {
+        logo.blend_model(target, &LogoFrame::default(), opacity_factor, 1.0, false);
+        return;
+    }
     blend_overlay(target, logo.as_overlay(), opacity_factor);
 }
 
@@ -283,6 +418,10 @@ pub struct LogoControl(Arc<Mutex<LogoOverride>>);
 
 #[derive(Default)]
 struct LogoOverride {
+    layer_managed: bool,
+    model_definition: Option<Arc<LogoOverlay>>,
+    model_from: Vec<f64>,
+    clip_animation_ms: Option<u32>,
     hidden: bool,
     /// Visibility when the last switch began, and when that was.
     from: f64,
@@ -314,6 +453,9 @@ struct Outgoing {
 /// What the logo looks like in the frame being drawn.
 #[derive(Default)]
 pub(crate) struct LogoFrame {
+    model_elapsed: Option<Duration>,
+    model_hidden: bool,
+    model_from: Vec<f64>,
     /// How visible the logo is, between 0 (hidden) and 1.
     pub visibility: f64,
     /// The image replacing the configured logo.
@@ -367,6 +509,16 @@ impl LogoOverride {
     fn set_hidden(&mut self, hidden: bool) {
         if hidden != self.hidden {
             let now = Instant::now();
+
+            if let Some(Some(overlay)) = &self.configured
+                && let Some(model) = &overlay.model
+            {
+                self.model_from = model.graphic.role_levels(
+                    self.switched_at.map(|at| now.saturating_duration_since(at)),
+                    self.hidden,
+                    &self.model_from,
+                );
+            }
 
             self.from = self.level(now);
             self.hidden = hidden;
@@ -438,7 +590,20 @@ impl LogoControl {
     /// placed for an output of `width` x `height`. `label` names it in
     /// [`LogoState`].
     pub fn replace(&self, label: &str, config: &LogoConfig, width: u32, height: u32) -> Result<()> {
-        let mut overlay = LogoOverlay::load(config, width, height)?;
+        let configured = {
+            let state = self.lock();
+            state
+                .model_definition
+                .clone()
+                .or_else(|| state.configured.clone().flatten())
+        };
+        let mut overlay = match configured.filter(|overlay| overlay.is_model()) {
+            Some(model) => model.replaced_image(&config.path, width, height)?,
+            None if self.lock().layer_managed => {
+                LogoOverlay::from_model_config(config, width, height)?
+            }
+            None => LogoOverlay::load(config, width, height)?,
+        };
         let mut state = self.lock();
 
         if let Some(position) = &state.position {
@@ -512,7 +677,12 @@ impl LogoControl {
             return Ok(());
         }
 
-        let overlay = match LogoOverlay::load(config, width, height) {
+        let configured = self.lock().configured.clone().flatten();
+        let loaded = match configured.filter(|overlay| overlay.is_model()) {
+            Some(model) => model.replaced_image(&config.path, width, height),
+            None => LogoOverlay::load(config, width, height),
+        };
+        let overlay = match loaded {
             Ok(overlay) => overlay,
             Err(error) => {
                 self.lock().clip_image = None;
@@ -554,8 +724,120 @@ impl LogoControl {
             });
         }
         state.configured = Some(overlay);
+        state.model_definition = None;
+        state.layer_managed = false;
+        state.clip_animation_ms = None;
 
         Ok(())
+    }
+
+    /// The assigned template is the only configured logo. Native setters remain
+    /// available to SDK clients; application compatibility controls edit overrides.
+    pub fn set_model(
+        &self,
+        spec: Option<&GraphicSpec>,
+        primary: usize,
+        clip_animation_ms: Option<u32>,
+        enabled: bool,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        {
+            let state = self.lock();
+            let current = state.model_definition.as_ref();
+            let unchanged = match (spec, current) {
+                (None, None) => true,
+                (Some(spec), Some(overlay)) => overlay.model.as_ref().is_some_and(|model| {
+                    model.spec == *spec
+                        && model.primary == primary
+                        && model.frame_size == (width, height)
+                }),
+                _ => false,
+            };
+
+            if state.layer_managed
+                && unchanged
+                && state.clip_animation_ms == clip_animation_ms
+                && state.configured.as_ref().and_then(Option::as_ref).is_some()
+                    == (enabled && spec.is_some())
+            {
+                return Ok(());
+            }
+        }
+
+        let overlay = spec
+            .map(|spec| LogoOverlay::from_model(spec, primary, width, height))
+            .transpose()?
+            .map(Arc::new);
+        let mut state = self.lock();
+
+        if !state.hidden
+            && let Some(Some(previous)) = &state.configured
+        {
+            state.outgoing = Some(Outgoing {
+                image: Some(previous.clone()),
+                since: Instant::now(),
+            });
+        }
+
+        state.layer_managed = true;
+        if let Some(model) = &overlay {
+            if let Some((path, _)) = &state.clip_image {
+                state.clip_image = Some((
+                    path.clone(),
+                    Arc::new(model.replaced_image(path, width, height)?),
+                ));
+            }
+
+            if let Some((label, previous)) = &state.replacement
+                && let Some(previous_model) = &previous.model
+                && let Some(layer) = previous_model.spec.layers.get(previous_model.primary)
+                && let GraphicContent::Image { path } = &layer.content
+            {
+                let mut replacement =
+                    model.replaced_image(&path.to_string_lossy(), width, height)?;
+
+                if let Some(position) = &state.position {
+                    replacement = replacement.moved_to(position, width, height)?;
+                }
+
+                state.replacement = Some((label.clone(), Arc::new(replacement)));
+            }
+        }
+
+        state.model_definition = overlay.clone();
+        state.configured = Some(overlay.filter(|_| enabled));
+        state.clip_animation_ms = clip_animation_ms;
+
+        Ok(())
+    }
+
+    pub(crate) fn clip_transitions(&self) -> LogoTransitions {
+        let state = self.lock();
+        let mut transitions = state.transitions;
+
+        if let Some(milliseconds) = state.clip_animation_ms {
+            transitions.seconds = Some(f64::from(milliseconds) / 1000.0);
+
+            if let Some(model) = state
+                .model_definition
+                .as_ref()
+                .and_then(|overlay| overlay.model.as_ref())
+                && let Some(layer) = model.spec.layers.get(model.primary)
+            {
+                let transition = |animation| {
+                    if milliseconds == 0 || animation == crate::GraphicAnimation::None {
+                        LogoTransition::Cut
+                    } else {
+                        LogoTransition::Fade
+                    }
+                };
+                transitions.show = transition(layer.animation_in);
+                transitions.hide = transition(layer.animation_out);
+            }
+        }
+
+        transitions
     }
 
     pub fn state(&self) -> LogoState {
@@ -599,6 +881,11 @@ impl LogoControl {
         }
 
         LogoFrame {
+            model_elapsed: state
+                .switched_at
+                .map(|at| now.saturating_duration_since(at)),
+            model_hidden: state.hidden,
+            model_from: state.model_from.clone(),
             visibility: state.level(now),
             replacement: state
                 .replacement
@@ -638,6 +925,83 @@ mod tests {
             opacity: 1.0,
             position: "W-w-12:12".to_string(),
         }
+    }
+
+    #[test]
+    fn a_layer_logo_matches_native_pixels_and_keeps_other_layers_during_image_overrides() {
+        use super::{LogoFrame, LogoOverlay, blend_logo};
+        use crate::frame::{PixelFormat, VideoFrame};
+        use crate::{GraphicAnimation, GraphicContent, GraphicLayerSpec, GraphicSpec, RgbaColor};
+
+        let mut config = logo_asset();
+        config.scale = Some("80:48".to_string());
+        config.position = "12:12".to_string();
+        config.opacity = 0.6;
+        let layer = GraphicLayerSpec {
+            content: GraphicContent::Image {
+                path: config.path.clone().into(),
+            },
+            x: 1.875,
+            y: 100.0 * 12.0 / 360.0,
+            width: 12.5,
+            height: 100.0 * 48.0 / 360.0,
+            opacity: 0.6,
+            radius: 0.0,
+            animation_in: GraphicAnimation::Fade,
+            animation_out: GraphicAnimation::Fade,
+            animation_ms: 1000,
+            delay_ms: 0,
+        };
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![layer.clone()],
+        };
+        let native = LogoOverlay::load(&config, 640, 360).unwrap();
+        let model = LogoOverlay::from_model(&spec, 0, 640, 360).unwrap();
+
+        for visibility in [0.0, 0.25, 0.5, 1.0] {
+            let mut before = VideoFrame::new(PixelFormat::Yuv420p, 640, 360);
+            let mut after = before.clone();
+            blend_logo(&mut before, &native, visibility);
+            model.blend_model(&mut after, &LogoFrame::default(), visibility, 1.0, false);
+
+            for plane in 0..3 {
+                assert_eq!(
+                    before.data(plane),
+                    after.data(plane),
+                    "plane {plane}, opacity {visibility}"
+                );
+            }
+        }
+
+        let mut decoration = layer;
+        decoration.content = GraphicContent::Box {
+            fill: RgbaColor::opaque(255, 255, 255),
+        };
+        decoration.x = 50.0;
+        decoration.opacity = 1.0;
+        let composite = GraphicSpec {
+            picture: None,
+            layers: vec![spec.layers[0].clone(), decoration],
+        };
+        let control = LogoControl::default();
+        control
+            .set_model(Some(&composite), 0, Some(1000), true, 640, 360)
+            .unwrap();
+        control.replace("replacement", &config, 640, 360).unwrap();
+        let replacement = control.frame().replacement.unwrap();
+        assert_eq!(
+            replacement.model.as_ref().unwrap().spec.layers[1],
+            composite.layers[1]
+        );
+        control.hide();
+        control
+            .set_model(Some(&composite), 0, Some(1000), true, 640, 360)
+            .unwrap();
+        assert!(
+            control.state().hidden,
+            "saving does not show a hidden model"
+        );
     }
 
     #[test]

@@ -106,7 +106,49 @@ function updateSelectedLayer(patch: Partial<TemplateLayer>) {
     }
 
     rememberDraft()
+
+    if (patch.animation_ms !== undefined) {
+        patch.clip_animation_ms = null
+    }
+
     Object.assign(selected.value, patch)
+}
+
+function setAlwaysOn(value: boolean) {
+    rememberDraft()
+    draft.value.always_on = value
+    draft.value.duration = 0
+}
+
+const videoCorner = computed(() => {
+    const layer = selected.value
+
+    if (!layer || layer.kind !== 'video') {
+        return 'custom'
+    }
+
+    const horizontal = Math.abs(layer.x) < 0.01 ? 'left' : Math.abs(layer.x + layer.width - 100) < 0.01 ? 'right' : ''
+    const vertical = Math.abs(layer.y) < 0.01 ? 'top' : Math.abs(layer.y + layer.height - 100) < 0.01 ? 'bottom' : ''
+
+    return horizontal && vertical ? `${vertical}-${horizontal}` : 'custom'
+})
+
+function setVideoWindow(corner: string, size: number) {
+    if (!selected.value || corner === 'custom') {
+        return
+    }
+
+    const percent = Math.max(30, Math.min(95, size))
+    const width = Math.max(2, Math.round((frame.value.width * percent) / 100) & ~1)
+    const height = Math.max(2, Math.round((frame.value.height * percent) / 100) & ~1)
+    const x = corner.endsWith('right') ? (frame.value.width - width) & ~1 : 0
+    const y = corner.startsWith('bottom') ? (frame.value.height - height) & ~1 : 0
+    updateSelectedLayer({
+        x: (x * 100) / frame.value.width,
+        y: (y * 100) / frame.value.height,
+        width: (width * 100) / frame.value.width,
+        height: (height * 100) / frame.value.height,
+    })
 }
 
 function setDimension(key: 'x' | 'y' | 'width' | 'height', value: string) {
@@ -350,6 +392,8 @@ async function loadEditor() {
                   duration: template.duration,
                   during_lshape: template.during_lshape,
                   layers: template.layers,
+                  always_on: template.always_on,
+                  control_layer_id: template.control_layer_id,
               }
             : { name: '', group: '', duration: 8, during_lshape: 'follow', layers: [] }
         fonts.value = families
@@ -391,6 +435,8 @@ async function saveTemplate() {
             duration: result.duration,
             during_lshape: result.during_lshape,
             layers: result.layers,
+            always_on: result.always_on,
+            control_layer_id: result.control_layer_id,
         }
 
         baseline.value = JSON.stringify(draft.value)
@@ -977,6 +1023,43 @@ onBeforeUnmount(() => {
                             </select></label
                         >
                     </template>
+                    <template v-if="selected.kind === 'video'">
+                        <label class="field-label">
+                            {{ t('graphics.composer.videoCorner') }}
+                            <select
+                                class="field-input"
+                                :aria-label="t('graphics.composer.videoCorner')"
+                                :value="videoCorner"
+                                @change="setVideoWindow(($event.target as HTMLSelectElement).value, selected.width)"
+                            >
+                                <option value="custom">{{ t('graphics.composer.freeWindow') }}</option>
+                                <option
+                                    v-for="corner in ['top-left', 'top-right', 'bottom-left', 'bottom-right']"
+                                    :key="corner"
+                                    :value="corner"
+                                >
+                                    {{ t(`lshape.corners.${corner}`) }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="field-label">
+                            {{ t('graphics.composer.videoSize') }} (%)
+                            <input
+                                type="number"
+                                min="30"
+                                max="95"
+                                class="field-input"
+                                :value="selected.width"
+                                :aria-label="t('graphics.composer.videoSize')"
+                                @change="
+                                    setVideoWindow(
+                                        videoCorner === 'custom' ? 'top-right' : videoCorner,
+                                        Number(($event.target as HTMLInputElement).value),
+                                    )
+                                "
+                            />
+                        </label>
+                    </template>
                     <template v-if="selected.kind === 'image'">
                         <label class="field-label"
                             >{{ t('graphics.composer.image')
@@ -1068,7 +1151,19 @@ onBeforeUnmount(() => {
                         /></label>
                     </div>
                 </template>
-                <label class="field-label border-t border-line-strong pt-3"
+                <label v-if="draft.always_on != null" class="flex items-center gap-2 border-t border-line-strong pt-3">
+                    <input
+                        type="checkbox"
+                        class="checkbox checkbox-accent"
+                        :checked="draft.always_on"
+                        @change="setAlwaysOn(($event.target as HTMLInputElement).checked)"
+                    />
+                    {{ t('graphics.composer.alwaysOn') }}
+                </label>
+                <p v-if="draft.always_on != null" class="m-0 text-xs text-muted">
+                    {{ t('graphics.composer.alwaysOnHint') }}
+                </p>
+                <label v-else class="field-label border-t border-line-strong pt-3"
                     >{{ t('graphics.templates.duration')
                     }}<input
                         v-model.number="draft.duration"
@@ -1079,7 +1174,7 @@ onBeforeUnmount(() => {
                         step="0.1"
                     /><span class="text-xs text-muted">{{ t('graphics.templates.durationHint') }}</span></label
                 >
-                <label class="field-label"
+                <label v-if="draft.always_on == null" class="field-label"
                     >{{ t('graphics.composer.duringLshape')
                     }}<select v-model="draft.during_lshape" class="field-input">
                         <option v-for="rule in ['follow', 'wait', 'skip'] as const" :key="rule" :value="rule">

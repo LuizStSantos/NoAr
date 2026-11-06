@@ -1,0 +1,52 @@
+{
+  "rust": {
+    "status": "PASS",
+    "gstreamer": "1.26.2",
+    "commands": [
+      "cargo fmt --all",
+      "cargo clippy --no-default-features --all-targets -- --deny warnings",
+      "cargo test --no-default-features"
+    ],
+    "passed": 684,
+    "ignored": 14,
+    "app_library": 384,
+    "http": 34,
+    "as_run": 5,
+    "engine": 261,
+    "log_sha256": "fa4242416aec2d06c073a4324c0e8ba03267e3c37d176cf05ed0bf7fef9a14fc"
+  },
+  "frontend": {
+    "status": "PASS",
+    "commands": [
+      "npx vue-tsc --build",
+      "npx eslint . --config frontend/eslint.config.ts",
+      "npx prettier --check <changed Vue/TS files>",
+      "npm run build",
+      "npm run type-check --prefix qa/e2e"
+    ],
+    "full_browser_tests": 22
+  },
+  "runtime_binaries": {
+    "main_capture": "703de44e3746b49408cfd911dfa9946359544eaba7e710434205eadb911d5551",
+    "candidate_capture": "2b4bbed4074c5ba73aa0e52a5f2eaf4db30c220268d6e0b434f72ad072fda89e",
+    "candidate_server": "350b8f0f8e2504e319cadbe03405a81a39faa0f6f094c63a35049cb968b5e297",
+    "main_desktop": "538c0608b4279874fa0185293a751c1012140f09cdde1c99e195d169023c301c",
+    "candidate_desktop": "4c115320cae163331a43916fce41ebfb8cf27e50967f1ad2ca49ae6fb24dce1b"
+  },
+  "capture_hook_sha256": "663aeb867770016e99e2fc8b544fad65f5463c26cb4db562441744c8cedef465",
+  "capture_source_note": "Isolated candidate source differs from delivered backend only by the encoder capture hook, one explanatory comment and formatting inside a test. No capture hook is shipped.",
+  "not_tested": [
+    "GPU desktop",
+    "physical outputs",
+    "long soak",
+    "hardware audio/video synchronization"
+  ],
+  "retained_parity_archive": {
+    "file": "layers-parity-raw-hls.tar.gz",
+    "sha256": "bacd8a18af2130bae8046e330480fc4e3134495e1ef9955a3220975625c9af3b",
+    "bytes": 5909669,
+    "raw_frames": 2000,
+    "hls_segments": 44,
+    "contains_databases_or_credentials": false
+  }
+}

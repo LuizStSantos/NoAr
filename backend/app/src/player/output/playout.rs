@@ -55,13 +55,69 @@ pub fn channel_logo(config: &PlayoutConfig) -> Option<LogoConfig> {
 /// without restarting, sized for the output the playout runs with. An image
 /// that cannot be read leaves the logo on air as it was.
 pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
-    let logo = channel_logo(config);
+    use crate::utils::graphics::{Animation, graphic_spec};
 
-    if let Err(error) = manager
-        .graphics_control
-        .set_channel_logo(logo.as_ref(), width, height)
-    {
-        warn!(channel = config.general.channel_id; "Logo not changed on air: {error:#}");
+    let result = (|| -> Result<(), ServiceError> {
+        let model = config.logo_model.as_ref();
+        let spec = model
+            .map(|model| {
+                graphic_spec(
+                    model,
+                    &std::collections::HashMap::new(),
+                    &config.channel.storage,
+                )
+            })
+            .transpose()?;
+        let image = model.and_then(|model| {
+            model
+                .layers
+                .iter()
+                .find(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
+        });
+        let primary = model.map_or(0, |model| {
+            model
+                .layers
+                .iter()
+                .filter(|layer| layer.visible)
+                .position(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
+                .unwrap_or(usize::MAX)
+        });
+        let transition = |animation| {
+            if animation == Animation::None {
+                noar_engine::LogoTransition::Cut
+            } else {
+                noar_engine::LogoTransition::Fade
+            }
+        };
+
+        if let Some(image) = image {
+            manager
+                .logo_control
+                .set_transitions(noar_engine::LogoTransitions {
+                    show: transition(image.animation_in),
+                    hide: transition(image.animation_out),
+                    seconds: Some(f64::from(image.animation_ms.max(1)) / 1000.0),
+                });
+        }
+
+        let spec = spec.as_ref().filter(|spec| !spec.layers.is_empty());
+        manager
+            .logo_control
+            .set_model(
+                spec,
+                primary,
+                image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms)),
+                model.is_some_and(|model| model.always_on == Some(true)),
+                width,
+                height,
+            )
+            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+
+        Ok(())
+    })();
+
+    if let Err(error) = result {
+        warn!(channel = config.general.channel_id; "Logo model not changed on air: {error}");
     }
 }
 
@@ -109,12 +165,20 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
             &std::collections::HashMap::new(),
             &config.channel.storage,
         )?;
+        let primary = template
+            .layers
+            .iter()
+            .filter(|layer| layer.visible)
+            .position(|layer| Some(layer.id.as_str()) == template.control_layer_id.as_deref())
+            .unwrap_or(usize::MAX);
         let control = manager.lshape_control.clone();
         let (width, height) = (config.output.width, config.output.height);
-        tokio::task::spawn_blocking(move || control.set_template(&spec, width, height))
-            .await
-            .map_err(|_| ServiceError::InternalServerError)?
-            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+        tokio::task::spawn_blocking(move || {
+            control.set_template_controlled(&spec, primary, width, height)
+        })
+        .await
+        .map_err(|_| ServiceError::InternalServerError)?
+        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
         Ok(())
     }
 
@@ -204,7 +268,7 @@ async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: 
         if inherit_window {
             control.set_clip_model_art(graphic.as_ref(), width, height)
         } else {
-            control.set_clip_graphic(graphic.as_ref(), width, height)
+            control.set_clip_model_art_placed(graphic.as_ref(), width, height)
         }
     })
     .await;

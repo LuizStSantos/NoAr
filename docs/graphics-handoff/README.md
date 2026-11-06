@@ -4,6 +4,147 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Layer-based channel models (current revision)
+
+This revision supersedes the native-layout storage and dedicated logo/L-shape/
+ticker editors described in the historical stages below. Channel models now use
+Composer layers for both editing and application rendering. Clock support remains
+outside this delivery.
+
+| Concern | Authoritative state after startup conversion |
+| --- | --- |
+| Logo | Bound template `layers`: image path, percent geometry, opacity, entry/exit animation and timing. |
+| L-shape | Bound template `layers`: composed artwork and a video layer with the picture window. |
+| Ticker | Bound template text layers. |
+| Permanent visibility | `graphics_channel_bindings.enabled`, exposed as `always_on` for logo/ticker. Library off is a transient hide; turning an unconfigured role on also enables its startup binding. Saving a hidden model preserves its transient hide. |
+| Compatibility image target | `graphics_channel_bindings.control_layer_id`: stable image ID, preserved across layer reordering and clients that omit metadata. Deleting that layer selects the next image once. |
+| Scenes | Ordered scene bindings and `settings.scene` action snapshots; these are actions, not a second layout source. Scheduled events retain their action snapshots and reversal. |
+
+Migration `00030_graphics_layer_layout.sql` adds the conversion version and stable
+image target to the existing bindings. Automatic conversion runs after the normal
+sqlx migrator, inside the existing all-channel transaction. It upgrades both a
+2.2.1 database and an installation already converted by 00029. Existing model IDs,
+bindings, enabled states, additional layers and freely edited L-shape windows are
+preserved. The 00029 logo expressions become percent geometry at the channel's
+output size; cut/fade become layer animations. Role-template layout `settings`
+become `{}` and are never read again after the binding's completed conversion.
+Repeating startup does not overwrite edited layers. Frozen legacy processing
+columns remain untouched; previous migration checksums remain unchanged.
+
+The legacy configuration API projects a compatibility DTO from these layers.
+Writes update the controlled layer/window and binding in one transaction;
+unrelated configuration saves preserve custom layers, animations and free windows.
+External API/key/scene replacements clone the composed definition and replace only
+the controlled image. Logo placement translates its composition relative to that
+image. Clip overrides inherit the model artwork/window unless their own placement
+is explicit; external overrides retain precedence and clearing them restores the
+clip/model. These transient operations do not rewrite the template. Application
+output renders model layers; the engine's native constructors remain available to
+SDK callers, without an extra application logo plane.
+
+Legacy timing has two defaults when no duration was configured: 400 ms for external
+logo controls, 1000 ms for clip marks. Conversion preserves both as `animation_ms`
+and optional `clip_animation_ms`. Changing duration in Composer clears the clip
+override so the authored duration applies consistently. Zero duration is a cut.
+XMLTV still prefers the explicit guide icon, then the configured primary image,
+and never a transient replacement.
+
+Library **Edit** opens Composer for logo, L-shape and ticker. **Always on air** is
+available for the two permanent roles. Selecting the video layer exposes corner
+and picture-size controls; dragging still supports a freely positioned window.
+Scenes keep their action editor inside Graphics. Legacy page URLs resolve their
+binding and redirect to Composer; no native-layout editor remains in this flow.
+The independent guide image has its own **Graphics › XMLTV logo** page, with
+storage selection, preview and a separate save. It uses the existing
+`processing.guide_logo` setting, not the on-air image layers.
+
+Current-revision browser captures (pt-BR; 1440 px desktop, 390 px phone):
+
+| Part | Desktop | Phone |
+| --- | --- | --- |
+| Logo layers | [geometry](composer-layers-logo-pt-BR.jpg), [animation and Always on air](composer-layers-logo-permanent-pt-BR.jpg) | [logo](composer-layers-phone-logo-pt-BR.jpg) |
+| L-shape layers/window | [L-shape](composer-layers-lshape-pt-BR.jpg) | [L-shape](composer-layers-phone-lshape-pt-BR.jpg) |
+| Ticker | [text](composer-layers-ticker-pt-BR.jpg), [Always on air](composer-layers-ticker-permanent-pt-BR.jpg) | [ticker](composer-layers-phone-ticker-pt-BR.jpg) |
+| XMLTV logo tab | [guide icon](composer-layers-xmltv-pt-BR.jpg) | [guide icon](composer-layers-phone-xmltv-pt-BR.jpg) |
+
+Current-revision runtime verification:
+
+- GStreamer **1.26.2**: `cargo fmt --all`, the exact
+  `cargo clippy --no-default-features --all-targets -- --deny warnings`, and
+  `cargo test --no-default-features` passed. Totals: **684 passed, 14 ignored**
+  (384 app library, 34 HTTP, 5 as-run, 261 engine). New regressions cover real
+  00029→00030 migration, transactional rollback, stable IDs/targets, no later
+  settings reads, edited free windows, zero-duration cuts and exact logo pixels.
+- `npx vue-tsc --build`, full ESLint, changed-file Prettier and `npm run build`
+  passed. Seven graphics browser regressions passed, including the three
+  retained Composer tests, assigned controls/navigation/scenes and XMLTV saving
+  without changing logo layers. The complete browser suite then passed
+  **22/22** on a separate freshly initialized database.
+  [Full-suite and restart evidence](layers-e2e-evidence.json) confirms both
+  saved playlists, scheduled events and graphic bindings survive a backend restart.
+  The harness now seeds its owned logo/guide assets and initial scene.
+- [76 exact legacy HTTP responses and both XMLTV cases](layers-api-evidence.json)
+  match the official 2.2.1 baseline. [Browser evidence](layers-browser-evidence.json)
+  records saves/reloads, storage selection and desktop/phone layout, with no
+  JavaScript page errors.
+- [15 real HLS captures](layers-output-evidence.json) verify clip logo image/
+  position/hide/restore, external overrides, clip L-shape artwork/placement,
+  free-window preservation, extra composed layers across replacements/moves,
+  scheduled action snapshots and reversal. [Channel log](layers-controls-channel.txt)
+  contains no errors. [All 12 frozen graphic columns](layers-frozen-columns-evidence.json)
+  still match the pre-00030 backup, including after browser saves and another
+  [original-fixture restart](layers-restart-evidence.json); role IDs also remain
+  unchanged and output returns healthy on air. 2.2.1 has no persisted ticker
+  text to import.
+- Composer saves were also observed in actual HLS:
+  [new logo image](output-composer-layers-saved-logo.jpg),
+  [static ticker](output-composer-layers-saved-ticker.jpg), and
+  [model L-shape with ticker above it](output-composer-layers-saved-lshape.jpg).
+  [Pixels, segment hashes and health](layers-composer-output-evidence.json)
+  confirm the saved image replaces the old logo and is suppressed during L-shape.
+- [Current parity evidence](layers-parity-evidence.json): fresh copies of the same
+  2.2.1/00027 database, same deterministic 40-second 640×360/25 fps source and
+  marks; actual main `dd4529e2` versus migration 00030. **1000/1000 pre-encode
+  YUV frames and 1000/1000 PTS-aligned HLS RGB frames are byte-identical**.
+  Every frame's logo, L-shape and ticker region passed, including fade and
+  picture transitions. Maximum RGB error is **0**; no geometry/time shifts or
+  threshold relaxation were used. The unchanged compression limits remain
+  MAE≤0.75, p99.9≤8, maximum≤32, in addition to mandatory raw equality.
+  HLS segment indices 0–20 also have identical bytes; only final partial
+  post-roll segment 21 differs (1.56 s versus 1.60 s after 42 s), outside the
+  0–40 s test interval, due to stop/flush wall time. Segment filenames include
+  per-process identifiers. Raw/TS sets remain under
+  `/workspace/noar-cloud/layers/parity/{main,branch}` and are retained in the
+  [5.7 MiB proof archive](layers-parity-raw-hls.tar.gz) (2000 raw frames, 44 HLS
+  segments, deterministic media, health and channel logs; no databases or credentials).
+  [Checks and archive SHA-256](layers-checks-evidence.json) record provenance.
+  Matched samples/differences
+  are in [layers-parity/](layers-parity/). Examples:
+  [logo fade](layers-parity/output-parity-d-0187-branch.jpg),
+  [L-shape entry](layers-parity/output-parity-d-0370-branch.jpg),
+  [settled L-shape](layers-parity/output-parity-d-0420-branch.jpg).
+  [Main health](layers-parity-main-health.json), [branch health](layers-parity-branch-health.json),
+  [main channel log](layers-parity-main-channel.txt) and
+  [branch channel log](layers-parity-branch-channel.txt) contain no channel errors.
+  The empty ticker region remains equal; a newly authored ticker has no
+  historical 2.2.1 counterpart.
+- [Fresh desktop pair](layers-desktop-evidence.json): 240 s each, same media,
+  duration, Xvfb/PulseAudio/ALSA setup and command schedule. Main logged 2
+  buffer warnings and 1 ALSA I/O error; branch logged 1 and 0. Neither logged
+  a clip-sync offset in this run. These virtual-device counts vary; the earlier
+  paired main sync failures remain a documented environment limitation, not
+  proof of audio stability. [Main frame](layers-desktop-main.jpg),
+  [branch frame](layers-desktop-branch.jpg), [main log](layers-desktop-main-server.txt),
+  [branch log](layers-desktop-branch-server.txt). This is a CPU desktop check;
+  GPU, physical outputs, long soak and hardware A/V synchronization remain untested.
+- [Rollback after 00030](layers-rollback-evidence.json): the actual automatic
+  pre-update v27 backup was copied byte-for-byte and opened with official
+  `ghcr.io/luizstsantos/noar:2.2.1`; schema stayed at 00027, authenticated
+  configuration was readable and `/health` reported on-air output. A v29
+  backup can only return to a compatible branch image, not released 2.2.1.
+  [Rollback procedure](../docker.md#restoring-before-graphics-conversion-00029)
+  keeps the verified pre-update database and previous image together.
+
 ## Done and verified
 
 | Commit | What |
@@ -616,7 +757,8 @@ desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. Approved stages a–e are complete within the evidence and limitations above.
+1. The layer-based channel-model revision and historical stages a–e are
+   complete within the evidence and limitations above.
    Desktop audio stability, physical outputs and long-soak verification remain
    explicit limits; clock support remains excluded.
 2. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics

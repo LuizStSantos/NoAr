@@ -375,12 +375,28 @@ Showing a previously disabled logo/ticker enables its binding; hiding changes
 runtime visibility while retaining its definition. A full server restart resets
 these transient hide/show overrides and loads enabled definitions again, as for
 the legacy controls. A playout restart retains the shared control handles.
-Templates opens dedicated channel-model editors at
-`/graphics/channel/{logo|ticker|lshape|scene}`. The ticker editor saves static
-text; it does not implement scrolling or a clock. Legacy UI URLs
-`/graphics/logo`, `/graphics/lshape` and `/graphics/scenes` redirect with their
-channel query preserved; the old logo `#ticker` link opens the ticker editor.
-These browser redirects do not change the legacy HTTP control endpoints above.
+Templates opens Composer for channel logo/ticker/L-shape models. Scenes retain
+their action editor at `/graphics/channel/scene`. Old channel-model and legacy
+UI URLs resolve their binding and redirect with the channel preserved; the old
+logo `#ticker` link opens the ticker model. These redirects do not change legacy
+HTTP control endpoints. Ticker layers are static text, without scrolling or a clock. The separate
+`/graphics/xmltv` tab edits `processing.guide_logo`, the independent guide icon,
+through the existing configuration API; it does not change on-air model layers.
+
+Templates expose nullable `always_on` and `control_layer_id`. `always_on` is
+startup visibility for bound logo/ticker models; it is null for other templates.
+Omitting it on PUT preserves the binding. It is rejected on unbound POST and on
+nonpermanent bindings. `control_layer_id` identifies the image addressed by
+legacy replacement/placement controls on logo/L-shape models. Omission preserves
+the saved ID across layer reordering; deletion chooses another image once.
+Bound models require literal content, and only L-shape models contain a visible
+video window. Ordinary templates retain operator fields.
+
+Layers can additionally contain `clip_animation_ms`: the imported legacy clip
+fade duration when it differs from external control timing. Composer clears this
+override when Duration is edited. A zero duration produces a cut. Normal layer
+geometry, opacity and animations are authoritative; compatibility configuration
+reads project these values and writes update layers, not layout `settings`.
 
 
 | Method | Endpoint | Access | Request body |
@@ -392,7 +408,7 @@ These browser redirects do not change the legacy HTTP control endpoints above.
 | `GET` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA, U` | One template; 404 when the channel has no such template. |
 | `POST` | `/api/graphics/{id}/templates` | `GA, CA` | A template (below). 409 when the channel already has that name, ignoring case. |
 | `PUT` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | The whole template again. |
-| `DELETE` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | 409 while bound to a channel role or quick scene. Remove quick scenes through their settings page. |
+| `DELETE` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | 409 while bound to a channel role or quick scene. Remove quick scenes through their action editor in Graphics. |
 | `POST` | `/api/graphics/{id}/take` | `GA, CA, U` | `{ "template_id", "fields": { "name": "Maria" }, "duration" }`. `duration` (seconds) replaces the template's; 0 stays until taken out. Answers `{ "state": "on_air", "take_id" }`, or `{ "state": "waiting" }` when the template waits for the L-shape on air to end. 409 for an assigned channel model, or when it skips L-shapes and one is on; 400 when an image is not in the storage. |
 | `POST` | `/api/graphics/{id}/out` | `GA, CA, U` | `{ "take_id" }` takes that graphic out, `{}` every graphic. Each plays its exit animation. Answers `{ "on_air": [...] }`; 404 for a graphic not on air. |
 | `GET` | `/api/graphics/{id}/on-air` | `GA, CA, U` | `[{ "take_id", "template_id", "name", "since", "leaving" }]`, `since` in seconds. |

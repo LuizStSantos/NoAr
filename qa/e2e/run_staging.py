@@ -87,6 +87,8 @@ def main() -> int:
     for folder in ('db', 'media', 'playlists', 'public', 'logs'):
         (data / folder).mkdir(parents=True)
     shutil.copyfile(ROOT / 'tests_assets/storage/media_mix/ad.mp4', data / 'media/e2e-clip.mp4')
+    for filename in ('logo.png', 'guide-logo.png'):
+        shutil.copyfile(ROOT / 'tests_assets/storage/logo.png', data / 'media' / filename)
     env = dict(os.environ)
     # Select only the local managed daemon, preserving registry/proxy settings.
     for key in ('DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_TLS', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH'):

@@ -211,11 +211,14 @@ update goes on.
 
 #### Restoring before graphics conversion (00029)
 
-Migration `00029` is a normal sqlx migration. Startup then converts every
+Migrations `00029` and `00030` are normal sqlx migrations. Startup then converts every
 channel's logo, L-shape and quick scenes to templates in one transaction.
 It leaves the old graphics columns intact, but the new application no longer
-reads them after conversion. The old Logo, L-shape and Quick scenes pages
-save the templates instead. Clock support is not part of this conversion.
+reads them after conversion. Logo/L-shape/ticker editing now opens Composer;
+legacy configuration writes update the same layers and bindings. Scene actions
+remain models with scene bindings. Migration 00030 also upgrades existing
+00029 templates once, preserving edited layers on subsequent starts. Clock
+support is not part of this conversion.
 
 Keeping old columns does **not** make an upgraded database usable by an old
 binary: sqlx rejects migrations unknown to that binary. Released 2.2.1 knows
@@ -229,7 +232,7 @@ After startup, confirm the pre-update `.bak` file exists beside the database
 and record its exact name and pre-update migration version. Verify the file
 itself rather than relying only on console messages. Automatic backups are best effort,
 keep only three copies, and run only when sqlx migrations are pending. A
-failed conversion can leave `00029` applied; a retry does not create another
+failed conversion can leave the schema migrations applied; a retry does not create another
 pre-update copy. Keep the first successful copy separately.
 
 For the default Compose bind mount (`./data:/data`), restore as follows,

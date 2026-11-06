@@ -119,6 +119,12 @@ const router = createRouter({
                     }),
                 },
                 {
+                    path: 'xmltv',
+                    name: 'graphics-xmltv',
+                    component: () => import('@/components/graphics/GraphicsGuideLogo.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
                     path: 'subtitles',
                     name: 'graphics-subtitles',
                     component: () => import('@/components/settings/SettingsLogo.vue'),

@@ -206,7 +206,16 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
         )
         .await
         .unwrap();
-    assert_eq!(update_config_response.status(), StatusCode::OK);
+    if update_config_response.status() != StatusCode::OK {
+        let status = update_config_response.status();
+        let body = to_bytes(update_config_response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        panic!(
+            "configuration save returned {status}: {}",
+            String::from_utf8_lossy(&body)
+        );
+    }
     let stored = handles::select_configuration(&pool, 1).await.unwrap();
     assert_eq!(stored.processing_loudness_scope, "all");
     assert_eq!(stored.processing_compressor_ratio, 4.0);

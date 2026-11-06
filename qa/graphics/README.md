@@ -9,18 +9,22 @@ them at an operator's database, storage or output destination.
 the candidate on port 8787 and the official 2.2.1 image on port 18787. Both
 must already contain a disposable channel/account. `--auth-file` contains its
 `username` and `password`; tokens and external-control keys stay out of evidence.
-The baseline database must be a separate pre-00028 copy. The runner seeds
+The baseline database must be a separate pre-00028 copy. When its storage
+lives in a different owned fixture, pass `--baseline-work-root` for that root. The runner seeds
 synthetic playlists, changes channel settings, renews the graphics key and
 checks XMLTV's explicit and configured-model fallback icons.
 
 `output.py` uses the candidate and its local HLS files. It changes clip marks,
 restarts playout, edits the bound L-shape window, creates/deletes a timed event
-and edits a named scene after taking the event's action snapshot. It waits for
+and edits a named scene after taking the event's action snapshot. Additional
+logo/L-shape art layers prove image overrides preserve the composition; a logo
+move also checks the translated secondary layer. It waits for
 ten newly published HLS segments, decodes an actually completed `.ts` segment
 with FFmpeg and checks pixel samples before saving each JPEG. It checks health
 and verifies the frozen legacy logo/L-shape/scene columns did not change.
 `--free-window-only` runs only the free-window captures; it still resets the
-fixture's transient graphics state and marks.
+fixture's transient graphics state and marks. `--composite-only` isolates the
+additional-layer cases with the same reset behavior.
 
 Required synthetic storage fixtures, all without embedded graphics:
 
@@ -50,7 +54,7 @@ python3 qa/graphics/output.py \
   --screenshots /tmp/owned-graphics/captures
 ```
 
-Do not run the two runners concurrently: they intentionally control the same
+Do not run browser/model writers or these runners concurrently: they intentionally control the same
 candidate channel. HTTP equality and sampled settled HLS frames do not prove
 aligned frame-by-frame migration parity, hardware output, A/V sync or a soak.
 

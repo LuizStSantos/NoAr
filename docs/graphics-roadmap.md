@@ -1,24 +1,21 @@
 # Graphics roadmap
 
-Status: **in progress**. Template storage, rendering, the take / out API,
-On air, the library and the Composer UI are implemented. Migration of the
-existing channel graphics into templates is implemented in stage b;
-stage-c compatibility and stage-d aligned output parity have passed within
-their documented scope. Stage e replaces the legacy menu pages with dedicated
-editors reached from Templates. See the
-[implementation handoff](graphics-handoff/README.md) for scope and test evidence.
-A scoped synthetic HLS run now verifies template L-shape take/out and a
-`follow` GC inside its picture window; captures and limits are in the handoff.
-Always-on work is approved in stages: engine/DB infrastructure first, then
-normal sqlx migration 00029 with automatic conversion of every channel and
-redirected legacy page writes. Compatibility and HLS parity passed before stage e removed the legacy menu. Clock support is outside this delivery. Stage a is
-complete: permanent-role engine support and DB handles have passed tests.
-Stage b now installs the normal 00029 migration, converts every channel,
-redirects legacy page writes, and verifies backup/image restoration. Its exact
-scope and runtime evidence are recorded in the handoff.
-This document records the
-agreed design for the new Graphics tab, so the work can land in small releases
-without breaking what operators use today.
+Status: **in progress**. Template storage, rendering, take/out, On air,
+the library and Composer are implemented. Channel logo, L-shape and ticker
+layouts now use Composer layers too. Migration 00030 upgrades both 2.2.1 and
+already converted 00029 installations automatically, preserving bindings,
+identity and frozen legacy columns. Legacy APIs and clip/scene controls act
+on these models. Logo/L-shape/ticker Edit opens Composer; scenes retain an
+action editor in Graphics. Clock support remains outside this delivery.
+
+See the [implementation handoff](graphics-handoff/README.md) for the current
+source-of-truth contract, runtime evidence and historical stages a–e. The
+synthetic main-versus-candidate comparison includes exact pre-encode frames,
+aligned HLS and the logo/L-shape transitions. Broader deployment and physical
+output validation remain separate from that scoped proof.
+
+This document records the agreed design so the work can land in small
+releases without breaking existing operator workflows.
 
 ## Goals
 
@@ -40,8 +37,8 @@ without breaking what operators use today.
   picture is shrunk into its corner, then the logo and texts are drawn **over
   the full frame**.
 - App: `GraphicsScene` (logo and L-shape changes), `graphics_events`
-  (scheduled scenes), logo marks inside clips, and the Graphics view with the
-  pages live, logo, lshape, subtitles, scenes and api.
+  (scheduled scenes), logo marks inside clips, and Graphics navigation with On air, Templates, XMLTV logo, Subtitles and External control.
+  Bound logo/L-shape/ticker templates open Composer; scenes have an action editor.
 
 ## Design decisions
 

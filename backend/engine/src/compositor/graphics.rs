@@ -49,12 +49,28 @@ impl crate::LShapeControl {
     /// Draw a bound L-shape model, preserving its complete picture geometry.
     /// Loading it does not take it on or off air.
     pub fn set_template(&self, spec: &GraphicSpec, width: u32, height: u32) -> Result<()> {
+        let primary = spec
+            .layers
+            .iter()
+            .position(|layer| matches!(layer.content, GraphicContent::Image { .. }))
+            .unwrap_or(0);
+
+        self.set_template_controlled(spec, primary, width, height)
+    }
+
+    pub fn set_template_controlled(
+        &self,
+        spec: &GraphicSpec,
+        primary: usize,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
         let rendered = render_graphic(spec, width, height)?;
         anyhow::ensure!(
             rendered.picture.is_some(),
             "channel L-shape needs a video layer"
         );
-        self.set_rendered_graphic(rendered.picture);
+        self.set_rendered_graphic(rendered.picture, spec, primary)?;
         Ok(())
     }
 }
@@ -156,6 +172,12 @@ pub struct RenderedGraphic {
     picture: Option<Arc<LShapeGraphic>>,
 }
 
+pub(crate) struct RoleImageBlend {
+    pub index: usize,
+    pub opacity: f64,
+    pub only: bool,
+}
+
 /// How long an L-shape template takes to go in or out: as long as the
 /// channel's L-shape.
 fn picture_switch() -> Duration {
@@ -163,6 +185,81 @@ fn picture_switch() -> Duration {
 }
 
 impl RenderedGraphic {
+    pub(crate) fn picture_graphic(&self) -> Option<&LShapeGraphic> {
+        self.picture.as_deref()
+    }
+    pub(crate) fn role_levels(
+        &self,
+        elapsed: Option<Duration>,
+        hidden: bool,
+        from: &[f64],
+    ) -> Vec<f64> {
+        self.layers
+            .iter()
+            .enumerate()
+            .map(|(index, layer)| {
+                let target = if hidden { 0.0 } else { 1.0 };
+                let Some(elapsed) = elapsed else {
+                    return target;
+                };
+                let animation = if hidden {
+                    layer.animation_out
+                } else {
+                    layer.animation_in
+                };
+
+                if animation == GraphicAnimation::None || layer.animation.is_zero() {
+                    return target;
+                }
+
+                let start = from.get(index).copied().unwrap_or(1.0 - target);
+                let elapsed = if hidden {
+                    elapsed
+                } else {
+                    elapsed.saturating_sub(layer.delay)
+                };
+                let progress = (elapsed.as_secs_f64() / layer.animation.as_secs_f64()).min(1.0);
+
+                start + (target - start) * progress
+            })
+            .collect()
+    }
+
+    /// Permanent logo layers use the native linear switch curve so converted
+    /// fades keep their exact timing. Clip/L-shape suppression is a separate mask.
+    pub(crate) fn blend_role(
+        &self,
+        frame: &mut VideoFrame,
+        levels: &[f64],
+        hidden: bool,
+        visibility: f64,
+        image: RoleImageBlend,
+    ) {
+        for (index, layer) in self.layers.iter().enumerate() {
+            if image.only && index != image.index {
+                continue;
+            }
+
+            let level = levels.get(index).copied().unwrap_or(1.0);
+
+            if level <= 0.0 {
+                continue;
+            }
+
+            let animation = if hidden {
+                layer.animation_out
+            } else {
+                layer.animation_in
+            };
+            let factor = if index == image.index {
+                image.opacity
+            } else {
+                1.0
+            };
+            blend_layer_with_visibility(frame, layer, level, animation, visibility * factor);
+        }
+    }
+
     /// How long its exit takes, from the moment it is taken out.
     fn exit_time(&self) -> Duration {
         if self.picture.is_some() {

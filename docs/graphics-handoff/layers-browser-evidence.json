@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "locale": "pt-BR",
+  "captures": [
+    "composer-layers-logo-pt-BR.jpg",
+    "composer-layers-logo-permanent-pt-BR.jpg",
+    "composer-layers-phone-logo-pt-BR.jpg",
+    "composer-layers-lshape-pt-BR.jpg",
+    "composer-layers-phone-lshape-pt-BR.jpg",
+    "composer-layers-ticker-pt-BR.jpg",
+    "composer-layers-ticker-permanent-pt-BR.jpg",
+    "composer-layers-phone-ticker-pt-BR.jpg",
+    "composer-layers-xmltv-pt-BR.jpg",
+    "composer-layers-phone-xmltv-pt-BR.jpg"
+  ],
+  "page_errors": [],
+  "checks": [
+    "Library edit opens Composer for all channel roles",
+    "Always on air is visible for logo and ticker",
+    "Logo layer save survives reload",
+    "Video corner and size save survives reload",
+    "No desktop or mobile horizontal overflow",
+    "Independent XMLTV logo tab saves, reloads and exports its guide icon",
+    "Storage picker selects the guide icon",
+    "New logo image and Portuguese ticker saved from Composer and decoded from HLS"
+  ]
+}

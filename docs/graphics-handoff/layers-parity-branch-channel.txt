@@ -1,0 +1,15 @@
+<span class="log-gray">[2026-11-06 12:32:27.951145+00:00]</span> <span class="level-debug">[DEBUG]</span> Start NoAr v2.2.1, channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-06 12:32:28.081523+00:00]</span> <span class="level-info">[ INFO]</span> Output connected to udp://127.0.0.1:33375
+<span class="log-gray">[2026-11-06 12:32:28.081718+00:00]</span> <span class="level-info">[ INFO]</span> Closed 1 on-air record(s) left open by the last run
+<span class="log-gray">[2026-11-06 12:32:28.083232+00:00]</span> <span class="level-info">[ INFO]</span> Playout in folder mode
+<span class="log-gray">[2026-11-06 12:32:28.084488+00:00]</span> <span class="level-debug">[DEBUG]</span> Monitor folder: <span class="log-addr">"/workspace/noar-cloud/layers/parity/media"</span>
+<span class="log-gray">[2026-11-06 12:32:28.109617+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:00:40.000</span>: <span class="log-addr">/workspace/noar-cloud/layers/parity/media/deterministic.mp4</span>
+<span class="log-gray">[2026-11-06 12:32:28.153451+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 41.065252ms; output video=0, audio=0
+<span class="log-gray">[2026-11-06 12:32:28.154470+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 545.378µs; seek=None
+<span class="log-gray">[2026-11-06 12:33:08.164252+00:00]</span> <span class="level-info">[ INFO]</span> Sort files
+<span class="log-gray">[2026-11-06 12:33:08.166982+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:00:40.000</span>: <span class="log-addr">/workspace/noar-cloud/layers/parity/media/deterministic.mp4</span>
+<span class="log-gray">[2026-11-06 12:33:08.214631+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 44.93343ms; output video=1000, audio=1920000
+<span class="log-gray">[2026-11-06 12:33:08.216009+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 1.145176ms; seek=None
+<span class="log-gray">[2026-11-06 12:33:11.666770+00:00]</span> <span class="level-debug">[DEBUG]</span> Deactivate playout and stop all child processes from channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-06 12:33:11.810716+00:00]</span> <span class="level-info">[ INFO]</span> Sort files
+<span class="log-gray">[2026-11-06 12:33:11.980632+00:00]</span> <span class="level-debug">[DEBUG]</span> Stop all child processes from channel: <span class="log-number">1</span>

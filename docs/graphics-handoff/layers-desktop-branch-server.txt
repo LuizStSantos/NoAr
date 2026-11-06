@@ -1,0 +1,165 @@
+[DEBUG] Start NoAr v2.2.1, channel: 1
+[ INFO] Running NoAr, listen on http://127.0.0.1:18788
+[DEBUG] desktop audio device buffer: 682 samples (14.21 ms)
+[ INFO] Desktop output uses backend/engine winit/softbuffer CPU renderer
+[ INFO] Playout in playlist mode
+[ INFO] Read playlist: /workspace/noar-cloud/stage-d/playlists/2026/11/2026-11-06.json
+[DEBUG] Validate playlist from: 2026-11-06
+[DEBUG] Playlist init
+[ INFO] Play for 00:00:32.680: /workspace/noar-cloud/stage-d/media/compatibility.mp4
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(180.0), width: 0, height: 0, fps: 0.0 }
+[DEBUG] GStreamer source opened in 59.226861ms; output video=0, audio=0
+[DEBUG] GStreamer source started in 2.974918ms; seek=Some(147.32028016)
+[DEBUG] GStreamer first audio sample: PTS Some(0:02:27.341613493), segment Some(Segment { format: Time, start: 0:02:27.341613493, offset: 0:00:00.000000000, stop: 0:03:00.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(RESET), time: 0:02:27.320280160, base: 0:00:00.000000000, position: 0:02:27.341613493, duration: --:--:--.--------- })
+[DEBUG] GStreamer first video sample: PTS Some(0:02:27.320280160), segment Some(Segment { format: Time, start: 0:02:27.320280160, offset: 0:00:00.000000000, stop: 0:03:00.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(RESET), time: 0:02:27.320280160, base: 0:00:00.000000000, position: 0:02:27.320280160, duration: --:--:--.--------- })
+[DEBUG] Validation done, in 1.037s, playlist length: 24:03:00.000 ...
+[ WARN] No Two-factor authentication!
+[ INFO] 127.0.0.1 user migration-review login, with role: global_admin
+[ INFO] 127.0.0.1 "POST /auth/login HTTP/1.1" 200 599 "-" "Python-urllib/3.13" 0.604597
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.13" 0.002111
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.13" 0.000696
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.13" 0.001004
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.13" 0.001086
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.13" 0.001349
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.13" 0.002288
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001023
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001056
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000735
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001072
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001175
+[ WARN] desktop audio device underrun/overrun: 1 event(s); audio queued 516.7 ms, pending 149.3 ms, video queued 8 frames
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001282
+[DEBUG] Preloading /workspace/noar-cloud/stage-d/media/compatibility.mp4 with GStreamer
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(180.0), width: 0, height: 0, fps: 0.0 }
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000576
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000968
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001161
+[ WARN] Update check failed: GitHub did not answer: error sending request for url (https://api.github.com/repos/LuizStSantos/NoAr/releases/latest): operation timed out
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000769
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001237
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000738
+[DEBUG] Delta: -3.334
+[ INFO] Play for 00:03:00.000: /workspace/noar-cloud/stage-d/media/compatibility.mp4
+[DEBUG] GStreamer source opened in 16.87778ms; output video=817, audio=1568640
+[DEBUG] GStreamer source started in 828.861µs; seek=None
+[DEBUG] GStreamer first video sample: PTS Some(0:00:00.000000000), segment Some(Segment { format: Time, start: 0:00:00.000000000, offset: 0:00:00.000000000, stop: 0:03:00.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.000000000, duration: --:--:--.--------- })
+[DEBUG] GStreamer first audio sample: PTS Some(0:00:00.021333333), segment Some(Segment { format: Time, start: 0:00:00.021333333, offset: 0:00:00.000000000, stop: 0:03:00.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.021333333, duration: --:--:--.--------- })
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000807
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.002142
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000618
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000865
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000677
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000669
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001452
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001109
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000722
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000929
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001193
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001073
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000513
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000524
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000582
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000737
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000500
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000845
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000519
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000557
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000538
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000539
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000745
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000561
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001402
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000650
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000762
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.001277
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000599
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000796
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.13" 0.000528
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000825
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000591
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000593
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000518
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000749
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000660
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000574
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000602
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000562
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000966
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000548
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000540
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 51 "-" "Python-urllib/3.13" 0.003193
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 51 "-" "Python-urllib/3.13" 0.000879
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000358
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 50 "-" "Python-urllib/3.13" 0.000712
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000422
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 69 "-" "Python-urllib/3.13" 0.018803
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 72 "-" "Python-urllib/3.13" 0.008755
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 54 "-" "Python-urllib/3.13" 0.000651
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 72 "-" "Python-urllib/3.13" 0.010537
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000409
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000533
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 54 "-" "Python-urllib/3.13" 0.000807
+[ INFO] 127.0.0.1 "POST /api/control/1/logo HTTP/1.1" 200 51 "-" "Python-urllib/3.13" 0.000913
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000718
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000644
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000653
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001385
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000659
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000597
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000556
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000618
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000759
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000629
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000742
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000722
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.002187
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001116
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001558
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000630
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000695
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000661
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000649
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000606
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.002383
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000775
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000963
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001214
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000584
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001391
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000688
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000732
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000687
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000891
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000849
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001672
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000966
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001223
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000917
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000914
+[DEBUG] Preloading /workspace/noar-cloud/stage-d/media/compatibility.mp4 with GStreamer
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(180.0), width: 0, height: 0, fps: 0.0 }
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000721
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000939
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000739
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000571
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000601
+[DEBUG] Delta: -3.314
+[ INFO] Play for 00:03:00.000: /workspace/noar-cloud/stage-d/media/compatibility.mp4
+[DEBUG] GStreamer source opened in 13.671933ms; output video=5317, audio=10208640
+[DEBUG] GStreamer source started in 1.369515ms; seek=None
+[DEBUG] GStreamer first video sample: PTS Some(0:00:00.000000000), segment Some(Segment { format: Time, start: 0:00:00.000000000, offset: 0:00:00.000000000, stop: 0:03:00.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.000000000, duration: --:--:--.--------- })
+[DEBUG] GStreamer first audio sample: PTS Some(0:00:00.021333333), segment Some(Segment { format: Time, start: 0:00:00.021333333, offset: 0:00:00.000000000, stop: 0:03:00.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.021333333, duration: --:--:--.--------- })
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000891
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000665
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.001340
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000639
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000734
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000813
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000705
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000976
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000699
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000634
+[ INFO] 127.0.0.1 "GET /health HTTP/1.1" 200 102 "-" "Python-urllib/3.13" 0.000826
+[ INFO] Shutdown signal received
+[DEBUG] Stop all child processes from channel: 1
+[DEBUG] Delta: 151.683

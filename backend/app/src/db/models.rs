@@ -739,6 +739,10 @@ pub struct GraphicsTemplate {
     pub layers: Vec<crate::utils::graphics::TemplateLayer>,
     /// The `{field}` names to fill in on air, read from the layers.
     pub fields: Vec<String>,
+    /// Startup visibility for bound permanent roles; not applicable to GCs/scenes.
+    pub always_on: Option<bool>,
+    /// Stable image layer addressed by compatibility image/placement controls.
+    pub control_layer_id: Option<String>,
 }
 
 impl FromRow<'_, SqliteRow> for GraphicsTemplate {
@@ -760,6 +764,8 @@ impl FromRow<'_, SqliteRow> for GraphicsTemplate {
             during_lshape: crate::utils::graphics::DuringLShape::parse(&during_lshape)
                 .unwrap_or_default(),
             fields: crate::utils::graphics::template_fields(&layers),
+            always_on: row.try_get("always_on").unwrap_or(None),
+            control_layer_id: row.try_get("control_layer_id").unwrap_or(None),
             layers,
         })
     }

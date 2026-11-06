@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "tests_passed": 22,
+  "failed": 0,
+  "fresh_database": true,
+  "backend_restart": {
+    "playlists_unchanged": 2,
+    "scheduled_events_unchanged": true,
+    "graphics_bindings_unchanged": true
+  }
+}

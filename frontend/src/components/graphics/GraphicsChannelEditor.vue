@@ -1,16 +1,53 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import GraphicsScenes from '@/components/graphics/GraphicsScenes.vue'
-import GraphicsTicker from '@/components/graphics/GraphicsTicker.vue'
-import SettingsLogo from '@/components/settings/SettingsLogo.vue'
+import { useGraphicsApi } from '@/composables/graphicsTemplates'
+import { useConfig } from '@/stores/config'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
+const config = useConfig()
+const api = useGraphicsApi()
 const kind = computed(() => String(route.params.kind))
-const modelName = computed(() => t(`graphics.assigned.${kind.value === 'scene' ? 'scenes' : kind.value}`))
+const channelId = computed(() => config.channels[config.i]?.id)
+const error = ref('')
+let requestVersion = 0
+
+async function openModel() {
+    const version = ++requestVersion
+    error.value = ''
+
+    if (kind.value === 'scene' || !channelId.value) {
+        return
+    }
+
+    try {
+        const models = await api.channel()
+
+        if (version !== requestVersion) {
+            return
+        }
+
+        const model = models.find((model) => model.kind === kind.value)
+
+        if (!model) {
+            throw new Error(t('graphics.templates.loadFailed'))
+        }
+
+        await router.replace({
+            name: 'graphics-composer',
+            query: { channel: channelId.value, template: model.template.id },
+        })
+    } catch {
+        error.value = t('graphics.templates.loadFailed')
+    }
+}
+
+watch([kind, channelId], openModel, { immediate: true })
 </script>
 <template>
     <div class="flex flex-col gap-4" data-testid="channel-graphics-editor">
@@ -22,18 +59,17 @@ const modelName = computed(() => t(`graphics.assigned.${kind.value === 'scene' ?
                 <i class="bi bi-arrow-left" aria-hidden="true" />
                 {{ t('graphics.editor.back') }}
             </RouterLink>
-            <h1 class="m-0 text-xl font-semibold">{{ t('graphics.editor.title', { name: modelName }) }}</h1>
-            <p class="mt-1 mb-0 text-muted">{{ t('graphics.editor.hint') }}</p>
+            <template v-if="kind === 'scene'">
+                <h1 class="m-0 text-xl font-semibold">
+                    {{ t('graphics.editor.title', { name: t('graphics.assigned.scenes') }) }}
+                </h1>
+                <p class="mt-1 mb-0 text-muted">{{ t('graphics.editor.hint') }}</p>
+            </template>
         </header>
-
-        <SettingsLogo
-            v-if="kind === 'logo' || kind === 'lshape'"
-            :key="kind"
-            :part="kind"
-            embedded
-            :include-ticker="false"
-        />
-        <GraphicsTicker v-else-if="kind === 'ticker'" />
-        <GraphicsScenes v-else-if="kind === 'scene'" embedded />
+        <GraphicsScenes v-if="kind === 'scene'" embedded />
+        <div v-else-if="error" role="alert" class="flex flex-col items-start gap-3">
+            <p>{{ error }}</p>
+            <button class="btn-quiet" @click="openModel">{{ t('graphics.composer.retry') }}</button>
+        </div>
     </div>
 </template>
