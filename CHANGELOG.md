@@ -20,6 +20,10 @@ one is tagged.
 
 ### Added
 
+- The graphics API tutorial explains layer-based channel models, startup
+  visibility and temporary take/out, using real model IDs and separate token/key
+  examples. A disposable-machine Compose file builds this branch locally.
+
 - Channel logo, L-shape and ticker models are edited as Composer layers, with
   permanent visibility and video-window corner/size controls. Migration `00030`
   upgrades already converted layouts without duplicating models or changing

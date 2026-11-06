@@ -356,6 +356,11 @@ curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
 
 ### Graphics templates
 
+The Graphics → External control (API) page explains channel versus temporary
+models, shows examples with saved model IDs, and distinguishes login tokens
+from the legacy graphics key. Its examples do not execute on page load.
+
+
 A template is a graphic a channel designs once and puts on air many times:
 layers placed in percent of the frame, with `{field}` names filled in on
 air ([roadmap](graphics-roadmap.md)).

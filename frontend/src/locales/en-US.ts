@@ -1643,7 +1643,7 @@ export default {
             lshape: 'The L-shape graphic and where the video goes in it.',
             subtitles: 'Subtitles of the HLS output, from each video’s WebVTT file.',
             scenes: 'Named sets of logo and L-shape changes, applied in one go from Live now, the Player or an encoder. Each scene changes only what it says; the rest stays as it is.',
-            api: 'Control the logo, the L-shape and the scenes from outside NoAr (vMix, OBS, Stream Deck, scripts) with the channel’s graphics key.',
+            api: 'Control models and scenes from outside NoAr. Model endpoints use a login token; the existing logo/L-shape/scene links use the graphics key.',
         },
         places: {
             'top-left': 'Top left',
@@ -1721,6 +1721,53 @@ export default {
             },
         },
         api: {
+            modelsTitle: 'Channel models and layers',
+            modelsIntro:
+                'Edit the channel logo, L-shape and ticker in Templates → Edit. Their layers are the saved layout used on air.',
+            logoLayers:
+                'Logo: image and additional artwork layers. Image replacement changes the controlled image; a placement command moves its composition. Other layers are preserved.',
+            lshapeLayers:
+                'L-shape: artwork layers plus a video window. Enter/leave uses this model. An image-only override keeps its window; an explicit corner/size command temporarily overrides it.',
+            tickerLayers:
+                'Ticker: a permanent text model. It supports static text; scrolling and a clock are not part of this delivery.',
+            permanentState:
+                'Always on air saves startup visibility for the logo and ticker. The library On air / Off switch controls current visibility; hiding a model does not clear its startup setting. Showing a disabled permanent role also enables it. An L-shape enters and leaves on command.',
+            legacyModels:
+                'The keyed logo/L-shape/scene links below still work with the same responses. They now act on the channel models. Image/placement overrides are temporary and do not rewrite the Composer layout.',
+            xmltvSeparate:
+                'The guide icon is separate: Graphics → XMLTV logo. On-air replacements do not change it; an empty guide icon uses the configured model image.',
+            authTitle: 'Authenticated API for models and ticker',
+            authIntro:
+                'These /api/graphics endpoints use a login access token. The graphics key below only authorizes the existing logo, L-shape and scene links.',
+            tokenHelp:
+                "Get access from the NoAr login flow (/auth/login; complete two-factor authentication if enabled). Use Bash and curl 7.76 or newer (--fail-with-body); the permanent-setting example also requires jq. Set TOKEN='YOUR_ACCESS_TOKEN' before running these examples. Never use the graphics key in place of this token.",
+            permissions:
+                'Channel users can read models and operate them. Saving or deleting templates requires a channel/global administrator. Opening this page does not execute the example commands.',
+            listTemplates: 'List saved templates, including assigned channel models',
+            channelState: 'Read assigned models, their IDs and requested on-air state',
+            channelModel: 'Channel model for these examples',
+            readModel: 'Read this complete model and its layers',
+            modelOn: 'Show the logo/ticker or enter the L-shape',
+            modelOff: 'Hide the logo/ticker or return to full screen',
+            savePermanent: 'Save Always on air through the API',
+            savePermanentHelp:
+                'This example requires jq. Read the entire current model, change always_on, then PUT the complete document. Use false to disable startup visibility. Omission preserves the current setting. Keep the other fields and layers; a partial template can overwrite them. Saving a temporarily hidden model keeps it hidden.',
+            verifyOutput:
+                'on is requested runtime state: clip marks, breaks and the L-shape can still suppress the logo. ready checks saved content, not decoded output. Check the Player/HLS and /health to verify actual output.',
+            loading: 'Loading saved model IDs…',
+            temporaryTitle: 'Temporary templates: take and out',
+            temporaryIntro:
+                'Use take for ordinary templates, filling their fields. A template with a video window acts as an L-shape; other graphics follow their follow/wait/skip rule.',
+            assignedNotTake:
+                'Channel logo, ticker, L-shape and scene models use their channel controls. Sending one to take returns 409. Apply saved scenes through the scene links below.',
+            temporaryModel: 'Temporary template for these examples',
+            createTemporary: 'Create an ordinary template in Templates to see examples using its real ID and fields.',
+            sampleValue: 'Example value',
+            takeTemplate: 'Put the selected ordinary template on air',
+            temporaryState: 'List temporary graphics on air',
+            outTemplates: 'Take all temporary templates out (channel roles stay as they are)',
+            takeResult:
+                'Replace example field values before sending. take returns take_id; send that ID to out to remove only one graphic. A waiting template returns state=waiting. duration=0 stays until out; otherwise the saved duration applies. out plays the exit animation; items can remain listed with leaving=true until it ends.',
             title: 'Graphics key and tutorial',
             intro: 'One key for the logo, the L-shape and the scenes. Whoever has it changes this channel’s graphics without logging in.',
             scenesTitle: 'Scenes by address',
@@ -2489,9 +2536,9 @@ export default {
                 lshapeStateReplaced: 'with the graphic {graphic}',
                 lshapeSwap: 'Swap graphic…',
                 lshapeReset: 'Channel graphic',
-                lshapeNotReady: 'No graphic: choose one in Graphics › L-shape and save.',
+                lshapeNotReady: 'No artwork: edit Channel L-shape in Graphics → Templates and save in Composer.',
                 lshapeFailed: 'Could not change the L-shape.',
-                key: 'Graphics key (logo and L-shape) for encoders and scripts',
+                key: 'Graphics key (logo, L-shape and scenes) for encoders and scripts',
                 noKey: 'No key: only from NoAr itself',
                 createKey: 'Create key',
                 newKey: 'New key',
@@ -2513,7 +2560,7 @@ export default {
                 copied: 'Copied.',
                 copyFailed: 'Could not copy.',
                 keyHint:
-                    'One key for the logo and the L-shape. It works as soon as it is created and stays the same until you make a new one. Anyone with the key can change this channel’s graphics; make a new one if it leaks.',
+                    'One key for the logo, L-shape and scenes. It works as soon as it is created and stays the same until you make a new one. Anyone with the key can change this channel’s graphics; make a new one if it leaks.',
                 keyPlaceholder: 'YOUR_KEY',
                 howTo: 'How to send commands from your encoder (tutorial)',
                 step1: 'Create the key above.',

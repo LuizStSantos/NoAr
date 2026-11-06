@@ -556,3 +556,84 @@ test('the XMLTV logo tab saves its independent guide icon without changing layer
         }
     }
 })
+
+test('the API tutorial uses actual model IDs, separates tokens and keys, and stays read-only', async ({ page }) => {
+    await page.goto('/graphics/api?channel=1')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const created = await page.request.post('/api/graphics/1/templates', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            name: `API tutorial ${Date.now()}`,
+            group: 'API examples',
+            layers: [
+                {
+                    id: 'title',
+                    name: 'Title',
+                    kind: 'text',
+                    text: 'Topic: {topic}',
+                    x: 5,
+                    y: 70,
+                    width: 90,
+                    height: 12,
+                },
+            ],
+        },
+    })
+    expect(created.ok()).toBeTruthy()
+    const ordinary = await created.json()
+    const models = await api(page, '/api/graphics/1/channel')
+    let graphicsWrites = 0
+    page.on('request', (request) => {
+        if (request.url().includes('/api/graphics/') && request.method() !== 'GET') {
+            graphicsWrites += 1
+        }
+    })
+    await page.reload()
+    const authenticated = page.getByRole('region', { name: 'Authenticated API for models and ticker', exact: true })
+    await expect(authenticated).toContainText('The graphics key below only authorizes')
+    await expect(authenticated).toContainText('Authorization: Bearer $TOKEN')
+    const selected = page.getByRole('combobox', { name: 'Channel model for these examples', exact: true })
+
+    for (const kind of ['logo', 'ticker', 'lshape']) {
+        const model = models.find((item: { kind: string }) => item.kind === kind)
+        await selected.selectOption(String(model.template.id))
+        await expect(authenticated).toContainText(`/api/graphics/1/channel/${model.template.id}`)
+        await expect(authenticated).toContainText('"on":true')
+        await expect(authenticated).toContainText('"on":false')
+        await expect(authenticated.getByText('Save Always on air through the API', { exact: true })).toHaveCount(
+            kind === 'lshape' ? 0 : 1,
+        )
+    }
+
+    const temporary = page.getByRole('region', { name: 'Temporary templates: take and out', exact: true })
+    await page
+        .getByRole('combobox', { name: 'Temporary template for these examples', exact: true })
+        .selectOption(String(ordinary.id))
+    await expect(temporary).toContainText(`"template_id":${ordinary.id}`)
+    await expect(temporary).toContainText('"topic":"Example value"')
+    await expect(temporary).toContainText('/api/graphics/1/take')
+    await expect(temporary).toContainText('/api/graphics/1/out')
+    await expect(temporary).toContainText('returns 409')
+    await expect(page.getByRole('region', { name: 'Channel models and layers', exact: true })).toContainText(
+        'XMLTV logo',
+    )
+    await expect(
+        page
+            .getByRole('region', { name: 'Channel models and layers', exact: true })
+            .getByRole('link', { name: 'See templates', exact: true }),
+    ).toHaveAttribute('href', '/graphics/templates?channel=1')
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(graphicsWrites).toBe(0)
+
+    await page.route('**/api/graphics/1/channel', (route) =>
+        route.fulfill({ status: 503, body: 'Tutorial unavailable' }),
+    )
+    await page.reload()
+    await expect(authenticated.getByRole('alert')).toBeVisible()
+    await expect(selected).toHaveCount(0)
+    await page.unroute('**/api/graphics/1/channel')
+    await authenticated.getByRole('button', { name: 'Retry', exact: true }).click()
+    await expect(selected).toBeVisible()
+    expect(graphicsWrites).toBe(0)
+})

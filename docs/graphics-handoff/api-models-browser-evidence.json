@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "locale": "pt-BR",
+  "widths": [
+    1440,
+    390
+  ],
+  "model_ids": [
+    "2",
+    "4",
+    "3"
+  ],
+  "page_errors": [],
+  "graphics_writes_on_navigation": 0,
+  "checks": [
+    "Actual IDs selected for logo, ticker and L-shape",
+    "Token/key distinction and complete always_on update example",
+    "Temporary template fields use its saved field names",
+    "No phone horizontal overflow",
+    "Screenshots include no graphics key or login token"
+  ]
+}

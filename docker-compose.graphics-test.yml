@@ -1,0 +1,23 @@
+# Disposable branch installation. Stop the stable instance using port 8787 first.
+# Build locally; this is not a published image or a release channel.
+name: noar-graphics-test
+
+services:
+  noar:
+    image: noar:graphics-review
+    build: .
+    pull_policy: never
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    environment:
+      TZ: America/Sao_Paulo
+      NOAR_UPDATER_URL: ""
+      NOAR_UPDATER_TOKEN: ""
+    ports:
+      - "8787:8787"
+    volumes:
+      - graphics-test-data:/data
+
+volumes:
+  graphics-test-data:

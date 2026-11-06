@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "validation": "docker compose config and rendered service assertions",
+  "project": "noar-graphics-test",
+  "image": "noar:graphics-review",
+  "volume": "noar-graphics-test_graphics-test-data",
+  "port": 8787,
+  "updater_disabled": true,
+  "local_build_context": "/workspace/NoAr",
+  "full_container_image_build_this_followup": "NOT_RUN",
+  "note": "Frontend production build and browser/API runtime tests used the existing disposable GStreamer staging backend; the complete Docker image build was not repeated."
+}

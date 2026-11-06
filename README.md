@@ -205,6 +205,10 @@ rate.
 
 Requirements: Docker with the Compose plugin.
 
+To test the graphics review branch on a disposable machine, follow the
+[branch test guide](docs/graphics-testing.md) instead of the published-image
+commands below. It builds this checkout and starts a fresh test installation.
+
 ```sh
 git clone https://github.com/LuizStSantos/NoAr.git
 cd NoAr

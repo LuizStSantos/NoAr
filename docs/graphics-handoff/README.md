@@ -4,6 +4,51 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## API tutorial and disposable-machine testing
+
+The External control (API) page now explains channel layers, startup visibility
+versus current on-air state, transient image/position overrides, the independent
+XMLTV icon and ordinary template take/out. It distinguishes the existing graphics
+key from login-token authorization. Selectors use real channel/template IDs and
+saved field names; opening the tutorial only performs reads. Examples cover role
+on/off, complete-model GET/jq/PUT for `always_on`, take, on-air and out. Exit
+animation can keep a template listed as `leaving=true` until it finishes.
+
+Verification for this frontend/documentation follow-up:
+
+- `npx vue-tsc --build`, full ESLint, changed-file Prettier, production frontend
+  build and the E2E TypeScript check passed. No Rust source changed; Rust checks
+  were not repeated for this follow-up.
+- The new Playwright regression passed against the disposable backend: real IDs,
+  logo/ticker/L-shape selection, temporary field examples, no writes on navigation,
+  mobile width, a failed model fetch and retry. This is one targeted new test;
+  the earlier 22-test baseline below is a separate recorded run.
+- [Browser evidence](api-models-browser-evidence.json): pt-BR desktop/phone,
+  no JavaScript page errors and no horizontal overflow. Captures:
+  [model explanation](api-models-explanation-pt-BR.jpg),
+  [authenticated controls](api-models-auth-pt-BR.jpg),
+  [take/out](api-models-temporary-pt-BR.jpg),
+  [phone](api-models-phone-pt-BR.jpg). No token/key values appear in these captures.
+- [Executed examples](api-models-curl-evidence.json): 16 command groups copied
+  from the rendered page passed using a valid login token, including actual
+  role on/off, complete GET/jq/PUT, field substitution, temporary take/on-air/out
+  and waiting for exit completion. Original role visibility and template
+  documents were restored; health stayed OK. This validates the API commands,
+  not a new frame-by-frame renderer comparison.
+- [Disposable Compose validation](graphics-test-compose-evidence.json): the
+  local image, project-specific fresh volume, port 8787 and disabled updater
+  were checked with `docker compose config`. The complete Docker image build
+  was not repeated; browser/API checks used the existing GStreamer staging
+  backend. The production frontend build was run.
+
+The user explicitly wants an empty test-machine installation without manual
+backup or parallel stable operation. [The test guide](../graphics-testing.md)
+stops stable, clones `claude/branch-review-opz967`, builds locally and starts
+[`docker-compose.graphics-test.yml`](../../docker-compose.graphics-test.yml).
+It opens setup on port 8787 and uses its own empty named volume. This recipe
+exercises a fresh installation; migration of existing 2.2.1 data remains the
+separate proof below. No release or image publication is involved.
+
 ## Layer-based channel models (current revision)
 
 This revision supersedes the native-layout storage and dedicated logo/L-shape/

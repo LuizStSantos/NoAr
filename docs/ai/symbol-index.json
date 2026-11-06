@@ -975,9 +975,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "21be49bf8baf9880f9257047ea5fbdc18e3171f8cb74c52039b35046eedb2bf8",
+      "sha256": "d59c2930986945c1f3582871b2366e97b6a06418e2b1d91c7ad0efbc0bc5d718",
       "language": "Markdown",
-      "bytes": 55775,
+      "bytes": 56004,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1005,9 +1005,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "8ea46530ade10eeb817ef99666511fd42dd4175d8b031f403f2759978f8dacbb",
+      "sha256": "6951ebf7f42ade205d701762569f21daf22214e92af1cc683cd6f41f9c2e4cfa",
       "language": "Markdown",
-      "bytes": 13126,
+      "bytes": 13353,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -20846,6 +20846,12 @@
         }
       ]
     },
+    "docker-compose.graphics-test.yml": {
+      "sha256": "d161b5777aea0c845d53a71a985859b1179302619db62ee421b52b1aff8f416f",
+      "language": "YAML",
+      "bytes": 566,
+      "symbols": []
+    },
     "docker-compose.yml": {
       "sha256": "9cf5a7afc83f178bc95c1518548fa1eedd57c9fbc51e24c3bca499a57231632c",
       "language": "YAML",
@@ -20889,9 +20895,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "cfe9c190ae8c70e74ff56abc1d56197d6de9ab6a2f019750c3a3baef12ee5234",
+      "sha256": "c51ce92c4da49847d7b14a0c06b3cbc6a508b839ce0de9ff7e1efe361a2a15cd",
       "language": "Markdown",
-      "bytes": 39496,
+      "bytes": 39725,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -20913,9 +20919,9 @@
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "e6083b3756ed09a42feb7dae9e5b589d206a00c11cce18b7f02a518239d46466",
+      "sha256": "8e6383a7d8ae507029775d2b5af381fda5132507c096b6c1d1d38599f21c3c9c",
       "language": "Markdown",
-      "bytes": 14581,
+      "bytes": 14869,
       "symbols": []
     },
     "docs/external_tasks.md": {
@@ -20931,15 +20937,27 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "d54d0123f8fabbc3f3dd04627a6d9f737b4ac8f2470e018db2f4b8e9cfa9067a",
+      "sha256": "e55bae862afe4ebaefe3962abe4428da4f3c96c938d082b7892be9f91fd60da0",
       "language": "Markdown",
-      "bytes": 49975,
+      "bytes": 53585,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
       "sha256": "8da115f8485bf7b41c000c4cfa9e8193a69cf28d6a78307b6f0d1176eca72c63",
       "language": "JSON",
       "bytes": 4141,
+      "symbols": []
+    },
+    "docs/graphics-handoff/api-models-browser-evidence.json": {
+      "sha256": "19b90d15ed480849c39145985a46ee8f7699aab6d51fc71bbcdf81238d73b9f9",
+      "language": "JSON",
+      "bytes": 482,
+      "symbols": []
+    },
+    "docs/graphics-handoff/api-models-curl-evidence.json": {
+      "sha256": "46293e665662a9208640744ca40860b0794a681481353ed8dfb821b3587f2613",
+      "language": "JSON",
+      "bytes": 1630,
       "symbols": []
     },
     "docs/graphics-handoff/compat-c-api-evidence.json": {
@@ -21056,6 +21074,12 @@
       "bytes": 60332,
       "symbols": []
     },
+    "docs/graphics-handoff/graphics-test-compose-evidence.json": {
+      "sha256": "4b303a0c9631629835210b361d8fed45ac0cc3aad7f5e45c35bda21bfd6dbf00",
+      "language": "JSON",
+      "bytes": 539,
+      "symbols": []
+    },
     "docs/graphics-handoff/layers-api-evidence.json": {
       "sha256": "e806fa6d8a6fd2bb1562138a8d48e0f56a51dee8a46683470063661399dbbe89",
       "language": "JSON",
@@ -21063,9 +21087,15 @@
       "symbols": []
     },
     "docs/graphics-handoff/layers-browser-evidence.json": {
-      "sha256": "b8c5bd2391dc7dd2dd497de6daa129b1326d7b361e5520544182c1b763610603",
+      "sha256": "71cc61166c20eb12a42a8eb63dda2e1230a43c1c2ba032a315ca9083d7689880",
       "language": "JSON",
-      "bytes": 861,
+      "bytes": 991,
+      "symbols": []
+    },
+    "docs/graphics-handoff/layers-checks-evidence.json": {
+      "sha256": "2f3f4d06a2546aaf03226943fdcf08bf764a32d1fb63f14960d5212cc6b0ab47",
+      "language": "JSON",
+      "bytes": 1919,
       "symbols": []
     },
     "docs/graphics-handoff/layers-composer-output-evidence.json": {
@@ -21075,15 +21105,15 @@
       "symbols": []
     },
     "docs/graphics-handoff/layers-controls-channel.txt": {
-      "sha256": "8f3dac35cdba7fcc3cfaf1f123b40788ea899df240f7c35b07fd44aa53936288",
+      "sha256": "51baf13c8fa07f376a97106d98d68325310ad6c56c9e50f4abbcb6ccdfc3c45e",
       "language": "Other",
-      "bytes": 78716,
+      "bytes": 80478,
       "symbols": []
     },
     "docs/graphics-handoff/layers-desktop-branch-server.txt": {
-      "sha256": "b076d0865f973888e8ed4750b4cfd4dbb745fbc524d69c98103eeb8e229a858d",
+      "sha256": "cbae1e9b9cd17e9e8c69d850e25e651c6b5f568c5f020ae11c1a87256762c8ef",
       "language": "Other",
-      "bytes": 15047,
+      "bytes": 15044,
       "symbols": []
     },
     "docs/graphics-handoff/layers-desktop-evidence.json": {
@@ -21093,9 +21123,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/layers-desktop-main-server.txt": {
-      "sha256": "70a0bd33551073cf99b207c52c74c0ecb3f5e334a57cc77aa1bf67063b03b13c",
+      "sha256": "5a9056bd17c8385429ab66f0e6b4dd12a31b44afd5c1b51094ffe035f3871351",
       "language": "Other",
-      "bytes": 15276,
+      "bytes": 15273,
       "symbols": []
     },
     "docs/graphics-handoff/layers-e2e-evidence.json": {
@@ -21144,6 +21174,12 @@
       "sha256": "60932b5b481b910b1fe3801ab1222de58187815dcfc44729eb15c3d9fb25eda8",
       "language": "JSON",
       "bytes": 13307,
+      "symbols": []
+    },
+    "docs/graphics-handoff/layers-restart-evidence.json": {
+      "sha256": "31696f9dc80541bc8b0ee5294d66f69b29be260fe3b20fcd3b746ed802cbd5e5",
+      "language": "JSON",
+      "bytes": 390,
       "symbols": []
     },
     "docs/graphics-handoff/layers-rollback-evidence.json": {
@@ -21222,6 +21258,12 @@
       "sha256": "b7f44c77e2c71d19972d0b04edfc3528d4c5b90fae00be26148676f5ac245f9e",
       "language": "Markdown",
       "bytes": 5103,
+      "symbols": []
+    },
+    "docs/graphics-testing.md": {
+      "sha256": "3cfef4656ec98137504b9250869c9923ef7d1030207ba8b2eb6fb20e38743ff0",
+      "language": "Markdown",
+      "bytes": 5182,
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
@@ -21626,41 +21668,157 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsApi.vue": {
-      "sha256": "e3a8583e72329be8303797ef12478f32c801c78ce8d44721479f36e8715596d3",
+      "sha256": "b9ad454af4c6f57e5d72d104f0db0def543f7d6dc9751ad6a38d9c59da111d97",
       "language": "Vue",
-      "bytes": 2871,
+      "bytes": 13329,
       "symbols": [
         {
           "name": "configStore",
-          "line": 13
-        },
-        {
-          "name": "indexStore",
           "line": 14
         },
         {
-          "name": "channelId",
-          "line": 16
+          "name": "indexStore",
+          "line": 15
         },
         {
-          "name": "key",
+          "name": "channelId",
           "line": 17
         },
         {
-          "name": "scenes",
-          "line": 20
+          "name": "key",
+          "line": 18
         },
         {
-          "name": "slug",
+          "name": "scenes",
+          "line": 21
+        },
+        {
+          "name": "api",
+          "line": 22
+        },
+        {
+          "name": "channelModels",
           "line": 23
         },
         {
-          "name": "sceneUrl",
+          "name": "templates",
+          "line": 24
+        },
+        {
+          "name": "selectedChannel",
+          "line": 25
+        },
+        {
+          "name": "selectedTemporary",
+          "line": 26
+        },
+        {
+          "name": "loading",
+          "line": 27
+        },
+        {
+          "name": "loadError",
+          "line": 28
+        },
+        {
+          "name": "loadVersion",
+          "line": 29
+        },
+        {
+          "name": "roles",
           "line": 31
         },
         {
+          "name": "temporary",
+          "line": 32
+        },
+        {
+          "name": "assigned",
+          "line": 33
+        },
+        {
+          "name": "selectedRole",
+          "line": 37
+        },
+        {
+          "name": "selectedTemplate",
+          "line": 38
+        },
+        {
+          "name": "base",
+          "line": 39
+        },
+        {
+          "name": "shellQuote",
+          "line": 42
+        },
+        {
+          "name": "curl",
+          "line": 47
+        },
+        {
+          "name": "headers",
+          "line": 48
+        },
+        {
+          "name": "data",
+          "line": 49
+        },
+        {
+          "name": "readExamples",
+          "line": 55
+        },
+        {
+          "name": "channelExamples",
+          "line": 59
+        },
+        {
+          "name": "model",
+          "line": 60
+        },
+        {
+          "name": "permanentExample",
+          "line": 72
+        },
+        {
+          "name": "model",
+          "line": 73
+        },
+        {
+          "name": "url",
+          "line": 79
+        },
+        {
+          "name": "temporaryExamples",
+          "line": 87
+        },
+        {
+          "name": "template",
+          "line": 88
+        },
+        {
+          "name": "fields",
+          "line": 94
+        },
+        {
+          "name": "loadModels",
+          "line": 103
+        },
+        {
+          "name": "version",
+          "line": 104
+        },
+        {
+          "name": "slug",
+          "line": 142
+        },
+        {
+          "name": "sceneUrl",
+          "line": 150
+        },
+        {
           "name": "copy",
-          "line": 35
+          "line": 154
         }
       ]
     },
@@ -31733,15 +31891,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "7a5dcb666565e1ae279c99639fa48e0e031c16093d85e8096615aaa9d71c6dcd",
+      "sha256": "62667500559dd14e1a0bc5d73eab5c4b387190894129d5bb5366cf4295918aed",
       "language": "TypeScript",
-      "bytes": 134906,
+      "bytes": 139748,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "7b70c0093f4c2bafb5eb0a2abca12f7e071d1a32fc0e2054f178048564bb111a",
+      "sha256": "806e55ca26b18d58b890a2351f45fc3ee2fde1ddf9a5b80b1a46d59ce00d87de",
       "language": "TypeScript",
-      "bytes": 140328,
+      "bytes": 145325,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -35182,9 +35340,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator.spec.ts": {
-      "sha256": "68fd569f609659f88a61d8b8ff6601cc7eda44cce2dd56722efc95f3f56db29f",
+      "sha256": "e55c0fe1fec0eec5e0bf35298be96e8c4b824f306e45e3886c8d2e17aa2ad8ed",
       "language": "TypeScript",
-      "bytes": 31594,
+      "bytes": 35429,
       "symbols": [
         {
           "name": "api",

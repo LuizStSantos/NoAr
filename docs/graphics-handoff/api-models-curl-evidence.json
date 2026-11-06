@@ -1,0 +1,90 @@
+{
+  "status": "PASS",
+  "generated_command_groups": 16,
+  "command_exit_codes": [
+    {
+      "command_index": 0,
+      "exit_code": 0
+    },
+    {
+      "command_index": 1,
+      "exit_code": 0
+    },
+    {
+      "command_index": 2,
+      "exit_code": 0
+    },
+    {
+      "command_index": 3,
+      "exit_code": 0
+    },
+    {
+      "command_index": 4,
+      "exit_code": 0
+    },
+    {
+      "command_index": 5,
+      "exit_code": 0
+    },
+    {
+      "command_index": 6,
+      "exit_code": 0
+    },
+    {
+      "command_index": 7,
+      "exit_code": 0
+    },
+    {
+      "command_index": 8,
+      "exit_code": 0
+    },
+    {
+      "command_index": 9,
+      "exit_code": 0
+    },
+    {
+      "command_index": 10,
+      "exit_code": 0
+    },
+    {
+      "command_index": 11,
+      "exit_code": 0
+    },
+    {
+      "command_index": 12,
+      "exit_code": 0
+    },
+    {
+      "command_index": 13,
+      "exit_code": 0
+    },
+    {
+      "command_index": 14,
+      "exit_code": 0
+    },
+    {
+      "command_index": 15,
+      "exit_code": 0
+    }
+  ],
+  "checks": [
+    "Executed commands copied from rendered pt-BR page using a valid login token",
+    "Actual logo/ticker/L-shape on/off responses",
+    "Complete GET/jq/PUT always_on examples for logo and ticker",
+    "Temporary take/on-air/out with real fields and take ID",
+    "Original channel visibility and model documents restored"
+  ],
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "on_air",
+        "uptime": 1637,
+        "output_age": 0.1
+      }
+    ]
+  },
+  "credentials_in_evidence": false
+}

@@ -1648,7 +1648,7 @@ export default {
             lshape: 'A arte do L-shape e onde o vídeo fica nela.',
             subtitles: 'Legendas da saída HLS, a partir do arquivo WebVTT de cada vídeo.',
             scenes: 'Conjuntos com nome de mudanças na logo e no L-shape, aplicados de uma vez em Ao vivo agora, no Player ou por um encoder. Cada cena muda só o que ela diz; o resto fica como está.',
-            api: 'Controle a logo, o L-shape e as cenas de fora do NoAr (vMix, OBS, Stream Deck, scripts) com a chave de grafismo do canal.',
+            api: 'Controle modelos e cenas de fora do NoAr. As rotas de modelos usam o token do login; os endereços existentes de logo/L-shape/cena usam a chave de grafismo.',
         },
         places: {
             'top-left': 'Topo à esquerda',
@@ -1726,6 +1726,53 @@ export default {
             },
         },
         api: {
+            modelsTitle: 'Modelos do canal e camadas',
+            modelsIntro:
+                'Edite a logo, o L-shape e o letreiro em Modelos → Editar. As camadas são o desenho salvo usado no ar.',
+            logoLayers:
+                'Logo: imagem e outras camadas de arte. Trocar a imagem altera a imagem controlada; mover a logo desloca sua composição. As outras camadas são preservadas.',
+            lshapeLayers:
+                'L-shape: camadas da arte mais a janela de vídeo. Entrar/voltar usa esse modelo. Trocar só a imagem mantém a janela; informar canto/tamanho muda a janela temporariamente.',
+            tickerLayers:
+                'Letreiro: modelo permanente de texto. O texto é fixo; rolagem e relógio não fazem parte desta entrega.',
+            permanentState:
+                'Sempre no ar salva se a logo e o letreiro carregam ao iniciar. O interruptor No ar / Fora em Modelos controla a visibilidade atual; esconder não apaga essa configuração. Mostrar um modelo permanente desabilitado também o habilita. O L-shape entra e sai por comando.',
+            legacyModels:
+                'Os endereços com chave de logo/L-shape/cena abaixo continuam com as mesmas respostas. Agora eles agem nos modelos do canal. Trocas de imagem e posição são temporárias e não reescrevem o desenho salvo no Composer.',
+            xmltvSeparate:
+                'A imagem do guia é separada: Grafismo → Logo XMLTV. Trocar a logo no ar não muda o guia; vazio usa a imagem configurada no modelo.',
+            authTitle: 'API com login para modelos e letreiro',
+            authIntro:
+                'Estas rotas /api/graphics usam o token de acesso do login. A chave de grafismo abaixo autoriza só os endereços existentes de logo, L-shape e cena.',
+            tokenHelp:
+                "Obtenha access pelo fluxo de login do NoAr (/auth/login; conclua o segundo fator se estiver habilitado). Use Bash e curl 7.76 ou mais novo (--fail-with-body); o exemplo de configuração permanente também exige jq. Defina TOKEN='YOUR_ACCESS_TOKEN' antes de executar os exemplos. Não use a chave de grafismo no lugar desse token.",
+            permissions:
+                'Usuários do canal podem ler e operar os modelos. Salvar ou apagar modelos exige administrador do canal/global. Abrir esta página não executa os comandos dos exemplos.',
+            listTemplates: 'Listar os modelos salvos, incluindo os do canal',
+            channelState: 'Ler os modelos vinculados, seus IDs e o estado solicitado no ar',
+            channelModel: 'Modelo do canal para estes exemplos',
+            readModel: 'Ler este modelo completo e suas camadas',
+            modelOn: 'Mostrar logo/letreiro ou entrar no L-shape',
+            modelOff: 'Esconder logo/letreiro ou voltar à tela cheia',
+            savePermanent: 'Salvar Sempre no ar pela API',
+            savePermanentHelp:
+                'Este exemplo usa jq. Leia o modelo completo atual, altere always_on e envie o documento inteiro por PUT. Use false para desabilitar ao iniciar. Omitir preserva a configuração atual. Mantenha os outros campos e camadas; enviar um modelo parcial pode sobrescrevê-los. Salvar um modelo temporariamente escondido mantém ele escondido.',
+            verifyOutput:
+                'on é o estado solicitado: marcações do clipe, breaks e L-shape ainda podem esconder a logo. ready confere o conteúdo salvo, não a saída decodificada. Confira o Player/HLS e /health para verificar a saída real.',
+            loading: 'Lendo os IDs dos modelos salvos…',
+            temporaryTitle: 'Modelos temporários: take e out',
+            temporaryIntro:
+                'Use take nos modelos comuns, preenchendo seus campos. Um modelo com janela de vídeo funciona como L-shape; os outros grafismos seguem a regra de acompanhar/esperar/pular.',
+            assignedNotTake:
+                'Logo, letreiro, L-shape e cenas do canal usam os controles do canal. Enviar um deles para take responde 409. Aplique as cenas salvas pelos endereços abaixo.',
+            temporaryModel: 'Modelo temporário para estes exemplos',
+            createTemporary: 'Crie um modelo comum em Modelos para ver exemplos com seu ID e seus campos reais.',
+            sampleValue: 'Valor de exemplo',
+            takeTemplate: 'Pôr o modelo comum selecionado no ar',
+            temporaryState: 'Listar grafismos temporários no ar',
+            outTemplates: 'Tirar todos os modelos temporários (os do canal ficam como estão)',
+            takeResult:
+                'Troque os valores de exemplo dos campos antes de enviar. take devolve take_id; envie esse ID para out se quiser tirar só um grafismo. Um modelo que espera devolve state=waiting. duration=0 fica até out; sem informar, vale a duração salva. out executa a animação de saída; o item pode continuar na lista com leaving=true até ela terminar.',
             title: 'Chave de grafismo e tutorial',
             intro: 'Uma chave para a logo, o L-shape e as cenas. Quem tem a chave muda o grafismo deste canal sem login.',
             scenesTitle: 'Cenas por endereço',
@@ -2494,9 +2541,9 @@ export default {
                 lshapeStateReplaced: 'com a arte {graphic}',
                 lshapeSwap: 'Trocar arte…',
                 lshapeReset: 'Arte do canal',
-                lshapeNotReady: 'Sem arte: escolha uma em Grafismo › L-shape e salve.',
+                lshapeNotReady: 'Sem arte: edite o L-shape do canal em Grafismo → Modelos e salve no Composer.',
                 lshapeFailed: 'Não deu para mudar o L-shape.',
-                key: 'Chave dos gráficos (logo e L-shape) para encoders e scripts',
+                key: 'Chave de grafismo (logo, L-shape e cenas) para encoders e scripts',
                 noKey: 'Sem chave: só daqui do NoAr',
                 createKey: 'Criar chave',
                 newKey: 'Nova chave',
@@ -2518,7 +2565,7 @@ export default {
                 copied: 'Copiado.',
                 copyFailed: 'Não deu para copiar.',
                 keyHint:
-                    'Uma chave só para a logo e o L-shape. Vale assim que é criada e fica a mesma até você gerar uma nova. Quem tem a chave muda os gráficos deste canal; gere uma nova se ela vazar.',
+                    'Uma chave só para a logo, o L-shape e as cenas. Vale assim que é criada e fica a mesma até você gerar uma nova. Quem tem a chave muda os gráficos deste canal; gere uma nova se ela vazar.',
                 keyPlaceholder: 'SUA_CHAVE',
                 howTo: 'Como mandar comandos do seu encoder (tutorial)',
                 step1: 'Crie a chave acima.',

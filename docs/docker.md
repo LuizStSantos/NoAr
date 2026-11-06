@@ -4,6 +4,12 @@
 NoAr ships as a single container. `docker-compose.yml` in the repository root
 has everything a normal installation needs.
 
+## Testing a source branch on a disposable machine
+
+For the graphics review branch, use the [test-machine guide](graphics-testing.md)
+and `docker-compose.graphics-test.yml`. It builds a local image, starts with a
+new test volume and disables automatic replacement by the stable updater.
+
 ## First start
 
 ```sh
