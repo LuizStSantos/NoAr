@@ -187,7 +187,7 @@ The agreed stages, each with its own commit, tests, captures and handoff:
 - **c — completed:** compatibility coverage for clip logo/L-shape
   marks, graphics events and scene reversal, keyed and authenticated routes,
   external replacement/placement and transitions, desktop output and XMLTV.
-- **d — pending:** aligned before/after HLS frame comparisons in logo and
+- **d — completed:** aligned before/after HLS frame comparisons in logo and
   L-shape regions, including transitions, health and channel logs.
 - **e — pending:** only after migration and compatibility validation, remove
   Logo, L-shape and Quick scenes from the menu.
@@ -258,8 +258,101 @@ warnings, an I/O error and a clip-boundary sync error; the visual checks do
 not establish desktop audio stability. Desktop GPU, physical outputs,
 recording, window resizing, A/V sync and a long soak were not tested. Logo
 cut/fade/crossfade transitions passed engine regressions; aligned integration
-comparison of transition frames remains **stage d**. **Stage e** menu removal
-has not begun. Clock support remains excluded.
+comparison of transition frames was deferred to **stage d**, now recorded
+below. **Stage e** menu removal was not part of stage c. Clock remains excluded.
+
+## Desktop baseline check before stage d
+
+Repeated the same synthetic desktop scenario on `main` at `dd4529e2` and this
+branch at `ee2ad7cb`: 240 seconds each, the same 180-second 640×360/25 fps
+gray clip with 440 Hz AAC, initial fake time/source seek, desktop-cpu renderer,
+Xvfb `:99` at 1280×720×24, fresh PulseAudio daemon with the same clocked null
+sink (48 kHz, stereo), ALSA configuration and logo commands at the same elapsed
+times. No compilation ran during either measurement. Backend/Cargo source on
+that main SHA matches released 2.2.1 revision `d4a1a0a8`; documentation and QA
+trees differ. Both runs reported healthy output during sampling.
+
+| Observed in 240 seconds | Main | Branch |
+| --- | --- | --- |
+| Buffer underrun/overrun messages | 17 | 7 |
+| ALSA `snd_pcm_avail_delay` I/O errors | 15 | 6 |
+| Clip-boundary sync offsets (seconds) | -20.870, -17.601 | -15.973 |
+
+The same failure classes occur without the graphics changes. The earlier
+`-11.942 s` is not a deterministic expected number: offsets and warning counts
+vary with the virtual audio clock. This paired run does not show an increase
+on the branch. Record this as a pre-existing limitation of the virtual desktop
+environment, not proof of desktop audio stability or a newly introduced
+graphics regression. Physical audio/GPU/long-soak behavior remains untested.
+
+[Paired evidence, binary/media hashes and health samples](desktop-reference-d-evidence.json),
+[main application log](desktop-main-d-server.txt),
+[branch application log](desktop-branch-d-server.txt),
+[main PulseAudio log](desktop-main-d-pulse.txt),
+[branch PulseAudio log](desktop-branch-d-pulse.txt).
+The retained runner is [`qa/graphics/desktop.py`](../../qa/graphics/desktop.py).
+
+## Stage d — exact pre-encode and aligned HLS parity
+
+Passed the [criteria fixed before evaluation](../../qa/graphics/parity-criteria.md)
+using the actual main and branch applications. Two byte-identical copies of
+the same disposable 2.2.1/00027 database and the same deterministic 40-second
+640×360/25 fps source were used. Main stayed at 00027; branch startup applied
+00028/00029 and converted the channel automatically. Folder mode starts both
+at source PTS zero; no wall-clock API scheduling or best-fit image/time shifting
+was used. The source grid and visible frame-number marker expose movement,
+scaling and missing frames.
+
+The identical [capture-only patch](../../qa/graphics/preencode.patch) was applied
+only to isolated test worktrees, not the shipped application. It writes the
+accepted compositor frame immediately before encoder packing, after overlays,
+PTS assignment, duplicate filtering and pacing. Captures are tightly packed
+YUV420P; stride padding is excluded. No pixel, PTS or transition clock is changed.
+When switching source worktrees with a shared Cargo target, the application
+and engine packages were explicitly cleaned/rebuilt to avoid stale artifacts;
+the evidence records different binary hashes and the capture-patch hash.
+
+**All 1000 frames at PTS 0–999 matched byte for byte before encoding.** All
+1000 decoded HLS frames matched on the exact 40 ms PTS grid after removing the
+constant MPEG-TS origin. Source frame IDs 0 and 999 were verified. No test frame
+was dropped, spatially aligned, rescaled or shifted in time. In the logo,
+whole-frame L-shape and ticker regions, **HLS RGB error was zero on every
+frame**, including fades and picture motion. The fixed lossy-codec allowance
+(MAE ≤0.75, p99.9 ≤8, max ≤32) was not needed or changed.
+
+The logo gap is 8–10 seconds, with its configured one-second fade during
+7–8 and 10–11 seconds. The L-shape mark is 14–20 seconds, with complete
+1.2-second entry and exit phases (logo suppression plus picture motion).
+The reference application has no persisted ticker after migration 00008;
+the ticker region stayed unchanged, and conversion created an empty, disabled
+binding. This proves absence is preserved, not parity for newly authored text.
+
+| Frame / time | Main | Branch | Difference ×8 |
+| --- | --- | --- | --- |
+| 0 / 0 s, configured logo | [Before](output-parity-d-0000-main.jpg) | [After](output-parity-d-0000-branch.jpg) | [Diff](output-parity-d-0000-diff.png) |
+| 187 / 7.48 s, logo fading out | [Before](output-parity-d-0187-main.jpg) | [After](output-parity-d-0187-branch.jpg) | [Diff](output-parity-d-0187-diff.png) |
+| 262 / 10.48 s, logo fading in | [Before](output-parity-d-0262-main.jpg) | [After](output-parity-d-0262-branch.jpg) | [Diff](output-parity-d-0262-diff.png) |
+| 370 / 14.8 s, picture shrinking | [Before](output-parity-d-0370-main.jpg) | [After](output-parity-d-0370-branch.jpg) | [Diff](output-parity-d-0370-diff.png) |
+| 420 / 16.8 s, settled L-shape | [Before](output-parity-d-0420-main.jpg) | [After](output-parity-d-0420-branch.jpg) | [Diff](output-parity-d-0420-diff.png) |
+| 480 / 19.2 s, picture growing | [Before](output-parity-d-0480-main.jpg) | [After](output-parity-d-0480-branch.jpg) | [Diff](output-parity-d-0480-diff.png) |
+| 495 / 19.8 s, logo returning | [Before](output-parity-d-0495-main.jpg) | [After](output-parity-d-0495-branch.jpg) | [Diff](output-parity-d-0495-diff.png) |
+| 999 / 39.96 s, final source frame | [Before](output-parity-d-0999-main.jpg) | [After](output-parity-d-0999-branch.jpg) | [Diff](output-parity-d-0999-diff.png) |
+
+[All per-frame metrics, hashes, PTS and health samples](parity-d-evidence.json),
+[all common exact pre-encode frames](parity-d-common-preencode.tar.gz),
+[both actual HLS segment sets](parity-d-hls-segments.tar.gz),
+[main channel log](parity-d-main-channel.txt),
+[branch channel log](parity-d-branch-channel.txt),
+[main server log](parity-d-main-server.txt) and
+[branch server log](parity-d-branch-server.txt).
+Both channels stayed healthy and their nonempty channel logs had zero errors.
+Representative captures include 23 matched frame pairs and their differences;
+the complete comparison covers every frame, not just these examples.
+
+The retained runner is [`qa/graphics/parity.py`](../../qa/graphics/parity.py).
+This establishes migration parity for this deterministic HLS scenario. It does
+not establish desktop audio stability, hardware outputs or a long soak.
+Stage e menu/editor changes may now proceed; none were included in this stage.
 
 Only logo and ticker are always on in this delivery. Clock support is out
 of scope. L-shape remains a manual picture-window graphic. Full-frame logo
@@ -418,7 +511,7 @@ schema remained at 00027 with no graphics binding table.
 | Converted models in the library | [Models](migration-b-converted-models.jpg) |
 
 At the end of stage b, compatibility coverage and desktop output remained for
-stage c, now recorded above. Aligned frame-by-frame parity remains stage d.
+stage c, now recorded above. Aligned frame-by-frame parity was subsequently verified in stage d above.
 No menu has been removed; clock support remains out of scope.
 
 ## Library correction before stage c
@@ -464,14 +557,11 @@ desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. **Complete stage d for logo and L-shape models**: conversion, compatibility
-   pages, library controls and the stage-c matrix are installed and verified
-   within their documented scope. Still perform aligned before/after HLS
-   frame comparisons, including transitions. Desktop audio stability and
-   untested outputs remain explicit limitations. Clock remains outside this delivery.
-2. **Remove** Logo, L-shape and Quick scenes from the Graphics menu once 1 is
-   in.
-3. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics
+1. **Stage e**: remove Logo, L-shape and Quick scenes from the Graphics menu
+   and send assigned-model Edit links to dedicated editors inside Graphics.
+   Keep compatibility API routes working. Stage d has passed; desktop audio
+   stability and untested outputs remain explicit limitations. Clock remains excluded.
+2. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics
    inside clips with open tracks 2.6 (`video-graphics-design.html`), control API
    with key and webhooks 2.7 (`control-api-design.html`).
 

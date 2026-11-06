@@ -3,7 +3,8 @@
 Status: **in progress**. Template storage, rendering, the take / out API,
 On air, the library and the Composer UI are implemented. Migration of the
 existing channel graphics into templates is implemented in stage b;
-complete compatibility and aligned output parity remain pending. See the
+stage-c compatibility and stage-d aligned output parity have passed within
+their documented scope. Legacy menu/editor cleanup remains stage e. See the
 [implementation handoff](graphics-handoff/README.md) for scope and test evidence.
 A scoped synthetic HLS run now verifies template L-shape take/out and a
 `follow` GC inside its picture window; captures and limits are in the handoff.

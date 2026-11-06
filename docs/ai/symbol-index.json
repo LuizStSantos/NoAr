@@ -20835,9 +20835,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "0dba9a8d8bcaed37d60ebcb516c77fbe4415e0ba1fa492acc57ecb263f945434",
+      "sha256": "83d38b2aa3a3ffa8f5aa872615b266a7e4c4fb010062046188dbd62c038dad25",
       "language": "Markdown",
-      "bytes": 30755,
+      "bytes": 36927,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -20888,6 +20888,48 @@
       "bytes": 15182,
       "symbols": []
     },
+    "docs/graphics-handoff/desktop-branch-d-pulse.txt": {
+      "sha256": "36b23d202f43a0099b2a3e49505ce6bb2f58e384e332d9f350410d004011868f",
+      "language": "Other",
+      "bytes": 2728,
+      "symbols": []
+    },
+    "docs/graphics-handoff/desktop-branch-d-server.txt": {
+      "sha256": "d592f48e7ee0cbdbe7d555b9b2ccd5cff7a3ef34fa37d59a467c48ac445f1b39",
+      "language": "Other",
+      "bytes": 16515,
+      "symbols": []
+    },
+    "docs/graphics-handoff/desktop-branch-d-xvfb.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "language": "Other",
+      "bytes": 0,
+      "symbols": []
+    },
+    "docs/graphics-handoff/desktop-main-d-pulse.txt": {
+      "sha256": "36b23d202f43a0099b2a3e49505ce6bb2f58e384e332d9f350410d004011868f",
+      "language": "Other",
+      "bytes": 2728,
+      "symbols": []
+    },
+    "docs/graphics-handoff/desktop-main-d-server.txt": {
+      "sha256": "04bdad9c79c47b204a789fe3cf3d9f52b254e1cbfccd8e073373f84ec1106d97",
+      "language": "Other",
+      "bytes": 18704,
+      "symbols": []
+    },
+    "docs/graphics-handoff/desktop-main-d-xvfb.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "language": "Other",
+      "bytes": 0,
+      "symbols": []
+    },
+    "docs/graphics-handoff/desktop-reference-d-evidence.json": {
+      "sha256": "32868ae987505a1af2ed7bf6cd70570dd66b314cf48610a54204479219c9b0ab",
+      "language": "JSON",
+      "bytes": 86510,
+      "symbols": []
+    },
     "docs/graphics-handoff/library-channel-evidence.json": {
       "sha256": "bda2039169ee958bbc209bf14bf91a7d0e2a32bec356fa6712006a3495a6d908",
       "language": "JSON",
@@ -20918,6 +20960,36 @@
       "bytes": 6042,
       "symbols": []
     },
+    "docs/graphics-handoff/parity-d-branch-channel.txt": {
+      "sha256": "c45424f249a5dd7f55c4fe757b928fdf0d407a648cf9ca4fa54264281de3c6a1",
+      "language": "Other",
+      "bytes": 2415,
+      "symbols": []
+    },
+    "docs/graphics-handoff/parity-d-branch-server.txt": {
+      "sha256": "b615ec732abeb8089ccc9151cde3c7784088421e4a05e79ba2b5f2405ab61219",
+      "language": "Other",
+      "bytes": 8536,
+      "symbols": []
+    },
+    "docs/graphics-handoff/parity-d-evidence.json": {
+      "sha256": "9a6cca6bedd8b1cd7880a244b932f1182843a88eec5052cff7355f6270252ac9",
+      "language": "JSON",
+      "bytes": 650984,
+      "symbols": []
+    },
+    "docs/graphics-handoff/parity-d-main-channel.txt": {
+      "sha256": "4c0d164f3ad1d54bf8d86d2fb99f062297a389667cb0fb010099c88fa71bf7bf",
+      "language": "Other",
+      "bytes": 2416,
+      "symbols": []
+    },
+    "docs/graphics-handoff/parity-d-main-server.txt": {
+      "sha256": "66805ff2e8ccca945b47531213825dec72d880149f4e71005c276ea67026a6b1",
+      "language": "Other",
+      "bytes": 8536,
+      "symbols": []
+    },
     "docs/graphics-handoff/video-graphics-design.html": {
       "sha256": "c2c36fd7616135198cc894765ef31e21713701688ad8aa36648e232e6c5e2d4e",
       "language": "HTML",
@@ -20925,9 +20997,9 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "4b073268870f70956021e8c539c8b553df1f6392f23c6bbfc35a02d310c330a1",
+      "sha256": "93e6798160f928854482a079826fdd2160c45b6e97782ec3f33bbe68c3109763",
       "language": "Markdown",
-      "bytes": 5256,
+      "bytes": 5334,
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
@@ -34705,9 +34777,9 @@
       "symbols": []
     },
     "qa/graphics/README.md": {
-      "sha256": "fd34b0b2a96de0c71c350a7ea2a365aee844f5c615a02c10c8b3dafd43b22a6d",
+      "sha256": "648f2aa8e29885e1865d21a19a34cb0c01244c14f52871f3d8c90c0dec1b4dbd",
       "language": "Markdown",
-      "bytes": 2782,
+      "bytes": 5100,
       "symbols": []
     },
     "qa/graphics/compatibility.py": {
@@ -34749,6 +34821,21 @@
         }
       ]
     },
+    "qa/graphics/desktop.py": {
+      "sha256": "dc02d014515bce35efb36d0b9fde655d153b3535c367f96239532bdc80eb10a5",
+      "language": "Python",
+      "bytes": 5879,
+      "symbols": [
+        {
+          "name": "main",
+          "line": 16
+        },
+        {
+          "name": "launch",
+          "line": 41
+        }
+      ]
+    },
     "qa/graphics/output.py": {
       "sha256": "3879f94a4f68b64e58f294f0d4db0a61675b58a66d7a801479530be94e55b78e",
       "language": "Python",
@@ -34771,6 +34858,53 @@
           "line": 46
         }
       ]
+    },
+    "qa/graphics/parity-criteria.md": {
+      "sha256": "b267f19dedec640c3d12569e289b657046609f16a58435401eef74da2d4a1d60",
+      "language": "Markdown",
+      "bytes": 3610,
+      "symbols": []
+    },
+    "qa/graphics/parity.py": {
+      "sha256": "7bdc25081877c5807ad7a347784e8e75d4a770356447bde6b8ae07fbf571d2e3",
+      "language": "Python",
+      "bytes": 13743,
+      "symbols": [
+        {
+          "name": "digest",
+          "line": 24
+        },
+        {
+          "name": "prepare",
+          "line": 28
+        },
+        {
+          "name": "run",
+          "line": 96
+        },
+        {
+          "name": "decoded",
+          "line": 156
+        },
+        {
+          "name": "read_frame",
+          "line": 175
+        },
+        {
+          "name": "compare",
+          "line": 185
+        },
+        {
+          "name": "main",
+          "line": 245
+        }
+      ]
+    },
+    "qa/graphics/preencode.patch": {
+      "sha256": "663aeb867770016e99e2fc8b544fad65f5463c26cb4db562441744c8cedef465",
+      "language": "Other",
+      "bytes": 1690,
+      "symbols": []
     },
     "qa/gstreamer/.gitignore": {
       "sha256": "11f681d10856a600de2e1d06a7d299992a64b3c3945a21494a37c75da104e430",

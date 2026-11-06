@@ -1,0 +1,88 @@
+[DEBUG] Start NoAr v2.2.1, channel: 1
+[ INFO] Running NoAr, listen on http://0.0.0.0:8787
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(40.0), width: 0, height: 0, fps: 0.0 }
+[DEBUG] GStreamer first video sample: PTS Some(0:00:00.000000000), segment Some(Segment { format: Time, start: 0:00:00.000000000, offset: 0:00:00.000000000, stop: 0:00:40.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.000000000, duration: --:--:--.--------- })
+[DEBUG] GStreamer first audio sample: PTS Some(0:00:00.021333333), segment Some(Segment { format: Time, start: 0:00:00.021333333, offset: 0:00:00.000000000, stop: 0:00:40.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.021333333, duration: --:--:--.--------- })
+[ WARN] No Two-factor authentication!
+[ INFO] 172.17.0.1 user migration-review login, with role: global_admin
+[ INFO] 172.17.0.1 "POST /auth/login HTTP/1.1" 200 599 "-" "Python-urllib/3.12" 0.635852
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000363
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000341
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000544
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000630
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000515
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000607
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000720
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000526
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000605
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000496
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000628
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000508
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000523
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000567
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000561
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 100 "-" "Python-urllib/3.12" 0.000842
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000767
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000603
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000790
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000514
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000563
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000556
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000497
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000723
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.001179
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000826
+[ WARN] Update check failed: GitHub did not answer: error sending request for url (https://api.github.com/repos/LuizStSantos/NoAr/releases/latest): client error (Connect): tunnel error: failed to create underlying connection: tcp connect error: Connection refused (os error 111)
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000530
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000755
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000483
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.002237
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000527
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000656
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000707
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000640
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000549
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000569
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000527
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000745
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000847
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000538
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000642
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000603
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000690
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000536
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000575
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000517
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000582
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000623
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000789
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000710
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000527
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000704
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.003115
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000585
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000810
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000735
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000526
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000647
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000669
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000526
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.004526
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000732
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.001066
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.001540
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.001433
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000951
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000615
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000689
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000511
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000917
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000664
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(40.0), width: 0, height: 0, fps: 0.0 }
+[DEBUG] GStreamer first video sample: PTS Some(0:00:00.000000000), segment Some(Segment { format: Time, start: 0:00:00.000000000, offset: 0:00:00.000000000, stop: 0:00:40.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.000000000, duration: --:--:--.--------- })
+[DEBUG] GStreamer first audio sample: PTS Some(0:00:00.021333333), segment Some(Segment { format: Time, start: 0:00:00.021333333, offset: 0:00:00.000000000, stop: 0:00:40.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.021333333, duration: --:--:--.--------- })
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 101 "-" "Python-urllib/3.12" 0.000517
+[DEBUG] Deactivate playout and stop all child processes from channel: 1
+[ INFO] 172.17.0.1 "POST /api/control/1/process HTTP/1.1" 200 9 "-" "Python-urllib/3.12" 0.149663
+[ INFO] Shutdown signal received
+[DEBUG] Stop all child processes from channel: 1

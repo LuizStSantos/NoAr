@@ -53,3 +53,44 @@ python3 qa/graphics/output.py \
 Do not run the two runners concurrently: they intentionally control the same
 candidate channel. HTTP equality and sampled settled HLS frames do not prove
 aligned frame-by-frame migration parity, hardware output, A/V sync or a soak.
+
+## Paired desktop and migration parity
+
+`desktop.py` runs inside the GStreamer container with equivalent pre-created
+`desktop-main/noar.db` and `desktop-branch/noar.db` fixtures. It starts fresh
+Xvfb/PulseAudio processes for each 240-second run, uses the same media, fake
+clock and action times, and saves logs, health and warning counts. Its ALSA
+configuration path is the owned stage-c fixture from the original comparison.
+
+For `parity.py`, read [the fixed criteria](parity-criteria.md) first. NumPy,
+Pillow, FFmpeg and Docker are required on the controller. The runtime container
+must mount the work root at the same absolute path and publish port 8787 to
+loopback. No other process may own that test port.
+
+Create isolated source worktrees at the reference/candidate commits and apply
+`preencode.patch` to each. It adds only a writer at the encoder boundary;
+never apply it to shipped source. Build each no-default binary in the same
+GStreamer 1.26 environment. When reusing Cargo's target between worktrees,
+**clean `noar` and `noar-engine` before switching**, then copy the binary to a
+distinct path. Dependency artifacts may stay cached. Save commits, build logs,
+patch hash and binary hashes.
+
+```sh
+export NOAR_E2E_STAGING=1 NOAR_E2E_DISPOSABLE=1
+python3 qa/graphics/parity.py prepare \
+  --work-root /tmp/owned-parity --source-database /tmp/disposable-221.db
+python3 qa/graphics/parity.py run --work-root /tmp/owned-parity \
+  --name main --binary /tmp/main-capture --auth-file /tmp/disposable-auth.json
+python3 qa/graphics/parity.py run --work-root /tmp/owned-parity \
+  --name branch --binary /tmp/branch-capture --auth-file /tmp/disposable-auth.json
+python3 qa/graphics/parity.py compare --work-root /tmp/owned-parity \
+  --screenshots /tmp/owned-parity/captures
+```
+
+`prepare` requires a new directory and creates the deterministic media, marks
+and byte-identical database copies. `run` clears only that owned root's output
+and logs, starts the actual application, captures the complete interval, then
+stops and flushes output. `compare` requires all 1000 raw PTS files and all 1000
+HLS timestamps; failures are reported without selecting matching subsets.
+Archives retain all common raw frames and both HLS segment sets; JPEG/PNG pairs
+illustrate selected frames. These runners must run sequentially.
