@@ -11,21 +11,17 @@ import { useConfig } from '@/stores/config'
 import { useSettings } from '@/stores/settings'
 
 /**
- * The channel's graphics: what is on air now, the logo, the L-shape, the
- * subtitles, quick scenes and control from outside NoAr.
+ * Channel graphics are managed from On air and Templates. Assigned models
+ * have dedicated editors rather than separate navigation pages.
  */
 const PAGES = [
     { name: 'onair', icon: 'bi-record-circle', admins: false, group: 'main' },
     { name: 'templates', icon: 'bi-grid-1x2', admins: false, group: 'main' },
     { name: 'subtitles', icon: 'bi-badge-cc', admins: true, group: 'main' },
     { name: 'api', icon: 'bi-plug', admins: true, group: 'main' },
-    // Channel settings that become templates when the old graphics move over.
-    { name: 'logo', icon: 'bi-badge-tm', admins: true, group: 'channel' },
-    { name: 'lshape', icon: 'bi-aspect-ratio', admins: true, group: 'channel' },
-    { name: 'scenes', icon: 'bi-collection-play', admins: true, group: 'channel' },
 ] as const
 
-const GROUPS = ['main', 'channel'] as const
+const GROUPS = ['main'] as const
 
 type PageName = (typeof PAGES)[number]['name'] | 'composer'
 
@@ -39,7 +35,11 @@ const settings = useSettings()
 const pendingChannel = ref<number | null>(null)
 
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
-const current = computed(() => String(route.name ?? '').replace('graphics-', '') as PageName)
+const current = computed(() =>
+    route.name === 'graphics-channel-editor'
+        ? 'templates'
+        : (String(route.name ?? '').replace('graphics-', '') as PageName),
+)
 const pages = computed(() =>
     PAGES.filter((page) => !page.admins || ['global_admin', 'channel_admin'].includes(authStore.role)),
 )
@@ -50,7 +50,16 @@ const groupedPages = computed(() =>
 )
 
 useHead({
-    title: computed(() => `${t(`graphics.sections.${current.value}`)} · ${t('nav.graphics')}`),
+    title: computed(() => {
+        const title =
+            route.name === 'graphics-channel-editor'
+                ? t('graphics.editor.title', {
+                      name: t(`graphics.assigned.${route.params.kind === 'scene' ? 'scenes' : route.params.kind}`),
+                  })
+                : t(`graphics.sections.${current.value}`)
+
+        return `${title} · ${t('nav.graphics')}`
+    }),
 })
 
 function link(name: PageName) {
@@ -114,7 +123,12 @@ function confirmChannel(discard: boolean) {
 
             <label class="field-label lg:hidden">
                 {{ t('graphics.page') }}
-                <select class="field-input bg-base-100!" :value="current" @change="selectPage">
+                <select
+                    class="field-input bg-base-100!"
+                    :aria-label="t('graphics.page')"
+                    :value="current"
+                    @change="selectPage"
+                >
                     <optgroup
                         v-for="entry in groupedPages"
                         :key="entry.group"
@@ -127,7 +141,7 @@ function confirmChannel(discard: boolean) {
                 </select>
             </label>
 
-            <nav class="hidden lg:flex flex-col gap-0.5">
+            <nav class="hidden lg:flex flex-col gap-0.5" :aria-label="t('nav.graphics')">
                 <template v-for="entry in groupedPages" :key="entry.group">
                     <div
                         class="text-[11px] text-subtle tracking-[0.08em] uppercase px-2.5 pb-1.5"
@@ -149,15 +163,7 @@ function confirmChannel(discard: boolean) {
                     >
                         <i class="bi" :class="page.icon" aria-hidden="true" />
                         <span class="flex-auto">{{ t(`graphics.sections.${page.name}`) }}</span>
-                        <span
-                            v-if="page.admins && page.group === 'channel' && settings.changedSections.includes('logo')"
-                            class="dot bg-accent"
-                            :title="t('settings.hasChanges')"
-                        />
                     </RouterLink>
-                    <p v-if="entry.group === 'channel'" class="m-0 mt-1.5 px-2.5 text-xs text-muted leading-relaxed">
-                        {{ t('graphics.groups.channelHint') }}
-                    </p>
                 </template>
                 <p class="m-0 mt-3 px-2.5 text-xs text-muted leading-relaxed">{{ t('graphics.marksHint') }}</p>
             </nav>

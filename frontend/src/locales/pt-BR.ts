@@ -1428,9 +1428,15 @@ export default {
         },
     },
     graphics: {
+        editor: {
+            back: 'Voltar aos modelos',
+            title: 'Editar {name}',
+            hint: 'As alterações atualizam o modelo vinculado a este canal.',
+        },
         assigned: {
             group: 'Grafismo do canal',
             scenes: 'Cenas',
+            editScenes: 'Editar cenas',
             logo: 'Logo do canal',
             lshape: 'L-shape do canal',
             ticker: 'Letreiro',

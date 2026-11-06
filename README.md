@@ -82,13 +82,14 @@ and the Report for what aired.
   timing, and save them in groups. Open **Edit** or **+ New template** from
   Templates or On air; operators fill in the fields and take the templates
   on air ([roadmap and status](docs/graphics-roadmap.md)).
-- Its own menu tab for the logo, the L-shape and the subtitles. The logo comes
-  up and goes off with a fade or a cut, cross-fades when swapped, and goes
-  anywhere on the screen (`X% × Y%`).
+- **On air**, **Templates**, **Subtitles** and **External control (API)** are
+  the Graphics navigation. Templates groups channel logo, ticker and L-shape
+  models separately from ordinary GCs; Edit opens their dedicated editors.
+  The logo fades or cuts, cross-fades when swapped and can go anywhere on screen.
 - **L-shape**: the picture shrinks into a corner over a full-screen graphic,
   with a downloadable template.
-- **Quick scenes**: a set of logo and L-shape changes applied in one click,
-  from NoAr or an encoder.
+- **Quick scenes**: manage them from the Templates **Scenes** group, then
+  apply their logo/L-shape changes from NoAr or an encoder.
 - Everything can be hidden, swapped, moved or applied on air from NoAr or by
   API with a fixed key, with a tutorial ([docs](docs/logo.md)).
 - **WebVTT subtitles** in the HLS output ([docs](docs/closed_captions.md)).
@@ -178,10 +179,10 @@ comes back, next to where the logo goes off.
 
 ![Marks in a video](docs/images/marks.png)
 
-**Graphics › Live now**: the logo and the L-shape on air, placed by dragging
-or typing and confirmed before they move, and the quick scenes.
+**Graphics › Templates**: channel models and scenes have their own controls
+and editors. Logo, L-shape and Quick scenes no longer have separate menu entries.
 
-![Graphics](docs/images/graphics.png)
+![Graphics](docs/graphics-handoff/editor-e-templates-pt-BR.jpg)
 
 **Report**: a day with the actual times of what aired and how each item ended; on
 the current day, also what is still to come

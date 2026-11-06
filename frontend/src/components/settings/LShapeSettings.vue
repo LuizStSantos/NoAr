@@ -127,6 +127,7 @@ watch(() => processing.value?.lshape, loadImage, { immediate: true })
                     <span class="flex gap-2">
                         <input
                             v-model.trim="processing.lshape"
+                            :aria-label="t('lshape.graphic')"
                             class="field-input font-mono text-[13px]"
                             :placeholder="t('lshape.graphicPlaceholder')"
                             spellcheck="false"

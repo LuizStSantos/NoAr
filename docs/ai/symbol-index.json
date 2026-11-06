@@ -975,9 +975,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "a345baf20e5c5029c2dfe4f2adce22c6382dfb0f9495a936ebecf6bfdd4132eb",
+      "sha256": "7273c21fc8ea481aa89b2eb8198f6851f5a38f9a098795f1ac93910ad45a1a4c",
       "language": "Markdown",
-      "bytes": 55130,
+      "bytes": 55298,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1005,9 +1005,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "f858b6235ce1f34d9f135f180b55eefd4882df0df52ff33a071ddb48c72f3f94",
+      "sha256": "0dfb72a7e9366680d3bf08537e028890c9c92621cf7de5c4861f011281872736",
       "language": "Markdown",
-      "bytes": 12816,
+      "bytes": 13009,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -7526,9 +7526,9 @@
       ]
     },
     "backend/app/src/utils/convert.rs": {
-      "sha256": "0cfa950820e3c22638050cc507a81eb3ce85f357ce2ea953f0efea7aae23d7cd",
+      "sha256": "ea36c07b1a250750918f5dad0de37f77fdedc8ef538bb99ddd7c5dbaf6d30558",
       "language": "Rust",
-      "bytes": 16898,
+      "bytes": 17030,
       "symbols": [
         {
           "name": "ConversionState",
@@ -7607,32 +7607,36 @@
           "line": 304
         },
         {
+          "name": "stale_temporaries_at",
+          "line": 308
+        },
+        {
           "name": "converted_in_place_of",
-          "line": 341
+          "line": 345
         },
         {
           "name": "temporary_path",
-          "line": 354
+          "line": 358
         },
         {
           "name": "run",
-          "line": 364
+          "line": 368
         },
         {
           "name": "tests",
-          "line": 447
-        },
-        {
-          "name": "results_keep_the_name_when_the_container_takes_h264",
           "line": 451
         },
         {
+          "name": "results_keep_the_name_when_the_container_takes_h264",
+          "line": 455
+        },
+        {
           "name": "a_converted_file_stands_in_for_its_original",
-          "line": 465
+          "line": 469
         },
         {
           "name": "only_old_temporary_files_are_stale",
-          "line": 489
+          "line": 493
         }
       ]
     },
@@ -20793,9 +20797,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "053a1d344e2c29b564e7e314cebbff4e0d3ae29025433f05fd47eef9c3665db0",
+      "sha256": "6a4dc9d53a07e35599f2ceb3ce634536f240a20aee82cc17bfccbfdda662d68f",
       "language": "Markdown",
-      "bytes": 38013,
+      "bytes": 38336,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -20835,9 +20839,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "83d38b2aa3a3ffa8f5aa872615b266a7e4c4fb010062046188dbd62c038dad25",
+      "sha256": "9ab20e2d39fe503bbc0e0f3bc2ed452a62cf74a868d510883149e9f774ba88bf",
       "language": "Markdown",
-      "bytes": 36927,
+      "bytes": 40502,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -20930,6 +20934,36 @@
       "bytes": 86510,
       "symbols": []
     },
+    "docs/graphics-handoff/editor-e-api-evidence.json": {
+      "sha256": "e806fa6d8a6fd2bb1562138a8d48e0f56a51dee8a46683470063661399dbbe89",
+      "language": "JSON",
+      "bytes": 22114,
+      "symbols": []
+    },
+    "docs/graphics-handoff/editor-e-browser-evidence.json": {
+      "sha256": "865e35a8b8f536900c9a42dd8545d3547de4ca0fd15a8cab91d3715d88d8a22c",
+      "language": "JSON",
+      "bytes": 666,
+      "symbols": []
+    },
+    "docs/graphics-handoff/editor-e-browser-tests.txt": {
+      "sha256": "729ef9fe9a5ce25798a005e022ff4b31909747c0561104b39ea5a8992a48ab51",
+      "language": "Other",
+      "bytes": 989,
+      "symbols": []
+    },
+    "docs/graphics-handoff/editor-e-checks.json": {
+      "sha256": "cf7d33061aa5a2270edb4bff8d709b0cc9e1e506ff5b5fe133875c6d8adca000",
+      "language": "JSON",
+      "bytes": 1539,
+      "symbols": []
+    },
+    "docs/graphics-handoff/editor-e-rust-checks.txt": {
+      "sha256": "8693ba41aeabeabd223cc00f26bbf6b722ade28ad834aa84a77bdab0ecb7585e",
+      "language": "Other",
+      "bytes": 60332,
+      "symbols": []
+    },
     "docs/graphics-handoff/library-channel-evidence.json": {
       "sha256": "bda2039169ee958bbc209bf14bf91a7d0e2a32bec356fa6712006a3495a6d908",
       "language": "JSON",
@@ -20997,9 +21031,9 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "93e6798160f928854482a079826fdd2160c45b6e97782ec3f33bbe68c3109763",
+      "sha256": "746f1f27167ddf65835d4802b57fd868754e72299623b5883a18ba40c86bdc1f",
       "language": "Markdown",
-      "bytes": 5334,
+      "bytes": 5380,
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
@@ -21027,9 +21061,9 @@
       "symbols": []
     },
     "docs/logo.md": {
-      "sha256": "1b05f4d83a69c7925f7ccc13f6a98663cd63e66d99deb4c06c47db2191a2c72c",
+      "sha256": "738c44e4b10a530821a3d16a0438427adedc6cd653b5070ff580f7b8b7c2edb5",
       "language": "Markdown",
-      "bytes": 13502,
+      "bytes": 13878,
       "symbols": []
     },
     "docs/ndi.md": {
@@ -21081,9 +21115,9 @@
       "symbols": []
     },
     "docs/scheduler.md": {
-      "sha256": "fb3b223339c717f5c9243164b01e15c3f93bcbf0db5bd413acd6c50d95ec317e",
+      "sha256": "0a0bbdb386b16b2ffa4a6d9188be67703ef0740725a7b4faec6d6bd2d59bd8a0",
       "language": "Markdown",
-      "bytes": 9721,
+      "bytes": 9934,
       "symbols": []
     },
     "docs/scte35.md": {
@@ -21111,9 +21145,9 @@
       "symbols": []
     },
     "docs/xmltv.md": {
-      "sha256": "7476b7f3cf43ebe60e18692576d8aeb145aadadbe5a475becd0ff59d2e1e18cc",
+      "sha256": "a6e8508a4417386d6b5eb9fffb41706d903dd6b860be8b3302e3fc919505a85e",
       "language": "Markdown",
-      "bytes": 8562,
+      "bytes": 8593,
       "symbols": []
     },
     "frontend/README.md": {
@@ -21439,6 +21473,25 @@
         {
           "name": "copy",
           "line": 35
+        }
+      ]
+    },
+    "frontend/src/components/graphics/GraphicsChannelEditor.vue": {
+      "sha256": "b62c9fb9fed74c4baf31ff02ff6cb49f85dcab17128c92356a7b1fe20d8e6083",
+      "language": "Vue",
+      "bytes": 1562,
+      "symbols": [
+        {
+          "name": "route",
+          "line": 11
+        },
+        {
+          "name": "kind",
+          "line": 12
+        },
+        {
+          "name": "modelName",
+          "line": 13
         }
       ]
     },
@@ -21806,9 +21859,9 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsLibrary.vue": {
-      "sha256": "bf5702d64310311ba70a758c0e7e1665e9203154ab728d74490cba6dd84be49c",
+      "sha256": "22d529e16fcc7900c8c3c56832cb26727971f90b8eea25e1e58a4b0a0f6d3972",
       "language": "Vue",
-      "bytes": 12979,
+      "bytes": 13437,
       "symbols": [
         {
           "name": "configStore",
@@ -21895,59 +21948,55 @@
           "line": 88
         },
         {
-          "name": "name",
-          "line": 89
-        },
-        {
           "name": "reportError",
-          "line": 102
+          "line": 96
         },
         {
           "name": "loadLibrary",
-          "line": 112
+          "line": 106
         },
         {
           "name": "requestedChannel",
-          "line": 113
+          "line": 107
         },
         {
           "name": "version",
-          "line": 114
+          "line": 108
         },
         {
           "name": "replaceChannelModels",
-          "line": 135
+          "line": 129
         },
         {
           "name": "previous",
-          "line": 136
+          "line": 130
         },
         {
           "name": "current",
-          "line": 137
+          "line": 131
         },
         {
           "name": "refreshState",
-          "line": 143
+          "line": 137
         },
         {
           "name": "version",
-          "line": 148
+          "line": 142
         },
         {
           "name": "assigned",
-          "line": 151
+          "line": 145
         },
         {
           "name": "control",
-          "line": 161
+          "line": 155
         }
       ]
     },
     "frontend/src/components/graphics/GraphicsOnAir.vue": {
-      "sha256": "5e525ee02c35eff4dc4251e2cae08c6730dc6298eaa9874298a834b454694105",
+      "sha256": "616fbaa26a8a0911d371cfd565e867f36f6014dc04b07d0bf68d1dd7c4f3d3a5",
       "language": "Vue",
-      "bytes": 16868,
+      "bytes": 17028,
       "symbols": [
         {
           "name": "route",
@@ -22116,33 +22165,37 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsScenes.vue": {
-      "sha256": "12765f0cb662564905b064b4b32140833134692b4f347265bc6864ecec7bffe8",
+      "sha256": "626cd4f4c0ab4bfc52e9df3f35a3e31653410510cb6b8c3a785da34449629113",
       "language": "Vue",
-      "bytes": 4968,
+      "bytes": 5079,
       "symbols": [
         {
           "name": "MAX_SCENES",
           "line": 17
         },
         {
-          "name": "picking",
-          "line": 23
+          "name": "props",
+          "line": 19
         },
         {
-          "name": "scenes",
+          "name": "picking",
           "line": 25
         },
         {
-          "name": "addScene",
+          "name": "scenes",
           "line": 27
         },
         {
+          "name": "addScene",
+          "line": 29
+        },
+        {
           "name": "moveScene",
-          "line": 40
+          "line": 42
         },
         {
           "name": "pick",
-          "line": 48
+          "line": 50
         }
       ]
     },
@@ -25992,9 +26045,9 @@
       ]
     },
     "frontend/src/components/settings/LShapeSettings.vue": {
-      "sha256": "6c9702d08d1e63daa91c28d18217fdd1bebb898a33e6a858213bb5ac0456389d",
+      "sha256": "fb76594800312dd051493c4d48e9974b1b4b259456f3d45b16d2dcfb6b3501bc",
       "language": "Vue",
-      "bytes": 7268,
+      "bytes": 7330,
       "symbols": [
         {
           "name": "configStore",
@@ -27120,9 +27173,9 @@
       ]
     },
     "frontend/src/components/settings/SettingsLogo.vue": {
-      "sha256": "6a67227ebc7e061851c9ee310093a53e5c585f3690b36d522ee51d2af28d9017",
+      "sha256": "e2bf1d5ba4b7de0955c78d117c8cc8d668bd8eb01f4e220eb4f1784518785f9b",
       "language": "Vue",
-      "bytes": 26501,
+      "bytes": 26711,
       "symbols": [
         {
           "name": "props",
@@ -27130,159 +27183,159 @@
         },
         {
           "name": "SIZES",
-          "line": 25
-        },
-        {
-          "name": "picking",
-          "line": 27
-        },
-        {
-          "name": "showAdvanced",
           "line": 28
         },
         {
-          "name": "logoUrl",
-          "line": 29
-        },
-        {
-          "name": "logoFailed",
+          "name": "picking",
           "line": 30
         },
         {
-          "name": "logoImage",
+          "name": "showAdvanced",
+          "line": 31
+        },
+        {
+          "name": "logoUrl",
           "line": 32
         },
         {
-          "name": "processing",
-          "line": 34
+          "name": "logoFailed",
+          "line": 33
         },
         {
-          "name": "output",
+          "name": "logoImage",
           "line": 35
         },
         {
-          "name": "placement",
+          "name": "processing",
+          "line": 37
+        },
+        {
+          "name": "output",
           "line": 38
         },
         {
+          "name": "placement",
+          "line": 41
+        },
+        {
           "name": "margin",
-          "line": 40
+          "line": 43
         },
         {
           "name": "placeLogo",
-          "line": 50
+          "line": 53
         },
         {
           "name": "logoPadBox",
-          "line": 55
+          "line": 58
         },
         {
           "name": "box",
-          "line": 56
+          "line": 59
         },
         {
           "name": "opacity",
-          "line": 61
+          "line": 64
         },
         {
           "name": "transitionOptions",
-          "line": 66
+          "line": 69
         },
         {
           "name": "transitionSeconds",
-          "line": 72
-        },
-        {
-          "name": "seconds",
           "line": 75
         },
         {
+          "name": "seconds",
+          "line": 78
+        },
+        {
           "name": "sizeChoice",
-          "line": 81
+          "line": 84
         },
         {
           "name": "frameSize",
-          "line": 93
+          "line": 96
         },
         {
           "name": "safeAreas",
-          "line": 99
+          "line": 102
         },
         {
           "name": "GUIDES_KEY",
-          "line": 104
-        },
-        {
-          "name": "showGuides",
-          "line": 105
-        },
-        {
-          "name": "readGuides",
           "line": 107
         },
         {
+          "name": "showGuides",
+          "line": 108
+        },
+        {
+          "name": "readGuides",
+          "line": 110
+        },
+        {
           "name": "previewStyle",
-          "line": 124
+          "line": 127
         },
         {
           "name": "box",
-          "line": 125
+          "line": 128
         },
         {
           "name": "spot",
-          "line": 134
-        },
-        {
-          "name": "size",
-          "line": 135
-        },
-        {
-          "name": "boxWidth",
-          "line": 136
-        },
-        {
-          "name": "boxHeight",
           "line": 137
         },
         {
-          "name": "along",
+          "name": "size",
           "line": 138
         },
         {
-          "name": "style",
+          "name": "boxWidth",
+          "line": 139
+        },
+        {
+          "name": "boxHeight",
           "line": 140
         },
         {
+          "name": "along",
+          "line": 141
+        },
+        {
+          "name": "style",
+          "line": 143
+        },
+        {
           "name": "storageImageUrl",
-          "line": 151
+          "line": 154
         },
         {
           "name": "loadLogo",
-          "line": 155
+          "line": 158
         },
         {
           "name": "logoLoaded",
-          "line": 169
+          "line": 172
         },
         {
           "name": "image",
-          "line": 170
+          "line": 173
         },
         {
           "name": "guideLogoUrl",
-          "line": 175
-        },
-        {
-          "name": "guideLogoFailed",
-          "line": 176
-        },
-        {
-          "name": "loadGuideLogo",
           "line": 178
         },
         {
+          "name": "guideLogoFailed",
+          "line": 179
+        },
+        {
+          "name": "loadGuideLogo",
+          "line": 181
+        },
+        {
           "name": "pick",
-          "line": 191
+          "line": 194
         }
       ]
     },
@@ -31301,15 +31354,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "563bd7c43a89df3d09537e662a53857be3c4641748e07933340e4abeab6ad4e7",
+      "sha256": "4a4d0d11c4811f3b5eac4de1a1b9a0d7410e11f8094972f37c09d4d7f88cfcd1",
       "language": "TypeScript",
-      "bytes": 134277,
+      "bytes": 134492,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "2d377aa179967034ffa7bd3349f37e402448331e498a36a01cae671741c5e35b",
+      "sha256": "614b4f2c5f66c3684951cef541680ec07056324dccc93a86d37441442e4df309",
       "language": "TypeScript",
-      "bytes": 139636,
+      "bytes": 139861,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -31324,9 +31377,9 @@
       ]
     },
     "frontend/src/router/index.ts": {
-      "sha256": "a8f13357d1824b3ed8bedec60886da86198ea9527434faa01651973e86f54293",
+      "sha256": "0889fc1ceb4fe3e25c7ae5b371e2c0c047fe39a62083a98199e5a295faff6e0e",
       "language": "TypeScript",
-      "bytes": 11300,
+      "bytes": 11658,
       "symbols": [
         {
           "name": "router",
@@ -32242,9 +32295,9 @@
       ]
     },
     "frontend/src/views/GraphicsView.vue": {
-      "sha256": "4d626f1c064c6bbf0f6d0db6c8cdb5f3c3f63d1fdc3806429c8c6de23fe252bb",
+      "sha256": "3da82e8cded89d65ac2050d27aca0a76a5a62ac2d78d6710ffb04ec7f3f6d963",
       "language": "Vue",
-      "bytes": 7218,
+      "bytes": 6951,
       "symbols": [
         {
           "name": "PAGES",
@@ -32252,39 +32305,39 @@
         },
         {
           "name": "GROUPS",
-          "line": 28
+          "line": 24
         },
         {
           "name": "route",
-          "line": 33
+          "line": 29
         },
         {
           "name": "router",
-          "line": 34
+          "line": 30
         },
         {
           "name": "authStore",
-          "line": 35
+          "line": 31
         },
         {
           "name": "configStore",
-          "line": 36
+          "line": 32
         },
         {
           "name": "settings",
-          "line": 37
+          "line": 33
         },
         {
           "name": "pendingChannel",
-          "line": 39
+          "line": 35
         },
         {
           "name": "channelId",
-          "line": 41
+          "line": 37
         },
         {
           "name": "current",
-          "line": 42
+          "line": 38
         },
         {
           "name": "pages",
@@ -32295,28 +32348,32 @@
           "line": 46
         },
         {
+          "name": "title",
+          "line": 54
+        },
+        {
           "name": "link",
-          "line": 56
-        },
-        {
-          "name": "selectPage",
-          "line": 60
-        },
-        {
-          "name": "changeChannel",
-          "line": 64
-        },
-        {
-          "name": "id",
           "line": 65
         },
         {
-          "name": "confirmChannel",
-          "line": 76
+          "name": "selectPage",
+          "line": 69
+        },
+        {
+          "name": "changeChannel",
+          "line": 73
         },
         {
           "name": "id",
-          "line": 77
+          "line": 74
+        },
+        {
+          "name": "confirmChannel",
+          "line": 85
+        },
+        {
+          "name": "id",
+          "line": 86
         }
       ]
     },
@@ -34740,9 +34797,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator.spec.ts": {
-      "sha256": "eacfb420b46d3d329a206e267cb5eaed207a56fae7bbf3c4ee44c1e2b7de4a2b",
+      "sha256": "98fb7988c8af234d974fb0c37875276109584bdc6f0d54b5420864fae4a5d553",
       "language": "TypeScript",
-      "bytes": 25014,
+      "bytes": 29042,
       "symbols": [
         {
           "name": "api",

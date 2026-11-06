@@ -82,6 +82,10 @@ end time it undoes them (the L-shape goes off and the logo goes back to the
 channel's, where the channel puts it). Without an end, the change stays until
 something else changes it. An end before the start means the next day.
 
+Edit reusable scenes in **Graphics › Templates › Scenes › Manage scenes**.
+A scheduled graphics event stores its own action snapshot; editing a named
+scene later does not rewrite the event's saved actions.
+
 An event can:
 
 - bring the L-shape in or take it off, with its graphic, the corner the

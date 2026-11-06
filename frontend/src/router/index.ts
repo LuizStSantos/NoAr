@@ -95,18 +95,28 @@ const router = createRouter({
                     redirect: (to) => ({ name: 'graphics-onair', query: to.query }),
                 },
                 {
+                    path: 'channel/:kind(logo|ticker|lshape|scene)',
+                    name: 'graphics-channel-editor',
+                    component: () => import('@/components/graphics/GraphicsChannelEditor.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
                     path: 'logo',
                     name: 'graphics-logo',
-                    component: () => import('@/components/settings/SettingsLogo.vue'),
-                    props: { part: 'logo' },
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({
+                        name: 'graphics-channel-editor',
+                        params: { kind: to.hash === '#ticker' ? 'ticker' : 'logo' },
+                        query: to.query,
+                    }),
                 },
                 {
                     path: 'lshape',
                     name: 'graphics-lshape',
-                    component: () => import('@/components/settings/SettingsLogo.vue'),
-                    props: { part: 'lshape' },
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({
+                        name: 'graphics-channel-editor',
+                        params: { kind: 'lshape' },
+                        query: to.query,
+                    }),
                 },
                 {
                     path: 'subtitles',
@@ -118,8 +128,7 @@ const router = createRouter({
                 {
                     path: 'scenes',
                     name: 'graphics-scenes',
-                    component: () => import('@/components/graphics/GraphicsScenes.vue'),
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({ name: 'graphics-channel-editor', params: { kind: 'scene' }, query: to.query }),
                 },
                 {
                     path: 'api',

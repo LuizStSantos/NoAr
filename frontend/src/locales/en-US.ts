@@ -1424,9 +1424,15 @@ export default {
         },
     },
     graphics: {
+        editor: {
+            back: 'Back to templates',
+            title: 'Edit {name}',
+            hint: 'Changes update the model assigned to this channel.',
+        },
         assigned: {
             group: 'Channel graphics',
             scenes: 'Scenes',
+            editScenes: 'Manage scenes',
             logo: 'Channel logo',
             lshape: 'Channel L-shape',
             ticker: 'Ticker',

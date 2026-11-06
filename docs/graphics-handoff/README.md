@@ -189,7 +189,7 @@ The agreed stages, each with its own commit, tests, captures and handoff:
   external replacement/placement and transitions, desktop output and XMLTV.
 - **d — completed:** aligned before/after HLS frame comparisons in logo and
   L-shape regions, including transitions, health and channel logs.
-- **e — pending:** only after migration and compatibility validation, remove
+- **e — completed:** after migration and compatibility validation, remove
   Logo, L-shape and Quick scenes from the menu.
 
 ## Stage c — shared compatibility state and output proof
@@ -353,6 +353,64 @@ The retained runner is [`qa/graphics/parity.py`](../../qa/graphics/parity.py).
 This establishes migration parity for this deterministic HLS scenario. It does
 not establish desktop audio stability, hardware outputs or a long soak.
 Stage e menu/editor changes may now proceed; none were included in this stage.
+
+## Stage e — model editors and navigation cleanup
+
+After stage d passed (`2670a2ba`), removed Logo, L-shape and Quick scenes from
+both the desktop Graphics navigation and the phone selector. The four entries
+are now On air, Templates, Subtitles and External control (API).
+
+Assigned-model **Edit** links open `GraphicsChannelEditor.vue` at
+`/graphics/channel/{logo|ticker|lshape|scene}`. It gives the operator a named
+editor and **Back to templates**, reusing the native controls and existing save
+contracts. Logo/L-shape settings write converted models, ticker edits its own
+model, and scenes edit their bound action definitions. Ordinary templates
+still open the Composer. The Scenes library group remains visible when empty,
+with **Manage scenes** so creating the first scene does not require an old menu.
+
+Legacy UI links `/graphics/logo`, `/graphics/lshape` and `/graphics/scenes`
+redirect to the dedicated editor, preserving `channel`. The old logo `#ticker`
+link opens the ticker editor. Legacy keyed/authenticated **API endpoints have
+not been removed or redirected**: the 76 exact HTTP comparisons and both XMLTV
+checks passed again against 2.2.1. The first-scene browser regression also
+applies the newly saved scene through `/api/control/1/scene`.
+
+Real Chromium checks in pt-BR at 1440×1000 and 390×844 verified all four
+editors, image loading, saves and reloads, canonical model image layers,
+bookmark redirects, return links, menu removal, no horizontal overflow and no
+JavaScript page errors. Vue type/build checks, ESLint, changed-file Prettier
+and QA TypeScript checks passed. Six retained graphics browser tests passed:
+the three Composer regressions, assigned controls/editors, navigation/aliases
+and first-scene creation in an empty group.
+
+| Part | Desktop | Phone |
+| --- | --- | --- |
+| Templates and cleaned menu | [Templates](editor-e-templates-pt-BR.jpg) | [Templates](editor-e-phone-templates-pt-BR.jpg) |
+| Logo editor | [Logo](editor-e-logo-pt-BR.jpg) | [Logo](editor-e-phone-logo-pt-BR.jpg) |
+| L-shape editor | [L-shape](editor-e-lshape-pt-BR.jpg) | [L-shape](editor-e-phone-lshape-pt-BR.jpg) |
+| Ticker editor | [Ticker](editor-e-ticker-pt-BR.jpg) | [Ticker](editor-e-phone-ticker-pt-BR.jpg) |
+| Scene editor | [Scenes](editor-e-scenes-pt-BR.jpg) | [Scenes](editor-e-phone-scene-pt-BR.jpg) |
+
+The phone also created and saved its first scene from the
+[empty Scenes group](editor-e-phone-empty-scenes-pt-BR.jpg), then applied it
+through the legacy scene API: [saved phone scene](editor-e-phone-first-scene-pt-BR.jpg).
+The pt-BR checks were repeated with the final built backend after the test-clock
+fix, not just with the earlier stage-c binary.
+
+[Browser evidence](editor-e-browser-evidence.json) and
+[verification results](editor-e-checks.json) record the executed checks.
+The final no-default Rust suite passed 681 tests, zero failed and 14 ignored;
+fmt and the exact all-target Clippy command passed with GStreamer 1.26.2.
+One initial run exposed an unrelated cleanup-test race: another test's worker
+deleted a deliberately old temporary file during its assertion. Commit
+`b2c16242` gives that scan an explicit local clock, keeping fixture files fresh
+in real time. The isolated case and complete suite then passed. This is separate
+from the frontend editor delivery and changes no graphics composition.
+
+Desktop audio remains limited as recorded in the paired baseline check above.
+No physical outputs, GPU, A/V sync or long soak was added to this verification.
+Clock support remains outside this delivery. No merge, release or main push
+was performed.
 
 Only logo and ticker are always on in this delivery. Clock support is out
 of scope. L-shape remains a manual picture-window graphic. Full-frame logo
@@ -524,8 +582,9 @@ rules and take buttons are absent from these cards and their On air picker.
 
 Logo/ticker cards use visibility switches; L-shape uses Enter/Return; scenes
 use Apply. These controls share the existing engine handles. Edit opens Logo,
-L-shape or Quick scenes. Ticker editing is a static-text section at Logo
-`#ticker`; it preserves other layers. Empty tickers ask for configuration.
+L-shape or Quick scenes in that delivery. Ticker editing was a static-text
+section at Logo `#ticker`; stage e replaced these targets with dedicated model
+editors. Ticker saves preserve other layers. Empty tickers ask for configuration.
 Saving a hidden ticker does not restore it to air. Existing rows are not renamed
 for localization, and no migration was changed.
 
@@ -557,10 +616,9 @@ desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. **Stage e**: remove Logo, L-shape and Quick scenes from the Graphics menu
-   and send assigned-model Edit links to dedicated editors inside Graphics.
-   Keep compatibility API routes working. Stage d has passed; desktop audio
-   stability and untested outputs remain explicit limitations. Clock remains excluded.
+1. Approved stages a–e are complete within the evidence and limitations above.
+   Desktop audio stability, physical outputs and long-soak verification remain
+   explicit limits; clock support remains excluded.
 2. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics
    inside clips with open tracks 2.6 (`video-graphics-design.html`), control API
    with key and webhooks 2.7 (`control-api-design.html`).

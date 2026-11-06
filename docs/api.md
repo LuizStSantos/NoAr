@@ -375,8 +375,12 @@ Showing a previously disabled logo/ticker enables its binding; hiding changes
 runtime visibility while retaining its definition. A full server restart resets
 these transient hide/show overrides and loads enabled definitions again, as for
 the legacy controls. A playout restart retains the shared control handles.
-The Logo page's `#ticker` section edits static ticker text; it does not implement
-scrolling text or a clock.
+Templates opens dedicated channel-model editors at
+`/graphics/channel/{logo|ticker|lshape|scene}`. The ticker editor saves static
+text; it does not implement scrolling or a clock. Legacy UI URLs
+`/graphics/logo`, `/graphics/lshape` and `/graphics/scenes` redirect with their
+channel query preserved; the old logo `#ticker` link opens the ticker editor.
+These browser redirects do not change the legacy HTTP control endpoints above.
 
 
 | Method | Endpoint | Access | Request body |

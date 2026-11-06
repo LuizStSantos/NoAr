@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "locale": "pt-BR",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "checks": [
+    "No legacy menu entries on desktop or phone",
+    "All four assigned model editors open inside Graphics",
+    "Logo/L-shape/ticker/scene save and survive reload",
+    "Logo and artwork persist in canonical model layers",
+    "All legacy UI URLs retain channel and redirect",
+    "Back to templates works on phone",
+    "No horizontal overflow",
+    "No JavaScript page errors",
+    "First scene created on pt-BR phone from an empty group and applied through legacy API"
+  ]
+}

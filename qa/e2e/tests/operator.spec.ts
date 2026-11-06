@@ -380,7 +380,7 @@ test('graphics Composer cannot overwrite a template after a failed load', async 
     await expect(page.getByRole('button', { name: 'Save template', exact: true })).toBeEnabled()
 })
 
-test('assigned channel models use dedicated controls and legacy editors', async ({ page }) => {
+test('assigned channel models use dedicated controls and graphics editors', async ({ page }) => {
     await page.goto('/graphics/templates?channel=1')
     const channel = page.getByRole('region', { name: 'Channel graphics', exact: true })
     await expect(channel.getByRole('heading', { name: 'Channel logo', exact: true })).toBeVisible()
@@ -396,7 +396,7 @@ test('assigned channel models use dedicated controls and legacy editors', async 
     const models = await api(page, '/api/graphics/1/channel')
     const originalName = models.find((view: { kind: string }) => view.kind === 'ticker').template.name
     await channel.locator('article[data-kind="ticker"]').getByRole('link', { name: 'Edit', exact: true }).click()
-    await expect(page).toHaveURL(/graphics\/logo.*#ticker/)
+    await expect(page).toHaveURL(/graphics\/channel\/ticker/)
     const text = `E2E channel bulletin ${Date.now()}`
     await page.getByLabel('Ticker text', { exact: true }).fill(text)
     await page.getByRole('button', { name: 'Save ticker', exact: true }).click()
@@ -423,4 +423,81 @@ test('assigned channel models use dedicated controls and legacy editors', async 
     expect(saved.find((view: { kind: string }) => view.kind === 'ticker').template.name).toBe(originalName)
     await page.setViewportSize({ width: 390, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('channel graphics editors replace legacy navigation and retain bookmarked links', async ({ page }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const navigation = page.getByRole('navigation', { name: 'Graphics', exact: true })
+    await expect(navigation.locator('a')).toHaveCount(4)
+    await expect(
+        navigation.locator('a[href*="/graphics/logo"], a[href*="/graphics/lshape"], a[href*="/graphics/scenes"]'),
+    ).toHaveCount(0)
+
+    for (const kind of ['logo', 'lshape', 'ticker', 'scene']) {
+        const edit = page
+            .locator(`article[data-kind="${kind}"]`)
+            .first()
+            .getByRole('link', { name: 'Edit', exact: true })
+        await expect(edit).toHaveAttribute('href', new RegExp(`/graphics/channel/${kind}`))
+        await edit.click()
+        await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
+        await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+        await page.getByRole('link', { name: 'Back to templates', exact: true }).click()
+        await expect(page).toHaveURL(/graphics\/templates\?channel=1/)
+    }
+
+    for (const [legacy, kind] of [
+        ['logo', 'logo'],
+        ['logo#ticker', 'ticker'],
+        ['lshape', 'lshape'],
+        ['scenes', 'scene'],
+    ]) {
+        const [path, hash] = legacy!.split('#')
+        await page.goto(`/graphics/${path}?channel=1${hash ? `#${hash}` : ''}`)
+        await expect(page).toHaveURL(new RegExp(`/graphics/channel/${kind}\\?channel=1`))
+        await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    const selector = page.getByLabel('Page', { exact: true })
+    await expect(selector.locator('option')).toHaveCount(4)
+    await expect(selector.locator('option[value="logo"], option[value="lshape"], option[value="scenes"]')).toHaveCount(
+        0,
+    )
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('the library can create the first scene after legacy menu removal', async ({ page, request }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const config = await api(page, '/api/playout/config/1')
+    const scenes = config.processing.graphics_scenes
+
+    try {
+        config.processing.graphics_scenes = []
+        expect((await page.request.put('/api/playout/config/1', { headers, data: config })).ok()).toBeTruthy()
+        await page.reload()
+        const section = page.getByRole('region', { name: 'Scenes', exact: true })
+        await expect(section.locator('article')).toHaveCount(0)
+        await section.getByRole('link', { name: 'Manage scenes', exact: true }).click()
+        await page.getByRole('button', { name: 'New scene', exact: true }).click()
+        const name = `E2E first scene ${Date.now()}`
+        await page.getByLabel('Name', { exact: true }).fill(name)
+        const response = page.waitForResponse(
+            (item) => item.url().endsWith('/api/playout/config/1') && item.request().method() === 'PUT',
+        )
+        await page.getByRole('button', { name: 'Save', exact: true }).click()
+        expect((await response).ok()).toBeTruthy()
+        await page.getByRole('link', { name: 'Back to templates', exact: true }).click()
+        await expect(section.locator('article[data-kind="scene"]')).toContainText(name)
+        const applied = await page.request.post('/api/control/1/scene', { headers, data: { name } })
+        expect(applied.ok()).toBeTruthy()
+    } finally {
+        const response = await request.get('/api/playout/config/1', { headers })
+        expect(response.ok()).toBeTruthy()
+        const current = await response.json()
+        current.processing.graphics_scenes = scenes
+        expect((await request.put('/api/playout/config/1', { headers, data: current })).ok()).toBeTruthy()
+    }
 })

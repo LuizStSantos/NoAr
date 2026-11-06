@@ -16,6 +16,8 @@ import type { GraphicsScene } from '@/types/playout_config'
  */
 const MAX_SCENES = 24
 
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const { t } = useI18n()
 const { ready, changes, alsoSaves, saveLabel, save, discard, settings, configStore } = usePlayoutPage('logo')
 
@@ -55,7 +57,7 @@ function pick(file: { path: string }) {
 </script>
 <template>
     <template v-if="ready">
-        <div>
+        <div v-if="!props.embedded">
             <h1 class="m-0 text-xl font-semibold">{{ t('graphics.sections.scenes') }}</h1>
             <p class="mt-1 mb-0 text-muted">{{ t('graphics.intro.scenes') }}</p>
         </div>

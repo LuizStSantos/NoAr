@@ -17,7 +17,10 @@ import { type Size, logoBox, logoBoxStyle, storageImageUrl as sharedStorageImage
 import { usePlayoutPage } from '@/composables/settingsPage'
 
 /** Which part of the graphics settings this page shows. */
-const props = withDefaults(defineProps<{ part?: 'logo' | 'lshape' | 'subtitles' }>(), { part: 'logo' })
+const props = withDefaults(
+    defineProps<{ part?: 'logo' | 'lshape' | 'subtitles'; embedded?: boolean; includeTicker?: boolean }>(),
+    { part: 'logo', embedded: false, includeTicker: true },
+)
 
 const { t } = useI18n()
 const { ready, changes, alsoSaves, saveLabel, save, discard, settings, configStore } = usePlayoutPage('logo')
@@ -200,7 +203,7 @@ function pick(file: { path: string }) {
 </script>
 <template>
     <template v-if="ready">
-        <div>
+        <div v-if="!props.embedded">
             <h1 class="m-0 text-xl font-semibold">{{ t(`graphics.sections.${props.part}`) }}</h1>
             <p class="mt-1 mb-0 text-muted">{{ t(`graphics.intro.${props.part}`) }}</p>
         </div>
@@ -355,6 +358,7 @@ function pick(file: { path: string }) {
                         <span class="flex gap-2">
                             <input
                                 v-model.trim="processing.logo"
+                                :aria-label="t('settings.logo.file')"
                                 class="field-input font-mono text-[13px]"
                                 spellcheck="false"
                             />
@@ -561,7 +565,7 @@ function pick(file: { path: string }) {
             <ToggleRow v-model="processing.vtt_default" :label="t('settings.logo.subtitleDefault')" />
         </SectionCard>
 
-        <GraphicsTicker v-if="props.part === 'logo'" />
+        <GraphicsTicker v-if="props.part === 'logo' && props.includeTicker" />
 
         <SaveBar
             :changes="changes"

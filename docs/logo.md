@@ -3,15 +3,20 @@
 
 NoAr puts the channel logo over the picture of everything it plays: clips,
 scheduled lives and live ingest. Everything about it is in the **Graphics**
-tab of the main menu (Settings › Logo and subtitles before 1.6.0), whose pages
-are:
+tab of the main menu. Its navigation has four pages:
 
-- **Live now**: the logo, the L-shape and the quick scenes on air (every user);
-- **Logo**: the image, its place, how it comes and goes, and the guide logo;
-- **L-shape**: the graphic and where the video goes in it;
+- **On air**: live graphics, logo/L-shape controls and scene actions (every user);
+- **Templates**: ordinary templates plus separate **Channel graphics** and
+  **Scenes** groups. Use **Edit** on Channel logo, Channel L-shape or Ticker
+  to open its dedicated editor inside Graphics. **Manage scenes** works even
+  before the first scene exists;
 - **Subtitles**: the WebVTT subtitles of the HLS output;
-- **Quick scenes**: sets of changes applied in one go ([below](#quick-scenes));
 - **External control (API)**: the graphics key and a tutorial for encoders.
+
+Logo, L-shape and Quick scenes are no longer separate menu entries. Existing
+`/graphics/logo`, `/graphics/lshape` and `/graphics/scenes` links redirect to
+these editors with the selected channel preserved. `/graphics/logo#ticker`
+opens the ticker editor. Existing API control URLs and responses are unchanged.
 
 The Player has the same at hand under its preview: the logo on and off and
 where it is, the L-shape in and out and its corner, the quick scenes, and a
@@ -19,7 +24,7 @@ link to the tab. A move there also waits for **Move on air**. Like the
 transport, the bar starts **locked** while the channel is on air: unlock
 **Graphics locked** to use it.
 
-Wherever the logo is placed on a small screen (Live now, the Player, a
+Wherever the logo is placed on a small screen (On air, the Player, a
 video's marks), the place can also be typed: **X** across and **Y** down,
 in percent of the room around the logo (`50 × 1` is the top centre).
 
@@ -81,7 +86,7 @@ from the storage, or moved to another place, until the next command or a
 server restart. A typical case is
 a live whose encoder runs its own commercial break.
 
-- From NoAr: **Graphics › Live now** (or the Player's graphics bar) shows
+- From NoAr: **Graphics › On air** (or the Player's graphics bar) shows
   what the logo and the L-shape are doing. Its Logo row
   has **Hide**, **Back to the channel logo**, **Swap for…** and **Position**
   (a corner, or back to the channel's); its L-shape row is described
@@ -137,7 +142,7 @@ top. Going in, the logo goes off first (0.4 s) and then the picture shrinks
 the logo returns. A stretch marked in a video starts this at its first mark
 and ends it at its second.
 
-Set it up in **Graphics › L-shape**:
+Set it up in **Graphics › Templates › Channel L-shape › Edit**:
 
 - **L-shape graphic**: an image in the storage, made for the whole screen
   (1920×1080 for a 1080p output; another size is stretched to the output).
@@ -163,7 +168,7 @@ It goes on air:
   stretches of that part. **This video's L-shape graphic** on that tab gives
   the video a graphic of its own (a sponsor of that programme), used for its
   stretches with the channel's size and corner; empty uses the channel's.
-- **From NoAr**: the L-shape row of **Graphics › Live now** (or the Player's
+- **From NoAr**: the L-shape row of **Graphics › On air** (or the Player's
   graphics bar),
   with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
   after a swap, **Channel graphic**. It stays until switched back or the
@@ -236,11 +241,10 @@ item's in and out points). Items without `marks` use the video's.
 
 A scene is a named set of changes for a moment that repeats, like a
 commercial break: hide the logo, swap it or move it, and put the L-shape in or
-out with a given graphic, corner and size. Make them in **Graphics › Quick
-scenes** (up to 24 per channel) and save. Each scene changes only what it
+out with a given graphic, corner and size. Make them in **Graphics › Templates › Scenes › Manage scenes** (up to 24 per channel) and save. Each scene changes only what it
 says; anything set to **Leave as it is** stays as it is on air.
 
-A scene is applied with one click in **Graphics › Live now** and in the
+A scene is applied with one click in **Graphics › On air** and in the
 Player's graphics bar, or from an encoder with the graphics key, its name in
 the address in lower case with dashes:
 

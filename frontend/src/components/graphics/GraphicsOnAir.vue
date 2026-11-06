@@ -338,7 +338,11 @@ onBeforeUnmount(() => clearInterval(timer))
                         {{ t('graphics.scenes.none') }}
                         <RouterLink
                             v-if="isAdmin"
-                            :to="{ name: 'graphics-scenes', query: { channel: channel?.id } }"
+                            :to="{
+                                name: 'graphics-channel-editor',
+                                params: { kind: 'scene' },
+                                query: { channel: channel?.id },
+                            }"
                             class="link-accent"
                         >
                             {{ t('graphics.scenes.create') }}
