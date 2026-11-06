@@ -637,3 +637,125 @@ test('the API tutorial uses actual model IDs, separates tokens and keys, and sta
     await expect(selected).toBeVisible()
     expect(graphicsWrites).toBe(0)
 })
+
+test('Composer adds every layer when the secure UUID browser API is unavailable', async ({ page }) => {
+    await page.addInitScript(() =>
+        Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: undefined }),
+    )
+    const errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    await page.goto('/graphics/composer?channel=1')
+    expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined')
+
+    for (const kind of ['Image', 'Text', 'Shape', 'Video in the corner']) {
+        await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+        await page
+            .getByRole('group', { name: 'Layer type', exact: true })
+            .getByRole('button', { name: kind, exact: true })
+            .click()
+        await expect(page.getByLabel('Layer name', { exact: true })).toHaveValue(kind)
+
+        if (kind === 'Image') {
+            await page.getByLabel('Image path or field', { exact: true }).fill('00-assets/logo.png')
+        }
+    }
+
+    const name = `HTTP layers ${Date.now()}`
+    await page.getByLabel('Template name', { exact: true }).fill(name)
+    await page.getByRole('button', { name: 'Save template', exact: true }).click()
+    const response = page.waitForResponse(
+        (item) => item.url().endsWith('/api/graphics/1/templates') && item.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    const saved = await response
+    expect(saved.ok()).toBeTruthy()
+    const template = await saved.json()
+    expect(template.layers).toHaveLength(4)
+    expect(new Set(template.layers.map((layer: { id: string }) => layer.id)).size).toBe(4)
+    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await page.reload()
+    await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
+    expect(errors).toEqual([])
+})
+
+test('the channel logo can explicitly restore its natural size and corner with undo', async ({ page, request }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const views = await api(page, '/api/graphics/1/channel')
+    const logo = views.find((view: { kind: string }) => view.kind === 'logo').template
+    const original = structuredClone(logo)
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const image = logo.layers.find((layer: { id: string }) => layer.id === logo.control_layer_id)
+    Object.assign(image, { x: 0, y: 0, width: 100, height: 100 })
+    expect((await request.put(`/api/graphics/1/templates/${logo.id}`, { headers, data: logo })).ok()).toBeTruthy()
+
+    try {
+        await page.goto(`/graphics/composer?channel=1&template=${logo.id}`)
+        const restore = page.getByRole('button', { name: 'Restore image size and top-right position', exact: true })
+        await restore.click()
+        await expect(page.getByLabel('Width', { exact: true })).not.toHaveValue('100')
+        await page.getByRole('button', { name: 'Undo', exact: true }).first().click()
+        await expect(page.getByLabel('Width', { exact: true })).toHaveValue('100')
+        await restore.click()
+        await expect(page.getByLabel('Width', { exact: true })).not.toHaveValue('100')
+        await page.getByRole('button', { name: 'Save template', exact: true }).click()
+        await page.getByRole('button', { name: 'Save', exact: true }).click()
+        await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
+        const saved = await api(page, `/api/graphics/1/templates/${logo.id}`)
+        const config = await api(page, '/api/playout/config/1')
+        const result = saved.layers.find((layer: { id: string }) => layer.id === saved.control_layer_id)
+        expect((result.width * config.output.width) / 100).toBeCloseTo(42, 4)
+        expect((result.height * config.output.height) / 100).toBeCloseTo(42, 4)
+        expect(((100 - result.x - result.width) * config.output.width) / 100).toBeCloseTo(12, 4)
+        expect((result.y * config.output.height) / 100).toBeCloseTo(12, 4)
+        await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+        await expect(
+            page
+                .getByRole('group', { name: 'Layer type', exact: true })
+                .getByRole('button', { name: 'Video in the corner', exact: true }),
+        ).toBeDisabled()
+    } finally {
+        expect(
+            (await request.put(`/api/graphics/1/templates/${logo.id}`, { headers, data: original })).ok(),
+        ).toBeTruthy()
+    }
+})
+
+test('On air uses permanent model controls and the Player only reports graphics state', async ({ page }) => {
+    await page.goto('/graphics/onair?channel=1')
+    const permanent = page.getByRole('region', { name: 'Always on air', exact: true })
+    await expect(permanent).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Live graphics: logo and L-shape', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Quick scenes', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Swap for…', exact: true })).toHaveCount(0)
+    const logo = permanent.getByRole('button').filter({ hasText: 'Channel logo' })
+    const wasOn = await logo.getAttribute('aria-pressed')
+    await logo.click()
+    await expect(logo).toHaveAttribute('aria-pressed', wasOn === 'true' ? 'false' : 'true')
+    await logo.click()
+    await expect(logo).toHaveAttribute('aria-pressed', wasOn!)
+    const views = await api(page, '/api/graphics/1/channel')
+    const lshape = views.find((view: { kind: string }) => view.kind === 'lshape')
+    await page
+        .getByRole('complementary', { name: 'Templates', exact: true })
+        .getByRole('button')
+        .filter({ hasText: 'Channel L-shape' })
+        .click()
+    const response = page.waitForResponse(
+        (item) =>
+            item.url().endsWith(`/api/graphics/1/channel/${lshape.template.id}`) && item.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Enter L-shape', exact: true }).click()
+    expect((await response).ok()).toBeTruthy()
+    await page.getByRole('button', { name: 'Return to full screen', exact: true }).click()
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.goto('/player?channel=1')
+    const graphics = page.getByRole('region', { name: 'Graphics', exact: true })
+    await expect(graphics.getByRole('link', { name: 'Open Graphics', exact: true })).toHaveAttribute(
+        'href',
+        '/graphics/onair?channel=1',
+    )
+    await expect(graphics.getByRole('button')).toHaveCount(0)
+    await expect(graphics.getByRole('switch')).toHaveCount(0)
+})

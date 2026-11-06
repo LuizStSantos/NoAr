@@ -102,6 +102,20 @@ pub struct VideoFile {
     live: bool,
 }
 
+/// Find the same packaged assets before storage is initialized and when copying them.
+pub(crate) fn default_asset_path(name: &str) -> PathBuf {
+    [
+        PathBuf::from("/usr/share/noar"),
+        PathBuf::from("/usr/share/ffplayout"),
+        PathBuf::from("./assets"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets"),
+    ]
+    .into_iter()
+    .map(|directory| directory.join(name))
+    .find(|path| path.is_file())
+    .unwrap_or_else(|| Path::new("./assets").join(name))
+}
+
 fn default_true() -> bool {
     true
 }

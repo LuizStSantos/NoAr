@@ -553,9 +553,18 @@ async fn native_model_layers(
         if let Some((storage, width, height)) = output {
             let path = crate::file::norm_abs_path(std::path::Path::new(&storage), image)
                 .ok()
-                .map(|(path, _, _)| path);
+                .map(|(path, _, _)| path)
+                .filter(|path| path.is_file())
+                .or_else(|| {
+                    // First-run conversion precedes setup/storage creation. Only
+                    // the packaged default may use its original asset here;
+                    // custom images must never borrow another image's geometry.
+                    (image == "00-assets/logo.png")
+                        .then(|| crate::file::default_asset_path("logo.png"))
+                        .filter(|path| path.is_file())
+                });
 
-            if let Some(path) = path.filter(|path| path.is_file()) {
+            if let Some(path) = path {
                 let config = noar_engine::LogoConfig {
                     path: path.to_string_lossy().to_string(),
                     scale: settings["scale"]
@@ -898,6 +907,67 @@ mod tests {
 
     async fn install_fixture(pool: &SqlitePool) {
         sqlx::migrate!("../../migrations").run(pool).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn first_run_places_the_packaged_logo_before_storage_assets_exist() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        install_fixture(&pool).await;
+        let missing_storage =
+            std::env::temp_dir().join(format!("noar-uncreated-{}", uuid::Uuid::new_v4()));
+        assert!(!missing_storage.exists());
+        sqlx::query("UPDATE channels SET storage=$1 WHERE id=1")
+            .bind(missing_storage.to_string_lossy().as_ref())
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE config_output SET width=640,height=360 WHERE active=1")
+            .execute(&pool)
+            .await
+            .unwrap();
+        convert_channel_graphics(&pool).await.unwrap();
+        let binding = select_graphics_bindings(&pool, 1)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|binding| binding.role == GraphicsRole::Logo)
+            .unwrap();
+        let mut logo = select_graphics_template(&pool, 1, binding.template_id)
+            .await
+            .unwrap()
+            .unwrap();
+        let image = &logo.layers[0];
+        assert_eq!(
+            (layer_pixels(image.x, 640), layer_pixels(image.y, 360)),
+            (586, 12)
+        );
+        assert_eq!(
+            (
+                layer_pixels(image.width, 640),
+                layer_pixels(image.height, 360)
+            ),
+            (42, 42)
+        );
+
+        // An operator may deliberately make the same stock image full-frame.
+        // Subsequent starts must preserve that edit instead of guessing intent.
+        logo.layers[0].x = 0.0;
+        logo.layers[0].y = 0.0;
+        logo.layers[0].width = 100.0;
+        logo.layers[0].height = 100.0;
+        update_graphics_template(&pool, &logo).await.unwrap();
+        convert_channel_graphics(&pool).await.unwrap();
+        assert_eq!(
+            select_graphics_template(&pool, 1, logo.id)
+                .await
+                .unwrap()
+                .unwrap(),
+            logo
+        );
     }
 
     async fn fixture_29() -> SqlitePool {

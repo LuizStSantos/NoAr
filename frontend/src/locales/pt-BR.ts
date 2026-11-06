@@ -1456,6 +1456,10 @@ export default {
             },
         },
         composer: {
+            videoModelOnly: 'Use o modelo de L-shape do canal ou um modelo temporário para a janela de vídeo.',
+            restoreLogoPlacement: 'Restaurar tamanho da imagem e canto superior direito',
+            restoreLogoPlacementHint:
+                'Usa o tamanho original da imagem (limitado à saída), com 12 px de margem em cima e à direita. Confira e salve para aplicar.',
             saveGuideLogo: 'Salvar imagem do guia',
             guideLogoSaved: 'Imagem do guia salva.',
             alwaysOn: 'Sempre no ar',
@@ -1565,6 +1569,14 @@ export default {
             },
         },
         onAir: {
+            permanentTitle: 'Sempre no ar',
+            permanentHint: 'Clique para esconder ou mostrar o modelo do canal. Edite suas camadas em Modelos.',
+            permanentRequested:
+                'Visibilidade solicitada; marcações do clipe e L-shape podem esconder a logo na saída real.',
+            statusUnavailable: 'O estado do grafismo está indisponível.',
+            selectPreview: 'Selecione um modelo para ver suas camadas.',
+            temporaryOnAir: 'Grafismos temporários no ar',
+            noTemporary: 'Nenhum grafismo temporário no ar.',
             library: 'Ver modelos',
             monitors: 'Monitores',
             preview: 'PRÉVIA',

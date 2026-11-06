@@ -4,6 +4,73 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Composer startup fixes and operator screen review
+
+This follow-up fixes the fresh-installation reports after the layer revision.
+Composer uses the existing browser-compatible UUID helper rather than calling
+`crypto.randomUUID` directly. The regression explicitly removes that API on
+loopback; adding image, text, shape and video layers, saving and reloading pass.
+A real LAN HTTP origin could not be reached under the cloud network policy;
+that origin itself is not claimed as tested.
+
+First-run conversion previously preceded Storage asset copying and could freeze
+the default logo as a full-frame layer. The stock image now resolves through the
+same packaged-asset locator used by Storage. New channel creation converts only
+after its outputs exist. The 42×42 px default uses 12 px top/right margins.
+Custom paths never borrow the stock image geometry; existing authored models
+are not rewritten, and no migration checksum changed. For an already oversized
+saved logo, select its primary image in Composer, use **Restore image size and
+top-right position**, review and save. This explicit operation supports Undo,
+limits oversized assets to the output and does not save automatically.
+Permanent logo/ticker models reject video windows in the menu, matching the
+existing backend contract; L-shape and temporary models support that layer.
+
+On air no longer embeds the legacy live logo/L-shape editor or quick scenes.
+Its picker separates assigned channel models from ordinary GCs; bound controls
+use their bindings, not temporary take. **Always on air** operates requested
+logo/ticker visibility; selecting Channel L-shape offers entry/full-screen.
+Scenes remain available through **Templates › Scenes › Apply**. The Player
+shows a read-only model/temporary status line with **Open Graphics**. It has no
+graphics switches, placement panel or scene buttons.
+
+**Preview** illustrates the selected saved model, including the stock logo when
+there are no ordinary templates. **Program** uses the existing real Player
+preview and its stopped/wait/error/unsupported states. Requested visibility is
+not proof that a logo is currently drawn: clip marks, breaks and L-shape can
+suppress it. Clock and version 2.5 rundowns remain excluded.
+
+Review all **32 current screenshots** in [the gallery](review-gallery.md) or
+[the 33-page PDF](review-gallery.pdf), including desktop, 390 px phone, Composer,
+channel models, stopped/live On air, Player and decoded HLS frames.
+
+Verification for this follow-up:
+
+- GStreamer 1.26.2: `cargo fmt --all`, exact no-default Clippy with denied
+  warnings and `cargo test --no-default-features` passed: **686 passed,
+  14 ignored**. Two added database regressions cover missing first-run storage,
+  correct new-channel output dimensions and preservation of a deliberate
+  later full-frame edit. The backend binary was built and run.
+- `npx vue-tsc --build`, full ESLint, changed-file Prettier, production frontend
+  build and QA TypeScript passed. All **26 Playwright tests** passed against a
+  fresh disposable backend/database. Global setup verifies the untouched stock
+  logo and bound-model-only Preview before custom fixtures are seeded.
+- pt-BR browser captures exercise actual drag/resize, all four layer kinds,
+  upload, fields, animation, save/reload, natural-size logo repair, role controls
+  and desktop/phone layouts. The evidence below records decoded Program video
+  dimensions and advancing playback time, rather than relying on a black box.
+- HLS evidence and capture-time health/log results are recorded in
+  [the review evidence](review-evidence.json). These are actual `.ts` decoded
+  frames, not Composer illustrations. The stock logo's measured content box
+  is exactly `(586,12)–(628,54)` at 640×360: one 42×42 logo. The RGB comparison
+  includes the saved 0.7 opacity; model position/size are exact. Documented
+  compression limits are mean RGB error ≤8 and p99 ≤50, including chroma edges.
+
+This is a scoped fresh-installation/operator regression run, not another full
+2.2.1 frame-by-frame parity run. The earlier 76-response and stage-d parity
+records remain separate evidence. Physical outputs, long-soak/desktop audio
+stability and a full Docker image rebuild were not repeated. No production
+installation or user media was used.
+
 ## API tutorial and disposable-machine testing
 
 The External control (API) page now explains channel layers, startup visibility

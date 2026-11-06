@@ -80,9 +80,9 @@ docker compose -f docker-compose.graphics-test.yml up -d --no-build
 7. Restart this test instance and check that the saved models return with their
    configured startup visibility:
 
-   ```sh
-   docker compose -f docker-compose.graphics-test.yml restart noar
-   ```
+    ```sh
+    docker compose -f docker-compose.graphics-test.yml restart noar
+    ```
 
 This fresh-install route tests authoring and playback. It does **not** exercise
 conversion of an existing 2.2.1 database; that separate migration/rollback and
@@ -109,3 +109,22 @@ the stable installation, stop the test, return to the stable installation's
 original directory and start its own Compose/service. This test's migrated
 volume is not a database for the stable binary; a clean stable installation is
 also an option on a disposable machine.
+
+## Existing oversized logo and HTTP layer menu
+
+Updating this branch does not require deleting data. A fresh installation uses
+the bundled logo at its natural 42×42 px size with 12 px top/right margins.
+Existing models keep their authored geometry: open Channel logo in Composer,
+select its primary image and use **Restore image size and top-right position**,
+review, then save. **Undo** reverses the draft change.
+
+Composer layer IDs use the browser-compatible random-ID helper, including when
+`crypto.randomUUID` is absent on HTTP origins. The regression simulates this
+missing API on loopback; a real LAN HTTP origin was not reachable in the cloud
+network policy and is not claimed as tested.
+
+Player now links to Graphics through a read-only state line. In On air, inspect
+the selected model on Preview and actual decoded output on Program. A stopped
+channel shows a message. Use Always on air for logo/ticker, select Channel
+L-shape for its entry/exit and apply scenes from Templates. These replace the
+former live-control and quick-scene panels.

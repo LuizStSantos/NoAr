@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { dirname, join } from 'node:path'
 import { chromium, expect, request, type FullConfig } from '@playwright/test'
 
 /** Writes are allowed only on the fresh, loopback instance owned by run_staging.py. */
@@ -45,13 +46,38 @@ export default async function setup(config: FullConfig) {
             await page.locator('input[name="password"]').fill(password)
             await page.getByRole('button', { name: 'Sign in', exact: true }).click()
             await expect(page).not.toHaveURL(/\/login(?:\?|$)/)
-            // Seed the channel roles exercised by the graphics tests. The runner owns
-            // both files; a fresh installation has no scene or readable default logo.
+            // Verify first-run defaults before custom fixtures can hide a startup bug.
+            // Seed additional artwork and a scene only after checking the stock logo.
             const token = await page.evaluate(() => localStorage.getItem('token'))
             const headers = { Authorization: `Bearer ${token}` }
             const loaded = await context.request.get('/api/playout/config/1', { headers })
             expect(loaded.ok()).toBeTruthy()
             const playout = await loaded.json()
+            const assigned = await context.request.get('/api/graphics/1/channel', { headers })
+            expect(assigned.ok()).toBeTruthy()
+            const stock = (await assigned.json()).find((model: { kind: string }) => model.kind === 'logo')
+            const image = stock.template.layers[0]
+            expect((image.width * playout.output.width) / 100).toBeCloseTo(42, 4)
+            expect((image.height * playout.output.height) / 100).toBeCloseTo(42, 4)
+            expect(((100 - image.x - image.width) * playout.output.width) / 100).toBeCloseTo(12, 4)
+            expect((image.y * playout.output.height) / 100).toBeCloseTo(12, 4)
+            await page.goto('/graphics/onair?channel=1')
+            const preview = page.getByRole('region', { name: 'Monitors', exact: true }).locator('figure').first()
+            await expect(preview.locator('img')).toBeVisible()
+            await expect
+                .poll(() => preview.locator('img').evaluate((image) => (image as HTMLImageElement).naturalWidth))
+                .toBe(42)
+            await expect(
+                page.getByText('The preview shows up when the playout is on air.', { exact: true }),
+            ).toBeVisible()
+            await expect(
+                page.getByRole('heading', { name: 'Live graphics: logo and L-shape', exact: true }),
+            ).toHaveCount(0)
+            await page.screenshot({
+                path: join(dirname(process.env.NOAR_E2E_STATE_PATH), 'fresh-onair-default.jpg'),
+                type: 'jpeg',
+                quality: 86,
+            })
             Object.assign(playout.processing, {
                 add_logo: true,
                 logo: 'logo.png',

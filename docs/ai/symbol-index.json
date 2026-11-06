@@ -1005,9 +1005,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "6951ebf7f42ade205d701762569f21daf22214e92af1cc683cd6f41f9c2e4cfa",
+      "sha256": "01045faeceddfbcf88294610f6690ff02a2eaf09b6bce022958a3e382fb5ca2b",
       "language": "Markdown",
-      "bytes": 13353,
+      "bytes": 14110,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -2828,9 +2828,9 @@
       ]
     },
     "backend/app/src/db/handles/channel.rs": {
-      "sha256": "6f5887ca514ab7023866ea9842d66544e9a51bf8aa2444adbed5b3eb6fea3a21",
+      "sha256": "b2949da54662708fbc90ade5e65b0508963a160d40fdf9adc8223372499c0f15",
       "language": "Rust",
-      "bytes": 16215,
+      "bytes": 17620,
       "symbols": [
         {
           "name": "select_channel",
@@ -2866,38 +2866,42 @@
         },
         {
           "name": "tests",
-          "line": 191
+          "line": 194
+        },
+        {
+          "name": "new_channel_logo_uses_its_created_output_before_assets_are_copied",
+          "line": 200
         },
         {
           "name": "channel_creation_rolls_back_all_records_on_failure",
-          "line": 197
+          "line": 234
         },
         {
           "name": "channel_creation_assigns_the_channel_to_every_global_admin",
-          "line": 242
+          "line": 279
         },
         {
           "name": "concurrent_channel_creation_is_atomic_without_allocating_listener_ports",
-          "line": 282
+          "line": 319
         },
         {
           "name": "channel_creation_does_not_create_input_servers_or_reserve_ports",
-          "line": 346
+          "line": 383
         },
         {
           "name": "deleting_a_channel_cascades_to_every_config_table",
-          "line": 387
+          "line": 424
         },
         {
           "name": "deleting_a_channel_keeps_its_as_run_in_the_archive",
-          "line": 450
+          "line": 487
         }
       ]
     },
     "backend/app/src/db/handles/configuration.rs": {
-      "sha256": "07fa40ec2e054255b1f41f77ab56b5e120204a6528a3ed2a65a1a44b8d24eabc",
+      "sha256": "3a4ded26b1994ec91a54bf6284e03973a70bc4914ba1b156aa015bb5b5cc01e9",
       "language": "Rust",
-      "bytes": 31972,
+      "bytes": 31900,
       "symbols": [
         {
           "name": "select_configuration",
@@ -2909,59 +2913,59 @@
         },
         {
           "name": "update_configuration",
-          "line": 132
+          "line": 130
         },
         {
           "name": "update_configuration_on",
-          "line": 143
+          "line": 141
         },
         {
           "name": "activate_output",
-          "line": 229
+          "line": 227
         },
         {
           "name": "update_configuration_volume",
-          "line": 256
+          "line": 254
         },
         {
           "name": "tests",
-          "line": 271
+          "line": 269
         },
         {
           "name": "pool",
-          "line": 277
+          "line": 275
         },
         {
           "name": "loudness_migration_preserves_existing_scope_and_defaults_new_rows_to_all",
-          "line": 288
+          "line": 286
         },
         {
           "name": "migration_preserves_non_default_configuration_data",
-          "line": 341
+          "line": 339
         },
         {
           "name": "migration_preserves_one_active_output_and_enforces_uniqueness",
-          "line": 442
+          "line": 440
         },
         {
           "name": "future_pipeline_configuration_has_safe_defaults_and_audio_tracks_are_ordered",
-          "line": 460
+          "line": 458
         },
         {
           "name": "output_selection_is_switched_atomically",
-          "line": 636
+          "line": 634
         },
         {
           "name": "complete_configuration_update_rolls_back_all_topics_on_error",
-          "line": 654
+          "line": 652
         },
         {
           "name": "logo_transitions_are_saved_and_default_to_fades",
-          "line": 685
+          "line": 683
         },
         {
           "name": "saving_configuration_leaves_legacy_listener_rows_inert_and_unchanged",
-          "line": 720
+          "line": 718
         }
       ]
     },
@@ -2989,9 +2993,9 @@
       ]
     },
     "backend/app/src/db/handles/graphics.rs": {
-      "sha256": "ca4b7bc7f8f6424367a964e4c5982da90d1f571c6d614c0f42957f21a038b142",
+      "sha256": "634b4ce3b5ed708c0298ff26a088dcbf3d941345db7f3c8ef605d2442fd0cea9",
       "language": "Rust",
-      "bytes": 57075,
+      "bytes": 59730,
       "symbols": [
         {
           "name": "select_graphics_scene_templates",
@@ -3075,67 +3079,71 @@
         },
         {
           "name": "insert_converted_model",
-          "line": 619
+          "line": 628
         },
         {
           "name": "project_channel_graphics",
-          "line": 642
+          "line": 651
         },
         {
           "name": "save_channel_graphics_on",
-          "line": 683
+          "line": 692
         },
         {
           "name": "tests",
-          "line": 894
-        },
-        {
-          "name": "install_fixture",
-          "line": 899
-        },
-        {
-          "name": "fixture_29",
           "line": 903
         },
         {
+          "name": "install_fixture",
+          "line": 908
+        },
+        {
+          "name": "first_run_places_the_packaged_logo_before_storage_assets_exist",
+          "line": 913
+        },
+        {
+          "name": "fixture_29",
+          "line": 973
+        },
+        {
           "name": "layer_upgrade_converts_29_in_place_preserves_edits_and_never_reads_settings_again",
-          "line": 965
+          "line": 1035
         },
         {
           "name": "layer_upgrade_rolls_back_every_definition_on_invalid_29_layers",
-          "line": 1045
+          "line": 1115
         },
         {
           "name": "template",
-          "line": 1078
+          "line": 1148
         },
         {
           "name": "conversion_keeps_native_even_pixel_rounding_for_fractional_lshape_scales",
-          "line": 1092
+          "line": 1162
         },
         {
           "name": "conversion_keeps_existing_names_and_never_reads_frozen_data_again",
-          "line": 1123
+          "line": 1193
         },
         {
           "name": "conversion_preserves_frozen_columns_and_edited_models_across_restart",
-          "line": 1166
+          "line": 1236
         },
         {
           "name": "conversion_rolls_back_all_channels_when_one_has_invalid_scenes",
-          "line": 1270
+          "line": 1340
         },
         {
           "name": "permanent_bindings_survive_reopen_without_changing_the_legacy_logo",
-          "line": 1295
+          "line": 1365
         },
         {
           "name": "a_binding_cannot_read_or_replace_another_channels_template",
-          "line": 1363
+          "line": 1433
         },
         {
           "name": "migration_installs_bindings_before_conversion",
-          "line": 1401
+          "line": 1471
         }
       ]
     },
@@ -4006,9 +4014,9 @@
       ]
     },
     "backend/app/src/file/local.rs": {
-      "sha256": "a325657a7abd50923a88d01a25e23fb5e28044356a3a32f8d32dfabbd8fc1ddb",
+      "sha256": "f3fc423287e33cd85e2831c7e6d66c95227b05c4af841dc941b0662c84785f46",
       "language": "Rust",
-      "bytes": 26785,
+      "bytes": 26365,
       "symbols": [
         {
           "name": "LocalStorage",
@@ -4072,38 +4080,38 @@
         },
         {
           "name": "holds_live",
-          "line": 629
+          "line": 620
         },
         {
           "name": "rename_only",
-          "line": 649
+          "line": 640
         },
         {
           "name": "copy_and_delete",
-          "line": 674
+          "line": 665
         },
         {
           "name": "tests",
-          "line": 705
+          "line": 696
         },
         {
           "name": "renames_directory_within_storage",
-          "line": 709
+          "line": 700
         },
         {
           "name": "browse_marks_the_folders_of_lives",
-          "line": 732
+          "line": 723
         },
         {
           "name": "storage_creation_returns_error_instead_of_panicking",
-          "line": 764
+          "line": 755
         }
       ]
     },
     "backend/app/src/file/mod.rs": {
-      "sha256": "cccda2d2eed61ffeee5aedc9c7b07e450c09c33833989a35da9392d47e95733c",
+      "sha256": "c5451569c35eb51ce9d6470643fd197e7b3030af11480a42e2dcae383102a5dd",
       "language": "Rust",
-      "bytes": 8092,
+      "bytes": 8594,
       "symbols": [
         {
           "name": "local",
@@ -4138,36 +4146,40 @@
           "line": 75
         },
         {
+          "name": "default_asset_path",
+          "line": 106
+        },
+        {
           "name": "default_true",
-          "line": 105
-        },
-        {
-          "name": "init_storage",
-          "line": 109
-        },
-        {
-          "name": "norm_abs_path",
           "line": 119
         },
         {
+          "name": "init_storage",
+          "line": 123
+        },
+        {
+          "name": "norm_abs_path",
+          "line": 133
+        },
+        {
           "name": "ensure_path_within_root",
-          "line": 165
+          "line": 179
         },
         {
           "name": "tests",
-          "line": 184
+          "line": 198
         },
         {
           "name": "normalized_paths_preserve_virtual_roots_and_use_component_boundaries",
-          "line": 188
+          "line": 202
         },
         {
           "name": "normalized_paths_reject_parent_traversal",
-          "line": 210
+          "line": 224
         },
         {
           "name": "containment_checks_symlinks_for_existing_files_and_new_targets",
-          "line": 229
+          "line": 243
         }
       ]
     },
@@ -20937,9 +20949,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "e55bae862afe4ebaefe3962abe4428da4f3c96c938d082b7892be9f91fd60da0",
+      "sha256": "d4e276b380b0bf1182fd260ef9738d07502489624b1a779660711a6f72aa0cd9",
       "language": "Markdown",
-      "bytes": 53585,
+      "bytes": 57882,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -21248,6 +21260,18 @@
       "bytes": 8536,
       "symbols": []
     },
+    "docs/graphics-handoff/review-evidence.json": {
+      "sha256": "4f977f68c7dd863d25bd5ba733f968d66a04613c2bbf2dc8b1395d1220a3f487",
+      "language": "JSON",
+      "bytes": 12499,
+      "symbols": []
+    },
+    "docs/graphics-handoff/review-gallery.md": {
+      "sha256": "7d4ab0e1eccbbc3712145cb74aac4744b44a66f87ecbc1a8f6213883c18ff1d8",
+      "language": "Markdown",
+      "bytes": 7390,
+      "symbols": []
+    },
     "docs/graphics-handoff/video-graphics-design.html": {
       "sha256": "c2c36fd7616135198cc894765ef31e21713701688ad8aa36648e232e6c5e2d4e",
       "language": "HTML",
@@ -21255,15 +21279,15 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "b7f44c77e2c71d19972d0b04edfc3528d4c5b90fae00be26148676f5ac245f9e",
+      "sha256": "5f183926089a32c5506bddb6573c566dfa7fc320a7eafbe52457653084b0b9dd",
       "language": "Markdown",
-      "bytes": 5103,
+      "bytes": 6617,
       "symbols": []
     },
     "docs/graphics-testing.md": {
-      "sha256": "3cfef4656ec98137504b9250869c9923ef7d1030207ba8b2eb6fb20e38743ff0",
+      "sha256": "b5f1cadcb458bb4fada1b9afff6ce2b5dcb382e3c9ee0ca7426851ab0b5316f1",
       "language": "Markdown",
-      "bytes": 5182,
+      "bytes": 6239,
       "symbols": []
     },
     "docs/gstreamer-integration.md": {
@@ -21291,9 +21315,9 @@
       "symbols": []
     },
     "docs/logo.md": {
-      "sha256": "7b63c9308d62254b3ea77109d40bfa316ce9ac0fbf520bd6ae2061864ff3a0e2",
+      "sha256": "06295ffb44e7414ba946a2b13730a59f09b3702e38c41ab2f76c96cc26973373",
       "language": "Markdown",
-      "bytes": 13935,
+      "bytes": 14675,
       "symbols": []
     },
     "docs/ndi.md": {
@@ -21878,409 +21902,445 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsComposer.vue": {
-      "sha256": "cf60c0c3defef7f34e097ffc8c02128c99a44856874900c780b8ad90cd8a857d",
+      "sha256": "8e0e1e3a6ea4cb304d67b86af99ec2ee157835696edb0311717e4f093851abf1",
       "language": "Vue",
-      "bytes": 51870,
+      "bytes": 54628,
       "symbols": [
         {
           "name": "configStore",
-          "line": 27
-        },
-        {
-          "name": "graphicsApi",
-          "line": 28
-        },
-        {
-          "name": "channelId",
           "line": 29
         },
         {
-          "name": "route",
+          "name": "graphicsApi",
           "line": 30
         },
         {
-          "name": "router",
+          "name": "channelId",
           "line": 31
         },
         {
-          "name": "authStore",
+          "name": "route",
           "line": 32
         },
         {
-          "name": "draft",
+          "name": "router",
           "line": 33
         },
         {
-          "name": "selectedId",
+          "name": "authStore",
           "line": 34
         },
         {
-          "name": "selected",
+          "name": "draft",
           "line": 35
         },
         {
-          "name": "fields",
+          "name": "selectedId",
           "line": 36
         },
         {
-          "name": "preview",
+          "name": "selected",
           "line": 37
         },
         {
-          "name": "sampleValues",
+          "name": "fields",
           "line": 38
         },
         {
-          "name": "savedId",
+          "name": "preview",
           "line": 39
         },
         {
-          "name": "baseline",
+          "name": "sampleValues",
           "line": 40
         },
         {
-          "name": "history",
+          "name": "savedId",
           "line": 41
         },
         {
-          "name": "fonts",
+          "name": "baseline",
           "line": 42
         },
         {
-          "name": "groups",
+          "name": "history",
           "line": 43
         },
         {
-          "name": "saving",
+          "name": "fonts",
           "line": 44
         },
         {
-          "name": "busy",
+          "name": "groups",
           "line": 45
         },
         {
-          "name": "editorReady",
+          "name": "saving",
           "line": 46
         },
         {
-          "name": "error",
+          "name": "busy",
           "line": 47
         },
         {
-          "name": "note",
+          "name": "editorReady",
           "line": 48
         },
         {
-          "name": "adding",
+          "name": "error",
           "line": 49
         },
         {
-          "name": "picking",
+          "name": "note",
           "line": 50
         },
         {
-          "name": "proportional",
+          "name": "adding",
           "line": 51
         },
         {
-          "name": "unit",
+          "name": "picking",
           "line": 52
         },
         {
-          "name": "canvas",
+          "name": "proportional",
           "line": 53
         },
         {
-          "name": "guideV",
+          "name": "unit",
           "line": 54
         },
         {
-          "name": "guideH",
+          "name": "canvas",
           "line": 55
         },
         {
-          "name": "scaleBases",
+          "name": "guideV",
+          "line": 56
+        },
+        {
+          "name": "guideH",
           "line": 57
         },
         {
-          "name": "output",
-          "line": 58
-        },
-        {
-          "name": "frame",
+          "name": "scaleBases",
           "line": 59
         },
         {
-          "name": "time",
+          "name": "output",
           "line": 60
         },
         {
-          "name": "playing",
+          "name": "frame",
           "line": 61
         },
         {
-          "name": "timelineEnd",
+          "name": "time",
           "line": 62
         },
         {
+          "name": "playing",
+          "line": 63
+        },
+        {
+          "name": "timelineEnd",
+          "line": 64
+        },
+        {
           "name": "animationFrame",
-          "line": 69
-        },
-        {
-          "name": "loadVersion",
-          "line": 70
-        },
-        {
-          "name": "drag",
           "line": 71
         },
         {
-          "name": "dirty",
-          "line": 74
+          "name": "loadVersion",
+          "line": 72
         },
         {
-          "name": "rememberDraft",
+          "name": "drag",
+          "line": 73
+        },
+        {
+          "name": "dirty",
           "line": 76
         },
         {
+          "name": "rememberDraft",
+          "line": 78
+        },
+        {
           "name": "undo",
-          "line": 86
+          "line": 88
         },
         {
           "name": "previous",
-          "line": 87
+          "line": 89
         },
         {
           "name": "updateSelectedLayer",
-          "line": 103
+          "line": 105
         },
         {
           "name": "setAlwaysOn",
-          "line": 117
+          "line": 119
         },
         {
           "name": "videoCorner",
-          "line": 123
+          "line": 125
         },
         {
           "name": "layer",
-          "line": 124
+          "line": 126
         },
         {
           "name": "horizontal",
-          "line": 130
+          "line": 132
         },
         {
           "name": "vertical",
-          "line": 131
+          "line": 133
         },
         {
           "name": "setVideoWindow",
-          "line": 136
+          "line": 138
         },
         {
           "name": "percent",
-          "line": 141
-        },
-        {
-          "name": "width",
-          "line": 142
-        },
-        {
-          "name": "height",
           "line": 143
         },
         {
-          "name": "x",
+          "name": "width",
           "line": 144
         },
         {
-          "name": "y",
+          "name": "height",
           "line": 145
         },
         {
+          "name": "x",
+          "line": 146
+        },
+        {
+          "name": "y",
+          "line": 147
+        },
+        {
           "name": "setDimension",
-          "line": 154
+          "line": 156
         },
         {
           "name": "number",
-          "line": 159
+          "line": 161
         },
         {
           "name": "axis",
-          "line": 165
+          "line": 167
         },
         {
           "name": "formatDimension",
-          "line": 175
-        },
-        {
-          "name": "value",
-          "line": 176
-        },
-        {
-          "name": "axis",
           "line": 177
         },
         {
+          "name": "value",
+          "line": 178
+        },
+        {
+          "name": "axis",
+          "line": 179
+        },
+        {
           "name": "setScale",
-          "line": 181
+          "line": 183
         },
         {
           "name": "layer",
-          "line": 182
+          "line": 184
         },
         {
           "name": "base",
-          "line": 188
+          "line": 190
         },
         {
           "name": "scaleValue",
-          "line": 194
+          "line": 196
         },
         {
           "name": "addLayer",
-          "line": 199
+          "line": 201
         },
         {
           "name": "layer",
-          "line": 208
+          "line": 211
         },
         {
           "name": "removeLayer",
-          "line": 240
+          "line": 243
         },
         {
           "name": "layer",
-          "line": 241
+          "line": 244
         },
         {
           "name": "toggleLayer",
-          "line": 257
+          "line": 260
         },
         {
           "name": "startDrag",
-          "line": 262
+          "line": 265
         },
         {
           "name": "moveLayer",
-          "line": 283
+          "line": 286
         },
         {
           "name": "layer",
-          "line": 288
+          "line": 291
         },
         {
           "name": "original",
-          "line": 294
+          "line": 297
         },
         {
           "name": "dx",
-          "line": 295
+          "line": 298
         },
         {
           "name": "dy",
-          "line": 296
-        },
-        {
-          "name": "snap",
           "line": 299
         },
         {
+          "name": "snap",
+          "line": 302
+        },
+        {
           "name": "targets",
-          "line": 300
+          "line": 303
         },
         {
           "name": "patch",
-          "line": 309
+          "line": 312
         },
         {
           "name": "endDrag",
-          "line": 319
+          "line": 322
         },
         {
           "name": "seekPreview",
-          "line": 329
+          "line": 332
         },
         {
           "name": "stopPreview",
-          "line": 334
+          "line": 337
         },
         {
           "name": "playPreview",
-          "line": 340
+          "line": 343
         },
         {
           "name": "start",
-          "line": 346
+          "line": 349
         },
         {
           "name": "tick",
-          "line": 348
+          "line": 351
         },
         {
           "name": "loadEditor",
-          "line": 361
+          "line": 364
         },
         {
           "name": "version",
-          "line": 362
+          "line": 365
         },
         {
           "name": "id",
-          "line": 370
+          "line": 373
         },
         {
           "name": "saveTemplate",
-          "line": 422
+          "line": 425
         },
         {
           "name": "result",
-          "line": 430
+          "line": 433
         },
         {
           "name": "uploadImage",
-          "line": 459
-        },
-        {
-          "name": "input",
-          "line": 460
-        },
-        {
-          "name": "original",
-          "line": 461
-        },
-        {
-          "name": "layer",
           "line": 462
         },
         {
-          "name": "channel",
+          "name": "input",
           "line": 463
         },
         {
+          "name": "original",
+          "line": 464
+        },
+        {
+          "name": "layer",
+          "line": 465
+        },
+        {
+          "name": "channel",
+          "line": 466
+        },
+        {
           "name": "cleanedName",
-          "line": 469
+          "line": 472
         },
         {
           "name": "number",
-          "line": 488
-        },
-        {
-          "name": "name",
           "line": 491
         },
         {
+          "name": "name",
+          "line": 494
+        },
+        {
           "name": "file",
-          "line": 492
+          "line": 495
+        },
+        {
+          "name": "restoreLogoPlacement",
+          "line": 530
+        },
+        {
+          "name": "layer",
+          "line": 531
+        },
+        {
+          "name": "source",
+          "line": 541
+        },
+        {
+          "name": "image",
+          "line": 542
+        },
+        {
+          "name": "availableWidth",
+          "line": 550
+        },
+        {
+          "name": "availableHeight",
+          "line": 551
+        },
+        {
+          "name": "factor",
+          "line": 552
+        },
+        {
+          "name": "width",
+          "line": 553
+        },
+        {
+          "name": "height",
+          "line": 554
         },
         {
           "name": "pickImage",
-          "line": 526
+          "line": 569
         },
         {
           "name": "confirmBeforeUnload",
-          "line": 536
+          "line": 579
         }
       ]
     },
@@ -22531,41 +22591,37 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsOnAir.vue": {
-      "sha256": "616fbaa26a8a0911d371cfd565e867f36f6014dc04b07d0bf68d1dd7c4f3d3a5",
+      "sha256": "6cde208a7614ce8b480a8a29541f325930e63a4f2e6fcf0647bf4c65a365fba4",
       "language": "Vue",
-      "bytes": 17028,
+      "bytes": 19700,
       "symbols": [
         {
           "name": "route",
-          "line": 29
+          "line": 22
         },
         {
           "name": "authStore",
-          "line": 30
+          "line": 23
         },
         {
           "name": "configStore",
-          "line": 31
+          "line": 24
         },
         {
           "name": "indexStore",
-          "line": 32
+          "line": 25
         },
         {
           "name": "graphicsApi",
-          "line": 33
+          "line": 26
         },
         {
           "name": "isAdmin",
-          "line": 34
+          "line": 27
         },
         {
           "name": "templates",
-          "line": 36
-        },
-        {
-          "name": "onAir",
-          "line": 37
+          "line": 29
         },
         {
           "name": "loaded",
@@ -22588,116 +22644,132 @@
           "line": 42
         },
         {
-          "name": "remote",
-          "line": 43
-        },
-        {
-          "name": "muted",
+          "name": "channel",
           "line": 44
         },
         {
-          "name": "timer",
+          "name": "selected",
           "line": 45
         },
         {
-          "name": "channel",
-          "line": 47
-        },
-        {
-          "name": "selected",
-          "line": 48
-        },
-        {
           "name": "selectedValues",
-          "line": 49
-        },
-        {
-          "name": "programUrl",
-          "line": 50
+          "line": 46
         },
         {
           "name": "latest",
-          "line": 51
+          "line": 47
         },
         {
-          "name": "groups",
+          "name": "selectedModel",
+          "line": 48
+        },
+        {
+          "name": "permanent",
+          "line": 49
+        },
+        {
+          "name": "ordinary",
           "line": 52
         },
         {
-          "name": "byGroup",
-          "line": 53
+          "name": "programName",
+          "line": 55
         },
         {
-          "name": "group",
-          "line": 56
-        },
-        {
-          "name": "message",
-          "line": 63
-        },
-        {
-          "name": "loadOnAir",
-          "line": 67
-        },
-        {
-          "name": "select",
-          "line": 75
-        },
-        {
-          "name": "load",
-          "line": 81
+          "name": "templateName",
+          "line": 65
         },
         {
           "name": "assigned",
-          "line": 84
+          "line": 66
         },
         {
-          "name": "wanted",
+          "name": "templateHint",
+          "line": 71
+        },
+        {
+          "name": "assigned",
+          "line": 72
+        },
+        {
+          "name": "groups",
+          "line": 79
+        },
+        {
+          "name": "byGroup",
+          "line": 80
+        },
+        {
+          "name": "group",
+          "line": 83
+        },
+        {
+          "name": "message",
           "line": 92
         },
         {
+          "name": "loadOnAir",
+          "line": 96
+        },
+        {
+          "name": "select",
+          "line": 100
+        },
+        {
+          "name": "load",
+          "line": 106
+        },
+        {
+          "name": "scenes",
+          "line": 113
+        },
+        {
+          "name": "wanted",
+          "line": 123
+        },
+        {
           "name": "first",
-          "line": 93
+          "line": 124
         },
         {
           "name": "take",
-          "line": 102
+          "line": 139
         },
         {
           "name": "template",
-          "line": 103
+          "line": 140
         },
         {
           "name": "seconds",
-          "line": 109
-        },
-        {
-          "name": "fields",
-          "line": 110
-        },
-        {
-          "name": "result",
-          "line": 114
-        },
-        {
-          "name": "takeOut",
-          "line": 132
-        },
-        {
-          "name": "takeAllOut",
-          "line": 141
-        },
-        {
-          "name": "next",
           "line": 151
         },
         {
-          "name": "index",
+          "name": "fields",
           "line": 152
         },
         {
+          "name": "result",
+          "line": 156
+        },
+        {
+          "name": "takeOut",
+          "line": 174
+        },
+        {
+          "name": "takeAllOut",
+          "line": 188
+        },
+        {
+          "name": "next",
+          "line": 198
+        },
+        {
+          "name": "index",
+          "line": 199
+        },
+        {
           "name": "following",
-          "line": 153
+          "line": 200
         }
       ]
     },
@@ -23700,121 +23772,21 @@
       ]
     },
     "frontend/src/components/player/GraphicsQuickBar.vue": {
-      "sha256": "bca85d26270a5bbbe61081923bf006381a7eb3da395128b930f15aaf548c310a",
+      "sha256": "44b89dace4ed6b56039f60884100d42bc54c99240ae9c6dbb6e9c6ad853bf9b4",
       "language": "Vue",
-      "bytes": 13442,
+      "bytes": 1809,
       "symbols": [
         {
-          "name": "REFRESH_MS",
-          "line": 34
-        },
-        {
-          "name": "authStore",
-          "line": 37
-        },
-        {
-          "name": "configStore",
-          "line": 38
-        },
-        {
-          "name": "indexStore",
-          "line": 39
-        },
-        {
-          "name": "playlistStore",
-          "line": 40
-        },
-        {
-          "name": "logo",
-          "line": 42
-        },
-        {
-          "name": "lshape",
-          "line": 43
-        },
-        {
-          "name": "busy",
-          "line": 44
-        },
-        {
-          "name": "open",
-          "line": 45
-        },
-        {
-          "name": "logoDraft",
-          "line": 46
-        },
-        {
-          "name": "cornerDraft",
-          "line": 47
-        },
-        {
-          "name": "timer",
-          "line": 48
-        },
-        {
-          "name": "locked",
-          "line": 51
-        },
-        {
-          "name": "blocked",
-          "line": 53
+          "name": "config",
+          "line": 10
         },
         {
           "name": "channelId",
-          "line": 61
+          "line": 12
         },
         {
-          "name": "processing",
-          "line": 62
-        },
-        {
-          "name": "logoShares",
-          "line": 63
-        },
-        {
-          "name": "lshapeCorner",
-          "line": 64
-        },
-        {
-          "name": "logoOn",
-          "line": 65
-        },
-        {
-          "name": "headers",
-          "line": 67
-        },
-        {
-          "name": "load",
-          "line": 71
-        },
-        {
-          "name": "toggleLogo",
-          "line": 102
-        },
-        {
-          "name": "toggleLShape",
-          "line": 106
-        },
-        {
-          "name": "confirmLogo",
-          "line": 110
-        },
-        {
-          "name": "logoBack",
-          "line": 118
-        },
-        {
-          "name": "confirmCorner",
-          "line": 123
-        },
-        {
-          "name": "togglePanel",
-          "line": 136
-        },
-        {
-          "name": "closePanel",
-          "line": 142
+          "name": "active",
+          "line": 13
         }
       ]
     },
@@ -30751,6 +30723,33 @@
         }
       ]
     },
+    "frontend/src/composables/channelGraphics.ts": {
+      "sha256": "5416a1074e439d9c3522bbabdb8e3cddd5a62cf8005b356444eb5d4637ec8cc5",
+      "language": "TypeScript",
+      "bytes": 2883,
+      "symbols": [
+        {
+          "name": "useChannelGraphics",
+          "line": 10
+        },
+        {
+          "name": "channelId",
+          "line": 15
+        },
+        {
+          "name": "unavailable",
+          "line": 19
+        },
+        {
+          "name": "refresh",
+          "line": 23
+        },
+        {
+          "name": "control",
+          "line": 45
+        }
+      ]
+    },
     "frontend/src/composables/chunkedUpload.ts": {
       "sha256": "c96cc81c4401158c07eac2ea5f20f7f250e39c17ce3cee42a12f5385b79a873e",
       "language": "TypeScript",
@@ -31891,15 +31890,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "62667500559dd14e1a0bc5d73eab5c4b387190894129d5bb5366cf4295918aed",
+      "sha256": "a4b6edcdba4178226915d9b8e77736cde775929ce842e5dbef3a90fe1c5a9dda",
       "language": "TypeScript",
-      "bytes": 139748,
+      "bytes": 140634,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "806e55ca26b18d58b890a2351f45fc3ee2fde1ddf9a5b80b1a46d59ce00d87de",
+      "sha256": "a43198b27c735cd06049a906351b16e7c291049057d0472f4e29d918e8b3817e",
       "language": "TypeScript",
-      "bytes": 145325,
+      "bytes": 146286,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -35282,13 +35281,13 @@
       "symbols": []
     },
     "qa/e2e/global-setup.ts": {
-      "sha256": "0257ba90b3264466470f534f6905913fa82d5ac95de3f84224e531b978832abd",
+      "sha256": "7ee69bae12d1fe3a36e30f70048130502fe559e4ea8d14cb1c8ade2ec88de98b",
       "language": "TypeScript",
-      "bytes": 3648,
+      "bytes": 5253,
       "symbols": [
         {
           "name": "setup",
-          "line": 5
+          "line": 6
         }
       ]
     },
@@ -35340,9 +35339,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator.spec.ts": {
-      "sha256": "e55c0fe1fec0eec5e0bf35298be96e8c4b824f306e45e3886c8d2e17aa2ad8ed",
+      "sha256": "2ffa069d7dd7ee8a75046b885b5db047fb44c6a93ef4166ed5366f361806e3ff",
       "language": "TypeScript",
-      "bytes": 35429,
+      "bytes": 42296,
       "symbols": [
         {
           "name": "api",

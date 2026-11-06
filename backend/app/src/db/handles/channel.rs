@@ -179,6 +179,9 @@ pub async fn create_channel_records(
         handles::insert_output(&mut *transaction, config_id, output, index == 0).await?;
     }
 
+    // Logo percentages require the active output's dimensions. Configuration
+    // records alone do not have an output yet.
+    handles::convert_channel_graphics_on(&mut transaction, channel.id).await?;
     handles::insert_recording(&mut transaction, config_id, channel.id).await?;
     handles::insert_scte35(&mut transaction, config_id).await?;
     handles::assign_channel_to_global_admins(&mut *transaction, channel.id).await?;
@@ -192,6 +195,40 @@ mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
 
     use super::*;
+
+    #[tokio::test]
+    async fn new_channel_logo_uses_its_created_output_before_assets_are_copied() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        handles::db_migrate(&pool).await.unwrap();
+        let channel = create_channel_records(
+            &pool,
+            Channel {
+                name: "Fresh graphics".to_string(),
+                storage: format!("/uncreated-noar-{}", uuid::Uuid::new_v4()),
+                ..Channel::default()
+            },
+        )
+        .await
+        .unwrap();
+        let configuration = handles::select_configuration(&pool, channel.id)
+            .await
+            .unwrap();
+        assert_eq!(configuration.processing_logo_scale, "42:42");
+        let (width, _height): (u32, u32) =
+            sqlx::query_as("SELECT width,height FROM config_output WHERE id=$1")
+                .bind(configuration.output_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            configuration.processing_logo_position,
+            format!("{}:12", width - 42 - 12)
+        );
+    }
 
     #[tokio::test]
     async fn channel_creation_rolls_back_all_records_on_failure() {

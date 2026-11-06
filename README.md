@@ -21,10 +21,9 @@ and the Report for what aired.
   or the output's own; a clock with what is on air and what comes next, the
   next break and scheduled event, the sync state and the audio levels; and
   transport controls that lock against a stray click.
-- **Graphics bar** under the preview: switch the logo and the L-shape, move
-  them (dragged or typed, confirmed before they go on air), pick the L-shape's
-  corner, apply quick scenes and mark a commercial break; it locks like the
-  transport.
+- **Graphics status** under the preview: a read-only list of active channel
+  models and temporary graphics, with **Open Graphics** to operate them.
+  Graphics › On air has the model preview, program monitor and channel controls.
 - **Output that keeps going**: HLS (with adaptive renditions) and SRT, RTMP or
   UDP streams. A destination that is down never stops the channel: NoAr
   reconnects by itself, the preview keeps playing, and the Player says whether
@@ -91,8 +90,11 @@ and the Report for what aired.
   with artwork layers and an editable video window.
 - **Quick scenes**: manage them from the Templates **Scenes** group, then
   apply their logo/L-shape changes from NoAr or an encoder.
-- Everything can be hidden, swapped, moved or applied on air from NoAr or by
-  API with a fixed key, with a tutorial ([docs](docs/logo.md)).
+- On air offers model preview, a real program monitor, temporary take/out and
+  logo/ticker visibility. Select the channel L-shape to enter or return to full
+  screen. Edit layers in Composer; apply scenes from Templates. Temporary image
+  replacement/placement remains available through the compatible control API
+  ([docs](docs/logo.md)).
 - **WebVTT subtitles** in the HLS output ([docs](docs/closed_captions.md)).
 
 **Storage**
@@ -226,13 +228,13 @@ under `/data`.
 
 Everything NoAr stores lives in `./data` next to `docker-compose.yml`:
 
-| Folder | Content |
-| --- | --- |
-| `data/media` | Media storage: videos, program folders with `.nfo` and artwork |
-| `data/playlists` | Daily playlists |
-| `data/public` | HLS output |
-| `data/db` | Database |
-| `data/logs` | Channel logs |
+| Folder           | Content                                                        |
+| ---------------- | -------------------------------------------------------------- |
+| `data/media`     | Media storage: videos, program folders with `.nfo` and artwork |
+| `data/playlists` | Daily playlists                                                |
+| `data/public`    | HLS output                                                     |
+| `data/db`        | Database                                                       |
+| `data/logs`      | Channel logs                                                   |
 
 Set your time zone in `docker-compose.yml` (`TZ`, default
 `America/Sao_Paulo`). Live source URLs connect to an external server and need no
@@ -259,12 +261,12 @@ NoAr follows [Semantic Versioning](https://semver.org); every release is
 listed in [CHANGELOG.md](CHANGELOG.md). The images on
 `ghcr.io/luizstsantos/noar` are tagged:
 
-| Tag | What it is |
-| --- | --- |
-| `latest` | The newest stable release |
+| Tag            | What it is                                           |
+| -------------- | ---------------------------------------------------- |
+| `latest`       | The newest stable release                            |
 | `1.1`, `1.1.1` | A release line (gets its fixes) or one exact release |
-| `main` | The development build, not for air |
-| `sha-…` | One commit, for tests |
+| `main`         | The development build, not for air                   |
+| `sha-…`        | One commit, for tests                                |
 
 To stay on a release line, pin it in `docker-compose.yml`, for example
 `ghcr.io/luizstsantos/noar:1.1`. Releases are prepared and published by the

@@ -5,7 +5,8 @@ NoAr puts the channel logo over the picture of everything it plays: clips,
 scheduled lives and live ingest. Everything about it is in the **Graphics**
 tab of the main menu. Its navigation has five pages:
 
-- **On air**: live graphics, logo/L-shape controls and scene actions (every user);
+- **On air**: model preview, real program monitor, temporary take/out,
+  logo/ticker visibility and channel L-shape entry/exit (every user);
 - **Templates**: ordinary templates plus separate **Channel graphics** and
   **Scenes** groups. Use **Edit** on Channel logo, Channel L-shape or Ticker
   to open its layers in Composer. **Manage scenes** works even
@@ -19,15 +20,17 @@ Logo, L-shape and Quick scenes are no longer separate menu entries. Existing
 Composer (or the scene action editor) with the selected channel preserved. `/graphics/logo#ticker`
 opens the ticker model in Composer. Existing API control URLs and responses are unchanged.
 
-The Player has the same at hand under its preview: the logo on and off and
-where it is, the L-shape in and out and its corner, the quick scenes, and a
-link to the tab. A move there also waits for **Move on air**. Like the
-transport, the bar starts **locked** while the channel is on air: unlock
-**Graphics locked** to use it.
+The Player reports requested channel-model state and temporary graphics below
+its preview, with **Open Graphics** linking to On air. It has no graphics
+switches, placement controls or scene buttons. Apply scenes from the Templates
+**Scenes** group. Clip marks retain their own placement editor.
 
-Wherever the logo is placed on a small screen (On air, the Player, a
-video's marks), the place can also be typed: **X** across and **Y** down,
-in percent of the room around the logo (`50 × 1` is the top centre).
+The On air **Preview** shows the selected saved model and supplied field values;
+it is a browser illustration. **Program** shows actual decoded playout output.
+When stopped, unsupported or waiting for a picture, it reports that state.
+The first configured channel model is selected even when no ordinary GC exists.
+Logo/ticker switches report requested visibility: clip marks, breaks and an
+L-shape can still suppress the logo in the actual output.
 
 ## Placing the logo
 
@@ -37,6 +40,15 @@ image to choose a storage path or upload to `Graphics/`, drag it and resize
 with the canvas handles, or type X/Y/width/height in percent of the output.
 The px toggle uses the actual channel output size. Proportional, scale,
 centering and opacity controls apply to the selected layer.
+
+A fresh installation places the bundled 42×42 px logo at the top right with
+12 px margins, even before Storage has copied its assets. Existing authored
+models are preserved. To repair a previously saved oversized logo, select its
+primary image, click **Restore image size and top-right position**, review the
+preview and **Save template**. This uses the natural image size, reduces it if
+necessary to fit the output and supports **Undo**; it does not save automatically.
+The permanent logo/ticker cannot contain a video window; use the channel L-shape
+or an ordinary temporary model for that layer.
 
 Enable **Always on air** to load the logo model at startup. The library's
 **On air / Off** switch hides or shows it during operation. Hiding does not
@@ -84,39 +96,38 @@ from the storage, or moved to another place, until the next command or a
 server restart. A typical case is
 a live whose encoder runs its own commercial break.
 
-- From NoAr: **Graphics › On air** (or the Player's graphics bar) shows
-  what the logo and the L-shape are doing. Its Logo row
-  has **Hide**, **Back to the channel logo**, **Swap for…** and **Position**
-  (a corner, or back to the channel's); its L-shape row is described
-  [below](#l-shape).
+- From NoAr: **Graphics › On air › Always on air** hides or shows the logo
+  or ticker. Select **Channel L-shape** to enter/leave its composed window.
+  To change the saved artwork or position, use **Edit** to open Composer.
+  Temporary replacement/placement still uses the compatible API or a scene
+  applied from Templates; the former live-control panel is no longer shown.
 - From an encoder or a script: create the channel's **graphics key** (logo,
   L-shape and scenes) in **Graphics › External control (API)**. It works at once and stays the same until
   you make a new one there.
   Calling these addresses (GET or POST) then changes the logo,
   with the channel's logo animation:
 
-  ```text
-  http://<server>:8787/logo/<channel>/hide?key=<KEY>
-  http://<server>:8787/logo/<channel>/show?key=<KEY>
-  http://<server>:8787/logo/<channel>/replace?key=<KEY>&logo=00-assets/other-logo.png
-  http://<server>:8787/logo/<channel>/move?key=<KEY>&x=90&y=5
-  http://<server>:8787/logo/<channel>/move?key=<KEY>&position=bottom-left
-  http://<server>:8787/logo/<channel>/move?key=<KEY>&position=default
-  ```
+    ```text
+    http://<server>:8787/logo/<channel>/hide?key=<KEY>
+    http://<server>:8787/logo/<channel>/show?key=<KEY>
+    http://<server>:8787/logo/<channel>/replace?key=<KEY>&logo=00-assets/other-logo.png
+    http://<server>:8787/logo/<channel>/move?key=<KEY>&x=90&y=5
+    http://<server>:8787/logo/<channel>/move?key=<KEY>&position=bottom-left
+    http://<server>:8787/logo/<channel>/move?key=<KEY>&position=default
+    ```
 
-  `x` and `y` go from 0 to 100: shares of the room around the logo, so
-  `x=0` is the left edge, `x=100` the right one and `50` the middle, on any
-  output size. `position` is also a place 12 pixels from the edges
-  (`top-left`, `top`, `top-right`, `left`, `center`, `right`,
-  `bottom-left`, `bottom`, `bottom-right`), an `X:Y` expression like the one
-  in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
-  place. A swapped image goes to the same place. In the card, the logo's
-  small screen does the same: click or drag the logo where it goes, or move
-  it with the arrow keys, then **Move on air**. Nothing moves before that
-  confirmation; a dashed box shows where the logo is on air meanwhile.
+    `x` and `y` go from 0 to 100: shares of the room around the logo, so
+    `x=0` is the left edge, `x=100` the right one and `50` the middle, on any
+    output size. `position` is also a place 12 pixels from the edges
+    (`top-left`, `top`, `top-right`, `left`, `center`, `right`,
+    `bottom-left`, `bottom`, `bottom-right`), an `X:Y` expression like the one
+    in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
+    place. A swapped image goes to the same place. These are temporary API
+    overrides. For a persistent change, edit the primary image layer in Composer
+    and save; its coordinates are percentages of the whole output frame.
 
-  The card has a tutorial with these addresses ready to copy, and examples for
-  curl, vMix, OBS (Advanced Scene Switcher) and Bitfocus Companion.
+    **External control (API)** has these addresses ready to copy, and examples
+    for curl, vMix, OBS (Advanced Scene Switcher) and Bitfocus Companion.
 
 A swapped logo takes the size, position and opacity of the configured one, and
 cross-fades with the image it replaces. A
@@ -159,44 +170,40 @@ It goes on air:
   wherever the video plays; a playlist that plays part of the video gets the
   stretches of that part. **This video's L-shape graphic** on that tab gives
   the video a graphic of its own (a sponsor of that programme), used for its
-  stretches with the channel's size and corner; empty uses the channel's.
-- **From NoAr**: the L-shape row of **Graphics › On air** (or the Player's
-  graphics bar),
-  with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
-  after a swap, **Channel graphic**. It stays until switched back or the
-  server restarts. Its four corner buttons and size slider move the video to
-  where another graphic needs it, after **Move on air** (or **Use this
-  place** while the L-shape is off); **Back to the graphic’s position**
-  undoes that. Use it with a graphic drawn for that corner: the band stays
-  where the graphic has it.
+  stretches with the model's picture window. Explicit clip corner/scale settings
+  override that window; empty artwork uses the channel model's image.
+- **From NoAr**: select **Channel L-shape** in **Graphics › On air**, then
+  **Enter L-shape** or **Return to full screen**; the library offers the same
+  controls. **Edit** opens its layers in Composer. Change the artwork and video
+  window there, or apply a scene from the Templates **Scenes** group.
 - **From an encoder or a script**, with the graphics key, like the logo:
 
-  ```text
-  http://<server>:8787/lshape/<channel>/on?key=<KEY>
-  http://<server>:8787/lshape/<channel>/off?key=<KEY>
-  http://<server>:8787/lshape/<channel>/replace?key=<KEY>&graphic=00-assets/sponsor.png
-  http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/sponsor.png
-  http://<server>:8787/lshape/<channel>/reset?key=<KEY>
-  ```
+    ```text
+    http://<server>:8787/lshape/<channel>/on?key=<KEY>
+    http://<server>:8787/lshape/<channel>/off?key=<KEY>
+    http://<server>:8787/lshape/<channel>/replace?key=<KEY>&graphic=00-assets/sponsor.png
+    http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/sponsor.png
+    http://<server>:8787/lshape/<channel>/reset?key=<KEY>
+    ```
 
-  `replace` swaps the graphic without going in, so the next `on` shows it;
-  `on` with `graphic` swaps and goes in at once; `reset` goes back to the
-  channel's graphic. A swap lasts until `reset` or a server restart.
+    `replace` swaps the graphic without going in, so the next `on` shows it;
+    `on` with `graphic` swaps and goes in at once; `reset` goes back to the
+    channel's graphic. A swap lasts until `reset` or a server restart.
 
-  For a graphic whose space for the video is in another corner, move it:
+    For a graphic whose space for the video is in another corner, move it:
 
-  ```text
-  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=bottom-left&scale=70
-  http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/news.png&position=top-left
-  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=default
-  ```
+    ```text
+    http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=bottom-left&scale=70
+    http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/news.png&position=top-left
+    http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=default
+    ```
 
-  `position` is `top-left`, `top-right`, `bottom-left` or `bottom-right`;
-  `scale` is the video's size in percent of the screen (30 to 95), the
-  graphic's when left out. It lasts until moved again,
-  `position=default` or a server restart.
+    `position` is `top-left`, `top-right`, `bottom-left` or `bottom-right`;
+    `scale` is the video's size in percent of the screen (30 to 95), the
+    graphic's when left out. It lasts until moved again,
+    `position=default` or a server restart.
 
-  The API is described in [api.md](api.md#l-shape).
+    The API is described in [api.md](api.md#l-shape).
 
 ## Logo and L-shape of one video
 
@@ -216,7 +223,7 @@ the Storage (**Cut, logo, breaks and L-shape in this video**).
 
 They are saved in the video's `<name>.marks.json` (`logo_image`,
 `logo_position`, `lshape_graphic`, `lshape_corner`, `lshape_scale`). A swap or
-move from outside (Graphics, the Player, the API) goes before the video's own
+move from outside (a scene or the API) goes before the video's own
 logo and position.
 
 ### Marks of one playlist item
@@ -236,9 +243,9 @@ commercial break: hide the logo, swap it or move it, and put the L-shape in or
 out with a given graphic, corner and size. Make them in **Graphics › Templates › Scenes › Manage scenes** (up to 24 per channel) and save. Each scene changes only what it
 says; anything set to **Leave as it is** stays as it is on air.
 
-A scene is applied with one click in **Graphics › On air** and in the
-Player's graphics bar, or from an encoder with the graphics key, its name in
-the address in lower case with dashes:
+A scene is applied with **Apply** in **Graphics › Templates › Scenes**,
+or from an encoder with the graphics key, its name in the address in lower
+case with dashes:
 
 ```text
 http://<server>:8787/scene/<channel>/intervalo-comercial?key=<KEY>

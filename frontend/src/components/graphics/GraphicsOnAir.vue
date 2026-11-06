@@ -1,21 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
-import LiveVideo from '@/components/player/LiveVideo.vue'
-import SceneButtons from '@/components/graphics/SceneButtons.vue'
-import LogoRemote from '@/components/settings/LogoRemote.vue'
+import LivePreview from '@/components/player/LivePreview.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
+import { useChannelGraphics } from '@/composables/channelGraphics'
 import { AuthFetchError } from '@/composables/authFetch'
-import {
-    type GraphicOnAir,
-    type GraphicsTemplate,
-    fieldList,
-    onAirSince,
-    useGraphicsApi,
-} from '@/composables/graphicsTemplates'
+import { type GraphicsTemplate, fieldList, onAirSince, useGraphicsApi } from '@/composables/graphicsTemplates'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -34,26 +27,62 @@ const graphicsApi = useGraphicsApi()
 const isAdmin = ['global_admin', 'channel_admin'].includes(authStore.role)
 
 const templates = ref<GraphicsTemplate[]>([])
-const onAir = ref<GraphicOnAir[]>([])
+const {
+    models: channelModels,
+    onAir,
+    busy: channelBusy,
+    unavailable,
+    refresh: refreshStatus,
+    control: controlModel,
+} = useChannelGraphics()
 const loaded = ref(false)
 const selectedId = ref<number | null>(null)
 const values = reactive<Record<string, Record<string, string>>>({})
 const duration = ref('')
 const busy = ref(false)
-const remote = ref<InstanceType<typeof LogoRemote> | null>(null)
-const muted = ref(true)
-let timer: ReturnType<typeof setInterval> | undefined
 
 const channel = computed(() => configStore.channels[configStore.i])
 const selected = computed(() => templates.value.find((template) => template.id === selectedId.value))
 const selectedValues = computed(() => (selectedId.value === null ? {} : (values[selectedId.value] ?? {})))
-const programUrl = computed(() => (channel.value ? `/api/preview/${channel.value.id}?quality=light` : ''))
 const latest = computed(() => [...onAir.value].reverse().find((graphic) => !graphic.leaving))
+const selectedModel = computed(() => channelModels.value.find((model) => model.template.id === selectedId.value))
+const permanent = computed(() =>
+    channelModels.value.filter((model) => model.kind === 'logo' || model.kind === 'ticker'),
+)
+const ordinary = computed(() =>
+    templates.value.filter((template) => !channelModels.value.some((model) => model.template.id === template.id)),
+)
+const programName = computed(
+    () =>
+        latest.value?.name ||
+        channelModels.value
+            .filter((model) => model.kind !== 'scene' && model.on && model.ready)
+            .map((model) => t(`graphics.assigned.${model.kind}`))
+            .join(' · ') ||
+        t('graphics.onAir.noGraphic'),
+)
+
+function templateName(template: GraphicsTemplate) {
+    const assigned = channelModels.value.find((model) => model.template.id === template.id)
+
+    return assigned ? t(`graphics.assigned.${assigned.kind}`) : template.name
+}
+
+function templateHint(template: GraphicsTemplate) {
+    const assigned = channelModels.value.find((model) => model.template.id === template.id)
+
+    return assigned
+        ? t(`graphics.assigned.hint.${assigned.kind}`)
+        : fieldList(template) || t('graphics.templates.noFields')
+}
+
 const groups = computed(() => {
     const byGroup = new Map<string, GraphicsTemplate[]>()
 
     for (const template of templates.value) {
-        const group = template.group || t('graphics.templates.noGroup')
+        const group = channelModels.value.some((model) => model.template.id === template.id)
+            ? t('graphics.assigned.group')
+            : template.group || t('graphics.templates.noGroup')
         byGroup.set(group, [...(byGroup.get(group) ?? []), template])
     }
 
@@ -65,11 +94,7 @@ function message(error: unknown, fallback: string): string {
 }
 
 async function loadOnAir() {
-    try {
-        onAir.value = await graphicsApi.onAir()
-    } catch {
-        // The next poll tries again.
-    }
+    await refreshStatus()
 }
 
 function select(template: GraphicsTemplate) {
@@ -80,9 +105,15 @@ function select(template: GraphicsTemplate) {
 
 async function load() {
     try {
-        const [models, channelModels] = await Promise.all([graphicsApi.templates(), graphicsApi.channel()])
-        const assigned = new Set(channelModels.map((view) => view.template.id))
-        templates.value = models.filter((model) => !assigned.has(model.id))
+        const [models] = await Promise.all([graphicsApi.templates(), refreshStatus()])
+        if (unavailable.value) {
+            throw new Error(t('graphics.templates.loadFailed'))
+        }
+
+        const scenes = new Set(
+            channelModels.value.filter((model) => model.kind === 'scene').map((model) => model.template.id),
+        )
+        templates.value = models.filter((model) => !scenes.has(model.id))
     } catch (error) {
         indexStore.msgAlert('error', message(error, t('graphics.templates.loadFailed')), 4)
     } finally {
@@ -90,7 +121,13 @@ async function load() {
     }
 
     const wanted = Number(route.query.template)
-    const first = templates.value.find((template) => template.id === wanted) ?? templates.value[0]
+    const first =
+        templates.value.find((template) => template.id === wanted) ??
+        ordinary.value[0] ??
+        templates.value.find((template) =>
+            channelModels.value.some((model) => model.template.id === template.id && model.ready),
+        ) ??
+        templates.value[0]
 
     if (first) {
         select(first)
@@ -103,6 +140,11 @@ async function take() {
     const template = selected.value
 
     if (!template || busy.value) {
+        return
+    }
+
+    if (selectedModel.value) {
+        await controlModel(selectedModel.value, true)
         return
     }
 
@@ -130,6 +172,11 @@ async function take() {
 }
 
 async function takeOut(takeId?: number) {
+    if (takeId === undefined && selectedModel.value) {
+        await controlModel(selectedModel.value, false)
+        return
+    }
+
     try {
         await graphicsApi.out(takeId ?? latest.value?.take_id)
         await loadOnAir()
@@ -149,8 +196,8 @@ async function takeAllOut() {
 
 /** The next template of the list goes to the preview. */
 function next() {
-    const index = templates.value.findIndex((template) => template.id === selectedId.value)
-    const following = templates.value[(index + 1) % Math.max(templates.value.length, 1)]
+    const index = ordinary.value.findIndex((template) => template.id === selectedId.value)
+    const following = ordinary.value[(index + 1) % Math.max(ordinary.value.length, 1)]
 
     if (following) {
         select(following)
@@ -165,10 +212,7 @@ watch(selectedId, () => {
 
 onMounted(() => {
     load()
-    timer = setInterval(loadOnAir, 2000)
 })
-
-onBeforeUnmount(() => clearInterval(timer))
 </script>
 <template>
     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -205,36 +249,38 @@ onBeforeUnmount(() => clearInterval(timer))
                         <span class="font-semibold tracking-[0.08em] text-success">{{
                             t('graphics.onAir.preview')
                         }}</span>
-                        <span class="text-muted truncate">{{ selected?.name ?? '' }}</span>
+                        <span class="text-muted truncate">{{
+                            selected ? templateName(selected) : t('graphics.onAir.selectPreview')
+                        }}</span>
                     </figcaption>
                     <TemplatePreview
                         :template="selected"
                         :values="selectedValues"
-                        class="rounded-field border border-success/60 bg-[repeating-conic-gradient(#2b2c30_0_25%,#232428_0_50%)] bg-[length:24px_24px]"
-                    />
+                        class="rounded-field border border-success/60 bg-[linear-gradient(180deg,#38596d_0%,#38596d_60%,#31543e_60%,#31543e_100%)]"
+                    >
+                        <template #overlay>
+                            <div
+                                v-if="!selected || (selectedModel && !selectedModel.ready)"
+                                class="absolute inset-0 flex items-center justify-center p-5 text-center text-sm text-white bg-black/40"
+                            >
+                                {{ selected ? t('graphics.assigned.configure') : t('graphics.onAir.selectPreview') }}
+                            </div>
+                        </template>
+                    </TemplatePreview>
                 </figure>
                 <figure class="m-0 card-box p-2.5 flex flex-col gap-2">
                     <figcaption class="flex items-center justify-between gap-2 text-xs">
                         <span class="font-semibold tracking-[0.08em] text-error">{{
                             t('graphics.onAir.program')
                         }}</span>
-                        <span class="text-muted truncate">{{ latest?.name ?? t('graphics.onAir.noGraphic') }}</span>
+                        <span class="text-muted truncate">{{ programName }}</span>
                     </figcaption>
-                    <div class="relative aspect-video rounded-field overflow-hidden border border-error/60 bg-black">
-                        <LiveVideo
-                            v-if="programUrl"
-                            :key="programUrl"
-                            :src="programUrl"
-                            direct
-                            :token="authStore.jwtToken"
-                            :muted="muted"
-                        />
-                    </div>
+                    <LivePreview data-testid="graphics-program-monitor" />
                 </figure>
             </div>
 
             <section
-                v-if="selected"
+                v-if="selected && !selectedModel"
                 class="card-box px-5 py-4 flex flex-col gap-3"
                 :aria-label="t('graphics.templates.fillLabel', { name: selected.name })"
             >
@@ -267,23 +313,28 @@ onBeforeUnmount(() => clearInterval(timer))
                 <button
                     type="button"
                     class="min-h-14 rounded-field font-bold tracking-[0.04em] bg-error text-error-content cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="!selected || busy"
+                    :disabled="
+                        !selected ||
+                        busy ||
+                        channelBusy !== null ||
+                        Boolean(selectedModel && (unavailable || !selectedModel.ready || selectedModel.on))
+                    "
                     @click="take"
                 >
-                    {{ t('graphics.onAir.take') }}
+                    {{ selectedModel?.kind === 'lshape' ? t('graphics.assigned.enter') : t('graphics.onAir.take') }}
                 </button>
                 <button
                     type="button"
                     class="min-h-14 rounded-field font-bold tracking-[0.04em] border border-line-strong bg-base-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="!latest"
+                    :disabled="channelBusy !== null || (selectedModel ? unavailable || !selectedModel.on : !latest)"
                     @click="takeOut()"
                 >
-                    {{ t('graphics.onAir.out') }}
+                    {{ selectedModel?.kind === 'lshape' ? t('graphics.assigned.fullscreen') : t('graphics.onAir.out') }}
                 </button>
                 <button
                     type="button"
                     class="min-h-14 rounded-field font-bold tracking-[0.04em] border border-line-strong bg-base-100 cursor-pointer disabled:opacity-50"
-                    :disabled="templates.length < 2"
+                    :disabled="ordinary.length < 2"
                     @click="next"
                 >
                     {{ t('graphics.onAir.next') }}
@@ -292,7 +343,7 @@ onBeforeUnmount(() => clearInterval(timer))
 
             <section class="card-box px-5 py-4 flex flex-col gap-3" role="status" aria-live="polite">
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="m-0 text-base font-semibold">{{ t('graphics.templates.onAir') }}</h2>
+                    <h2 class="m-0 text-base font-semibold">{{ t('graphics.onAir.temporaryOnAir') }}</h2>
                     <button
                         type="button"
                         class="btn-quiet min-h-9"
@@ -302,7 +353,7 @@ onBeforeUnmount(() => clearInterval(timer))
                         {{ t('graphics.templates.allOut') }}
                     </button>
                 </div>
-                <p v-if="!onAir.length" class="m-0 text-sm text-muted">{{ t('graphics.templates.nothingOnAir') }}</p>
+                <p v-if="!onAir.length" class="m-0 text-sm text-muted">{{ t('graphics.onAir.noTemporary') }}</p>
                 <ul v-else class="m-0 p-0 list-none flex flex-col gap-1.5">
                     <li
                         v-for="graphic in onAir"
@@ -326,30 +377,31 @@ onBeforeUnmount(() => clearInterval(timer))
                 </ul>
             </section>
 
-            <template v-if="configStore.playout?.processing">
-                <LogoRemote ref="remote" part="live" />
-
-                <SectionCard :title="t('graphics.sections.scenes')" :description="t('graphics.scenes.liveIntro')">
-                    <SceneButtons @applied="remote?.load()" />
-                    <p
-                        v-if="!configStore.playoutSaved?.processing?.graphics_scenes?.length"
-                        class="m-0 text-muted text-sm"
+            <SectionCard :title="t('graphics.onAir.permanentTitle')" :description="t('graphics.onAir.permanentHint')">
+                <p v-if="unavailable" class="m-0 text-sm text-muted">{{ t('graphics.onAir.statusUnavailable') }}</p>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="model in permanent"
+                        :key="model.template.id"
+                        type="button"
+                        class="btn-quiet min-h-11 inline-flex items-center gap-2"
+                        :class="model.on ? 'border-success text-success' : ''"
+                        :aria-pressed="model.on"
+                        :disabled="unavailable || channelBusy !== null || (!model.ready && !model.on)"
+                        @click="controlModel(model, !model.on)"
                     >
-                        {{ t('graphics.scenes.none') }}
-                        <RouterLink
-                            v-if="isAdmin"
-                            :to="{
-                                name: 'graphics-channel-editor',
-                                params: { kind: 'scene' },
-                                query: { channel: channel?.id },
-                            }"
-                            class="link-accent"
-                        >
-                            {{ t('graphics.scenes.create') }}
-                        </RouterLink>
-                    </p>
-                </SectionCard>
-            </template>
+                        <span
+                            :class="model.on ? 'dot bg-success' : 'inline-block w-2 h-2 rounded-full bg-muted'"
+                            aria-hidden="true"
+                        />
+                        {{ t(`graphics.assigned.${model.kind}`) }}
+                        <span class="text-xs">{{
+                            t(model.on ? 'graphics.assigned.on' : 'graphics.assigned.off')
+                        }}</span>
+                    </button>
+                </div>
+                <p class="m-0 text-xs text-muted">{{ t('graphics.onAir.permanentRequested') }}</p>
+            </SectionCard>
         </section>
 
         <aside
@@ -373,17 +425,18 @@ onBeforeUnmount(() => clearInterval(timer))
                     @click="select(template)"
                 >
                     <span class="flex items-center gap-2">
-                        <strong class="font-semibold text-sm flex-auto">{{ template.name }}</strong>
+                        <strong class="font-semibold text-sm flex-auto">{{ templateName(template) }}</strong>
                         <span
-                            v-if="onAir.some((graphic) => graphic.template_id === template.id && !graphic.leaving)"
+                            v-if="
+                                onAir.some((graphic) => graphic.template_id === template.id && !graphic.leaving) ||
+                                channelModels.some((model) => model.template.id === template.id && model.on)
+                            "
                             class="text-[11px] font-bold text-error"
                         >
                             {{ t('graphics.onAir.badge') }}
                         </span>
                     </span>
-                    <span class="text-xs text-muted">{{
-                        fieldList(template) || t('graphics.templates.noFields')
-                    }}</span>
+                    <span class="text-xs text-muted">{{ templateHint(template) }}</span>
                 </button>
             </div>
             <p class="m-0 text-xs text-muted leading-relaxed">{{ t('graphics.onAir.rundownsSoon') }}</p>

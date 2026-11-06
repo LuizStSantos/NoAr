@@ -1,0 +1,327 @@
+{
+    "status": "PASS",
+    "branch": "claude/branch-review-opz967",
+    "base_commit": "0169d4f7",
+    "gstreamer": "1.26.2",
+    "rust": {
+        "passed": 686,
+        "ignored": 14,
+        "commands": [
+            "cargo fmt --all",
+            "cargo clippy --no-default-features --all-targets -- --deny warnings",
+            "cargo test --no-default-features"
+        ]
+    },
+    "browser_suite": {
+        "passed": 26,
+        "failed": 0,
+        "fresh_database": true,
+        "stock_geometry_checked_before_custom_seed": true
+    },
+    "frontend_checks": ["vue-tsc --build", "full ESLint", "changed-file Prettier", "vite build", "QA TypeScript"],
+    "browser": {
+        "locale": "pt-BR",
+        "desktop_width": 1440,
+        "phone_width": 390,
+        "page_errors": [],
+        "horizontal_overflow": false,
+        "unsupported_uuid_simulated": true,
+        "actual_LAN_HTTP_origin_tested": false,
+        "drag": {
+            "before": {
+                "x": "30",
+                "width": "70"
+            },
+            "after": {
+                "x": "27.23",
+                "width": "67.69"
+            }
+        },
+        "decoded_program_video": [
+            {
+                "width": 640,
+                "height": 360,
+                "current_time": 8.585142,
+                "ready": 4,
+                "paused": false
+            },
+            {
+                "width": 640,
+                "height": 360,
+                "current_time": 46.673536,
+                "ready": 4,
+                "paused": false
+            },
+            {
+                "width": 640,
+                "height": 360,
+                "current_time": 0.976974,
+                "ready": 4,
+                "paused": false
+            },
+            {
+                "width": 640,
+                "height": 360,
+                "current_time": 1.818687,
+                "ready": 4,
+                "paused": false
+            }
+        ]
+    },
+    "hls": [
+        {
+            "stage": "logo",
+            "capture": "output-review-logo.jpg",
+            "segment_sha256": "fa181d76cd2903c8129f1fcffb7c0c4316165c73bc11358926070d2aaa35eb8e",
+            "health": {
+                "status": "ok",
+                "version": "2.2.1",
+                "channels": [
+                    {
+                        "id": 1,
+                        "state": "on_air",
+                        "uptime": 349,
+                        "output_age": 0.1
+                    }
+                ]
+            },
+            "metrics": {
+                "model_box_px": [586, 12, 42, 42],
+                "model_opacity": 0.7,
+                "decoded_content_box_px": [586, 12, 628, 54],
+                "background_rgb": [80.0, 80.0, 80.0],
+                "roi_mean_absolute_rgb_error": 3.5447759844678575,
+                "opaque_interior_mean_absolute_rgb_error": 3.354689143950259,
+                "roi_rgb_error_p99": 38.74383529411771,
+                "hls_tolerance": "Mean RGB error <= 8; p99 <= 50 including chroma-subsampled edges; content bbox <= 2 px codec fringe only. Model coordinates/size are exact.",
+                "single_logo": true
+            }
+        },
+        {
+            "stage": "ticker",
+            "capture": "output-review-ticker.jpg",
+            "segment_sha256": "5b1d302ad456382421d283c5f6e8f6a45c7acab184904a7332fb2c166d42074e",
+            "health": {
+                "status": "ok",
+                "version": "2.2.1",
+                "channels": [
+                    {
+                        "id": 1,
+                        "state": "on_air",
+                        "uptime": 375,
+                        "output_age": 0.1
+                    }
+                ]
+            },
+            "metrics": {
+                "white_text_pixels_model_band": 763
+            }
+        },
+        {
+            "stage": "lshape",
+            "capture": "output-review-lshape.jpg",
+            "segment_sha256": "412242331d6a99a1df6eb9d0920fa86f4144cdb6aa2b5312d9e1b521815c479d",
+            "health": {
+                "status": "ok",
+                "version": "2.2.1",
+                "channels": [
+                    {
+                        "id": 1,
+                        "state": "on_air",
+                        "uptime": 511,
+                        "output_age": 0.3
+                    }
+                ]
+            },
+            "metrics": {
+                "video_window_model_percent": [30, 0, 70, 70],
+                "gray_video_rgb": [80, 80, 80],
+                "artwork_rgb": [20, 60, 88]
+            }
+        }
+    ],
+    "capture_time_channel_log_errors": 0,
+    "source_sha256": {
+        "backend/app/src/db/handles/channel.rs": "b2949da54662708fbc90ade5e65b0508963a160d40fdf9adc8223372499c0f15",
+        "backend/app/src/db/handles/configuration.rs": "3a4ded26b1994ec91a54bf6284e03973a70bc4914ba1b156aa015bb5b5cc01e9",
+        "backend/app/src/db/handles/graphics.rs": "634b4ce3b5ed708c0298ff26a088dcbf3d941345db7f3c8ef605d2442fd0cea9",
+        "backend/app/src/file/local.rs": "f3fc423287e33cd85e2831c7e6d66c95227b05c4af841dc941b0662c84785f46",
+        "backend/app/src/file/mod.rs": "c5451569c35eb51ce9d6470643fd197e7b3030af11480a42e2dcae383102a5dd",
+        "frontend/src/components/graphics/GraphicsComposer.vue": "8e0e1e3a6ea4cb304d67b86af99ec2ee157835696edb0311717e4f093851abf1",
+        "frontend/src/components/graphics/GraphicsOnAir.vue": "6cde208a7614ce8b480a8a29541f325930e63a4f2e6fcf0647bf4c65a365fba4",
+        "frontend/src/components/player/GraphicsQuickBar.vue": "44b89dace4ed6b56039f60884100d42bc54c99240ae9c6dbb6e9c6ad853bf9b4",
+        "frontend/src/locales/en-US.ts": "a4b6edcdba4178226915d9b8e77736cde775929ce842e5dbef3a90fe1c5a9dda",
+        "frontend/src/locales/pt-BR.ts": "a43198b27c735cd06049a906351b16e7c291049057d0472f4e29d918e8b3817e",
+        "qa/e2e/global-setup.ts": "7ee69bae12d1fe3a36e30f70048130502fe559e4ea8d14cb1c8ade2ec88de98b",
+        "qa/e2e/tests/operator.spec.ts": "2ffa069d7dd7ee8a75046b885b5db047fb44c6a93ef4166ed5366f361806e3ff",
+        "frontend/src/composables/channelGraphics.ts": "5416a1074e439d9c3522bbabdb8e3cddd5a62cf8005b356444eb5d4637ec8cc5"
+    },
+    "captures": [
+        {
+            "file": "composer-review-new-menu-pt-BR.jpg",
+            "description": "New template: image, text, shape and video menu",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "composer-review-four-layers-pt-BR.jpg",
+            "description": "Composer: all four layer kinds added without crypto.randomUUID",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "composer-review-text-fields-pt-BR.jpg",
+            "description": "Composer: text and operator fields",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "composer-review-upload-pt-BR.jpg",
+            "description": "Composer: image uploaded into Graphics/",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "composer-review-drag-resize-pt-BR.jpg",
+            "description": "Composer: actual pointer drag and resize",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "composer-review-animation-timeline-pt-BR.jpg",
+            "description": "Composer: entry, exit, delay and timeline",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "composer-review-save-pt-BR.jpg",
+            "description": "Composer: save with a name and group",
+            "size": [1440, 1080]
+        },
+        {
+            "file": "composer-review-four-layers-phone-pt-BR.jpg",
+            "description": "Composer: four-layer template on a phone",
+            "size": [390, 2282]
+        },
+        {
+            "file": "composer-review-logo-pt-BR.jpg",
+            "description": "Channel logo: 42 x 42 px, top-right with 12 px margins",
+            "size": [1440, 1051]
+        },
+        {
+            "file": "composer-review-logo-menu-pt-BR.jpg",
+            "description": "Channel logo: layer menu and video-window restriction",
+            "size": [1440, 1051]
+        },
+        {
+            "file": "composer-review-logo-animation-permanent-pt-BR.jpg",
+            "description": "Channel logo: animation and Always on air",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "composer-review-logo-phone-pt-BR.jpg",
+            "description": "Channel logo editor on a phone",
+            "size": [390, 2333]
+        },
+        {
+            "file": "composer-review-lshape-pt-BR.jpg",
+            "description": "Channel L-shape: artwork and video window",
+            "size": [1440, 1051]
+        },
+        {
+            "file": "composer-review-lshape-phone-pt-BR.jpg",
+            "description": "Channel L-shape editor on a phone",
+            "size": [390, 2182]
+        },
+        {
+            "file": "composer-review-ticker-pt-BR.jpg",
+            "description": "Ticker: permanent text layer",
+            "size": [1440, 1037]
+        },
+        {
+            "file": "composer-review-ticker-permanent-pt-BR.jpg",
+            "description": "Ticker: animation and Always on air",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "review-models-pt-BR.jpg",
+            "description": "Templates: channel graphics, scenes and ordinary models",
+            "size": [1440, 1177]
+        },
+        {
+            "file": "review-models-phone-pt-BR.jpg",
+            "description": "Templates on a phone",
+            "size": [390, 2291]
+        },
+        {
+            "file": "review-onair-stopped-pt-BR.jpg",
+            "description": "On air: model Preview and stopped Program message",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "review-onair-live-logo-pt-BR.jpg",
+            "description": "On air: selected logo, decoded Program and permanent controls",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "review-onair-live-phone-pt-BR.jpg",
+            "description": "On air with actual playback on a phone",
+            "size": [390, 1797]
+        },
+        {
+            "file": "review-onair-live-ticker-pt-BR.jpg",
+            "description": "On air: permanent logo and ticker",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "review-onair-live-lshape-pt-BR.jpg",
+            "description": "On air: bound L-shape entered through the model control",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "review-player-pt-BR.jpg",
+            "description": "Player: live picture and read-only graphics state",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "review-player-status-pt-BR.jpg",
+            "description": "Player: graphics status line and Open Graphics link",
+            "size": [989, 63]
+        },
+        {
+            "file": "review-player-phone-pt-BR.jpg",
+            "description": "Player on a phone",
+            "size": [390, 1190]
+        },
+        {
+            "file": "review-xmltv-pt-BR.jpg",
+            "description": "Independent XMLTV guide-logo tab",
+            "size": [1440, 1000]
+        },
+        {
+            "file": "review-xmltv-phone-pt-BR.jpg",
+            "description": "XMLTV guide-logo tab on a phone",
+            "size": [390, 844]
+        },
+        {
+            "file": "review-api-pt-BR.jpg",
+            "description": "External control: channel-model and legacy API explanation",
+            "size": [1440, 2655]
+        },
+        {
+            "file": "output-review-logo.jpg",
+            "description": "Actual decoded HLS: one stock logo at the exact saved geometry",
+            "size": [640, 360]
+        },
+        {
+            "file": "output-review-ticker.jpg",
+            "description": "Actual decoded HLS: permanent logo and ticker",
+            "size": [640, 360]
+        },
+        {
+            "file": "output-review-lshape.jpg",
+            "description": "Actual decoded HLS: model artwork/window, ticker, suppressed logo",
+            "size": [640, 360]
+        }
+    ],
+    "limits": [
+        "Real LAN HTTP origin unavailable under cloud network policy; absent UUID API simulated on loopback.",
+        "No repeat of historical 2.2.1 parity/76-response matrix; no rendering-engine code changed.",
+        "No physical outputs, long soak, desktop-audio stability or complete Docker-image rebuild in this follow-up.",
+        "Clock and version 2.5 rundowns remain excluded."
+    ]
+}

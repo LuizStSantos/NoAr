@@ -124,8 +124,6 @@ pub async fn insert_configuration(
             .await?;
     }
 
-    super::convert_channel_graphics_on(connection, channel_id).await?;
-
     Ok(config_id)
 }
 

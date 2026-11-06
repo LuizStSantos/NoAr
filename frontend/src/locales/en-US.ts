@@ -1452,6 +1452,10 @@ export default {
             },
         },
         composer: {
+            videoModelOnly: 'Use the channel L-shape model or a temporary template for a video window.',
+            restoreLogoPlacement: 'Restore image size and top-right position',
+            restoreLogoPlacementHint:
+                'Use the original image size (fit inside the output), with a 12 px top/right margin. Review and save to apply.',
             saveGuideLogo: 'Save guide icon',
             guideLogoSaved: 'Guide icon saved.',
             alwaysOn: 'Always on air',
@@ -1560,6 +1564,14 @@ export default {
             },
         },
         onAir: {
+            permanentTitle: 'Always on air',
+            permanentHint: 'Click to hide or show the channel model. Edit its layers in Templates.',
+            permanentRequested:
+                'Requested visibility; clip marks and L-shape can suppress the logo on the actual output.',
+            statusUnavailable: 'Graphics status is unavailable.',
+            selectPreview: 'Select a model to preview its layers.',
+            temporaryOnAir: 'Temporary graphics on air',
+            noTemporary: 'No temporary graphics on air.',
             library: 'See templates',
             monitors: 'Monitors',
             preview: 'PREVIEW',

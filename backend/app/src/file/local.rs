@@ -21,7 +21,7 @@ use tokio::{
 use tokio_stream::StreamExt;
 
 use crate::file::{
-    MoveObject, PathObject, VideoFile, norm_abs_path,
+    MoveObject, PathObject, VideoFile, default_asset_path, norm_abs_path,
     upload::{
         UploadStatus, UploadStatusQuery, finalize_upload, get_or_create_upload, received_ranges,
         sanitize_upload_filename, validate_chunk, validate_upload_metadata, write_upload_chunk,
@@ -558,17 +558,8 @@ impl LocalStorage {
         let root = self.root.read().await.clone();
         if root.is_dir() {
             let target = root.join("00-assets");
-            // Installed with the image, from before the rename, or beside
-            // the binary when run from the source tree.
-            let asset = |name: &str| {
-                ["/usr/share/noar", "/usr/share/ffplayout", "./assets"]
-                    .iter()
-                    .map(|dir| Path::new(dir).join(name))
-                    .find(|path| path.is_file())
-                    .unwrap_or_else(|| Path::new("./assets").join(name))
-            };
-            let dummy_source = asset("dummy.vtt");
-            let logo_source = asset("logo.png");
+            let dummy_source = default_asset_path("dummy.vtt");
+            let logo_source = default_asset_path("logo.png");
 
             if !target.is_dir() {
                 let dummy_target = target.join("dummy.vtt");

@@ -40,6 +40,14 @@ releases without breaking existing operator workflows.
   (scheduled scenes), logo marks inside clips, and Graphics navigation with On air, Templates, XMLTV logo, Subtitles and External control.
   Bound logo/L-shape/ticker templates open Composer; scenes have an action editor.
 
+The current operator follow-up removes the legacy logo/L-shape and quick-scene
+panels from On air. Its saved-model Preview works with channel models alone;
+Program uses the Player's real preview component, including stopped/wait/error
+states. Logo/ticker requested visibility and channel L-shape entry/exit act on
+bindings. The Player now has the read-only status line described below.
+Scenes remain in the library. Clock and version 2.5 rundowns remain outside this
+follow-up. See the handoff screenshot gallery for executed browser evidence.
+
 ## Design decisions
 
 1. **Template = layers + fields.** A template is a list of layers (text,
@@ -54,9 +62,9 @@ releases without breaking existing operator workflows.
    tracks the user creates, renames and deletes; any template can go on any
    track. A channel can save its track set as the default for new clips.
 4. **Graphics during an L-shape.** Each placed graphic chooses what happens
-   when it overlaps an L-shape: *follow the picture* (default; drawn inside the
-   shrunk picture at the same scale), *wait until the L-shape ends*, or *skip*.
-   In the engine, *follow* means compositing that graphic onto the picture
+   when it overlaps an L-shape: _follow the picture_ (default; drawn inside the
+   shrunk picture at the same scale), _wait until the L-shape ends_, or _skip_.
+   In the engine, _follow_ means compositing that graphic onto the picture
    **before** the L-shape shrinks it, which changes today's order for those
    graphics only. The logo and ticker keep their current behaviour.
 5. **Graphics leave the Player view.** The Player shows a read-only status
@@ -68,13 +76,13 @@ releases without breaking existing operator workflows.
 
 ## Phases
 
-| Release | Scope |
-| --- | --- |
-| 2.3 | Templates and On air: template storage and API, engine renderer for text/image/box layers with fields and animation presets, operator rundown with take/out, migration of the current logo, L-shape and ticker settings into the new tab. |
-| 2.4 (UI implemented) | Composer: visual editor with drag, resize in % or px, proportional lock, layers list (rename, hide, delete, undo), image upload and animations. |
-| 2.5 | Rundowns: several rundowns per channel, guests list and CSV import for fields, duplicate, "when to use". |
-| 2.6 | Graphics inside clips and series: open tracks, in/out marks anchored to start, end of opening, middle or end, apply to a folder of episodes, L-shape overlap rule. |
-| 2.7 | Data and API: control API, webhooks, data sources (RSS, CSV, HTTP) for fields, command log and as-run entries. |
+| Release              | Scope                                                                                                                                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.3                  | Templates and On air: template storage and API, engine renderer for text/image/box layers with fields and animation presets, operator rundown with take/out, migration of the current logo, L-shape and ticker settings into the new tab. |
+| 2.4 (UI implemented) | Composer: visual editor with drag, resize in % or px, proportional lock, layers list (rename, hide, delete, undo), image upload and animations.                                                                                           |
+| 2.5                  | Rundowns: several rundowns per channel, guests list and CSV import for fields, duplicate, "when to use".                                                                                                                                  |
+| 2.6                  | Graphics inside clips and series: open tracks, in/out marks anchored to start, end of opening, middle or end, apply to a folder of episodes, L-shape overlap rule.                                                                        |
+| 2.7                  | Data and API: control API, webhooks, data sources (RSS, CSV, HTTP) for fields, command log and as-run entries.                                                                                                                            |
 
 ## Verification per phase
 

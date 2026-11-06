@@ -7,6 +7,8 @@ import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import { sendFileInChunks } from '@/composables/chunkedUpload'
 import { useAuth } from '@/stores/auth'
+import { randomId } from '@/composables/browser'
+import { storageImageUrl } from '@/composables/logo'
 import { AuthFetchError, authFetch } from '@/composables/authFetch'
 import {
     type GraphicsTemplate,
@@ -199,14 +201,15 @@ const scaleValue = computed(() =>
 function addLayer(kind: TemplateLayer['kind']) {
     if (
         draft.value.layers.length >= 64 ||
-        (kind === 'video' && draft.value.layers.some((layer) => layer.kind === 'video'))
+        (kind === 'video' &&
+            (draft.value.always_on != null || draft.value.layers.some((layer) => layer.kind === 'video')))
     ) {
         return
     }
 
     rememberDraft()
     const layer: TemplateLayer = {
-        id: crypto.randomUUID(),
+        id: randomId(),
         name: t('graphics.composer.kinds.' + kind),
         kind,
         visible: true,
@@ -523,6 +526,46 @@ async function uploadImage(event: Event) {
     }
 }
 
+/** Explicit repair for a previously saved full-frame logo; never rewrite an authored model automatically. */
+async function restoreLogoPlacement() {
+    const layer = selected.value
+
+    if (!layer?.image || busy.value) {
+        return
+    }
+
+    busy.value = true
+    error.value = ''
+
+    try {
+        const source = await storageImageUrl(configStore.channels[configStore.i], layer.image)
+        const image = new Image()
+        image.src = source
+        await image.decode()
+
+        if (selected.value?.id !== layer.id) {
+            return
+        }
+
+        const availableWidth = Math.max(2, frame.value.width - 24)
+        const availableHeight = Math.max(2, frame.value.height - 24)
+        const factor = Math.min(1, availableWidth / image.naturalWidth, availableHeight / image.naturalHeight)
+        const width = Math.max(2, Math.floor(image.naturalWidth * factor) & ~1)
+        const height = Math.max(2, Math.floor(image.naturalHeight * factor) & ~1)
+        updateSelectedLayer({
+            x: (Math.max(0, frame.value.width - width - 12) * 100) / frame.value.width,
+            y: (12 * 100) / frame.value.height,
+            width: (width * 100) / frame.value.width,
+            height: (height * 100) / frame.value.height,
+        })
+        scaleBases.set(layer.id, { width: layer.width, height: layer.height })
+    } catch (failure) {
+        error.value = failure instanceof Error ? failure.message : String(failure)
+    } finally {
+        busy.value = false
+    }
+}
+
 function pickImage(item: { path: string }) {
     if (!/\.(png|jpe?g|webp|gif)$/i.test(item.path)) {
         error.value = t('graphics.composer.imageOnly')
@@ -675,7 +718,15 @@ onBeforeUnmount(() => {
                         v-for="kind in ['image', 'text', 'box', 'video'] as const"
                         :key="kind"
                         class="btn-quiet text-left"
-                        :disabled="kind === 'video' && draft.layers.some((layer) => layer.kind === 'video')"
+                        :disabled="
+                            kind === 'video' &&
+                            (draft.always_on != null || draft.layers.some((layer) => layer.kind === 'video'))
+                        "
+                        :title="
+                            kind === 'video' && draft.always_on != null
+                                ? t('graphics.composer.videoModelOnly')
+                                : undefined
+                        "
                         @click="addLayer(kind)"
                     >
                         {{ t('graphics.composer.kinds.' + kind) }}
@@ -1061,6 +1112,20 @@ onBeforeUnmount(() => {
                         </label>
                     </template>
                     <template v-if="selected.kind === 'image'">
+                        <button
+                            v-if="draft.always_on != null && selected.id === draft.control_layer_id"
+                            class="btn-quiet"
+                            :disabled="busy || !selected.image"
+                            @click="restoreLogoPlacement"
+                        >
+                            {{ t('graphics.composer.restoreLogoPlacement') }}
+                        </button>
+                        <p
+                            v-if="draft.always_on != null && selected.id === draft.control_layer_id"
+                            class="m-0 text-xs text-muted"
+                        >
+                            {{ t('graphics.composer.restoreLogoPlacementHint') }}
+                        </p>
                         <label class="field-label"
                             >{{ t('graphics.composer.image')
                             }}<input
