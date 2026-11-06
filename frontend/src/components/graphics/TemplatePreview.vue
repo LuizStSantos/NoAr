@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useGraphicsFonts } from '@/composables/graphicsFonts'
 
 import { useGraphicsClock } from '@/composables/graphicsClock'
 import { storageImageUrl } from '@/composables/logo'
@@ -17,6 +19,8 @@ const props = defineProps<{
     time?: number
 }>()
 
+const { t } = useI18n()
+const { fontError } = useGraphicsFonts(() => props.template?.layers ?? [])
 const configStore = useConfig()
 const { clockValue } = useGraphicsClock()
 const images = ref<Record<string, string>>({})
@@ -113,6 +117,13 @@ function shapeSize(layer: TemplateLayer) {
 <template>
     <div class="relative w-full aspect-video overflow-hidden [container-type:size]">
         <slot />
+        <p
+            v-if="fontError"
+            role="status"
+            class="absolute z-20 top-1 left-1 right-1 m-0 bg-base-100/90 p-1 text-xs text-error"
+        >
+            {{ t('graphics.composer.fontUnavailable') }}
+        </p>
         <div
             v-for="layer in layers"
             :key="layer.id"

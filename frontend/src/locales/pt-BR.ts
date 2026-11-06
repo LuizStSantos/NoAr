@@ -1457,6 +1457,11 @@ export default {
             },
         },
         composer: {
+            uploadFont: 'Enviar fonte',
+            fontUploading: 'Enviando fonte…',
+            fontUnavailable: 'Fonte enviada indisponível; a prévia pode usar uma fonte alternativa.',
+            fontHint:
+                'TTF ou OTF, até 10 MiB. Fica salva com o canal; nomes iguais criam arquivos separados. Até 32 fontes, mantidas ao excluir modelos.',
             shape: 'Tipo de forma',
             shapes: {
                 rectangle: 'Retângulo',

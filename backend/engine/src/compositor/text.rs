@@ -106,6 +106,59 @@ fn renderer() -> &'static Mutex<TextRenderer> {
     TEXT_RENDERER.get_or_init(|| Mutex::new(TextRenderer::new()))
 }
 
+/// Validate one immutable OpenType/TrueType face before persisting an upload.
+pub(crate) fn uploaded_font_name(data: &[u8]) -> Result<String> {
+    if !matches!(data.get(..4), Some(b"OTTO" | b"\0\x01\0\0")) {
+        return Err(anyhow!("Upload a TrueType (.ttf) or OpenType (.otf) font"));
+    }
+
+    let mut database = cosmic_text::fontdb::Database::new();
+    database.load_font_data(data.to_vec());
+    let faces: Vec<_> = database.faces().collect();
+
+    if faces.len() != 1 {
+        return Err(anyhow!("The file must contain exactly one valid font face"));
+    }
+
+    faces[0]
+        .families
+        .first()
+        .map(|(name, _)| name.clone())
+        .context("The font has no family name")
+}
+
+/// Namespace faces by asset identity so identical filenames cannot replace a model's font.
+pub(crate) fn register_uploaded_font(family: &str, data: Vec<u8>) -> Result<()> {
+    uploaded_font_name(&data)?;
+    let mut renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+    let database = renderer.font_system.db_mut();
+
+    if database
+        .faces()
+        .any(|face| face.families.iter().any(|(name, _)| name == family))
+    {
+        return Ok(());
+    }
+
+    let ids = database.load_font_source(cosmic_text::fontdb::Source::Binary(std::sync::Arc::new(
+        data,
+    )));
+
+    for id in ids {
+        let mut face = database
+            .face(id)
+            .context("The validated font could not be registered")?
+            .clone();
+        database.remove_face(id);
+        face.families
+            .iter_mut()
+            .for_each(|(name, _)| *name = family.to_string());
+        database.push_face_info(face);
+    }
+
+    Ok(())
+}
+
 pub(crate) fn available_font_families() -> Vec<String> {
     let renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
     renderer
@@ -113,6 +166,7 @@ pub(crate) fn available_font_families() -> Vec<String> {
         .db()
         .faces()
         .filter_map(|face| face.families.first().map(|(family, _)| family.clone()))
+        .filter(|family| !family.starts_with("NoArFont_"))
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect()
@@ -932,6 +986,45 @@ mod cache_tests {
             "1000 changing overlays: {:?}, slowest render: {:?}",
             started.elapsed(),
             worst
+        );
+    }
+}
+
+#[cfg(test)]
+mod uploaded_font_tests {
+    use super::*;
+
+    #[test]
+    fn validated_upload_selects_its_exact_bytes_by_immutable_family() {
+        let data = std::fs::read(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests_assets/fonts/graphics.ttf"),
+        )
+        .unwrap();
+        assert!(uploaded_font_name(b"not a font").is_err());
+        assert!(uploaded_font_name(&data).unwrap().contains("NoAr"));
+        let alias = "NoArFont_stage3_verified";
+        register_uploaded_font(alias, data.clone()).unwrap();
+        register_uploaded_font(alias, data.clone()).unwrap();
+        let renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+        let database = renderer.font_system.db();
+        let families = [Family::Name(alias)];
+        let id = database
+            .query(&cosmic_text::fontdb::Query {
+                families: &families,
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(
+            database
+                .with_face_data(id, |selected, _| selected == data)
+                .unwrap()
+        );
+        assert_eq!(
+            database
+                .faces()
+                .filter(|face| face.families.iter().any(|(name, _)| name == alias))
+                .count(),
+            1
         );
     }
 }

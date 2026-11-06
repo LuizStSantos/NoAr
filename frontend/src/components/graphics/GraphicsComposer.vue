@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
+import { type GraphicsFont, loadGraphicsFont } from '@/composables/graphicsFonts'
 import { CLOCK_FORMATS } from '@/composables/graphicsClock'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
@@ -50,6 +51,8 @@ const savedId = ref<number>()
 const baseline = ref(JSON.stringify(draft.value))
 const history = ref<string[]>([])
 const fonts = ref<string[]>([])
+const uploadedFonts = ref<GraphicsFont[]>([])
+const fontUploading = ref(false)
 const groups = ref<string[]>([])
 const assignment = ref('')
 const originalAssignment = ref('')
@@ -86,6 +89,42 @@ let drag:
 const dirty = computed(
     () => JSON.stringify(draft.value) !== baseline.value || assignment.value !== originalAssignment.value,
 )
+
+async function uploadFont(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    const id = channelId.value
+    const layerId = selectedId.value
+    const version = loadVersion
+    input.value = ''
+
+    if (!file || !id) {
+        return
+    }
+
+    fontUploading.value = true
+    error.value = ''
+    try {
+        const asset = await authFetch<GraphicsFont>(
+            `/api/graphics/${id}/font-assets?filename=${encodeURIComponent(file.name)}`,
+            {
+                method: 'POST',
+                body: file,
+                headers: { 'Content-Type': 'application/octet-stream' },
+            },
+        )
+        await loadGraphicsFont(id, asset)
+        uploadedFonts.value.push(asset)
+
+        if (version === loadVersion && selectedId.value === layerId) {
+            updateSelectedLayer({ font_family: asset.family })
+        }
+    } catch (failure) {
+        error.value = String(failure)
+    } finally {
+        fontUploading.value = false
+    }
+}
 
 function rememberDraft() {
     history.value.push(JSON.stringify(draft.value))
@@ -401,12 +440,13 @@ async function loadEditor() {
             throw new Error(t('graphics.composer.notFound'))
         }
 
-        const [template, families, templates, assigned] = await Promise.all([
+        const [template, families, templates, assigned, assets] = await Promise.all([
             id === undefined ? undefined : graphicsApi.template(id),
             graphicsApi.fonts(),
             // Group suggestions must not block editing when the library is unavailable.
             graphicsApi.templates().catch(() => []),
             graphicsApi.channel(),
+            authFetch<GraphicsFont[]>(`/api/graphics/${channelId.value}/font-assets`),
         ])
 
         if (version !== loadVersion) {
@@ -430,6 +470,7 @@ async function loadEditor() {
                   control_layer_id: template.control_layer_id,
               }
             : { name: '', group: '', duration: 8, during_lshape: 'follow', layers: [], always_on: false }
+        uploadedFonts.value = assets
         fonts.value = families
         groups.value = [...new Set(templates.map((template) => template.group))].filter(Boolean)
         scaleBases.clear()
@@ -1122,9 +1163,35 @@ onBeforeUnmount(() => {
                                 "
                             >
                                 <option value="">{{ t('graphics.composer.defaultFont') }}</option>
+                                <option v-for="font in uploadedFonts" :key="font.id" :value="font.family">
+                                    {{ font.name }} — {{ font.filename }} ({{ font.id.slice(0, 6) }})
+                                </option>
+                                <option
+                                    v-if="
+                                        selected.font_family?.startsWith('NoArFont_') &&
+                                        !uploadedFonts.some((font) => font.family === selected?.font_family)
+                                    "
+                                    :value="selected.font_family"
+                                >
+                                    {{ t('graphics.composer.fontUnavailable') }}
+                                </option>
                                 <option v-for="font in fonts" :key="font" :value="font">{{ font }}</option>
                             </select></label
                         >
+                        <label class="btn-quiet cursor-pointer inline-flex items-center justify-center">
+                            {{
+                                fontUploading ? t('graphics.composer.fontUploading') : t('graphics.composer.uploadFont')
+                            }}
+                            <input
+                                type="file"
+                                accept=".ttf,.otf"
+                                class="sr-only"
+                                :aria-label="t('graphics.composer.uploadFont')"
+                                :disabled="fontUploading"
+                                @change="uploadFont"
+                            />
+                        </label>
+                        <p class="text-xs text-muted m-0">{{ t('graphics.composer.fontHint') }}</p>
                         <label class="field-label"
                             >{{ t('graphics.composer.fontSize') }} (%)<input
                                 class="field-input"

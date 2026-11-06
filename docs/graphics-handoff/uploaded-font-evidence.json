@@ -1,0 +1,104 @@
+{
+    "status": "PASS",
+    "stage": "open-templates-3-fonts",
+    "branch": "claude/branch-review-opz967",
+    "migration": "00032_graphics_fonts.sql",
+    "gstreamer": "1.26.2",
+    "rust": {
+        "passed": 699,
+        "ignored": 14,
+        "fmt": "PASS",
+        "clippy_no_default_deny_warnings": "PASS"
+    },
+    "playwright": {
+        "passed": 29,
+        "failed": 0,
+        "fresh_data_directory": true
+    },
+    "browser": {
+        "status": "PASS",
+        "template_id": 17,
+        "font": {
+            "id": "3133ab52-2f70-4202-8ac4-c45c3c468154",
+            "name": "NoArReviewSerif",
+            "filename": "graphics.ttf",
+            "family": "NoArFont_3133ab522f7042028ac4c45c3c468154",
+            "size": 40700
+        },
+        "loaded_browser_face": true,
+        "page_errors": [],
+        "captures": [
+            "composer-uploaded-font-pt-BR.jpg",
+            "composer-clock-font-pt-BR.jpg",
+            "composer-font-phone-pt-BR.jpg",
+            "uploaded-font-onair-pt-BR.jpg"
+        ]
+    },
+    "hls": [
+        {
+            "status": "PASS",
+            "capture": "output-uploaded-font-before-restart.jpg",
+            "font": {
+                "id": "3133ab52-2f70-4202-8ac4-c45c3c468154",
+                "name": "NoArReviewSerif",
+                "filename": "graphics.ttf",
+                "family": "NoArFont_3133ab522f7042028ac4c45c3c468154",
+                "size": 40700
+            },
+            "text_white_pixels": 511,
+            "health": {
+                "status": "ok",
+                "version": "2.2.1",
+                "channels": [
+                    {
+                        "id": 1,
+                        "state": "on_air",
+                        "uptime": 51,
+                        "output_age": 0.1
+                    }
+                ]
+            },
+            "segment_sha256": "d7c3b7a7e3cd4a92b0621c78138eb01f5d6fefbd74c06a3e46611fcd83bbe276"
+        },
+        {
+            "status": "PASS",
+            "capture": "output-uploaded-font-after-restart.jpg",
+            "font": {
+                "id": "3133ab52-2f70-4202-8ac4-c45c3c468154",
+                "name": "NoArReviewSerif",
+                "filename": "graphics.ttf",
+                "family": "NoArFont_3133ab522f7042028ac4c45c3c468154",
+                "size": 40700
+            },
+            "text_white_pixels": 511,
+            "health": {
+                "status": "ok",
+                "version": "2.2.1",
+                "channels": [
+                    {
+                        "id": 1,
+                        "state": "on_air",
+                        "uptime": 25,
+                        "output_age": 0.3
+                    }
+                ]
+            },
+            "segment_sha256": "c996548c182f8796ead364587a2e6dbd1700fa53493a665cd42bbcb661409763",
+            "text_roi_mean_absolute_error": 0.0,
+            "text_roi_max_absolute_error": 0.0
+        }
+    ],
+    "restarted_log_errors": 0,
+    "backend_sha256": "953bcaeb2afa56355f6299c671765ef6615b0617bb38061b4c98c01253ba6d5b",
+    "limits": [
+        "No font deletion endpoint; template deletion preserves uploaded assets and quota usage.",
+        "The fixture contains Latin-1; missing glyphs still use normal fallback.",
+        "Historical 76-response and complete 2.2.1 raw/HLS parity not repeated in this stage.",
+        "No physical/desktop output or long soak test."
+    ],
+    "test_harness_corrections": [
+        "Use semantic combobox lookup for select labels with uploaded options.",
+        "Wait for the saved template route before reload.",
+        "Repeat the full suite in a fresh directory, including playlist files, not only a new database."
+    ]
+}

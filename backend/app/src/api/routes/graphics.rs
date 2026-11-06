@@ -133,6 +133,7 @@ pub async fn add_graphics_template(
     let _edit = manager.graphics_takes.begin_edit().await;
     let storage = manager.config.read().await.channel.storage.clone();
     let mut template = prepare_template(&storage, id, 0, input)?;
+    crate::utils::graphics::fonts::validate(&state.pool, &template).await?;
 
     validate_permanent_template(&manager, &template).await?;
 
@@ -157,6 +158,7 @@ pub async fn update_graphics_template(
     let _edit = manager.graphics_takes.begin_edit().await;
     let storage = manager.config.read().await.channel.storage.clone();
     let template = prepare_template(&storage, id, template_id, input)?;
+    crate::utils::graphics::fonts::validate(&state.pool, &template).await?;
 
     if let Some(binding) = handles::select_graphics_bindings(&state.pool, id)
         .await?
@@ -585,5 +587,61 @@ pub async fn graphics_clock(
 
     Ok(Json(
         serde_json::json!({"unix_ms":chrono::Utc::now().timestamp_millis(),"timezone":timezone.map(|zone|zone.to_string()),"offset_seconds":offset}),
+    ))
+}
+
+/// Uploaded faces available to the authorized channel, without raw font bytes.
+pub async fn get_graphics_font_assets(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<Vec<crate::db::models::GraphicsFont>>, ServiceError> {
+    authorized(&state, id, &user, &details, false).await?;
+
+    Ok(Json(handles::select_graphics_fonts(&state.pool, id).await?))
+}
+
+#[derive(Deserialize)]
+pub struct FontUploadQuery {
+    filename: String,
+}
+
+pub async fn upload_graphics_font(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    axum::extract::Query(query): axum::extract::Query<FontUploadQuery>,
+    body: axum::body::Bytes,
+) -> Result<Json<crate::db::models::GraphicsFont>, ServiceError> {
+    authorized(&state, id, &user, &details, true).await?;
+
+    Ok(Json(
+        crate::utils::graphics::fonts::upload(&state.pool, id, &query.filename, body.to_vec())
+            .await?,
+    ))
+}
+
+pub async fn download_graphics_font(
+    State(state): State<AppState>,
+    Path((id, font_id)): Path<(i32, String)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<impl axum::response::IntoResponse, ServiceError> {
+    authorized(&state, id, &user, &details, false).await?;
+    let data = handles::select_graphics_font_data(&state.pool, id, &font_id)
+        .await?
+        .ok_or_else(|| ServiceError::NotFound("Font not found".to_string()))?;
+
+    Ok((
+        [
+            (axum::http::header::CONTENT_TYPE, "application/octet-stream"),
+            (
+                axum::http::header::CACHE_CONTROL,
+                "private, max-age=31536000, immutable",
+            ),
+        ],
+        data,
     ))
 }

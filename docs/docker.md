@@ -325,3 +325,13 @@ location / {
     proxy_buffering off;
 }
 ```
+
+### Uploaded graphics fonts
+
+Composer's **Upload font** stores validated TTF/OTF bytes with channel metadata
+in SQLite (migration 00032), and registers them again when the backend starts.
+Back up/restore the database to retain those assets. Do not install them into a
+running container or expect uploaded fonts to appear as Storage files. Duplicate
+filenames create independent immutable assets. A channel accepts up to 32 fonts,
+10 MiB each; deleting templates preserves them, and this stage does not provide
+a font deletion command. Use fonts whose license permits your intended usage.

@@ -210,6 +210,7 @@ impl ChannelManager {
             loudness_config(&config.audio),
         );
         let preview = PreviewFeed::bind(channel.id, shutdown.clone()).await?;
+        crate::utils::graphics::fonts::load(&db_pool, channel.id).await?;
         let graphics_control = noar_engine::GraphicsControl::default();
 
         Ok(Self {

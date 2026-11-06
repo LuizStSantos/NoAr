@@ -14,6 +14,9 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+#[path = "graphics/fonts/graphics.rs"]
+pub mod fonts;
+
 use crate::{
     db::models::GraphicsTemplate,
     file::norm_abs_path,

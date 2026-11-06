@@ -99,6 +99,14 @@ pub use utils::{
     },
 };
 
+pub fn uploaded_font_name(data: &[u8]) -> anyhow::Result<String> {
+    compositor::text::uploaded_font_name(data)
+}
+
+pub fn register_uploaded_font(family: &str, data: Vec<u8>) -> anyhow::Result<()> {
+    compositor::text::register_uploaded_font(family, data)
+}
+
 pub fn available_font_families() -> Vec<String> {
     compositor::text::available_font_families()
 }

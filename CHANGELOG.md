@@ -20,6 +20,9 @@ one is tagged.
 
 ### Added
 
+- Upload immutable channel fonts from Composer for text/clock layers; the browser
+  and server use the same bytes, persisted in SQLite and restored on restart.
+
 - Add Composer shape outlines, rounded rectangles, ellipses and lines, plus live
   server-time clock layers with channel or explicit timezone and date formats.
 

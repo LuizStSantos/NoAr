@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Run with run_staging.py for disposable authenticated tests.')
@@ -851,4 +852,65 @@ test('Composer authors shape primitives and a live server-time clock', async ({ 
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
     await page.setViewportSize({ width: 390, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('Composer uploads immutable fonts used by text and live clock previews', async ({ page }) => {
+    await page.goto('/graphics/composer?channel=1')
+    await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await page
+        .getByRole('group', { name: 'Layer type', exact: true })
+        .getByRole('button', { name: 'Text', exact: true })
+        .click()
+    await page.getByLabel('Text', { exact: true }).fill('NoAr typography 123')
+    await page.getByLabel('Text', { exact: true }).press('Tab')
+    const file = resolve(__dirname, '../../../tests_assets/fonts/graphics.ttf')
+    const upload = page.waitForResponse(
+        (r) => r.url().includes('/font-assets?filename=') && r.request().method() === 'POST',
+    )
+    await page.getByLabel('Upload font', { exact: true }).setInputFiles(file)
+    const response = await upload
+    expect(response.ok()).toBeTruthy()
+    const selector = page.getByRole('combobox', { name: 'Font', exact: true })
+    await expect(selector).toHaveValue(/^NoArFont_/)
+    const family = await selector.inputValue()
+    const font = (await api(page, '/api/graphics/1/font-assets')).find(
+        (asset: { family: string }) => asset.family === family,
+    )
+    await expect(page.getByRole('combobox', { name: 'Font', exact: true })).toHaveValue(font.family)
+    await expect
+        .poll(() =>
+            page.evaluate(
+                (family) =>
+                    Array.from(document.fonts).some((face) => face.family === family && face.status === 'loaded'),
+                font.family,
+            ),
+        )
+        .toBe(true)
+    await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await page
+        .getByRole('group', { name: 'Layer type', exact: true })
+        .getByRole('button', { name: 'Clock', exact: true })
+        .click()
+    await page.getByRole('combobox', { name: 'Font', exact: true }).selectOption(font.family)
+    const name = `Uploaded typeface ${Date.now()}`
+    await page.getByLabel('Template name', { exact: true }).fill(name)
+    await page.getByRole('button', { name: 'Save template', exact: true }).click()
+    const saving = page.waitForResponse(
+        (r) => r.url().endsWith('/api/graphics/1/templates') && r.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    const template = await (await saving).json()
+    expect(template.layers.every((layer: { font_family: string }) => layer.font_family === font.family)).toBe(true)
+    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await page.reload()
+    await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
+    await expect
+        .poll(() =>
+            page.evaluate(
+                (family) =>
+                    Array.from(document.fonts).some((face) => face.family === family && face.status === 'loaded'),
+                font.family,
+            ),
+        )
+        .toBe(true)
 })

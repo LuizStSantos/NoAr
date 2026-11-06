@@ -1007,6 +1007,40 @@ pub async fn assign_graphics_template(
     Ok(())
 }
 
+pub async fn select_graphics_fonts(
+    pool: &SqlitePool,
+    channel_id: i32,
+) -> Result<Vec<crate::db::models::GraphicsFont>, ProcessError> {
+    Ok(sqlx::query_as("SELECT id, name, filename, family, size FROM graphics_fonts WHERE channel_id = $1 ORDER BY name, id")
+        .bind(channel_id).fetch_all(pool).await?)
+}
+
+pub async fn select_graphics_font_data(
+    pool: &SqlitePool,
+    channel_id: i32,
+    id: &str,
+) -> Result<Option<Vec<u8>>, ProcessError> {
+    Ok(
+        sqlx::query_scalar("SELECT data FROM graphics_fonts WHERE channel_id = $1 AND id = $2")
+            .bind(channel_id)
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
+    )
+}
+
+pub async fn insert_graphics_font(
+    pool: &SqlitePool,
+    channel_id: i32,
+    font: &crate::db::models::GraphicsFont,
+    data: &[u8],
+) -> Result<(), ProcessError> {
+    sqlx::query("INSERT INTO graphics_fonts (id, channel_id, name, filename, family, size, data) VALUES ($1,$2,$3,$4,$5,$6,$7)")
+        .bind(&font.id).bind(channel_id).bind(&font.name).bind(&font.filename).bind(&font.family).bind(font.size).bind(data).execute(pool).await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};

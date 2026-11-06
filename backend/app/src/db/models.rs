@@ -9,6 +9,16 @@ use crate::{
     utils::config::{OutputMode, PlayoutConfig},
 };
 
+/// Uploaded font identity; bytes are read separately by authorized callers.
+#[derive(Clone, Debug, Serialize, sqlx::FromRow)]
+pub struct GraphicsFont {
+    pub id: String,
+    pub name: String,
+    pub filename: String,
+    pub family: String,
+    pub size: i64,
+}
+
 #[derive(Clone, Default, Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct GlobalSettings {
     pub id: i32,

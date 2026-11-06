@@ -4,6 +4,44 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Open templates: stage 3 — uploaded fonts
+
+Composer now offers **Upload font** beside text/clock font selection. Validated
+single-face TTF/OTF uploads (10 MiB each, 32 per channel) receive immutable UUID
+families; duplicate filenames never replace an existing model's font. Migration
+`00032_graphics_fonts.sql` stores bytes and metadata in SQLite, included in normal
+database backup/restore. The engine restores channel faces at startup; browser
+FontFace loads the same bytes. No manual installation inside Docker is needed.
+Unknown/other-channel aliases cannot be saved; unavailable browser faces show a
+warning. Missing glyphs may still use ordinary font fallback. Deleting templates
+preserves fonts; there is no font deletion endpoint in this stage.
+
+Verification: GStreamer 1.26.2, fmt, exact no-default Clippy, backend build and
+**699 Rust tests passed, 14 ignored**. Vue types, full ESLint, Prettier, QA types
+and production build passed. **29 Playwright tests passed** in a fresh data
+directory. Font tests cover malformed bytes, duplicate filenames, channel
+ownership, immutable storage and exact engine face-byte selection. Control
+tests now install real migrations rather than a handwritten partial schema.
+The browser regression uses semantic select lookup and waits for the saved route
+before reload; a separate fixture rerun corrected reuse of old playlist files.
+
+Actual pt-BR desktop/phone authoring used an uploaded family absent from system
+fonts for text and a clock, saved/reloaded both and decoded advancing Program.
+Actual HLS text and uploaded-font clock survived a full backend restart; the
+static text region matched with the recorded compression-aware metrics. Capture
+health was OK and the restarted log has zero ERROR entries.
+[Evidence](uploaded-font-evidence.json). Full historical legacy/parity, physical
+outputs and soak checks have not been repeated in this stage. Data sources are
+the remaining approved implementation stage.
+
+| Part | Capture |
+| --- | --- |
+| Upload/select a font for text | [Composer](composer-uploaded-font-pt-BR.jpg) |
+| Same uploaded family in a clock | [Composer](composer-clock-font-pt-BR.jpg) |
+| Phone | [Composer](composer-font-phone-pt-BR.jpg) |
+| Actual Program | [On air](uploaded-font-onair-pt-BR.jpg) |
+| Persisted uploaded font in HLS | [Before restart](output-uploaded-font-before-restart.jpg), [after restart](output-uploaded-font-after-restart.jpg) |
+
 ## Open templates: stage 2 — shapes and live clock
 
 Composer now provides rectangle, rounded rectangle, ellipse/circle and line
@@ -985,8 +1023,8 @@ desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. Finish the approved [open-templates revision](open-templates-plan.md): font upload, then RSS/CSV/Sheets/JSON data sources. Stages 1–2
-   (templates/first-run defaults, shapes and clock) are complete above.
+1. Finish the approved [open-templates revision](open-templates-plan.md): RSS/CSV/Sheets/JSON data sources. Stages 1–3
+   (templates/first-run defaults, shapes/clock and uploaded fonts) are complete above.
 2. Repeat relevant compatibility/raw/HLS and browser evidence after renderer and
    live-data changes. Desktop audio stability, physical outputs and long-soak
    verification remain explicit limitations.

@@ -680,3 +680,34 @@ signal. Render errors retain the last frame and emit a throttled channel warning
 that clock may be stale until rendering recovers. The browser initially shows
 `—` without a server sample and retains its last time reference on read failure.
 Stopping playout stops its background refresh; starting it renders current time.
+
+### Uploaded graphics fonts
+
+- `GET /api/graphics/{id}/font-assets`: channel-owned metadata (`id`, `name`,
+  `filename`, `family`, `size` in bytes); GA/CA/U on that channel.
+- `POST /api/graphics/{id}/font-assets?filename=Review.ttf`: raw font bytes,
+  `Content-Type: application/octet-stream`; GA/CA. Returns that metadata.
+- `GET /api/graphics/{id}/font-assets/{font_id}`: authorized raw bytes,
+  `application/octet-stream`, immutable private cache; GA/CA/U on that channel.
+
+Accepted uploads are single-face TTF/OTF files up to 10 MiB; malformed/unsupported
+fonts return 400, oversized request bodies 413. The maximum is 32 uploads per
+channel (preflight 409, database limit also protects concurrent writers). Reads
+retain standard 401/403/channel-not-found behavior and unknown assets return 404.
+
+Migration `00032_graphics_fonts.sql` stores immutable font bytes and metadata in
+SQLite. Normal database backup/restore includes them; no Docker image rebuild,
+manual container installation or Storage file is required. The display name
+comes from the font, while `family` is a unique internal `NoArFont_*` alias used
+in text/clock `font_family`. Every upload, including identical bytes/filenames,
+gets a new identity and counts toward the limit. It never replaces an older
+composition's font. There is no font deletion endpoint in this stage; deleting
+a template preserves its fonts and does not free that quota.
+
+The engine registers these faces on startup and the browser loads the exact
+same bytes for preview. Missing glyphs can still use the usual system fallback;
+this is distinct from an unavailable uploaded face, which the preview reports.
+A template cannot save an unknown/other-channel uploaded alias. The existing
+`GET /api/graphics/{id}/fonts` continues returning installed system families;
+it excludes uploaded aliases so another channel's private identities do not
+appear there. Uploaded assets are listed through `font-assets`.

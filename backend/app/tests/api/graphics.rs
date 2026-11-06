@@ -823,3 +823,113 @@ async fn clock_layers_and_shape_styles_validate_and_do_not_create_default_models
         StatusCode::BAD_REQUEST
     );
 }
+
+#[tokio::test]
+#[serial]
+async fn uploaded_fonts_are_immutable_channel_assets_and_validate_template_ownership() {
+    let fixture = security_fixture().await;
+    let user = access_token(&fixture.state, 1).await;
+    let admin = access_token(&fixture.state, 2).await;
+    let bytes = std::fs::read(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/fonts/graphics.ttf"),
+    )
+    .unwrap();
+
+    async fn upload(
+        fixture: &SecurityFixture,
+        token: &str,
+        bytes: Vec<u8>,
+    ) -> (StatusCode, serde_json::Value) {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/api/graphics/1/font-assets?filename=Review.ttf")
+            .header("Authorization", format!("Bearer {token}"))
+            .header("Content-Type", "application/octet-stream")
+            .body(Body::from(bytes))
+            .unwrap();
+        let response = fixture.app.clone().oneshot(request).await.unwrap();
+        let status = response.status();
+        let body = to_bytes(response.into_body(), 1 << 20).await.unwrap();
+
+        (status, serde_json::from_slice(&body).unwrap())
+    }
+
+    assert_eq!(
+        upload(&fixture, &user, bytes.clone()).await.0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        upload(&fixture, &admin, b"not a font".to_vec()).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    let (status, first) = upload(&fixture, &admin, bytes.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{first}");
+    let (status, second) = upload(&fixture, &admin, bytes.clone()).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_ne!(first["id"], second["id"]);
+    assert_ne!(first["family"], second["family"]);
+    assert_eq!(first["filename"], second["filename"]);
+    assert!(first.get("data").is_none());
+    let id = first["id"].as_str().unwrap();
+    assert_eq!(
+        handles::select_graphics_font_data(&fixture.state.pool, 1, id)
+            .await
+            .unwrap(),
+        Some(bytes.clone())
+    );
+    assert!(
+        handles::select_graphics_font_data(&fixture.state.pool, 2, id)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    noar::utils::graphics::fonts::load(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    assert_eq!(
+        handles::select_graphics_font_data(&fixture.state.pool, 1, id)
+            .await
+            .unwrap(),
+        Some(bytes)
+    );
+    let mut template = lower_third("Custom typeface");
+    template["layers"][1]["font_family"] = json!("NoArFont_other_channel");
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            template.clone()
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    template["layers"][1]["font_family"] = first["family"].clone();
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            template
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "GET",
+            &format!("/api/graphics/2/font-assets/{id}"),
+            Some(&user),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+}

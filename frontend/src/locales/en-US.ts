@@ -1453,6 +1453,11 @@ export default {
             },
         },
         composer: {
+            uploadFont: 'Upload font',
+            fontUploading: 'Uploading font…',
+            fontUnavailable: 'Uploaded font unavailable; preview may use a fallback.',
+            fontHint:
+                'TTF or OTF, up to 10 MiB. Stored with the channel; identical file names create separate assets. Up to 32 fonts, preserved when templates are deleted.',
             shape: 'Shape type',
             shapes: { rectangle: 'Rectangle', rounded: 'Rounded rectangle', ellipse: 'Ellipse / circle', line: 'Line' },
             stroke: 'Stroke colour',
@@ -1460,8 +1465,7 @@ export default {
             clockFormat: 'Clock format',
             clockTimezone: 'Clock timezone',
             channelTimezone: 'Use the channel timezone',
-            clockHint:
-                'Uses server time independently of video time. Leave the timezone empty to follow the channel.',
+            clockHint: 'Uses server time independently of video time. Leave the timezone empty to follow the channel.',
             permanentLimit:
                 'The channel supports up to 16 Always-on templates. Turn that option off on another template first.',
             controlImage: 'Image controlled by the API',
