@@ -1,0 +1,119 @@
+{
+  "status": "PASS",
+  "renderer": "desktop-cpu under Xvfb; clocked PulseAudio null sink",
+  "captures": [
+    {
+      "stage": "canonical",
+      "rgb": [
+        163.0,
+        125.0,
+        49.0
+      ],
+      "expected": [
+        166,
+        128,
+        51
+      ],
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 124,
+            "output_age": 0.3
+          }
+        ]
+      }
+    },
+    {
+      "stage": "hidden",
+      "rgb": [
+        78.0,
+        78.0,
+        78.0
+      ],
+      "expected": [
+        80,
+        80,
+        80
+      ],
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 126,
+            "output_age": 0.1
+          }
+        ]
+      }
+    },
+    {
+      "stage": "replacement",
+      "rgb": [
+        51.0,
+        110.0,
+        181.0
+      ],
+      "expected": [
+        52,
+        113,
+        184
+      ],
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 129,
+            "output_age": 0.5
+          }
+        ]
+      }
+    },
+    {
+      "stage": "restored",
+      "rgb": [
+        163.0,
+        125.0,
+        49.0
+      ],
+      "expected": [
+        166,
+        128,
+        51
+      ],
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 132,
+            "output_age": 0.3
+          }
+        ]
+      }
+    }
+  ],
+  "scope": "Visual commands and sampled single-logo pixels only; not desktop audio or soak readiness",
+  "observed_runtime_limitations": [
+    "Virtual PulseAudio/ALSA underrun/overrun warnings",
+    "ALSA snd_pcm_avail_delay I/O error (5)",
+    "A subsequent clip boundary logged -11.942 seconds out of sync"
+  ],
+  "not_tested": [
+    "desktop-gpu",
+    "physical display/audio",
+    "recording output",
+    "A/V sync",
+    "window resize"
+  ]
+}

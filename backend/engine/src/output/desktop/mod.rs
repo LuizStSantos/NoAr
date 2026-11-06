@@ -604,19 +604,19 @@ impl FrameOutput for DesktopFrameSender {
 
     fn apply_logo_overlay(
         &mut self,
-        _frame: &mut VideoFrame,
+        frame: &mut VideoFrame,
         logo: &LogoOverlay,
         opacity_factor: f64,
     ) {
-        self.current_logo_opacity = opacity_factor;
-
-        if self.recording_sender.is_some() && self.recording_logo.is_none() {
-            self.recording_logo = Some(Arc::new(logo.clone()));
-        }
+        // Use the same model/clip/remote composition as encoded output. A
+        // separate startup bitmap loses replacements and can draw a second logo.
+        blend_logo(frame, logo, opacity_factor);
+        self.current_logo_opacity = 0.0;
+        self.recording_logo = None;
     }
 
     fn benchmarks_logo_overlay(&self) -> bool {
-        false
+        true
     }
 
     fn encode_audio(&mut self, frame: &AudioFrame) -> Result<()> {

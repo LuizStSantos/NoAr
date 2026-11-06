@@ -184,13 +184,82 @@ The agreed stages, each with its own commit, tests, captures and handoff:
 - **b — completed:** normal 00029 migration, automatic all-channel conversion,
   redirected legacy page writes, real HLS, playout/backend restarts and rollback
   using the automatic backup with the exact released 2.2.1 image. Evidence below.
-- **c — pending:** complete compatibility coverage for clip logo/L-shape
+- **c — completed:** compatibility coverage for clip logo/L-shape
   marks, graphics events and scene reversal, keyed and authenticated routes,
   external replacement/placement and transitions, desktop output and XMLTV.
 - **d — pending:** aligned before/after HLS frame comparisons in logo and
   L-shape regions, including transitions, health and channel logs.
 - **e — pending:** only after migration and compatibility validation, remove
   Logo, L-shape and Quick scenes from the menu.
+
+## Stage c — shared compatibility state and output proof
+
+The legacy authenticated and keyed controls, quick scenes, scheduled action
+snapshots and clip marks use the converted model handles. The comparison with
+the official 2.2.1 binary passed **76 exact HTTP status/body cases**, including
+replacement/placement state, malformed requests and authentication. Both XMLTV
+cases passed: an explicit guide icon and the canonical-logo fallback, isolated
+from transient on-air replacements.
+
+Fixed desktop output's stale startup-logo dependency: it now composites the
+active model/clip/external logo into the frame, with no second static plane.
+Artwork replacements and image-only clip overrides preserve the model's free
+picture window; explicit legacy corner/scale and existing SDK methods retain
+their geometry. Each new playlist clip reads current model settings while
+keeping the dimensions of the running output. Channel L-shape controls return
+409 if configured artwork cannot actually be loaded.
+
+Verification: `cargo fmt --all`, the required no-default/all-target Clippy
+command and full no-default test suite passed with GStreamer 1.26.2 and Rust
+1.99.1: **681 passed, zero failed, 14 ignored**. The desktop-cpu build and its
+all-target Clippy check passed; **33 desktop tests passed**. Actual desktop
+window captures verified show/hide, replacement, placement and restoration.
+Frontend source did not change in this stage; pt-BR, phone and four browser
+regressions were verified in the preceding library fix (`aa720c87`).
+
+Eleven frames from fresh completed HLS `.ts` segments passed decoded-pixel
+checks and healthy on-air samples. The logo's single-blend opacity was checked;
+clip image/position and external priority work, marked gaps suppress the logo,
+clip L-shape geometry works, and clearing marks restores the canonical model.
+The actual future scheduled event used its saved `GraphicsScene` actions even
+after editing the named scene, then reversed at its end. Frozen legacy logo,
+L-shape and scene columns stayed byte-for-byte unchanged during the runner.
+
+| Proof | Capture |
+| --- | --- |
+| Canonical logo, one blend | [Channel logo](output-compat-c-canonical-logo.jpg) |
+| Clip image and position | [Clip logo](output-compat-c-clip-logo.jpg) |
+| External image/move takes priority | [External logo](output-compat-c-external-logo.jpg) |
+| Restore clip image/position | [Clip restored](output-compat-c-clip-logo-restored.jpg) |
+| Marked logo gap | [Logo hidden](output-compat-c-clip-logo-hidden.jpg) |
+| Clip L-shape at bottom-left/60% | [Clip artwork/window](output-compat-c-clip-lshape.jpg) |
+| Marks removed | [Channel restored](output-compat-c-clip-cleared.jpg) |
+| External art preserves free window | [Replacement art](output-compat-c-free-window-replacement.jpg) |
+| Clip art inherits free window | [Clip art](output-compat-c-free-window-clip.jpg) |
+| Scheduled action snapshot on air | [Event active](output-compat-c-scheduled-scene.jpg) |
+| Scheduled action reverses at end | [Event ended](output-compat-c-scheduled-reverted.jpg) |
+| Desktop before this fix | [Missing logo](output-compat-c-desktop-before.jpg) |
+| Desktop fixed, configured logo | [Single logo](output-compat-c-desktop-canonical.jpg) |
+| Desktop hide | [Hidden](output-compat-c-desktop-hidden.jpg) |
+| Desktop replacement and move | [Replacement](output-compat-c-desktop-replacement.jpg) |
+| Desktop restore | [Restored](output-compat-c-desktop-restored.jpg) |
+
+[Complete matrix](compat-c-matrix.md), [HTTP evidence](compat-c-api-evidence.json),
+[HLS hashes/pixels/health](compat-c-output-evidence.json),
+[desktop evidence and limitations](compat-c-desktop-evidence.json), and
+[retained staging runners](../../qa/graphics/README.md).
+
+A final backend restart with file logging enabled returned healthy on-air
+output. The nonempty `noar_1.log` contained zero errors; the fresh HLS frame
+is [here](output-compat-c-restarted.jpg), with [restart/log evidence](compat-c-restart-evidence.json).
+
+The desktop virtual PulseAudio/ALSA device later logged underrun/overrun
+warnings, an I/O error and a clip-boundary sync error; the visual checks do
+not establish desktop audio stability. Desktop GPU, physical outputs,
+recording, window resizing, A/V sync and a long soak were not tested. Logo
+cut/fade/crossfade transitions passed engine regressions; aligned integration
+comparison of transition frames remains **stage d**. **Stage e** menu removal
+has not begun. Clock support remains excluded.
 
 Only logo and ticker are always on in this delivery. Clock support is out
 of scope. L-shape remains a manual picture-window graphic. Full-frame logo
@@ -348,8 +417,9 @@ schema remained at 00027 with no graphics binding table.
 | Legacy Logo page before/after saving | [Before](migration-b-legacy-logo-before.jpg), [Saved](migration-b-legacy-logo-saved.jpg) |
 | Converted models in the library | [Models](migration-b-converted-models.jpg) |
 
-Full compatibility coverage, desktop output and aligned frame-by-frame parity
-remain stages c/d. No menu has been removed; clock support remains out of scope.
+At the end of stage b, compatibility coverage and desktop output remained for
+stage c, now recorded above. Aligned frame-by-frame parity remains stage d.
+No menu has been removed; clock support remains out of scope.
 
 ## Library correction before stage c
 
@@ -388,16 +458,17 @@ Captures: [initial empty ticker](library-channel-empty-pt-BR.jpg),
 [phone scenes](library-channel-phone-scenes-pt-BR.jpg).
 [Machine-readable evidence](library-channel-evidence.json).
 
-Stage c remains separate: full legacy-route, scheduled-event, clip-mark,
-replacement/placement, transition, native desktop and XMLTV coverage.
+The subsequent stage c coverage is recorded above, including legacy routes,
+scheduled events, clip marks, replacement/placement, engine transitions,
+desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. **Complete stages c/d for logo and L-shape models**: the conversion and
-   compatibility-page writes are installed. Still verify the complete clip,
-   event, keyed/authenticated-route, remote-state, transition, desktop and
-   XMLTV matrix, then aligned before/after HLS frame comparisons. Clock remains
-   outside this delivery.
+1. **Complete stage d for logo and L-shape models**: conversion, compatibility
+   pages, library controls and the stage-c matrix are installed and verified
+   within their documented scope. Still perform aligned before/after HLS
+   frame comparisons, including transitions. Desktop audio stability and
+   untested outputs remain explicit limitations. Clock remains outside this delivery.
 2. **Remove** Logo, L-shape and Quick scenes from the Graphics menu once 1 is
    in.
 3. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics

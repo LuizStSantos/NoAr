@@ -11,6 +11,13 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- Desktop output composes the active model, clip or externally replaced logo
+  into the video frame, matching encoded output instead of using a stale
+  startup bitmap. L-shape artwork replacements and image-only clip overrides
+  preserve the assigned model's freely positioned picture window.
+
 ### Added
 
 - Assigned channel graphics and scenes have separate library cards, localized

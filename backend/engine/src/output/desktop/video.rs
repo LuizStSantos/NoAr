@@ -158,7 +158,7 @@ impl DesktopFrameConverter {
                 .chunks_exact_mut(width as usize)
                 .zip(self.converted.data(0).chunks_exact(stride))
             {
-                for (target, source) in target_row.iter_mut().zip(source_row.chunks_exact(4)) {
+                for (target, source) in target_row.iter_mut().zip(source_row.as_chunks::<4>().0) {
                     *target = bgrz_to_rgb_pixel([source[0], source[1], source[2], source[3]]);
                 }
             }

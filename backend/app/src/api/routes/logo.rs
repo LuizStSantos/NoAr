@@ -459,7 +459,7 @@ async fn swap_lshape(manager: &ChannelManager, graphic: &str) -> Result<(), Serv
     let (width, height) = (config.output.width, config.output.height);
     let label = relative.clone();
 
-    tokio::task::spawn_blocking(move || control.replace(&label, &lshape, width, height))
+    tokio::task::spawn_blocking(move || control.replace_model_art(&label, &lshape, width, height))
         .await
         .map_err(|_| ServiceError::InternalServerError)?
         .map_err(|error| {

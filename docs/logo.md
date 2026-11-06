@@ -122,7 +122,14 @@ commercial still keeps any logo off. The API is described in
 
 ## L-shape
 
-In an L-shape the programme picture shrinks into a corner of the screen and a
+After graphics conversion, channel artwork and its picture window come from
+the assigned L-shape model. Replacing only the artwork keeps that window,
+including a freely positioned Composer window. External corner/scale moves
+remain temporary overrides; resetting the position restores the model's
+window. A clip with only an artwork override inherits the model window;
+explicit clip corner/scale settings keep their legacy geometry.
+
+In an L-shape the programme picture shrinks into its configured window and a
 full-screen graphic fills the band around it, with news, a sponsor or what is
 on next, over the picture of clips, lives and ingest alike; texts stay on
 top. Going in, the logo goes off first (0.4 s) and then the picture shrinks

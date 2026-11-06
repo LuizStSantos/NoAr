@@ -326,6 +326,13 @@ or a server restart.
 
 The logo goes off while the picture is in the L-shape and comes back after.
 
+After conversion, replacing only the artwork preserves the assigned model's
+picture window, including a freely placed window. An explicit `move` still
+uses the legacy corner/scale contract; `position=default` restores the model's
+window. A clip artwork override without `lshape_corner` or `lshape_scale`
+inherits that window too. Explicit clip geometry retains its own corner/scale.
+Each new playlist clip resolves the current models at the running output size.
+
 ### Quick scenes
 
 A scene is a named set of logo and L-shape changes applied in one go.
@@ -375,7 +382,7 @@ scrolling text or a clock.
 | Method | Endpoint | Access | Request body |
 | --- | --- | --- | --- |
 | `GET` | `/api/graphics/{id}/channel` | `GA, CA, U` | Assigned models with `kind` (logo/ticker/lshape/scene), `template` (saved preview), requested `on`, content-availability `ready`, and nullable `scene_name`. |
-| `POST` | `/api/graphics/{id}/channel/{template_id}` | `GA, CA, U` | `{ "on": true/false }` controls the assigned model on this channel; returns the refreshed list above. 404 for an unassigned/other-channel model; 409 when content must first be configured. For scenes, `on:true` applies the action; `on:false` is 400. |
+| `POST` | `/api/graphics/{id}/channel/{template_id}` | `GA, CA, U` | `{ "on": true/false }` controls the assigned model on this channel; returns the refreshed list above. 404 for an unassigned/other-channel model; 409 when content must first be configured or L-shape artwork cannot be loaded. For scenes, `on:true` applies the action; `on:false` is 400. |
 | `GET` | `/api/graphics/{id}/fonts` | `GA, CA, U` | Available font family names for text layers. |
 | `GET` | `/api/graphics/{id}/templates` | `GA, CA, U` | Every template of the channel, sorted by group and name. |
 | `GET` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA, U` | One template; 404 when the channel has no such template. |

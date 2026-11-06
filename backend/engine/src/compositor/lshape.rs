@@ -323,9 +323,37 @@ impl LShapeControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
-        let graphic = LShapeGraphic::load(config, width, height)?;
+        self.replace_graphic(label, config, width, height, false)
+    }
+
+    /// Replace channel artwork while keeping the assigned model's picture
+    /// window. Legacy corner/scale requests still apply through `place`.
+    pub fn replace_model_art(
+        &self,
+        label: &str,
+        config: &LShapeConfig,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.replace_graphic(label, config, width, height, true)
+    }
+
+    fn replace_graphic(
+        &self,
+        label: &str,
+        config: &LShapeConfig,
+        width: u32,
+        height: u32,
+        inherit_window: bool,
+    ) -> Result<()> {
+        let mut graphic = LShapeGraphic::load(config, width, height)?;
         let mut state = self.lock();
         let placement = state.placement;
+
+        if inherit_window && let Some(model) = &state.graphic {
+            graphic.home = model.home;
+            graphic.window = model.home;
+        }
 
         state.replacement = Some((label.to_string(), Arc::new(graphic.placed(placement))));
 
@@ -376,21 +404,60 @@ impl LShapeControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
+        self.set_clip_graphic_with_window(config, width, height, false)
+    }
+
+    /// Clip image-only overrides inherit the assigned model's free window.
+    pub fn set_clip_model_art(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.set_clip_graphic_with_window(config, width, height, true)
+    }
+
+    fn set_clip_graphic_with_window(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+        inherit_window: bool,
+    ) -> Result<()> {
         let Some(config) = config else {
             self.lock().clip = None;
             return Ok(());
         };
 
-        if self
-            .lock()
-            .clip
-            .as_ref()
-            .is_some_and(|(loaded, _)| loaded == config)
-        {
+        let state = self.lock();
+        let home = state.graphic.as_ref().map(|model| model.home);
+        let expected_home = if inherit_window && home.is_some() {
+            home
+        } else if width >= 2 && height >= 2 {
+            Some(window(config, width, height))
+        } else {
+            None
+        };
+        let cached = state.clip.as_ref().is_some_and(|(loaded, graphic)| {
+            loaded == config
+                && expected_home == Some(graphic.home)
+                && graphic.background.width() == width
+                && graphic.background.height() == height
+        });
+        drop(state);
+
+        if cached {
             return Ok(());
         }
 
-        let graphic = LShapeGraphic::load(config, width, height);
+        let graphic = LShapeGraphic::load(config, width, height).map(|mut graphic| {
+            if inherit_window && let Some(home) = home {
+                graphic.home = home;
+                graphic.window = home;
+            }
+
+            graphic
+        });
         let mut state = self.lock();
 
         match graphic {
@@ -617,6 +684,77 @@ mod tests {
                 height: 180
             }
         );
+    }
+
+    #[test]
+    fn model_art_replacement_and_clip_art_inherit_free_windows_without_changing_sdk_placement() {
+        let control = LShapeControl::default();
+        let spec = crate::GraphicSpec {
+            layers: Vec::new(),
+            picture: Some(crate::PictureWindow {
+                x: 10.0,
+                y: 10.0,
+                width: 70.0,
+                height: 50.0,
+            }),
+        };
+        control.set_template(&spec, 640, 360).unwrap();
+        let config = LShapeConfig {
+            path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests_assets/storage/logo.png")
+                .to_string_lossy()
+                .to_string(),
+            scale: 70.0,
+            corner: LShapeCorner::TopRight,
+        };
+        let free = Rect {
+            x: 64,
+            y: 36,
+            width: 448,
+            height: 180,
+        };
+        control
+            .replace_model_art("replacement", &config, 640, 360)
+            .unwrap();
+        assert_eq!(control.frame(0.0).unwrap().0.window, free);
+        assert!(
+            !control.is_on(),
+            "loading artwork does not enter the L-shape"
+        );
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::BottomLeft,
+                scale: Some(60.0),
+            }))
+            .unwrap();
+        assert_eq!(
+            control.frame(0.0).unwrap().0.window,
+            Rect {
+                x: 0,
+                y: 144,
+                width: 384,
+                height: 216
+            }
+        );
+        control.place(None).unwrap();
+        assert_eq!(control.frame(0.0).unwrap().0.window, free);
+        control.reset();
+        control.set_clip_model_art(Some(&config), 640, 360).unwrap();
+        assert_eq!(control.frame(1.0).unwrap().0.window, free);
+        control.set_clip_graphic(Some(&config), 640, 360).unwrap();
+        assert_eq!(
+            control.frame(1.0).unwrap().0.window,
+            Rect {
+                x: 192,
+                y: 0,
+                width: 448,
+                height: 252
+            }
+        );
+        control.set_clip_model_art(Some(&config), 640, 360).unwrap();
+        assert_eq!(control.frame(1.0).unwrap().0.window, free);
+        control.set_clip_model_art(None, 640, 360).unwrap();
+        assert_eq!(control.frame(1.0).unwrap().0.window, free);
     }
 
     fn graphic(corner: LShapeCorner) -> LShapeGraphic {

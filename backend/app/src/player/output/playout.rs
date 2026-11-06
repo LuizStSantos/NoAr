@@ -199,8 +199,13 @@ async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: 
         .flatten();
     let control = playout.lshape_control();
 
+    let inherit_window = marks.lshape_corner.is_none() && marks.lshape_scale.is_none();
     let loaded = tokio::task::spawn_blocking(move || {
-        control.set_clip_graphic(graphic.as_ref(), width, height)
+        if inherit_window {
+            control.set_clip_model_art(graphic.as_ref(), width, height)
+        } else {
+            control.set_clip_graphic(graphic.as_ref(), width, height)
+        }
     })
     .await;
 
@@ -484,7 +489,12 @@ async fn play_loop(
         };
         let logo_gaps = marks.gaps();
         let lshape = marks.lshape_spans();
-        set_clip_lshape(playout, config, &marks).await;
+        // Graphics settings can change without restarting the output. Resolve
+        // clip defaults from the current models, at the dimensions already on air.
+        let mut graphics_config = manager.config.read().await.clone();
+        graphics_config.output.width = config.output.width;
+        graphics_config.output.height = config.output.height;
+        set_clip_lshape(playout, &graphics_config, &marks).await;
         let mut breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
         // Breaks marked inside the video itself, when it is not a commercial.
         if !node.ad {

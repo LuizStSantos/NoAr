@@ -213,6 +213,12 @@ pub async fn control_channel_graphic(
                     crate::player::output::load_lshape(manager, &config).await;
                 }
 
+                if on && !manager.lshape_control.is_ready() {
+                    return Err(ServiceError::Conflict(
+                        "The L-shape artwork cannot be loaded".to_string(),
+                    ));
+                }
+
                 if on {
                     manager.lshape_control.on();
                 } else {
