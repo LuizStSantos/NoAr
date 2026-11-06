@@ -1445,6 +1445,7 @@ export default {
             tickerText: 'Ticker text',
             saveTicker: 'Save ticker',
             hint: {
+                permanent: 'Always-on template.',
                 logo: 'Permanent channel logo.',
                 ticker: 'Permanent text over the program.',
                 lshape: 'Channel artwork and picture window.',
@@ -1452,6 +1453,12 @@ export default {
             },
         },
         composer: {
+            permanentLimit:
+                'The channel supports up to 16 Always-on templates. Turn that option off on another template first.',
+            controlImage: 'Image controlled by the API',
+            firstImage: 'First image in the template',
+            assignment: 'Control assignment (optional)',
+            noAssignment: 'None — free template',
             videoModelOnly: 'Use the channel L-shape model or a temporary template for a video window.',
             restoreLogoPlacement: 'Restore image size and top-right position',
             restoreLogoPlacementHint:
@@ -1595,6 +1602,13 @@ export default {
                 'Rundowns (several, with items in order and guests) come in version 2.5. For now, pick the template here.',
         },
         library: {
+            snapshotRetained: 'scheduled action retained',
+            delete: 'Delete template',
+            deleteTitle: 'Delete this template?',
+            deleteConfirm: '“{name}” will be deleted. Restarting will not recreate it.',
+            deleteUsed:
+                'This template is assigned or on air ({count} temporary instances). Deleting also removes it from air and detaches its assignments. Scheduled events retain their saved actions.',
+            deleteAssets: 'Storage images and fonts will be preserved.',
             new: 'New template',
             filter: 'Filter by group',
             all: 'All',

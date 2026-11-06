@@ -129,10 +129,16 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
         };
 
         let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
-        let binding = bindings
+        let Some(binding) = bindings
             .iter()
             .find(|binding| binding.role == GraphicsRole::Lshape)
-            .ok_or_else(|| ServiceError::Conflict("Missing channel L-shape binding".to_string()))?;
+        else {
+            manager
+                .lshape_control
+                .set_graphic(None, 0, 0)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            return Ok(());
+        };
         let template =
             handles::select_graphics_template(&manager.db_pool, manager.id, binding.template_id)
                 .await?

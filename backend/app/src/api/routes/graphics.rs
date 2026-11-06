@@ -133,14 +133,11 @@ pub async fn add_graphics_template(
     let storage = manager.config.read().await.channel.storage.clone();
     let mut template = prepare_template(&storage, id, 0, input)?;
 
-    if template.always_on.is_some() {
-        return Err(ServiceError::BadRequest(
-            "Always on is configured on the channel logo or ticker model".to_string(),
-        ));
-    }
+    validate_permanent_template(&manager, &template).await?;
 
     ensure_unique_name(&state, &template).await?;
     template.id = handles::insert_graphics_template(&state.pool, &template).await?;
+    crate::utils::graphics::load_permanent_templates(&manager).await?;
 
     Ok(Json(template))
 }
@@ -196,6 +193,7 @@ pub async fn update_graphics_template(
         })?;
     }
 
+    validate_permanent_template(&manager, &template).await?;
     ensure_unique_name(&state, &template).await?;
 
     if !handles::update_graphics_template(&state.pool, &template).await? {
@@ -228,17 +226,21 @@ pub async fn delete_graphics_template(
     user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<Json<&'static str>, ServiceError> {
-    authorized(&state, id, &user, &details, true).await?;
-
-    if handles::graphics_template_is_bound(&state.pool, id, template_id).await? {
-        return Err(ServiceError::Conflict(
-            "This template is bound to channel graphics and cannot be deleted".to_string(),
-        ));
-    }
+    let manager = authorized(&state, id, &user, &details, true).await?;
+    let active = crate::utils::graphics::graphics_on_air(&manager);
 
     if !handles::delete_graphics_template(&state.pool, id, template_id).await? {
         return Err(template_not_found(template_id));
     }
+
+    for take in active
+        .into_iter()
+        .filter(|take| take.template_id == template_id)
+    {
+        manager.graphics_control.take_out(take.take_id);
+    }
+
+    reload_graphics(&manager).await?;
 
     Ok(Json("removed"))
 }
@@ -289,7 +291,9 @@ pub async fn take_graphic(
         .await?
         .ok_or_else(|| template_not_found(request.template_id))?;
 
-    if handles::graphics_template_is_bound(&state.pool, id, request.template_id).await? {
+    if template.always_on == Some(true)
+        || handles::graphics_template_is_bound(&state.pool, id, request.template_id).await?
+    {
         return Err(ServiceError::Conflict(
             "Use the channel logo, L-shape or quick-scene controls for this assigned model"
                 .to_string(),
@@ -392,4 +396,168 @@ pub async fn control_channel_graphics(
     Ok(Json(
         crate::utils::graphics::channel_graphics(&manager).await?,
     ))
+}
+
+async fn validate_permanent_template(
+    manager: &ChannelManager,
+    template: &GraphicsTemplate,
+) -> Result<(), ServiceError> {
+    if template.always_on != Some(true) {
+        return Ok(());
+    }
+
+    if template
+        .layers
+        .iter()
+        .any(|layer| layer.kind == crate::utils::graphics::LayerKind::Video)
+    {
+        return Err(ServiceError::BadRequest(
+            "A permanent template cannot contain a video window".to_string(),
+        ));
+    }
+
+    let existing = handles::select_graphics_templates(&manager.db_pool, manager.id).await?;
+
+    if existing
+        .iter()
+        .filter(|other| other.id != template.id && other.always_on == Some(true))
+        .count()
+        >= noar_engine::MAX_GRAPHICS_ON_AIR
+    {
+        return Err(ServiceError::Conflict(
+            "At most 16 permanent templates per channel".to_string(),
+        ));
+    }
+
+    let config = manager.config.read().await.clone();
+    let spec =
+        crate::utils::graphics::graphic_spec(template, &HashMap::new(), &config.channel.storage)?;
+    tokio::task::spawn_blocking(move || {
+        noar_engine::render_graphic(&spec, config.output.width, config.output.height)
+    })
+    .await
+    .map_err(|_| ServiceError::InternalServerError)?
+    .map_err(|error| {
+        ServiceError::BadRequest(format!("Permanent template cannot be rendered: {error:#}"))
+    })?;
+
+    Ok(())
+}
+
+async fn reload_graphics(manager: &ChannelManager) -> Result<(), ServiceError> {
+    let config = crate::utils::config::get_config(&manager.db_pool, manager.id).await?;
+    let running = manager.running_config();
+    let (width, height) = running
+        .as_deref()
+        .map_or((config.output.width, config.output.height), |running| {
+            (running.output.width, running.output.height)
+        });
+    crate::player::output::load_logo(manager, &config, width, height);
+    crate::player::output::load_lshape(manager, &config).await;
+    manager.update_config(config).await;
+    crate::utils::graphics::load_channel_ticker(manager).await
+}
+
+#[derive(Deserialize)]
+pub struct GraphicsAssignmentRequest {
+    pub role: Option<crate::db::models::GraphicsRole>,
+    pub control_layer_id: Option<String>,
+}
+
+/// Assign an optional compatibility control independently of names and groups.
+pub async fn assign_graphics_template(
+    State(state): State<AppState>,
+    Path((id, template_id)): Path<(i32, i32)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<GraphicsAssignmentRequest>,
+) -> Result<Json<GraphicsTemplate>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, true).await?;
+    let template = handles::select_graphics_template(&state.pool, id, template_id)
+        .await?
+        .ok_or_else(|| template_not_found(template_id))?;
+    let video = template
+        .layers
+        .iter()
+        .any(|layer| layer.visible && layer.kind == crate::utils::graphics::LayerKind::Video);
+
+    if let Some(role) = request.role
+        && ((role == crate::db::models::GraphicsRole::Lshape) != video
+            || !template.fields.is_empty())
+    {
+        return Err(ServiceError::BadRequest("The assigned model requires literal content and only L-shape can contain a video window".to_string()));
+    }
+
+    if let Some(target) = &request.control_layer_id
+        && !template.layers.iter().any(|layer| {
+            layer.id == *target && layer.kind == crate::utils::graphics::LayerKind::Image
+        })
+    {
+        return Err(ServiceError::BadRequest(
+            "The control target must be an image layer in this template".to_string(),
+        ));
+    }
+
+    handles::assign_graphics_template(
+        &state.pool,
+        id,
+        template_id,
+        request.role,
+        request.control_layer_id.as_deref(),
+    )
+    .await?;
+    reload_graphics(&manager).await?;
+
+    Ok(Json(
+        handles::select_graphics_template(&state.pool, id, template_id)
+            .await?
+            .ok_or_else(|| template_not_found(template_id))?,
+    ))
+}
+
+/// Show live use and retained scheduled action snapshots before deletion.
+pub async fn graphics_template_usage(
+    State(state): State<AppState>,
+    Path((id, template_id)): Path<(i32, i32)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+) -> Result<Json<serde_json::Value>, ServiceError> {
+    let manager = authorized(&state, id, &user, &details, false).await?;
+    let template = handles::select_graphics_template(&state.pool, id, template_id)
+        .await?
+        .ok_or_else(|| template_not_found(template_id))?;
+    let views = crate::utils::graphics::channel_graphics(&manager).await?;
+    let assigned = views.iter().find(|view| view.template.id == template_id);
+    let events = handles::select_graphics_events(&state.pool, id).await?;
+    let events: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            assigned.is_some_and(|view| match view.kind.as_str() {
+                "logo" => {
+                    event.actions.logo != crate::utils::config::SceneLogo::Keep
+                        || event.actions.logo_position.is_some()
+                }
+                "lshape" => {
+                    event.actions.lshape != crate::utils::config::SceneLShape::Keep
+                        || event.actions.lshape_graphic.is_some()
+                }
+                "scene" => event.actions.name == view.scene_name.as_deref().unwrap_or_default(),
+                _ => false,
+            })
+        })
+        .map(|event| serde_json::json!({"id":event.id,"title":event.title,"enabled":event.enabled}))
+        .collect();
+    let active = crate::utils::graphics::graphics_on_air(&manager)
+        .iter()
+        .filter(|take| take.template_id == template_id)
+        .count();
+
+    Ok(Json(serde_json::json!({
+        "assignment":assigned.map(|view|&view.kind),
+        "on":assigned.is_some_and(|view|view.on),
+        "always_on":template.always_on==Some(true),
+        "temporary_instances":active,
+        "events":events,
+        "scheduled_actions_are_snapshots":true
+    })))
 }

@@ -2,12 +2,14 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import GenericModal from '@/components/utils/GenericModal.vue'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
 import { AuthFetchError } from '@/composables/authFetch'
 import {
     type ChannelGraphic,
     type GraphicOnAir,
     type GraphicsTemplate,
+    type TemplateUsage,
     fieldList,
     useGraphicsApi,
 } from '@/composables/graphicsTemplates'
@@ -31,58 +33,86 @@ const busy = ref<number | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 let stateVersion = 0
 
-const assignedIds = computed(() => new Set(channelModels.value.map((view) => view.template.id)))
-const ordinary = computed(() => templates.value.filter((template) => !assignedIds.value.has(template.id)))
-const groups = computed(() => [
-    { key: '@channel', name: t('graphics.assigned.group') },
-    { key: '@scenes', name: t('graphics.assigned.scenes') },
-    ...[...new Set(ordinary.value.map((template) => template.group))]
-        .filter(Boolean)
-        .map((name) => ({ key: `custom:${name}`, name })),
-])
-
-const sections = computed(() =>
-    [
-        {
-            key: '@channel',
-            name: t('graphics.assigned.group'),
-            cards: channelModels.value
-                .filter((view) => view.kind !== 'scene')
-                .map((view) => ({ template: view.template, assigned: view })),
-        },
-        {
-            key: '@scenes',
-            name: t('graphics.assigned.scenes'),
-            cards: channelModels.value
-                .filter((view) => view.kind === 'scene')
-                .map((view) => ({ template: view.template, assigned: view })),
-        },
-        {
-            key: '@ordinary',
-            name: t('graphics.sections.templates'),
-            cards: ordinary.value
-                .filter((template) => group.value === null || group.value === `custom:${template.group}`)
-                .map((template) => ({ template, assigned: undefined as ChannelGraphic | undefined })),
-        },
-    ].filter(
-        (section) =>
-            (section.cards.length || section.key === '@scenes') &&
-            (group.value === null ||
-                group.value === section.key ||
-                (group.value.startsWith('custom:') && section.key === '@ordinary')),
-    ),
+const groups = computed(() =>
+    [...new Set(templates.value.map((template) => template.group))].map((name) => ({
+        key: name,
+        name: name || t('graphics.templates.noGroup'),
+    })),
 )
+const sections = computed(() =>
+    groups.value
+        .filter((item) => group.value === null || group.value === item.key)
+        .map((item) => ({
+            ...item,
+            cards: templates.value
+                .filter((template) => template.group === item.key)
+                .map((template) => ({
+                    template,
+                    assigned: channelModels.value.find((model) => model.template.id === template.id),
+                })),
+        })),
+)
+const deleting = ref<GraphicsTemplate | null>(null)
+const deleteUsage = ref<TemplateUsage | null>(null)
+
+async function openDeletion(template: GraphicsTemplate) {
+    if (busy.value !== null) {
+        return
+    }
+
+    const requestedChannel = channelId.value
+    busy.value = template.id
+
+    try {
+        const usage = await graphicsApi.usage(template.id)
+
+        if (requestedChannel === channelId.value) {
+            deleteUsage.value = usage
+            deleting.value = template
+        }
+    } catch (error) {
+        reportError(error)
+    } finally {
+        busy.value = null
+    }
+}
+
+function confirmDeletion(confirmed: boolean) {
+    if (busy.value !== null) {
+        return
+    }
+
+    if (confirmed) {
+        void deleteTemplate()
+    } else {
+        deleting.value = null
+    }
+}
+
+async function deleteTemplate() {
+    if (!deleting.value || busy.value !== null) {
+        return
+    }
+
+    busy.value = deleting.value.id
+
+    try {
+        await graphicsApi.remove(deleting.value.id)
+        deleting.value = null
+        await loadLibrary()
+    } catch (error) {
+        reportError(error)
+    } finally {
+        busy.value = null
+    }
+}
 
 function sample(template: GraphicsTemplate): Record<string, string> {
     return Object.fromEntries(template.fields.map((field) => [field, `[${field}]`]))
 }
 
 function title(template: GraphicsTemplate, assigned?: ChannelGraphic): string {
-    return assigned
-        ? assigned.kind === 'scene'
-            ? assigned.scene_name!
-            : t(`graphics.assigned.${assigned.kind}`)
-        : template.name
+    return assigned?.kind === 'scene' ? assigned.scene_name! : template.name
 }
 
 function editTarget(template: GraphicsTemplate, assigned?: ChannelGraphic) {
@@ -127,10 +157,6 @@ async function loadLibrary() {
 }
 
 function replaceChannelModels(views: ChannelGraphic[]) {
-    const previous = assignedIds.value
-    const current = new Set(views.map((view) => view.template.id))
-    // A deleted scene must disappear, rather than reappearing as an ordinary GC.
-    templates.value = templates.value.filter((model) => !previous.has(model.id) || current.has(model.id))
     channelModels.value = views
 }
 
@@ -208,6 +234,38 @@ watch(channelId, () => {
             {{ item.name }}
         </button>
     </div>
+    <GenericModal
+        :show="Boolean(deleting)"
+        :title="t('graphics.library.deleteTitle')"
+        :ok-label="t('graphics.library.delete')"
+        :danger="true"
+        :ok-disabled="busy !== null"
+        :modal-action="confirmDeletion"
+    >
+        <p>{{ t('graphics.library.deleteConfirm', { name: deleting?.name }) }}</p>
+        <p
+            v-if="deleteUsage?.assignment || deleteUsage?.on || deleteUsage?.temporary_instances"
+            class="text-sm text-muted"
+        >
+            {{ t('graphics.library.deleteUsed', { count: deleteUsage.temporary_instances }) }}
+        </p>
+        <p v-if="deleteUsage?.always_on" class="text-sm">
+            {{ t('graphics.composer.alwaysOn') }} ·
+            {{ t(deleteUsage.on ? 'graphics.assigned.on' : 'graphics.assigned.off') }}
+        </p>
+        <ul v-if="deleteUsage?.events.length" class="text-sm text-muted">
+            <li v-for="event in deleteUsage.events" :key="event.id">
+                {{ event.title }} · {{ t('graphics.library.snapshotRetained') }}
+            </li>
+        </ul>
+        <p class="text-xs text-muted">{{ t('graphics.library.deleteAssets') }}</p>
+    </GenericModal>
+    <RouterLink
+        v-if="isAdmin"
+        :to="{ name: 'graphics-channel-editor', params: { kind: 'scene' }, query: { channel: channelId } }"
+        class="link-accent text-sm"
+        >{{ t('graphics.assigned.editScenes') }}</RouterLink
+    >
     <p v-if="loaded && !templates.length" class="m-0 text-muted">{{ t('graphics.templates.none') }}</p>
     <section v-for="section in sections" :key="section.key" :aria-label="section.name" class="flex flex-col gap-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -275,6 +333,13 @@ watch(channelId, () => {
                         t(`graphics.assigned.hint.${card.assigned.kind}`)
                     }}</span>
                     <div class="flex flex-wrap gap-2 mt-auto pt-2">
+                        <button
+                            v-if="isAdmin"
+                            class="btn-quiet min-h-9 text-error"
+                            @click="openDeletion(card.template)"
+                        >
+                            {{ t('graphics.library.delete') }}
+                        </button>
                         <RouterLink
                             v-if="isAdmin"
                             :to="editTarget(card.template, card.assigned)"
@@ -283,7 +348,7 @@ watch(channelId, () => {
                             {{ t('graphics.composer.edit') }}
                         </RouterLink>
                         <label
-                            v-if="card.assigned && ['logo', 'ticker'].includes(card.assigned.kind)"
+                            v-if="card.assigned && ['logo', 'ticker', 'permanent'].includes(card.assigned.kind)"
                             class="inline-flex items-center gap-2 min-h-9 px-2 text-sm cursor-pointer"
                         >
                             <input

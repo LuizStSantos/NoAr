@@ -39,7 +39,7 @@ pub async fn select_graphics_templates(
 ) -> Result<Vec<GraphicsTemplate>, ProcessError> {
     Ok(sqlx::query_as(
         "SELECT id, channel_id, name, group_name, duration, during_lshape, layers,
-         (SELECT enabled FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id AND b.role IN ('logo','ticker')) AS always_on,
+         COALESCE((SELECT enabled FROM graphics_channel_bindings b WHERE b.template_id=graphics_templates.id AND b.channel_id=graphics_templates.channel_id AND b.role IN ('logo','ticker')),permanent) AS always_on,
          (SELECT control_layer_id FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id) AS control_layer_id
          FROM graphics_templates WHERE channel_id = $1
          ORDER BY group_name COLLATE NOCASE, name COLLATE NOCASE, id",
@@ -56,7 +56,7 @@ pub async fn select_graphics_template(
 ) -> Result<Option<GraphicsTemplate>, ProcessError> {
     Ok(sqlx::query_as(
         "SELECT id, channel_id, name, group_name, duration, during_lshape, layers,
-         (SELECT enabled FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id AND b.role IN ('logo','ticker')) AS always_on,
+         COALESCE((SELECT enabled FROM graphics_channel_bindings b WHERE b.template_id=graphics_templates.id AND b.channel_id=graphics_templates.channel_id AND b.role IN ('logo','ticker')),permanent) AS always_on,
          (SELECT control_layer_id FROM graphics_channel_bindings b WHERE b.template_id = graphics_templates.id AND b.channel_id = graphics_templates.channel_id) AS control_layer_id
          FROM graphics_templates WHERE channel_id = $1 AND id = $2",
     )
@@ -91,8 +91,8 @@ pub async fn insert_graphics_template(
 ) -> Result<i32, ProcessError> {
     Ok(sqlx::query_scalar(
         "INSERT INTO graphics_templates (channel_id, name, group_name, duration, during_lshape,
-            layers)
-         VALUES ($1, $2, $3, $4, $5, $6)
+            layers, permanent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id",
     )
     .bind(template.channel_id)
@@ -101,6 +101,7 @@ pub async fn insert_graphics_template(
     .bind(template.duration)
     .bind(template.during_lshape.as_str())
     .bind(layers_json(template)?)
+    .bind(template.always_on)
     .fetch_one(pool)
     .await?)
 }
@@ -120,12 +121,6 @@ pub async fn update_graphics_template(
     .await?;
 
     if let Some(always_on) = template.always_on {
-        if !matches!(role.as_deref(), Some("logo" | "ticker")) {
-            return Err(ProcessError::Custom(
-                "Always on requires a channel logo or ticker binding".to_string(),
-            ));
-        }
-
         sqlx::query("UPDATE graphics_channel_bindings SET enabled = $3 WHERE channel_id = $1 AND template_id = $2")
             .bind(template.channel_id).bind(template.id).bind(always_on)
             .execute(&mut *transaction).await?;
@@ -158,7 +153,7 @@ pub async fn update_graphics_template(
 
     let result = sqlx::query(
         "UPDATE graphics_templates SET name = $3, group_name = $4, duration = $5,
-            during_lshape = $6, layers = $7, updated_at = CURRENT_TIMESTAMP
+            during_lshape = $6, layers = $7, permanent = COALESCE($8, permanent), updated_at = CURRENT_TIMESTAMP
          WHERE channel_id = $1 AND id = $2",
     )
     .bind(template.channel_id)
@@ -168,6 +163,7 @@ pub async fn update_graphics_template(
     .bind(template.duration)
     .bind(template.during_lshape.as_str())
     .bind(layers_json(template)?)
+    .bind(template.always_on)
     .execute(&mut *transaction)
     .await?;
 
@@ -181,11 +177,25 @@ pub async fn delete_graphics_template(
     channel_id: i32,
     template_id: i32,
 ) -> Result<bool, ProcessError> {
+    let mut transaction = pool.begin().await?;
+
+    for query in [
+        "DELETE FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2",
+        "DELETE FROM graphics_scene_bindings WHERE channel_id=$1 AND template_id=$2",
+    ] {
+        sqlx::query(query)
+            .bind(channel_id)
+            .bind(template_id)
+            .execute(&mut *transaction)
+            .await?;
+    }
+
     let result = sqlx::query("DELETE FROM graphics_templates WHERE channel_id = $1 AND id = $2")
         .bind(channel_id)
         .bind(template_id)
-        .execute(pool)
+        .execute(&mut *transaction)
         .await?;
+    transaction.commit().await?;
 
     Ok(result.rows_affected() > 0)
 }
@@ -221,6 +231,7 @@ pub async fn save_graphics_binding(
     pool: &SqlitePool,
     binding: &GraphicsChannelBinding,
 ) -> Result<bool, ProcessError> {
+    let mut transaction = pool.begin().await?;
     let result = sqlx::query(
         "INSERT INTO graphics_channel_bindings (channel_id, role, template_id, enabled)
          SELECT $1, $2, id, $4 FROM graphics_templates WHERE channel_id = $1 AND id = $3
@@ -231,8 +242,21 @@ pub async fn save_graphics_binding(
     .bind(binding.role.as_str())
     .bind(binding.template_id)
     .bind(binding.enabled)
-    .execute(pool)
+    .execute(&mut *transaction)
     .await?;
+
+    if result.rows_affected() > 0
+        && matches!(binding.role, GraphicsRole::Logo | GraphicsRole::Ticker)
+    {
+        sqlx::query("UPDATE graphics_templates SET permanent=$3 WHERE channel_id=$1 AND id=$2")
+            .bind(binding.channel_id)
+            .bind(binding.template_id)
+            .bind(binding.enabled)
+            .execute(&mut *transaction)
+            .await?;
+    }
+
+    transaction.commit().await?;
 
     Ok(result.rows_affected() > 0)
 }
@@ -275,20 +299,15 @@ pub async fn convert_channel_graphics_on(
 ) -> Result<(), ProcessError> {
     use sqlx::Row;
 
-    let count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM graphics_channel_bindings WHERE channel_id = $1")
-            .bind(channel)
-            .fetch_one(&mut *connection)
-            .await?;
+    let imported: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM graphics_channel_state WHERE channel_id=$1)",
+    )
+    .bind(channel)
+    .fetch_one(&mut *connection)
+    .await?;
 
-    if count == 3 {
+    if imported {
         return upgrade_channel_layers_on(connection, channel).await;
-    }
-
-    if count != 0 {
-        return Err(ProcessError::Custom(format!(
-            "Incomplete graphics bindings for channel {channel}"
-        )));
     }
 
     // This is the only reader of the frozen columns, and only for an unconverted channel.
@@ -358,7 +377,44 @@ pub async fn convert_channel_graphics_on(
             .execute(&mut *connection).await?;
     }
 
-    upgrade_channel_layers_on(connection, channel).await
+    upgrade_channel_layers_on(connection, channel).await?;
+    sqlx::query("UPDATE graphics_templates SET permanent=(SELECT enabled FROM graphics_channel_bindings b WHERE b.template_id=graphics_templates.id AND b.role IN ('logo','ticker')) WHERE channel_id=$1")
+        .bind(channel).execute(&mut *connection).await?;
+    sqlx::query("INSERT INTO graphics_channel_state(channel_id) VALUES($1)")
+        .bind(channel)
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+/// A new channel starts with one removable logo example, not empty role cards.
+pub async fn initialize_channel_graphics_on(
+    connection: &mut sqlx::SqliteConnection,
+    channel: i32,
+) -> Result<(), ProcessError> {
+    convert_channel_graphics_on(connection, channel).await?;
+    let unused: Vec<i32> = sqlx::query_scalar("SELECT template_id FROM graphics_channel_bindings WHERE channel_id=$1 AND role IN ('ticker','lshape')")
+        .bind(channel).fetch_all(&mut *connection).await?;
+    sqlx::query(
+        "DELETE FROM graphics_channel_bindings WHERE channel_id=$1 AND role IN ('ticker','lshape')",
+    )
+    .bind(channel)
+    .execute(&mut *connection)
+    .await?;
+
+    for id in unused {
+        sqlx::query("DELETE FROM graphics_templates WHERE channel_id=$1 AND id=$2")
+            .bind(channel)
+            .bind(id)
+            .execute(&mut *connection)
+            .await?;
+    }
+
+    sqlx::query("UPDATE graphics_templates SET name='Logo',group_name='' WHERE channel_id=$1 AND id IN (SELECT template_id FROM graphics_channel_bindings WHERE channel_id=$1 AND role='logo')")
+        .bind(channel).execute(&mut *connection).await?;
+
+    Ok(())
 }
 
 fn image_layers(image: &str, opacity: f64) -> String {
@@ -662,13 +718,6 @@ pub async fn project_channel_graphics(
          JOIN graphics_templates t ON t.id=b.template_id AND t.channel_id=b.channel_id WHERE b.channel_id=$1",
     ).bind(config.channel_id).fetch_all(pool).await?;
 
-    if rows.len() != 3 {
-        return Err(ProcessError::Custom(format!(
-            "Missing graphics bindings for channel {}",
-            config.channel_id
-        )));
-    }
-
     for (role, enabled, layers, target) in rows {
         let layers: Vec<crate::utils::graphics::TemplateLayer> = serde_json::from_str(&layers)
             .map_err(|error| ProcessError::Custom(error.to_string()))?;
@@ -717,13 +766,35 @@ pub async fn save_channel_graphics_on(
         ),
         ("lshape", &processing.lshape, 1.0, lshape_settings),
     ] {
-        let template_id: i32 = sqlx::query_scalar(
+        let template_id: Option<i32> = sqlx::query_scalar(
             "SELECT template_id FROM graphics_channel_bindings WHERE channel_id = $1 AND role = $2",
         )
         .bind(channel)
         .bind(role)
-        .fetch_one(&mut *connection)
+        .fetch_optional(&mut *connection)
         .await?;
+        let template_id = match template_id {
+            Some(id) => id,
+            None if path.is_empty() => continue,
+            None => {
+                let layers =
+                    native_model_layers(connection, channel, role, path, opacity, &settings)
+                        .await?;
+                let id = insert_converted_model(
+                    connection,
+                    channel,
+                    role,
+                    "",
+                    &layers,
+                    &serde_json::json!({}),
+                )
+                .await?;
+                sqlx::query("INSERT INTO graphics_channel_bindings(channel_id,role,template_id,enabled,layers_version,control_layer_id) VALUES($1,$2,$3,$4,1,'image')")
+                    .bind(channel).bind(role).bind(id).bind(role == "logo" && processing.add_logo)
+                    .execute(&mut *connection).await?;
+                id
+            }
+        };
         let saved: String = sqlx::query_scalar(
             "SELECT layers FROM graphics_templates WHERE id = $1 AND channel_id = $2",
         )
@@ -858,6 +929,9 @@ pub async fn save_channel_graphics_on(
     .execute(&mut *connection)
     .await?;
 
+    sqlx::query("UPDATE graphics_templates SET permanent=$2 WHERE id IN (SELECT template_id FROM graphics_channel_bindings WHERE channel_id=$1 AND role='logo')")
+        .bind(channel).bind(processing.add_logo).execute(&mut *connection).await?;
+
     // Reconcile by slug so reordering or an unchanged settings save keeps model IDs.
     let existing: Vec<(i32, String)> = sqlx::query_as("SELECT t.id, json_extract(t.settings, '$.scene') FROM graphics_scene_bindings b JOIN graphics_templates t ON t.id = b.template_id WHERE b.channel_id = $1")
         .bind(channel).fetch_all(&mut *connection).await?;
@@ -895,6 +969,40 @@ pub async fn save_channel_graphics_on(
                 .await?;
         }
     }
+
+    Ok(())
+}
+
+/// Assign a compatibility role without changing a template's identity or group.
+pub async fn assign_graphics_template(
+    pool: &SqlitePool,
+    channel: i32,
+    template: i32,
+    role: Option<GraphicsRole>,
+    target: Option<&str>,
+) -> Result<(), ProcessError> {
+    let mut transaction = pool.begin().await?;
+    let enabled: bool = sqlx::query_scalar("SELECT COALESCE((SELECT enabled FROM graphics_channel_bindings b WHERE b.channel_id=$1 AND b.template_id=$2 AND b.role IN ('logo','ticker')),permanent,0) FROM graphics_templates WHERE channel_id=$1 AND id=$2")
+        .bind(channel).bind(template).fetch_one(&mut *transaction).await?;
+    let previous_target: Option<String> = sqlx::query_scalar("SELECT control_layer_id FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2")
+        .bind(channel).bind(template).fetch_optional(&mut *transaction).await?.flatten();
+    sqlx::query("DELETE FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2")
+        .bind(channel)
+        .bind(template)
+        .execute(&mut *transaction)
+        .await?;
+
+    if let Some(role) = role {
+        // Replacing a role retains its old composition as an ordinary template,
+        // rather than drawing it again as a second permanent logo/ticker.
+        sqlx::query("UPDATE graphics_templates SET permanent=0 WHERE channel_id=$1 AND id IN (SELECT template_id FROM graphics_channel_bindings WHERE channel_id=$1 AND role=$2 AND template_id!=$3)")
+            .bind(channel).bind(role.as_str()).bind(template).execute(&mut *transaction).await?;
+        sqlx::query("INSERT INTO graphics_channel_bindings(channel_id,role,template_id,enabled,layers_version,control_layer_id) VALUES($1,$2,$3,$4,1,COALESCE($5,(SELECT json_extract(value,'$.id') FROM graphics_templates t,json_each(t.layers) WHERE t.id=$3 AND json_extract(value,'$.kind')='image' LIMIT 1))) ON CONFLICT(channel_id,role) DO UPDATE SET template_id=excluded.template_id,enabled=excluded.enabled,layers_version=1,control_layer_id=excluded.control_layer_id")
+            .bind(channel).bind(role.as_str()).bind(template).bind(enabled)
+            .bind(target.or(previous_target.as_deref())).execute(&mut *transaction).await?;
+    }
+
+    transaction.commit().await?;
 
     Ok(())
 }
@@ -1461,10 +1569,9 @@ mod tests {
             select_graphics_bindings(&pool, 1).await.unwrap(),
             vec![binding]
         );
-        assert!(
-            delete_graphics_template(&pool, 1, id).await.is_err(),
-            "a bound template cannot be removed silently"
-        );
+        assert!(!delete_graphics_template(&pool, 2, id).await.unwrap());
+        assert!(delete_graphics_template(&pool, 1, id).await.unwrap());
+        assert!(select_graphics_bindings(&pool, 1).await.unwrap().is_empty());
     }
 
     #[tokio::test]

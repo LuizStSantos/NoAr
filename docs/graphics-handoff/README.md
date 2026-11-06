@@ -4,6 +4,82 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Open templates: stage 1 complete; shapes/clock/fonts/data pending
+
+The user approved [the next revision](open-templates-plan.md), then required
+fresh installations and new channels to contain **only one removable Logo
+example**. Existing installations retain all authored/converted models. This
+approved revision supersedes the historical reserved-group UI and the earlier
+clock exclusion. Clock is now requested, but not implemented in this stage.
+
+Migration `00031_graphics_open_templates.sql` separates completed conversion from
+role existence and adds startup visibility for user-authored permanent models.
+It uses normal sqlx migration tracking; `graphics_channel_state` records completed
+channel import, not a separate migration ledger. Earlier migration checksums and
+frozen processing columns remain unchanged. Deleting all role bindings/models
+therefore does not import old artwork again on restart.
+
+The library uses authored names and group labels for every composition. Groups
+are labels, not rendering modes or persistent empty folders. Removing/moving the
+last model removes that empty group from the filter. Compatible free models can
+be Always on air: up to **16 per channel including compatibility permanent
+roles**, checked before saving and enforced with SQLite triggers. User permanent
+compositions draw in ascending template-ID order, in full-frame space after
+L-shape. They retain their own requested visibility through pixel replacement
+and take-all-out does not remove them. A temporary take of a permanent model is
+rejected, preventing duplicate instances.
+
+Composer's Save form offers an optional logo/ticker/L-shape assignment and an
+explicit image-layer target for legacy replacement/placement. Assignment changes
+neither the authored name nor its group. Replacing a role retains its old model
+as temporary, avoiding a second permanent copy. Missing legacy editor targets
+open the library. Role APIs, scenes and clip overrides continue to address their
+selected model rather than frozen processing layout.
+
+**Delete template** works on assigned models too. The focus-trapped confirmation
+loads current use, permanent visibility and potentially affected scheduled action
+snapshots before confirmation. It removes channel/scene bindings, takes active
+temporary instances out, and preserves uploaded assets and scheduled snapshots.
+Those events may still execute their saved actions later. The database operation
+is transactional; runtime reload follows commit. A reload failure is reported,
+not presented as an atomic rollback of database and output; restart recovers the
+persisted state. Capacity/render preflight and a database limit prevent invalid
+permanent saves from leaving a partially persisted 17th model.
+
+Verification with GStreamer 1.26.2:
+
+- `cargo fmt --all`, exact no-default Clippy with denied warnings, complete
+  no-default tests and backend build passed: **691 passed, 14 ignored**.
+  Added tests cover first-run single-logo state, deletion/restart without
+  resurrection, cross-channel access, explicit image targets, permanent state,
+  capacity/concurrent-writer enforcement and rejected artwork without a saved row.
+- Vue type build, full ESLint, Prettier, QA TypeScript and production build passed.
+  **27 Playwright tests passed** against the final disposable backend/database.
+  The existing playlist-failure test now waits for initial day loading before
+  adding its fixture, avoiding an unrelated setup race.
+- pt-BR desktop/phone browser interaction created image+text compositions with
+  user groups, selected the second image for API control, deleted an assigned
+  model, verified the missing editor redirect and decoded advancing Program video.
+- Actual HLS frames before and after backend restart show the free permanent
+  composition, its artwork/text and an empty former-logo corner. The removed
+  template and logo assignment remain absent. Capture-time health is OK and
+  the channel log contains no errors. [Evidence](open-templates-evidence.json).
+
+| Part | Evidence |
+| --- | --- |
+| New installation: only Logo | [Desktop](open-templates-fresh-pt-BR.jpg), [phone](open-templates-fresh-phone-pt-BR.jpg) |
+| Free permanent composition | [Composer](composer-open-free-permanent-pt-BR.jpg) |
+| Optional role and controlled image | [Composer save](composer-open-optional-assignment-pt-BR.jpg) |
+| Authored groups/names | [Desktop](open-templates-custom-groups-pt-BR.jpg), [phone](open-templates-custom-groups-phone-pt-BR.jpg) |
+| Assigned deletion and use | [Confirmation](open-templates-delete-assigned-pt-BR.jpg) |
+| Actual Program | [On air](open-templates-live-permanent-pt-BR.jpg) |
+| API tutorial uses authored names | [API](open-templates-api-names-pt-BR.jpg) |
+| Actual decoded HLS | [Before restart](output-open-templates-before-restart.jpg), [after restart](output-open-templates-after-restart.jpg) |
+
+This stage has not repeated the full historical 76-response/2.2.1 parity or
+physical/desktop-output runs. The new shapes, clock, font upload and data-source
+page remain next, not completed by this stage-1 commit.
+
 ## Composer startup fixes and operator screen review
 
 This follow-up fixes the fresh-installation reports after the layer revision.
@@ -869,13 +945,15 @@ desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. The layer-based channel-model revision and historical stages a–e are
-   complete within the evidence and limitations above.
-   Desktop audio stability, physical outputs and long-soak verification remain
-   explicit limits; clock support remains excluded.
-2. Later phases (see roadmap): rundowns 2.5 (`on-air-design.html`), graphics
-   inside clips with open tracks 2.6 (`video-graphics-design.html`), control API
-   with key and webhooks 2.7 (`control-api-design.html`).
+1. Finish the approved [open-templates revision](open-templates-plan.md): new
+   shapes and clock, font upload, then RSS/CSV/Sheets/JSON data sources. Stage 1
+   (models/groups/assignments/deletion and single-logo first run) is complete above.
+2. Repeat relevant compatibility/raw/HLS and browser evidence after renderer and
+   live-data changes. Desktop audio stability, physical outputs and long-soak
+   verification remain explicit limitations.
+3. Later phases: rundowns 2.5, open graphics tracks in clips 2.6 and broader
+   control/webhook/data integration 2.7. The newly approved sources/clock work
+   advances that scope; it does not claim those entire phases complete.
 
 ## How to build and check
 

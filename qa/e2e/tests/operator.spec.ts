@@ -106,7 +106,12 @@ test('schedule create, edit and delete persist through the real API and reload',
 test('a failed playlist load cannot overwrite the saved day', async ({ page }) => {
     await page.goto('/playlist')
     const playlist = page.getByRole('region', { name: 'Playlist', exact: true })
+    const nextDayLoad = page.waitForResponse(
+        (response) => response.url().includes('/api/playlist/1?date=') && response.request().method() === 'GET',
+    )
     await playlist.getByRole('button', { name: 'Next day', exact: true }).click()
+    await nextDayLoad
+    await expect(playlist.locator('.loading-spinner')).toHaveCount(0)
     await page
         .getByRole('complementary', { name: 'Library' })
         .getByRole('button', { name: 'Add e2e-clip.mp4 to the playlist', exact: true })
@@ -498,8 +503,8 @@ test('the library can create the first scene after legacy menu removal', async (
         expect((await page.request.put('/api/playout/config/1', { headers, data: config })).ok()).toBeTruthy()
         await page.reload()
         const section = page.getByRole('region', { name: 'Scenes', exact: true })
-        await expect(section.locator('article')).toHaveCount(0)
-        await section.getByRole('link', { name: 'Manage scenes', exact: true }).click()
+        await expect(section).toHaveCount(0)
+        await page.getByRole('link', { name: 'Manage scenes', exact: true }).click()
         await page.getByRole('button', { name: 'New scene', exact: true }).click()
         const name = `E2E first scene ${Date.now()}`
         await page.getByLabel('Name', { exact: true }).fill(name)
@@ -758,4 +763,37 @@ test('On air uses permanent model controls and the Player only reports graphics 
     )
     await expect(graphics.getByRole('button')).toHaveCount(0)
     await expect(graphics.getByRole('switch')).toHaveCount(0)
+})
+
+test('free template names and groups support permanent compositions and deletion', async ({ page }) => {
+    await page.goto('/graphics/composer?channel=1')
+    await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Text', exact: true }).click()
+    await page.getByLabel('Text', { exact: true }).fill('Programme information')
+    await page.getByLabel('Always on air', { exact: true }).check()
+    const name = `Programme graphic ${Date.now()}`
+    await page.getByLabel('Template name', { exact: true }).fill(name)
+    await page.getByRole('button', { name: 'Save template', exact: true }).click()
+    await page.getByLabel('Group', { exact: true }).fill('My programme')
+    await expect(page.getByLabel('Control assignment (optional)', { exact: true })).toHaveValue('')
+    const posted = page.waitForResponse(
+        (response) => response.url().endsWith('/api/graphics/1/templates') && response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    expect((await posted).ok()).toBeTruthy()
+    await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
+    await page.goto('/graphics/templates?channel=1')
+    const group = page.getByRole('region', { name: 'My programme', exact: true })
+    const card = group.locator('article').filter({ hasText: name })
+    await expect(card.getByRole('heading', { name, exact: true })).toBeVisible()
+    await expect(card.getByRole('switch', { name, exact: true })).toBeChecked()
+    await card.getByRole('switch', { name, exact: true }).click()
+    await expect(card.getByRole('switch', { name, exact: true })).not.toBeChecked()
+    await card.getByRole('button', { name: 'Delete template', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Delete this template?', exact: true })
+    await expect(dialog).toContainText('Storage images and fonts will be preserved.')
+    await dialog.getByRole('button', { name: 'Delete template', exact: true }).click()
+    await expect(card).toHaveCount(0)
+    await page.reload()
+    await expect(page.getByRole('region', { name: 'My programme', exact: true })).toHaveCount(0)
 })

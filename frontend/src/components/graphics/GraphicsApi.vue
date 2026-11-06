@@ -209,7 +209,7 @@ async function copy(text: string) {
                     {{ t('graphics.api.channelModel') }}
                     <select v-model="selectedChannel" class="field-input">
                         <option v-for="model in roles" :key="model.template.id" :value="model.template.id">
-                            {{ t(`graphics.assigned.${model.kind}`) }} · #{{ model.template.id }}
+                            {{ model.template.name }} · #{{ model.template.id }}
                         </option>
                     </select>
                 </label>

@@ -6,6 +6,7 @@
 //! graphic on air during an L-shape follows the picture into its corner.
 
 use std::{
+    collections::BTreeMap,
     path::PathBuf,
     sync::{Arc, Mutex, PoisonError},
     time::{Duration, Instant},
@@ -667,6 +668,7 @@ struct AlwaysOn {
 struct GraphicsState {
     on_air: Vec<OnAir>,
     always_on: [Option<AlwaysOn>; 2],
+    persistent: BTreeMap<u64, AlwaysOn>,
     // Native logo composition preserves clip marks, remote placement and desktop overlays.
     channel_logo: crate::LogoControl,
     next_id: u64,
@@ -811,6 +813,18 @@ impl GraphicsControl {
                         entry.graphic.out_since(now),
                     ))
                 })
+                .chain(state.persistent.values().filter_map(|entry| {
+                    if !entry.visible && entry.graphic.taken_out_at.is_none() {
+                        return None;
+                    }
+
+                    Some((
+                        AlwaysOnSlot::Ticker,
+                        entry.graphic.graphic.clone(),
+                        now.saturating_duration_since(entry.graphic.taken_at),
+                        entry.graphic.out_since(now),
+                    ))
+                }))
                 .collect()
         };
 
@@ -832,6 +846,70 @@ impl GraphicsControl {
                 blend_layer_with_visibility(frame, layer, level, animation, visibility);
             }
         }
+    }
+
+    /// Replace a permanent model without resetting its visibility or entry time.
+    pub fn set_persistent(&self, id: u64, graphic: RenderedGraphic) -> Result<()> {
+        if graphic.picture.is_some() {
+            return Err(anyhow!(
+                "a permanent template cannot contain a video window"
+            ));
+        }
+
+        let mut state = self.state();
+
+        if let Some(current) = state.persistent.get_mut(&id) {
+            current.graphic.graphic = Arc::new(graphic);
+        } else {
+            if state.persistent.len() >= MAX_GRAPHICS_ON_AIR {
+                return Err(anyhow!("too many permanent templates"));
+            }
+
+            state.persistent.insert(
+                id,
+                AlwaysOn {
+                    graphic: OnAir {
+                        id,
+                        graphic: Arc::new(graphic),
+                        taken_at: Instant::now(),
+                        out_after: None,
+                        taken_out_at: None,
+                    },
+                    visible: true,
+                },
+            );
+        }
+
+        Ok(())
+    }
+
+    pub fn retain_persistent(&self, ids: &[u64]) {
+        self.state().persistent.retain(|id, _| ids.contains(id));
+    }
+
+    pub fn persistent_visible(&self, id: u64) -> Option<bool> {
+        self.state().persistent.get(&id).map(|entry| entry.visible)
+    }
+
+    pub fn set_persistent_visible(&self, id: u64, visible: bool) -> bool {
+        let mut state = self.state();
+        let Some(entry) = state.persistent.get_mut(&id) else {
+            return false;
+        };
+
+        if entry.visible != visible {
+            let now = Instant::now();
+            entry.visible = visible;
+
+            if visible {
+                entry.graphic.taken_at = now;
+                entry.graphic.taken_out_at = None;
+            } else {
+                entry.graphic.taken_out_at = Some(now);
+            }
+        }
+
+        true
     }
 
     /// Put a graphic on air; `duration` takes it out by itself. Answers its
@@ -1043,6 +1121,33 @@ mod tests {
             animation_ms: 400,
             delay_ms: 0,
         }
+    }
+
+    #[test]
+    fn user_permanent_models_preserve_time_visibility_and_deterministic_order() {
+        let control = GraphicsControl::default();
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![white_box(0.0, 0.0, GraphicAnimation::None)],
+        };
+        control
+            .set_persistent(42, render_graphic(&spec, 320, 180).unwrap())
+            .unwrap();
+        let entered = control.state().persistent[&42].graphic.taken_at;
+        assert!(control.set_persistent_visible(42, false));
+        control
+            .set_persistent(42, render_graphic(&spec, 320, 180).unwrap())
+            .unwrap();
+        assert_eq!(control.persistent_visible(42), Some(false));
+        assert_eq!(control.state().persistent[&42].graphic.taken_at, entered);
+        control.take_all_out();
+        assert_eq!(control.persistent_visible(42), Some(false));
+        assert!(control.set_persistent_visible(42, true));
+        let mut frame = black_frame(320, 180);
+        control.blend_always_on(&mut frame, 0.0);
+        assert!(luma(&frame, 20, 20) > 200);
+        control.retain_persistent(&[]);
+        assert_eq!(control.persistent_visible(42), None);
     }
 
     #[test]

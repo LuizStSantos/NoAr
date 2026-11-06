@@ -56,7 +56,7 @@ pub async fn channel_graphics(
     let storage = manager.config.read().await.channel.storage.clone();
     let mut result = Vec::new();
 
-    for binding in bindings {
+    for binding in &bindings {
         let template = templates
             .iter()
             .find(|template| template.id == binding.template_id)
@@ -79,6 +79,24 @@ pub async fn channel_graphics(
             template,
             on,
             ready,
+            scene_name: None,
+        });
+    }
+
+    for template in templates.iter().filter(|template| {
+        template.always_on == Some(true)
+            && !bindings
+                .iter()
+                .any(|binding| binding.template_id == template.id)
+    }) {
+        result.push(ChannelGraphicView {
+            kind: "permanent".to_string(),
+            ready: graphic_has_content(template, &storage),
+            on: manager
+                .graphics_control
+                .persistent_visible(template.id as u64)
+                .unwrap_or(false),
+            template: template.clone(),
             scene_name: None,
         });
     }
@@ -230,6 +248,24 @@ pub async fn control_channel_graphic(
         return Ok(());
     }
 
+    if let Some(template) =
+        handles::select_graphics_template(&manager.db_pool, manager.id, template_id).await?
+        && template.always_on == Some(true)
+    {
+        if manager
+            .graphics_control
+            .persistent_visible(template_id as u64)
+            .is_none()
+        {
+            load_permanent_templates(manager).await?;
+        }
+
+        manager
+            .graphics_control
+            .set_persistent_visible(template_id as u64, on);
+        return Ok(());
+    }
+
     let scenes = handles::select_graphics_scene_templates(&manager.db_pool, manager.id).await?;
     let (_, scene) = scenes
         .iter()
@@ -254,16 +290,21 @@ pub const MAX_LAYERS: usize = 64;
 pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), ServiceError> {
     let bindings =
         crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
-    let binding = bindings
+    let Some(binding) = bindings
         .iter()
         .find(|binding| binding.role == crate::db::models::GraphicsRole::Ticker)
-        .ok_or_else(|| ServiceError::Conflict("Missing channel ticker binding".to_string()))?;
+    else {
+        manager
+            .graphics_control
+            .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
+        return load_permanent_templates(manager).await;
+    };
 
     if !binding.enabled {
         manager
             .graphics_control
             .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
-        return Ok(());
+        return load_permanent_templates(manager).await;
     }
 
     let template = crate::db::handles::select_graphics_template(
@@ -284,7 +325,12 @@ pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), Service
             picture: None,
         }
     };
-    let (width, height) = (config.output.width, config.output.height);
+    let running = manager.running_config();
+    let (width, height) = running
+        .as_deref()
+        .map_or((config.output.width, config.output.height), |running| {
+            (running.output.width, running.output.height)
+        });
     drop(config);
     let graphic =
         tokio::task::spawn_blocking(move || noar_engine::render_graphic(&spec, width, height))
@@ -302,7 +348,7 @@ pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), Service
         .graphics_control
         .set_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic, visible)
         .map_err(|error| ServiceError::Conflict(error.to_string()))?;
-    Ok(())
+    load_permanent_templates(manager).await
 }
 const MAX_NAME_CHARS: usize = 100;
 const MAX_TEXT_CHARS: usize = 1000;
@@ -1044,6 +1090,50 @@ pub async fn take_template(
     let take_id = draw_and_take(manager, &template, spec, duration).await?;
 
     Ok(TakeOutcome::OnAir { take_id })
+}
+
+/// Restore user-authored permanent compositions independently of compatibility roles.
+pub async fn load_permanent_templates(manager: &ChannelManager) -> Result<(), ServiceError> {
+    let bindings =
+        crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
+    let templates =
+        crate::db::handles::select_graphics_templates(&manager.db_pool, manager.id).await?;
+    let config = manager.config.read().await.clone();
+    let mut ids = Vec::new();
+
+    for template in templates.into_iter().filter(|template| {
+        template.always_on == Some(true)
+            && !bindings
+                .iter()
+                .any(|binding| binding.template_id == template.id)
+    }) {
+        let id = template.id as u64;
+        let spec = graphic_spec(&template, &HashMap::new(), &config.channel.storage)?;
+        let running = manager.running_config();
+        let (width, height) = running
+            .as_deref()
+            .map_or((config.output.width, config.output.height), |running| {
+                (running.output.width, running.output.height)
+            });
+        let graphic =
+            tokio::task::spawn_blocking(move || noar_engine::render_graphic(&spec, width, height))
+                .await
+                .map_err(|_| ServiceError::InternalServerError)?
+                .map_err(|error| {
+                    ServiceError::Conflict(format!(
+                        "Permanent template cannot be rendered: {error:#}"
+                    ))
+                })?;
+        manager
+            .graphics_control
+            .set_persistent(id, graphic)
+            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+        ids.push(id);
+    }
+
+    manager.graphics_control.retain_persistent(&ids);
+
+    Ok(())
 }
 
 #[cfg(test)]

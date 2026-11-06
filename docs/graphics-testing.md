@@ -128,3 +128,18 @@ the selected model on Preview and actual decoded output on Program. A stopped
 channel shows a message. Use Always on air for logo/ticker, select Channel
 L-shape for its entry/exit and apply scenes from Templates. These replace the
 former live-control and quick-scene panels.
+
+## Open templates
+
+A new installation or channel contains only the removable Logo example. Create
+other models with + New template and enter your own name/group. Groups are free
+labels: moving the last model out removes the empty group from the filter.
+Choose Always on air for a compatible permanent composition (up to 16 per
+channel, ordered by template ID and drawn in full-frame space after L-shape).
+The current visibility switch does not change startup visibility.
+
+Save offers an optional logo/ticker/L-shape control assignment and an image-layer
+target for compatibility replacement/placement. Replacing an assignment keeps
+its previous template as temporary. Deleting a template shows live use and
+retained scheduled action snapshots; it preserves uploaded media/fonts and does
+not recreate the model on restart. Events can still execute their saved actions.

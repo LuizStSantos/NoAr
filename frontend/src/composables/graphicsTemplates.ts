@@ -146,11 +146,20 @@ export interface GraphicsTemplate {
 }
 
 export interface ChannelGraphic {
-    kind: 'logo' | 'ticker' | 'lshape' | 'scene'
+    kind: 'logo' | 'ticker' | 'lshape' | 'scene' | 'permanent'
     template: GraphicsTemplate
     on: boolean
     ready: boolean
     scene_name: string | null
+}
+
+export interface TemplateUsage {
+    assignment: string | null
+    on: boolean
+    always_on: boolean
+    temporary_instances: number
+    events: { id: number; title: string; enabled: boolean }[]
+    scheduled_actions_are_snapshots: boolean
 }
 
 export interface GraphicOnAir {
@@ -195,6 +204,14 @@ export function useGraphicsApi() {
                 method: id === undefined ? 'POST' : 'PUT',
                 headers: headers(),
                 body: JSON.stringify(input),
+            }),
+        usage: (id: number) => authFetch<TemplateUsage>(`${base()}/templates/${id}/usage`, { headers: headers() }),
+        remove: (id: number) => authFetch(`${base()}/templates/${id}`, { method: 'DELETE', headers: headers() }),
+        assign: (id: number, role: string | null, control_layer_id?: string | null) =>
+            authFetch<GraphicsTemplate>(`${base()}/templates/${id}/assignment`, {
+                method: 'PUT',
+                headers: headers(),
+                body: JSON.stringify({ role, control_layer_id }),
             }),
         templates: () => authFetch<GraphicsTemplate[]>(`${base()}/templates`, { headers: headers() }),
         channel: () => authFetch<ChannelGraphic[]>(`${base()}/channel`, { headers: headers() }),

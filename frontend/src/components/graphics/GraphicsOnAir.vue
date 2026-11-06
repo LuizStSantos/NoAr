@@ -47,7 +47,7 @@ const selectedValues = computed(() => (selectedId.value === null ? {} : (values[
 const latest = computed(() => [...onAir.value].reverse().find((graphic) => !graphic.leaving))
 const selectedModel = computed(() => channelModels.value.find((model) => model.template.id === selectedId.value))
 const permanent = computed(() =>
-    channelModels.value.filter((model) => model.kind === 'logo' || model.kind === 'ticker'),
+    channelModels.value.filter((model) => ['logo', 'ticker', 'permanent'].includes(model.kind)),
 )
 const ordinary = computed(() =>
     templates.value.filter((template) => !channelModels.value.some((model) => model.template.id === template.id)),
@@ -57,15 +57,13 @@ const programName = computed(
         latest.value?.name ||
         channelModels.value
             .filter((model) => model.kind !== 'scene' && model.on && model.ready)
-            .map((model) => t(`graphics.assigned.${model.kind}`))
+            .map((model) => model.template.name)
             .join(' · ') ||
         t('graphics.onAir.noGraphic'),
 )
 
 function templateName(template: GraphicsTemplate) {
-    const assigned = channelModels.value.find((model) => model.template.id === template.id)
-
-    return assigned ? t(`graphics.assigned.${assigned.kind}`) : template.name
+    return template.name
 }
 
 function templateHint(template: GraphicsTemplate) {
@@ -80,9 +78,7 @@ const groups = computed(() => {
     const byGroup = new Map<string, GraphicsTemplate[]>()
 
     for (const template of templates.value) {
-        const group = channelModels.value.some((model) => model.template.id === template.id)
-            ? t('graphics.assigned.group')
-            : template.group || t('graphics.templates.noGroup')
+        const group = template.group || t('graphics.templates.noGroup')
         byGroup.set(group, [...(byGroup.get(group) ?? []), template])
     }
 
@@ -394,7 +390,7 @@ onMounted(() => {
                             :class="model.on ? 'dot bg-success' : 'inline-block w-2 h-2 rounded-full bg-muted'"
                             aria-hidden="true"
                         />
-                        {{ t(`graphics.assigned.${model.kind}`) }}
+                        {{ model.template.name }}
                         <span class="text-xs">{{
                             t(model.on ? 'graphics.assigned.on' : 'graphics.assigned.off')
                         }}</span>

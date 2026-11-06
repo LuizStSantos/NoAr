@@ -181,7 +181,7 @@ pub async fn create_channel_records(
 
     // Logo percentages require the active output's dimensions. Configuration
     // records alone do not have an output yet.
-    handles::convert_channel_graphics_on(&mut transaction, channel.id).await?;
+    handles::initialize_channel_graphics_on(&mut transaction, channel.id).await?;
     handles::insert_recording(&mut transaction, config_id, channel.id).await?;
     handles::insert_scte35(&mut transaction, config_id).await?;
     handles::assign_channel_to_global_admins(&mut *transaction, channel.id).await?;

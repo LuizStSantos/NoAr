@@ -40,7 +40,11 @@ export default async function setup(config: FullConfig) {
         try {
             const context = await browser.newContext({ baseURL })
             const page = await context.newPage()
-            await page.addInitScript(() => localStorage.setItem('language', 'en'))
+            await page.addInitScript(() => {
+                if (!localStorage.getItem('language')) {
+                    localStorage.setItem('language', 'en')
+                }
+            })
             await page.goto('/login')
             await page.locator('input[name="username"]').fill(username)
             await page.locator('input[name="password"]').fill(password)
@@ -55,7 +59,11 @@ export default async function setup(config: FullConfig) {
             const playout = await loaded.json()
             const assigned = await context.request.get('/api/graphics/1/channel', { headers })
             expect(assigned.ok()).toBeTruthy()
-            const stock = (await assigned.json()).find((model: { kind: string }) => model.kind === 'logo')
+            const initialModels = await assigned.json()
+            expect(initialModels).toHaveLength(1)
+            const initialLibrary = await context.request.get('/api/graphics/1/templates', { headers })
+            expect(await initialLibrary.json()).toHaveLength(1)
+            const stock = initialModels.find((model: { kind: string }) => model.kind === 'logo')
             const image = stock.template.layers[0]
             expect((image.width * playout.output.width) / 100).toBeCloseTo(42, 4)
             expect((image.height * playout.output.height) / 100).toBeCloseTo(42, 4)
@@ -78,6 +86,29 @@ export default async function setup(config: FullConfig) {
                 type: 'jpeg',
                 quality: 86,
             })
+            await page.evaluate(() => {
+                localStorage.setItem('language', 'pt-br')
+                localStorage.setItem('theme', 'dark')
+            })
+            await page.goto('/graphics/templates?channel=1')
+            await expect(page.locator('article')).toHaveCount(1)
+            await expect(page.getByRole('heading', { name: 'Logo', exact: true })).toBeVisible()
+            await expect(page.getByRole('heading', { name: 'Modelos', exact: true })).toBeVisible()
+            await page.screenshot({
+                path: join(dirname(process.env.NOAR_E2E_STATE_PATH), 'fresh-only-logo-pt-BR.jpg'),
+                type: 'jpeg',
+                quality: 88,
+            })
+            await page.setViewportSize({ width: 390, height: 844 })
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+            await page.screenshot({
+                path: join(dirname(process.env.NOAR_E2E_STATE_PATH), 'fresh-only-logo-phone-pt-BR.jpg'),
+                type: 'jpeg',
+                quality: 88,
+                fullPage: true,
+            })
+            await page.evaluate(() => localStorage.setItem('language', 'en'))
+
             Object.assign(playout.processing, {
                 add_logo: true,
                 logo: 'logo.png',
@@ -88,6 +119,41 @@ export default async function setup(config: FullConfig) {
             })
             const saved = await context.request.put('/api/playout/config/1', { headers, data: playout })
             expect(saved.ok(), await saved.text()).toBeTruthy()
+            // Compatibility fixtures are explicitly authored after first-run assertions.
+            const tickerCreated = await context.request.post('/api/graphics/1/templates', {
+                headers,
+                data: { name: 'Ticker', group: 'Channel graphics', duration: 0, always_on: false, layers: [] },
+            })
+            expect(tickerCreated.ok()).toBeTruthy()
+            const ticker = await tickerCreated.json()
+            expect(
+                (
+                    await context.request.put(`/api/graphics/1/templates/${ticker.id}/assignment`, {
+                        headers,
+                        data: { role: 'ticker' },
+                    })
+                ).ok(),
+            ).toBeTruthy()
+            const roleResponse = await context.request.get('/api/graphics/1/channel', { headers })
+
+            for (const role of await roleResponse.json()) {
+                if (role.kind === 'scene') {
+                    continue
+                }
+
+                role.template.name =
+                    role.kind === 'logo' ? 'Channel logo' : role.kind === 'lshape' ? 'Channel L-shape' : 'Ticker'
+                role.template.group = 'Channel graphics'
+                expect(
+                    (
+                        await context.request.put(`/api/graphics/1/templates/${role.template.id}`, {
+                            headers,
+                            data: role.template,
+                        })
+                    ).ok(),
+                ).toBeTruthy()
+            }
+
             await context.storageState({ path: process.env.NOAR_E2E_STATE_PATH })
             await context.close()
         } finally {

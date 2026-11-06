@@ -20,6 +20,11 @@ one is tagged.
 
 ### Added
 
+- Free template names/groups, optional compatibility assignments with explicit
+  image targets, deletion of assigned models with a usage confirmation, and
+  user-authored permanent compositions. Fresh installations/new channels start
+  with only one removable logo example; existing installations retain their models.
+
 - The graphics API tutorial explains layer-based channel models, startup
   visibility and temporary take/out, using real model IDs and separate token/key
   examples. A disposable-machine Compose file builds this branch locally.
@@ -188,13 +193,13 @@ one is tagged.
 
 ### Added
 
-- *Ident or promo* in a video's marks (*Storage › trim, logo, breaks and
-  L-shape*): a marked clip airs inside the program before it, so the Player
+- _Ident or promo_ in a video's marks (_Storage › trim, logo, breaks and
+  L-shape_): a marked clip airs inside the program before it, so the Player
   keeps that program's name and the XMLTV guide does not list it. Saved as
   `"insert": true` in the video's `<name>.marks.json`, not in a sheet, so a
   clip in a series folder keeps using the folder's `.nfo`. The report items
   gain an `insert` field.
-- Assembled programs (`.program`, made with *Storage › New program*) are
+- Assembled programs (`.program`, made with _Storage › New program_) are
   listed in the Scheduler's storage panel and in the event dialog, so they
   can be scheduled.
 - `docker/ndi/enable-ndi.sh --test` sets NDI up for the isolated GStreamer
@@ -219,7 +224,7 @@ one is tagged.
 - Idents are no longer guessed. Short clips without a sheet used to count as
   idents of the program before them, so a playlist of music videos aired in
   the Player and the guide under one clip's name. Every clip is now a program
-  under its own name unless its marks say *Ident or promo*. **On updating:**
+  under its own name unless its marks say _Ident or promo_. **On updating:**
   mark the idents and promos that should stay inside their programs.
 - `index` in the playout status (`media/current` and the event stream) is the
   entry of the saved playlist on air; the clips of an assembled program share
@@ -239,7 +244,7 @@ one is tagged.
   and the playout restarts them only after five seconds without taking any.
 - The Player keeps the clip on air (name and progress) after an assembled
   program in the playlist, the progress of a scheduled program runs over the
-  whole program instead of restarting with each block, and *Up next* and the
+  whole program instead of restarting with each block, and _Up next_ and the
   playlist's past and coming entries take the time shift into account.
 - `docker/ndi/enable-ndi.sh` run with sudo gives the Compose file it writes
   to the user who ran it.
@@ -255,18 +260,18 @@ one is tagged.
   programme; the as-run log lists every clip. See `docs/programs.md`.
 
 - NDI output: publish the uncompressed program as an NDI source on the local
-  network (*Settings › Output › NDI*). The NDI elements are compiled in; the
+  network (_Settings › Output › NDI_). The NDI elements are compiled in; the
   proprietary NDI Runtime is installed on the server and NDI stays disabled,
   with an explanation, until it is present. Migration `00024` adds an inactive
   NDI output to every channel. `docker/ndi/enable-ndi.sh` installs the
   runtime (after the NDI license is accepted), mDNS discovery and the Compose
   override in one step. See `docs/ndi.md`.
 - NDI input for lives: `ndi://SERVER (Source name)` addresses in Storage and
-  the Scheduler, a *Find NDI sources* list from network discovery
+  the Scheduler, a _Find NDI sources_ list from network discovery
   (`GET /api/schedule/{id}/lives/ndi`) and the signal test. Picture-only
   sources are accepted and get silence.
 - Video cards: play the program on a Blackmagic DeckLink card
-  (*Settings › Output › SDI*, any DeckLink/UltraStudio sub-device, NTSC/PAL
+  (_Settings › Output › SDI_, any DeckLink/UltraStudio sub-device, NTSC/PAL
   to 2160p modes, including 1080i59.94, 1080p29.97 and 1080p30), and take
   DeckLink or V4L2 capture cards as lives (`decklink://`, `v4l2://`).
   `GET /api/playout/devices/{id}` lists the cards the server sees. Migration
@@ -298,7 +303,7 @@ one is tagged.
 - A channel **live key** (migration `00026`) lets encoders and scripts extend
   or end the live on air without logging in:
   `/live/{id}/extend?key=…&minutes=30|until=13:30` and `/live/{id}/end?key=…`,
-  set under *Scheduler › Lives › Live remote control*.
+  set under _Scheduler › Lives › Live remote control_.
 - Lives go into playlists (dragged from the Player library for their default
   length) and into assembled programs as a **Live** part with its own length;
   both air the live's current address. A program's clips follow trims made
@@ -664,8 +669,8 @@ Includes the changes prepared for 1.4.3, which was never published as its own re
   so a title with markup ran script in the browser of whoever removed it.
   Confirmation texts are now always plain text.
 - Files opened from the storage are sent with `X-Content-Type-Options:
-  nosniff`, and HTML, SVG and XML files also with `Content-Security-Policy:
-  sandbox`, so such a file opened on its own runs no script with access to
+nosniff`, and HTML, SVG and XML files also with `Content-Security-Policy:
+sandbox`, so such a file opened on its own runs no script with access to
   NoAr.
 - **Test signal** on a live answers every failure with the same message (the
   cause is in the server log) and runs at most two tests at once, so it can
@@ -835,13 +840,13 @@ Includes the changes prepared for 1.4.3, which was never published as its own re
   connecting, waiting for a receiver, or no connection and why
   ([docs](docs/output.md#when-the-destination-is-down)).
 - Building a playlist in the Player:
-  - a **Build the playlist** view that puts the library and the list on top;
-  - **undo and redo** (Ctrl+Z, Ctrl+Shift+Z);
-  - add after the selected clips, at the start or at a time;
-  - **To the start** and **To the end** for the selection;
-  - keys for the selection (Delete, Alt+↑/↓, Esc);
-  - how much of the day is still to fill or runs over, with **Fill the day**
-    at the end of the list.
+    - a **Build the playlist** view that puts the library and the list on top;
+    - **undo and redo** (Ctrl+Z, Ctrl+Shift+Z);
+    - add after the selected clips, at the start or at a time;
+    - **To the start** and **To the end** for the selection;
+    - keys for the selection (Delete, Alt+↑/↓, Esc);
+    - how much of the day is still to fill or runs over, with **Fill the day**
+      at the end of the list.
 
 ### Changed
 
@@ -1013,12 +1018,12 @@ adds and changes.
 - **Commercials folders**: everything in them plays as a commercial in
   playlists and breaks, out of the guide and without the logo.
 - **Logo**:
-  - stretches without logo inside a video, for breaks edited into a
-    programme;
-  - hiding or swapping the logo on air by API, with a key for encoders and a
-    tutorial in Settings;
-  - a separate logo for the XMLTV guide;
-  - a preview in the shape of the output, with reference lines.
+    - stretches without logo inside a video, for breaks edited into a
+      programme;
+    - hiding or swapping the logo on air by API, with a key for encoders and a
+      tutorial in Settings;
+    - a separate logo for the XMLTV guide;
+    - a preview in the shape of the output, with reference lines.
 - **Report**: what aired, with the actual times and how each item ended, and
   what is still to come. It covers a day or a period, can be narrowed to one
   commercial, programme, live or event, and downloads as a PDF or a

@@ -32,7 +32,14 @@ const channelId = computed(() => configStore.channels[configStore.i]?.id)
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuth()
-const draft = ref<TemplateInput>({ name: '', group: '', duration: 8, during_lshape: 'follow', layers: [] })
+const draft = ref<TemplateInput>({
+    name: '',
+    group: '',
+    duration: 8,
+    during_lshape: 'follow',
+    layers: [],
+    always_on: false,
+})
 const selectedId = ref('')
 const selected = computed(() => draft.value.layers.find((layer) => layer.id === selectedId.value))
 const fields = computed(() => templateFields(draft.value.layers))
@@ -43,6 +50,8 @@ const baseline = ref(JSON.stringify(draft.value))
 const history = ref<string[]>([])
 const fonts = ref<string[]>([])
 const groups = ref<string[]>([])
+const assignment = ref('')
+const originalAssignment = ref('')
 const saving = ref(false)
 const busy = ref(false)
 const editorReady = ref(false)
@@ -73,7 +82,9 @@ let loadVersion = 0
 let drag:
     | { id: string; mode: string; x: number; y: number; rect: DOMRect; layer: TemplateLayer; snapshot: string }
     | undefined
-const dirty = computed(() => JSON.stringify(draft.value) !== baseline.value)
+const dirty = computed(
+    () => JSON.stringify(draft.value) !== baseline.value || assignment.value !== originalAssignment.value,
+)
 
 function rememberDraft() {
     history.value.push(JSON.stringify(draft.value))
@@ -202,7 +213,7 @@ function addLayer(kind: TemplateLayer['kind']) {
     if (
         draft.value.layers.length >= 64 ||
         (kind === 'video' &&
-            (draft.value.always_on != null || draft.value.layers.some((layer) => layer.kind === 'video')))
+            (draft.value.always_on === true || draft.value.layers.some((layer) => layer.kind === 'video')))
     ) {
         return
     }
@@ -376,11 +387,12 @@ async function loadEditor() {
             throw new Error(t('graphics.composer.notFound'))
         }
 
-        const [template, families, templates] = await Promise.all([
+        const [template, families, templates, assigned] = await Promise.all([
             id === undefined ? undefined : graphicsApi.template(id),
             graphicsApi.fonts(),
             // Group suggestions must not block editing when the library is unavailable.
             graphicsApi.templates().catch(() => []),
+            graphicsApi.channel(),
         ])
 
         if (version !== loadVersion) {
@@ -388,6 +400,11 @@ async function loadEditor() {
         }
 
         savedId.value = template?.id
+        assignment.value =
+            assigned.find(
+                (model) => model.template.id === template?.id && ['logo', 'ticker', 'lshape'].includes(model.kind),
+            )?.kind ?? ''
+        originalAssignment.value = assignment.value
         draft.value = template
             ? {
                   name: template.name,
@@ -398,7 +415,7 @@ async function loadEditor() {
                   always_on: template.always_on,
                   control_layer_id: template.control_layer_id,
               }
-            : { name: '', group: '', duration: 8, during_lshape: 'follow', layers: [] }
+            : { name: '', group: '', duration: 8, during_lshape: 'follow', layers: [], always_on: false }
         fonts.value = families
         groups.value = [...new Set(templates.map((template) => template.group))].filter(Boolean)
         scaleBases.clear()
@@ -430,8 +447,13 @@ async function saveTemplate() {
     busy.value = true
     error.value = ''
     try {
-        const result = await graphicsApi.save(draft.value, savedId.value)
+        let result = await graphicsApi.save(draft.value, savedId.value)
         savedId.value = result.id
+
+        if (assignment.value !== originalAssignment.value) {
+            result = await graphicsApi.assign(result.id, assignment.value || null, draft.value.control_layer_id)
+            originalAssignment.value = assignment.value
+        }
         draft.value = {
             name: result.name,
             group: result.group,
@@ -448,11 +470,16 @@ async function saveTemplate() {
         note.value = t('graphics.composer.saved', { name: result.name })
     } catch (err) {
         error.value =
-            err instanceof AuthFetchError && err.status === 409
-                ? t('graphics.composer.nameTaken')
-                : err instanceof Error
-                  ? err.message
-                  : String(err)
+            err instanceof AuthFetchError &&
+            err.status === 409 &&
+            typeof err.data === 'string' &&
+            err.data.startsWith('At most 16')
+                ? t('graphics.composer.permanentLimit')
+                : err instanceof AuthFetchError && err.status === 409
+                  ? t('graphics.composer.nameTaken')
+                  : err instanceof Error
+                    ? err.message
+                    : String(err)
     } finally {
         busy.value = false
     }
@@ -688,6 +715,32 @@ onBeforeUnmount(() => {
             <button type="button" class="btn-quiet" :disabled="busy" @click="saving = false">
                 {{ t('graphics.composer.cancel') }}
             </button>
+            <label class="field-label flex-1 min-w-48"
+                >{{ t('graphics.composer.assignment') }}
+                <select v-model="assignment" class="field-input" :aria-label="t('graphics.composer.assignment')">
+                    <option value="">{{ t('graphics.composer.noAssignment') }}</option>
+                    <option v-for="role in ['logo', 'ticker', 'lshape']" :key="role" :value="role">
+                        {{ t(`graphics.assigned.${role}`) }}
+                    </option>
+                </select>
+            </label>
+            <label v-if="['logo', 'lshape'].includes(assignment)" class="field-label flex-1 min-w-48"
+                >{{ t('graphics.composer.controlImage') }}
+                <select
+                    v-model="draft.control_layer_id"
+                    :aria-label="t('graphics.composer.controlImage')"
+                    class="field-input"
+                >
+                    <option :value="null">{{ t('graphics.composer.firstImage') }}</option>
+                    <option
+                        v-for="layer in draft.layers.filter((layer) => layer.kind === 'image')"
+                        :key="layer.id"
+                        :value="layer.id"
+                    >
+                        {{ layer.name || layer.id }}
+                    </option>
+                </select>
+            </label>
             <button class="btn-main" :disabled="busy || !draft.name.trim()">{{ t('graphics.composer.save') }}</button>
         </form>
         <div
@@ -720,10 +773,10 @@ onBeforeUnmount(() => {
                         class="btn-quiet text-left"
                         :disabled="
                             kind === 'video' &&
-                            (draft.always_on != null || draft.layers.some((layer) => layer.kind === 'video'))
+                            (draft.always_on === true || draft.layers.some((layer) => layer.kind === 'video'))
                         "
                         :title="
-                            kind === 'video' && draft.always_on != null
+                            kind === 'video' && draft.always_on === true
                                 ? t('graphics.composer.videoModelOnly')
                                 : undefined
                         "
@@ -1113,7 +1166,7 @@ onBeforeUnmount(() => {
                     </template>
                     <template v-if="selected.kind === 'image'">
                         <button
-                            v-if="draft.always_on != null && selected.id === draft.control_layer_id"
+                            v-if="assignment === 'logo' && selected.id === draft.control_layer_id"
                             class="btn-quiet"
                             :disabled="busy || !selected.image"
                             @click="restoreLogoPlacement"
@@ -1121,7 +1174,7 @@ onBeforeUnmount(() => {
                             {{ t('graphics.composer.restoreLogoPlacement') }}
                         </button>
                         <p
-                            v-if="draft.always_on != null && selected.id === draft.control_layer_id"
+                            v-if="assignment === 'logo' && selected.id === draft.control_layer_id"
                             class="m-0 text-xs text-muted"
                         >
                             {{ t('graphics.composer.restoreLogoPlacementHint') }}
@@ -1216,19 +1269,22 @@ onBeforeUnmount(() => {
                         /></label>
                     </div>
                 </template>
-                <label v-if="draft.always_on != null" class="flex items-center gap-2 border-t border-line-strong pt-3">
+                <label
+                    v-if="!draft.layers.some((layer) => layer.kind === 'video')"
+                    class="flex items-center gap-2 border-t border-line-strong pt-3"
+                >
                     <input
                         type="checkbox"
                         class="checkbox checkbox-accent"
-                        :checked="draft.always_on"
+                        :checked="Boolean(draft.always_on)"
                         @change="setAlwaysOn(($event.target as HTMLInputElement).checked)"
                     />
                     {{ t('graphics.composer.alwaysOn') }}
                 </label>
-                <p v-if="draft.always_on != null" class="m-0 text-xs text-muted">
+                <p v-if="!draft.layers.some((layer) => layer.kind === 'video')" class="m-0 text-xs text-muted">
                     {{ t('graphics.composer.alwaysOnHint') }}
                 </p>
-                <label v-else class="field-label border-t border-line-strong pt-3"
+                <label v-if="!draft.always_on" class="field-label border-t border-line-strong pt-3"
                     >{{ t('graphics.templates.duration')
                     }}<input
                         v-model.number="draft.duration"
@@ -1239,7 +1295,7 @@ onBeforeUnmount(() => {
                         step="0.1"
                     /><span class="text-xs text-muted">{{ t('graphics.templates.durationHint') }}</span></label
                 >
-                <label v-if="draft.always_on == null" class="field-label"
+                <label v-if="!draft.always_on" class="field-label"
                     >{{ t('graphics.composer.duringLshape')
                     }}<select v-model="draft.during_lshape" class="field-input">
                         <option v-for="rule in ['follow', 'wait', 'skip'] as const" :key="rule" :value="rule">

@@ -22,14 +22,14 @@ to users assigned to that channel, unless they are a global admin.
 
 These endpoints do not use a bearer token.
 
-| Method | Endpoint | Request / response |
-| --- | --- | --- |
-| `POST` | `/auth/login` | `{ "username": "...", "password": "..." }`. Returns `{ "access": "...", "refresh": "..." }`, or a verification message when two-factor authentication is required. |
-| `POST` | `/auth/verify` | `{ "username": "...", "code": "123456" }`. Returns access and refresh tokens. Verification codes expire after five minutes. |
-| `POST` | `/auth/refresh` | `{ "refresh": "..." }`. Rotates it and returns a new `{ "access": "...", "refresh": "..." }` pair. |
-| `POST` | `/auth/logout` | `{ "refresh": "..." }`. Revokes the complete refresh-token family for the session. |
-| `GET` | `/api/setup` | Reports whether first-time setup is required. |
-| `POST` | `/api/setup` | Completes first-time setup. It works only while no user exists; directory paths must be absolute and cannot be protected system paths. |
+| Method | Endpoint        | Request / response                                                                                                                                                 |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST` | `/auth/login`   | `{ "username": "...", "password": "..." }`. Returns `{ "access": "...", "refresh": "..." }`, or a verification message when two-factor authentication is required. |
+| `POST` | `/auth/verify`  | `{ "username": "...", "code": "123456" }`. Returns access and refresh tokens. Verification codes expire after five minutes.                                        |
+| `POST` | `/auth/refresh` | `{ "refresh": "..." }`. Rotates it and returns a new `{ "access": "...", "refresh": "..." }` pair.                                                                 |
+| `POST` | `/auth/logout`  | `{ "refresh": "..." }`. Revokes the complete refresh-token family for the session.                                                                                 |
+| `GET`  | `/api/setup`    | Reports whether first-time setup is required.                                                                                                                      |
+| `POST` | `/api/setup`    | Completes first-time setup. It works only while no user exists; directory paths must be absolute and cannot be protected system paths.                             |
 
 Access tokens are valid for 45 minutes and refresh tokens for 14 days. Refresh
 tokens are single-use: each successful refresh replaces the submitted token.
@@ -67,35 +67,35 @@ them later in Settings › General, or with `noar -i` on the server.
 listed authenticated endpoints also enforce the channel assignment where an
 `{id}` is present.
 
-| Access | Meaning |
-| --- | --- |
-| `GA` | Global admin only |
-| `GA, CA` | Global or channel admin |
+| Access      | Meaning                                                  |
+| ----------- | -------------------------------------------------------- |
+| `GA`        | Global admin only                                        |
+| `GA, CA`    | Global or channel admin                                  |
 | `GA, CA, U` | Any authenticated role with access to the target channel |
 
 ## Channel and global settings
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/channel/{id}` | `GA, CA, U` | Read one channel. |
-| `PATCH` | `/api/channel/{id}` | `GA, CA` | Update a channel. Only a global admin may change its `public`, `playlists`, or `storage` paths. |
-| `POST` | `/api/channel` | `GA` | Create a channel. |
-| `DELETE` | `/api/channel/{id}` | `GA` | Delete a channel. |
-| `GET` | `/api/channels` | `GA, CA, U` | List channels available to the current user. |
-| `GET` | `/api/global` | `GA` | Read editable global SMTP and HTTP push settings. Secrets are represented only by `smtp_password_set` and `notification_token_set`. |
-| `PUT` | `/api/global` | `GA` | Update SMTP and HTTP push settings. Omit a secret or send an empty value to retain its current value. |
-| `POST` | `/api/global/test-mail` | `GA` | `{ "recipient": "..." }`. Sends a test e-mail with the saved SMTP settings. |
+| Method   | Endpoint                | Access      | Description                                                                                                                         |
+| -------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/api/channel/{id}`     | `GA, CA, U` | Read one channel.                                                                                                                   |
+| `PATCH`  | `/api/channel/{id}`     | `GA, CA`    | Update a channel. Only a global admin may change its `public`, `playlists`, or `storage` paths.                                     |
+| `POST`   | `/api/channel`          | `GA`        | Create a channel.                                                                                                                   |
+| `DELETE` | `/api/channel/{id}`     | `GA`        | Delete a channel.                                                                                                                   |
+| `GET`    | `/api/channels`         | `GA, CA, U` | List channels available to the current user.                                                                                        |
+| `GET`    | `/api/global`           | `GA`        | Read editable global SMTP and HTTP push settings. Secrets are represented only by `smtp_password_set` and `notification_token_set`. |
+| `PUT`    | `/api/global`           | `GA`        | Update SMTP and HTTP push settings. Omit a secret or send an empty value to retain its current value.                               |
+| `POST`   | `/api/global/test-mail` | `GA`        | `{ "recipient": "..." }`. Sends a test e-mail with the saved SMTP settings.                                                         |
 
 ## Playout configuration and capabilities
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/playout/config/{id}` | `GA, CA, U` | Read the complete `PlayoutConfig`. |
-| `PUT` | `/api/playout/config/{id}` | `GA, CA` | Replace the complete `PlayoutConfig`. Use the response from `GET` as the request shape. The response contains `requires_restart`; mail, notification, and volume changes are runtime-safe and return `false`. |
-| `GET` | `/api/playout/outputs/{id}` | `GA, CA, U` | List configured outputs for the channel. |
-| `GET` | `/api/playout/codecs/{id}` | `GA, CA, U` | List supported codecs for HLS, RTMP, SRT, UDP, and custom outputs, including compatible hardware encoders and their curated encoder-setting schema. |
-| `POST` | `/api/playout/config/{id}/keys/{kind}` | `GA, CA` | `kind` is `logo` (logo and L-shape links) or `scte35`; `{ "action": "renew" }` makes and saves a new key, `{ "action": "clear" }` turns it off. Answers `{ "key": "..." }`. `PUT /api/playout/config/{id}` keeps the stored keys whatever it is sent. |
-| `POST` | `/api/playout/config/{id}/test-alert` | `GA, CA` | `{ "kind": "mail", "recipient": "...", "subject": "..." }` or `{ "kind": "push", "topic": "...", "tags": "..." }`. Sends one test alert with these values, saved or not. `409` when no mail or push server is configured. |
+| Method | Endpoint                               | Access      | Description                                                                                                                                                                                                                                           |
+| ------ | -------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/playout/config/{id}`             | `GA, CA, U` | Read the complete `PlayoutConfig`.                                                                                                                                                                                                                    |
+| `PUT`  | `/api/playout/config/{id}`             | `GA, CA`    | Replace the complete `PlayoutConfig`. Use the response from `GET` as the request shape. The response contains `requires_restart`; mail, notification, and volume changes are runtime-safe and return `false`.                                         |
+| `GET`  | `/api/playout/outputs/{id}`            | `GA, CA, U` | List configured outputs for the channel.                                                                                                                                                                                                              |
+| `GET`  | `/api/playout/codecs/{id}`             | `GA, CA, U` | List supported codecs for HLS, RTMP, SRT, UDP, and custom outputs, including compatible hardware encoders and their curated encoder-setting schema.                                                                                                   |
+| `POST` | `/api/playout/config/{id}/keys/{kind}` | `GA, CA`    | `kind` is `logo` (logo and L-shape links) or `scte35`; `{ "action": "renew" }` makes and saves a new key, `{ "action": "clear" }` turns it off. Answers `{ "key": "..." }`. `PUT /api/playout/config/{id}` keeps the stored keys whatever it is sent. |
+| `POST` | `/api/playout/config/{id}/test-alert`  | `GA, CA`    | `{ "kind": "mail", "recipient": "...", "subject": "..." }` or `{ "kind": "push", "topic": "...", "tags": "..." }`. Sends one test alert with these values, saved or not. `409` when no mail or push server is configured.                             |
 
 `logging.media_level` is the level of the media engine's (GStreamer's)
 messages in the log. Until 2.0 it was named `ffmpeg_level`: requests may still
@@ -142,15 +142,15 @@ Uncompressed video codecs such as `rawvideo` and lossless audio codecs such as
 
 ## Server
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/system/server` | `GA` | `{ "started_at", "version", "channels", "channels_running" }`; `started_at` is the Unix time this run started. |
-| `POST` | `/api/system/restart` | `GA` | Answers, then stops every channel and starts NoAr again in the same process. |
-| `GET` | `/api/system/update` | `GA` | Installed version and commit, the newest published image (`latest`: commit, publish time, changes), `available`, `checked_at`, `error` and `auto_check`, as of the last check. |
-| `POST` | `/api/system/update/check` | `GA` | Asks GitHub now (at most every 20 s) and answers like `GET /api/system/update`. |
-| `PUT` | `/api/system/update/settings` | `GA` | Any of `{ "auto_check": bool, "auto_update": bool, "update_time": "HH:MM" }`; the status also has `scheduled_at` and `updater` (`configured`, `connected`, `address`, `error`). |
-| `POST` | `/api/system/update/install` | `GA` | Asks the updater to install the newest image now; NoAr stops moments later and starts on the new version. `409` without the updater. |
-| `POST` | `/api/system/update/schedule` | `GA` | `{ "time": "HH:MM" }`: install at the next such time of the server clock. `DELETE` cancels. |
+| Method | Endpoint                      | Access | Description                                                                                                                                                                     |
+| ------ | ----------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/system/server`          | `GA`   | `{ "started_at", "version", "channels", "channels_running" }`; `started_at` is the Unix time this run started.                                                                  |
+| `POST` | `/api/system/restart`         | `GA`   | Answers, then stops every channel and starts NoAr again in the same process.                                                                                                    |
+| `GET`  | `/api/system/update`          | `GA`   | Installed version and commit, the newest published image (`latest`: commit, publish time, changes), `available`, `checked_at`, `error` and `auto_check`, as of the last check.  |
+| `POST` | `/api/system/update/check`    | `GA`   | Asks GitHub now (at most every 20 s) and answers like `GET /api/system/update`.                                                                                                 |
+| `PUT`  | `/api/system/update/settings` | `GA`   | Any of `{ "auto_check": bool, "auto_update": bool, "update_time": "HH:MM" }`; the status also has `scheduled_at` and `updater` (`configured`, `connected`, `address`, `error`). |
+| `POST` | `/api/system/update/install`  | `GA`   | Asks the updater to install the newest image now; NoAr stops moments later and starts on the new version. `409` without the updater.                                            |
+| `POST` | `/api/system/update/schedule` | `GA`   | `{ "time": "HH:MM" }`: install at the next such time of the server clock. `DELETE` cancels.                                                                                     |
 
 After a restart the channels that were running start again by themselves. A
 client can wait for `started_at` to change to know the new run is up.
@@ -163,20 +163,20 @@ when one is not:
 
 ```json
 {
-  "status": "ok",
-  "version": "2.2.0",
-  "channels": [{ "id": 1, "state": "on_air", "uptime": 3600, "output_age": 0.2 }]
+    "status": "ok",
+    "version": "2.2.0",
+    "channels": [{ "id": 1, "state": "on_air", "uptime": 3600, "output_age": 0.2 }]
 }
 ```
 
-| `state` | Meaning | Healthy |
-| --- | --- | --- |
-| `on_air` | Running, and the output carried something in the last 10 s. | yes |
-| `starting` | Running for less than 30 s, nothing output yet. | yes |
-| `stopped` | Stopped on purpose. | yes |
-| `frozen` | Running, but the output carried nothing for over 10 s. | no |
-| `failed` | Off air after an error, being retried. | no |
-| `down` | Set to run, not running. | no |
+| `state`    | Meaning                                                     | Healthy |
+| ---------- | ----------------------------------------------------------- | ------- |
+| `on_air`   | Running, and the output carried something in the last 10 s. | yes     |
+| `starting` | Running for less than 30 s, nothing output yet.             | yes     |
+| `stopped`  | Stopped on purpose.                                         | yes     |
+| `frozen`   | Running, but the output carried nothing for over 10 s.      | no      |
+| `failed`   | Off air after an error, being retried.                      | no      |
+| `down`     | Set to run, not running.                                    | no      |
 
 `output_age` is the seconds since the output last carried sound (it carries
 silence too, so black or a filler counts as on air); `uptime` the seconds
@@ -186,12 +186,12 @@ before it alerts.
 
 ## Playout control
 
-| Method | Endpoint | Access | Request body |
-| --- | --- | --- | --- |
-| `POST` | `/api/control/{id}/playout` | `GA, CA, U` | `{ "control": "back" \| "next" \| "reset" }` |
-| `PUT` | `/api/control/{id}/audio` | `GA, CA` | `{ "volume": 0.0 }`, from `0.0` through `1.5`. |
-| `GET` | `/api/control/{id}/media/current` | `GA, CA, U` | Read the current media and playout state. `index` is the entry of the saved playlist on air (the clips of an assembled program share their entry, and `elapsed` counts from the start of the entry); during a scheduled event it is `null` and `media` covers the whole event. |
-| `POST` | `/api/control/{id}/process` | `GA, CA, U` | `{ "command": "status" \| "start" \| "stop" \| "restart" }` |
+| Method | Endpoint                          | Access      | Request body                                                                                                                                                                                                                                                                   |
+| ------ | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST` | `/api/control/{id}/playout`       | `GA, CA, U` | `{ "control": "back" \| "next" \| "reset" }`                                                                                                                                                                                                                                   |
+| `PUT`  | `/api/control/{id}/audio`         | `GA, CA`    | `{ "volume": 0.0 }`, from `0.0` through `1.5`.                                                                                                                                                                                                                                 |
+| `GET`  | `/api/control/{id}/media/current` | `GA, CA, U` | Read the current media and playout state. `index` is the entry of the saved playlist on air (the clips of an assembled program share their entry, and `elapsed` counts from the start of the entry); during a scheduled event it is `null` and `media` covers the whole event. |
+| `POST` | `/api/control/{id}/process`       | `GA, CA, U` | `{ "command": "status" \| "start" \| "stop" \| "restart" }`                                                                                                                                                                                                                    |
 
 During an active live ingest, `back`, `next`, and `reset` return HTTP 200 with
 `{ "operation": "ignored", "reason": "live_ingest_active" }`. They do not change
@@ -256,11 +256,11 @@ ingest alike, and lasts until the next
 command or a server restart. A commercial in the playlist still keeps any logo
 off.
 
-| Method | Endpoint | Access | Request body |
-| --- | --- | --- | --- |
-| `GET` | `/api/control/{id}/logo` | `GA, CA, U` | Read the state: `{ "hidden": false, "replacement": null, "position": null }`. |
-| `POST` | `/api/control/{id}/logo` | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace" \| "move", "logo": "<storage path>", "position": "bottom-left" }`, or `"x": 90, "y": 5` instead of `position`; `logo` only for `replace`, `position` (or `x`/`y`) only for `move`. |
-| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace\|move}` | Logo key | Query `key` (or header `X-Logo-Key`), `logo` for `replace`, `position` or `x` and `y` for `move`. |
+| Method        | Endpoint                                 | Access      | Request body                                                                                                                                                                                                                  |
+| ------------- | ---------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`         | `/api/control/{id}/logo`                 | `GA, CA, U` | Read the state: `{ "hidden": false, "replacement": null, "position": null }`.                                                                                                                                                 |
+| `POST`        | `/api/control/{id}/logo`                 | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace" \| "move", "logo": "<storage path>", "position": "bottom-left" }`, or `"x": 90, "y": 5` instead of `position`; `logo` only for `replace`, `position` (or `x`/`y`) only for `move`. |
+| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace\|move}` | Logo key    | Query `key` (or header `X-Logo-Key`), `logo` for `replace`, `position` or `x` and `y` for `move`.                                                                                                                             |
 
 `show` brings back the configured logo and drops a replacement. A replacement
 takes the size, position and opacity of the configured logo. `move` puts the
@@ -301,11 +301,11 @@ The picture shrinks into a corner over the channel's L-shape graphic
 the server restarts; stretches marked in a video go into it by themselves.
 The keyed route takes the channel’s graphics key (the logo key).
 
-| Method | Endpoint | Access | Request body |
-| --- | --- | --- | --- |
-| `GET` | `/api/control/{id}/lshape` | `GA, CA, U` | Read the state: `{ "on": false, "ready": true, "replacement": null, "position": null, "scale": null }`; `ready` is false without a graphic, `replacement` names a graphic swapped in, `position` and `scale` the corner and size the picture was moved to. |
-| `POST` | `/api/control/{id}/lshape` | `GA, CA, U` | `{ "action": "on" \| "off" \| "replace" \| "reset" \| "move", "graphic": "<storage path>", "position": "bottom-left", "scale": 70 }`. `replace` swaps the graphic (needs `graphic`); `on` with `graphic` swaps and goes in; `reset` goes back to the channel's graphic; `move` puts the picture elsewhere (below). `on` without any graphic answers 409. |
-| `GET`, `POST` | `/lshape/{id}/{on\|off\|replace\|reset\|move}` | Logo key | Query `key` (or header `X-Logo-Key`), `graphic`, `position` and `scale`. |
+| Method        | Endpoint                                       | Access      | Request body                                                                                                                                                                                                                                                                                                                                             |
+| ------------- | ---------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`         | `/api/control/{id}/lshape`                     | `GA, CA, U` | Read the state: `{ "on": false, "ready": true, "replacement": null, "position": null, "scale": null }`; `ready` is false without a graphic, `replacement` names a graphic swapped in, `position` and `scale` the corner and size the picture was moved to.                                                                                               |
+| `POST`        | `/api/control/{id}/lshape`                     | `GA, CA, U` | `{ "action": "on" \| "off" \| "replace" \| "reset" \| "move", "graphic": "<storage path>", "position": "bottom-left", "scale": 70 }`. `replace` swaps the graphic (needs `graphic`); `on` with `graphic` swaps and goes in; `reset` goes back to the channel's graphic; `move` puts the picture elsewhere (below). `on` without any graphic answers 409. |
+| `GET`, `POST` | `/lshape/{id}/{on\|off\|replace\|reset\|move}` | Logo key    | Query `key` (or header `X-Logo-Key`), `graphic`, `position` and `scale`.                                                                                                                                                                                                                                                                                 |
 
 ```bash
 curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>'
@@ -340,10 +340,10 @@ After migration 00029, it is stored in a bound template and exposed through
 `processing.graphics_scenes` in the compatibility configuration API (at most
 24, unique names) ([docs](logo.md#quick-scenes)).
 
-| Method | Endpoint | Access | Request body |
-| --- | --- | --- | --- |
-| `POST` | `/api/control/{id}/scene` | `GA, CA, U` | `{ "name": "Intervalo comercial" }`. Answers `{ "scene", "logo", "lshape" }` with the state after it; 404 for an unknown scene, 409 when it goes to the L-shape without a graphic. |
-| `GET`, `POST` | `/scene/{id}/{name}` | Logo key | `name` in lower case with dashes (`intervalo-comercial`); query `key` or header `X-Logo-Key`. |
+| Method        | Endpoint                  | Access      | Request body                                                                                                                                                                       |
+| ------------- | ------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`        | `/api/control/{id}/scene` | `GA, CA, U` | `{ "name": "Intervalo comercial" }`. Answers `{ "scene", "logo", "lshape" }` with the state after it; 404 for an unknown scene, 409 when it goes to the L-shape without a graphic. |
+| `GET`, `POST` | `/scene/{id}/{name}`      | Logo key    | `name` in lower case with dashes (`intervalo-comercial`); query `key` or header `X-Logo-Key`.                                                                                      |
 
 A scene in `graphics_scenes` is
 `{ "name", "logo": "keep" | "hide" | "show" | "replace", "logo_image", "logo_position", "lshape": "keep" | "on" | "off", "lshape_graphic", "lshape_corner", "lshape_scale" }`;
@@ -360,7 +360,6 @@ The Graphics → External control (API) page explains channel versus temporary
 models, shows examples with saved model IDs, and distinguishes login tokens
 from the legacy graphics key. Its examples do not execute on page load.
 
-
 A template is a graphic a channel designs once and puts on air many times:
 layers placed in percent of the frame, with `{field}` names filled in on
 air ([roadmap](graphics-roadmap.md)).
@@ -368,7 +367,9 @@ air ([roadmap](graphics-roadmap.md)).
 Models assigned to channel logo, ticker, L-shape or quick-scene bindings are
 operated through the channel graphics controls. `POST /take` returns 409 for
 these models: it must not stack a second logo or silently ignore scene actions.
-Ordinary unbound templates retain their take/out behavior.
+Ordinary temporary templates retain their take/out behavior. User-authored
+permanent templates use the channel control endpoint and never stack a temporary
+copy through take.
 
 Channel `on` is the requested runtime control state; clip-logo gaps and L-shape
 suppression can still hide a logo on a particular frame. Scene `on` is always
@@ -388,10 +389,12 @@ HTTP control endpoints. Ticker layers are static text, without scrolling or a cl
 `/graphics/xmltv` tab edits `processing.guide_logo`, the independent guide icon,
 through the existing configuration API; it does not change on-air model layers.
 
-Templates expose nullable `always_on` and `control_layer_id`. `always_on` is
-startup visibility for bound logo/ticker models; it is null for other templates.
-Omitting it on PUT preserves the binding. It is rejected on unbound POST and on
-nonpermanent bindings. `control_layer_id` identifies the image addressed by
+Templates expose nullable `always_on` and `control_layer_id`. `always_on:true`
+loads a compatible model at startup, including unbound user-authored templates;
+false/null is temporary unless it has a compatibility role. Omitting it on PUT
+preserves the saved selection. Video-window templates cannot be permanent. At
+most 16 permanent models are allowed per channel, enforced transactionally;
+capacity conflicts return 409 before persisting the requested change. `control_layer_id` identifies the image addressed by
 legacy replacement/placement controls on logo/L-shape models. Omission preserves
 the saved ID across layer reordering; deletion chooses another image once.
 Bound models require literal content, and only L-shape models contain a visible
@@ -403,20 +406,21 @@ override when Duration is edited. A zero duration produces a cut. Normal layer
 geometry, opacity and animations are authoritative; compatibility configuration
 reads project these values and writes update layers, not layout `settings`.
 
-
-| Method | Endpoint | Access | Request body |
-| --- | --- | --- | --- |
-| `GET` | `/api/graphics/{id}/channel` | `GA, CA, U` | Assigned models with `kind` (logo/ticker/lshape/scene), `template` (saved preview), requested `on`, content-availability `ready`, and nullable `scene_name`. |
-| `POST` | `/api/graphics/{id}/channel/{template_id}` | `GA, CA, U` | `{ "on": true/false }` controls the assigned model on this channel; returns the refreshed list above. 404 for an unassigned/other-channel model; 409 when content must first be configured or L-shape artwork cannot be loaded. For scenes, `on:true` applies the action; `on:false` is 400. |
-| `GET` | `/api/graphics/{id}/fonts` | `GA, CA, U` | Available font family names for text layers. |
-| `GET` | `/api/graphics/{id}/templates` | `GA, CA, U` | Every template of the channel, sorted by group and name. |
-| `GET` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA, U` | One template; 404 when the channel has no such template. |
-| `POST` | `/api/graphics/{id}/templates` | `GA, CA` | A template (below). 409 when the channel already has that name, ignoring case. |
-| `PUT` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | The whole template again. |
-| `DELETE` | `/api/graphics/{id}/templates/{template_id}` | `GA, CA` | 409 while bound to a channel role or quick scene. Remove quick scenes through their action editor in Graphics. |
-| `POST` | `/api/graphics/{id}/take` | `GA, CA, U` | `{ "template_id", "fields": { "name": "Maria" }, "duration" }`. `duration` (seconds) replaces the template's; 0 stays until taken out. Answers `{ "state": "on_air", "take_id" }`, or `{ "state": "waiting" }` when the template waits for the L-shape on air to end. 409 for an assigned channel model, or when it skips L-shapes and one is on; 400 when an image is not in the storage. |
-| `POST` | `/api/graphics/{id}/out` | `GA, CA, U` | `{ "take_id" }` takes that graphic out, `{}` every graphic. Each plays its exit animation. Answers `{ "on_air": [...] }`; 404 for a graphic not on air. |
-| `GET` | `/api/graphics/{id}/on-air` | `GA, CA, U` | `[{ "take_id", "template_id", "name", "since", "leaving" }]`, `since` in seconds. |
+| Method   | Endpoint                                                | Access      | Request body                                                                                                                                                                                                                                                                                                                                                                               |
+| -------- | ------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/api/graphics/{id}/channel`                            | `GA, CA, U` | Assigned and permanent models with `kind` (logo/ticker/lshape/scene/permanent), `template` (saved preview), requested `on`, content-availability `ready`, and nullable `scene_name`.                                                                                                                                                                                                       |
+| `POST`   | `/api/graphics/{id}/channel/{template_id}`              | `GA, CA, U` | `{ "on": true/false }` controls the assigned model on this channel; returns the refreshed list above. 404 for an unassigned/other-channel model; 409 when content must first be configured or L-shape artwork cannot be loaded. For scenes, `on:true` applies the action; `on:false` is 400.                                                                                               |
+| `GET`    | `/api/graphics/{id}/fonts`                              | `GA, CA, U` | Available font family names for text layers.                                                                                                                                                                                                                                                                                                                                               |
+| `GET`    | `/api/graphics/{id}/templates`                          | `GA, CA, U` | Every template of the channel, sorted by group and name.                                                                                                                                                                                                                                                                                                                                   |
+| `GET`    | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA, U` | One template; 404 when the channel has no such template.                                                                                                                                                                                                                                                                                                                                   |
+| `POST`   | `/api/graphics/{id}/templates`                          | `GA, CA`    | A template (below). 409 when the channel already has that name, ignoring case.                                                                                                                                                                                                                                                                                                             |
+| `PUT`    | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA`    | The whole template again.                                                                                                                                                                                                                                                                                                                                                                  |
+| `DELETE` | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA`    | `"removed"`. Detaches channel/scene assignments, takes active temporary instances out and reloads model state. Uploaded media/fonts and scheduled action snapshots remain. A reload failure after commit is reported; restart restores the saved state. Intentional removal is never re-imported.                                                                                          |
+| `GET`    | `/api/graphics/{id}/templates/{template_id}/usage`      | `GA, CA, U` | Assignment, current/startup visibility, temporary instance count and retained scheduled actions potentially affected by removing the assignment. Events hold snapshots, not template foreign keys.                                                                                                                                                                                         |
+| `PUT`    | `/api/graphics/{id}/templates/{template_id}/assignment` | `GA, CA`    | `{ "role": "logo"/"ticker"/"lshape"/null, "control_layer_id": "image-id" }`. Optional role and image target; does not rename or regroup. Omitted target retains the saved image or chooses the first image initially. Invalid/foreign targets are 400. Replacing a role makes the old model temporary to avoid a second permanent copy.                                                    |
+| `POST`   | `/api/graphics/{id}/take`                               | `GA, CA, U` | `{ "template_id", "fields": { "name": "Maria" }, "duration" }`. `duration` (seconds) replaces the template's; 0 stays until taken out. Answers `{ "state": "on_air", "take_id" }`, or `{ "state": "waiting" }` when the template waits for the L-shape on air to end. 409 for an assigned channel model, or when it skips L-shapes and one is on; 400 when an image is not in the storage. |
+| `POST`   | `/api/graphics/{id}/out`                                | `GA, CA, U` | `{ "take_id" }` takes that graphic out, `{}` every graphic. Each plays its exit animation. Answers `{ "on_air": [...] }`; 404 for a graphic not on air.                                                                                                                                                                                                                                    |
+| `GET`    | `/api/graphics/{id}/on-air`                             | `GA, CA, U` | `[{ "take_id", "template_id", "name", "since", "leaving" }]`, `since` in seconds.                                                                                                                                                                                                                                                                                                          |
 
 A template is
 `{ "name", "group", "duration", "during_lshape": "follow" | "wait" | "skip", "layers": [...] }`.
@@ -467,19 +471,19 @@ Breaks marked in the SRT or UDP output; see [Ad breaks](ad_breaks.md). The
 of a login, for encoders and automation
 ([docs](ad_breaks.md#from-an-encoder-or-an-automation-with-the-scte-35-key)).
 
-| Method | Endpoint | Access | Request body |
-| --- | --- | --- | --- |
-| `GET` | `/api/control/{id}/scte35` | `GA, CA, U` | Read the state, the breaks to come and on air, and the last 20. |
-| `POST` | `/api/control/{id}/scte35/break` | `GA, CA, U` | `{ "duration": 120 }`: mark a break of that many seconds, from now plus the pre-roll. |
-| `DELETE` | `/api/control/{id}/scte35/break/{event_id}` | `GA, CA, U` | Call off a break that has not started. |
-| `GET`, `POST` | `/scte35/{id}/{break\|cancel}` | SCTE-35 key | Query `key` (or header `X-Scte35-Key`), `duration` for `break`, `event` for `cancel` (else the next break). |
+| Method        | Endpoint                                    | Access      | Request body                                                                                                |
+| ------------- | ------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `GET`         | `/api/control/{id}/scte35`                  | `GA, CA, U` | Read the state, the breaks to come and on air, and the last 20.                                             |
+| `POST`        | `/api/control/{id}/scte35/break`            | `GA, CA, U` | `{ "duration": 120 }`: mark a break of that many seconds, from now plus the pre-roll.                       |
+| `DELETE`      | `/api/control/{id}/scte35/break/{event_id}` | `GA, CA, U` | Call off a break that has not started.                                                                      |
+| `GET`, `POST` | `/scte35/{id}/{break\|cancel}`              | SCTE-35 key | Query `key` (or header `X-Scte35-Key`), `duration` for `break`, `event` for `cancel` (else the next break). |
 
 ## Live preview
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/preview/{id}` | `GA, CA, U` | The channel output as a live MPEG-TS stream (`video/mp2t`). |
-| `GET` | `/api/preview/{id}?quality=light` | `GA, CA, U` | A lighter copy: 640×360, 15 frames per second, about 0.6 Mb/s. |
+| Method | Endpoint                          | Access      | Description                                                    |
+| ------ | --------------------------------- | ----------- | -------------------------------------------------------------- |
+| `GET`  | `/api/preview/{id}`               | `GA, CA, U` | The channel output as a live MPEG-TS stream (`video/mp2t`).    |
+| `GET`  | `/api/preview/{id}?quality=light` | `GA, CA, U` | A lighter copy: 640×360, 15 frames per second, about 0.6 Mb/s. |
 
 The Player shows this stream. It is a copy of the packets the output
 encoders already produced, so it costs no extra encoding, works the same for
@@ -496,17 +500,17 @@ curl -N http://127.0.0.1:8787/api/preview/1 \
 
 ## Playlists and programme data
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/playlist/{id}?date=YYYY-MM-DD` | `GA, CA, U` | Read a playlist. |
-| `POST` | `/api/playlist/{id}` | `GA, CA, U` | Save a complete playlist JSON document. |
-| `POST` | `/api/playlist/{id}/generate/{date}` | `GA, CA, U` | Generate and save a playlist. Body is optional: `{ "paths": ["..."], "shuffle": true, "template": { ... } }`. |
-| `POST` | `/api/playlist/{id}/programs` | `GA, CA, U` | Body: `[{ "source": "...", "title": null, "ad": false }]`. Returns, per clip, the guide programme it belongs to: `{ "key", "title", "sub_title", "is_break" }`. Consecutive clips with the same `key` form one guide entry; breaks extend the entry before them. |
-| `POST` | `/api/playlist/{id}/episodes` | `GA, CA, U` | Body: `{ "folder": "Show", "date": "YYYY-MM-DD", "after": null }`. The videos of a program folder (with season subfolders) in episode order: by the date in the file name when there is one (`show-16.10.26.mp4`, day first, or `2026-10-16`), else by natural name order. Returns `{ "episodes": [{ "source", "name", "duration" }], "last": { "source", "date" } | null, "next": 0 }`: `last` is `after` (the folder's last clip in the day being edited) or the folder's last clip in the saved playlists of the 60 days before `date`, and `next` is the index of the episode after it, starting over after the last one. |
-| `DELETE` | `/api/playlist/{id}/{date}` | `GA, CA, U` | Delete a playlist. |
-| `GET` | `/api/program/{id}` | `GA, CA, U` | Read programme items. Optional `start_after` and `start_before` query parameters accept local ISO date-times. |
-| `GET` | `/api/log/{id}` | `GA, CA, U` | Read a log. Optional query parameters: `date`, `timezone`, `download`. |
-| `GET` | `/api/system/{id}` | `GA, CA, U` | Read system statistics for the channel. |
+| Method   | Endpoint                             | Access      | Description                                                                                                                                                                                                                                                                                                                                                        |
+| -------- | ------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/api/playlist/{id}?date=YYYY-MM-DD` | `GA, CA, U` | Read a playlist.                                                                                                                                                                                                                                                                                                                                                   |
+| `POST`   | `/api/playlist/{id}`                 | `GA, CA, U` | Save a complete playlist JSON document.                                                                                                                                                                                                                                                                                                                            |
+| `POST`   | `/api/playlist/{id}/generate/{date}` | `GA, CA, U` | Generate and save a playlist. Body is optional: `{ "paths": ["..."], "shuffle": true, "template": { ... } }`.                                                                                                                                                                                                                                                      |
+| `POST`   | `/api/playlist/{id}/programs`        | `GA, CA, U` | Body: `[{ "source": "...", "title": null, "ad": false }]`. Returns, per clip, the guide programme it belongs to: `{ "key", "title", "sub_title", "is_break" }`. Consecutive clips with the same `key` form one guide entry; breaks extend the entry before them.                                                                                                   |
+| `POST`   | `/api/playlist/{id}/episodes`        | `GA, CA, U` | Body: `{ "folder": "Show", "date": "YYYY-MM-DD", "after": null }`. The videos of a program folder (with season subfolders) in episode order: by the date in the file name when there is one (`show-16.10.26.mp4`, day first, or `2026-10-16`), else by natural name order. Returns `{ "episodes": [{ "source", "name", "duration" }], "last": { "source", "date" } | null, "next": 0 }`: `last`is`after`(the folder's last clip in the day being edited) or the folder's last clip in the saved playlists of the 60 days before`date`, and `next` is the index of the episode after it, starting over after the last one. |
+| `DELETE` | `/api/playlist/{id}/{date}`          | `GA, CA, U` | Delete a playlist.                                                                                                                                                                                                                                                                                                                                                 |
+| `GET`    | `/api/program/{id}`                  | `GA, CA, U` | Read programme items. Optional `start_after` and `start_before` query parameters accept local ISO date-times.                                                                                                                                                                                                                                                      |
+| `GET`    | `/api/log/{id}`                      | `GA, CA, U` | Read a log. Optional query parameters: `date`, `timezone`, `download`.                                                                                                                                                                                                                                                                                             |
+| `GET`    | `/api/system/{id}`                   | `GA, CA, U` | Read system statistics for the channel.                                                                                                                                                                                                                                                                                                                            |
 
 Playlist items identify advertisements with `"ad": true`. The field is omitted
 for regular content and defaults to `false` when absent. For compatibility,
@@ -528,24 +532,24 @@ All file-management endpoints require `GA, CA, U` access to the channel.
 Paths are resolved below the channel storage root; parent-directory traversal is
 rejected.
 
-| Method | Endpoint | Request body or query |
-| --- | --- | --- |
-| `POST` | `/api/file/{id}/browse` | `{ "source": "", "folders_only": false }` |
-| `POST` | `/api/file/{id}/create-folder` | `{ "source": "folder" }` |
-| `POST` | `/api/file/{id}/rename` | Rename or move a file/folder: `{ "source": "old", "target": "new" }` |
-| `POST` | `/api/file/{id}/remove` | `{ "source": "file.mp4", "recursive": false }` |
-| `GET` | `/api/file/{id}/upload?path=folder&file_name=clip.mp4&size=1234&batch_id=<ID>` | Returns already received byte ranges for a resumable upload |
-| `PUT` | `/api/file/{id}/upload?path=folder` | Chunked `multipart/form-data` upload |
-| `GET` | `/api/file/{id}/conversions` | Uploaded videos queued, being or recently converted to the output format: `[{ "path", "converted", "state", "progress", "error", "updated" }]`; `state` is `queued`, `converting`, `done`, `skipped` or `failed`. See [Converting uploaded videos](uploads.md). |
-| `PUT` | `/api/file/{id}/import?file=list.m3u&date=YYYY-MM-DD` | `multipart/form-data` with a file field |
-| `POST` | `/api/file/{id}/access-token` | `{ "filename": "folder/file.mp4" }` |
-| `POST` | `/api/file/{id}/sheet` | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip |
-| `PUT` | `/api/file/{id}/sheet` | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }` |
-| `POST` | `/api/file/{id}/logo-marks` | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...], "trim": { "from": 8, "to": 1790.5 } }` |
-| `PUT` | `/api/file/{id}/logo-marks` | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35, `lshape` the stretches in the [L-shape](logo.md#l-shape), with this video's own `lshape_graphic`, `lshape_corner` and `lshape_scale` for them (each optional), `logo_position` (`X%:Y%`) where the logo goes while it plays, and `logo_image` (a storage path) the logo it shows in place of the channel's ([docs](logo.md#logo-and-l-shape-of-one-video)). At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. `insert: true` makes the video an ident or promo, which the guide and the Player count inside the program before it ([guide](xmltv.md#how-the-guide-is-built)). See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
-| `PUT` | `/api/file/{id}/artwork?path=Folder&kind=poster` | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips) |
-| `POST` | `/api/file/{id}/artwork/remove` | `{ "path": "Folder", "kind": "poster" }` |
-| `PUT` | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza` | `multipart/form-data` with a `file` field: the photo of a person in the credits |
+| Method | Endpoint                                                                       | Request body or query                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/api/file/{id}/browse`                                                        | `{ "source": "", "folders_only": false }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `POST` | `/api/file/{id}/create-folder`                                                 | `{ "source": "folder" }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `POST` | `/api/file/{id}/rename`                                                        | Rename or move a file/folder: `{ "source": "old", "target": "new" }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `POST` | `/api/file/{id}/remove`                                                        | `{ "source": "file.mp4", "recursive": false }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `GET`  | `/api/file/{id}/upload?path=folder&file_name=clip.mp4&size=1234&batch_id=<ID>` | Returns already received byte ranges for a resumable upload                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `PUT`  | `/api/file/{id}/upload?path=folder`                                            | Chunked `multipart/form-data` upload                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `GET`  | `/api/file/{id}/conversions`                                                   | Uploaded videos queued, being or recently converted to the output format: `[{ "path", "converted", "state", "progress", "error", "updated" }]`; `state` is `queued`, `converting`, `done`, `skipped` or `failed`. See [Converting uploaded videos](uploads.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `PUT`  | `/api/file/{id}/import?file=list.m3u&date=YYYY-MM-DD`                          | `multipart/form-data` with a file field                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `POST` | `/api/file/{id}/access-token`                                                  | `{ "filename": "folder/file.mp4" }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `POST` | `/api/file/{id}/sheet`                                                         | `{ "path": "Folder or folder/clip.mp4" }`: the `.nfo` sheet of a program folder or clip                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `PUT`  | `/api/file/{id}/sheet`                                                         | `{ "path", "kind": "program", "fields": { ... } }`, or `{ "path", "raw": "<tvshow>...</tvshow>" }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `POST` | `/api/file/{id}/logo-marks`                                                    | `{ "path": "folder/clip.mp4" }`: the marks of the video, `{ "hide": [{ "from": 750, "to": 990.5 }], "breaks": [...], "trim": { "from": 8, "to": 1790.5 } }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `PUT`  | `/api/file/{id}/logo-marks`                                                    | `{ "path", "hide": [...], "breaks": [...] }`: seconds of the video; `hide` keeps the logo off, `breaks` are ad breaks signalled with SCTE-35, `lshape` the stretches in the [L-shape](logo.md#l-shape), with this video's own `lshape_graphic`, `lshape_corner` and `lshape_scale` for them (each optional), `logo_position` (`X%:Y%`) where the logo goes while it plays, and `logo_image` (a storage path) the logo it shows in place of the channel's ([docs](logo.md#logo-and-l-shape-of-one-video)). At most 16 of each, not overlapping; empty lists remove them. `trim` is the part that airs by default ([trimming videos](trim.md)); `null` plays the whole video. `insert: true` makes the video an ident or promo, which the guide and the Player count inside the program before it ([guide](xmltv.md#how-the-guide-is-built)). See [commercials](commercials.md#a-break-inside-a-video) and [ad breaks](ad_breaks.md#breaks-marked-inside-a-video). |
+| `PUT`  | `/api/file/{id}/artwork?path=Folder&kind=poster`                               | `multipart/form-data` with a `file` field; `kind` is `poster`, `backdrop` or `still` (clips)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `POST` | `/api/file/{id}/artwork/remove`                                                | `{ "path": "Folder", "kind": "poster" }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `PUT`  | `/api/file/{id}/photo?path=Folder&name=Ana%20Souza`                            | `multipart/form-data` with a `file` field: the photo of a person in the credits                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 The browse response lists `folders`, `files` (with `duration`, `size`,
 `modified`, whether a video has its own `sheet`, `logo_marks` when its marks
@@ -584,14 +588,14 @@ single HTTP `Range` request for seeking.
 
 ## Users
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/user` | `GA, CA, U` | Read the current user. |
-| `PUT` | `/api/user/{id}` | Self or `GA` | Update a user. Only a global admin can change channel assignments, two-factor settings or the `role_id` (1 global admin, 2 channel admin, 3 operator) of another user. |
-| `GET` | `/api/user/{id}` | `GA` | Read a user by ID. |
-| `DELETE` | `/api/user/{id}` | `GA` | Delete a user. |
-| `POST` | `/api/user` | `GA` | Create a user. |
-| `GET` | `/api/users` | `GA` | List users with mail, role, channels and two-factor setting. |
+| Method   | Endpoint         | Access       | Description                                                                                                                                                            |
+| -------- | ---------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/api/user`      | `GA, CA, U`  | Read the current user.                                                                                                                                                 |
+| `PUT`    | `/api/user/{id}` | Self or `GA` | Update a user. Only a global admin can change channel assignments, two-factor settings or the `role_id` (1 global admin, 2 channel admin, 3 operator) of another user. |
+| `GET`    | `/api/user/{id}` | `GA`         | Read a user by ID.                                                                                                                                                     |
+| `DELETE` | `/api/user/{id}` | `GA`         | Delete a user.                                                                                                                                                         |
+| `POST`   | `/api/user`      | `GA`         | Create a user.                                                                                                                                                         |
+| `GET`    | `/api/users`     | `GA`         | List users with mail, role, channels and two-factor setting.                                                                                                           |
 
 ## Server-sent events
 
@@ -639,7 +643,7 @@ The program guide and its artwork are public, so IPTV players can load them
 without authentication. See [XMLTV / EPG](/docs/xmltv.md) for the folder layout
 and `.nfo` fields.
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/xmltv/{id}/guide.xml` | XMLTV guide. Optional query parameters: `days` (1-14, default 7), `lang`, `tvg_id`, `base_url`. |
-| `GET` | `/xmltv/{id}/images/{path}` | Image file below the channel storage root. Other file types return `404`. |
+| Method | Endpoint                    | Description                                                                                     |
+| ------ | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `GET`  | `/xmltv/{id}/guide.xml`     | XMLTV guide. Optional query parameters: `days` (1-14, default 7), `lang`, `tvg_id`, `base_url`. |
+| `GET`  | `/xmltv/{id}/images/{path}` | Image file below the channel storage root. Other file types return `404`.                       |

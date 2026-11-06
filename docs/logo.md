@@ -1,16 +1,16 @@
 **Logo**
 ================
 
-NoAr puts the channel logo over the picture of everything it plays: clips,
+When a logo model is assigned and enabled, NoAr puts it over the picture of everything it plays: clips,
 scheduled lives and live ingest. Everything about it is in the **Graphics**
 tab of the main menu. Its navigation has five pages:
 
 - **On air**: model preview, real program monitor, temporary take/out,
   logo/ticker visibility and channel L-shape entry/exit (every user);
-- **Templates**: ordinary templates plus separate **Channel graphics** and
-  **Scenes** groups. Use **Edit** on Channel logo, Channel L-shape or Ticker
-  to open its layers in Composer. **Manage scenes** works even
-  before the first scene exists;
+- **Templates**: models organized by their authored group labels, with editable
+  names. Use **Edit** to open their layers in Composer. Optional logo/L-shape/
+  ticker assignments identify the targets of compatibility controls without
+  reserving a group. **Manage scenes** also works before the first scene exists;
 - **XMLTV logo**: the independent guide icon, with storage selection and preview;
 - **Subtitles**: the WebVTT subtitles of the HLS output;
 - **External control (API)**: the graphics key and a tutorial for encoders.
@@ -31,6 +31,14 @@ When stopped, unsupported or waiting for a picture, it reports that state.
 The first configured channel model is selected even when no ordinary GC exists.
 Logo/ticker switches report requested visibility: clip marks, breaks and an
 L-shape can still suppress the logo in the actual output.
+
+A fresh installation or new channel starts with only one removable **Logo**
+example; no empty ticker or L-shape cards are created. Upgrades retain existing
+models. Names and groups are yours to edit, and **Delete template** also works
+on assigned models. Its confirmation lists live use and retained event actions.
+Deleting detaches assignments and preserves uploaded assets. Scheduled events
+keep their saved actions and may still run later. Startup does not recreate
+removed examples. A missing legacy editor target opens Templates.
 
 ## Placing the logo
 

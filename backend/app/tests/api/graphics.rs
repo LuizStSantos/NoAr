@@ -69,16 +69,15 @@ async fn graphics_templates_are_read_by_the_channel_and_changed_by_admins() {
     let bound = handles::select_graphics_bindings(&fixture.state.pool, 1)
         .await
         .unwrap();
-    let (status, message) = send(
+    let (status, _) = send(
         &fixture,
         "DELETE",
         &format!("/api/graphics/1/templates/{}", bound[0].template_id),
-        Some(&admin),
+        Some(&user),
         json!(null),
     )
     .await;
-    assert_eq!(status, StatusCode::CONFLICT);
-    assert!(message.as_str().unwrap().contains("bound"));
+    assert_eq!(status, StatusCode::FORBIDDEN);
 
     for binding in &bound {
         let (status, _) = send(
@@ -149,7 +148,7 @@ async fn graphics_templates_are_read_by_the_channel_and_changed_by_admins() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(list.as_array().unwrap().len(), 4);
+    assert_eq!(list.as_array().unwrap().len(), bound.len() + 1);
     assert_eq!(
         list.as_array()
             .unwrap()
@@ -264,7 +263,7 @@ async fn graphics_templates_are_read_by_the_channel_and_changed_by_admins() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(list.as_array().unwrap().len(), 3);
+    assert_eq!(list.as_array().unwrap().len(), bound.len());
 }
 
 #[tokio::test]
@@ -446,9 +445,28 @@ async fn assigned_models_have_channel_controls_and_keep_hidden_tickers_hidden_on
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
+    let ticker_created = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        json!({"name":"Ticker fixture","duration":0,"always_on":false,"layers":[]}),
+    )
+    .await;
+    assert_eq!(ticker_created.0, StatusCode::OK);
+    let ticker_id = ticker_created.1["id"].as_i64().unwrap();
+    let assigned = send(
+        &fixture,
+        "PUT",
+        &format!("/api/graphics/1/templates/{ticker_id}/assignment"),
+        Some(&admin),
+        json!({"role":"ticker"}),
+    )
+    .await;
+    assert_eq!(assigned.0, StatusCode::OK);
     let (status, cards) = send(&fixture, "GET", uri, Some(&user), json!(null)).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(cards.as_array().unwrap().len(), 3);
+    assert_eq!(cards.as_array().unwrap().len(), 2);
     let ticker = cards
         .as_array()
         .unwrap()
@@ -510,5 +528,208 @@ async fn assigned_models_have_channel_controls_and_keep_hidden_tickers_hidden_on
     assert!(
         manager.graphics_control.on_air().is_empty(),
         "permanent actions never enter the GC queue"
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn an_admin_can_delete_an_assigned_model_without_restart_resurrection() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let bindings = handles::select_graphics_bindings(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    assert_eq!(bindings.len(), 1);
+    let id = bindings[0].template_id;
+    let result = send(
+        &fixture,
+        "DELETE",
+        &format!("/api/graphics/1/templates/{id}"),
+        Some(&admin),
+        json!(null),
+    )
+    .await;
+    assert_eq!(result.0, StatusCode::OK);
+    handles::convert_channel_graphics(&fixture.state.pool)
+        .await
+        .unwrap();
+    assert!(
+        handles::select_graphics_template(&fixture.state.pool, 1, id)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "GET",
+            "/api/playout/config/1",
+            Some(&admin),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn permanent_capacity_and_bad_artwork_do_not_leave_partial_saved_models() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+
+    let initial = handles::select_graphics_templates(&fixture.state.pool, 1)
+        .await
+        .unwrap()
+        .iter()
+        .filter(|template| template.always_on == Some(true))
+        .count();
+
+    for number in 0..(16 - initial) {
+        let model = json!({"name":format!("Permanent {number}"),"always_on":true,"layers":[{"id":"box","kind":"box","x":5,"y":5,"width":10,"height":10,"fill":"#ffffff"}]});
+        let result = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            model,
+        )
+        .await;
+        assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+    }
+
+    let before = handles::select_graphics_templates(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    let rejected = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        json!({"name":"Seventeenth","always_on":true,"layers":[]}),
+    )
+    .await;
+    assert_eq!(rejected.0, StatusCode::CONFLICT);
+    assert_eq!(
+        handles::select_graphics_templates(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .len(),
+        before.len()
+    );
+    let inserted = handles::insert_graphics_template(
+        &fixture.state.pool,
+        &noar::db::models::GraphicsTemplate {
+            channel_id: 1,
+            name: "Concurrent capacity".to_string(),
+            always_on: Some(true),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert!(
+        inserted.is_err(),
+        "the database must enforce the limit for concurrent writers too"
+    );
+    let removed = before
+        .iter()
+        .find(|model| model.name == "Permanent 0")
+        .unwrap()
+        .id;
+    assert_eq!(
+        send(
+            &fixture,
+            "DELETE",
+            &format!("/api/graphics/1/templates/{removed}"),
+            Some(&admin),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let before_invalid = handles::select_graphics_templates(&fixture.state.pool, 1)
+        .await
+        .unwrap()
+        .len();
+    let invalid=send(&fixture,"POST","/api/graphics/1/templates",Some(&admin),json!({"name":"Missing artwork","always_on":true,"layers":[{"id":"missing","kind":"image","image":"missing-font-artwork.png","x":0,"y":0,"width":10,"height":10}]})).await;
+    assert_eq!(invalid.0, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        handles::select_graphics_templates(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .len(),
+        before_invalid
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn compatibility_assignment_preserves_an_explicit_image_target_and_authored_group() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let created = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        json!({"name":"Programme identity","group":"My programme","layers":[
+            {"id":"first","kind":"image","image":"logo.png","x":5,"y":5,"width":10,"height":10},
+            {"id":"second","kind":"image","image":"logo.png","x":75,"y":5,"width":10,"height":10}
+        ]}),
+    )
+    .await;
+    assert_eq!(created.0, StatusCode::OK);
+    let id = created.1["id"].as_i64().unwrap();
+    let route = format!("/api/graphics/1/templates/{id}/assignment");
+    let assigned = send(
+        &fixture,
+        "PUT",
+        &route,
+        Some(&admin),
+        json!({"role":"logo","control_layer_id":"second"}),
+    )
+    .await;
+    assert_eq!(assigned.0, StatusCode::OK, "{}", assigned.1);
+    assert_eq!(assigned.1["control_layer_id"], "second");
+    assert_eq!(assigned.1["name"], "Programme identity");
+    assert_eq!(assigned.1["group"], "My programme");
+    let repeated = send(
+        &fixture,
+        "PUT",
+        &route,
+        Some(&admin),
+        json!({"role":"logo"}),
+    )
+    .await;
+    assert_eq!(repeated.1["control_layer_id"], "second");
+    let invalid = send(
+        &fixture,
+        "PUT",
+        &route,
+        Some(&admin),
+        json!({"role":"logo","control_layer_id":"foreign"}),
+    )
+    .await;
+    assert_eq!(invalid.0, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        send(&fixture, "PUT", &route, Some(&admin), json!({"role":null}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert!(
+        !handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .iter()
+            .any(|binding| binding.template_id == id as i32)
     );
 }

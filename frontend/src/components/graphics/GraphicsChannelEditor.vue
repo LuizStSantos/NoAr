@@ -35,7 +35,8 @@ async function openModel() {
         const model = models.find((model) => model.kind === kind.value)
 
         if (!model) {
-            throw new Error(t('graphics.templates.loadFailed'))
+            await router.replace({ name: 'graphics-templates', query: { channel: channelId.value } })
+            return
         }
 
         await router.replace({

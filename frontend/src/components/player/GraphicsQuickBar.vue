@@ -23,7 +23,7 @@ const active = computed(() => models.value.filter((model) => model.kind !== 'sce
         <span v-if="unavailable" class="text-muted">{{ t('graphics.onAir.statusUnavailable') }}</span>
         <template v-else>
             <span v-for="model in active" :key="model.template.id" class="inline-flex items-center gap-1.5 text-muted">
-                <span class="dot bg-success" aria-hidden="true" />{{ t(`graphics.assigned.${model.kind}`) }}
+                <span class="dot bg-success" aria-hidden="true" />{{ model.template.name }}
             </span>
             <span v-for="graphic in onAir" :key="graphic.take_id" class="text-muted">{{ graphic.name }}</span>
             <span v-if="!active.length && !onAir.length" class="text-muted">{{ t('graphics.onAir.noGraphic') }}</span>

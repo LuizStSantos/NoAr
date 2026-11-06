@@ -1449,6 +1449,7 @@ export default {
             tickerText: 'Texto do letreiro',
             saveTicker: 'Salvar letreiro',
             hint: {
+                permanent: 'Modelo sempre no ar.',
                 logo: 'Logo permanente do canal.',
                 ticker: 'Texto permanente sobre o programa.',
                 lshape: 'Arte e janela de vídeo do canal.',
@@ -1456,6 +1457,11 @@ export default {
             },
         },
         composer: {
+            permanentLimit: 'O canal aceita até 16 modelos Sempre no ar. Desative essa opção em outro modelo primeiro.',
+            controlImage: 'Imagem controlada pela API',
+            firstImage: 'Primeira imagem do modelo',
+            assignment: 'Vínculo de controle (opcional)',
+            noAssignment: 'Nenhum — modelo livre',
             videoModelOnly: 'Use o modelo de L-shape do canal ou um modelo temporário para a janela de vídeo.',
             restoreLogoPlacement: 'Restaurar tamanho da imagem e canto superior direito',
             restoreLogoPlacementHint:
@@ -1464,7 +1470,7 @@ export default {
             guideLogoSaved: 'Imagem do guia salva.',
             alwaysOn: 'Sempre no ar',
             alwaysOnHint:
-                'Carrega este modelo permanente ao iniciar. O interruptor em Modelos permite escondê-lo temporariamente.',
+                'Carrega este modelo ao iniciar. O interruptor em Modelos permite escondê-lo temporariamente. O grupo é apenas uma organização.',
             videoCorner: 'Canto do vídeo',
             freeWindow: 'Posição livre',
             videoSize: 'Tamanho da janela de vídeo',
@@ -1600,6 +1606,13 @@ export default {
                 'Roteiros (vários, com itens em ordem e convidados) chegam na versão 2.5. Por enquanto, escolha o modelo aqui.',
         },
         library: {
+            snapshotRetained: 'ação agendada preservada',
+            delete: 'Excluir modelo',
+            deleteTitle: 'Excluir este modelo?',
+            deleteConfirm: '“{name}” será excluído. Ele não será recriado ao reiniciar.',
+            deleteUsed:
+                'Este modelo tem vínculos ou está no ar ({count} instâncias temporárias). Excluir também o retira do ar e remove seus vínculos. Eventos agendados mantêm suas ações salvas.',
+            deleteAssets: 'Imagens e fontes do Armazenamento serão preservadas.',
             new: 'Novo modelo',
             filter: 'Filtrar por grupo',
             all: 'Todos',
@@ -1748,7 +1761,7 @@ export default {
             tickerLayers:
                 'Letreiro: modelo permanente de texto. O texto é fixo; rolagem e relógio não fazem parte desta entrega.',
             permanentState:
-                'Sempre no ar salva se a logo e o letreiro carregam ao iniciar. O interruptor No ar / Fora em Modelos controla a visibilidade atual; esconder não apaga essa configuração. Mostrar um modelo permanente desabilitado também o habilita. O L-shape entra e sai por comando.',
+                'Sempre no ar carrega modelos compatíveis ao iniciar, inclusive modelos livres, até 16 por canal. Nome e grupo são definidos por você; o vínculo de controle é opcional. O interruptor No ar / Fora controla a visibilidade atual. O L-shape entra e sai por comando.',
             legacyModels:
                 'Os endereços com chave de logo/L-shape/cena abaixo continuam com as mesmas respostas. Agora eles agem nos modelos do canal. Trocas de imagem e posição são temporárias e não reescrevem o desenho salvo no Composer.',
             xmltvSeparate:

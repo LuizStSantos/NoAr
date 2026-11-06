@@ -6,7 +6,8 @@ layouts now use Composer layers too. Migration 00030 upgrades both 2.2.1 and
 already converted 00029 installations automatically, preserving bindings,
 identity and frozen legacy columns. Legacy APIs and clip/scene controls act
 on these models. Logo/L-shape/ticker Edit opens Composer; scenes retain an
-action editor in Graphics. Clock support remains outside this delivery.
+action editor in Graphics. Clock, uploaded fonts and data sources are now approved for the next stages;
+they are not implemented by open-templates stage 1.
 
 See the [implementation handoff](graphics-handoff/README.md) for the current
 source-of-truth contract, runtime evidence and historical stages a–e. The
@@ -16,6 +17,12 @@ output validation remain separate from that scoped proof.
 
 This document records the agreed design so the work can land in small
 releases without breaking existing operator workflows.
+
+Open-templates stage 1 now uses authored groups/names, optional compatibility
+assignments and image targets, assigned-model deletion and free permanent
+compositions. New installations/channels start with only one removable Logo
+example; updates preserve existing models. A separate completed-import state
+prevents deleted models returning at restart. See the current handoff evidence.
 
 ## Goals
 
@@ -45,8 +52,8 @@ panels from On air. Its saved-model Preview works with channel models alone;
 Program uses the Player's real preview component, including stopped/wait/error
 states. Logo/ticker requested visibility and channel L-shape entry/exit act on
 bindings. The Player now has the read-only status line described below.
-Scenes remain in the library. Clock and version 2.5 rundowns remain outside this
-follow-up. See the handoff screenshot gallery for executed browser evidence.
+Scenes remain in the library. Clock is approved in the next revision; version 2.5 rundowns remain outside
+this follow-up. See the handoff screenshot gallery for executed browser evidence.
 
 ## Design decisions
 
