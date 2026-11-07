@@ -9,7 +9,10 @@ on these models. Logo/L-shape/ticker Edit opens Composer; scenes retain an
 action editor in Graphics. The approved open-templates stages now include free
 groups/assignments and deletion, shape primitives, live clocks, uploaded fonts
 and CSV/RSS/JSON field mappings. Fresh installations start with only one
-removable Logo example. See the current handoff for executed checks and limits.
+removable Logo example. Data-bound text refreshes in place; continuous scrolling
+text/feed controls are still pending in Composer. WebVTT subtitles are a
+separate HLS track, described in [Closed captions](closed_captions.md). See the
+current handoff for executed checks and limits.
 
 See the [implementation handoff](graphics-handoff/README.md) for the current
 source-of-truth contract, runtime evidence and historical stages a–e. The

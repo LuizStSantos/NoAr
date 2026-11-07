@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "de48ce88a48f85cb6e2074b1d0baddfc14ecfe8f38f07954844df0463d564098",
+      "sha256": "37949a6c4b7a9da9752aa5340def61d177a034c9dbafd407b8abae78542481d1",
       "language": "Markdown",
-      "bytes": 58360,
+      "bytes": 58518,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -4305,141 +4305,141 @@
       ]
     },
     "backend/app/src/file/upload.rs": {
-      "sha256": "37750a687806b47274808bf6231c613a9cffa5f72d7eebb58b940a6b5abb5aac",
+      "sha256": "3a317abcbf3b3e769dd774645848f5a769914a50e8cdaff496f60f8f4ec5dde5",
       "language": "Rust",
-      "bytes": 19510,
+      "bytes": 19593,
       "symbols": [
         {
           "name": "UploadStatusQuery",
-          "line": 64
+          "line": 65
         },
         {
           "name": "UploadStatus",
-          "line": 73
+          "line": 74
         },
         {
           "name": "PersistedUpload",
-          "line": 78
+          "line": 79
         },
         {
           "name": "UploadState",
-          "line": 85
+          "line": 86
         },
         {
           "name": "Upload",
-          "line": 95
+          "line": 96
         },
         {
           "name": "UploadMap",
-          "line": 101
+          "line": 102
         },
         {
           "name": "sanitize_upload_filename",
-          "line": 107
+          "line": 108
         },
         {
           "name": "validate_mime_type",
-          "line": 117
+          "line": 118
         },
         {
           "name": "validate_upload_metadata",
-          "line": 137
+          "line": 138
         },
         {
           "name": "validate_chunk",
-          "line": 158
+          "line": 159
         },
         {
           "name": "merge_ranges",
-          "line": 176
+          "line": 177
         },
         {
           "name": "is_upload_complete",
-          "line": 197
+          "line": 198
         },
         {
           "name": "append_suffix",
-          "line": 213
+          "line": 214
         },
         {
           "name": "uploading_path",
-          "line": 219
+          "line": 220
         },
         {
           "name": "metadata_path",
-          "line": 223
+          "line": 224
         },
         {
           "name": "persist_upload",
-          "line": 227
+          "line": 228
         },
         {
           "name": "active_upload",
-          "line": 246
+          "line": 247
         },
         {
           "name": "prune_inactive_uploads",
-          "line": 278
+          "line": 279
         },
         {
           "name": "restored_state",
-          "line": 307
+          "line": 308
         },
         {
           "name": "get_or_create_upload",
-          "line": 344
+          "line": 345
         },
         {
           "name": "write_upload_chunk",
-          "line": 419
+          "line": 420
         },
         {
           "name": "received_ranges",
-          "line": 461
+          "line": 462
         },
         {
           "name": "remove_tracked_upload",
-          "line": 476
+          "line": 477
         },
         {
           "name": "finalize_upload",
-          "line": 486
+          "line": 487
         },
         {
           "name": "tests",
-          "line": 515
+          "line": 516
         },
         {
           "name": "test_directory",
-          "line": 518
+          "line": 519
         },
         {
           "name": "merges_overlapping_adjacent_and_contained_ranges",
-          "line": 527
+          "line": 528
         },
         {
           "name": "rejects_invalid_upload_metadata_and_ranges",
-          "line": 538
+          "line": 539
         },
         {
           "name": "creates_sidecar_paths_without_replacing_the_extension",
-          "line": 559
+          "line": 562
         },
         {
           "name": "restores_ranges_and_atomically_finalizes_upload",
-          "line": 571
+          "line": 574
         },
         {
           "name": "status_only_upload_does_not_create_sidecar_files",
-          "line": 598
+          "line": 601
         },
         {
           "name": "finalizing_does_not_replace_an_existing_file",
-          "line": 614
+          "line": 617
         },
         {
           "name": "rejects_competing_or_incompatible_uploads",
-          "line": 637
+          "line": 640
         }
       ]
     },
@@ -21667,9 +21667,9 @@
       "symbols": []
     },
     "docs/README.md": {
-      "sha256": "c2da6ade57b86a26836c16840c819515ea84fec079eb9e2f60ca7f5154091382",
+      "sha256": "8d0bcbbb9690999fed07094d3bec976505de6bbc47bf3f350f0bb386b8e38dc4",
       "language": "Markdown",
-      "bytes": 3102,
+      "bytes": 3233,
       "symbols": []
     },
     "docs/ad_breaks.md": {
@@ -21685,9 +21685,9 @@
       "symbols": []
     },
     "docs/closed_captions.md": {
-      "sha256": "6505be075500720deeccb8faef3355a6a93ca24510721ebb30a678cbd0312d92",
+      "sha256": "66cf7d7b6fd4e47bb3c6f3f38b5d82d39d2e2cf8ba8b68c17eb402f2063737ab",
       "language": "Markdown",
-      "bytes": 605,
+      "bytes": 3031,
       "symbols": []
     },
     "docs/commercials.md": {
@@ -21727,9 +21727,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "84aaf83ca6883ad2ac73d07ca4befc76c9b1985adcfb73bf4606f0c9d711051a",
+      "sha256": "cde85ee79aefdc7b4fd8538d06a0833335ffeff78625ab1853ce9718b196a6f3",
       "language": "Markdown",
-      "bytes": 93373,
+      "bytes": 96554,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -22344,6 +22344,30 @@
       "bytes": 6042,
       "symbols": []
     },
+    "docs/graphics-handoff/output-webvtt-cue.vtt": {
+      "sha256": "ca9491d99d32d1af273007f314a90b91781ba6b14ae4115e765e00679c09eceb",
+      "language": "Other",
+      "bytes": 123,
+      "symbols": []
+    },
+    "docs/graphics-handoff/output-webvtt-empty.vtt": {
+      "sha256": "6737e495afc1061507cdddf14c4211925911ebbdc17ffa914f37b03f95c023e7",
+      "language": "Other",
+      "bytes": 60,
+      "symbols": []
+    },
+    "docs/graphics-handoff/output-webvtt-master.m3u8": {
+      "sha256": "0374e3d63bc3d7fb730d0220aa02d026bd7700cd472924ea4da7f437ce6d989e",
+      "language": "Other",
+      "bytes": 251,
+      "symbols": []
+    },
+    "docs/graphics-handoff/output-webvtt-playlist.m3u8": {
+      "sha256": "6a72b02f68fae85ae0cccc83a8008f10c5e98e6fbfb493f6f815f60269652bee",
+      "language": "Other",
+      "bytes": 2729,
+      "symbols": []
+    },
     "docs/graphics-handoff/parity-d-branch-channel.txt": {
       "sha256": "c45424f249a5dd7f55c4fe757b928fdf0d407a648cf9ca4fa54264281de3c6a1",
       "language": "Other",
@@ -22404,6 +22428,36 @@
       "bytes": 4009,
       "symbols": []
     },
+    "docs/graphics-handoff/storage-subtitles-browser-evidence.json": {
+      "sha256": "3e36dca49afb14f4eaa02f8bee93e6abe74a90075ef7e1884e17cce84e2c0921",
+      "language": "JSON",
+      "bytes": 3171,
+      "symbols": []
+    },
+    "docs/graphics-handoff/storage-subtitles-browser-test-log.txt": {
+      "sha256": "47047780cda3309e6f9ef142270c0def5ec8c26fbe56d9bd3d080d8850704e8b",
+      "language": "Other",
+      "bytes": 4275,
+      "symbols": []
+    },
+    "docs/graphics-handoff/storage-subtitles-channel-log.txt": {
+      "sha256": "0aacefc6c2019049f90fd06b706f76d5a3cfb95f321bd1140029f41ead1ead8e",
+      "language": "Other",
+      "bytes": 3216,
+      "symbols": []
+    },
+    "docs/graphics-handoff/storage-subtitles-health.json": {
+      "sha256": "193c5386764e98b43ea732d4ad6f5afe8cc2c9a6483ca2a4b93e3d4ffa616f39",
+      "language": "JSON",
+      "bytes": 160,
+      "symbols": []
+    },
+    "docs/graphics-handoff/storage-subtitles-rust-verification-log.txt": {
+      "sha256": "21950216a7514c0fa60a514f46324e03753baafbd00ededdcabe28257e713ccc",
+      "language": "Other",
+      "bytes": 64429,
+      "symbols": []
+    },
     "docs/graphics-handoff/template-removal-channel-log.txt": {
       "sha256": "605b1d1197bc9d61b5b414a38be108f27abc63c1258bc97bec2f1acfc61f9823",
       "language": "Other",
@@ -22435,9 +22489,9 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "4a662374daa87c800c3c4deaf1ecf7c765ea85dd9138758d041ccd6d0acfeb88",
+      "sha256": "1cabb70876cc2639d9f7f2fa5c91c6bc06aaa8cafaabfbffef9eb695d37b3d16",
       "language": "Markdown",
-      "bytes": 8721,
+      "bytes": 8923,
       "symbols": []
     },
     "docs/graphics-testing.md": {
@@ -22534,6 +22588,12 @@
       "sha256": "d4499ea11944724ded424e207b495211d8169f9487112add78bf57ca10cd72a4",
       "language": "Markdown",
       "bytes": 18271,
+      "symbols": []
+    },
+    "docs/storage.md": {
+      "sha256": "b83320e8b76e607b16a71efc3ee917b245706430f949ec11001c5eca2e42700d",
+      "language": "Markdown",
+      "bytes": 1371,
       "symbols": []
     },
     "docs/trim.md": {
@@ -30041,9 +30101,9 @@
       ]
     },
     "frontend/src/components/storage/ImageViewer.vue": {
-      "sha256": "d9fe59ceaa3e1853cdafdac7a7f41b6421859f473489d6379013bd32fdf087d3",
+      "sha256": "6a173e33800c664f3974809e14f16c7475da562efc9ceb9191ec20f04192be78",
       "language": "Vue",
-      "bytes": 8205,
+      "bytes": 8324,
       "symbols": [
         {
           "name": "props",
@@ -30051,47 +30111,47 @@
         },
         {
           "name": "index",
-          "line": 33
+          "line": 34
         },
         {
           "name": "emit",
-          "line": 35
+          "line": 36
         },
         {
           "name": "dialog",
-          "line": 44
-        },
-        {
-          "name": "strip",
-          "line": 45
-        },
-        {
-          "name": "image",
           "line": 46
         },
         {
-          "name": "details",
+          "name": "strip",
+          "line": 47
+        },
+        {
+          "name": "image",
           "line": 48
         },
         {
+          "name": "details",
+          "line": 50
+        },
+        {
           "name": "current",
-          "line": 49
+          "line": 51
         },
         {
           "name": "go",
-          "line": 65
+          "line": 67
         },
         {
           "name": "total",
-          "line": 66
+          "line": 68
         },
         {
           "name": "loaded",
-          "line": 73
+          "line": 75
         },
         {
           "name": "element",
-          "line": 74
+          "line": 76
         }
       ]
     },
@@ -31930,9 +31990,9 @@
       ]
     },
     "frontend/src/composables/fileAccess.ts": {
-      "sha256": "e61a31cbf9502ea333b6cf9f5ce78b6b676dd8e5ca4d7ba0a14ac993b89188ec",
+      "sha256": "4cf790a3b413866122e53053f66b79ad1fde58b42dd2156738861025a7f474aa",
       "language": "TypeScript",
-      "bytes": 873,
+      "bytes": 1335,
       "symbols": [
         {
           "name": "FileAccessResponse",
@@ -31945,6 +32005,10 @@
         {
           "name": "createFilePreviewUrl",
           "line": 14
+        },
+        {
+          "name": "downloadStorageFile",
+          "line": 31
         }
       ]
     },
@@ -33164,15 +33228,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "819fba1bd735cabd6b3dc3349828befbed7119667de922b0945c2428ea82f5c2",
+      "sha256": "4e630d98df46f23f4d56ec8434657e697234d5e32c883973d4c892a759a3c339",
       "language": "TypeScript",
-      "bytes": 146013,
+      "bytes": 146046,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "64c22d2533421440838ee210abe1d3104846e1a2bbfee33b83520d8e19794141",
+      "sha256": "6cdb8c2f592ee42157267975cf283954255f19a959e6ee46798da3c0269f623c",
       "language": "TypeScript",
-      "bytes": 152166,
+      "bytes": 152208,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -34604,9 +34668,9 @@
       ]
     },
     "frontend/src/views/MediaView.vue": {
-      "sha256": "d9ed87378c4b97cd7bcb4c80a0d8c802025eaa7fc27e827a6510d2225a32348a",
+      "sha256": "e13be435752d38ae00e76d350ce1d92f788dde54990fe97dd6edd92910ae1a57",
       "language": "Vue",
-      "bytes": 74952,
+      "bytes": 77033,
       "symbols": [
         {
           "name": "configStore",
@@ -34713,640 +34777,656 @@
           "line": 90
         },
         {
-          "name": "renameTarget",
-          "line": 92
+          "name": "downloading",
+          "line": 91
         },
         {
-          "name": "renameValue",
+          "name": "renameTarget",
           "line": 93
         },
         {
-          "name": "showCreate",
+          "name": "renameValue",
           "line": 94
         },
         {
-          "name": "newFolderName",
+          "name": "showCreate",
           "line": 95
         },
         {
-          "name": "deleteNames",
+          "name": "newFolderName",
           "line": 96
         },
         {
-          "name": "deleteRecursive",
+          "name": "deleteNames",
           "line": 97
         },
         {
-          "name": "moveNames",
+          "name": "deleteRecursive",
           "line": 98
         },
         {
-          "name": "moveTarget",
+          "name": "moveNames",
           "line": 99
         },
         {
-          "name": "preview",
+          "name": "moveTarget",
           "line": 100
         },
         {
+          "name": "preview",
+          "line": 101
+        },
+        {
           "name": "readSetting",
-          "line": 104
+          "line": 105
         },
         {
           "name": "writeSetting",
-          "line": 112
+          "line": 113
         },
         {
           "name": "initialView",
-          "line": 120
-        },
-        {
-          "name": "saved",
           "line": 121
         },
         {
-          "name": "rows",
-          "line": 131
+          "name": "saved",
+          "line": 122
         },
         {
-          "name": "needle",
+          "name": "rows",
           "line": 132
         },
         {
-          "name": "folders",
+          "name": "needle",
           "line": 133
         },
         {
-          "name": "files",
+          "name": "folders",
           "line": 134
         },
         {
+          "name": "files",
+          "line": 135
+        },
+        {
           "name": "isVideo",
-          "line": 142
+          "line": 143
         },
         {
           "name": "isProgram",
-          "line": 147
+          "line": 148
         },
         {
           "name": "isImage",
-          "line": 151
+          "line": 152
         },
         {
           "name": "videos",
-          "line": 155
-        },
-        {
-          "name": "images",
           "line": 156
         },
         {
-          "name": "shownImages",
+          "name": "images",
           "line": 157
         },
         {
-          "name": "needle",
+          "name": "shownImages",
           "line": 158
         },
         {
-          "name": "imageUrls",
-          "line": 164
+          "name": "needle",
+          "line": 159
         },
         {
-          "name": "imageDims",
+          "name": "imageUrls",
           "line": 165
         },
         {
-          "name": "retried",
+          "name": "imageDims",
           "line": 166
         },
         {
-          "name": "imagesFolder",
+          "name": "retried",
           "line": 167
         },
         {
+          "name": "imagesFolder",
+          "line": 168
+        },
+        {
           "name": "imageKey",
-          "line": 170
+          "line": 171
         },
         {
           "name": "loadImageUrls",
-          "line": 174
-        },
-        {
-          "name": "folder",
           "line": 175
         },
         {
+          "name": "folder",
+          "line": 176
+        },
+        {
           "name": "queue",
-          "line": 188
+          "line": 189
         },
         {
           "name": "worker",
-          "line": 190
+          "line": 191
         },
         {
           "name": "url",
-          "line": 193
+          "line": 194
         },
         {
           "name": "imageFailed",
-          "line": 208
-        },
-        {
-          "name": "key",
           "line": 209
         },
         {
-          "name": "imageLoaded",
-          "line": 218
+          "name": "key",
+          "line": 210
         },
         {
-          "name": "element",
+          "name": "imageLoaded",
           "line": 219
         },
         {
-          "name": "imagesSummary",
-          "line": 226
+          "name": "element",
+          "line": 220
         },
         {
-          "name": "bytes",
+          "name": "imagesSummary",
           "line": 227
         },
         {
+          "name": "bytes",
+          "line": 228
+        },
+        {
           "name": "artworkOwner",
-          "line": 237
+          "line": 238
         },
         {
           "name": "artworkHere",
-          "line": 246
+          "line": 247
         },
         {
           "name": "parts",
-          "line": 251
-        },
-        {
-          "name": "name",
           "line": 252
         },
         {
-          "name": "posterHere",
-          "line": 257
+          "name": "name",
+          "line": 253
         },
         {
-          "name": "backdropHere",
+          "name": "posterHere",
           "line": 258
         },
         {
-          "name": "viewerIndex",
-          "line": 260
+          "name": "backdropHere",
+          "line": 259
         },
         {
-          "name": "viewerBusy",
+          "name": "viewerIndex",
           "line": 261
         },
         {
-          "name": "viewerImages",
+          "name": "viewerBusy",
           "line": 262
         },
         {
-          "name": "openViewer",
-          "line": 282
+          "name": "viewerImages",
+          "line": 263
         },
         {
-          "name": "position",
+          "name": "openViewer",
           "line": 283
         },
         {
-          "name": "useAsArtwork",
-          "line": 292
+          "name": "position",
+          "line": 284
         },
         {
-          "name": "file",
+          "name": "useAsArtwork",
           "line": 293
         },
         {
-          "name": "url",
+          "name": "file",
           "line": 294
         },
         {
+          "name": "url",
+          "line": 295
+        },
+        {
           "name": "response",
-          "line": 303
+          "line": 304
         },
         {
           "name": "blob",
-          "line": 309
+          "line": 310
         },
         {
           "name": "guide",
-          "line": 319
+          "line": 320
         },
         {
           "name": "folderSheet",
-          "line": 321
+          "line": 322
         },
         {
           "name": "loadGuide",
-          "line": 329
-        },
-        {
-          "name": "storage",
           "line": 330
         },
         {
-          "name": "files",
+          "name": "storage",
           "line": 331
         },
         {
+          "name": "files",
+          "line": 332
+        },
+        {
           "name": "found",
-          "line": 339
+          "line": 340
         },
         {
           "name": "summary",
-          "line": 350
-        },
-        {
-          "name": "seconds",
           "line": 351
         },
         {
+          "name": "seconds",
+          "line": 352
+        },
+        {
           "name": "allSelected",
-          "line": 355
+          "line": 356
         },
         {
           "name": "sheetFolders",
-          "line": 358
-        },
-        {
-          "name": "liveFolders",
           "line": 359
         },
         {
-          "name": "commercialFolders",
+          "name": "liveFolders",
           "line": 360
         },
         {
-          "name": "commercialOf",
-          "line": 362
+          "name": "commercialFolders",
+          "line": 361
         },
         {
-          "name": "commercialBusy",
+          "name": "commercialOf",
           "line": 363
         },
         {
+          "name": "commercialBusy",
+          "line": 364
+        },
+        {
           "name": "setCommercial",
-          "line": 365
+          "line": 366
         },
         {
           "name": "liveFile",
-          "line": 386
-        },
-        {
-          "name": "isLiveFolder",
           "line": 387
         },
         {
-          "name": "currentLive",
+          "name": "isLiveFolder",
           "line": 388
         },
         {
-          "name": "file",
+          "name": "currentLive",
           "line": 389
         },
         {
+          "name": "file",
+          "line": 390
+        },
+        {
           "name": "path",
-          "line": 395
+          "line": 396
         },
         {
           "name": "liveEditor",
-          "line": 399
+          "line": 400
         },
         {
           "name": "programEditor",
-          "line": 401
-        },
-        {
-          "name": "liveTests",
           "line": 402
         },
         {
-          "name": "liveTesting",
+          "name": "liveTests",
           "line": 403
         },
         {
-          "name": "liveNext",
-          "line": 405
+          "name": "liveTesting",
+          "line": 404
         },
         {
-          "name": "path",
+          "name": "liveNext",
           "line": 406
         },
         {
+          "name": "path",
+          "line": 407
+        },
+        {
           "name": "active",
-          "line": 412
+          "line": 413
         },
         {
           "name": "next",
-          "line": 418
+          "line": 419
         },
         {
           "name": "loadLiveInfo",
-          "line": 436
+          "line": 437
         },
         {
           "name": "testLive",
-          "line": 443
-        },
-        {
-          "name": "live",
           "line": 444
         },
         {
+          "name": "live",
+          "line": 445
+        },
+        {
           "name": "result",
-          "line": 453
+          "line": 454
         },
         {
           "name": "scheduleLive",
-          "line": 467
+          "line": 468
         },
         {
           "name": "liveSaved",
-          "line": 473
+          "line": 474
         },
         {
           "name": "folder",
-          "line": 482
+          "line": 483
         },
         {
           "name": "liveRole",
-          "line": 494
-        },
-        {
-          "name": "lower",
           "line": 495
         },
         {
+          "name": "lower",
+          "line": 496
+        },
+        {
           "name": "movieFolders",
-          "line": 515
+          "line": 516
         },
         {
           "name": "clock",
-          "line": 517
-        },
-        {
-          "name": "total",
           "line": 518
         },
         {
-          "name": "hours",
+          "name": "total",
           "line": 519
         },
         {
-          "name": "minutes",
+          "name": "hours",
           "line": 520
         },
         {
-          "name": "rest",
+          "name": "minutes",
           "line": 521
         },
         {
+          "name": "rest",
+          "line": 522
+        },
+        {
           "name": "modifiedLabel",
-          "line": 526
+          "line": 527
         },
         {
           "name": "extension",
-          "line": 534
+          "line": 535
         },
         {
           "name": "fileIcon",
-          "line": 538
+          "line": 539
         },
         {
           "name": "ext",
-          "line": 543
+          "line": 544
         },
         {
           "name": "canPreview",
-          "line": 560
+          "line": 561
         },
         {
           "name": "load",
-          "line": 564
+          "line": 565
         },
         {
           "name": "conversions",
-          "line": 572
+          "line": 573
         },
         {
           "name": "conversionOf",
-          "line": 574
+          "line": 575
         },
         {
           "name": "conversionLabel",
-          "line": 578
+          "line": 579
         },
         {
           "name": "refresh",
-          "line": 600
+          "line": 601
         },
         {
           "name": "loadSheet",
-          "line": 607
-        },
-        {
-          "name": "path",
           "line": 608
         },
         {
+          "name": "path",
+          "line": 609
+        },
+        {
           "name": "next",
-          "line": 616
+          "line": 617
         },
         {
           "name": "loadDisk",
-          "line": 626
+          "line": 627
         },
         {
           "name": "stat",
-          "line": 632
+          "line": 633
         },
         {
           "name": "linked",
-          "line": 643
+          "line": 644
         },
         {
           "name": "toggle",
-          "line": 678
+          "line": 679
         },
         {
           "name": "toggleAll",
-          "line": 684
+          "line": 685
         },
         {
           "name": "failed",
-          "line": 688
+          "line": 689
         },
         {
           "name": "move",
-          "line": 692
-        },
-        {
-          "name": "from",
           "line": 693
         },
         {
-          "name": "dragRow",
-          "line": 723
+          "name": "from",
+          "line": 694
         },
         {
-          "name": "names",
+          "name": "dragRow",
           "line": 724
         },
         {
+          "name": "names",
+          "line": 725
+        },
+        {
           "name": "droppedNames",
-          "line": 734
+          "line": 735
         },
         {
           "name": "dropOnFolder",
-          "line": 742
-        },
-        {
-          "name": "files",
           "line": 743
         },
         {
+          "name": "files",
+          "line": 744
+        },
+        {
           "name": "names",
-          "line": 752
+          "line": 753
         },
         {
           "name": "dropOnRow",
-          "line": 760
+          "line": 761
         },
         {
           "name": "allowFolderDrop",
-          "line": 769
-        },
-        {
-          "name": "types",
           "line": 770
         },
         {
+          "name": "types",
+          "line": 771
+        },
+        {
           "name": "onDragOverFiles",
-          "line": 778
+          "line": 779
         },
         {
           "name": "onDropFiles",
-          "line": 785
+          "line": 786
         },
         {
           "name": "files",
-          "line": 788
+          "line": 789
         },
         {
           "name": "onPickFiles",
-          "line": 795
-        },
-        {
-          "name": "input",
           "line": 796
         },
         {
-          "name": "upload",
-          "line": 804
+          "name": "input",
+          "line": 797
         },
         {
-          "name": "existing",
+          "name": "upload",
           "line": 805
         },
         {
-          "name": "fresh",
+          "name": "existing",
           "line": 806
         },
         {
+          "name": "fresh",
+          "line": 807
+        },
+        {
           "name": "uploadNfo",
-          "line": 827
+          "line": 828
         },
         {
           "name": "cardArtwork",
-          "line": 832
+          "line": 833
         },
         {
           "name": "onSheetSaved",
-          "line": 842
+          "line": 843
         },
         {
           "name": "startRename",
-          "line": 852
+          "line": 853
         },
         {
           "name": "finishRename",
-          "line": 857
-        },
-        {
-          "name": "row",
           "line": 858
         },
         {
-          "name": "name",
+          "name": "row",
           "line": 859
         },
         {
-          "name": "finishCreate",
-          "line": 883
+          "name": "name",
+          "line": 860
         },
         {
-          "name": "name",
+          "name": "finishCreate",
           "line": 884
         },
         {
+          "name": "name",
+          "line": 885
+        },
+        {
           "name": "deleteHasFolder",
-          "line": 912
+          "line": 913
         },
         {
           "name": "finishDelete",
-          "line": 916
-        },
-        {
-          "name": "names",
           "line": 917
         },
         {
-          "name": "recursive",
+          "name": "names",
           "line": 918
         },
         {
+          "name": "recursive",
+          "line": 919
+        },
+        {
           "name": "startMove",
-          "line": 943
+          "line": 944
         },
         {
           "name": "finishMove",
-          "line": 948
-        },
-        {
-          "name": "names",
           "line": 949
         },
         {
+          "name": "names",
+          "line": 950
+        },
+        {
           "name": "openLogoMarks",
-          "line": 958
+          "line": 959
         },
         {
           "name": "openPreview",
-          "line": 964
-        },
-        {
-          "name": "path",
           "line": 965
         },
         {
-          "name": "url",
-          "line": 968
+          "name": "path",
+          "line": 966
         },
         {
-          "name": "ext",
+          "name": "url",
           "line": 969
         },
         {
+          "name": "ext",
+          "line": 970
+        },
+        {
+          "name": "downloadFile",
+          "line": 996
+        },
+        {
+          "name": "id",
+          "line": 1001
+        },
+        {
+          "name": "path",
+          "line": 1002
+        },
+        {
           "name": "uploadAccept",
-          "line": 995
+          "line": 1014
         }
       ]
     },
@@ -36740,6 +36820,17 @@
       "language": "TypeScript",
       "bytes": 478,
       "symbols": []
+    },
+    "qa/e2e/tests/storage.spec.ts": {
+      "sha256": "0aeb9e907807e4c01762654d19fa1bc3434056f6b4115e81a4b08295f6b32d84",
+      "language": "TypeScript",
+      "bytes": 4563,
+      "symbols": [
+        {
+          "name": "expectOriginalDownload",
+          "line": 8
+        }
+      ]
     },
     "qa/e2e/tsconfig.json": {
       "sha256": "4759e38531cd29980eb6590b90a0753fed7c8c30199abf29fcde8276bc08fdd8",

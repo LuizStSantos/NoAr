@@ -28,6 +28,7 @@ const props = defineProps<{
     /** Using an image as artwork is offered (not in the storage root). */
     canUse: boolean
     busy: boolean
+    downloading?: boolean
 }>()
 
 const index = defineModel<number>({ required: true })
@@ -36,6 +37,7 @@ const emit = defineEmits<{
     close: []
     use: [kind: ArtworkKind, name: string]
     loaded: [key: string, dims: string]
+    download: [name: string]
 }>()
 
 const { t } = useI18n()
@@ -142,14 +144,15 @@ onBeforeUnmount(() => {
                     {{ t('storage.images.useBackdrop') }}
                 </button>
             </template>
-            <a
-                v-if="image?.url"
-                :href="image.url"
-                :download="image.name"
+            <button
+                v-if="image"
+                type="button"
+                :disabled="busy || downloading"
                 class="btn-quiet min-h-10 text-white border-white/25 no-underline"
+                @click="emit('download', image.name)"
             >
                 {{ t('storage.images.download') }}
-            </a>
+            </button>
             <button
                 type="button"
                 class="btn-icon text-white/80"

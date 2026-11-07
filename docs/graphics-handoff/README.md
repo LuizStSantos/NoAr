@@ -4,6 +4,59 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Storage downloads and WebVTT subtitle guidance
+
+Storage now offers native browser downloads in file rows, image cards and the
+image viewer. Each click obtains a fresh channel/path-scoped access ticket;
+the browser streams the existing file under its server filename. Folder rows
+have no download action. A failed ticket request reports the error and leaves
+the action usable. Existing preview/authentication routes are unchanged.
+
+The upload picker now includes `.vtt`, and the backend accepts its browser MIME
+`text/vtt`. The first browser run exposed that MIME rejection; it was corrected
+before the clean full-suite repeat. The [Storage guide](../storage.md) explains
+current-file downloads and [Closed captions](../closed_captions.md) documents
+UTF-8 sidecars, same-name pairing, HLS settings, empty-file fallback and client
+CC selection. Composer data fields refresh in place; continuous text/feed
+scrolling controls are **still pending** and were not added in this change.
+
+Verification on an owned disposable SQLite installation with **GStreamer
+1.26.2**: fmt, exact no-default/all-target Clippy, **714 Rust tests passed / 14
+ignored**, normal backend build, Vue types, ESLint, changed-file Prettier, QA
+TypeScript, production frontend build and architecture boundaries passed.
+All **34 browser tests passed**, including MP4/PNG/WebVTT byte comparisons,
+Unicode filenames, image-viewer downloads, phone actions and ticket-error
+recovery. The real HLS check uses a separate Video.js QA player on the actual
+master output, not the NoAr low-latency monitor. It checks the uploaded accented
+cue, `pt-BR` track/default metadata and the transition to a video without a
+sidecar. Both cue display and empty fallback **passed**; `/health` reported
+`on_air` / `ok`, the scoped channel log has **zero ERROR entries**, and the
+browser reported no page errors. Delivered master/segment hashes are retained
+in the executed evidence.
+
+[Browser and HLS evidence](storage-subtitles-browser-evidence.json),
+[Rust log](storage-subtitles-rust-verification-log.txt),
+[browser suite](storage-subtitles-browser-test-log.txt),
+[HLS channel log](storage-subtitles-channel-log.txt),
+[HLS health](storage-subtitles-health.json).
+
+Screenshots:
+[Storage desktop](storage-download-files-pt-BR.jpg),
+[Storage phone](storage-download-files-phone-pt-BR.jpg),
+[Images phone](storage-download-images-phone-pt-BR.jpg),
+[subtitle settings desktop](subtitles-hls-settings-pt-BR.jpg),
+[subtitle settings phone](subtitles-hls-settings-phone-pt-BR.jpg),
+[HLS caption displayed](output-webvtt-player.jpg),
+[HLS empty fallback](output-webvtt-empty-fallback.jpg).
+[Delivered master](output-webvtt-master.m3u8) and
+[subtitle playlist](output-webvtt-playlist.m3u8) are captured evidence; their
+relative segment URLs belong to the disposable run. Example delivered segments: [with cue](output-webvtt-cue.vtt) and
+[empty](output-webvtt-empty.vtt). All screenshots are at most 1440 px wide.
+
+NOT_RUN for this change: Firefox/Safari subtitle clients, physical output
+devices, long-duration playback and continuous scrolling. WebVTT is an optional
+HLS subtitle track; this does not add burned-in subtitles or SRT import.
+
 ## Graphics architecture and maintenance refactor
 
 The application now owns a `graphics` feature module. Logo, L-shape and model

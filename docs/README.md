@@ -22,6 +22,8 @@ Portuguese and English; menus are named here in English.
   daily playlists.
 - **[Videos from a URL](remote_source.md)**: playlist entries that point to a
   remote file or stream.
+- **[Storage and downloads](storage.md)**: upload media, artwork and subtitle
+  sidecars, and download files stored on the server.
 - **[Trimming videos](trim.md)**: cut the slate, bars or black off a video
   once in Storage, and it comes in trimmed in every playlist, the Scheduler,
   folder mode and the playlist generator.

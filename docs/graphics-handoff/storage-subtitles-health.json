@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "version": "2.2.1",
+  "channels": [
+    {
+      "id": 1,
+      "state": "on_air",
+      "uptime": 88,
+      "output_age": 0.3
+    }
+  ]
+}

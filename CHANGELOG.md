@@ -36,6 +36,9 @@ one is tagged.
 
 ### Added
 
+- Download stored media and sidecar files from Storage, with fresh access tickets
+  for list, image-grid and viewer actions; accept WebVTT subtitle uploads.
+
 - Replace Composer's scenery background with a neutral checkerboard and 10%
   grid, plus optional action/text safety guides at 5%/10% from each edge.
 

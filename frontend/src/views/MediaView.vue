@@ -26,7 +26,7 @@ import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 
 import { authFetch } from '@/composables/authFetch'
 import { type Conversion, useConversions } from '@/composables/conversions'
-import { createFilePreviewUrl } from '@/composables/fileAccess'
+import { createFilePreviewUrl, downloadStorageFile } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
 import {
     LIVES_FOLDER,
@@ -88,6 +88,7 @@ const treeVersion = ref(0)
 const disk = ref<{ total: number; free: number } | null>(null)
 const dropActive = ref(false)
 const uploadInput = ref<HTMLInputElement>()
+const downloading = ref(false)
 
 const renameTarget = ref<Row | null>(null)
 const renameValue = ref('')
@@ -992,8 +993,26 @@ async function openPreview(row: Row) {
     }
 }
 
+async function downloadFile(row: Row) {
+    if (row.folder || downloading.value) {
+        return
+    }
+
+    const id = channelId.value
+    const path = `/${storageJoin(current.value, row.name)}`
+    downloading.value = true
+
+    try {
+        await downloadStorageFile(id, path, row.name)
+    } catch (error) {
+        failed(error)
+    } finally {
+        downloading.value = false
+    }
+}
+
 const uploadAccept = computed(() =>
-    [...configStore.playout.storage.extensions, ...IMAGE_TYPES, 'nfo'].map((ext) => `.${ext}`).join(','),
+    [...configStore.playout.storage.extensions, ...IMAGE_TYPES, 'nfo', 'vtt'].map((ext) => `.${ext}`).join(','),
 )
 </script>
 <template>
@@ -1235,6 +1254,16 @@ const uploadAccept = computed(() =>
                                         @click="openViewer(file.name)"
                                     >
                                         <i class="bi bi-eye" aria-hidden="true" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn-icon bg-base-100/90 text-base-content"
+                                        :aria-label="t('storage.download', { name: file.name })"
+                                        :title="t('storage.download', { name: file.name })"
+                                        :disabled="downloading"
+                                        @click="downloadFile({ name: file.name, folder: false, file })"
+                                    >
+                                        <i class="bi bi-download" aria-hidden="true" />
                                     </button>
                                     <button
                                         type="button"
@@ -1537,6 +1566,17 @@ const uploadAccept = computed(() =>
                                             class="flex justify-end gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                                         >
                                             <button
+                                                v-if="!row.folder"
+                                                type="button"
+                                                class="btn-icon text-muted"
+                                                :aria-label="t('storage.download', { name: row.name })"
+                                                :title="t('storage.download', { name: row.name })"
+                                                :disabled="downloading"
+                                                @click="downloadFile(row)"
+                                            >
+                                                <i class="bi bi-download" aria-hidden="true" />
+                                            </button>
+                                            <button
                                                 v-if="canPreview(row)"
                                                 type="button"
                                                 class="btn-icon text-muted"
@@ -1760,7 +1800,9 @@ const uploadAccept = computed(() =>
             :owner="artworkOwner"
             :can-use="Boolean(current)"
             :busy="viewerBusy"
+            :downloading="downloading"
             @close="viewerIndex = null"
+            @download="downloadFile({ name: $event, folder: false })"
             @use="useAsArtwork"
             @loaded="(key, dims) => imageDims.set(key, dims)"
         />
