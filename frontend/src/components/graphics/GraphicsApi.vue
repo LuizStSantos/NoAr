@@ -55,6 +55,9 @@ function curl(path: string, body?: object) {
 const readExamples = computed(() => [
     { label: t('graphics.api.listTemplates'), command: curl('templates') },
     { label: t('graphics.api.channelState'), command: curl('channel') },
+    { label: t('graphics.api.dataSources'), command: curl('sources') },
+    { label: t('graphics.api.fontAssets'), command: curl('font-assets') },
+    { label: t('graphics.api.clockReference'), command: curl('clock') },
 ])
 const channelExamples = computed(() => {
     const model = selectedRole.value

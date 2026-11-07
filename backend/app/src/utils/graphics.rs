@@ -16,6 +16,8 @@ use serde::{Deserialize, Serialize};
 
 #[path = "graphics/fonts/graphics.rs"]
 pub mod fonts;
+#[path = "graphics/sources/graphics.rs"]
+pub mod sources;
 
 use crate::{
     db::models::GraphicsTemplate,
@@ -25,15 +27,25 @@ use crate::{
 };
 
 /// Whether a saved model has visible artwork or text, not just a picture window.
-pub(crate) fn graphic_has_content(template: &GraphicsTemplate, storage: &std::path::Path) -> bool {
+pub(crate) fn graphic_has_content(
+    template: &GraphicsTemplate,
+    config: &crate::utils::config::PlayoutConfig,
+) -> bool {
+    let Ok(values) = sources::resolved_values(template, &HashMap::new(), &HashMap::new(), config)
+    else {
+        return false;
+    };
+
     template.layers.iter().any(|layer| {
         layer.visible
             && match layer.kind {
-                LayerKind::Image => layer.image.as_deref().is_some_and(|image| {
-                    !image.is_empty()
-                        && norm_abs_path(storage, image).is_ok_and(|(path, _, _)| path.is_file())
-                }),
-                LayerKind::Text => !layer.text.trim().is_empty(),
+                LayerKind::Image => layer_image(
+                    layer.image.as_deref().unwrap_or_default(),
+                    &values,
+                    &config.channel.storage,
+                )
+                .is_ok_and(|path| path.is_some_and(|path| path.is_file())),
+                LayerKind::Text => !fill_fields(&layer.text, &values).trim().is_empty(),
                 LayerKind::Clock => true,
                 LayerKind::Box => layer.fill.is_some() || layer.style.stroke.is_some(),
                 LayerKind::Video => false,
@@ -60,7 +72,7 @@ pub async fn channel_graphics(
     let templates = handles::select_graphics_templates(&manager.db_pool, manager.id).await?;
     let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
     let scenes = handles::select_graphics_scene_templates(&manager.db_pool, manager.id).await?;
-    let storage = manager.config.read().await.channel.storage.clone();
+    let config = manager.config.read().await.clone();
     let mut result = Vec::new();
 
     for binding in &bindings {
@@ -69,7 +81,7 @@ pub async fn channel_graphics(
             .find(|template| template.id == binding.template_id)
             .ok_or_else(|| ServiceError::Conflict("Missing channel graphics model".to_string()))?
             .clone();
-        let ready = graphic_has_content(&template, &storage);
+        let ready = graphic_has_content(&template, &config);
         let on = match binding.role {
             GraphicsRole::Logo => manager.logo_control.is_visible(),
             GraphicsRole::Ticker => {
@@ -98,7 +110,7 @@ pub async fn channel_graphics(
     }) {
         result.push(ChannelGraphicView {
             kind: "permanent".to_string(),
-            ready: graphic_has_content(template, &storage),
+            ready: graphic_has_content(template, &config),
             on: manager
                 .graphics_control
                 .persistent_visible(template.id as u64)
@@ -322,7 +334,7 @@ pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), Service
     .await?
     .ok_or_else(|| ServiceError::Conflict("Missing channel ticker model".to_string()))?;
     let config = manager.config.read().await;
-    let has_content = graphic_has_content(&template, &config.channel.storage);
+    let has_content = graphic_has_content(&template, &config);
     let spec = if has_content {
         graphic_spec_for_channel(&template, &HashMap::new(), &config)?
     } else {
@@ -473,6 +485,8 @@ fn default_stroke_width() -> f64 {
 /// Optional new controls flatten into the existing layer JSON, preserving old layouts.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayerStyle {
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub data_fields: HashMap<String, sources::DataField>,
     #[serde(default)]
     pub shape: ShapeKind,
     #[serde(default)]
@@ -488,6 +502,7 @@ pub struct LayerStyle {
 impl Default for LayerStyle {
     fn default() -> Self {
         Self {
+            data_fields: HashMap::new(),
             shape: ShapeKind::Rectangle,
             stroke: None,
             stroke_width: default_stroke_width(),
@@ -827,6 +842,16 @@ pub fn prepare_template(
         };
     }
 
+    // Removing a placeholder also releases its source reference.
+    let fields = template_fields(&layers);
+
+    for layer in &mut layers {
+        layer
+            .style
+            .data_fields
+            .retain(|field, _| fields.contains(field));
+    }
+
     if layers
         .iter()
         .filter(|layer| layer.kind == LayerKind::Video)
@@ -966,9 +991,19 @@ pub fn graphic_spec_for_channel(
     values: &HashMap<String, String>,
     config: &crate::utils::config::PlayoutConfig,
 ) -> Result<noar_engine::GraphicSpec, ServiceError> {
+    graphic_spec_for_records(template, values, &HashMap::new(), config)
+}
+
+pub fn graphic_spec_for_records(
+    template: &GraphicsTemplate,
+    values: &HashMap<String, String>,
+    records: &HashMap<i32, usize>,
+    config: &crate::utils::config::PlayoutConfig,
+) -> Result<noar_engine::GraphicSpec, ServiceError> {
+    let values = sources::resolved_values(template, values, records, config)?;
     graphic_spec_at(
         template,
-        values,
+        &values,
         &config.channel.storage,
         chrono::Utc::now(),
         config.channel.timezone,
@@ -1093,6 +1128,8 @@ pub struct TakeRecord {
     pub name: String,
     #[serde(skip)]
     pub values: HashMap<String, String>,
+    #[serde(skip)]
+    pub records: HashMap<i32, usize>,
 }
 
 impl GraphicsTakes {
@@ -1180,6 +1217,7 @@ async fn draw_and_take(
     spec: noar_engine::GraphicSpec,
     duration: Option<Duration>,
     values: HashMap<String, String>,
+    records: HashMap<i32, usize>,
 ) -> Result<u64, ServiceError> {
     let (width, height) = {
         let config = manager.config.read().await;
@@ -1202,6 +1240,7 @@ async fn draw_and_take(
         template_id: template.id,
         name: template.name.clone(),
         values,
+        records,
     });
 
     Ok(take_id)
@@ -1213,6 +1252,7 @@ pub async fn take_template(
     manager: &ChannelManager,
     template: GraphicsTemplate,
     values: HashMap<String, String>,
+    records: HashMap<i32, usize>,
     duration: Option<f64>,
 ) -> Result<TakeOutcome, ServiceError> {
     let seconds = duration.unwrap_or(template.duration);
@@ -1225,7 +1265,7 @@ pub async fn take_template(
 
     let duration = (seconds > 0.0).then(|| Duration::from_secs_f64(seconds));
     let config = manager.config.read().await.clone();
-    let spec = graphic_spec_for_channel(&template, &values, &config)?;
+    let spec = graphic_spec_for_records(&template, &values, &records, &config)?;
 
     let lshape_on = |manager: &ChannelManager| {
         manager.lshape_control.is_on() || manager.graphics_control.picture_on_air()
@@ -1254,8 +1294,15 @@ pub async fn take_template(
                     }
 
                     if waited < MAX_LSHAPE_WAIT
-                        && let Err(error) =
-                            draw_and_take(&manager, &template, spec, duration, values.clone()).await
+                        && let Err(error) = draw_and_take(
+                            &manager,
+                            &template,
+                            spec,
+                            duration,
+                            values.clone(),
+                            records.clone(),
+                        )
+                        .await
                     {
                         log::warn!(
                             "Graphic '{}' not taken after the L-shape: {error}",
@@ -1269,7 +1316,7 @@ pub async fn take_template(
         }
     }
 
-    let take_id = draw_and_take(manager, &template, spec, duration, values).await?;
+    let take_id = draw_and_take(manager, &template, spec, duration, values, records).await?;
 
     Ok(TakeOutcome::OnAir { take_id })
 }
@@ -1369,12 +1416,12 @@ async fn refresh_dynamic_graphics(
     let active = graphics_on_air(manager);
     let takes = manager.graphics_takes.records().clone();
     let mut retained = Vec::new();
+    let mut warning = None;
 
     for template in templates.iter().filter(|template| {
-        template
-            .layers
-            .iter()
-            .any(|layer| layer.visible && layer.kind == LayerKind::Clock)
+        template.layers.iter().any(|layer| {
+            layer.visible && (layer.kind == LayerKind::Clock || !layer.style.data_fields.is_empty())
+        })
     }) {
         let binding = bindings
             .iter()
@@ -1406,74 +1453,122 @@ async fn refresh_dynamic_graphics(
         for (kind, id, values) in targets {
             let key = (kind, id);
             retained.push(key);
-            let spec = graphic_spec_for_channel(template, &values, &config)?;
+            let records = if kind == DynamicScope::Take {
+                takes
+                    .iter()
+                    .find(|record| record.take_id == id)
+                    .map(|take| take.records.clone())
+                    .unwrap_or_default()
+            } else {
+                HashMap::new()
+            };
+            let spec = match graphic_spec_for_records(template, &values, &records, &config) {
+                Ok(spec) => spec,
+                Err(error) => {
+                    warning = Some(error);
+                    continue;
+                }
+            };
 
             if rendered.get(&key) == Some(&spec) {
                 continue;
             }
 
-            let pixels = if kind == DynamicScope::Role {
-                None
-            } else {
-                let draw = spec.clone();
-                Some(
-                    tokio::task::spawn_blocking(move || {
-                        noar_engine::render_graphic(&draw, width, height)
-                    })
-                    .await
-                    .map_err(|_| ServiceError::InternalServerError)?
-                    .map_err(|error| ServiceError::Conflict(error.to_string()))?,
-                )
-            };
-            let _editing = manager.graphics_takes.editing.clone().lock_owned().await;
-
-            if manager.graphics_takes.version.load(Ordering::SeqCst) != version {
-                return Ok(());
-            }
-
-            match kind {
-                DynamicScope::Role => match binding.map(|binding| binding.role) {
-                    Some(crate::db::models::GraphicsRole::Logo) => {
-                        let mut updated = config.clone();
-                        updated.logo_model = Some(template.clone());
-                        let manager = manager.clone();
+            // A bad image or feed must not starve clocks in other compositions.
+            let published: Result<bool, ServiceError> = async {
+                let pixels = if kind == DynamicScope::Role {
+                    None
+                } else {
+                    let draw = spec.clone();
+                    Some(
                         tokio::task::spawn_blocking(move || {
-                            crate::player::output::refresh_logo(&manager, &updated, width, height);
-                        })
-                        .await
-                        .map_err(|_| ServiceError::InternalServerError)?;
-                    }
-                    Some(crate::db::models::GraphicsRole::Lshape) => {
-                        crate::player::output::load_lshape(manager, &config).await;
-                    }
-                    Some(crate::db::models::GraphicsRole::Ticker) => {
-                        let spec = spec.clone();
-                        let graphic = tokio::task::spawn_blocking(move || {
-                            noar_engine::render_graphic(&spec, width, height)
+                            noar_engine::render_graphic(&draw, width, height)
                         })
                         .await
                         .map_err(|_| ServiceError::InternalServerError)?
-                        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                        .map_err(|error| ServiceError::Conflict(error.to_string()))?,
+                    )
+                };
+                let _editing = manager.graphics_takes.editing.clone().lock_owned().await;
+
+                if manager.graphics_takes.version.load(Ordering::SeqCst) != version {
+                    return Ok(false);
+                }
+
+                match kind {
+                    DynamicScope::Role => match binding.map(|binding| binding.role) {
+                        Some(crate::db::models::GraphicsRole::Logo) => {
+                            let mut updated = config.clone();
+                            updated.logo_model = Some(template.clone());
+                            let manager = manager.clone();
+                            tokio::task::spawn_blocking(move || {
+                                crate::player::output::refresh_logo(
+                                    &manager, &updated, width, height,
+                                )
+                            })
+                            .await
+                            .map_err(|_| ServiceError::InternalServerError)??;
+                        }
+                        Some(crate::db::models::GraphicsRole::Lshape) => {
+                            let control = manager.lshape_control.clone();
+                            let primary = template
+                                .layers
+                                .iter()
+                                .filter(|layer| layer.visible)
+                                .position(|layer| {
+                                    Some(layer.id.as_str()) == template.control_layer_id.as_deref()
+                                })
+                                .unwrap_or(usize::MAX);
+                            let draw = spec.clone();
+                            tokio::task::spawn_blocking(move || {
+                                control.set_template_controlled(&draw, primary, width, height)
+                            })
+                            .await
+                            .map_err(|_| ServiceError::InternalServerError)?
+                            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                        }
+                        Some(crate::db::models::GraphicsRole::Ticker) => {
+                            let spec = spec.clone();
+                            let graphic = tokio::task::spawn_blocking(move || {
+                                noar_engine::render_graphic(&spec, width, height)
+                            })
+                            .await
+                            .map_err(|_| ServiceError::InternalServerError)?
+                            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                            manager
+                                .graphics_control
+                                .refresh_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic)
+                                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                        }
+                        None => {}
+                    },
+                    DynamicScope::Permanent => {
                         manager
                             .graphics_control
-                            .refresh_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic)
+                            .set_persistent(
+                                id,
+                                pixels.expect("pixels rendered for a persistent template"),
+                            )
                             .map_err(|error| ServiceError::Conflict(error.to_string()))?;
                     }
-                    None => {}
-                },
-                DynamicScope::Permanent => {
-                    manager
-                        .graphics_control
-                        .set_persistent(
+                    DynamicScope::Take => {
+                        manager.graphics_control.update_graphic(
                             id,
-                            pixels.expect("pixels rendered for a persistent template"),
-                        )
-                        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                            pixels.expect("pixels rendered for an active take"),
+                        );
+                    }
                 }
-                DynamicScope::Take => {
-                    manager
-                        .graphics_control
-                        .update_graphic(id, pixels.expect("pixels rendered for an active take"));
+
+                Ok(true)
+            }
+            .await;
+
+            match published {
+                Ok(true) => {}
+                Ok(false) => return Ok(()),
+                Err(error) => {
+                    warning = Some(error);
+                    continue;
                 }
             }
 
@@ -1483,7 +1578,7 @@ async fn refresh_dynamic_graphics(
 
     rendered.retain(|key, _| retained.contains(key));
 
-    Ok(())
+    warning.map_or(Ok(()), Err)
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGraphicsFonts } from '@/composables/graphicsFonts'
 
+import { sourceBindings, sourceValues, useGraphicsSources } from '@/composables/graphicsSources'
 import { useGraphicsClock } from '@/composables/graphicsClock'
 import { storageImageUrl } from '@/composables/logo'
 import { type GraphicsTemplate, type TemplateLayer, fillFields } from '@/composables/graphicsTemplates'
@@ -16,11 +17,20 @@ import { useConfig } from '@/stores/config'
 const props = defineProps<{
     template: GraphicsTemplate | null | undefined
     values?: Record<string, string>
+    records?: Record<string, number>
     time?: number
 }>()
 
 const { t } = useI18n()
 const { fontError } = useGraphicsFonts(() => props.template?.layers ?? [])
+const { sources } = useGraphicsSources(() => Object.keys(sourceBindings(props.template)).length > 0)
+const effectiveValues = computed(() => ({
+    ...sourceValues(props.template, sources.value, props.records),
+    ...Object.fromEntries(Object.entries(props.values ?? {}).filter(([, value]) => value !== '')),
+}))
+const dataMissing = computed(() =>
+    Object.keys(sourceBindings(props.template)).some((field) => effectiveValues.value[field] === undefined),
+)
 const configStore = useConfig()
 const { clockValue } = useGraphicsClock()
 const images = ref<Record<string, string>>({})
@@ -32,12 +42,17 @@ function imagePath(layer: TemplateLayer): string {
     const image = layer.image?.trim() ?? ''
     const field = /^\{([\p{L}\p{N}_-]+)\}$/u.exec(image)
 
-    return field ? (props.values?.[field[1]!]?.trim() ?? '') : image
+    return field ? (effectiveValues.value[field[1]!]?.trim() ?? '') : image
 }
 
 watch(
-    () => layers.value.filter((layer) => layer.kind === 'image').map(imagePath),
-    async (paths) => {
+    () =>
+        JSON.stringify([
+            configStore.channels[configStore.i]?.id,
+            ...layers.value.filter((layer) => layer.kind === 'image').map(imagePath),
+        ]),
+    async (serialized) => {
+        const [, ...paths] = JSON.parse(serialized) as [number, ...string[]]
         const version = ++imageVersion
         const urls: Record<string, string> = {}
 
@@ -118,6 +133,13 @@ function shapeSize(layer: TemplateLayer) {
     <div class="relative w-full aspect-video overflow-hidden [container-type:size]">
         <slot />
         <p
+            v-if="dataMissing"
+            role="status"
+            class="absolute z-20 bottom-1 left-1 right-1 m-0 p-1 bg-base-100/90 text-error text-xs"
+        >
+            {{ t('graphics.sources.noData') }}
+        </p>
+        <p
             v-if="fontError"
             role="status"
             class="absolute z-20 top-1 left-1 right-1 m-0 bg-base-100/90 p-1 text-xs text-error"
@@ -140,7 +162,7 @@ function shapeSize(layer: TemplateLayer) {
                 class="w-full flex leading-[1.2] whitespace-pre-wrap break-words"
                 :style="textStyle(layer)"
             >
-                {{ layer.kind === 'clock' ? clockValue(layer) : fillFields(layer.text, props.values ?? {}) }}
+                {{ layer.kind === 'clock' ? clockValue(layer) : fillFields(layer.text, effectiveValues) }}
             </span>
             <svg
                 v-if="layer.kind === 'box'"

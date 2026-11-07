@@ -119,6 +119,12 @@ const router = createRouter({
                     }),
                 },
                 {
+                    path: 'sources',
+                    name: 'graphics-sources',
+                    component: () => import('@/components/graphics/GraphicsSources.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
                     path: 'xmltv',
                     name: 'graphics-xmltv',
                     component: () => import('@/components/graphics/GraphicsGuideLogo.vue'),

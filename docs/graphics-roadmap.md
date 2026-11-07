@@ -106,3 +106,12 @@ clock layers (format and channel/explicit timezone) to Composer. Actual executed
 checks and output evidence are recorded in the graphics handoff. Clock is in
 scope for this approved revision, superseding the earlier exclusion. Font upload
 and data sources remain separate subsequent stages.
+
+### Approved open-template revision: fonts and sources
+
+Stage 3 provides immutable uploaded TTF/OTF assets used by both preview and
+engine. Stage 4 adds Graphics Data sources (CSV/public Sheets CSV, RSS/Atom and
+HTTP JSON), layer field mappings, On air record/manual selection and last-good
+records. See the [operator guide](graphics-data-sources.md) and graphics handoff
+for actual executed checks. This does not implement private Google OAuth,
+custom HTTP headers, rundowns or the whole broader integration roadmap.

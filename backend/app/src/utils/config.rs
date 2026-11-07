@@ -187,6 +187,10 @@ pub struct PlayoutConfig {
     #[ts(skip)]
     #[serde(skip)]
     pub logo_model: Option<crate::db::models::GraphicsTemplate>,
+    #[ts(skip)]
+    #[serde(skip)]
+    pub graphics_data:
+        std::collections::HashMap<i32, std::sync::Arc<crate::utils::graphics::sources::DataRows>>,
     pub general: General,
     pub mail: Mail,
     #[serde(default)]
@@ -1711,9 +1715,16 @@ impl PlayoutConfig {
             None => None,
         };
 
+        let graphics_data = handles::select_graphics_sources(pool, channel_id)
+            .await?
+            .into_iter()
+            .map(|source| (source.id, std::sync::Arc::new(source.rows)))
+            .collect();
+
         Ok(Self {
             channel,
             logo_model,
+            graphics_data,
             general,
             mail,
             notification,

@@ -440,7 +440,8 @@ test('assigned channel models use dedicated controls and layered Composer', asyn
 test('channel graphics editors replace legacy navigation and retain bookmarked links', async ({ page }) => {
     await page.goto('/graphics/templates?channel=1')
     const navigation = page.getByRole('navigation', { name: 'Graphics', exact: true })
-    await expect(navigation.locator('a')).toHaveCount(5)
+    await expect(navigation.locator('a')).toHaveCount(6)
+    await expect(navigation.getByRole('link', { name: 'Data sources', exact: true })).toBeVisible()
     await expect(
         navigation.locator('a[href*="/graphics/logo"], a[href*="/graphics/lshape"], a[href*="/graphics/scenes"]'),
     ).toHaveCount(0)
@@ -485,7 +486,7 @@ test('channel graphics editors replace legacy navigation and retain bookmarked l
 
     await page.setViewportSize({ width: 390, height: 844 })
     const selector = page.getByLabel('Page', { exact: true })
-    await expect(selector.locator('option')).toHaveCount(5)
+    await expect(selector.locator('option')).toHaveCount(6)
     await expect(selector.locator('option[value="logo"], option[value="lshape"], option[value="scenes"]')).toHaveCount(
         0,
     )
@@ -565,6 +566,10 @@ test('the XMLTV logo tab saves its independent guide icon without changing layer
 
 test('the API tutorial uses actual model IDs, separates tokens and keys, and stays read-only', async ({ page }) => {
     await page.goto('/graphics/api?channel=1')
+    await expect(page.getByText('Read data sources and cached records', { exact: true })).toBeVisible()
+    await expect(page.getByText('Read uploaded font assets', { exact: true })).toBeVisible()
+    await expect(page.getByText('Read the server clock reference', { exact: true })).toBeVisible()
+
     const token = await page.evaluate(() => localStorage.getItem('token'))
     const created = await page.request.post('/api/graphics/1/templates', {
         headers: { Authorization: `Bearer ${token}` },
@@ -913,4 +918,94 @@ test('Composer uploads immutable fonts used by text and live clock previews', as
             ),
         )
         .toBe(true)
+})
+
+test('Data sources create, edit, refresh and delete uploaded CSV on desktop and phone', async ({ page }) => {
+    await page.goto('/graphics/sources?channel=1')
+    const name = `Market data ${Date.now()}`
+    await page.getByLabel('Source name', { exact: true }).fill(name)
+    await page.getByLabel('CSV data', { exact: true }).fill('symbol,price\nUSD,5.10\nEUR,6.20')
+    const created = page.waitForResponse(
+        (r) => r.url().endsWith('/api/graphics/1/sources') && r.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Save source', exact: true }).click()
+    const response = await created
+    expect(response.ok()).toBeTruthy()
+    const source = await response.json()
+    const card = page.locator('article').filter({ has: page.getByRole('heading', { name, exact: true }) })
+    await expect(card).toContainText('5.10')
+    await card.getByRole('button', { name: 'Edit source', exact: true }).click()
+    await page.getByLabel('CSV data', { exact: true }).fill('symbol,price\nUSD,5.45\nEUR,6.40')
+    const saved = page.waitForResponse(
+        (r) => r.url().endsWith(`/api/graphics/1/sources/${source.id}`) && r.request().method() === 'PUT',
+    )
+    await page.getByRole('button', { name: 'Save source', exact: true }).click()
+    expect((await saved).ok()).toBeTruthy()
+    await expect(card).toContainText('5.45')
+    await card.getByRole('button', { name: 'Refresh now', exact: true }).click()
+    await expect(card).toContainText('6.40')
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.reload()
+    await expect(card).toContainText('5.45')
+    await card.getByRole('button', { name: 'Delete source', exact: true }).click()
+    await page
+        .getByRole('dialog', { name: 'Delete this data source?', exact: true })
+        .getByRole('button', { name: 'Delete source', exact: true })
+        .click()
+    await expect(card).toHaveCount(0)
+})
+
+test('Composer maps live fields and On air selects records with manual overrides', async ({ page }) => {
+    await page.goto('/graphics/sources?channel=1')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const name = `Live quotes ${Date.now()}`
+    const response = await page.request.post('/api/graphics/1/sources', {
+        headers,
+        data: { name, kind: 'csv', interval: 5, document: 'symbol,price\nUSD,5.10\nEUR,6.20' },
+    })
+    expect(response.ok()).toBeTruthy()
+    const source = await response.json()
+    await page.goto('/graphics/composer?channel=1')
+    await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await page
+        .getByRole('group', { name: 'Layer type', exact: true })
+        .getByRole('button', { name: 'Text', exact: true })
+        .click()
+    await page.getByLabel('Text', { exact: true }).fill('Rates: {symbol} {price}')
+    await page.getByLabel('Text', { exact: true }).press('Tab')
+    await page.getByLabel('Template name', { exact: true }).fill(name)
+    await page.getByRole('button', { name: 'Save template', exact: true }).click()
+    for (const field of ['symbol', 'price']) {
+        await page.getByRole('combobox', { name: `Source for ${field}`, exact: true }).selectOption(String(source.id))
+        await page.getByRole('combobox', { name: `Column for ${field}`, exact: true }).selectOption(field)
+    }
+    const saving = page.waitForResponse(
+        (r) => r.url().endsWith('/api/graphics/1/templates') && r.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    const saved = await saving
+    expect(saved.ok(), await saved.text()).toBeTruthy()
+    const template = await saved.json()
+    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    expect(template.layers[0].data_fields.price).toMatchObject({ source_id: source.id, column: 'price', row: 0 })
+    await page.goto(`/graphics/onair?channel=1&template=${template.id}`)
+    await page.getByRole('combobox', { name: `Record from ${name}`, exact: true }).selectOption('1')
+    await expect(page.getByText('Rates: EUR 6.20', { exact: true })).toBeVisible()
+    await page.getByLabel('{price}', { exact: true }).fill('MANUAL')
+    await expect(page.getByText('Rates: EUR MANUAL', { exact: true })).toBeVisible()
+    const taking = page.waitForResponse(
+        (r) => r.url().endsWith('/api/graphics/1/take') && r.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: /^put on air$/i }).click()
+    const take = await taking
+    expect(take.ok()).toBeTruthy()
+    const onAir = await api(page, '/api/graphics/1/on-air')
+    expect(onAir.some((item: { template_id: number }) => item.template_id === template.id)).toBe(true)
+    expect((await page.request.delete(`/api/graphics/1/sources/${source.id}`, { headers })).status()).toBe(409)
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect((await page.request.delete(`/api/graphics/1/templates/${template.id}`, { headers })).ok()).toBeTruthy()
+    expect((await page.request.delete(`/api/graphics/1/sources/${source.id}`, { headers })).ok()).toBeTruthy()
 })

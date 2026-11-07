@@ -17,6 +17,7 @@ import { useSettings } from '@/stores/settings'
 const PAGES = [
     { name: 'onair', icon: 'bi-record-circle', admins: false, group: 'main' },
     { name: 'templates', icon: 'bi-grid-1x2', admins: false, group: 'main' },
+    { name: 'sources', icon: 'bi-table', admins: true, group: 'main' },
     { name: 'xmltv', icon: 'bi-image', admins: true, group: 'main' },
     { name: 'subtitles', icon: 'bi-badge-cc', admins: true, group: 'main' },
     { name: 'api', icon: 'bi-plug', admins: true, group: 'main' },

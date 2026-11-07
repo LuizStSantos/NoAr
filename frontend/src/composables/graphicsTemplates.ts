@@ -1,9 +1,11 @@
+import type { DataField } from '@/composables/graphicsSources'
 import { authFetch } from '@/composables/authFetch'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 
 /** A layer of a graphics template; positions and sizes in percent of the frame. */
 export interface TemplateLayer {
+    data_fields?: Record<string, DataField>
     id: string
     name: string
     kind: 'text' | 'image' | 'box' | 'video' | 'clock'
@@ -232,11 +234,16 @@ export function useGraphicsApi() {
                 body: JSON.stringify({ on }),
             }),
         onAir: () => authFetch<GraphicOnAir[]>(`${base()}/on-air`, { headers: headers() }),
-        take: (templateId: number, fields: Record<string, string>, duration?: number) =>
+        take: (
+            templateId: number,
+            fields: Record<string, string>,
+            duration?: number,
+            records?: Record<string, number>,
+        ) =>
             authFetch<TakeResult>(`${base()}/take`, {
                 method: 'POST',
                 headers: headers(),
-                body: JSON.stringify({ template_id: templateId, fields, duration }),
+                body: JSON.stringify({ template_id: templateId, fields, duration, records }),
             }),
         out: (takeId?: number) =>
             authFetch(`${base()}/out`, {

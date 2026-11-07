@@ -55,11 +55,18 @@ pub fn channel_logo(config: &PlayoutConfig) -> Option<LogoConfig> {
 /// without restarting, sized for the output the playout runs with. An image
 /// that cannot be read leaves the logo on air as it was.
 pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
-    load_logo_inner(manager, config, width, height, false);
+    if let Err(error) = load_logo_inner(manager, config, width, height, false) {
+        warn!(channel = config.general.channel_id; "Logo model not changed on air: {error}");
+    }
 }
 
-pub fn refresh_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
-    load_logo_inner(manager, config, width, height, true);
+pub fn refresh_logo(
+    manager: &ChannelManager,
+    config: &PlayoutConfig,
+    width: u32,
+    height: u32,
+) -> Result<(), ServiceError> {
+    load_logo_inner(manager, config, width, height, true)
 }
 
 fn load_logo_inner(
@@ -68,69 +75,63 @@ fn load_logo_inner(
     width: u32,
     height: u32,
     refresh: bool,
-) {
+) -> Result<(), ServiceError> {
     use crate::utils::graphics::{Animation, graphic_spec_for_channel};
 
-    let result = (|| -> Result<(), ServiceError> {
-        let model = config.logo_model.as_ref();
-        let spec = model
-            .map(|model| graphic_spec_for_channel(model, &std::collections::HashMap::new(), config))
-            .transpose()?;
-        let image = model.and_then(|model| {
-            model
-                .layers
-                .iter()
-                .find(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
-        });
-        let primary = model.map_or(0, |model| {
-            model
-                .layers
-                .iter()
-                .filter(|layer| layer.visible)
-                .position(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
-                .unwrap_or(usize::MAX)
-        });
-        let transition = |animation| {
-            if animation == Animation::None {
-                noar_engine::LogoTransition::Cut
-            } else {
-                noar_engine::LogoTransition::Fade
-            }
-        };
-
-        if let Some(image) = image {
-            manager
-                .logo_control
-                .set_transitions(noar_engine::LogoTransitions {
-                    show: transition(image.animation_in),
-                    hide: transition(image.animation_out),
-                    seconds: Some(f64::from(image.animation_ms.max(1)) / 1000.0),
-                });
-        }
-
-        let spec = spec.as_ref().filter(|spec| !spec.layers.is_empty());
-        let set = if refresh {
-            noar_engine::LogoControl::refresh_model
+    let model = config.logo_model.as_ref();
+    let spec = model
+        .map(|model| graphic_spec_for_channel(model, &std::collections::HashMap::new(), config))
+        .transpose()?;
+    let image = model.and_then(|model| {
+        model
+            .layers
+            .iter()
+            .find(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
+    });
+    let primary = model.map_or(0, |model| {
+        model
+            .layers
+            .iter()
+            .filter(|layer| layer.visible)
+            .position(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
+            .unwrap_or(usize::MAX)
+    });
+    let transition = |animation| {
+        if animation == Animation::None {
+            noar_engine::LogoTransition::Cut
         } else {
-            noar_engine::LogoControl::set_model
-        };
-        set(
-            &manager.logo_control,
-            spec,
-            primary,
-            image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms)),
-            model.is_some_and(|model| model.always_on == Some(true)),
-            width,
-            height,
-        )
-        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            noar_engine::LogoTransition::Fade
+        }
+    };
 
-        Ok(())
-    })();
-
-    if let Err(error) = result {
-        warn!(channel = config.general.channel_id; "Logo model not changed on air: {error}");
+    if let Some(image) = image {
+        manager
+            .logo_control
+            .set_transitions(noar_engine::LogoTransitions {
+                show: transition(image.animation_in),
+                hide: transition(image.animation_out),
+                seconds: Some(f64::from(image.animation_ms.max(1)) / 1000.0),
+            });
     }
+
+    let spec = spec.as_ref().filter(|spec| !spec.layers.is_empty());
+    let set = if refresh {
+        noar_engine::LogoControl::refresh_model
+    } else {
+        noar_engine::LogoControl::set_model
+    };
+    set(
+        &manager.logo_control,
+        spec,
+        primary,
+        image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms)),
+        model.is_some_and(|model| model.always_on == Some(true)),
+        width,
+        height,
+    )
+    .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+
+    Ok(())
 }
 
 pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
@@ -374,6 +375,11 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         ticker_cancel.clone(),
     ));
 
+    let data_sources = tokio::spawn(crate::utils::graphics::sources::run(
+        manager.clone(),
+        ticker_cancel.clone(),
+    ));
+
     let result = match config.output.mode {
         OutputMode::HLS => play_hls(manager.clone(), &config, &playout).await,
         _ => play_loop(manager.clone(), &config, &playout, None).await,
@@ -383,6 +389,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     let _ = ticker.await;
     let _ = graphics_ticker.await;
     let _ = dynamic_graphics.await;
+    let _ = data_sources.await;
 
     let finish_result = playout.finish().await.map_err(engine_error);
     result?;

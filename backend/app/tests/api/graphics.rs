@@ -933,3 +933,219 @@ async fn uploaded_fonts_are_immutable_channel_assets_and_validate_template_owner
         StatusCode::FORBIDDEN
     );
 }
+
+#[tokio::test]
+#[serial]
+async fn data_sources_enforce_channel_access_keep_last_good_rows_and_protect_references() {
+    let fixture = security_fixture().await;
+    let user = access_token(&fixture.state, 1).await;
+    let admin = access_token(&fixture.state, 2).await;
+    let input = json!({"name":"Quotes", "kind":"csv", "document":"symbol,price\nUSD,5.10\nEUR,6.20", "interval":5});
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/sources",
+            Some(&user),
+            input.clone()
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let (status, source) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/sources",
+        Some(&admin),
+        input.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{source}");
+    assert_eq!(source["rows"][1]["price"], "6.20");
+    assert!(source.get("document").is_none());
+    let id = source["id"].as_i64().unwrap();
+    assert_eq!(
+        send(
+            &fixture,
+            "GET",
+            "/api/graphics/1/sources",
+            Some(&user),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "GET",
+            "/api/graphics/2/sources",
+            Some(&user),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let private_url = "https://example.invalid/feed?token=synthetic-redaction-fixture";
+    let external = noar::utils::graphics::sources::SourceInput {
+        name: "Public provider".into(),
+        kind: "json".into(),
+        url: private_url.into(),
+        interval: 30,
+        ..Default::default()
+    };
+    let external_id = handles::save_graphics_source(&fixture.state.pool, 1, None, &external)
+        .await
+        .unwrap();
+    let (_, operator_sources) = send(
+        &fixture,
+        "GET",
+        "/api/graphics/1/sources",
+        Some(&user),
+        json!(null),
+    )
+    .await;
+    assert_eq!(
+        operator_sources
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|source| source["id"] == external_id)
+            .unwrap()["url"],
+        ""
+    );
+    let (_, admin_sources) = send(
+        &fixture,
+        "GET",
+        "/api/graphics/1/sources",
+        Some(&admin),
+        json!(null),
+    )
+    .await;
+    assert_eq!(
+        admin_sources
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|source| source["id"] == external_id)
+            .unwrap()["url"],
+        private_url
+    );
+    let unavailable = json!({"name":"No initial data", "always_on":true, "layers":[{"id":"quote","x":5,"y":75,"width":50,"height":10,"text":"{price}","data_fields":{"price":{"source_id":external_id,"column":"price","row":0}}}]});
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            unavailable
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+
+    let mut template = json!({"name":"Quotes on air","always_on":true,"duration":0,"layers":[{"id":"quote","x":5,"y":75,"width":50,"height":10,"text":"{symbol} {price}","data_fields":{"symbol":{"source_id":id,"column":"symbol","row":0},"price":{"source_id":id,"column":"price","row":0}}}]});
+    template["layers"][0]["data_fields"]["price"]["source_id"] = json!(999);
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            template.clone()
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    template["layers"][0]["data_fields"]["price"]["source_id"] = json!(id);
+    let (status, model) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        template,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{model}");
+    let mut changed = input;
+    changed["document"] = json!("symbol,other\nUSD,not-price");
+    changed["revision"] = source["revision"].clone();
+    let (status, failed) = send(
+        &fixture,
+        "PUT",
+        &format!("/api/graphics/1/sources/{id}"),
+        Some(&admin),
+        changed.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{failed}");
+    assert!(failed["error"].is_string());
+    assert_eq!(failed["rows"], source["rows"]);
+    assert_eq!(failed["last_success"], source["last_success"]);
+    assert_eq!(
+        send(
+            &fixture,
+            "PUT",
+            &format!("/api/graphics/1/sources/{id}"),
+            Some(&admin),
+            changed
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "DELETE",
+            &format!("/api/graphics/1/sources/{id}"),
+            Some(&admin),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/sources",
+            Some(&admin),
+            json!({"name":"Private","kind":"json","url":"http://127.0.0.1/","interval":5})
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let mut literal = model.clone();
+    literal["layers"][0]["text"] = json!("Literal quote");
+    let (status, detached) = send(
+        &fixture,
+        "PUT",
+        &format!("/api/graphics/1/templates/{}", model["id"]),
+        Some(&admin),
+        literal,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{detached}");
+    assert_eq!(detached["fields"], json!([]));
+    assert!(detached["layers"][0].get("data_fields").is_none());
+    assert_eq!(
+        send(
+            &fixture,
+            "DELETE",
+            &format!("/api/graphics/1/sources/{id}"),
+            Some(&admin),
+            json!(null)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+}

@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
+import { sourceBindings, sourceValues, useGraphicsSources } from '@/composables/graphicsSources'
 import LivePreview from '@/components/player/LivePreview.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
@@ -24,6 +25,8 @@ const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const graphicsApi = useGraphicsApi()
+const { sources: dataSources, unavailable: sourcesUnavailable } = useGraphicsSources()
+const recordSelection = reactive<Record<number, Record<string, number>>>({})
 const isAdmin = ['global_admin', 'channel_admin'].includes(authStore.role)
 
 const templates = ref<GraphicsTemplate[]>([])
@@ -44,6 +47,14 @@ const busy = ref(false)
 const channel = computed(() => configStore.channels[configStore.i])
 const selected = computed(() => templates.value.find((template) => template.id === selectedId.value))
 const selectedValues = computed(() => (selectedId.value === null ? {} : (values[selectedId.value] ?? {})))
+const selectedRecords = computed(() => (selectedId.value === null ? {} : (recordSelection[selectedId.value] ?? {})))
+const mapped = computed(() => sourceBindings(selected.value))
+const mappedSources = computed(() =>
+    dataSources.value.filter((source) =>
+        Object.values(mapped.value).some((binding) => binding.source_id === source.id),
+    ),
+)
+const mappedValues = computed(() => sourceValues(selected.value, dataSources.value, selectedRecords.value))
 const latest = computed(() => [...onAir.value].reverse().find((graphic) => !graphic.leaving))
 const selectedModel = computed(() => channelModels.value.find((model) => model.template.id === selectedId.value))
 const permanent = computed(() =>
@@ -95,6 +106,7 @@ async function loadOnAir() {
 
 function select(template: GraphicsTemplate) {
     values[template.id] ??= {}
+    recordSelection[template.id] ??= {}
     selectedId.value = template.id
     duration.value = String(template.duration)
 }
@@ -153,6 +165,7 @@ async function take() {
             template.id,
             fields,
             duration.value.trim() !== '' && Number.isFinite(seconds) ? seconds : undefined,
+            selectedRecords.value,
         )
 
         if (result.state === 'waiting') {
@@ -252,6 +265,7 @@ onMounted(() => {
                     <TemplatePreview
                         :template="selected"
                         :values="selectedValues"
+                        :records="selectedRecords"
                         class="rounded-field border border-success/60 bg-[linear-gradient(180deg,#38596d_0%,#38596d_60%,#31543e_60%,#31543e_100%)]"
                     >
                         <template #overlay>
@@ -275,6 +289,22 @@ onMounted(() => {
                 </figure>
             </div>
 
+            <div v-if="selected && Object.keys(mapped).length" class="text-xs text-warning">
+                <p v-if="sourcesUnavailable" role="status">{{ t('graphics.sources.unavailable') }}</p>
+                <template v-for="source in mappedSources" :key="source.id">
+                    <p v-if="source.error" role="status">
+                        {{ source.name }}:
+                        {{ t(source.last_success ? 'graphics.sources.lastGood' : 'graphics.sources.noData') }}
+                        {{ source.error }} · {{ t('graphics.sources.lastSuccess') }}:
+                        {{
+                            source.last_success
+                                ? new Date(source.last_success).toLocaleString()
+                                : t('graphics.sources.never')
+                        }}
+                    </p>
+                </template>
+            </div>
+
             <section
                 v-if="selected && !selectedModel"
                 class="card-box px-5 py-4 flex flex-col gap-3"
@@ -287,10 +317,40 @@ onMounted(() => {
                     <span class="text-xs text-muted">{{ t('graphics.onAir.fieldsHint') }}</span>
                 </div>
                 <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+                    <p v-if="sourcesUnavailable" role="status" class="text-warning text-sm">
+                        {{ t('graphics.sources.unavailable') }}
+                    </p>
+                    <div v-for="source in mappedSources" :key="source.id" class="flex flex-col gap-1">
+                        <label class="field-label"
+                            >{{ t('graphics.sources.sourceRecord', { name: source.name })
+                            }}<select
+                                class="field-input"
+                                :value="
+                                    selectedRecords[String(source.id)] ??
+                                    Object.values(mapped).find((field) => field.source_id === source.id)?.row ??
+                                    0
+                                "
+                                @change="
+                                    selectedRecords[String(source.id)] = Number(
+                                        ($event.target as HTMLSelectElement).value,
+                                    )
+                                "
+                            >
+                                <option v-for="(row, index) in source.rows" :key="index" :value="index">
+                                    {{ index + 1 }} · {{ Object.values(row).slice(0, 2).join(' · ') }}
+                                </option>
+                            </select></label
+                        >
+                        <p v-if="source.error" role="status" class="text-xs text-warning m-0">
+                            {{ t(source.last_success ? 'graphics.sources.lastGood' : 'graphics.sources.noData') }}
+                            {{ source.error }}
+                        </p>
+                    </div>
                     <label v-for="field in selected.fields" :key="field" class="field-label">
                         {{ '{' + field + '}' }}
                         <input
                             v-model="selectedValues[field]"
+                            :placeholder="mappedValues[field]"
                             class="field-input"
                             type="text"
                             @keydown.enter.prevent="take"

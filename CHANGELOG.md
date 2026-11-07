@@ -20,6 +20,10 @@ one is tagged.
 
 ### Added
 
+- Add Graphics Data sources for uploaded/published CSV (including public Google
+  Sheets CSV), RSS/Atom and HTTP JSON, with Composer field mappings, record
+  selection, live updates and persistent last-good data during provider failures.
+
 - Upload immutable channel fonts from Composer for text/clock layers; the browser
   and server use the same bytes, persisted in SQLite and restored on restart.
 

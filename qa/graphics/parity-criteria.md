@@ -58,3 +58,12 @@ Do not claim historical parity for a newly authored nonempty ticker.
 
 The original stage-d and later layer-model proofs must each pass both gates.
 Historical results do not substitute for rerunning the changed renderer.
+
+## Open-template revision repeat
+
+The approved open-template revision repeats these same pixel/PTS/compression
+criteria with candidate migrations through 00033 (font/data tables and permanent
+models). The fixture still has no clock, mapped feed or enabled application
+ticker, because released 2.2.1 has no equivalent of those new layers. New-layer
+proofs are recorded separately. This changes the expected migrated schema, not
+the frame count, geometry, temporal alignment or pixel acceptance thresholds.

@@ -9,6 +9,55 @@ use crate::{
     utils::config::{OutputMode, PlayoutConfig},
 };
 
+/// Persisted configuration and last-good rows for an external or uploaded data source.
+#[derive(Clone, Debug, Serialize)]
+pub struct GraphicsDataSource {
+    pub id: i32,
+    #[serde(skip)]
+    pub channel_id: i32,
+    pub name: String,
+    pub kind: String,
+    pub url: String,
+    pub interval: i64,
+    pub records_path: String,
+    #[serde(skip)]
+    pub document: String,
+    pub rows: crate::utils::graphics::sources::DataRows,
+    pub last_success: Option<i64>,
+    pub last_attempt: Option<i64>,
+    pub error: Option<String>,
+    pub revision: i64,
+    #[serde(skip)]
+    pub fetch_seq: i64,
+}
+
+impl FromRow<'_, SqliteRow> for GraphicsDataSource {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let data: String = row.try_get("data")?;
+        let rows = serde_json::from_str(&data).map_err(|error| sqlx::Error::ColumnDecode {
+            index: "data".to_string(),
+            source: Box::new(error),
+        })?;
+
+        Ok(Self {
+            id: row.try_get("id")?,
+            channel_id: row.try_get("channel_id")?,
+            name: row.try_get("name")?,
+            kind: row.try_get("kind")?,
+            url: row.try_get("url")?,
+            interval: row.try_get("interval")?,
+            records_path: row.try_get("records_path")?,
+            document: row.try_get("document")?,
+            rows,
+            last_success: row.try_get("last_success")?,
+            last_attempt: row.try_get("last_attempt")?,
+            error: row.try_get("error")?,
+            revision: row.try_get("revision")?,
+            fetch_seq: row.try_get("fetch_seq")?,
+        })
+    }
+}
+
 /// Uploaded font identity; bytes are read separately by authorized callers.
 #[derive(Clone, Debug, Serialize, sqlx::FromRow)]
 pub struct GraphicsFont {

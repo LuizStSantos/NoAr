@@ -4,6 +4,80 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Open templates: stage 4 — data sources and live fields
+
+**Graphics → Data sources** now provides uploaded/published UTF-8 CSV (including
+public Google Sheets CSV URLs), RSS/Atom and HTTP JSON with JSON Pointer record
+selection. Composer's Save panel maps named text/image fields to a source, column
+and record. On air selects records and accepts nonempty manual overrides for
+temporary takes; clearing an input restores automatic preview values, applied
+on the next take. Permanent compositions use their saved mappings.
+
+Migration `00033_graphics_data_sources.sql` persists configuration, uploaded CSV,
+last-successful rows/status and revision/fetch guards. IDs are not reused, so late
+responses cannot affect a newly created source. Earlier migrations are unchanged.
+Deleting a referenced source returns 409 with model names. Removing a placeholder
+prunes its mapping. Images name existing Storage files; remote images are not
+imported. There are no default sources or extra startup templates: a fresh
+installation/new channel still gets only the removable small Logo.
+
+Fetching, parsing and rendering run outside the frame thread. URL polling runs
+with playout; Refresh now also works off air. CSV replacement updates its values.
+Last-good rows/timestamps survive provider/schema errors and backend restart.
+Missing initial data blocks automatic take/permanent publication explicitly.
+The UI reports errors and last success. Source URLs are administrative metadata
+and are blanked for regular users. See [operator guide](../graphics-data-sources.md)
+and [API contract](../api.md#graphics-data-source-api) for limits/semantics.
+
+Verification: GStreamer 1.26.2; fmt, exact no-default/all-target Clippy, backend
+build, **707 Rust tests passed / 14 ignored**; Vue types, full ESLint, Prettier,
+QA TypeScript and production build passed. **31 Playwright tests passed**, plus
+two source regressions after the layout refinement and one API/localization
+regression. pt-BR desktop/390 px screenshots show authored mappings, source
+status, record/manual controls, advancing Program, readonly Player and API
+examples. The final mapping panel spans the form width.
+
+Actual synthetic HLS checks, with saved segment hashes and region metrics:
+
+- A CSV image/text/clock permanent composition changes USD 5.10 → 9.99.
+- Removing a referenced CSV column keeps the previous text/image and timestamp;
+  the clock continues changing. Restoring valid data updates output again.
+- Browser controls select EUR and MANUAL. A subsequent source update changes
+  the headline during the **same take ID**, with elapsed time still increasing.
+  Clearing the override and taking again displays EUR 88.88 automatically.
+- Source rows, model identity and static layout survive full backend restart;
+  the static text region matches exactly in decoded HLS (MAE/max 0 in this run).
+  A new CSV value after restart changes actual output to USD 8.18.
+- Capture health is OK; the channel log has zero ERROR entries. The unattended
+  pause is not treated as a formal soak test.
+
+[Machine-readable evidence](data-sources-evidence.json).
+
+**External-feed limitation:** public RSS/JSON fetch attempts failed/timed out at
+DNS resolution in both the executor and container. No proxy, policy or TLS
+verification was bypassed. Parsers and bounded local HTTP fixtures passed, but
+external RSS/JSON provider integration and a real published Google sheet are
+**NOT AVAILABLE / NOT RUN** here. Do not interpret CSV/HLS success as that proof.
+Public-address protection requires working server DNS, even with an HTTP proxy.
+Private Google OAuth and custom request headers are outside this delivery.
+
+| Part | Capture |
+| --- | --- |
+| Current fresh installation: only Logo | [Desktop](open-templates-final-fresh-pt-BR.jpg), [phone](open-templates-final-fresh-phone-pt-BR.jpg) |
+| Data sources | [Desktop](data-sources-csv-pt-BR.jpg), [phone](data-sources-phone-pt-BR.jpg) |
+| Composer mapping and live preview | [Desktop](composer-data-mapping-pt-BR.jpg), [phone](composer-data-phone-pt-BR.jpg) |
+| Real Program | [Desktop](data-onair-pt-BR.jpg), [phone](data-onair-phone-pt-BR.jpg) |
+| Last-good status | [Desktop](data-last-good-pt-BR.jpg), [phone](data-last-good-phone-pt-BR.jpg) |
+| Record/manual selection | [Manual](data-manual-operator-pt-BR.jpg), [phone](data-manual-phone-pt-BR.jpg), [automatic](data-automatic-operator-pt-BR.jpg) |
+| Initial/change/failure/recovery in HLS | [Initial](output-data-initial.jpg), [changed](output-data-updated.jpg), [last good](output-data-last-good.jpg), [recovered](output-data-recovered.jpg) |
+| Same take with live/manual data | [Manual](output-data-manual-record.jpg), [updated headline](output-data-manual-live-update.jpg), [automatic price](output-data-automatic-record.jpg) |
+| Restart and new update | [Restart](output-data-after-restart.jpg), [new value](output-data-after-restart-updated.jpg) |
+| Current library, Player and API | [Library](open-templates-final-library-pt-BR.jpg), [Player](open-templates-final-player-pt-BR.jpg), [API](open-templates-final-api-pt-BR.jpg) |
+| External-provider DNS failure | [Explicit status](data-source-network-limit-pt-BR.jpg) |
+
+Full historical API/raw/HLS parity repetition follows as a separate verification
+step. Physical output and desktop audio checks are not repeated in this stage.
+
 ## Open templates: stage 3 — uploaded fonts
 
 Composer now offers **Upload font** beside text/clock font selection. Validated
@@ -1023,11 +1097,12 @@ desktop visual checks and XMLTV, with the stated runtime limitations.
 
 ## What is left, in order
 
-1. Finish the approved [open-templates revision](open-templates-plan.md): RSS/CSV/Sheets/JSON data sources. Stages 1–3
-   (templates/first-run defaults, shapes/clock and uploaded fonts) are complete above.
-2. Repeat relevant compatibility/raw/HLS and browser evidence after renderer and
-   live-data changes. Desktop audio stability, physical outputs and long-soak
-   verification remain explicit limitations.
+1. Validate external RSS/JSON providers and an actual published Google sheet on
+   a network with working public DNS. The four approved implementation stages
+   (free templates, shapes/clock, fonts and data sources) are recorded above.
+2. Repeat the 76-response and raw/HLS legacy comparison for the final revision.
+   Desktop audio, physical outputs and formal long-soak checks remain explicit
+   limitations; they are not implied by the screenshots.
 3. Later phases: rundowns 2.5, open graphics tracks in clips 2.6 and broader
    control/webhook/data integration 2.7. The newly approved sources/clock work
    advances that scope; it does not claim those entire phases complete.

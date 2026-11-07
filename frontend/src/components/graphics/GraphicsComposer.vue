@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
+import { type DataField, sourceBindings, sourceColumns, useGraphicsSources } from '@/composables/graphicsSources'
 import { type GraphicsFont, loadGraphicsFont } from '@/composables/graphicsFonts'
 import { CLOCK_FORMATS } from '@/composables/graphicsClock'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
@@ -30,6 +31,7 @@ import { useConfig } from '@/stores/config'
 const { t } = useI18n()
 const configStore = useConfig()
 const graphicsApi = useGraphicsApi()
+const { sources: dataSources } = useGraphicsSources()
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
 const route = useRoute()
 const router = useRouter()
@@ -46,7 +48,13 @@ const selectedId = ref('')
 const selected = computed(() => draft.value.layers.find((layer) => layer.id === selectedId.value))
 const fields = computed(() => templateFields(draft.value.layers))
 const preview = computed<GraphicsTemplate>(() => ({ ...draft.value, id: savedId.value ?? 0, fields: fields.value }))
-const sampleValues = computed(() => Object.fromEntries(fields.value.map((field) => [field, '[' + field + ']'])))
+const sampleValues = computed(() =>
+    Object.fromEntries(
+        fields.value
+            .filter((field) => !sourceBindings(preview.value)[field])
+            .map((field) => [field, '[' + field + ']']),
+    ),
+)
 const savedId = ref<number>()
 const baseline = ref(JSON.stringify(draft.value))
 const history = ref<string[]>([])
@@ -123,6 +131,32 @@ async function uploadFont(event: Event) {
         error.value = String(failure)
     } finally {
         fontUploading.value = false
+    }
+}
+
+function mapField(field: string, binding?: DataField) {
+    rememberDraft()
+    for (const layer of draft.value.layers) {
+        if (!templateFields([layer]).includes(field)) {
+            continue
+        }
+        layer.data_fields = { ...layer.data_fields }
+        if (binding) {
+            layer.data_fields[field] = binding
+        } else {
+            delete layer.data_fields[field]
+        }
+    }
+}
+function selectFieldSource(field: string, event: Event) {
+    const id = Number((event.target as HTMLSelectElement).value)
+    const source = dataSources.value.find((source) => source.id === id)
+    mapField(field, source ? { source_id: id, column: sourceColumns(source)[0] ?? '', row: 0 } : undefined)
+}
+function changeFieldMapping(field: string, changes: Partial<DataField>) {
+    const current = sourceBindings(preview.value)[field]
+    if (current) {
+        mapField(field, { ...current, ...changes })
     }
 }
 
@@ -797,6 +831,73 @@ onBeforeUnmount(() => {
                 </select>
             </label>
             <button class="btn-main" :disabled="busy || !draft.name.trim()">{{ t('graphics.composer.save') }}</button>
+            <fieldset
+                v-if="fields.length"
+                class="basis-full w-full border-t border-line pt-4 flex flex-col gap-3 min-w-0"
+            >
+                <legend class="font-semibold text-sm">{{ t('graphics.sources.mapping') }}</legend>
+                <p class="text-xs text-muted m-0">{{ t('graphics.sources.mappingHint') }}</p>
+                <div v-for="field in fields" :key="field" class="grid sm:grid-cols-3 gap-2 min-w-0">
+                    <label class="field-label"
+                        >{{ t('graphics.sources.fieldSource', { field })
+                        }}<select
+                            class="field-input"
+                            :value="sourceBindings(preview)[field]?.source_id ?? ''"
+                            @change="selectFieldSource(field, $event)"
+                        >
+                            <option value="">{{ t('graphics.sources.manual') }}</option>
+                            <option v-for="source in dataSources" :key="source.id" :value="source.id">
+                                {{ source.name }}
+                            </option>
+                        </select></label
+                    >
+                    <template v-if="sourceBindings(preview)[field]">
+                        <label class="field-label"
+                            >{{ t('graphics.sources.column', { field })
+                            }}<select
+                                class="field-input"
+                                :value="sourceBindings(preview)[field]?.column"
+                                @change="
+                                    changeFieldMapping(field, {
+                                        column: ($event.target as HTMLSelectElement).value,
+                                    })
+                                "
+                            >
+                                <option
+                                    v-for="column in sourceColumns(
+                                        dataSources.find(
+                                            (source) => source.id === sourceBindings(preview)[field]?.source_id,
+                                        )!,
+                                    )"
+                                    :key="column"
+                                    :value="column"
+                                >
+                                    {{ column }}
+                                </option>
+                            </select></label
+                        >
+                        <label class="field-label"
+                            >{{ t('graphics.sources.record', { field })
+                            }}<input
+                                class="field-input"
+                                type="number"
+                                min="1"
+                                max="200"
+                                :value="(sourceBindings(preview)[field]?.row ?? 0) + 1"
+                                @change="
+                                    changeFieldMapping(field, {
+                                        row: Number(($event.target as HTMLInputElement).value) - 1,
+                                    })
+                                "
+                        /></label>
+                    </template>
+                </div>
+                <RouterLink
+                    class="link-accent text-sm"
+                    :to="{ name: 'graphics-sources', query: { channel: channelId } }"
+                    >{{ t('graphics.sections.sources') }}</RouterLink
+                >
+            </fieldset>
         </form>
         <div
             class="composer-grid"

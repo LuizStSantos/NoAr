@@ -711,3 +711,50 @@ A template cannot save an unknown/other-channel uploaded alias. The existing
 `GET /api/graphics/{id}/fonts` continues returning installed system families;
 it excludes uploaded aliases so another channel's private identities do not
 appear there. Uploaded assets are listed through `font-assets`.
+
+### Graphics data source API
+
+GA/CA/U can `GET /api/graphics/{id}/sources` on their channel. Regular users
+receive a blank `url`; GA/CA see the saved provider URL. Metadata includes `id`,
+`name`, `kind`, `url`, `interval` (seconds), `records_path`, `revision`, `rows`,
+`last_success`/`last_attempt` (nullable UTC Unix milliseconds) and `error`.
+Uploaded CSV text and internal fetch sequence are not exposed.
+
+GA/CA can write:
+
+| Method | Endpoint | Body/response |
+| --- | --- | --- |
+| POST | `/api/graphics/{id}/sources` | Source configuration; returns the saved source and current status. |
+| PUT | `/api/graphics/{id}/sources/{source_id}` | Source configuration including the current `revision`; stale edits return 409. |
+| POST | `/api/graphics/{id}/sources/{source_id}/refresh` | Fetch/parse immediately; returns source status. |
+| DELETE | `/api/graphics/{id}/sources/{source_id}` | 409 with dependent template names until mappings are removed; unknown source 404. |
+
+A configuration is `{ "name": "Rates", "kind": "csv", "url": "",
+"document": "symbol,price\nUSD,5.10", "interval": 30, "records_path": "" }`.
+`kind` accepts `csv`, `rss` or `json`. Public sources use `url` instead of
+`document`. JSON `records_path` is a JSON Pointer. Empty CSV text on update
+retains the previous uploaded document. Source names need not be unique; IDs
+are stable and never reused. No sources are created by installation/conversion.
+
+A 200 save/refresh can include `error` and empty rows when a provider has no
+successful result yet. It means configuration was saved, not that data arrived.
+Later errors keep `rows` and `last_success` unchanged. Revisions/fetch sequences
+prevent old responses overwriting newer configuration/results. Mapped column,
+record and image-path validation occurs before publishing new cached rows.
+
+A layer's optional `data_fields` maps names to
+`{ "price": { "source_id": 4, "column": "price", "row": 0 } }`.
+Mappings must refer to a source on the template's channel. Records are zero-based;
+Composer/On air display them from 1. Image field values must name existing Storage
+files, not remote URLs. Removing a placeholder prunes its mapping. A take accepts
+optional `records`, for example `"records": { "4": 1 }`, to override the source's
+record for that take. Nonempty `fields` override mapped values; omitted/empty
+manual fields remain automatic. An active take retains that choice until taken
+out/replaced; editing browser preview inputs does not rewrite an existing take.
+
+Permanent templates require literal or fully mapped fields. Without initial data,
+a new automatic take/permanent save returns a conflict before publication.
+Existing successful rows survive provider failures and backend restart. Limits,
+public-address rules, last-good status and operating details are in
+[Data sources](graphics-data-sources.md). Earlier graphics and keyed API routes
+retain their contracts; these are additive endpoints.
