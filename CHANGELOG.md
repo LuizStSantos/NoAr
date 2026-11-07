@@ -13,6 +13,9 @@ one is tagged.
 
 ### Fixed
 
+- Clear external and clip artwork/placement when an assigned template is deleted
+  or its compatibility binding is removed; leaving L-shape returns to full screen.
+
 - Desktop output composes the active model, clip or externally replaced logo
   into the video frame, matching encoded output instead of using a stale
   startup bitmap. L-shape artwork replacements and image-only clip overrides

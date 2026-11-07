@@ -1,0 +1,66 @@
+{
+  "status": "PASS",
+  "rust_tests_passed": 708,
+  "rust_tests_ignored": 14,
+  "gstreamer": "1.26.2",
+  "checks": [
+    "cargo fmt --all",
+    "cargo clippy --no-default-features --all-targets -- --deny warnings",
+    "cargo test --no-default-features",
+    "cargo build --no-default-features"
+  ],
+  "binary_sha256": "1690b9841c30096c64c4443a8c7db553541b74502bbb2427126fbfa317bf3906",
+  "before_fix": {
+    "state": {
+      "hidden": false,
+      "replacement": "replacement-logo.png",
+      "position": null
+    },
+    "old_logo_region_max_delta_from_gray": 106,
+    "capture": "output-template-delete-before.jpg",
+    "segment_sha256": "ca9e09511dfeb6f634f23adae410b4878a246738764663f3d22abc6d7681186a"
+  },
+  "after_fix": {
+    "state": {
+      "hidden": false,
+      "replacement": null,
+      "position": null
+    },
+    "old_logo_region_max_delta_from_gray": 0,
+    "capture": "output-template-delete-after.jpg",
+    "segment_sha256": "f783048d7ac20c2b8f07809ab716e385403373b58d9aa4abeb4c337a5733cb08"
+  },
+  "lshape_unassignment": {
+    "before": {
+      "on": true,
+      "ready": true,
+      "replacement": "replacement-art.png",
+      "position": "bottom-left",
+      "scale": 60.0
+    },
+    "after": {
+      "on": false,
+      "ready": false,
+      "replacement": null,
+      "position": null,
+      "scale": null
+    },
+    "full_frame_max_delta_from_gray": 0,
+    "capture": "output-template-unassign-lshape.jpg",
+    "segment_sha256": "eded145b58a386253c15543dbeec826b77a4aa903ed04fc797c9cde3f80bf336"
+  },
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "on_air",
+        "uptime": 137,
+        "output_age": 0.2
+      }
+    ]
+  },
+  "channel_error_count": 0,
+  "channel_log_sha256": "605b1d1197bc9d61b5b414a38be108f27abc63c1258bc97bec2f1acfc61f9823"
+}

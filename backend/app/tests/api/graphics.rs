@@ -541,6 +541,38 @@ async fn an_admin_can_delete_an_assigned_model_without_restart_resurrection() {
         .unwrap();
     assert_eq!(bindings.len(), 1);
     let id = bindings[0].template_id;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests_assets/storage/logo.png");
+    let output = manager.config.read().await.output.clone();
+    let replacement = noar_engine::LogoConfig {
+        path: path.to_string_lossy().to_string(),
+        scale: Some("42:42".to_string()),
+        opacity: 1.0,
+        position: "12:12".to_string(),
+    };
+    manager
+        .logo_control
+        .replace(
+            "delete-proof.png",
+            &replacement,
+            output.width,
+            output.height,
+        )
+        .unwrap();
+    manager
+        .logo_control
+        .set_clip_image(Some(&replacement), output.width, output.height)
+        .unwrap();
+    manager
+        .logo_control
+        .set_clip_position(Some("12:12"), output.width, output.height)
+        .unwrap();
+    manager
+        .logo_control
+        .move_to(Some("24:24"), output.width, output.height)
+        .unwrap();
+    assert!(manager.logo_control.is_visible());
     let result = send(
         &fixture,
         "DELETE",
@@ -550,6 +582,13 @@ async fn an_admin_can_delete_an_assigned_model_without_restart_resurrection() {
     )
     .await;
     assert_eq!(result.0, StatusCode::OK);
+    assert!(
+        !manager.logo_control.is_visible(),
+        "deleting the assigned model must also remove its external and clip images"
+    );
+    assert!(manager.logo_control.state().replacement.is_none());
+    assert!(manager.logo_control.state().position.is_none());
+
     handles::convert_channel_graphics(&fixture.state.pool)
         .await
         .unwrap();
@@ -1148,4 +1187,83 @@ async fn data_sources_enforce_channel_access_keep_last_good_rows_and_protect_ref
         .0,
         StatusCode::OK
     );
+}
+
+#[tokio::test]
+#[serial]
+async fn removing_a_lshape_assignment_clears_its_external_art_and_returns_full_screen() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    let storage = manager.config.read().await.channel.storage.clone();
+    std::fs::copy(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/logo.png"),
+        storage.join("override.png"),
+    )
+    .unwrap();
+    let (status, template) = send(&fixture, "POST", "/api/graphics/1/templates", Some(&admin), json!({"name":"Removable L-shape","layers":[{"id":"art","kind":"image","image":"override.png","x":0,"y":0,"width":100,"height":100},{"id":"video","kind":"video","x":25,"y":0,"width":75,"height":75}]})).await;
+    assert_eq!(status, StatusCode::OK, "{template}");
+    let path = format!("/api/graphics/1/templates/{}/assignment", template["id"]);
+    assert_eq!(
+        send(
+            &fixture,
+            "PUT",
+            &path,
+            Some(&admin),
+            json!({"role":"lshape"})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/control/1/lshape",
+            Some(&admin),
+            json!({"action":"replace","graphic":"override.png"})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/control/1/lshape",
+            Some(&admin),
+            json!({"action":"move","position":"bottom-left","scale":60})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/control/1/lshape",
+            Some(&admin),
+            json!({"action":"on"})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert!(manager.lshape_control.is_on());
+    assert!(manager.lshape_control.replacement().is_some());
+    assert!(manager.lshape_control.placement().is_some());
+    assert_eq!(
+        send(&fixture, "PUT", &path, Some(&admin), json!({"role":null}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert!(!manager.lshape_control.is_on());
+    assert!(!manager.lshape_control.is_ready());
+    assert!(manager.lshape_control.replacement().is_none());
+    assert!(manager.lshape_control.placement().is_none());
 }

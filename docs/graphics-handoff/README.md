@@ -4,6 +4,38 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Open templates: final removal regression verification
+
+Deleting an assigned logo now also clears external/clip image and position
+controls; removing an L-shape binding clears its external/clip artwork and
+placement and returns to full screen. Ordinary saves and replacement assignments
+retain shared transient controls. Unassigning preserves the model and any
+independent permanent setting. No migration or frozen legacy column changes.
+
+GStreamer 1.26.2: fmt, exact no-default/all-target Clippy, full tests and backend
+build passed: **708 tests passed, 14 ignored**. The HTTP deletion regression first
+failed with an external/clip image, then passed with the cleanup. The new HTTP
+L-shape test covers external artwork/placement and unassignment. All **76 exact
+legacy HTTP responses and both XMLTV icon cases** passed again against released
+2.2.1 in disposable installations. [Contract evidence](open-final-compatibility-evidence.json).
+
+Actual HLS reproduced the leftover logo before the fix (old-logo region maximum
+difference from the gray source: 106). After deletion with the corrected binary,
+that region is exactly gray (maximum difference 0); removing an externally
+replaced/moved L-shape also yields full-frame gray (maximum difference 0).
+Capture health is OK and the channel log contains zero ERROR entries.
+[Evidence](template-removal-evidence.json), [channel log](template-removal-channel-log.txt).
+
+| Check | Capture |
+| --- | --- |
+| Bug reproduction before cleanup (not desired output) | [Before](output-template-delete-before.jpg) |
+| Deleted logo and replacement are gone | [After](output-template-delete-after.jpg) |
+| Removed L-shape binding returns to full screen | [Full screen](output-template-unassign-lshape.jpg) |
+
+The final raw/HLS parity repetition and consolidated screenshot gallery follow
+as separate verification after this correction. Stage 4's 707-test count below
+records its earlier implementation revision.
+
 ## Open templates: stage 4 — data sources and live fields
 
 **Graphics → Data sources** now provides uploaded/published UTF-8 CSV (including

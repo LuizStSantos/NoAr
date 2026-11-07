@@ -235,6 +235,11 @@ pub async fn delete_graphics_template(
 ) -> Result<Json<&'static str>, ServiceError> {
     let manager = authorized(&state, id, &user, &details, true).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
+    let removed_role = handles::select_graphics_bindings(&state.pool, id)
+        .await?
+        .into_iter()
+        .find(|binding| binding.template_id == template_id)
+        .map(|binding| binding.role);
     let active = crate::utils::graphics::graphics_on_air(&manager);
 
     if !handles::delete_graphics_template(&state.pool, id, template_id).await? {
@@ -249,6 +254,10 @@ pub async fn delete_graphics_template(
     }
 
     reload_graphics(&manager).await?;
+
+    if let Some(role) = removed_role {
+        crate::utils::graphics::clear_removed_channel_graphic(&manager, role).await?;
+    }
 
     Ok(Json("removed"))
 }
@@ -498,6 +507,11 @@ pub async fn assign_graphics_template(
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
     let manager = authorized(&state, id, &user, &details, true).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
+    let previous_role = handles::select_graphics_bindings(&state.pool, id)
+        .await?
+        .into_iter()
+        .find(|binding| binding.template_id == template_id)
+        .map(|binding| binding.role);
     let template = handles::select_graphics_template(&state.pool, id, template_id)
         .await?
         .ok_or_else(|| template_not_found(template_id))?;
@@ -532,6 +546,12 @@ pub async fn assign_graphics_template(
     )
     .await?;
     reload_graphics(&manager).await?;
+
+    if let Some(role) = previous_role
+        && Some(role) != request.role
+    {
+        crate::utils::graphics::clear_removed_channel_graphic(&manager, role).await?;
+    }
 
     Ok(Json(
         handles::select_graphics_template(&state.pool, id, template_id)

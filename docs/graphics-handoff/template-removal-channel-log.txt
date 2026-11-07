@@ -1,0 +1,64 @@
+<span class="log-gray">[2026-11-07 06:45:05.069529+00:00]</span> <span class="level-debug">[DEBUG]</span> Start NoAr v2.2.1, channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-07 06:45:05.163477+00:00]</span> <span class="level-info">[ INFO]</span> Output connected to udp://127.0.0.1:59175
+<span class="log-gray">[2026-11-07 06:45:05.165766+00:00]</span> <span class="level-info">[ INFO]</span> Playout in playlist mode
+<span class="log-gray">[2026-11-07 06:45:05.174435+00:00]</span> <span class="level-info">[ INFO]</span> Read playlist: <span class="log-addr">/workspace/noar-cloud/open-final-compat/playlists/2026/11/2026-11-07.json</span>
+<span class="log-gray">[2026-11-07 06:45:05.174946+00:00]</span> <span class="level-debug">[DEBUG]</span> Validate playlist from: <span class="log-number">2026-11-07</span>
+<span class="log-gray">[2026-11-07 06:45:05.178198+00:00]</span> <span class="level-debug">[DEBUG]</span> Playlist init
+<span class="log-gray">[2026-11-07 06:45:05.214162+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:02:54.822</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 06:45:05.279292+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 53.008431ms; output video=0, audio=0
+<span class="log-gray">[2026-11-07 06:45:05.283210+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 3.275896ms; seek=Some(5.178141644999414)
+<span class="log-gray">[2026-11-07 06:45:05.967845+00:00]</span> <span class="level-debug">[DEBUG]</span> Validation done, in <span class="log-number">792.459ms</span>, playlist length: <span class="log-number">24:03:00.000</span> ...
+<span class="log-gray">[2026-11-07 06:48:04.387697+00:00]</span> <span class="level-debug">[DEBUG]</span> Delta: <span class="log-number">-4.387</span> 
+<span class="log-gray">[2026-11-07 06:48:04.388732+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:03:00.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 06:48:04.389270+00:00]</span> <span class="level-debug">[DEBUG]</span> Apply HLS playout rate correction: <span class="log-number">1.01124</span> for delta <span class="log-number">-4.389</span>s
+<span class="log-gray">[2026-11-07 06:48:04.396304+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 3.040548ms; output video=4371, audio=8392320
+<span class="log-gray">[2026-11-07 06:48:04.401563+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 4.937207ms; seek=None
+<span class="log-gray">[2026-11-07 06:51:09.337014+00:00]</span> <span class="level-debug">[DEBUG]</span> Delta: <span class="log-number">-9.337</span> 
+<span class="log-gray">[2026-11-07 06:51:09.338999+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:03:00.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 06:51:09.339838+00:00]</span> <span class="level-debug">[DEBUG]</span> Apply HLS playout rate correction: <span class="log-number">1.01124</span> for delta <span class="log-number">-9.340</span>s
+<span class="log-gray">[2026-11-07 06:51:09.355468+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 10.038367ms; output video=8871, audio=17032320
+<span class="log-gray">[2026-11-07 06:51:09.359469+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 3.625894ms; seek=None
+<span class="log-gray">[2026-11-07 06:54:07.332175+00:00]</span> <span class="level-debug">[DEBUG]</span> Delta: <span class="log-number">-7.332</span> 
+<span class="log-gray">[2026-11-07 06:54:07.333242+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:03:00.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 06:54:07.333825+00:00]</span> <span class="level-debug">[DEBUG]</span> Apply HLS playout rate correction: <span class="log-number">1.01124</span> for delta <span class="log-number">-7.334</span>s
+<span class="log-gray">[2026-11-07 06:54:07.350895+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 13.900195ms; output video=13371, audio=25672320
+<span class="log-gray">[2026-11-07 06:54:07.352031+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 744.342µs; seek=None
+<span class="log-gray">[2026-11-07 06:57:05.332225+00:00]</span> <span class="level-debug">[DEBUG]</span> Delta: <span class="log-number">-5.332</span> 
+<span class="log-gray">[2026-11-07 06:57:05.333338+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:03:00.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 06:57:05.335085+00:00]</span> <span class="level-debug">[DEBUG]</span> Apply HLS playout rate correction: <span class="log-number">1.01124</span> for delta <span class="log-number">-5.335</span>s
+<span class="log-gray">[2026-11-07 06:57:05.352170+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 13.331705ms; output video=17871, audio=34312320
+<span class="log-gray">[2026-11-07 06:57:05.354092+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 1.598797ms; seek=None
+<span class="log-gray">[2026-11-07 07:00:03.362329+00:00]</span> <span class="level-debug">[DEBUG]</span> Delta: <span class="log-number">-3.362</span> 
+<span class="log-gray">[2026-11-07 07:00:03.363732+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:03:00.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 07:00:03.364550+00:00]</span> <span class="level-debug">[DEBUG]</span> Apply HLS playout rate correction: <span class="log-number">1.01124</span> for delta <span class="log-number">-3.364</span>s
+<span class="log-gray">[2026-11-07 07:00:03.374080+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 2.570698ms; output video=22371, audio=42952320
+<span class="log-gray">[2026-11-07 07:00:03.375229+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 680.309µs; seek=None
+<span class="log-gray">[2026-11-07 07:02:09.904142+00:00]</span> <span class="level-debug">[DEBUG]</span> Stop all child processes from channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-07 07:02:10.021445+00:00]</span> <span class="level-debug">[DEBUG]</span> Delta: <span class="log-number">49.979</span> 
+<span class="log-gray">[2026-11-07 07:02:27.184877+00:00]</span> <span class="level-debug">[DEBUG]</span> Start NoAr v2.2.1, channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-07 07:02:27.387595+00:00]</span> <span class="level-info">[ INFO]</span> Output connected to udp://127.0.0.1:35638
+<span class="log-gray">[2026-11-07 07:02:27.389285+00:00]</span> <span class="level-info">[ INFO]</span> Playout in playlist mode
+<span class="log-gray">[2026-11-07 07:02:27.395877+00:00]</span> <span class="level-info">[ INFO]</span> Read playlist: <span class="log-addr">/workspace/noar-cloud/open-final-compat/playlists/2026/11/2026-11-07.json</span>
+<span class="log-gray">[2026-11-07 07:02:27.396121+00:00]</span> <span class="level-debug">[DEBUG]</span> Validate playlist from: <span class="log-number">2026-11-07</span>
+<span class="log-gray">[2026-11-07 07:02:27.396233+00:00]</span> <span class="level-debug">[DEBUG]</span> Playlist init
+<span class="log-gray">[2026-11-07 07:02:27.426856+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:00:32.604</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 07:02:27.477335+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 47.175679ms; output video=0, audio=0
+<span class="log-gray">[2026-11-07 07:02:27.481825+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 4.234152ms; seek=Some(147.39620314499916)
+<span class="log-gray">[2026-11-07 07:02:28.085722+00:00]</span> <span class="level-debug">[DEBUG]</span> Validation done, in <span class="log-number">689.219ms</span>, playlist length: <span class="log-number">24:03:00.000</span> ...
+<span class="log-gray">[2026-11-07 07:02:34.596773+00:00]</span> <span class="level-debug">[DEBUG]</span> Deactivate playout and stop all child processes from channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-07 07:02:34.729125+00:00]</span> <span class="level-debug">[DEBUG]</span> Playlist init
+<span class="log-gray">[2026-11-07 07:02:35.267500+00:00]</span> <span class="level-debug">[DEBUG]</span> Start NoAr v2.2.1, channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-07 07:02:35.314420+00:00]</span> <span class="level-info">[ INFO]</span> Output connected to udp://127.0.0.1:35638
+<span class="log-gray">[2026-11-07 07:02:35.317492+00:00]</span> <span class="level-info">[ INFO]</span> Playout in playlist mode
+<span class="log-gray">[2026-11-07 07:02:35.323831+00:00]</span> <span class="level-info">[ INFO]</span> Read playlist: <span class="log-addr">/workspace/noar-cloud/open-final-compat/playlists/2026/11/2026-11-07.json</span>
+<span class="log-gray">[2026-11-07 07:02:35.323970+00:00]</span> <span class="level-debug">[DEBUG]</span> Validate playlist from: <span class="log-number">2026-11-07</span>
+<span class="log-gray">[2026-11-07 07:02:35.327623+00:00]</span> <span class="level-debug">[DEBUG]</span> Playlist init
+<span class="log-gray">[2026-11-07 07:02:35.327803+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:00:24.672</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 07:02:35.371887+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 41.505202ms; output video=0, audio=0
+<span class="log-gray">[2026-11-07 07:02:35.375231+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 3.095032ms; seek=Some(155.32758548399943)
+<span class="log-gray">[2026-11-07 07:02:35.932577+00:00]</span> <span class="level-debug">[DEBUG]</span> Validation done, in <span class="log-number">608.517ms</span>, playlist length: <span class="log-number">24:03:00.000</span> ...
+<span class="log-gray">[2026-11-07 07:03:00.110510+00:00]</span> <span class="level-debug">[DEBUG]</span> Delta: <span class="log-number">-0.110</span> 
+<span class="log-gray">[2026-11-07 07:03:00.111105+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:03:00.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-compat/media/compatibility.mp4</span>
+<span class="log-gray">[2026-11-07 07:03:00.111355+00:00]</span> <span class="level-debug">[DEBUG]</span> Apply HLS playout rate correction: <span class="log-number">1.00062</span> for delta <span class="log-number">-0.111</span>s
+<span class="log-gray">[2026-11-07 07:03:00.120589+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 6.861438ms; output video=617, audio=1184640
+<span class="log-gray">[2026-11-07 07:03:00.122875+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 2.041466ms; seek=None

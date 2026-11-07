@@ -304,6 +304,54 @@ pub async fn control_channel_graphic(
 
 pub const MAX_LAYERS: usize = 64;
 
+/// Removing a channel binding also removes its transient external/clip artwork.
+/// Ordinary saves and replacement assignments keep those shared controls intact.
+pub async fn clear_removed_channel_graphic(
+    manager: &ChannelManager,
+    role: crate::db::models::GraphicsRole,
+) -> Result<(), ServiceError> {
+    let config = manager.config.read().await;
+    let running = manager.running_config();
+    let (width, height) = running
+        .as_deref()
+        .map_or((config.output.width, config.output.height), |running| {
+            (running.output.width, running.output.height)
+        });
+
+    match role {
+        crate::db::models::GraphicsRole::Logo => {
+            manager.logo_control.show();
+            manager
+                .logo_control
+                .move_to(None, width, height)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            manager
+                .logo_control
+                .set_clip_image(None, width, height)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            manager
+                .logo_control
+                .set_clip_position(None, width, height)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+        }
+        crate::db::models::GraphicsRole::Lshape => {
+            manager.lshape_control.off();
+            manager.lshape_control.reset();
+            manager
+                .lshape_control
+                .place(None)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            manager
+                .lshape_control
+                .set_clip_graphic(None, width, height)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+        }
+        crate::db::models::GraphicsRole::Ticker => {}
+    }
+
+    Ok(())
+}
+
 /// Restore the bound permanent text model. Released 2.2.1 has no persisted
 /// ticker settings, so conversion creates an empty, disabled binding.
 pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), ServiceError> {

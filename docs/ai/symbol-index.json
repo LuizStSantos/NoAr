@@ -1709,9 +1709,9 @@
       ]
     },
     "backend/app/src/api/routes/graphics.rs": {
-      "sha256": "726d39495d88df6e5d276f730bb0087b5eddcfa23fb63d0d2e2741e442475776",
+      "sha256": "dbe73d511ccf33f46d24dbb156c2f209aa1c224f7aa89a1a55f2875be9af39f8",
       "language": "Rust",
-      "bytes": 27190,
+      "bytes": 27916,
       "symbols": [
         {
           "name": "authorized",
@@ -1747,103 +1747,103 @@
         },
         {
           "name": "TakeRequest",
-          "line": 257
+          "line": 266
         },
         {
           "name": "OutRequest",
-          "line": 270
+          "line": 279
         },
         {
           "name": "OutStatus",
-          "line": 277
+          "line": 286
         },
         {
           "name": "take_graphic",
-          "line": 292
+          "line": 301
         },
         {
           "name": "take_graphic_out",
-          "line": 329
+          "line": 338
         },
         {
           "name": "get_graphics_on_air",
-          "line": 355
+          "line": 364
         },
         {
           "name": "get_graphics_fonts",
-          "line": 369
+          "line": 378
         },
         {
           "name": "get_channel_graphics",
-          "line": 385
+          "line": 394
         },
         {
           "name": "ChannelGraphicRequest",
-          "line": 399
+          "line": 408
         },
         {
           "name": "control_channel_graphics",
-          "line": 403
+          "line": 412
         },
         {
           "name": "validate_permanent_template",
-          "line": 419
+          "line": 428
         },
         {
           "name": "reload_graphics",
-          "line": 471
+          "line": 480
         },
         {
           "name": "GraphicsAssignmentRequest",
-          "line": 486
+          "line": 495
         },
         {
           "name": "assign_graphics_template",
-          "line": 492
+          "line": 501
         },
         {
           "name": "graphics_template_usage",
-          "line": 544
+          "line": 564
         },
         {
           "name": "graphics_clock",
-          "line": 590
+          "line": 610
         },
         {
           "name": "get_graphics_font_assets",
-          "line": 611
+          "line": 631
         },
         {
           "name": "FontUploadQuery",
-          "line": 623
-        },
-        {
-          "name": "upload_graphics_font",
-          "line": 627
-        },
-        {
-          "name": "download_graphics_font",
           "line": 643
         },
         {
+          "name": "upload_graphics_font",
+          "line": 647
+        },
+        {
+          "name": "download_graphics_font",
+          "line": 663
+        },
+        {
           "name": "get_graphics_sources",
-          "line": 666
+          "line": 686
         },
         {
           "name": "add_graphics_source",
-          "line": 685
+          "line": 705
         },
         {
           "name": "update_graphics_source",
-          "line": 715
+          "line": 735
         },
         {
           "name": "refresh_graphics_source",
-          "line": 743
+          "line": 763
         },
         {
           "name": "delete_graphics_source",
-          "line": 759
+          "line": 779
         }
       ]
     },
@@ -8156,9 +8156,9 @@
       ]
     },
     "backend/app/src/utils/graphics.rs": {
-      "sha256": "c3550879b494ac113598c893cad71a67a93d088d6ca39a4ed29f9874927e1e61",
+      "sha256": "8d3729257c82d345168d3f26677206ba9508223d05a551378c484c8941ab2134",
       "language": "Rust",
-      "bytes": 63681,
+      "bytes": 65507,
       "symbols": [
         {
           "name": "fonts",
@@ -8185,280 +8185,284 @@
           "line": 177
         },
         {
-          "name": "load_channel_ticker",
+          "name": "clear_removed_channel_graphic",
           "line": 309
         },
         {
+          "name": "load_channel_ticker",
+          "line": 357
+        },
+        {
           "name": "LayerKind",
-          "line": 380
-        },
-        {
-          "name": "Animation",
-          "line": 394
-        },
-        {
-          "name": "TextAlign",
-          "line": 408
-        },
-        {
-          "name": "DuringLShape",
-          "line": 418
-        },
-        {
-          "name": "DuringLShape",
           "line": 428
         },
         {
+          "name": "Animation",
+          "line": 442
+        },
+        {
+          "name": "TextAlign",
+          "line": 456
+        },
+        {
+          "name": "DuringLShape",
+          "line": 466
+        },
+        {
+          "name": "DuringLShape",
+          "line": 476
+        },
+        {
           "name": "as_str",
-          "line": 429
+          "line": 477
         },
         {
           "name": "parse",
-          "line": 437
+          "line": 485
         },
         {
           "name": "default_true",
-          "line": 447
+          "line": 495
         },
         {
           "name": "default_opacity",
-          "line": 451
+          "line": 499
         },
         {
           "name": "default_font_size",
-          "line": 455
-        },
-        {
-          "name": "default_color",
-          "line": 459
-        },
-        {
-          "name": "default_animation_ms",
-          "line": 463
-        },
-        {
-          "name": "default_duration",
-          "line": 467
-        },
-        {
-          "name": "ShapeKind",
-          "line": 473
-        },
-        {
-          "name": "default_stroke_width",
-          "line": 481
-        },
-        {
-          "name": "LayerStyle",
-          "line": 487
-        },
-        {
-          "name": "Default",
-          "line": 502
-        },
-        {
-          "name": "default",
           "line": 503
         },
         {
+          "name": "default_color",
+          "line": 507
+        },
+        {
+          "name": "default_animation_ms",
+          "line": 511
+        },
+        {
+          "name": "default_duration",
+          "line": 515
+        },
+        {
+          "name": "ShapeKind",
+          "line": 521
+        },
+        {
+          "name": "default_stroke_width",
+          "line": 529
+        },
+        {
+          "name": "LayerStyle",
+          "line": 535
+        },
+        {
+          "name": "Default",
+          "line": 550
+        },
+        {
+          "name": "default",
+          "line": 551
+        },
+        {
           "name": "clock_value",
-          "line": 516
+          "line": 564
         },
         {
           "name": "TemplateLayer",
-          "line": 552
+          "line": 600
         },
         {
           "name": "TemplateInput",
-          "line": 607
+          "line": 655
         },
         {
           "name": "template_fields",
-          "line": 624
+          "line": 672
         },
         {
           "name": "is_field_char",
-          "line": 646
+          "line": 694
         },
         {
           "name": "placeholders",
-          "line": 651
+          "line": 699
         },
         {
           "name": "whole_placeholder",
-          "line": 676
+          "line": 724
         },
         {
           "name": "is_color",
-          "line": 683
+          "line": 731
         },
         {
           "name": "check_layer",
-          "line": 691
+          "line": 739
         },
         {
           "name": "prepare_template",
-          "line": 800
+          "line": 848
         },
         {
           "name": "parse_color",
-          "line": 890
+          "line": 938
         },
         {
           "name": "fill_fields",
-          "line": 911
+          "line": 959
         },
         {
           "name": "layer_image",
-          "line": 941
-        },
-        {
-          "name": "engine_animation",
-          "line": 964
-        },
-        {
-          "name": "graphic_spec",
-          "line": 981
-        },
-        {
-          "name": "graphic_spec_for_channel",
           "line": 989
         },
         {
+          "name": "engine_animation",
+          "line": 1012
+        },
+        {
+          "name": "graphic_spec",
+          "line": 1029
+        },
+        {
+          "name": "graphic_spec_for_channel",
+          "line": 1037
+        },
+        {
           "name": "graphic_spec_for_records",
-          "line": 997
+          "line": 1045
         },
         {
           "name": "graphic_spec_at",
-          "line": 1013
+          "line": 1061
         },
         {
           "name": "GraphicsTakes",
-          "line": 1107
+          "line": 1155
         },
         {
           "name": "GraphicsEditGuard",
-          "line": 1113
+          "line": 1161
         },
         {
           "name": "Drop",
-          "line": 1118
+          "line": 1166
         },
         {
           "name": "drop",
-          "line": 1119
+          "line": 1167
         },
         {
           "name": "TakeRecord",
-          "line": 1125
+          "line": 1173
         },
         {
           "name": "GraphicsTakes",
-          "line": 1135
+          "line": 1183
         },
         {
           "name": "begin_edit",
-          "line": 1136
+          "line": 1184
         },
         {
           "name": "invalidate",
-          "line": 1146
+          "line": 1194
         },
         {
           "name": "records",
-          "line": 1150
+          "line": 1198
         },
         {
           "name": "add",
-          "line": 1154
-        },
-        {
-          "name": "keep_only",
-          "line": 1159
-        },
-        {
-          "name": "GraphicOnAirView",
-          "line": 1169
-        },
-        {
-          "name": "graphics_on_air",
-          "line": 1178
-        },
-        {
-          "name": "TakeOutcome",
           "line": 1202
         },
         {
+          "name": "keep_only",
+          "line": 1207
+        },
+        {
+          "name": "GraphicOnAirView",
+          "line": 1217
+        },
+        {
+          "name": "graphics_on_air",
+          "line": 1226
+        },
+        {
+          "name": "TakeOutcome",
+          "line": 1250
+        },
+        {
           "name": "draw_and_take",
-          "line": 1214
+          "line": 1262
         },
         {
           "name": "take_template",
-          "line": 1251
+          "line": 1299
         },
         {
           "name": "load_permanent_templates",
-          "line": 1325
+          "line": 1373
         },
         {
           "name": "DynamicScope",
-          "line": 1369
+          "line": 1417
         },
         {
           "name": "run_dynamic_graphics",
-          "line": 1376
+          "line": 1424
         },
         {
           "name": "refresh_dynamic_graphics",
-          "line": 1395
+          "line": 1443
         },
         {
           "name": "tests",
-          "line": 1585
+          "line": 1633
         },
         {
           "name": "text_layer",
-          "line": 1588
+          "line": 1636
         },
         {
           "name": "clock_formats_follow_channel_timezone_midnight_and_daylight_saving_time",
-          "line": 1596
+          "line": 1644
         },
         {
           "name": "shape_and_clock_specs_keep_geometry_and_only_clock_pixels_change_with_time",
-          "line": 1635
+          "line": 1683
         },
         {
           "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
-          "line": 1682
+          "line": 1730
         },
         {
           "name": "layers_take_defaults_and_are_checked",
-          "line": 1706
+          "line": 1754
         },
         {
           "name": "during_lshape_reads_back_what_it_writes",
-          "line": 1739
+          "line": 1787
         },
         {
           "name": "prepare_template_trims_and_keeps_field_images",
-          "line": 1748
-        },
-        {
-          "name": "fields_are_filled_and_unknown_braces_stay",
-          "line": 1784
-        },
-        {
-          "name": "colors_are_read_in_every_hex_form",
           "line": 1796
         },
         {
+          "name": "fields_are_filled_and_unknown_braces_stay",
+          "line": 1832
+        },
+        {
+          "name": "colors_are_read_in_every_hex_form",
+          "line": 1844
+        },
+        {
           "name": "a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields",
-          "line": 1807
+          "line": 1855
         },
         {
           "name": "a_video_layer_makes_the_template_an_lshape",
-          "line": 1844
+          "line": 1892
         }
       ]
     },
@@ -11490,9 +11494,9 @@
       ]
     },
     "backend/app/tests/api/graphics.rs": {
-      "sha256": "18588c93d56c23435c620ec96f55739bb41fd27a45aed827ab04bfddb7735bb7",
+      "sha256": "622e91deff2c2ec21d0e356a37caa67c4f1a6cc6b7e401d2d66d647c15ecc359",
       "language": "Rust",
-      "bytes": 33426,
+      "bytes": 37294,
       "symbols": [
         {
           "name": "send",
@@ -11524,27 +11528,31 @@
         },
         {
           "name": "permanent_capacity_and_bad_artwork_do_not_leave_partial_saved_models",
-          "line": 584
+          "line": 623
         },
         {
           "name": "compatibility_assignment_preserves_an_explicit_image_target_and_authored_group",
-          "line": 675
+          "line": 714
         },
         {
           "name": "clock_layers_and_shape_styles_validate_and_do_not_create_default_models",
-          "line": 739
+          "line": 778
         },
         {
           "name": "uploaded_fonts_are_immutable_channel_assets_and_validate_template_ownership",
-          "line": 829
+          "line": 868
         },
         {
           "name": "upload",
-          "line": 839
+          "line": 878
         },
         {
           "name": "data_sources_enforce_channel_access_keep_last_good_rows_and_protect_references",
-          "line": 939
+          "line": 978
+        },
+        {
+          "name": "removing_a_lshape_assignment_clears_its_external_art_and_returns_full_screen",
+          "line": 1194
         }
       ]
     },
@@ -21712,6 +21720,12 @@
       "bytes": 25895,
       "symbols": []
     },
+    "docs/graphics-handoff/open-final-parity-evidence.json": {
+      "sha256": "a24d1cb62c431f5a3759742bbe154acf2c220a5d0800b92bda23c79eafa838bc",
+      "language": "JSON",
+      "bytes": 451132,
+      "symbols": []
+    },
     "docs/graphics-handoff/open-templates-evidence.json": {
       "sha256": "a7bc3a60c43a5e408353b38176365c4f538dffa9e24389e380f0f8482ba92322",
       "language": "JSON",
@@ -21722,6 +21736,18 @@
       "sha256": "5b663f3b3fa08577c64cff030694b05dc37497823f5ae0360607d21b4206aff4",
       "language": "Markdown",
       "bytes": 7882,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-templates-review-index.json": {
+      "sha256": "0d05306dd44c83e5d9e73a90595b45a7a8678e7854e4a15e9a6e4d80e3d826a5",
+      "language": "JSON",
+      "bytes": 2208,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-templates-review.html": {
+      "sha256": "d4fa2e31dc46c76f6d57466706c751faf668727ff76f7e37f6d1b321860669bc",
+      "language": "HTML",
+      "bytes": 19108,
       "symbols": []
     },
     "docs/graphics-handoff/output-template-lshape-evidence.json": {

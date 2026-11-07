@@ -13,7 +13,7 @@ Machine-generated navigation index; verify behavior against current source code.
 - `assets/`: 1 indexed files
 - `backend/`: 208 indexed files
 - `docker/`: 4 indexed files
-- `docs/`: 92 indexed files
+- `docs/`: 95 indexed files
 - `frontend/`: 155 indexed files
 - `migrations/`: 33 indexed files
 - `qa/`: 63 indexed files
@@ -24,13 +24,13 @@ Machine-generated navigation index; verify behavior against current source code.
 - Rust: 202
 - Vue: 97
 - Markdown: 94
-- JSON: 65
+- JSON: 67
 - TypeScript: 60
 - Other: 40
 - Python: 37
 - SQL: 33
 - YAML: 14
-- HTML: 6
+- HTML: 7
 - TOML: 4
 - Shell: 4
 - Build: 2
