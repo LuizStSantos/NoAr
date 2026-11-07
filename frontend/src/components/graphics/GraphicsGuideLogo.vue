@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
-import { storageImageUrl } from '@/composables/logo'
+import { storageImageUrl } from '@/composables/graphicsImages'
 import { useConfig } from '@/stores/config'
 import { authFetch } from '@/composables/authFetch'
 import { useAuth } from '@/stores/auth'

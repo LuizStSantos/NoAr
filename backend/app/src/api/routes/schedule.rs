@@ -448,7 +448,7 @@ pub async fn control_live_with_key(
         .or(query.key.as_deref())
         .unwrap_or_default();
 
-    if !crate::api::routes::logo::key_matches(&expected, given) {
+    if !crate::api::auth::control_key_matches(&expected, given) {
         return Err(ServiceError::Forbidden(
             "Wrong or missing live key".to_string(),
         ));

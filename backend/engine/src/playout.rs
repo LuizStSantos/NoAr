@@ -19,7 +19,7 @@ use log::{debug, trace, warn};
 use crate::{
     LogoFade, MAX_LOGO_GAPS, PlaybackControl,
     benchmark::{self, Stage},
-    compositor::{logo::*, text::TextOverlay},
+    compositor::{graphics::logo::*, text::TextOverlay},
     input::{
         gstreamer::{FrameEvent, Source},
         preload::{OpenedInput, Preloaded},
@@ -340,7 +340,7 @@ impl LogoFadePlan {
 
     /// How far into the L-shape the stretches marked in the clip put `pts`.
     fn lshape_level(self, pts: i64) -> f64 {
-        crate::compositor::lshape::marked_level(
+        crate::compositor::graphics::lshape::marked_level(
             &self.lshape[..self.lshape_count],
             pts,
             self.lshape_frames,
@@ -979,7 +979,7 @@ struct VideoCompositor {
     moved_logo: Option<(String, usize, LogoOverlay)>,
     logo_control: LogoControl,
     lshape_control: crate::LShapeControl,
-    lshape_scaler: crate::compositor::lshape::LShapeScaler,
+    lshape_scaler: crate::compositor::graphics::lshape::LShapeScaler,
     graphics_control: crate::GraphicsControl,
     text: Option<TextOverlay>,
     runtime_text: RuntimeTextOverlay,
@@ -1257,10 +1257,10 @@ fn encode_composited_frame<O: FrameOutput>(
     };
 
     if let Some((graphic, progress)) = template_lshape.or(channel_lshape) {
-        let (gone, picture) = crate::compositor::lshape::lshape_phases(progress);
+        let (gone, picture) = crate::compositor::graphics::lshape::lshape_phases(progress);
         logo_off = gone;
 
-        if let Err(error) = crate::compositor::lshape::apply_lshape(
+        if let Err(error) = crate::compositor::graphics::lshape::apply_lshape(
             &mut frame,
             &graphic,
             picture,

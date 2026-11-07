@@ -3,21 +3,23 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
-import { type DataField, sourceBindings, sourceColumns, useGraphicsSources } from '@/composables/graphicsSources'
+import { type DataField, sourceBindings, useGraphicsSources } from '@/composables/graphicsSources'
 import { type GraphicsFont, loadGraphicsFont } from '@/composables/graphicsFonts'
-import { CLOCK_FORMATS } from '@/composables/graphicsClock'
-import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
+import ComposerCanvas from '@/components/graphics/composer/ComposerCanvas.vue'
+import ComposerLayerList from '@/components/graphics/composer/ComposerLayerList.vue'
+import ComposerFieldMappings from '@/components/graphics/composer/ComposerFieldMappings.vue'
+import ComposerTimeline from '@/components/graphics/composer/ComposerTimeline.vue'
+import ComposerLayerInspector from '@/components/graphics/composer/ComposerLayerInspector.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import { sendFileInChunks } from '@/composables/chunkedUpload'
 import { useAuth } from '@/stores/auth'
 import { randomId } from '@/composables/browser'
-import { storageImageUrl } from '@/composables/logo'
+import { storageImageUrl } from '@/composables/graphicsImages'
 import { AuthFetchError, authFetch } from '@/composables/authFetch'
 import {
     type GraphicsTemplate,
     type TemplateLayer,
     type TemplateInput,
-    LAYER_ANIMATIONS,
     fitLayer,
     templateFields,
     fieldList,
@@ -26,8 +28,13 @@ import {
     sanitizeGraphicsUploadFilename,
 } from '@/composables/graphicsTemplates'
 import { useConfig } from '@/stores/config'
+import { useComposerGeometry } from '@/composables/graphicsComposerGeometry'
+import { useComposerPreview } from '@/composables/graphicsComposerPreview'
 
-/** Author a template locally; only an explicit save changes the stored template. */
+/**
+ * Route entry and single owner of the draft, undo history, persistence and asset requests.
+ * Child panels emit commands; only an explicit save changes the stored template.
+ */
 const { t } = useI18n()
 const configStore = useConfig()
 const graphicsApi = useGraphicsApi()
@@ -71,94 +78,42 @@ const error = ref('')
 const note = ref('')
 const adding = ref(false)
 const picking = ref(false)
-const proportional = ref(false)
-const unit = ref('%')
-const canvas = ref<HTMLElement>()
-// Canvas aids are local to the editor and never enter the saved template.
-const showSafeAreas = ref(false)
-const guideV = ref(false)
-const guideH = ref(false)
-// Scale presets use the created or loaded size, so consecutive presets never compound.
-const scaleBases = new Map<string, { width: number; height: number }>()
 const output = computed(() => configStore.playout?.output)
 const frame = computed(() => ({ width: output.value?.width || 1920, height: output.value?.height || 1080 }))
-const time = ref<number>()
-const playing = ref(false)
-const timelineEnd = computed(
-    () =>
-        Math.max(
-            draft.value.duration || 5,
-            ...draft.value.layers.map((layer) => (layer.delay_ms + layer.animation_ms) / 1000),
-        ) + Math.max(0.4, ...draft.value.layers.map((layer) => layer.animation_ms / 1000)),
-)
-let animationFrame = 0
+const {
+    proportional,
+    unit,
+    videoCorner,
+    scaleValue,
+    setVideoWindow,
+    setDimension,
+    formatDimension,
+    setScale,
+    rememberScaleBase,
+    resetScaleBases,
+} = useComposerGeometry(selected, frame, updateSelectedLayer)
+const { time, playing, timelineEnd, seekPreview, stopPreview, playPreview } = useComposerPreview(() => draft.value)
 let loadVersion = 0
-let drag:
-    | { id: string; mode: string; x: number; y: number; rect: DOMRect; layer: TemplateLayer; snapshot: string }
-    | undefined
+let interactionSnapshot: string | undefined
 const dirty = computed(
     () => JSON.stringify(draft.value) !== baseline.value || assignment.value !== originalAssignment.value,
 )
 
-async function uploadFont(event: Event) {
-    const input = event.target as HTMLInputElement
-    const file = input.files?.[0]
-    const id = channelId.value
-    const layerId = selectedId.value
-    const version = loadVersion
-    input.value = ''
-
-    if (!file || !id) {
-        return
-    }
-
-    fontUploading.value = true
-    error.value = ''
-    try {
-        const asset = await authFetch<GraphicsFont>(
-            `/api/graphics/${id}/font-assets?filename=${encodeURIComponent(file.name)}`,
-            {
-                method: 'POST',
-                body: file,
-                headers: { 'Content-Type': 'application/octet-stream' },
-            },
-        )
-        await loadGraphicsFont(id, asset)
-        uploadedFonts.value.push(asset)
-
-        if (version === loadVersion && selectedId.value === layerId) {
-            updateSelectedLayer({ font_family: asset.family })
-        }
-    } catch (failure) {
-        error.value = String(failure)
-    } finally {
-        fontUploading.value = false
-    }
-}
-
 function mapField(field: string, binding?: DataField) {
     rememberDraft()
+
     for (const layer of draft.value.layers) {
         if (!templateFields([layer]).includes(field)) {
             continue
         }
+
         layer.data_fields = { ...layer.data_fields }
+
         if (binding) {
             layer.data_fields[field] = binding
         } else {
             delete layer.data_fields[field]
         }
-    }
-}
-function selectFieldSource(field: string, event: Event) {
-    const id = Number((event.target as HTMLSelectElement).value)
-    const source = dataSources.value.find((source) => source.id === id)
-    mapField(field, source ? { source_id: id, column: sourceColumns(source)[0] ?? '', row: 0 } : undefined)
-}
-function changeFieldMapping(field: string, changes: Partial<DataField>) {
-    const current = sourceBindings(preview.value)[field]
-    if (current) {
-        mapField(field, { ...current, ...changes })
     }
 }
 
@@ -209,82 +164,6 @@ function setAlwaysOn(value: boolean) {
     draft.value.duration = 0
 }
 
-const videoCorner = computed(() => {
-    const layer = selected.value
-
-    if (!layer || layer.kind !== 'video') {
-        return 'custom'
-    }
-
-    const horizontal = Math.abs(layer.x) < 0.01 ? 'left' : Math.abs(layer.x + layer.width - 100) < 0.01 ? 'right' : ''
-    const vertical = Math.abs(layer.y) < 0.01 ? 'top' : Math.abs(layer.y + layer.height - 100) < 0.01 ? 'bottom' : ''
-
-    return horizontal && vertical ? `${vertical}-${horizontal}` : 'custom'
-})
-
-function setVideoWindow(corner: string, size: number) {
-    if (!selected.value || corner === 'custom') {
-        return
-    }
-
-    const percent = Math.max(30, Math.min(95, size))
-    const width = Math.max(2, Math.round((frame.value.width * percent) / 100) & ~1)
-    const height = Math.max(2, Math.round((frame.value.height * percent) / 100) & ~1)
-    const x = corner.endsWith('right') ? (frame.value.width - width) & ~1 : 0
-    const y = corner.startsWith('bottom') ? (frame.value.height - height) & ~1 : 0
-    updateSelectedLayer({
-        x: (x * 100) / frame.value.width,
-        y: (y * 100) / frame.value.height,
-        width: (width * 100) / frame.value.width,
-        height: (height * 100) / frame.value.height,
-    })
-}
-
-function setDimension(key: 'x' | 'y' | 'width' | 'height', value: string) {
-    if (!selected.value) {
-        return
-    }
-
-    const number = Number(value.replace(',', '.'))
-
-    if (!Number.isFinite(number)) {
-        return
-    }
-
-    const axis = key === 'x' || key === 'width' ? frame.value.width : frame.value.height
-    updateSelectedLayer(
-        fitLayer(
-            selected.value,
-            { [key]: unit.value === 'px' ? (number / axis) * 100 : number },
-            proportional.value && (key === 'width' || key === 'height'),
-        ),
-    )
-}
-
-function formatDimension(key: 'x' | 'y' | 'width' | 'height') {
-    const value = selected.value?.[key] ?? 0
-    const axis = key === 'x' || key === 'width' ? frame.value.width : frame.value.height
-    return Math.round(value * (unit.value === 'px' ? axis / 100 : 1) * 100) / 100
-}
-
-function setScale(value: number) {
-    const layer = selected.value
-
-    if (!layer || !Number.isFinite(value) || value <= 0) {
-        return
-    }
-
-    const base = scaleBases.get(layer.id) ?? layer
-    updateSelectedLayer(
-        fitLayer(layer, { width: (base.width * value) / 100, height: (base.height * value) / 100 }, true),
-    )
-}
-
-const scaleValue = computed(() =>
-    selected.value
-        ? Math.round((selected.value.width / (scaleBases.get(selected.value.id)?.width ?? selected.value.width)) * 100)
-        : 100,
-)
 function addLayer(kind: TemplateLayer['kind']) {
     if (
         draft.value.layers.length >= 64 ||
@@ -326,18 +205,10 @@ function addLayer(kind: TemplateLayer['kind']) {
     }
 
     draft.value.layers.push(layer)
-    scaleBases.set(layer.id, { width: layer.width, height: layer.height })
+    rememberScaleBase(layer)
     selectedId.value = layer.id
     adding.value = false
     stopPreview()
-}
-
-function setShape(shape: NonNullable<TemplateLayer['shape']>) {
-    updateSelectedLayer({
-        shape,
-        ...(shape === 'rounded' ? { radius: 2 } : {}),
-        ...(shape === 'line' ? { stroke: selected.value?.stroke || '#ffffff', fill: null } : {}),
-    })
 }
 
 function removeLayer(id: string) {
@@ -362,105 +233,31 @@ function toggleLayer(layer: TemplateLayer) {
     layer.visible = !layer.visible
 }
 
-function startDrag(event: PointerEvent, layer: TemplateLayer, mode: string) {
-    if (event.button !== 0 || !canvas.value) {
-        return
-    }
-
-    event.preventDefault()
+function startLayerInteraction(layerId: string) {
     stopPreview()
-    selectedId.value = layer.id
-    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-    drag = {
-        id: layer.id,
-        mode,
-        x: event.clientX,
-        y: event.clientY,
-        rect: canvas.value.getBoundingClientRect(),
-        layer: { ...layer },
-        snapshot: JSON.stringify(draft.value),
+    selectedId.value = layerId
+    interactionSnapshot = JSON.stringify(draft.value)
+}
+
+function updateLayerInteraction(layerId: string, patch: Partial<TemplateLayer>) {
+    const layer = draft.value.layers.find((candidate) => candidate.id === layerId)
+
+    if (layer) {
+        Object.assign(layer, patch)
     }
 }
 
-/** Snap dragging to the centre and safe edges without changing typed geometry. */
-function moveLayer(event: PointerEvent) {
-    if (!drag) {
-        return
-    }
-
-    const layer = draft.value.layers.find((layer) => layer.id === drag!.id)
-
-    if (!layer) {
-        return
-    }
-
-    const original = drag.layer
-    const dx = ((event.clientX - drag.x) / drag.rect.width) * 100
-    const dy = ((event.clientY - drag.y) / drag.rect.height) * 100
-
-    if (drag.mode === 'move') {
-        const snap = (value: number, size: number) => {
-            const targets = [50 - size / 2, 5, 95 - size]
-            return Math.max(0, Math.min(targets.find((target) => Math.abs(value - target) < 1.2) ?? value, 100 - size))
-        }
-
-        layer.x = snap(original.x + dx, original.width)
-        layer.y = snap(original.y + dy, original.height)
-        guideV.value = Math.abs(layer.x + layer.width / 2 - 50) < 0.01
-        guideH.value = Math.abs(layer.y + layer.height / 2 - 50) < 0.01
-    } else {
-        const patch =
-            drag.mode === 'height'
-                ? { height: original.height + dy }
-                : drag.mode === 'width'
-                  ? { width: original.width + dx }
-                  : { width: original.width + dx, height: original.height + dy }
-        Object.assign(layer, fitLayer(original, patch, proportional.value))
-    }
-}
-
-function endDrag() {
-    if (drag && JSON.stringify(draft.value) !== drag.snapshot) {
-        history.value.push(drag.snapshot)
+/** Commit a whole pointer gesture once, rather than every previewed movement. */
+function finishLayerInteraction() {
+    if (interactionSnapshot && JSON.stringify(draft.value) !== interactionSnapshot) {
+        history.value.push(interactionSnapshot)
         note.value = ''
     }
 
-    drag = undefined
-    guideV.value = guideH.value = false
+    interactionSnapshot = undefined
 }
 
-function seekPreview(event: Event) {
-    stopPreview()
-    time.value = Number((event.target as HTMLInputElement).value)
-}
-
-function stopPreview() {
-    cancelAnimationFrame(animationFrame)
-    playing.value = false
-    time.value = undefined
-}
-
-function playPreview() {
-    if (playing.value) {
-        stopPreview()
-        return
-    }
-
-    const start = performance.now()
-    playing.value = true
-    const tick = (now: number) => {
-        time.value = (now - start) / 1000
-
-        if (time.value < timelineEnd.value) {
-            animationFrame = requestAnimationFrame(tick)
-        } else {
-            playing.value = false
-        }
-    }
-
-    animationFrame = requestAnimationFrame(tick)
-}
-
+/** Ignore stale requests and keep the document read-only until its entire load succeeds. */
 async function loadEditor() {
     const version = ++loadVersion
 
@@ -509,10 +306,7 @@ async function loadEditor() {
         uploadedFonts.value = assets
         fonts.value = families
         groups.value = [...new Set(templates.map((template) => template.group))].filter(Boolean)
-        scaleBases.clear()
-        for (const layer of draft.value.layers) {
-            scaleBases.set(layer.id, { width: layer.width, height: layer.height })
-        }
+        resetScaleBases(draft.value.layers)
 
         selectedId.value = draft.value.layers[0]?.id ?? ''
         history.value = []
@@ -530,6 +324,7 @@ async function loadEditor() {
     }
 }
 
+/** Save the model before updating its optional legacy-control assignment. */
 async function saveTemplate() {
     if (busy.value || !editorReady.value || !draft.value.name.trim()) {
         return
@@ -577,6 +372,42 @@ async function saveTemplate() {
 }
 
 /** Retry only name conflicts; the backend also rejects overwrite races atomically. */
+async function uploadFont(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    const id = channelId.value
+    const layerId = selectedId.value
+    const version = loadVersion
+    input.value = ''
+
+    if (!file || !id) {
+        return
+    }
+
+    fontUploading.value = true
+    error.value = ''
+    try {
+        const asset = await authFetch<GraphicsFont>(
+            `/api/graphics/${id}/font-assets?filename=${encodeURIComponent(file.name)}`,
+            {
+                method: 'POST',
+                body: file,
+                headers: { 'Content-Type': 'application/octet-stream' },
+            },
+        )
+        await loadGraphicsFont(id, asset)
+        uploadedFonts.value.push(asset)
+
+        if (version === loadVersion && selectedId.value === layerId) {
+            updateSelectedLayer({ font_family: asset.family })
+        }
+    } catch (failure) {
+        error.value = String(failure)
+    } finally {
+        fontUploading.value = false
+    }
+}
+
 async function uploadImage(event: Event) {
     const input = event.target as HTMLInputElement
     const original = input.files?.[0]
@@ -675,7 +506,7 @@ async function restoreLogoPlacement() {
             width: (width * 100) / frame.value.width,
             height: (height * 100) / frame.value.height,
         })
-        scaleBases.set(layer.id, { width: layer.width, height: layer.height })
+        rememberScaleBase(layer)
     } catch (failure) {
         error.value = failure instanceof Error ? failure.message : String(failure)
     } finally {
@@ -711,7 +542,7 @@ async function setImage(layer: TemplateLayer, path: string) {
 
     rememberDraft()
     Object.assign(layer, geometry, { image: path })
-    scaleBases.set(layer.id, { width: layer.width, height: layer.height })
+    rememberScaleBase(layer)
 }
 
 async function pickImage(item: { path: string }) {
@@ -780,7 +611,6 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
     ++loadVersion
-    stopPreview()
     window.removeEventListener('beforeunload', confirmBeforeUnload)
 })
 </script>
@@ -878,245 +708,39 @@ onBeforeUnmount(() => {
                 </select>
             </label>
             <button class="btn-main" :disabled="busy || !draft.name.trim()">{{ t('graphics.composer.save') }}</button>
-            <fieldset
-                v-if="fields.length"
-                class="basis-full w-full border-t border-line pt-4 flex flex-col gap-3 min-w-0"
-            >
-                <legend class="font-semibold text-sm">{{ t('graphics.sources.mapping') }}</legend>
-                <p class="text-xs text-muted m-0">{{ t('graphics.sources.mappingHint') }}</p>
-                <div v-for="field in fields" :key="field" class="grid sm:grid-cols-3 gap-2 min-w-0">
-                    <label class="field-label"
-                        >{{ t('graphics.sources.fieldSource', { field })
-                        }}<select
-                            class="field-input"
-                            :value="sourceBindings(preview)[field]?.source_id ?? ''"
-                            @change="selectFieldSource(field, $event)"
-                        >
-                            <option value="">{{ t('graphics.sources.manual') }}</option>
-                            <option v-for="source in dataSources" :key="source.id" :value="source.id">
-                                {{ source.name }}
-                            </option>
-                        </select></label
-                    >
-                    <template v-if="sourceBindings(preview)[field]">
-                        <label class="field-label"
-                            >{{ t('graphics.sources.column', { field })
-                            }}<select
-                                class="field-input"
-                                :value="sourceBindings(preview)[field]?.column"
-                                @change="
-                                    changeFieldMapping(field, {
-                                        column: ($event.target as HTMLSelectElement).value,
-                                    })
-                                "
-                            >
-                                <option
-                                    v-for="column in sourceColumns(
-                                        dataSources.find(
-                                            (source) => source.id === sourceBindings(preview)[field]?.source_id,
-                                        )!,
-                                    )"
-                                    :key="column"
-                                    :value="column"
-                                >
-                                    {{ column }}
-                                </option>
-                            </select></label
-                        >
-                        <label class="field-label"
-                            >{{ t('graphics.sources.record', { field })
-                            }}<input
-                                class="field-input"
-                                type="number"
-                                min="1"
-                                max="200"
-                                :value="(sourceBindings(preview)[field]?.row ?? 0) + 1"
-                                @change="
-                                    changeFieldMapping(field, {
-                                        row: Number(($event.target as HTMLInputElement).value) - 1,
-                                    })
-                                "
-                        /></label>
-                    </template>
-                </div>
+            <ComposerFieldMappings :fields="fields" :template="preview" :sources="dataSources" @map="mapField">
                 <RouterLink
                     class="link-accent text-sm"
                     :to="{ name: 'graphics-sources', query: { channel: channelId } }"
                     >{{ t('graphics.sections.sources') }}</RouterLink
                 >
-            </fieldset>
+            </ComposerFieldMappings>
         </form>
         <div
             class="composer-grid"
             :class="{ 'opacity-60 pointer-events-none': busy || !editorReady }"
             :aria-busy="busy"
         >
-            <aside class="card-box p-3 flex flex-col gap-3 min-w-0" :aria-label="t('graphics.composer.layers')">
-                <div class="flex items-center justify-between">
-                    <h2 class="m-0 text-base font-semibold">{{ t('graphics.composer.layers') }}</h2>
-                    <button
-                        class="btn-icon min-h-11 min-w-11"
-                        :aria-label="t('graphics.composer.add')"
-                        :aria-expanded="adding"
-                        :disabled="draft.layers.length >= 64"
-                        @click="adding = !adding"
-                    >
-                        <i class="bi bi-plus-lg" />
-                    </button>
-                </div>
-                <div
-                    v-if="adding"
-                    class="flex flex-col gap-1 border border-line-strong rounded-field p-1"
-                    role="group"
-                    :aria-label="t('graphics.composer.layerType')"
-                >
-                    <button
-                        v-for="kind in ['image', 'text', 'box', 'video', 'clock'] as const"
-                        :key="kind"
-                        class="btn-quiet text-left"
-                        :disabled="
-                            kind === 'video' &&
-                            (draft.always_on === true || draft.layers.some((layer) => layer.kind === 'video'))
-                        "
-                        :title="
-                            kind === 'video' && draft.always_on === true
-                                ? t('graphics.composer.videoModelOnly')
-                                : undefined
-                        "
-                        @click="addLayer(kind)"
-                    >
-                        {{ t('graphics.composer.kinds.' + kind) }}
-                    </button>
-                </div>
-                <p v-if="!draft.layers.length" class="m-0 text-sm text-muted">{{ t('graphics.composer.empty') }}</p>
-                <div
-                    v-for="layer in draft.layers"
-                    :key="layer.id"
-                    class="flex items-center border rounded-field min-w-0"
-                    :class="[
-                        selectedId === layer.id ? 'border-accent bg-base-300' : 'border-line-strong',
-                        { 'opacity-50': !layer.visible },
-                    ]"
-                >
-                    <button
-                        class="flex-auto min-w-0 min-h-12 text-left px-2 cursor-pointer"
-                        @click="selectedId = layer.id"
-                    >
-                        <span class="text-[10px] text-muted block">{{
-                            t('graphics.composer.kinds.' + layer.kind)
-                        }}</span
-                        ><span class="block text-sm truncate">{{ layer.name }}</span
-                        ><span class="block font-mono text-xs text-accent truncate">{{
-                            templateFields([layer])
-                                .map((field) => '{' + field + '}')
-                                .join(' ')
-                        }}</span>
-                    </button>
-                    <button
-                        class="btn-icon min-h-9 min-w-9"
-                        :aria-label="
-                            t(layer.visible ? 'graphics.composer.hide' : 'graphics.composer.show', { name: layer.name })
-                        "
-                        :aria-pressed="!layer.visible"
-                        @click="toggleLayer(layer)"
-                    >
-                        <i :class="layer.visible ? 'bi bi-eye' : 'bi bi-eye-slash'" />
-                    </button>
-                    <button
-                        class="btn-icon min-h-9 min-w-9"
-                        :aria-label="t('graphics.composer.deleteNamed', { name: layer.name })"
-                        @click="removeLayer(layer.id)"
-                    >
-                        <i class="bi bi-x-lg" />
-                    </button>
-                </div>
-            </aside>
+            <ComposerLayerList
+                v-model:selected-id="selectedId"
+                v-model:adding="adding"
+                :layers="draft.layers"
+                :always-on="draft.always_on"
+                @add="addLayer"
+                @toggle="toggleLayer"
+                @remove="removeLayer"
+            />
             <main class="min-w-0 flex flex-col gap-3">
-                <div class="flex flex-wrap gap-3 items-center text-xs text-muted">
-                    <span>{{ t('graphics.onAir.preview') }}</span>
-                    <label class="flex items-center gap-2 cursor-pointer min-h-9">
-                        <input v-model="showSafeAreas" type="checkbox" class="checkbox checkbox-sm" />
-                        {{ t('graphics.composer.safeArea') }}
-                    </label>
-                    <span class="ml-auto font-mono">{{ time?.toFixed(2) ?? '0.00' }} s</span>
-                </div>
-                <p v-if="showSafeAreas" class="m-0 text-xs text-muted">
-                    {{ t('graphics.composer.safeAreaHint') }}
-                </p>
-                <div
-                    ref="canvas"
-                    class="relative touch-none select-none"
-                    @pointermove="moveLayer"
-                    @pointerup="endDrag"
-                    @pointercancel="endDrag"
-                    @lostpointercapture="endDrag"
-                >
-                    <TemplatePreview
-                        :template="preview"
-                        :values="sampleValues"
-                        :time="time"
-                        class="composer-canvas rounded-field border border-line-strong"
-                    >
-                        <template #overlay>
-                            <template v-if="showSafeAreas">
-                                <div
-                                    class="composer-safe-area composer-action-safe"
-                                    role="img"
-                                    :aria-label="t('graphics.composer.actionSafe')"
-                                />
-                                <div
-                                    class="composer-safe-area composer-title-safe"
-                                    role="img"
-                                    :aria-label="t('graphics.composer.titleSafe')"
-                                />
-                            </template>
-                            <div
-                                v-if="guideV"
-                                class="absolute left-1/2 inset-y-0 border-l border-cyan-300 pointer-events-none"
-                            />
-                            <div
-                                v-if="guideH"
-                                class="absolute top-1/2 inset-x-0 border-t border-cyan-300 pointer-events-none"
-                            />
-                            <template v-if="time === undefined">
-                                <div
-                                    v-for="layer in draft.layers.filter((layer) => layer.visible)"
-                                    :key="layer.id"
-                                    role="button"
-                                    tabindex="0"
-                                    :aria-label="t('graphics.composer.selectNamed', { name: layer.name })"
-                                    class="absolute cursor-move outline-offset-1 focus-visible:outline-2 focus-visible:outline-accent"
-                                    :class="selectedId === layer.id ? 'outline-2 outline-cyan-300 z-10' : ''"
-                                    :style="{
-                                        left: layer.x + '%',
-                                        top: layer.y + '%',
-                                        width: layer.width + '%',
-                                        height: layer.height + '%',
-                                    }"
-                                    @keydown.enter="selectedId = layer.id"
-                                    @pointerdown.stop="startDrag($event, layer, 'move')"
-                                >
-                                    <template v-if="selectedId === layer.id">
-                                        <button
-                                            v-for="handle in ['width', 'height', 'both']"
-                                            :key="handle"
-                                            class="absolute w-4 h-4 border-2 border-cyan-300 bg-base-100 rounded-xs z-10"
-                                            :class="
-                                                handle === 'width'
-                                                    ? '-right-2 top-1/2 -translate-y-1/2 cursor-ew-resize'
-                                                    : handle === 'height'
-                                                      ? 'left-1/2 -bottom-2 -translate-x-1/2 cursor-ns-resize'
-                                                      : '-right-2 -bottom-2 cursor-nwse-resize'
-                                            "
-                                            :aria-label="t('graphics.composer.handles.' + handle)"
-                                            @pointerdown.stop="startDrag($event, layer, handle)"
-                                        />
-                                    </template>
-                                </div>
-                            </template>
-                        </template>
-                    </TemplatePreview>
-                </div>
+                <ComposerCanvas
+                    v-model:selected-id="selectedId"
+                    :template="preview"
+                    :values="sampleValues"
+                    :time="time"
+                    :proportional="proportional"
+                    @interaction-start="startLayerInteraction"
+                    @interaction-change="updateLayerInteraction"
+                    @interaction-end="finishLayerInteraction"
+                />
                 <p class="m-0 text-xs text-muted font-mono" aria-live="polite">
                     {{
                         selected
@@ -1124,290 +748,98 @@ onBeforeUnmount(() => {
                             : t('graphics.composer.empty')
                     }}
                 </p>
-                <section class="card-box p-3 flex flex-col gap-2" :aria-label="t('graphics.composer.timeline')">
-                    <h2 class="text-sm font-semibold m-0">{{ t('graphics.composer.timeline') }}</h2>
-                    <label class="field-label"
-                        >{{ t('graphics.composer.playhead')
-                        }}<input
-                            type="range"
-                            min="0"
-                            :max="timelineEnd"
-                            step="0.01"
-                            :value="time ?? 0"
-                            @input="seekPreview"
-                    /></label>
-                    <div
-                        v-for="layer in draft.layers"
-                        :key="layer.id"
-                        class="flex gap-2 items-center text-xs"
-                        :class="{ 'opacity-40': !layer.visible }"
-                    >
-                        <button class="w-24 truncate text-left cursor-pointer" @click="selectedId = layer.id">
-                            {{ layer.name }}
-                        </button>
-                        <div
-                            class="relative flex-1 h-6 bg-base-300 rounded overflow-hidden"
-                            :aria-label="`${layer.name}: ${layer.delay_ms} ms + ${layer.animation_ms} ms`"
-                        >
-                            <div
-                                class="absolute inset-y-1 bg-accent/25"
-                                :style="{
-                                    left: (layer.delay_ms / 1000 / timelineEnd) * 100 + '%',
-                                    width:
-                                        Math.max(
-                                            0,
-                                            (((draft.duration || timelineEnd) - layer.delay_ms / 1000) / timelineEnd) *
-                                                100,
-                                        ) + '%',
-                                }"
-                            />
-                            <div
-                                class="absolute inset-y-1 bg-accent rounded"
-                                :style="{
-                                    left: (layer.delay_ms / 1000 / timelineEnd) * 100 + '%',
-                                    width:
-                                        (layer.animation_in === 'none'
-                                            ? 0
-                                            : (layer.animation_ms / 1000 / timelineEnd) * 100) + '%',
-                                }"
-                            />
-                            <div
-                                v-if="draft.duration && layer.animation_out !== 'none'"
-                                class="absolute inset-y-1 bg-indigo-400 rounded"
-                                :style="{
-                                    left: (draft.duration / timelineEnd) * 100 + '%',
-                                    width: (layer.animation_ms / 1000 / timelineEnd) * 100 + '%',
-                                }"
-                            />
-                            <div
-                                v-if="time !== undefined"
-                                class="absolute inset-y-0 border-l border-white"
-                                :style="{ left: (time / timelineEnd) * 100 + '%' }"
-                            />
-                        </div>
-                    </div>
-                    <p class="m-0 text-xs text-muted">
-                        {{ t('graphics.composer.timelineHint') }} {{ t('graphics.composer.previewHint') }}
-                    </p>
-                    <button v-if="time !== undefined" class="btn-quiet" @click="stopPreview">
-                        {{ t('graphics.composer.backToEdit') }}
-                    </button>
-                </section>
+                <ComposerTimeline
+                    v-model:selected-id="selectedId"
+                    :layers="draft.layers"
+                    :duration="draft.duration"
+                    :time="time"
+                    :end="timelineEnd"
+                    @seek="seekPreview"
+                    @stop="stopPreview"
+                />
             </main>
-            <aside class="card-box p-3 flex flex-col gap-3 min-w-0" :aria-label="t('graphics.composer.properties')">
-                <template v-if="selected">
-                    <label class="field-label"
-                        >{{ t('graphics.composer.layerName')
-                        }}<input
-                            :value="selected.name"
-                            class="field-input"
-                            maxlength="100"
-                            @change="updateSelectedLayer({ name: ($event.target as HTMLInputElement).value })"
-                    /></label>
-                    <button class="btn-quiet text-error" @click="removeLayer(selected.id)">
-                        {{ t('graphics.composer.delete') }}
-                    </button>
-                    <div class="flex items-center justify-between">
-                        <strong class="text-sm">{{ t('graphics.composer.position') }}</strong>
-                        <div class="flex gap-1">
+            <ComposerLayerInspector
+                :selected="selected"
+                :fonts="fonts"
+                :uploaded-fonts="uploadedFonts"
+                :font-uploading="fontUploading"
+                @update-layer="updateSelectedLayer"
+                @remove="removeLayer"
+                @upload-font="uploadFont"
+            >
+                <template #geometry>
+                    <template v-if="selected">
+                        <div class="flex items-center justify-between">
+                            <strong class="text-sm">{{ t('graphics.composer.position') }}</strong>
+                            <div class="flex gap-1">
+                                <button
+                                    v-for="choice in ['%', 'px']"
+                                    :key="choice"
+                                    class="btn-quiet min-h-9"
+                                    :class="{ 'text-accent bg-base-300': unit === choice }"
+                                    :aria-pressed="unit === choice"
+                                    @click="unit = choice"
+                                >
+                                    {{ choice }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label v-for="key in ['x', 'y', 'width', 'height'] as const" :key="key" class="field-label"
+                                >{{ t('graphics.composer.dimensions.' + key)
+                                }}<input
+                                    class="field-input font-mono"
+                                    type="number"
+                                    step="any"
+                                    :value="formatDimension(key)"
+                                    @change="setDimension(key, ($event.target as HTMLInputElement).value)"
+                            /></label>
+                        </div>
+                        <label class="flex items-center gap-2 text-sm"
+                            ><input v-model="proportional" type="checkbox" class="checkbox checkbox-sm" />{{
+                                t('graphics.composer.proportional')
+                            }}</label
+                        >
+                        <label class="field-label"
+                            >{{ t('graphics.composer.scale') }} (%)<input
+                                type="number"
+                                class="field-input font-mono"
+                                min="1"
+                                :value="scaleValue"
+                                @change="setScale(Number(($event.target as HTMLInputElement).value))"
+                        /></label>
+                        <div class="grid grid-cols-4 gap-1">
                             <button
-                                v-for="choice in ['%', 'px']"
-                                :key="choice"
-                                class="btn-quiet min-h-9"
-                                :class="{ 'text-accent bg-base-300': unit === choice }"
-                                :aria-pressed="unit === choice"
-                                @click="unit = choice"
+                                v-for="factor in [50, 75, 100, 150]"
+                                :key="factor"
+                                class="btn-quiet min-h-10 px-1!"
+                                @click="setScale(factor)"
                             >
-                                {{ choice }}
+                                {{ factor }}%
                             </button>
                         </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label v-for="key in ['x', 'y', 'width', 'height'] as const" :key="key" class="field-label"
-                            >{{ t('graphics.composer.dimensions.' + key)
-                            }}<input
-                                class="field-input font-mono"
-                                type="number"
-                                step="any"
-                                :value="formatDimension(key)"
-                                @change="setDimension(key, ($event.target as HTMLInputElement).value)"
-                        /></label>
-                    </div>
-                    <label class="flex items-center gap-2 text-sm"
-                        ><input v-model="proportional" type="checkbox" class="checkbox checkbox-sm" />{{
-                            t('graphics.composer.proportional')
-                        }}</label
-                    >
-                    <label class="field-label"
-                        >{{ t('graphics.composer.scale') }} (%)<input
-                            type="number"
-                            class="field-input font-mono"
-                            min="1"
-                            :value="scaleValue"
-                            @change="setScale(Number(($event.target as HTMLInputElement).value))"
-                    /></label>
-                    <div class="grid grid-cols-4 gap-1">
-                        <button
-                            v-for="factor in [50, 75, 100, 150]"
-                            :key="factor"
-                            class="btn-quiet min-h-10 px-1!"
-                            @click="setScale(factor)"
-                        >
-                            {{ factor }}%
-                        </button>
-                    </div>
-                    <div class="flex flex-wrap gap-1">
-                        <button class="btn-quiet min-h-10" @click="updateSelectedLayer({ x: 50 - selected.width / 2 })">
-                            {{ t('graphics.composer.centerH') }}</button
-                        ><button
-                            class="btn-quiet min-h-10"
-                            @click="updateSelectedLayer({ y: 50 - selected.height / 2 })"
-                        >
-                            {{ t('graphics.composer.centerV') }}</button
-                        ><button
-                            class="btn-quiet min-h-10"
-                            @click="updateSelectedLayer(fitLayer(selected, { x: 0, width: 100 }, proportional))"
-                        >
-                            {{ t('graphics.composer.fullWidth') }}
-                        </button>
-                    </div>
-                    <template v-if="selected.kind === 'text' || selected.kind === 'clock'">
-                        <template v-if="selected.kind === 'clock'">
-                            <label class="field-label"
-                                >{{ t('graphics.composer.clockFormat') }}
-                                <select
-                                    class="field-input"
-                                    :aria-label="t('graphics.composer.clockFormat')"
-                                    :value="selected.clock_format || 'HH:mm:ss'"
-                                    @change="
-                                        updateSelectedLayer({
-                                            clock_format: ($event.target as HTMLSelectElement).value,
-                                        })
-                                    "
-                                >
-                                    <option v-for="format in CLOCK_FORMATS" :key="format" :value="format">
-                                        {{ format }}
-                                    </option>
-                                </select>
-                            </label>
-                            <label class="field-label"
-                                >{{ t('graphics.composer.clockTimezone')
-                                }}<input
-                                    class="field-input"
-                                    :value="selected.clock_timezone || ''"
-                                    :placeholder="t('graphics.composer.channelTimezone')"
-                                    @change="
-                                        updateSelectedLayer({
-                                            clock_timezone: ($event.target as HTMLInputElement).value.trim() || null,
-                                        })
-                                    "
-                            /></label>
-                            <p class="text-xs text-muted m-0">{{ t('graphics.composer.clockHint') }}</p>
-                        </template>
-                        <label v-if="selected.kind === 'text'" class="field-label"
-                            >{{ t('graphics.composer.text')
-                            }}<textarea
-                                class="field-input min-h-20"
-                                :value="selected.text"
-                                maxlength="1000"
-                                @change="updateSelectedLayer({ text: ($event.target as HTMLTextAreaElement).value })"
-                            />
-                        </label>
-                        <p v-if="selected.kind === 'text'" class="m-0 text-xs text-muted">
-                            {{ t('graphics.composer.fieldsHint') }}
-                        </p>
-                        <label class="field-label"
-                            >{{ t('graphics.composer.font')
-                            }}<select
-                                class="field-input"
-                                :value="selected.font_family ?? ''"
-                                @change="
-                                    updateSelectedLayer({
-                                        font_family: ($event.target as HTMLSelectElement).value || null,
-                                    })
-                                "
+                        <div class="flex flex-wrap gap-1">
+                            <button
+                                class="btn-quiet min-h-10"
+                                @click="updateSelectedLayer({ x: 50 - selected.width / 2 })"
                             >
-                                <option value="">{{ t('graphics.composer.defaultFont') }}</option>
-                                <option v-for="font in uploadedFonts" :key="font.id" :value="font.family">
-                                    {{ font.name }} — {{ font.filename }} ({{ font.id.slice(0, 6) }})
-                                </option>
-                                <option
-                                    v-if="
-                                        selected.font_family?.startsWith('NoArFont_') &&
-                                        !uploadedFonts.some((font) => font.family === selected?.font_family)
-                                    "
-                                    :value="selected.font_family"
-                                >
-                                    {{ t('graphics.composer.fontUnavailable') }}
-                                </option>
-                                <option v-for="font in fonts" :key="font" :value="font">{{ font }}</option>
-                            </select></label
-                        >
-                        <label class="btn-quiet cursor-pointer inline-flex items-center justify-center">
-                            {{
-                                fontUploading ? t('graphics.composer.fontUploading') : t('graphics.composer.uploadFont')
-                            }}
-                            <input
-                                type="file"
-                                accept=".ttf,.otf"
-                                class="sr-only"
-                                :aria-label="t('graphics.composer.uploadFont')"
-                                :disabled="fontUploading"
-                                @change="uploadFont"
-                            />
-                        </label>
-                        <p class="text-xs text-muted m-0">{{ t('graphics.composer.fontHint') }}</p>
-                        <label class="field-label"
-                            >{{ t('graphics.composer.fontSize') }} (%)<input
-                                class="field-input"
-                                type="number"
-                                step="0.1"
-                                min="0.1"
-                                max="50"
-                                :value="selected.font_size"
-                                @change="
-                                    updateSelectedLayer({
-                                        font_size: Number(($event.target as HTMLInputElement).value),
-                                    })
-                                "
-                        /></label>
-                        <label class="flex items-center gap-2 text-sm"
-                            ><input
-                                type="checkbox"
-                                class="checkbox checkbox-sm"
-                                :checked="selected.bold"
-                                @change="updateSelectedLayer({ bold: ($event.target as HTMLInputElement).checked })"
-                            />{{ t('graphics.composer.bold') }}</label
-                        >
-                        <label class="field-label"
-                            >{{ t('graphics.composer.color')
-                            }}<input
-                                class="field-input"
-                                :value="selected.color"
-                                @change="updateSelectedLayer({ color: ($event.target as HTMLInputElement).value })"
-                        /></label>
-                        <label class="field-label"
-                            >{{ t('graphics.composer.align')
-                            }}<select
-                                class="field-input"
-                                :value="selected.align"
-                                @change="
-                                    updateSelectedLayer({
-                                        align: ($event.target as HTMLSelectElement).value as TemplateLayer['align'],
-                                    })
-                                "
+                                {{ t('graphics.composer.centerH') }}</button
+                            ><button
+                                class="btn-quiet min-h-10"
+                                @click="updateSelectedLayer({ y: 50 - selected.height / 2 })"
                             >
-                                <option
-                                    v-for="align in ['left', 'center', 'right'] as const"
-                                    :key="align"
-                                    :value="align"
-                                >
-                                    {{ t('graphics.composer.alignments.' + align) }}
-                                </option>
-                            </select></label
-                        >
+                                {{ t('graphics.composer.centerV') }}</button
+                            ><button
+                                class="btn-quiet min-h-10"
+                                @click="updateSelectedLayer(fitLayer(selected, { x: 0, width: 100 }, proportional))"
+                            >
+                                {{ t('graphics.composer.fullWidth') }}
+                            </button>
+                        </div>
                     </template>
-                    <template v-if="selected.kind === 'video'">
+                </template>
+                <template #video>
+                    <template v-if="selected?.kind === 'video'">
                         <label class="field-label">
                             {{ t('graphics.composer.videoCorner') }}
                             <select
@@ -1444,7 +876,9 @@ onBeforeUnmount(() => {
                             />
                         </label>
                     </template>
-                    <template v-if="selected.kind === 'image'">
+                </template>
+                <template #image>
+                    <template v-if="selected?.kind === 'image'">
                         <button
                             v-if="assignment === 'logo' && selected.id === draft.control_layer_id"
                             class="btn-quiet"
@@ -1485,118 +919,6 @@ onBeforeUnmount(() => {
                             <StoragePicker class="h-full" hide-lives images-only @pick="pickImage" />
                         </div>
                     </template>
-                    <template v-if="selected.kind === 'box'">
-                        <label class="field-label"
-                            >{{ t('graphics.composer.shape') }}
-                            <select
-                                class="field-input"
-                                :aria-label="t('graphics.composer.shape')"
-                                :value="selected.shape || 'rectangle'"
-                                @change="
-                                    setShape(
-                                        ($event.target as HTMLSelectElement).value as NonNullable<
-                                            TemplateLayer['shape']
-                                        >,
-                                    )
-                                "
-                            >
-                                <option
-                                    v-for="shape in ['rectangle', 'rounded', 'ellipse', 'line'] as const"
-                                    :key="shape"
-                                    :value="shape"
-                                >
-                                    {{ t(`graphics.composer.shapes.${shape}`) }}
-                                </option>
-                            </select>
-                        </label>
-                        <label class="field-label"
-                            >{{ t('graphics.composer.stroke')
-                            }}<input
-                                class="field-input"
-                                :value="selected.stroke || ''"
-                                placeholder="#rrggbb"
-                                @change="
-                                    updateSelectedLayer({ stroke: ($event.target as HTMLInputElement).value || null })
-                                "
-                        /></label>
-                        <label class="field-label"
-                            >{{ t('graphics.composer.strokeWidth') }} (%)<input
-                                class="field-input"
-                                type="number"
-                                min="0"
-                                max="20"
-                                step="0.1"
-                                :value="selected.stroke_width ?? 0.25"
-                                @change="
-                                    updateSelectedLayer({
-                                        stroke_width: Number(($event.target as HTMLInputElement).value),
-                                    })
-                                "
-                        /></label>
-                    </template>
-                    <template v-if="selected.kind !== 'video'">
-                        <label class="field-label"
-                            >{{ t('graphics.composer.fill')
-                            }}<input
-                                class="field-input"
-                                :value="selected.fill ?? ''"
-                                placeholder="#rrggbb"
-                                @change="
-                                    updateSelectedLayer({ fill: ($event.target as HTMLInputElement).value || null })
-                                "
-                        /></label>
-                        <label class="field-label"
-                            >{{ t('graphics.composer.radius') }} (%)<input
-                                class="field-input"
-                                type="number"
-                                min="0"
-                                max="50"
-                                step="0.1"
-                                :value="selected.radius"
-                                @change="
-                                    updateSelectedLayer({ radius: Number(($event.target as HTMLInputElement).value) })
-                                "
-                        /></label>
-                    </template>
-                    <label class="field-label"
-                        >{{ t('graphics.composer.opacity')
-                        }}<input
-                            class="field-input"
-                            type="number"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            :value="selected.opacity"
-                            @change="
-                                updateSelectedLayer({ opacity: Number(($event.target as HTMLInputElement).value) })
-                            "
-                    /></label>
-                    <div class="border-t border-line-strong pt-3 flex flex-col gap-3">
-                        <h3 class="m-0 text-sm font-semibold">{{ t('graphics.composer.animation') }}</h3>
-                        <label v-for="key in ['animation_in', 'animation_out'] as const" :key="key" class="field-label"
-                            >{{ t('graphics.composer.' + key)
-                            }}<select
-                                class="field-input"
-                                :value="selected[key]"
-                                @change="updateSelectedLayer({ [key]: ($event.target as HTMLSelectElement).value })"
-                            >
-                                <option v-for="animation in LAYER_ANIMATIONS" :key="animation" :value="animation">
-                                    {{ t('graphics.composer.animations.' + animation) }}
-                                </option>
-                            </select></label
-                        >
-                        <label v-for="key in ['animation_ms', 'delay_ms'] as const" :key="key" class="field-label"
-                            >{{ t('graphics.composer.' + key) }} (ms)<input
-                                class="field-input"
-                                type="number"
-                                min="0"
-                                max="10000"
-                                :value="selected[key]"
-                                @change="
-                                    updateSelectedLayer({ [key]: Number(($event.target as HTMLInputElement).value) })
-                                "
-                        /></label>
-                    </div>
                 </template>
                 <label
                     v-if="!draft.layers.some((layer) => layer.kind === 'video')"
@@ -1632,38 +954,12 @@ onBeforeUnmount(() => {
                         </option>
                     </select></label
                 >
-            </aside>
+            </ComposerLayerInspector>
         </div>
     </section>
 </template>
 
 <style scoped>
-.composer-canvas {
-    background-color: #24272c;
-    background-image:
-        linear-gradient(to right, #ffffff24 1px, transparent 1px),
-        linear-gradient(to bottom, #ffffff24 1px, transparent 1px),
-        conic-gradient(#30343a 25%, transparent 0 50%, #30343a 0 75%, transparent 0);
-    background-size:
-        10% 10%,
-        10% 10%,
-        20px 20px;
-}
-.composer-safe-area {
-    position: absolute;
-    z-index: 20;
-    pointer-events: none;
-    border: 1px dashed;
-    box-shadow: 0 0 0 1px #0009;
-}
-.composer-action-safe {
-    inset: 5%;
-    border-color: #fff;
-}
-.composer-title-safe {
-    inset: 10%;
-    border-color: #fbbf24;
-}
 .composer-grid {
     display: grid;
     gap: 1rem;

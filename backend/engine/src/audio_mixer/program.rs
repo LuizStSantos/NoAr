@@ -6,7 +6,7 @@ use anyhow::Result;
 
 use crate::{
     benchmark::{self, Stage},
-    compositor::logo::LogoOverlay,
+    compositor::graphics::logo::LogoOverlay,
     output::FrameOutput,
     utils::config::OutputConfig,
 };

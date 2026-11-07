@@ -11,6 +11,14 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- Organize logo, L-shape and model rendering under the Graphics domain; move
+  shared controller actions out of HTTP handlers and separate Composer panels.
+- Remove unreachable legacy graphics editors, give subtitles/controller examples
+  their own components, and document ownership and maintenance boundaries.
+- Enforce service/API/data/engine dependencies with source-level CI checks.
+
 ### Fixed
 
 - Preserve a ticker hide issued before its runtime definition loads, including

@@ -45,7 +45,7 @@ use crate::{
     },
     audio_mixer::{AudioEffectChain, AudioEffectsControl},
     benchmark::{self, BenchHandle, Stage},
-    compositor::logo::{LogoOverlay, blend_logo},
+    compositor::graphics::logo::{LogoOverlay, blend_logo},
     utils::config::{DesktopControlCallback, DesktopControlCommand, OutputConfig},
 };
 

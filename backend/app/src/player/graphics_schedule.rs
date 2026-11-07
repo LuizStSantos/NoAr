@@ -12,8 +12,8 @@ use tokio_util::sync::CancellationToken;
 mod templates;
 
 use crate::{
-    api::routes::{apply_graphics, revert_graphics},
     db::handles,
+    graphics::control::{apply_scene_actions, revert_scene_actions},
     player::controller::ChannelManager,
     utils::time_machine::time_now,
 };
@@ -69,7 +69,7 @@ async fn tick(
             let on_now = now >= start && end.map_or(now - start <= grace, |end| now < end);
 
             if on_now && done.insert((event.id, start, false)) {
-                match apply_graphics(manager, &event.actions).await {
+                match apply_scene_actions(manager, &event.actions).await {
                     Ok(()) => info!(channel = manager.id;
                         "Scheduled graphics <span class=\"log-addr\">{}</span> on air",
                         event.title
@@ -86,7 +86,7 @@ async fn tick(
                 && now - end <= grace
                 && done.insert((event.id, start, true))
             {
-                match revert_graphics(manager, &event.actions).await {
+                match revert_scene_actions(manager, &event.actions).await {
                     Ok(()) => info!(channel = manager.id;
                         "Scheduled graphics <span class=\"log-addr\">{}</span> ended",
                         event.title

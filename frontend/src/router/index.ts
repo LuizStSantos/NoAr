@@ -133,8 +133,7 @@ const router = createRouter({
                 {
                     path: 'subtitles',
                     name: 'graphics-subtitles',
-                    component: () => import('@/components/settings/SettingsLogo.vue'),
-                    props: { part: 'subtitles' },
+                    component: () => import('@/components/graphics/GraphicsSubtitles.vue'),
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {

@@ -190,7 +190,7 @@ pub struct PlayoutConfig {
     #[ts(skip)]
     #[serde(skip)]
     pub graphics_data:
-        std::collections::HashMap<i32, std::sync::Arc<crate::utils::graphics::sources::DataRows>>,
+        std::collections::HashMap<i32, std::sync::Arc<crate::graphics::sources::DataRows>>,
     pub general: General,
     pub mail: Mail,
     #[serde(default)]

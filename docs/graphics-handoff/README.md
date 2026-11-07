@@ -4,6 +4,38 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Graphics architecture and maintenance refactor
+
+The application now owns a `graphics` feature module. Logo, L-shape and model
+rendering live under the engine's Graphics domain. Shared scene/replacement/
+placement actions are application services, used directly by the scheduler and
+adapted by the old HTTP routes. DB conversion, compatibility projection and
+resource persistence have dedicated owners; the real migration tests moved
+with them. No migration or wire contract changes are intended.
+
+Composer has one document/history owner and separate typed panels for canvas,
+layers, appearance, field mapping and timeline, plus focused geometry/preview
+composables. Unreachable old logo/L-shape/ticker editors were removed; active
+subtitles and controller examples have dedicated Graphics components.
+
+The [maintenance guide](../graphics-maintenance.md) includes the domain diagram,
+source ownership, extension recipes, state/compatibility rules and the official
+Rust/Vue/architecture references consulted. CI now checks source-level service,
+HTTP, data and engine boundaries; its five policy tests passed.
+
+Final post-move checks so far: **714 Rust tests passed / 14 ignored**, exact
+no-default/all-target Clippy, fmt, desktop-cpu all-target compilation and normal
+backend build. Vue types, ESLint, Prettier and production build passed; all
+**33 browser tests passed** in a fresh disposable installation. Actual pt-BR desktop/phone checks also passed for guides, drag/save/reload,
+subtitles save/reload/restore and read-only controller examples.
+[Browser measurements](maintenance-composer-evidence.json),
+[Rust log](maintenance-rust-verification-log.txt),
+[browser suite](maintenance-browser-test-log.txt),
+[architecture checks](maintenance-architecture-evidence.json),
+[research references](maintenance-research.json).
+Legacy HTTP/XMLTV comparison and media parity are pending separate final
+verification; historical proofs below are not their replacement.
+
 ## Composer checkerboard and optional safety guides
 
 The Composer canvas now uses a neutral transparency checkerboard with a 10%

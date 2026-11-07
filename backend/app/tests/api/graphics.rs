@@ -390,7 +390,7 @@ async fn graphics_go_on_and_off_air_and_follow_their_lshape_rule() {
 
     let on_air_names = |fixture: &SecurityFixture| {
         let manager = futures_free_manager(fixture);
-        noar::utils::graphics::graphics_on_air(&manager)
+        noar::graphics::graphics_on_air(&manager)
             .into_iter()
             .filter(|graphic| !graphic.leaving)
             .map(|graphic| graphic.name)
@@ -923,7 +923,7 @@ async fn uploaded_fonts_are_immutable_channel_assets_and_validate_template_owner
             .unwrap()
             .is_none()
     );
-    noar::utils::graphics::fonts::load(&fixture.state.pool, 1)
+    noar::graphics::fonts::load(&fixture.state.pool, 1)
         .await
         .unwrap();
     assert_eq!(
@@ -1029,7 +1029,7 @@ async fn data_sources_enforce_channel_access_keep_last_good_rows_and_protect_ref
         StatusCode::FORBIDDEN
     );
     let private_url = "https://example.invalid/feed?token=synthetic-redaction-fixture";
-    let external = noar::utils::graphics::sources::SourceInput {
+    let external = noar::graphics::sources::SourceInput {
         name: "Public provider".into(),
         kind: "json".into(),
         url: private_url.into(),
@@ -1439,9 +1439,7 @@ async fn hiding_an_unloaded_ticker_survives_startup_reload_without_changing_its_
         .0,
         StatusCode::OK
     );
-    noar::utils::graphics::load_channel_ticker(&manager)
-        .await
-        .unwrap();
+    noar::graphics::load_channel_ticker(&manager).await.unwrap();
     assert_eq!(
         manager
             .graphics_control

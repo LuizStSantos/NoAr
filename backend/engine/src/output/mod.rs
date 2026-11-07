@@ -26,7 +26,7 @@ mod vtt;
 use crate::benchmark::BenchHandle;
 use crate::{
     HlsHealth,
-    compositor::logo::{LogoOverlay, blend_logo},
+    compositor::graphics::logo::{LogoOverlay, blend_logo},
     utils::config::{HlsSubtitle, HlsVariant, OutputConfig},
 };
 

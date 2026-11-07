@@ -1,0 +1,126 @@
+{
+  "base_commit": "f7d4d301",
+  "coverage": "Structural inventory and dependency review; not an exhaustive line-by-line security audit",
+  "areas": {
+    "backend/app/src": {
+      "files": 121,
+      "lines": 48515,
+      "largest": [
+        {
+          "path": "backend/app/src/utils/config.rs",
+          "lines": 2415
+        },
+        {
+          "path": "backend/app/src/player/schedule.rs",
+          "lines": 2032
+        },
+        {
+          "path": "backend/app/src/player/output/playout.rs",
+          "lines": 1363
+        },
+        {
+          "path": "backend/app/src/player/utils/mod.rs",
+          "lines": 1190
+        },
+        {
+          "path": "backend/app/src/utils/xmltv/mod.rs",
+          "lines": 1141
+        },
+        {
+          "path": "backend/app/src/utils/xmltv/sheet.rs",
+          "lines": 1118
+        },
+        {
+          "path": "backend/app/src/player/controller.rs",
+          "lines": 1118
+        },
+        {
+          "path": "backend/app/src/api/routes/playout_config.rs",
+          "lines": 1112
+        }
+      ]
+    },
+    "backend/engine/src": {
+      "files": 67,
+      "lines": 37216,
+      "largest": [
+        {
+          "path": "backend/engine/src/output/desktop/mod.rs",
+          "lines": 2665
+        },
+        {
+          "path": "backend/engine/src/playout.rs",
+          "lines": 1909
+        },
+        {
+          "path": "backend/engine/src/utils/config.rs",
+          "lines": 1779
+        },
+        {
+          "path": "backend/engine/src/output/link.rs",
+          "lines": 1742
+        },
+        {
+          "path": "backend/engine/src/output/scte35.rs",
+          "lines": 1712
+        },
+        {
+          "path": "backend/engine/src/compositor/graphics/logo/graphics.rs",
+          "lines": 1606
+        },
+        {
+          "path": "backend/engine/src/output/gstreamer_output.rs",
+          "lines": 1568
+        },
+        {
+          "path": "backend/engine/src/compositor/graphics.rs",
+          "lines": 1507
+        }
+      ]
+    },
+    "frontend/src": {
+      "files": 152,
+      "lines": 42976,
+      "largest": [
+        {
+          "path": "frontend/src/locales/pt-BR.ts",
+          "lines": 2985
+        },
+        {
+          "path": "frontend/src/locales/en-US.ts",
+          "lines": 2975
+        },
+        {
+          "path": "frontend/src/components/player/PlaylistPanel.vue",
+          "lines": 2054
+        },
+        {
+          "path": "frontend/src/views/MediaView.vue",
+          "lines": 1768
+        },
+        {
+          "path": "frontend/src/components/storage/LogoMarksEditor.vue",
+          "lines": 1392
+        },
+        {
+          "path": "frontend/src/views/ScheduleView.vue",
+          "lines": 1225
+        },
+        {
+          "path": "frontend/src/components/graphics/GraphicsComposer.vue",
+          "lines": 978
+        },
+        {
+          "path": "frontend/src/components/schedule/ScheduleDialog.vue",
+          "lines": 732
+        }
+      ]
+    }
+  },
+  "migrations_unchanged": true,
+  "architecture_guard": {
+    "status": "PASS",
+    "rust_files_scanned": 188,
+    "findings": []
+  }
+}

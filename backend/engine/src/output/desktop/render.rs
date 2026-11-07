@@ -1,6 +1,6 @@
 //! Shared desktop renderer data and geometry.
 
-use crate::compositor::logo::logo_position;
+use crate::compositor::graphics::logo::logo_position;
 
 use super::{graphics::RgbaBitmap, video::VideoSurface};
 

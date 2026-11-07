@@ -183,13 +183,13 @@ pub async fn validate_scheduled_template(
     }
 
     let config = manager.config.read().await.clone();
-    if permanent && !crate::utils::graphics::graphic_has_content(&template, &config) {
+    if permanent && !crate::graphics::graphic_has_content(&template, &config) {
         return Err(ServiceError::BadRequest(
             "Configure the permanent model before scheduling it".to_string(),
         ));
     }
 
-    let spec = crate::utils::graphics::graphic_spec_for_records(
+    let spec = crate::graphics::graphic_spec_for_records(
         &template,
         &selection.values,
         &selection.records,

@@ -782,7 +782,7 @@ mod tests {
 
     #[test]
     fn mapped_values_support_record_selection_and_nonempty_manual_overrides() {
-        let template = crate::utils::graphics::prepare_template(std::path::Path::new("/tmp"), 1, 1, serde_json::from_value(serde_json::json!({"name":"Quotes","layers":[{"id":"quote","x":5,"y":75,"width":50,"height":10,"text":"{symbol} {price}","data_fields":{"symbol":{"source_id":4,"column":"symbol","row":0},"price":{"source_id":4,"column":"price","row":0}}}]})).unwrap()).unwrap();
+        let template = crate::graphics::prepare_template(std::path::Path::new("/tmp"), 1, 1, serde_json::from_value(serde_json::json!({"name":"Quotes","layers":[{"id":"quote","x":5,"y":75,"width":50,"height":10,"text":"{symbol} {price}","data_fields":{"symbol":{"source_id":4,"column":"symbol","row":0},"price":{"source_id":4,"column":"price","row":0}}}]})).unwrap()).unwrap();
         let mut config = PlayoutConfig::default();
         config.graphics_data.insert(
             4,

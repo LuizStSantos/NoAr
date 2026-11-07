@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import LogoRemote from '@/components/settings/LogoRemote.vue'
+import GraphicsControlApi from '@/components/graphics/GraphicsControlApi.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import { type ChannelGraphic, type GraphicsTemplate, useGraphicsApi } from '@/composables/graphicsTemplates'
 import { copyText } from '@/composables/browser'
@@ -273,7 +273,7 @@ async function copy(text: string) {
             <p class="m-0 text-sm text-muted">{{ t('graphics.api.takeResult') }}</p>
         </SectionCard>
 
-        <LogoRemote part="api" />
+        <GraphicsControlApi />
 
         <SectionCard :title="t('graphics.api.scenesTitle')" :description="t('graphics.api.scenesIntro')">
             <div v-for="scene in scenes" :key="scene.name" class="flex flex-col gap-1">

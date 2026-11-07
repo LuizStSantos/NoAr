@@ -1,0 +1,21 @@
+{
+  "retrieved": "2026-11-07",
+  "source": "Official documentation source repositories over the configured HTTPS proxy",
+  "references": [
+    {
+      "url": "https://doc.rust-lang.org/book/ch07-02-defining-modules-to-control-scope-and-privacy.html",
+      "topic": "Module privacy and facade boundaries",
+      "download_sha256": "9a47196bd42516d57eaa32a2813db3f89d404ef3a02f78fb465329acc9c95571"
+    },
+    {
+      "url": "https://vuejs.org/guide/reusability/composables.html#extracting-composables-for-code-organization",
+      "topic": "Component-scoped logic and explicit composition",
+      "download_sha256": "b455a5e66082b8272797715320d8d1dfab9ccc4fb50a2df6498cccdbf69f64b8"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/architectural-principles",
+      "topic": "Separation of concerns, encapsulation and explicit dependencies",
+      "download_sha256": "9b31aac649f97369aea1fcb9f4599c74af4d9049044c13be22d9dc95a5ff6cfe"
+    }
+  ]
+}

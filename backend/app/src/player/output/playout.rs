@@ -76,7 +76,7 @@ fn load_logo_inner(
     height: u32,
     refresh: bool,
 ) -> Result<(), ServiceError> {
-    use crate::utils::graphics::{Animation, graphic_spec_for_channel};
+    use crate::graphics::{Animation, graphic_spec_for_channel};
 
     let model = config.logo_model.as_ref();
     let spec = model
@@ -138,7 +138,7 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     async fn load(manager: &ChannelManager, config: &PlayoutConfig) -> Result<(), ServiceError> {
         use crate::{
             db::{handles, models::GraphicsRole},
-            utils::graphics::{LayerKind, graphic_spec_for_channel},
+            graphics::{LayerKind, graphic_spec_for_channel},
         };
 
         let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
@@ -322,7 +322,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     );
     load_logo(&manager, &config, config.output.width, config.output.height);
     load_lshape(&manager, &config).await;
-    crate::utils::graphics::load_channel_ticker(&manager).await?;
+    crate::graphics::load_channel_ticker(&manager).await?;
     let output_config = engine_output_config(
         &config,
         manager.audio_effects.clone(),
@@ -370,12 +370,12 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         ticker_cancel.clone(),
     ));
 
-    let dynamic_graphics = tokio::spawn(crate::utils::graphics::run_dynamic_graphics(
+    let dynamic_graphics = tokio::spawn(crate::graphics::run_dynamic_graphics(
         manager.clone(),
         ticker_cancel.clone(),
     ));
 
-    let data_sources = tokio::spawn(crate::utils::graphics::sources::run(
+    let data_sources = tokio::spawn(crate::graphics::sources::run(
         manager.clone(),
         ticker_cancel.clone(),
     ));

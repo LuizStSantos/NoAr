@@ -9,11 +9,9 @@ use crate::{
         handles,
         models::{GraphicsEvent, GraphicsRole},
     },
+    graphics::{DuringLShape, TakeOutcome, take_template},
     player::controller::ChannelManager,
-    utils::{
-        errors::ServiceError,
-        graphics::{DuringLShape, TakeOutcome, take_template},
-    },
+    utils::errors::ServiceError,
 };
 
 use super::Done;
@@ -173,7 +171,7 @@ impl TemplateSchedules {
         if permanent {
             let has_content = {
                 let config = manager.config.read().await;
-                crate::utils::graphics::graphic_has_content(&template, &config)
+                crate::graphics::graphic_has_content(&template, &config)
             };
 
             if !has_content {
@@ -198,7 +196,7 @@ impl TemplateSchedules {
 
                     if previous.is_none() {
                         let config = manager.config.read().await.clone();
-                        let spec = crate::utils::graphics::graphic_spec_for_channel(
+                        let spec = crate::graphics::graphic_spec_for_channel(
                             &template,
                             &HashMap::new(),
                             &config,
@@ -231,7 +229,7 @@ impl TemplateSchedules {
                         .persistent_visible(template.id as u64)
                         .is_none()
                     {
-                        crate::utils::graphics::load_permanent_templates(manager).await?;
+                        crate::graphics::load_permanent_templates(manager).await?;
                     }
 
                     let previous = manager
@@ -254,9 +252,10 @@ impl TemplateSchedules {
         }
 
         if template.during_lshape == DuringLShape::Wait
-            && !template.layers.iter().any(|layer| {
-                layer.visible && layer.kind == crate::utils::graphics::LayerKind::Video
-            })
+            && !template
+                .layers
+                .iter()
+                .any(|layer| layer.visible && layer.kind == crate::graphics::LayerKind::Video)
         {
             if manager.lshape_control.is_on() || manager.graphics_control.picture_on_air() {
                 return Ok(None);

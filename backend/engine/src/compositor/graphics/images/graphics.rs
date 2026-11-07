@@ -13,7 +13,7 @@ use gstreamer_app::AppSink;
 use gstreamer_video::VideoInfo;
 
 use crate::{
-    compositor::{graphics::cut_corners, overlay::chroma_alpha},
+    compositor::{graphics::geometry::cut_corners, overlay::chroma_alpha},
     frame::{PixelFormat, VideoFrame},
     gstreamer::{FrameConverter, copy_sample_frame},
 };

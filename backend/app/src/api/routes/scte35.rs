@@ -16,7 +16,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{
-        routes::{AuthUser, ensure_any_authority, logo::key_matches},
+        auth::control_key_matches,
+        routes::{AuthUser, ensure_any_authority},
         state::AppState,
     },
     db::models::Role,
@@ -207,7 +208,7 @@ pub async fn control_scte35_with_key(
         .or(query.key.as_deref())
         .unwrap_or_default();
 
-    if !key_matches(&expected, given) {
+    if !control_key_matches(&expected, given) {
         return Err(ServiceError::Forbidden(
             "Wrong or missing SCTE-35 key".to_string(),
         ));

@@ -5,7 +5,7 @@ use cosmic_text::Weight;
 
 use crate::{
     compositor::{
-        logo::LogoOverlay,
+        graphics::logo::LogoOverlay,
         text::{TextBitmap, render_left_aligned_text_bitmap, render_wrapped_text_bitmap},
     },
     utils::config::{LogoConfig, RgbaColor},

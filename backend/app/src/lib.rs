@@ -9,6 +9,7 @@ use log::{error, warn};
 pub mod api;
 pub mod db;
 pub mod file;
+pub mod graphics;
 pub mod middleware;
 pub mod player;
 pub mod sse;

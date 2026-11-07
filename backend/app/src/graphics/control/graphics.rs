@@ -1,23 +1,13 @@
-//! Hides, shows or swaps the logo on air while the channel plays, for
-//! example from the encoder of a live whose programme has a commercial
-//! break. The change lasts until the next one or a server restart. The
-//! L-shape is switched the same way, with the same key.
+//! Apply channel-model control actions independently of HTTP and scheduling.
+//!
+//! HTTP adapters, saved scenes and timed events share these operations. Keep
+//! placement validation, storage checks and action order here so each caller
+//! reaches the same runtime state without depending on an API route.
 
-use axum::{
-    Json,
-    extract::{Path, Query, State},
-    http::HeaderMap,
-};
 use noar_engine::{LShapeCorner, LShapePlacement, LogoConfig};
-use protect_axum::authorities::AuthDetails;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{
-        routes::{AuthUser, ensure_any_authority},
-        state::AppState,
-    },
-    db::models::Role,
     file::norm_abs_path,
     player::controller::ChannelManager,
     utils::{
@@ -26,9 +16,6 @@ use crate::{
         xmltv::library::has_image_extension,
     },
 };
-
-/// Header an encoder can send the key in, instead of the `key` query.
-const KEY_HEADER: &str = "x-logo-key";
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -43,54 +30,15 @@ pub enum LogoAction {
     Move,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct LogoRequest {
-    action: LogoAction,
-    /// Storage path of the image, for `replace`.
-    #[serde(default)]
-    logo: Option<String>,
-    /// Where to, for `move`: a place on the screen (`top-left`, `top`,
-    /// `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`,
-    /// `bottom-right`), `X%:Y%`, an `X:Y` expression, or `default`.
-    #[serde(default)]
-    position: Option<String>,
-    /// Instead of `position`: how far right and down, in percent of the
-    /// room around the logo (0 is the left or top edge, 100 the other one).
-    #[serde(default)]
-    x: Option<f64>,
-    #[serde(default)]
-    y: Option<f64>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-pub struct LogoKeyQuery {
-    #[serde(default)]
-    key: Option<String>,
-    #[serde(default)]
-    logo: Option<String>,
-    #[serde(default)]
-    position: Option<String>,
-    #[serde(default)]
-    x: Option<f64>,
-    #[serde(default)]
-    y: Option<f64>,
-    /// Storage path of an L-shape graphic, for `replace` (and `on`).
-    #[serde(default)]
-    graphic: Option<String>,
-    /// Size of the picture in the L-shape, in percent of the screen.
-    #[serde(default)]
-    scale: Option<f64>,
-}
-
 /// Where to put something: `position`, or the shares `x` and `y`.
 #[derive(Debug, Clone, Copy, Default)]
-struct Place<'a> {
-    position: Option<&'a str>,
-    x: Option<f64>,
-    y: Option<f64>,
+pub(crate) struct LogoPlacement<'a> {
+    pub(crate) position: Option<&'a str>,
+    pub(crate) x: Option<f64>,
+    pub(crate) y: Option<f64>,
 }
 
-impl<'a> Place<'a> {
+impl<'a> LogoPlacement<'a> {
     /// `position`, or `x`/`y` as `X%:Y%`.
     fn resolve(self) -> Result<Option<String>, ServiceError> {
         match (self.x, self.y) {
@@ -132,7 +80,7 @@ pub struct LogoStatus {
 const CORNER_MARGIN: u32 = 12;
 
 /// A place name as an `X:Y` expression; `default` is `None`.
-fn logo_position(position: Option<&str>) -> Result<Option<String>, ServiceError> {
+fn resolve_logo_position(position: Option<&str>) -> Result<Option<String>, ServiceError> {
     let position = position.map(str::trim).unwrap_or_default();
     let m = CORNER_MARGIN;
     let (left, center, right) = (format!("{m}"), "W/2-w/2", format!("W-w-{m}"));
@@ -159,93 +107,6 @@ fn logo_position(position: Option<&str>) -> Result<Option<String>, ServiceError>
     })
 }
 
-/// **What the logo on air is doing**
-pub async fn get_logo_state(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<Json<LogoStatus>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details).await?;
-
-    Ok(Json(status(&manager)))
-}
-
-/// **Hide, show or swap the logo on air**
-///
-/// ```BASH
-/// curl -X POST http://127.0.0.1:8787/api/control/1/logo -H 'Content-Type: application/json' \
-/// -d '{"action": "replace", "logo": "00-assets/logo-ao-vivo.png"}' -H 'Authorization: Bearer <TOKEN>'
-/// ```
-pub async fn control_logo(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    Json(request): Json<LogoRequest>,
-) -> Result<Json<LogoStatus>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details).await?;
-
-    apply(
-        &manager,
-        request.action,
-        request.logo.as_deref(),
-        Place {
-            position: request.position.as_deref(),
-            x: request.x,
-            y: request.y,
-        },
-    )
-    .await
-}
-
-/// **Hide, show or swap the logo on air, with the channel's logo key**
-///
-/// For encoders and scripts that cannot log in. The key is set in Settings ›
-/// Logo; without one this answers 403.
-///
-/// ```BASH
-/// curl -X POST 'http://127.0.0.1:8787/logo/1/hide?key=<KEY>'
-/// curl -X POST 'http://127.0.0.1:8787/logo/1/replace?key=<KEY>&logo=00-assets/logo-ao-vivo.png'
-/// curl -X POST 'http://127.0.0.1:8787/logo/1/move?key=<KEY>&x=90&y=5'
-/// ```
-pub async fn control_logo_with_key(
-    State(state): State<AppState>,
-    Path((id, action)): Path<(i32, LogoAction)>,
-    Query(query): Query<LogoKeyQuery>,
-    headers: HeaderMap,
-) -> Result<Json<LogoStatus>, ServiceError> {
-    let manager = {
-        let guard = state.controller.read().await;
-        guard.get(id)
-    }
-    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
-    let expected = manager.config.read().await.processing.logo_key.clone();
-    let given = headers
-        .get(KEY_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .or(query.key.as_deref())
-        .unwrap_or_default();
-
-    if !key_matches(&expected, given) {
-        return Err(ServiceError::Forbidden(
-            "Wrong or missing logo key".to_string(),
-        ));
-    }
-
-    apply(&manager, action, query.logo.as_deref(), query.place()).await
-}
-
-impl LogoKeyQuery {
-    fn place(&self) -> Place<'_> {
-        Place {
-            position: self.position.as_deref(),
-            x: self.x,
-            y: self.y,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum LShapeAction {
@@ -262,22 +123,6 @@ pub enum LShapeAction {
     Move,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct LShapeRequest {
-    action: LShapeAction,
-    /// Storage path of a graphic, for `replace` and optionally `on`.
-    #[serde(default)]
-    graphic: Option<String>,
-    /// The corner the picture goes to, for `move` and optionally `on`
-    /// (`top-left`, `top-right`, `bottom-left`, `bottom-right`), or
-    /// `default`.
-    #[serde(default)]
-    position: Option<String>,
-    /// Size of the picture, in percent of the screen (30 to 95).
-    #[serde(default)]
-    scale: Option<f64>,
-}
-
 #[derive(Debug, Serialize)]
 pub struct LShapeStatus {
     /// Switched on from outside; a stretch marked in a video also shows it.
@@ -292,87 +137,9 @@ pub struct LShapeStatus {
     scale: Option<f64>,
 }
 
-/// **Whether the L-shape is on**
-pub async fn get_lshape_state(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<Json<LShapeStatus>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details).await?;
-
-    Ok(Json(lshape_status(&manager)))
-}
-
-/// **Switch the L-shape on air**
-///
-/// ```BASH
-/// curl -X POST http://127.0.0.1:8787/api/control/1/lshape -H 'Content-Type: application/json' \
-/// -d '{"action": "on"}' -H 'Authorization: Bearer <TOKEN>'
-/// ```
-pub async fn control_lshape(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    Json(request): Json<LShapeRequest>,
-) -> Result<Json<LShapeStatus>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details).await?;
-
-    apply_lshape(
-        &manager,
-        request.action,
-        request.graphic.as_deref(),
-        request.position.as_deref(),
-        request.scale,
-    )
-    .await
-}
-
-/// **Switch the L-shape on air, with the channel's logo key**
-///
-/// ```BASH
-/// curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>'
-/// curl -X POST 'http://127.0.0.1:8787/lshape/1/off?key=<KEY>'
-/// curl -X POST 'http://127.0.0.1:8787/lshape/1/move?key=<KEY>&position=bottom-left&scale=70'
-/// ```
-pub async fn control_lshape_with_key(
-    State(state): State<AppState>,
-    Path((id, action)): Path<(i32, LShapeAction)>,
-    Query(query): Query<LogoKeyQuery>,
-    headers: HeaderMap,
-) -> Result<Json<LShapeStatus>, ServiceError> {
-    let manager = {
-        let guard = state.controller.read().await;
-        guard.get(id)
-    }
-    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
-    let expected = manager.config.read().await.processing.logo_key.clone();
-    let given = headers
-        .get(KEY_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .or(query.key.as_deref())
-        .unwrap_or_default();
-
-    if !key_matches(&expected, given) {
-        return Err(ServiceError::Forbidden(
-            "Wrong or missing logo key".to_string(),
-        ));
-    }
-
-    apply_lshape(
-        &manager,
-        action,
-        query.graphic.as_deref(),
-        query.position.as_deref(),
-        query.scale,
-    )
-    .await
-}
-
 /// Where the picture goes for `place` and `scale`: `Ok(None)` puts it back
 /// where the graphic places it.
-fn lshape_placement(
+fn resolve_lshape_placement(
     position: Option<&str>,
     scale: Option<f64>,
 ) -> Result<Option<LShapePlacement>, ServiceError> {
@@ -396,20 +163,20 @@ fn lshape_placement(
     }
 }
 
-async fn apply_lshape(
+pub(crate) async fn apply_lshape_action(
     manager: &ChannelManager,
     action: LShapeAction,
     graphic: Option<&str>,
     position: Option<&str>,
     scale: Option<f64>,
-) -> Result<Json<LShapeStatus>, ServiceError> {
+) -> Result<LShapeStatus, ServiceError> {
     let control = &manager.lshape_control;
     let graphic = graphic.map(str::trim).filter(|graphic| !graphic.is_empty());
 
     // Placed first, so `on` shrinks the picture straight to its new corner.
     if action == LShapeAction::Move || (action == LShapeAction::On && position.is_some()) {
         control
-            .place(lshape_placement(position, scale)?)
+            .place(resolve_lshape_placement(position, scale)?)
             .map_err(|error| ServiceError::BadRequest(format!("{error:#}")))?;
     }
 
@@ -435,7 +202,7 @@ async fn apply_lshape(
         LShapeAction::Reset => control.reset(),
     }
 
-    Ok(Json(lshape_status(manager)))
+    Ok(lshape_status(manager))
 }
 
 /// Load the storage image at `graphic` in place of the channel's L-shape graphic.
@@ -470,7 +237,7 @@ async fn swap_lshape(manager: &ChannelManager, graphic: &str) -> Result<(), Serv
         })
 }
 
-fn lshape_status(manager: &ChannelManager) -> LShapeStatus {
+pub(crate) fn lshape_status(manager: &ChannelManager) -> LShapeStatus {
     let placement = manager.lshape_control.placement();
 
     LShapeStatus {
@@ -482,12 +249,6 @@ fn lshape_status(manager: &ChannelManager) -> LShapeStatus {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct SceneRequest {
-    /// The scene's name (case and punctuation do not matter).
-    name: String,
-}
-
 #[derive(Debug, Serialize)]
 pub struct SceneStatus {
     /// The scene's name as written.
@@ -496,64 +257,12 @@ pub struct SceneStatus {
     lshape: LShapeStatus,
 }
 
-/// **Apply a quick graphics scene**
-///
-/// ```BASH
-/// curl -X POST http://127.0.0.1:8787/api/control/1/scene -H 'Content-Type: application/json' \
-/// -d '{"name": "Intervalo comercial"}' -H 'Authorization: Bearer <TOKEN>'
-/// ```
-pub async fn control_scene(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    Json(request): Json<SceneRequest>,
-) -> Result<Json<SceneStatus>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details).await?;
-
-    apply_scene(&manager, &request.name).await
-}
-
-/// **Apply a quick graphics scene, with the channel's graphics key**
-///
-/// The scene is named in the address, lower case with dashes.
-///
-/// ```BASH
-/// curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
-/// ```
-pub async fn control_scene_with_key(
-    State(state): State<AppState>,
-    Path((id, name)): Path<(i32, String)>,
-    Query(query): Query<LogoKeyQuery>,
-    headers: HeaderMap,
-) -> Result<Json<SceneStatus>, ServiceError> {
-    let manager = {
-        let guard = state.controller.read().await;
-        guard.get(id)
-    }
-    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
-    let expected = manager.config.read().await.processing.logo_key.clone();
-    let given = headers
-        .get(KEY_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .or(query.key.as_deref())
-        .unwrap_or_default();
-
-    if !key_matches(&expected, given) {
-        return Err(ServiceError::Forbidden(
-            "Wrong or missing logo key".to_string(),
-        ));
-    }
-
-    apply_scene(&manager, &name).await
-}
-
 /// Apply the scene called `name`: the L-shape graphic and place first, then
 /// the logo, then the L-shape in or out.
-async fn apply_scene(
+pub(crate) async fn apply_named_scene(
     manager: &ChannelManager,
     name: &str,
-) -> Result<Json<SceneStatus>, ServiceError> {
+) -> Result<SceneStatus, ServiceError> {
     let wanted = slug(name);
     let scene = manager
         .config
@@ -566,19 +275,19 @@ async fn apply_scene(
         .cloned()
         .ok_or_else(|| ServiceError::NotFound(format!("No scene called '{}'", name.trim())))?;
 
-    apply_graphics(manager, &scene).await?;
+    apply_scene_actions(manager, &scene).await?;
 
-    Ok(Json(SceneStatus {
+    Ok(SceneStatus {
         scene: scene.name,
-        logo: status(manager),
+        logo: logo_status(manager),
         lshape: lshape_status(manager),
-    }))
+    })
 }
 
 /// Put the changes of `scene` on air: the L-shape graphic and place first,
 /// then the logo, then the L-shape in or out. A scene or a scheduled
 /// graphics event.
-pub(crate) async fn apply_graphics(
+pub(crate) async fn apply_scene_actions(
     manager: &ChannelManager,
     scene: &GraphicsScene,
 ) -> Result<(), ServiceError> {
@@ -609,7 +318,7 @@ pub(crate) async fn apply_graphics(
             };
 
             control
-                .place(lshape_placement(Some(&corner), scale)?)
+                .place(resolve_lshape_placement(Some(&corner), scale)?)
                 .map_err(|error| ServiceError::BadRequest(format!("{error:#}")))?;
         }
     }
@@ -617,21 +326,21 @@ pub(crate) async fn apply_graphics(
     match scene.logo {
         SceneLogo::Keep => {}
         SceneLogo::Hide => {
-            apply(manager, LogoAction::Hide, None, Place::default())
+            apply_logo_action(manager, LogoAction::Hide, None, LogoPlacement::default())
                 .await
                 .map(drop)?;
         }
         SceneLogo::Show => {
-            apply(manager, LogoAction::Show, None, Place::default())
+            apply_logo_action(manager, LogoAction::Show, None, LogoPlacement::default())
                 .await
                 .map(drop)?;
         }
         SceneLogo::Replace => {
-            apply(
+            apply_logo_action(
                 manager,
                 LogoAction::Replace,
                 scene.logo_image.as_deref(),
-                Place::default(),
+                LogoPlacement::default(),
             )
             .await
             .map(drop)?;
@@ -643,13 +352,13 @@ pub(crate) async fn apply_graphics(
         .as_deref()
         .filter(|position| !position.trim().is_empty())
     {
-        let place = Place {
+        let place = LogoPlacement {
             position: Some(position),
             x: None,
             y: None,
         };
 
-        apply(manager, LogoAction::Move, None, place)
+        apply_logo_action(manager, LogoAction::Move, None, place)
             .await
             .map(drop)?;
     }
@@ -672,7 +381,7 @@ pub(crate) async fn apply_graphics(
 /// L-shape it brought in goes out, its graphic and place go back to the
 /// channel's, and the logo it hid, swapped or moved comes back as the
 /// channel has it.
-pub(crate) async fn revert_graphics(
+pub(crate) async fn revert_scene_actions(
     manager: &ChannelManager,
     scene: &GraphicsScene,
 ) -> Result<(), ServiceError> {
@@ -691,19 +400,19 @@ pub(crate) async fn revert_graphics(
     }
 
     if matches!(scene.logo, SceneLogo::Hide | SceneLogo::Replace) {
-        apply(manager, LogoAction::Show, None, Place::default())
+        apply_logo_action(manager, LogoAction::Show, None, LogoPlacement::default())
             .await
             .map(drop)?;
     }
 
     if scene.logo_position.is_some() {
-        let place = Place {
+        let place = LogoPlacement {
             position: Some("default"),
             x: None,
             y: None,
         };
 
-        apply(manager, LogoAction::Move, None, place)
+        apply_logo_action(manager, LogoAction::Move, None, place)
             .await
             .map(drop)?;
     }
@@ -711,53 +420,19 @@ pub(crate) async fn revert_graphics(
     Ok(())
 }
 
-async fn authorized(
-    state: &AppState,
-    id: i32,
-    user: &AuthUser,
-    details: &AuthDetails<Role>,
-) -> Result<ChannelManager, ServiceError> {
-    ensure_any_authority(
-        details,
-        &[&Role::GlobalAdmin, &Role::ChannelAdmin, &Role::User],
-    )?;
-    user.ensure_channel_or_admin(id)?;
-
-    let guard = state.controller.read().await;
-
-    guard
-        .get(id)
-        .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))
-}
-
-/// An empty key turns the keyed route off. Compares every byte, so the time
-/// taken tells nothing about how much of a guess was right.
-pub(crate) fn key_matches(expected: &str, given: &str) -> bool {
-    let expected = expected.trim().as_bytes();
-    let given = given.trim().as_bytes();
-
-    !expected.is_empty()
-        && expected.len() == given.len()
-        && expected
-            .iter()
-            .zip(given)
-            .fold(0, |diff, (a, b)| diff | (a ^ b))
-            == 0
-}
-
-async fn apply(
+pub(crate) async fn apply_logo_action(
     manager: &ChannelManager,
     action: LogoAction,
     logo: Option<&str>,
-    place: Place<'_>,
-) -> Result<Json<LogoStatus>, ServiceError> {
+    place: LogoPlacement<'_>,
+) -> Result<LogoStatus, ServiceError> {
     let control = &manager.logo_control;
 
     match action {
         LogoAction::Hide => control.hide(),
         LogoAction::Show => control.show(),
         LogoAction::Move => {
-            let position = logo_position(place.resolve()?.as_deref())?;
+            let position = resolve_logo_position(place.resolve()?.as_deref())?;
             let output = manager.config.read().await.output.clone();
 
             control
@@ -798,10 +473,10 @@ async fn apply(
         }
     }
 
-    Ok(Json(status(manager)))
+    Ok(logo_status(manager))
 }
 
-fn status(manager: &ChannelManager) -> LogoStatus {
+pub(crate) fn logo_status(manager: &ChannelManager) -> LogoStatus {
     let state = manager.logo_control.state();
 
     LogoStatus {
@@ -815,26 +490,30 @@ fn status(manager: &ChannelManager) -> LogoStatus {
 mod tests {
     use noar_engine::{LShapeCorner, LShapePlacement};
 
-    use super::{Place, key_matches, logo_position, lshape_placement};
+    use super::{LogoPlacement, resolve_logo_position, resolve_lshape_placement};
 
     #[test]
     fn a_logo_goes_to_a_corner_an_expression_or_back() {
         assert_eq!(
-            logo_position(Some("bottom-left")).unwrap().as_deref(),
+            resolve_logo_position(Some("bottom-left"))
+                .unwrap()
+                .as_deref(),
             Some("12:H-h-12")
         );
         assert_eq!(
-            logo_position(Some(" W/2-w/2:12 ")).unwrap().as_deref(),
+            resolve_logo_position(Some(" W/2-w/2:12 "))
+                .unwrap()
+                .as_deref(),
             Some("W/2-w/2:12")
         );
-        assert_eq!(logo_position(Some("default")).unwrap(), None);
-        assert!(logo_position(None).is_err());
+        assert_eq!(resolve_logo_position(Some("default")).unwrap(), None);
+        assert!(resolve_logo_position(None).is_err());
     }
 
     #[test]
     fn a_logo_goes_anywhere_by_shares_or_by_name() {
         let shares = |x, y| {
-            Place {
+            LogoPlacement {
                 position: None,
                 x: Some(x),
                 y: Some(y),
@@ -847,7 +526,7 @@ mod tests {
         assert!(shares(101.0, 0.0).is_err());
         assert!(shares(f64::NAN, 0.0).is_err());
         assert!(
-            Place {
+            LogoPlacement {
                 position: None,
                 x: Some(10.0),
                 y: None
@@ -856,11 +535,11 @@ mod tests {
             .is_err()
         );
         assert_eq!(
-            logo_position(Some("center")).unwrap().as_deref(),
+            resolve_logo_position(Some("center")).unwrap().as_deref(),
             Some("W/2-w/2:H/2-h/2")
         );
         assert_eq!(
-            logo_position(Some("bottom")).unwrap().as_deref(),
+            resolve_logo_position(Some("bottom")).unwrap().as_deref(),
             Some("W/2-w/2:H-h-12")
         );
     }
@@ -868,23 +547,17 @@ mod tests {
     #[test]
     fn the_lshape_picture_goes_to_a_corner_or_back() {
         assert_eq!(
-            lshape_placement(Some("bottom-left"), Some(70.0)).unwrap(),
+            resolve_lshape_placement(Some("bottom-left"), Some(70.0)).unwrap(),
             Some(LShapePlacement {
                 corner: LShapeCorner::BottomLeft,
                 scale: Some(70.0)
             })
         );
-        assert_eq!(lshape_placement(Some("default"), None).unwrap(), None);
-        assert!(lshape_placement(Some("50%:100%"), None).is_err());
-        assert!(lshape_placement(None, Some(60.0)).is_err());
-    }
-
-    #[test]
-    fn the_logo_key_must_be_set_and_match() {
-        assert!(key_matches("abc123", "abc123"));
-        assert!(key_matches(" abc123 ", "abc123"));
-        assert!(!key_matches("abc123", "abc124"));
-        assert!(!key_matches("abc123", "abc12"));
-        assert!(!key_matches("", ""));
+        assert_eq!(
+            resolve_lshape_placement(Some("default"), None).unwrap(),
+            None
+        );
+        assert!(resolve_lshape_placement(Some("50%:100%"), None).is_err());
+        assert!(resolve_lshape_placement(None, Some(60.0)).is_err());
     }
 }

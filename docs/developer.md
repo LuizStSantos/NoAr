@@ -1,3 +1,11 @@
+## Architecture and maintenance
+
+Use the [repository architecture map](ai/architecture-overview.md) for navigation
+and [Graphics maintenance guide](graphics-maintenance.md) for the graphics
+module boundaries, Composer contracts and safe extension workflow. CI checks
+layer dependencies with `python3 qa/architecture/check.py` alongside Cargo and
+frontend verification.
+
 ## Build NoAr
 
 For an isolated Docker installation of the current GStreamer integration

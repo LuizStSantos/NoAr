@@ -5,7 +5,7 @@ import { useGraphicsFonts } from '@/composables/graphicsFonts'
 
 import { sourceBindings, sourceValues, useGraphicsSources } from '@/composables/graphicsSources'
 import { useGraphicsClock } from '@/composables/graphicsClock'
-import { storageImageUrl } from '@/composables/logo'
+import { storageImageUrl } from '@/composables/graphicsImages'
 import { type GraphicsTemplate, type TemplateLayer, fillFields } from '@/composables/graphicsTemplates'
 import { useConfig } from '@/stores/config'
 

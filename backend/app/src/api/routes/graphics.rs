@@ -1,3 +1,6 @@
+//! Graphics HTTP entry points. Keep wire contracts and channel authorization here;
+//! application services own control actions, template preparation and rendering.
+
 use std::collections::HashMap;
 
 use axum::{
@@ -6,6 +9,17 @@ use axum::{
 };
 use protect_axum::authorities::AuthDetails;
 use serde::{Deserialize, Serialize};
+
+#[path = "graphics/control/graphics.rs"]
+mod control;
+#[path = "graphics/fonts/graphics.rs"]
+mod fonts;
+#[path = "graphics/sources/graphics.rs"]
+mod sources;
+
+pub use control::*;
+pub use fonts::*;
+pub use sources::*;
 
 use crate::{
     api::{
@@ -16,18 +30,16 @@ use crate::{
         handles,
         models::{GraphicsTemplate, Role},
     },
-    player::controller::ChannelManager,
-    utils::{
-        errors::ServiceError,
-        graphics::{
-            GraphicOnAirView, TakeOutcome, TemplateInput, graphics_on_air, prepare_template,
-            take_template,
-        },
+    graphics::{
+        GraphicOnAirView, TakeOutcome, TemplateInput, graphics_on_air, prepare_template,
+        take_template,
     },
+    player::controller::ChannelManager,
+    utils::errors::ServiceError,
 };
 
 /// Everyone on the channel may see the templates; only admins change them.
-async fn authorized(
+async fn authorize_channel_access(
     state: &AppState,
     id: i32,
     user: &AuthUser,
@@ -90,7 +102,7 @@ pub async fn get_graphics_templates(
     user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<Json<Vec<GraphicsTemplate>>, ServiceError> {
-    authorized(&state, id, &user, &details, false).await?;
+    authorize_channel_access(&state, id, &user, &details, false).await?;
 
     Ok(Json(
         handles::select_graphics_templates(&state.pool, id).await?,
@@ -104,7 +116,7 @@ pub async fn get_graphics_template(
     user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
-    authorized(&state, id, &user, &details, false).await?;
+    authorize_channel_access(&state, id, &user, &details, false).await?;
 
     handles::select_graphics_template(&state.pool, id, template_id)
         .await?
@@ -129,18 +141,18 @@ pub async fn add_graphics_template(
     details: AuthDetails<Role>,
     Json(input): Json<TemplateInput>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, true).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
     let storage = manager.config.read().await.channel.storage.clone();
     let mut template = prepare_template(&storage, id, 0, input)?;
-    crate::utils::graphics::fonts::validate(&state.pool, &template).await?;
-    crate::utils::graphics::sources::validate_template(&state.pool, &template).await?;
+    crate::graphics::fonts::validate(&state.pool, &template).await?;
+    crate::graphics::sources::validate_template(&state.pool, &template).await?;
 
     validate_permanent_template(&manager, &template).await?;
 
     ensure_unique_name(&state, &template).await?;
     template.id = handles::insert_graphics_template(&state.pool, &template).await?;
-    crate::utils::graphics::load_permanent_templates(&manager).await?;
+    crate::graphics::load_permanent_templates(&manager).await?;
 
     Ok(Json(template))
 }
@@ -155,12 +167,12 @@ pub async fn update_graphics_template(
     details: AuthDetails<Role>,
     Json(input): Json<TemplateInput>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, true).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
     let storage = manager.config.read().await.channel.storage.clone();
     let template = prepare_template(&storage, id, template_id, input)?;
-    crate::utils::graphics::fonts::validate(&state.pool, &template).await?;
-    crate::utils::graphics::sources::validate_template(&state.pool, &template).await?;
+    crate::graphics::fonts::validate(&state.pool, &template).await?;
+    crate::graphics::sources::validate_template(&state.pool, &template).await?;
 
     if let Some(binding) = handles::select_graphics_bindings(&state.pool, id)
         .await?
@@ -169,7 +181,7 @@ pub async fn update_graphics_template(
     {
         use crate::{
             db::models::GraphicsRole,
-            utils::graphics::{LayerKind, graphic_spec_for_channel},
+            graphics::{LayerKind, graphic_spec_for_channel},
         };
 
         let video = template
@@ -183,7 +195,7 @@ pub async fn update_graphics_template(
             ));
         }
 
-        if crate::utils::graphics::sources::has_unmapped_fields(&template) {
+        if crate::graphics::sources::has_unmapped_fields(&template) {
             return Err(ServiceError::BadRequest("Channel models need literal content or fully mapped data fields; unmapped fields belong to temporary templates".to_string()));
         }
 
@@ -217,7 +229,7 @@ pub async fn update_graphics_template(
     crate::player::output::load_logo(&manager, &config, width, height);
     crate::player::output::load_lshape(&manager, &config).await;
     manager.update_config(config).await;
-    crate::utils::graphics::load_channel_ticker(&manager).await?;
+    crate::graphics::load_channel_ticker(&manager).await?;
 
     Ok(Json(
         handles::select_graphics_template(&state.pool, id, template_id)
@@ -233,14 +245,14 @@ pub async fn delete_graphics_template(
     user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<Json<&'static str>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, true).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
     let removed_role = handles::select_graphics_bindings(&state.pool, id)
         .await?
         .into_iter()
         .find(|binding| binding.template_id == template_id)
         .map(|binding| binding.role);
-    let active = crate::utils::graphics::graphics_on_air(&manager);
+    let active = crate::graphics::graphics_on_air(&manager);
 
     if !handles::delete_graphics_template(&state.pool, id, template_id).await? {
         return Err(template_not_found(template_id));
@@ -256,7 +268,7 @@ pub async fn delete_graphics_template(
     reload_graphics(&manager).await?;
 
     if let Some(role) = removed_role {
-        crate::utils::graphics::clear_removed_channel_graphic(&manager, role).await?;
+        crate::graphics::clear_removed_channel_graphic(&manager, role).await?;
     }
 
     Ok(Json("removed"))
@@ -305,7 +317,7 @@ pub async fn take_graphic(
     details: AuthDetails<Role>,
     Json(request): Json<TakeRequest>,
 ) -> Result<Json<TakeOutcome>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, false).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
     let template = handles::select_graphics_template(&state.pool, id, request.template_id)
         .await?
         .ok_or_else(|| template_not_found(request.template_id))?;
@@ -342,7 +354,7 @@ pub async fn take_graphic_out(
     details: AuthDetails<Role>,
     Json(request): Json<OutRequest>,
 ) -> Result<Json<OutStatus>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, false).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
 
     match request.take_id {
         Some(take_id) => {
@@ -367,27 +379,9 @@ pub async fn get_graphics_on_air(
     user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<Json<Vec<GraphicOnAirView>>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, false).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
 
     Ok(Json(graphics_on_air(&manager)))
-}
-
-/// **Font families the graphics can use**
-///
-/// The families installed for the engine, for the text layers of templates.
-pub async fn get_graphics_fonts(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<Json<Vec<String>>, ServiceError> {
-    authorized(&state, id, &user, &details, false).await?;
-
-    Ok(Json(
-        tokio::task::spawn_blocking(noar_engine::available_font_families)
-            .await
-            .map_err(|_| ServiceError::InternalServerError)?,
-    ))
 }
 
 /// Assigned channel models and their shared runtime control state.
@@ -396,12 +390,10 @@ pub async fn get_channel_graphics(
     Path(id): Path<i32>,
     user: AuthUser,
     details: AuthDetails<Role>,
-) -> Result<Json<Vec<crate::utils::graphics::ChannelGraphicView>>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, false).await?;
+) -> Result<Json<Vec<crate::graphics::ChannelGraphicView>>, ServiceError> {
+    let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
 
-    Ok(Json(
-        crate::utils::graphics::channel_graphics(&manager).await?,
-    ))
+    Ok(Json(crate::graphics::channel_graphics(&manager).await?))
 }
 
 #[derive(Debug, Deserialize)]
@@ -415,14 +407,12 @@ pub async fn control_channel_graphics(
     user: AuthUser,
     details: AuthDetails<Role>,
     Json(request): Json<ChannelGraphicRequest>,
-) -> Result<Json<Vec<crate::utils::graphics::ChannelGraphicView>>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, false).await?;
+) -> Result<Json<Vec<crate::graphics::ChannelGraphicView>>, ServiceError> {
+    let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
-    crate::utils::graphics::control_channel_graphic(&manager, template_id, request.on).await?;
+    crate::graphics::control_channel_graphic(&manager, template_id, request.on).await?;
 
-    Ok(Json(
-        crate::utils::graphics::channel_graphics(&manager).await?,
-    ))
+    Ok(Json(crate::graphics::channel_graphics(&manager).await?))
 }
 
 async fn validate_permanent_template(
@@ -436,14 +426,14 @@ async fn validate_permanent_template(
     if template
         .layers
         .iter()
-        .any(|layer| layer.kind == crate::utils::graphics::LayerKind::Video)
+        .any(|layer| layer.kind == crate::graphics::LayerKind::Video)
     {
         return Err(ServiceError::BadRequest(
             "A permanent template cannot contain a video window".to_string(),
         ));
     }
 
-    if crate::utils::graphics::sources::has_unmapped_fields(template) {
+    if crate::graphics::sources::has_unmapped_fields(template) {
         return Err(ServiceError::BadRequest(
             "Map permanent template fields to a data source or use literal content".to_string(),
         ));
@@ -463,8 +453,7 @@ async fn validate_permanent_template(
     }
 
     let config = manager.config.read().await.clone();
-    let spec =
-        crate::utils::graphics::graphic_spec_for_channel(template, &HashMap::new(), &config)?;
+    let spec = crate::graphics::graphic_spec_for_channel(template, &HashMap::new(), &config)?;
     tokio::task::spawn_blocking(move || {
         noar_engine::render_graphic(&spec, config.output.width, config.output.height)
     })
@@ -488,7 +477,7 @@ async fn reload_graphics(manager: &ChannelManager) -> Result<(), ServiceError> {
     crate::player::output::load_logo(manager, &config, width, height);
     crate::player::output::load_lshape(manager, &config).await;
     manager.update_config(config).await;
-    crate::utils::graphics::load_channel_ticker(manager).await
+    crate::graphics::load_channel_ticker(manager).await
 }
 
 #[derive(Deserialize)]
@@ -505,7 +494,7 @@ pub async fn assign_graphics_template(
     details: AuthDetails<Role>,
     Json(request): Json<GraphicsAssignmentRequest>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, true).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
     let previous_role = handles::select_graphics_bindings(&state.pool, id)
         .await?
@@ -518,19 +507,20 @@ pub async fn assign_graphics_template(
     let video = template
         .layers
         .iter()
-        .any(|layer| layer.visible && layer.kind == crate::utils::graphics::LayerKind::Video);
+        .any(|layer| layer.visible && layer.kind == crate::graphics::LayerKind::Video);
 
     if let Some(role) = request.role
         && ((role == crate::db::models::GraphicsRole::Lshape) != video
-            || crate::utils::graphics::sources::has_unmapped_fields(&template))
+            || crate::graphics::sources::has_unmapped_fields(&template))
     {
         return Err(ServiceError::BadRequest("Assign literal content or fully mapped data fields; only L-shape can contain a video window".to_string()));
     }
 
     if let Some(target) = &request.control_layer_id
-        && !template.layers.iter().any(|layer| {
-            layer.id == *target && layer.kind == crate::utils::graphics::LayerKind::Image
-        })
+        && !template
+            .layers
+            .iter()
+            .any(|layer| layer.id == *target && layer.kind == crate::graphics::LayerKind::Image)
     {
         return Err(ServiceError::BadRequest(
             "The control target must be an image layer in this template".to_string(),
@@ -550,7 +540,7 @@ pub async fn assign_graphics_template(
     if let Some(role) = previous_role
         && Some(role) != request.role
     {
-        crate::utils::graphics::clear_removed_channel_graphic(&manager, role).await?;
+        crate::graphics::clear_removed_channel_graphic(&manager, role).await?;
     }
 
     Ok(Json(
@@ -567,11 +557,11 @@ pub async fn graphics_template_usage(
     user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<Json<serde_json::Value>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, false).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
     let template = handles::select_graphics_template(&state.pool, id, template_id)
         .await?
         .ok_or_else(|| template_not_found(template_id))?;
-    let views = crate::utils::graphics::channel_graphics(&manager).await?;
+    let views = crate::graphics::channel_graphics(&manager).await?;
     let assigned = views.iter().find(|view| view.template.id == template_id);
     let events = handles::select_graphics_events(&state.pool, id).await?;
     let events: Vec<_> = events
@@ -596,7 +586,7 @@ pub async fn graphics_template_usage(
         })
         .map(|event| serde_json::json!({"id":event.id,"title":event.title,"enabled":event.enabled}))
         .collect();
-    let active = crate::utils::graphics::graphics_on_air(&manager)
+    let active = crate::graphics::graphics_on_air(&manager)
         .iter()
         .filter(|take| take.template_id == template_id)
         .count();
@@ -617,7 +607,7 @@ pub async fn graphics_clock(
     user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<Json<serde_json::Value>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, false).await?;
+    let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
     let timezone = manager.config.read().await.channel.timezone;
     let now = chrono::Utc::now();
     let local = timezone.map_or_else(
@@ -629,192 +619,4 @@ pub async fn graphics_clock(
     Ok(Json(
         serde_json::json!({"unix_ms":chrono::Utc::now().timestamp_millis(),"timezone":timezone.map(|zone|zone.to_string()),"offset_seconds":offset}),
     ))
-}
-
-/// Uploaded faces available to the authorized channel, without raw font bytes.
-pub async fn get_graphics_font_assets(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<Json<Vec<crate::db::models::GraphicsFont>>, ServiceError> {
-    authorized(&state, id, &user, &details, false).await?;
-
-    Ok(Json(handles::select_graphics_fonts(&state.pool, id).await?))
-}
-
-#[derive(Deserialize)]
-pub struct FontUploadQuery {
-    filename: String,
-}
-
-pub async fn upload_graphics_font(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    axum::extract::Query(query): axum::extract::Query<FontUploadQuery>,
-    body: axum::body::Bytes,
-) -> Result<Json<crate::db::models::GraphicsFont>, ServiceError> {
-    authorized(&state, id, &user, &details, true).await?;
-
-    Ok(Json(
-        crate::utils::graphics::fonts::upload(&state.pool, id, &query.filename, body.to_vec())
-            .await?,
-    ))
-}
-
-pub async fn download_graphics_font(
-    State(state): State<AppState>,
-    Path((id, font_id)): Path<(i32, String)>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<impl axum::response::IntoResponse, ServiceError> {
-    authorized(&state, id, &user, &details, false).await?;
-    let data = handles::select_graphics_font_data(&state.pool, id, &font_id)
-        .await?
-        .ok_or_else(|| ServiceError::NotFound("Font not found".to_string()))?;
-
-    Ok((
-        [
-            (axum::http::header::CONTENT_TYPE, "application/octet-stream"),
-            (
-                axum::http::header::CACHE_CONTROL,
-                "private, max-age=31536000, immutable",
-            ),
-        ],
-        data,
-    ))
-}
-
-pub async fn get_graphics_sources(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<Json<Vec<crate::db::models::GraphicsDataSource>>, ServiceError> {
-    authorized(&state, id, &user, &details, false).await?;
-
-    let mut sources = handles::select_graphics_sources(&state.pool, id).await?;
-
-    if ensure_any_authority(&details, &[&Role::GlobalAdmin, &Role::ChannelAdmin]).is_err() {
-        for source in &mut sources {
-            source.url.clear();
-        }
-    }
-
-    Ok(Json(sources))
-}
-
-pub async fn add_graphics_source(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    Json(mut input): Json<crate::utils::graphics::sources::SourceInput>,
-) -> Result<Json<crate::db::models::GraphicsDataSource>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
-    crate::utils::graphics::sources::validate_input(&mut input)?;
-
-    if handles::select_graphics_sources(&state.pool, id)
-        .await?
-        .len()
-        >= 16
-    {
-        return Err(ServiceError::Conflict(
-            "At most 16 data sources per channel".to_string(),
-        ));
-    }
-
-    let source_id = handles::save_graphics_source(&state.pool, id, None, &input).await?;
-    crate::utils::graphics::sources::refresh(&manager, source_id).await?;
-
-    Ok(Json(
-        handles::select_graphics_source(&state.pool, id, source_id)
-            .await?
-            .ok_or_else(|| ServiceError::NotFound("Data source not found".to_string()))?,
-    ))
-}
-
-pub async fn update_graphics_source(
-    State(state): State<AppState>,
-    Path((id, source_id)): Path<(i32, i32)>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    Json(mut input): Json<crate::utils::graphics::sources::SourceInput>,
-) -> Result<Json<crate::db::models::GraphicsDataSource>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
-    let old = handles::select_graphics_source(&state.pool, id, source_id)
-        .await?
-        .ok_or_else(|| ServiceError::NotFound("Data source not found".to_string()))?;
-
-    if input.document.is_empty() && input.url.is_empty() && input.kind == "csv" {
-        input.document = old.document;
-    }
-    crate::utils::graphics::sources::validate_input(&mut input)?;
-    handles::save_graphics_source(&state.pool, id, Some(source_id), &input)
-        .await
-        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
-    crate::utils::graphics::sources::refresh(&manager, source_id).await?;
-
-    Ok(Json(
-        handles::select_graphics_source(&state.pool, id, source_id)
-            .await?
-            .ok_or_else(|| ServiceError::NotFound("Data source not found".to_string()))?,
-    ))
-}
-
-pub async fn refresh_graphics_source(
-    State(state): State<AppState>,
-    Path((id, source_id)): Path<(i32, i32)>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<Json<crate::db::models::GraphicsDataSource>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
-    crate::utils::graphics::sources::refresh(&manager, source_id).await?;
-
-    Ok(Json(
-        handles::select_graphics_source(&state.pool, id, source_id)
-            .await?
-            .ok_or_else(|| ServiceError::NotFound("Data source not found".to_string()))?,
-    ))
-}
-
-pub async fn delete_graphics_source(
-    State(state): State<AppState>,
-    Path((id, source_id)): Path<(i32, i32)>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-) -> Result<Json<&'static str>, ServiceError> {
-    let manager = authorized(&state, id, &user, &details, true).await?;
-    let _edit = manager.graphics_takes.begin_edit().await;
-    let templates = handles::select_graphics_templates(&state.pool, id).await?;
-    let used: Vec<_> = templates
-        .iter()
-        .filter(|template| {
-            crate::utils::graphics::sources::bindings(template)
-                .values()
-                .any(|field| field.source_id == source_id)
-        })
-        .map(|template| template.name.clone())
-        .collect();
-
-    if !used.is_empty() {
-        return Err(ServiceError::Conflict(format!(
-            "Unlink this source from: {}",
-            used.join(", ")
-        )));
-    }
-
-    if !handles::delete_graphics_source(&state.pool, id, source_id).await? {
-        return Err(ServiceError::NotFound("Data source not found".to_string()));
-    }
-    manager
-        .config
-        .write()
-        .await
-        .graphics_data
-        .remove(&source_id);
-
-    Ok(Json("Success"))
 }

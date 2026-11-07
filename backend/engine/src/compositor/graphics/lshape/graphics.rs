@@ -3,7 +3,6 @@
 //! next programme), and grows back when it ends. It is switched from outside
 //! the playout, like the logo, or by stretches marked in the video itself.
 
-use crate::frame::{PixelFormat, VideoFrame};
 use std::{
     fmt,
     sync::{Arc, Mutex, MutexGuard, PoisonError},
@@ -14,6 +13,7 @@ use anyhow::{Context, Result, anyhow};
 
 use crate::{
     compositor::graphics::{GraphicContent, GraphicSpec, RenderedGraphic, render_graphic},
+    frame::{PixelFormat, VideoFrame},
     utils::helper::even,
 };
 

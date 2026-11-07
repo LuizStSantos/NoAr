@@ -674,3 +674,32 @@ mod tests {
         assert_eq!(refresh.jti.as_deref(), Some("token-id"));
     }
 }
+
+/// An empty key turns the keyed route off. Compares every byte, so the time
+/// taken tells nothing about how much of a guess was right.
+pub(crate) fn control_key_matches(expected: &str, given: &str) -> bool {
+    let expected = expected.trim().as_bytes();
+    let given = given.trim().as_bytes();
+
+    !expected.is_empty()
+        && expected.len() == given.len()
+        && expected
+            .iter()
+            .zip(given)
+            .fold(0, |diff, (a, b)| diff | (a ^ b))
+            == 0
+}
+
+#[cfg(test)]
+mod control_key_tests {
+    use super::control_key_matches;
+
+    #[test]
+    fn the_logo_key_must_be_set_and_match() {
+        assert!(control_key_matches("abc123", "abc123"));
+        assert!(control_key_matches(" abc123 ", "abc123"));
+        assert!(!control_key_matches("abc123", "abc124"));
+        assert!(!control_key_matches("abc123", "abc12"));
+        assert!(!control_key_matches("", ""));
+    }
+}

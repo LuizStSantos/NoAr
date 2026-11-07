@@ -1,4 +1,8 @@
-use crate::frame::{PixelFormat, VideoFrame};
+//! Compatibility logo controls over a layered Graphics model.
+//!
+//! External placement/replacement, clip overrides and fade state keep one runtime
+//! handle; authored pixels are prepared by the shared Graphics renderer.
+
 use std::{
     fmt,
     sync::{Arc, Mutex, MutexGuard, PoisonError},
@@ -12,6 +16,7 @@ use crate::{
         GraphicContent, GraphicSpec, RenderedGraphic, RoleImageBlend, render_graphic,
     },
     compositor::overlay::{OverlayRef, blend_overlay, chroma_alpha},
+    frame::{PixelFormat, VideoFrame},
     utils::{config::LogoConfig, helper::even},
 };
 

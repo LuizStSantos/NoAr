@@ -13,7 +13,8 @@ import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { padBox, sharesOf } from '@/composables/graphics'
-import { type Size, logoBox, logoBoxStyle, storageImageUrl } from '@/composables/logo'
+import { storageImageUrl } from '@/composables/graphicsImages'
+import { type Size, legacyImageBox, imageBoxStyle } from '@/composables/graphicsLegacyGeometry'
 import { type LogoSpan, type VideoMarks, baseName, readLogoMarks, saveLogoMarks } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -398,7 +399,8 @@ const logoShares = computed(() => sharesOf(logoPosition.value))
 /** The logo's box on the pad, from its real size when known. */
 const logoPadBox = computed(() => {
     const processing = configStore.playout?.processing
-    const box = logoImage.value && processing && logoBox(processing.logo_scale, '0:0', logoImage.value, frameSize.value)
+    const box =
+        logoImage.value && processing && legacyImageBox(processing.logo_scale, '0:0', logoImage.value, frameSize.value)
 
     return padBox(box || null)
 })
@@ -574,9 +576,9 @@ const logoStyle = computed(() => {
     const box =
         logoImage.value &&
         processing &&
-        logoBox(processing.logo_scale, logoPosition.value, logoImage.value, frameSize.value)
+        legacyImageBox(processing.logo_scale, logoPosition.value, logoImage.value, frameSize.value)
 
-    return box ? logoBoxStyle(box) : { top: '3%', right: '2%', height: '6%' }
+    return box ? imageBoxStyle(box) : { top: '3%', right: '2%', height: '6%' }
 })
 
 const logoOpacity = computed(() =>

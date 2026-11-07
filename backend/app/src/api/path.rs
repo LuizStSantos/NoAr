@@ -50,7 +50,7 @@ pub fn routes() -> Router<AppState> {
                     get(get_graphics_font_assets)
                         .post(upload_graphics_font)
                         .layer(DefaultBodyLimit::max(
-                            crate::utils::graphics::fonts::MAX_FONT_BYTES,
+                            crate::graphics::fonts::MAX_FONT_BYTES,
                         )),
                 )
                 .route(

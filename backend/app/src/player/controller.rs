@@ -118,7 +118,7 @@ pub struct ChannelManager {
     /// Template graphics on air; kept across playout restarts.
     pub graphics_control: noar_engine::GraphicsControl,
     /// Which template each graphic on air came from.
-    pub graphics_takes: crate::utils::graphics::GraphicsTakes,
+    pub graphics_takes: crate::graphics::GraphicsTakes,
     /// The SCTE-35 ad breaks the channel signals.
     pub splice_control: noar_engine::SpliceControl,
     /// How the network output reaches its destination; outlasts restarts.
@@ -210,7 +210,7 @@ impl ChannelManager {
             loudness_config(&config.audio),
         );
         let preview = PreviewFeed::bind(channel.id, shutdown.clone()).await?;
-        crate::utils::graphics::fonts::load(&db_pool, channel.id).await?;
+        crate::graphics::fonts::load(&db_pool, channel.id).await?;
         let graphics_control = noar_engine::GraphicsControl::default();
 
         Ok(Self {
