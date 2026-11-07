@@ -62,5 +62,6 @@
     ]
   },
   "channel_error_count": 0,
-  "channel_log_sha256": "605b1d1197bc9d61b5b414a38be108f27abc63c1258bc97bec2f1acfc61f9823"
+  "channel_log_sha256": "605b1d1197bc9d61b5b414a38be108f27abc63c1258bc97bec2f1acfc61f9823",
+  "candidate_commit": "7f51b4df"
 }

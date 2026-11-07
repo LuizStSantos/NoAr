@@ -4,6 +4,56 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Open templates: final parity and review package
+
+Implementation: `7f51b4df` on `claude/branch-review-opz967`, following stages
+`23d73aa4` (free templates/defaults), `58716285` (shapes/clock), `750ea75c`
+(fonts) and `80c9c9cd` (sources). No main merge, release or main push.
+
+The final corrected revision was run against the same disposable 2.2.1 database
+fixture and deterministic 640×360, 25 fps, 40-second synthetic media used for the
+released-code reference. The isolated capture worktree adds only the approved
+pre-encode observation hook; shipped engine sources have no capture hook.
+All **1,000 YUV frames match byte for byte**, and all **1,000 PTS/content-aligned
+HLS frames match exactly** in the logo, full L-shape and ticker regions, including
+logo fade and L-shape entry/exit. No position, size or timing adjustment is used.
+The fixed HLS limits remain MAE ≤ 0.75, 99.9th percentile ≤ 8 and maximum ≤ 32;
+observed error is zero. Segment hashes 0–20 match; post-roll segment 21 differs
+outside the tested PTS 0–999 interval. An empty settled ticker region in 2.2.1
+and absence of clocks/mapped feeds in this fixture are explicit limits; new
+features have their own HLS evidence below.
+
+[Full metrics and binary hashes](open-final-parity-evidence.json),
+[transition comparison sheet](open-final-parity-review.jpg),
+[reference health](open-final-parity-main-health.json),
+[candidate health](open-final-parity-branch-health.json),
+[reference channel log](open-final-parity-main-channel-log.txt),
+[candidate channel log](open-final-parity-branch-channel-log.txt).
+Both captures report healthy output and zero channel ERROR entries. Full sampled
+frames and amplified difference images are stored as `output-open-final-parity-*`.
+
+The consolidated review provides **57 full screenshots** (pt-BR desktop/phone,
+Composer, forms, fonts, sources, operator screens and actual HLS), plus a cover:
+[58-page PDF](open-templates-review.pdf), [HTML gallery](open-templates-review.html)
+and [image index](open-templates-review-index.json). The pre-fix deletion image
+is explicitly marked as a bug reproduction, not desired output. Screenshots
+identify disposable fixtures; the gray Program background is actual synthetic
+video, and Composer's blue/green background is an authoring aid.
+
+Current Rust verification is 708 passed / 14 ignored, with fmt, exact Clippy and
+build passed on GStreamer 1.26.2. Vue types, full ESLint, Prettier, QA TypeScript
+and production frontend build passed again. All **31 browser tests passed**
+again in a new empty disposable installation, including first-run single-logo
+assertions before fixtures. [Verification index](open-final-verification.json),
+[Rust log](open-final-rust-test-log.txt), [browser log](open-final-browser-test-log.txt).
+
+External RSS/JSON providers and a real published Google sheet remain **NOT RUN /
+NOT AVAILABLE** due to cloud DNS failure. Local parsers/HTTP fixtures and actual
+CSV/HLS updates passed; no network or TLS bypass was used. Private Sheets OAuth,
+physical outputs and a formal soak are not included. Desktop audio's previously
+recorded cloud-environment limitation is unchanged; that scenario is not repeated
+in this open-templates follow-up.
+
 ## Open templates: final removal regression verification
 
 Deleting an assigned logo now also clears external/clip image and position
@@ -32,9 +82,9 @@ Capture health is OK and the channel log contains zero ERROR entries.
 | Deleted logo and replacement are gone | [After](output-template-delete-after.jpg) |
 | Removed L-shape binding returns to full screen | [Full screen](output-template-unassign-lshape.jpg) |
 
-The final raw/HLS parity repetition and consolidated screenshot gallery follow
-as separate verification after this correction. Stage 4's 707-test count below
-records its earlier implementation revision.
+The final raw/HLS parity repetition and consolidated screenshot gallery are
+linked in the section above. Stage 4's 707-test count below records its earlier
+implementation revision.
 
 ## Open templates: stage 4 — data sources and live fields
 

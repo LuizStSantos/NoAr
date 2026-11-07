@@ -6,8 +6,10 @@ layouts now use Composer layers too. Migration 00030 upgrades both 2.2.1 and
 already converted 00029 installations automatically, preserving bindings,
 identity and frozen legacy columns. Legacy APIs and clip/scene controls act
 on these models. Logo/L-shape/ticker Edit opens Composer; scenes retain an
-action editor in Graphics. Clock, uploaded fonts and data sources are now approved for the next stages;
-they are not implemented by open-templates stage 1.
+action editor in Graphics. The approved open-templates stages now include free
+groups/assignments and deletion, shape primitives, live clocks, uploaded fonts
+and CSV/RSS/JSON field mappings. Fresh installations start with only one
+removable Logo example. See the current handoff for executed checks and limits.
 
 See the [implementation handoff](graphics-handoff/README.md) for the current
 source-of-truth contract, runtime evidence and historical stages a–e. The

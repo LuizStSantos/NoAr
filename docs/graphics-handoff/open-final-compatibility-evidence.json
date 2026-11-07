@@ -913,5 +913,7 @@
   "xmltv": {
     "explicit_guide_icon": "PASS",
     "configured_model_fallback": "PASS"
-  }
+  },
+  "candidate_commit": "7f51b4df",
+  "reference": "released NoAr 2.2.1"
 }

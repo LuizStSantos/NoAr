@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "candidate_commit": "7f51b4df",
+  "gstreamer_version": "1.26.2",
+  "rust": {
+    "passed": 708,
+    "ignored": 14,
+    "log": "open-final-rust-test-log.txt"
+  },
+  "browser": {
+    "passed": 31,
+    "failed": 0,
+    "fresh_disposable_installation": true,
+    "log": "open-final-browser-test-log.txt"
+  },
+  "checks_passed": [
+    "cargo fmt --all",
+    "cargo clippy --no-default-features --all-targets -- --deny warnings",
+    "cargo test --no-default-features",
+    "cargo build --no-default-features",
+    "npx vue-tsc --build",
+    "npx eslint . --config frontend/eslint.config.ts",
+    "npx prettier --check frontend/src/components/graphics frontend/src/composables frontend/src/locales/en-US.ts frontend/src/locales/pt-BR.ts",
+    "npx tsc --noEmit -p qa/e2e/tsconfig.json",
+    "npm run build-only"
+  ],
+  "legacy_http_and_xmltv": "open-final-compatibility-evidence.json",
+  "raw_hls_parity": "open-final-parity-evidence.json",
+  "removal_hls": "template-removal-evidence.json",
+  "new_features_runtime": [
+    "open-templates-evidence.json",
+    "shapes-clock-evidence.json",
+    "uploaded-font-evidence.json",
+    "data-sources-evidence.json"
+  ],
+  "not_run": [
+    "External RSS/JSON providers: cloud DNS unavailable",
+    "Actual published Google sheet integration",
+    "Private Sheets OAuth (outside scope)",
+    "Physical output and formal soak",
+    "Desktop audio scenario not repeated; existing environment limit remains recorded"
+  ]
+}
