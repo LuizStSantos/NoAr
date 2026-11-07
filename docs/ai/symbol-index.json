@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "e9801ff596e2e7e8883c2f770ab003910b8beaa2668cc9de69f03bff57fb640a",
+      "sha256": "de48ce88a48f85cb6e2074b1d0baddfc14ecfe8f38f07954844df0463d564098",
       "language": "Markdown",
-      "bytes": 58255,
+      "bytes": 58360,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -21727,9 +21727,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "5d886ac2b8e5f868781cd55d57c30f94bf3a8eef6f7d32f92f61b31496df19b4",
+      "sha256": "84aaf83ca6883ad2ac73d07ca4befc76c9b1985adcfb73bf4606f0c9d711051a",
       "language": "Markdown",
-      "bytes": 90372,
+      "bytes": 93373,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -22117,9 +22117,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/maintenance-architecture-tests-log.txt": {
-      "sha256": "46c69649662c1f4c4023715c322206acbda59a77a6011e3f761a760fa3f287f4",
+      "sha256": "26ea08eb5b77840cb2d1e4e89c37c4ec13c3e9cf23fa524b7e7db0fd2931973d",
       "language": "Other",
-      "bytes": 750,
+      "bytes": 1054,
       "symbols": []
     },
     "docs/graphics-handoff/maintenance-browser-test-log.txt": {
@@ -22128,10 +22128,82 @@
       "bytes": 4129,
       "symbols": []
     },
+    "docs/graphics-handoff/maintenance-channel-log.txt": {
+      "sha256": "8ccdace7157af913a1ae4e5f81083ba1c160569e12fe4722ef84d27d65093fae",
+      "language": "Other",
+      "bytes": 3376,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-compatibility-evidence.json": {
+      "sha256": "2a4ffa5a8a2c3a1d31aa2de3fff57214adc8a7fcea820554d141b73e59fa8f37",
+      "language": "JSON",
+      "bytes": 22248,
+      "symbols": []
+    },
     "docs/graphics-handoff/maintenance-composer-evidence.json": {
       "sha256": "8c1e3c7f40bd0085a2c58a7bb4d597af5ce77e241318fa5170956e81858de0fc",
       "language": "JSON",
       "bytes": 1739,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-final-api-regression-log.txt": {
+      "sha256": "af17186f0fc67ef03981bbe541b4229e8c2f31c0dfd94665d9b295a7c8f7a30a",
+      "language": "Other",
+      "bytes": 352,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-hls-evidence.json": {
+      "sha256": "7830e4ee08674fb251203e5ccc48500c2de8c38367afb07b49e358bacf8a7b01",
+      "language": "JSON",
+      "bytes": 11322,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-parity-branch-channel-log.txt": {
+      "sha256": "c423981e740f7e548d1e41af266fa29d804cb9ad4545fba24af86958b9c6be6a",
+      "language": "Other",
+      "bytes": 2425,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-parity-branch-health.json": {
+      "sha256": "e14c257212faea1a9be4dbe1118d9bafa0e25f66321d9940d592ec72dbf3e23d",
+      "language": "JSON",
+      "bytes": 13307,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-parity-evidence.json": {
+      "sha256": "548e8bb22bc20b7b724a9a1081e20e250be4dfed879fca2766fb2cab546dec0f",
+      "language": "JSON",
+      "bytes": 451489,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-parity-main-channel-log.txt": {
+      "sha256": "4b331c882e6627eeae5a9a0190df7ad6c73e1ffd4669d9d5e53f17d3ee8a734a",
+      "language": "Other",
+      "bytes": 2425,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-parity-main-health.json": {
+      "sha256": "7621b720bd69055e7c448846d9599d5cb01e34bfa50d2172e50ea6b89fcfc59d",
+      "language": "JSON",
+      "bytes": 13307,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-parity-setup-log.txt": {
+      "sha256": "a599d079ba0ec13305f6a10dd392e60f0b6a02223a8c1e9c9828ffb9ed8f75ea",
+      "language": "Other",
+      "bytes": 4275,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-prior-channel-log.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "language": "Other",
+      "bytes": 0,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-program-evidence.json": {
+      "sha256": "34540f234f90bdf6dea11327853e4daa0757430f6322ea6c2a6911c785c02cc6",
+      "language": "JSON",
+      "bytes": 406,
       "symbols": []
     },
     "docs/graphics-handoff/maintenance-research.json": {
@@ -22140,16 +22212,34 @@
       "bytes": 999,
       "symbols": []
     },
+    "docs/graphics-handoff/maintenance-review-index.json": {
+      "sha256": "793dad3dd9075c0e15aec89e954087c8942dd371a4def015d41808ea7f149a3f",
+      "language": "JSON",
+      "bytes": 1458,
+      "symbols": []
+    },
     "docs/graphics-handoff/maintenance-review-inventory.json": {
       "sha256": "0b4751b00b2b70c501fc5901d42d6f8999600f5311185e62cb487addfb73f34a",
       "language": "JSON",
       "bytes": 3126,
       "symbols": []
     },
+    "docs/graphics-handoff/maintenance-review.html": {
+      "sha256": "1b0bffef6fa77ce785f36fe29a436e9ff307e380c1ab00c1e911a06e082f59cb",
+      "language": "HTML",
+      "bytes": 10304,
+      "symbols": []
+    },
     "docs/graphics-handoff/maintenance-rust-verification-log.txt": {
       "sha256": "8af1eddc48902515944f57a44e72b198786c3af9a17366b9188f338bad147663",
       "language": "Other",
       "bytes": 64557,
+      "symbols": []
+    },
+    "docs/graphics-handoff/maintenance-verification.json": {
+      "sha256": "e154d474c108fd78a427d381770655465ee1eae9524cf1d825d2bf62130a26ec",
+      "language": "JSON",
+      "bytes": 2288,
       "symbols": []
     },
     "docs/graphics-handoff/migration-b-evidence.json": {
@@ -22339,9 +22429,9 @@
       "symbols": []
     },
     "docs/graphics-maintenance.md": {
-      "sha256": "1e34bded25054a0224fd055068604e57e59d512c3331106b1fcf929ba504e465",
+      "sha256": "ae962c318ba3ffdc1828284570b2d4f503f61fe8eb4c05abde9189d425cc5621",
       "language": "Markdown",
-      "bytes": 12823,
+      "bytes": 12876,
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
@@ -33074,15 +33164,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "f024257d0598490af6026abca9426b7f5021c3e2ecc499302b8ed15a85dc9e51",
+      "sha256": "819fba1bd735cabd6b3dc3349828befbed7119667de922b0945c2428ea82f5c2",
       "language": "TypeScript",
-      "bytes": 146002,
+      "bytes": 146013,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "154c2aed819ded52a3e62e33306fbecf2263d16a382c68b777c42c2027739192",
+      "sha256": "64c22d2533421440838ee210abe1d3104846e1a2bbfee33b83520d8e19794141",
       "language": "TypeScript",
-      "bytes": 152099,
+      "bytes": 152166,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -36477,28 +36567,32 @@
       "symbols": []
     },
     "qa/architecture/check.py": {
-      "sha256": "5efdadae8b566c82f154d17eb8d750af3bd52bdd6d3b2c27507132220b6bd404",
+      "sha256": "9381aedb985cdbdd726cd6f52462132db38825d3bc00d36af1fd49f75072262e",
       "language": "Python",
-      "bytes": 2972,
+      "bytes": 3726,
       "symbols": [
         {
           "name": "production_code",
-          "line": 20
+          "line": 21
+        },
+        {
+          "name": "mask",
+          "line": 22
         },
         {
           "name": "violations",
-          "line": 26
+          "line": 49
         },
         {
           "name": "main",
-          "line": 47
+          "line": 70
         }
       ]
     },
     "qa/architecture/test_check.py": {
-      "sha256": "0f784c2c0d88e0b252bac7f4b22a5c143760cb96820e0994b7f3bf9ca12d0372",
+      "sha256": "8af744795af55a36092544e738227b7fcf30e33195fe41b2e5476e8af0646244",
       "language": "Python",
-      "bytes": 2268,
+      "bytes": 2816,
       "symbols": [
         {
           "name": "ArchitectureTests",
@@ -36527,6 +36621,14 @@
         {
           "name": "test_comments_and_strings_are_not_dependencies",
           "line": 45
+        },
+        {
+          "name": "test_production_after_a_test_module_is_still_checked",
+          "line": 52
+        },
+        {
+          "name": "test_test_only_module_declarations_do_not_hide_later_queries",
+          "line": 59
         }
       ]
     },

@@ -1,0 +1,31 @@
+[DEBUG] Start NoAr v2.2.1, channel: 1
+[ INFO] Running NoAr, listen on http://0.0.0.0:8787
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(40.0), width: 0, height: 0, fps: 0.0 }
+[DEBUG] GStreamer first video sample: PTS Some(0:00:00.000000000), segment Some(Segment { format: Time, start: 0:00:00.000000000, offset: 0:00:00.000000000, stop: 0:00:40.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.000000000, duration: --:--:--.--------- })
+[DEBUG] GStreamer first audio sample: PTS Some(0:00:00.021333333), segment Some(Segment { format: Time, start: 0:00:00.021333333, offset: 0:00:00.000000000, stop: 0:00:40.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.021333333, duration: --:--:--.--------- })
+[DEBUG] Stop all child processes from channel: 1
+[ERROR] Run channel 1 failed: Conflict: failed to generate fallback for /workspace/noar-cloud/open-final-parity/media/deterministic.mp4: No such file or directory (os error 2) | Retry in 1 seconds
+[ WARN] No Two-factor authentication!
+[ INFO] 172.17.0.1 user migration-review login, with role: global_admin
+[ INFO] 172.17.0.1 "POST /auth/login HTTP/1.1" 200 599 "-" "Python-urllib/3.12" 0.488217
+[ERROR] 172.17.0.1 "GET /health HTTP/1.1" 503 107 "-" "Python-urllib/3.12" 0.000440
+[DEBUG] Start NoAr v2.2.1, channel: 1
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(40.0), width: 0, height: 0, fps: 0.0 }
+[DEBUG] GStreamer first video sample: PTS Some(0:00:00.000000000), segment Some(Segment { format: Time, start: 0:00:00.000000000, offset: 0:00:00.000000000, stop: 0:00:40.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.000000000, duration: --:--:--.--------- })
+[DEBUG] GStreamer first audio sample: PTS Some(0:00:00.021333333), segment Some(Segment { format: Time, start: 0:00:00.021333333, offset: 0:00:00.000000000, stop: 0:00:40.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.021333333, duration: --:--:--.--------- })
+[DEBUG] Stop all child processes from channel: 1
+[ERROR] 172.17.0.1 "GET /health HTTP/1.1" 503 105 "-" "Python-urllib/3.12" 0.000389
+[ERROR] Run channel 1 failed: Conflict: failed to generate fallback for /workspace/noar-cloud/open-final-parity/media/deterministic.mp4: No such file or directory (os error 2) | Retry in 2 seconds
+[ERROR] 172.17.0.1 "GET /health HTTP/1.1" 503 107 "-" "Python-urllib/3.12" 0.000613
+[ERROR] 172.17.0.1 "GET /health HTTP/1.1" 503 107 "-" "Python-urllib/3.12" 0.000423
+[ERROR] 172.17.0.1 "GET /health HTTP/1.1" 503 107 "-" "Python-urllib/3.12" 0.000547
+[DEBUG] Start NoAr v2.2.1, channel: 1
+[DEBUG] GStreamer decoded streams: SourceInfo { has_video: true, has_audio: true, duration: Some(40.0), width: 0, height: 0, fps: 0.0 }
+[DEBUG] GStreamer first video sample: PTS Some(0:00:00.000000000), segment Some(Segment { format: Time, start: 0:00:00.000000000, offset: 0:00:00.000000000, stop: 0:00:40.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.000000000, duration: --:--:--.--------- })
+[DEBUG] GStreamer first audio sample: PTS Some(0:00:00.021333333), segment Some(Segment { format: Time, start: 0:00:00.021333333, offset: 0:00:00.000000000, stop: 0:00:40.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(0x0), time: 0:00:00.000000000, base: 0:00:00.000000000, position: 0:00:00.021333333, duration: --:--:--.--------- })
+[ INFO] 172.17.0.1 "GET /health HTTP/1.1" 200 106 "-" "Python-urllib/3.12" 0.000753
+[DEBUG] Stop all child processes from channel: 1
+[ERROR] Run channel 1 failed: Conflict: failed to generate fallback for /workspace/noar-cloud/open-final-parity/media/deterministic.mp4: No such file or directory (os error 2) | Retry in 4 seconds
+[ERROR] 172.17.0.1 "GET /health HTTP/1.1" 503 107 "-" "Python-urllib/3.12" 0.000254
+[ INFO] Shutdown signal received
+[DEBUG] Stop all child processes from channel: 1

@@ -49,6 +49,20 @@ const EXAMPLE: &str = r#"sqlx::query("sample")"#;
 /* api::routes::example(); */
 '''), set())
 
+    def test_production_after_a_test_module_is_still_checked(self):
+        self.assertEqual(self.inspect('backend/app/src/graphics.rs', '''
+#[cfg(test)]
+mod tests { const BRACE: char = '{'; }
+fn production() { crate::api::routes::apply_scene(); }
+'''), {'service-depends-on-http'})
+
+    def test_test_only_module_declarations_do_not_hide_later_queries(self):
+        self.assertEqual(self.inspect('backend/app/src/utils/config.rs', '''
+#[cfg(test)]
+mod test_support;
+fn production() { sqlx::query("SELECT 1"); }
+'''), {'sql-outside-data-layer'})
+
 
 if __name__ == '__main__':
     unittest.main()

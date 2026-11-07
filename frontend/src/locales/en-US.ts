@@ -1827,9 +1827,9 @@ export default {
             lshapeLayers:
                 'L-shape: artwork layers plus a video window. Enter/leave uses this model. An image-only override keeps its window; an explicit corner/size command temporarily overrides it.',
             tickerLayers:
-                'Ticker: a permanent text model. It supports static text; scrolling and a clock are not part of this delivery.',
+                'Ticker: permanent text, including mapped data fields. Live clocks use their own Composer layer. Text scrolling is not implemented.',
             permanentState:
-                'Always on air saves startup visibility for the logo and ticker. The library On air / Off switch controls current visibility; hiding a model does not clear its startup setting. Showing a disabled permanent role also enables it. An L-shape enters and leaves on command.',
+                'Always on air loads compatible models at startup, including free compositions, up to 16 per channel. You choose names and groups; a control assignment is optional. The On air / Off switch controls current visibility. An L-shape enters and leaves on command.',
             legacyModels:
                 'The keyed logo/L-shape/scene links below still work with the same responses. They now act on the channel models. Image/placement overrides are temporary and do not rewrite the Composer layout.',
             xmltvSeparate:

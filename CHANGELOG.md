@@ -18,6 +18,8 @@ one is tagged.
 - Remove unreachable legacy graphics editors, give subtitles/controller examples
   their own components, and document ownership and maintenance boundaries.
 - Enforce service/API/data/engine dependencies with source-level CI checks.
+- Refresh the API tutorial to describe live clock layers, mapped text and free
+  permanent compositions.
 
 ### Fixed
 

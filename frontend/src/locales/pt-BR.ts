@@ -1837,7 +1837,7 @@ export default {
             lshapeLayers:
                 'L-shape: camadas da arte mais a janela de vídeo. Entrar/voltar usa esse modelo. Trocar só a imagem mantém a janela; informar canto/tamanho muda a janela temporariamente.',
             tickerLayers:
-                'Letreiro: modelo permanente de texto. O texto é fixo; rolagem e relógio não fazem parte desta entrega.',
+                'Letreiro: texto permanente, inclusive com campos de fontes de dados. Relógios ao vivo usam uma camada própria no Composer. Rolagem de texto ainda não está implementada.',
             permanentState:
                 'Sempre no ar carrega modelos compatíveis ao iniciar, inclusive modelos livres, até 16 por canal. Nome e grupo são definidos por você; o vínculo de controle é opcional. O interruptor No ar / Fora controla a visibilidade atual. O L-shape entra e sai por comando.',
             legacyModels:

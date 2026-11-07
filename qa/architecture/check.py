@@ -13,14 +13,37 @@ import re
 
 # Mask comments and quoted text so documentation, SQL strings and test fixtures
 # do not accidentally count as dependency edges. Preserve line numbers.
-NON_CODE = re.compile(r'r(\#*)".*?"\1|"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/', re.DOTALL)
+NON_CODE = re.compile(r'''r(\#*)".*?"\1|"(?:\\.|[^"\\])*"|'(?:\\(?:u\{[0-9a-fA-F]+\}|.)|[^'\\])'|//[^\n]*|/\*.*?\*/''', re.DOTALL)
+TEST_ITEM = re.compile(r'#\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]')
 SQL_QUERY = re.compile(r'\bsqlx\s*::\s*(?:query(?:_as|_scalar)?|raw_sql)\s*(?:[!(]|::)|\buse\s+sqlx\s*::[^;]*\b(?:query(?:_as|_scalar)?|raw_sql)\b', re.DOTALL)
 
 
 def production_code(source: str) -> str:
-    source = NON_CODE.sub(lambda match: '\n' * match.group().count('\n'), source)
-    # NoAr keeps adjacent #[cfg(test)] modules after production definitions.
-    return re.split(r'#\[cfg\(test\)\]', source, maxsplit=1)[0]
+    def mask(text):
+        return re.sub(r'[^\n]', ' ', text)
+
+    source = NON_CODE.sub(lambda match: mask(match.group()), source)
+    offset = 0
+    while match := TEST_ITEM.search(source, offset):
+        end = match.end()
+        depth = 0
+        # Exclude just this cfg-gated item. Production definitions may follow
+        # test imports/statics or another test module in the same source file.
+        while end < len(source):
+            character = source[end]
+            end += 1
+            if character == '{':
+                depth += 1
+            elif character == '}':
+                depth -= 1
+                if depth == 0:
+                    break
+            elif character == ';' and depth == 0:
+                break
+        source = source[:match.start()] + mask(source[match.start():end]) + source[end:]
+        offset = end
+
+    return source
 
 
 def violations(root: Path) -> tuple[list[dict], int]:

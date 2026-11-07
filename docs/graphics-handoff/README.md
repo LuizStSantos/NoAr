@@ -21,20 +21,69 @@ subtitles and controller examples have dedicated Graphics components.
 The [maintenance guide](../graphics-maintenance.md) includes the domain diagram,
 source ownership, extension recipes, state/compatibility rules and the official
 Rust/Vue/architecture references consulted. CI now checks source-level service,
-HTTP, data and engine boundaries; its five policy tests passed.
+HTTP, data and engine boundaries; its seven policy tests passed.
 
 Final post-move checks so far: **714 Rust tests passed / 14 ignored**, exact
 no-default/all-target Clippy, fmt, desktop-cpu all-target compilation and normal
 backend build. Vue types, ESLint, Prettier and production build passed; all
-**33 browser tests passed** in a fresh disposable installation. Actual pt-BR desktop/phone checks also passed for guides, drag/save/reload,
+**33 browser tests passed** in a fresh disposable installation. The final API
+explanation revision passed **one affected API regression** again
+([log](maintenance-final-api-regression-log.txt)). Actual pt-BR desktop/phone
+checks also passed for guides, drag/save/reload,
 subtitles save/reload/restore and read-only controller examples.
 [Browser measurements](maintenance-composer-evidence.json),
 [Rust log](maintenance-rust-verification-log.txt),
 [browser suite](maintenance-browser-test-log.txt),
 [architecture checks](maintenance-architecture-evidence.json),
 [research references](maintenance-research.json).
-Legacy HTTP/XMLTV comparison and media parity are pending separate final
-verification; historical proofs below are not their replacement.
+Final compatibility passed **76 exact legacy HTTP responses** and both XMLTV
+cases against released 2.2.1. Real HLS passed animated GIF/transparency, timed
+text and picture-window ownership, manual-take preservation and overlapping
+startup-disabled logo leases; the 400 ms fade has eight intermediate frames in
+each direction. Its isolated channel log has zero ERROR entries.
+
+The repeated static fixture passed **1,000 byte-identical raw YUV frames** and
+**1,000 aligned HLS frames**, including logo fade and picture-window transitions.
+Observed HLS error is zero; fixed limits remain MAE ≤ 0.75, p99.9 ≤ 8, max ≤ 32.
+No position, size or timing adjustment was used. Segments 0–20 match; post-roll
+segment 21 differs outside tested PTS 0–999. The 2.2.1 ticker region is empty;
+new GIF/data/clock features are not claimed as historical ticker parity.
+The capture worktree has only the approved pre-encode observer; the normal
+binary has no hook. One initial capture failed before its first frame because
+the test output directory was missing. Its logs are retained separately; a
+clean DB/directory repeat passed.
+
+[Verification index](maintenance-verification.json),
+[legacy API/XMLTV](maintenance-compatibility-evidence.json),
+[HLS/health metrics](maintenance-hls-evidence.json),
+[HLS scoped channel log](maintenance-channel-log.txt),
+[full frame metrics/hashes](maintenance-parity-evidence.json),
+[comparison sheet](maintenance-parity-review.jpg),
+[reference health](maintenance-parity-main-health.json),
+[candidate health](maintenance-parity-branch-health.json),
+[reference log](maintenance-parity-main-channel-log.txt),
+[candidate log](maintenance-parity-branch-channel-log.txt),
+[initial test-setup failure](maintenance-parity-setup-log.txt).
+Individual sampled frames/differences are `output-maintenance-parity-*`.
+
+Review **27 screenshots** in the [28-page PDF](maintenance-review.pdf),
+[HTML gallery](maintenance-review.html) or [image index](maintenance-review-index.json).
+The actual advancing Program, corrected clock/permanent-model API explanation,
+subtitles and Composer were captured in pt-BR at 1440/390 px. Physical desktop/
+device output, a formal soak and remote CI execution were not run in this
+refactor. External feeds/Google Sheets and rollback installation were not
+repeated; earlier evidence and limitations remain historical below.
+
+| Owner | Before | After |
+| --- | ---: | ---: |
+| Composer route/document | 1,682 lines | 978 lines plus focused panels/composables |
+| Application Graphics facade | 1,933 lines in utils | 525 lines in its own feature module |
+| Graphics DB repository facade | 1,729 lines | 463 lines plus conversion/compatibility/resources |
+
+These counts include adjacent tests where present; they describe ownership,
+not a performance claim. Larger unrelated subsystems keep their existing owners.
+The scope is a project-wide structural inventory and targeted refactoring with
+runtime evidence, rather than an exhaustive line-by-line security audit.
 
 ## Composer checkerboard and optional safety guides
 

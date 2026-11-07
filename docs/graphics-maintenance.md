@@ -184,7 +184,8 @@ python3 -m unittest discover -s qa/architecture -v
 
 This scans application/engine Rust source for service-to-HTTP dependencies,
 SQL outside the data layer and engine imports of application-only dependencies.
-It masks comments/quoted text and excludes adjacent `#[cfg(test)]` tails. It is
+It masks comments/quoted text and excludes individual `#[cfg(test)]` items,
+including when production definitions follow them. It is
 a lexical tripwire, not a complete Rust dependency analyzer; Cargo and runtime
 verification remain required. `--json` emits a machine-readable evidence record.
 

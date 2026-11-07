@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "captures": [
+    "maintenance-control-api-pt-BR.jpg",
+    "maintenance-control-api-phone-pt-BR.jpg",
+    "maintenance-program-pt-BR.jpg",
+    "maintenance-program-phone-pt-BR.jpg"
+  ],
+  "video_width": 640,
+  "current_time_advanced": true,
+  "graphics_writes": 0,
+  "page_errors": [],
+  "backend_binary_sha256": "5405046a54fc19080f07043f149262cc739f62c53d9923ef480b917b5262bde8"
+}
