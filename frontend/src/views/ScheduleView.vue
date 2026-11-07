@@ -491,6 +491,10 @@ const graphicsBlocks = computed(() =>
 
 /** What a graphics event does, in a few words. */
 function graphicsSummary(event: GraphicsEvent): string {
+    if (event.template) {
+        return event.template.name || t('schedule.graphics.missingTemplate', { id: event.template.template_id })
+    }
+
     const actions = event.actions
     const parts: string[] = []
 

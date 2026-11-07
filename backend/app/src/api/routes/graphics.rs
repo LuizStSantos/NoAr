@@ -577,18 +577,22 @@ pub async fn graphics_template_usage(
     let events: Vec<_> = events
         .iter()
         .filter(|event| {
-            assigned.is_some_and(|view| match view.kind.as_str() {
-                "logo" => {
-                    event.actions.logo != crate::utils::config::SceneLogo::Keep
-                        || event.actions.logo_position.is_some()
-                }
-                "lshape" => {
-                    event.actions.lshape != crate::utils::config::SceneLShape::Keep
-                        || event.actions.lshape_graphic.is_some()
-                }
-                "scene" => event.actions.name == view.scene_name.as_deref().unwrap_or_default(),
-                _ => false,
-            })
+            event
+                .template
+                .as_ref()
+                .is_some_and(|selection| selection.template_id == template_id)
+                || assigned.is_some_and(|view| match view.kind.as_str() {
+                    "logo" => {
+                        event.actions.logo != crate::utils::config::SceneLogo::Keep
+                            || event.actions.logo_position.is_some()
+                    }
+                    "lshape" => {
+                        event.actions.lshape != crate::utils::config::SceneLShape::Keep
+                            || event.actions.lshape_graphic.is_some()
+                    }
+                    "scene" => event.actions.name == view.scene_name.as_deref().unwrap_or_default(),
+                    _ => false,
+                })
         })
         .map(|event| serde_json::json!({"id":event.id,"title":event.title,"enabled":event.enabled}))
         .collect();

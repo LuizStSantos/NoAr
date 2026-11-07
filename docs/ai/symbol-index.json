@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "7fce6c30cef0e36fa516ef9c6bdb957b48aa183fdbfed919bbf94d72872ca7f6",
+      "sha256": "8a160c5eafab4078347f76cda8c6576ab84ab13a9a3d5e09e861d22477b28702",
       "language": "Markdown",
-      "bytes": 56906,
+      "bytes": 57702,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1709,9 +1709,9 @@
       ]
     },
     "backend/app/src/api/routes/graphics.rs": {
-      "sha256": "dbe73d511ccf33f46d24dbb156c2f209aa1c224f7aa89a1a55f2875be9af39f8",
+      "sha256": "1eed49736a9150a0a882a6cb96fd06897bbe51ae5fd1b02901608c5e3e9fa517",
       "language": "Rust",
-      "bytes": 27916,
+      "bytes": 28116,
       "symbols": [
         {
           "name": "authorized",
@@ -1807,43 +1807,43 @@
         },
         {
           "name": "graphics_clock",
-          "line": 610
+          "line": 614
         },
         {
           "name": "get_graphics_font_assets",
-          "line": 631
+          "line": 635
         },
         {
           "name": "FontUploadQuery",
-          "line": 643
-        },
-        {
-          "name": "upload_graphics_font",
           "line": 647
         },
         {
+          "name": "upload_graphics_font",
+          "line": 651
+        },
+        {
           "name": "download_graphics_font",
-          "line": 663
+          "line": 667
         },
         {
           "name": "get_graphics_sources",
-          "line": 686
+          "line": 690
         },
         {
           "name": "add_graphics_source",
-          "line": 705
+          "line": 709
         },
         {
           "name": "update_graphics_source",
-          "line": 735
+          "line": 739
         },
         {
           "name": "refresh_graphics_source",
-          "line": 763
+          "line": 767
         },
         {
           "name": "delete_graphics_source",
-          "line": 779
+          "line": 783
         }
       ]
     },
@@ -2486,9 +2486,9 @@
       ]
     },
     "backend/app/src/api/routes/schedule.rs": {
-      "sha256": "cce0fdd6f2979900808a591647a4ffb50ca48a6f53f1f384ea39103e671c45fa",
+      "sha256": "522521a22e8d77ca8bbe065185f09026c6b7055aaea61647193659d56180af2e",
       "language": "Rust",
-      "bytes": 27145,
+      "bytes": 27341,
       "symbols": [
         {
           "name": "ScheduleQuery",
@@ -2620,11 +2620,11 @@
         },
         {
           "name": "update_graphics_event",
-          "line": 767
+          "line": 768
         },
         {
           "name": "delete_graphics_event",
-          "line": 789
+          "line": 791
         }
       ]
     },
@@ -3258,9 +3258,9 @@
       ]
     },
     "backend/app/src/db/handles/graphics_schedule.rs": {
-      "sha256": "efcd967ae729d01994a81cef2329b5d7108b27eeb3340e87ba085e8cebd55d82",
+      "sha256": "805b94c24bd05ffc6ca8cbb4b233b2715a753bb0b3c298755dafad3e4cffc179",
       "language": "Rust",
-      "bytes": 2468,
+      "bytes": 4575,
       "symbols": [
         {
           "name": "actions_json",
@@ -3276,11 +3276,19 @@
         },
         {
           "name": "update_graphics_event",
-          "line": 47
+          "line": 55
         },
         {
           "name": "delete_graphics_event",
-          "line": 72
+          "line": 88
+        },
+        {
+          "name": "tests",
+          "line": 103
+        },
+        {
+          "name": "template_schedule_migration_preserves_existing_action_bytes_and_is_repeatable",
+          "line": 108
         }
       ]
     },
@@ -3849,9 +3857,9 @@
       ]
     },
     "backend/app/src/db/models.rs": {
-      "sha256": "4fa1c4e73a71c640d8ccb1c391bcfbdc1473c74ed39c3d30ce47573ffa6e0296",
+      "sha256": "c69fea8ce51caac36b59637979255dd96f6ce863ba74dbfb93199a1a02d6823d",
       "language": "Rust",
-      "bytes": 34573,
+      "bytes": 35525,
       "symbols": [
         {
           "name": "GraphicsDataSource",
@@ -4054,92 +4062,96 @@
           "line": 693
         },
         {
+          "name": "ScheduledGraphic",
+          "line": 709
+        },
+        {
           "name": "GraphicsEvent",
-          "line": 710
+          "line": 722
         },
         {
           "name": "FromRow",
-          "line": 727
+          "line": 742
         },
         {
           "name": "from_row",
-          "line": 728
+          "line": 743
         },
         {
           "name": "GraphicsRole",
-          "line": 751
+          "line": 775
         },
         {
           "name": "GraphicsChannelBinding",
-          "line": 762
+          "line": 786
         },
         {
           "name": "FromRow",
-          "line": 769
+          "line": 793
         },
         {
           "name": "from_row",
-          "line": 770
+          "line": 794
         },
         {
           "name": "GraphicsTemplate",
-          "line": 790
+          "line": 814
         },
         {
           "name": "FromRow",
-          "line": 807
+          "line": 831
         },
         {
           "name": "from_row",
-          "line": 808
+          "line": 832
         },
         {
           "name": "ScheduleEvent",
-          "line": 835
-        },
-        {
-          "name": "FromRow",
           "line": 859
         },
         {
+          "name": "FromRow",
+          "line": 883
+        },
+        {
           "name": "from_row",
-          "line": 860
+          "line": 884
         },
         {
           "name": "ScheduleRun",
-          "line": 897
+          "line": 921
         },
         {
           "name": "UnfinishedRun",
-          "line": 910
+          "line": 934
         },
         {
           "name": "UpdateSettings",
-          "line": 923
+          "line": 947
         },
         {
           "name": "AsRunEntry",
-          "line": 936
+          "line": 960
         },
         {
           "name": "NewAsRunEntry",
-          "line": 961
+          "line": 985
         },
         {
           "name": "default_logo_transition",
-          "line": 974
+          "line": 998
         },
         {
           "name": "default_lshape_scale",
-          "line": 978
+          "line": 1002
         },
         {
           "name": "default_lshape_corner",
-          "line": 982
+          "line": 1006
         },
         {
           "name": "default_graphics_scenes",
-          "line": 986
+          "line": 1010
         }
       ]
     },
@@ -5005,21 +5017,76 @@
       ]
     },
     "backend/app/src/player/graphics_schedule.rs": {
-      "sha256": "4045e86f6df26e9067cb6c3bb815b367bb4211118f0f0c580ed1e7db654efeeb",
+      "sha256": "92479feb22643e18c1dbdb6ebbbe1d71053673e9fee1206fe99ba4c30ec58fcb",
       "language": "Rust",
-      "bytes": 3481,
+      "bytes": 3805,
       "symbols": [
         {
+          "name": "templates",
+          "line": 12
+        },
+        {
           "name": "Done",
-          "line": 26
+          "line": 29
         },
         {
           "name": "run_graphics_ticker",
-          "line": 28
+          "line": 31
         },
         {
           "name": "tick",
-          "line": 43
+          "line": 49
+        }
+      ]
+    },
+    "backend/app/src/player/graphics_schedule/graphics.rs": {
+      "sha256": "e58d540c432b3e6fea24ac65277eee5f39ecde4936c90c6a1068b85549d109a5",
+      "language": "Rust",
+      "bytes": 12211,
+      "symbols": [
+        {
+          "name": "Occurrence",
+          "line": 21
+        },
+        {
+          "name": "Activation",
+          "line": 24
+        },
+        {
+          "name": "Visibility",
+          "line": 29
+        },
+        {
+          "name": "Run",
+          "line": 35
+        },
+        {
+          "name": "TemplateSchedules",
+          "line": 42
+        },
+        {
+          "name": "TemplateSchedules",
+          "line": 47
+        },
+        {
+          "name": "visible",
+          "line": 48
+        },
+        {
+          "name": "tick",
+          "line": 64
+        },
+        {
+          "name": "start",
+          "line": 149
+        },
+        {
+          "name": "finish",
+          "line": 285
+        },
+        {
+          "name": "stop",
+          "line": 324
         }
       ]
     },
@@ -8156,9 +8223,9 @@
       ]
     },
     "backend/app/src/utils/graphics.rs": {
-      "sha256": "8d3729257c82d345168d3f26677206ba9508223d05a551378c484c8941ab2134",
+      "sha256": "46c514b7259183f9ed61d53a2dcb56672140c89aa606690dbf2398e87ec4bf96",
       "language": "Rust",
-      "bytes": 65507,
+      "bytes": 65418,
       "symbols": [
         {
           "name": "fonts",
@@ -8182,287 +8249,287 @@
         },
         {
           "name": "control_channel_graphic",
-          "line": 177
+          "line": 176
         },
         {
           "name": "clear_removed_channel_graphic",
-          "line": 309
+          "line": 307
         },
         {
           "name": "load_channel_ticker",
-          "line": 357
+          "line": 355
         },
         {
           "name": "LayerKind",
-          "line": 428
+          "line": 426
         },
         {
           "name": "Animation",
-          "line": 442
+          "line": 440
         },
         {
           "name": "TextAlign",
-          "line": 456
+          "line": 454
         },
         {
           "name": "DuringLShape",
-          "line": 466
+          "line": 464
         },
         {
           "name": "DuringLShape",
-          "line": 476
+          "line": 474
         },
         {
           "name": "as_str",
-          "line": 477
+          "line": 475
         },
         {
           "name": "parse",
-          "line": 485
+          "line": 483
         },
         {
           "name": "default_true",
-          "line": 495
+          "line": 493
         },
         {
           "name": "default_opacity",
-          "line": 499
+          "line": 497
         },
         {
           "name": "default_font_size",
-          "line": 503
+          "line": 501
         },
         {
           "name": "default_color",
-          "line": 507
+          "line": 505
         },
         {
           "name": "default_animation_ms",
-          "line": 511
+          "line": 509
         },
         {
           "name": "default_duration",
-          "line": 515
+          "line": 513
         },
         {
           "name": "ShapeKind",
-          "line": 521
+          "line": 519
         },
         {
           "name": "default_stroke_width",
-          "line": 529
+          "line": 527
         },
         {
           "name": "LayerStyle",
-          "line": 535
+          "line": 533
         },
         {
           "name": "Default",
-          "line": 550
+          "line": 548
         },
         {
           "name": "default",
-          "line": 551
+          "line": 549
         },
         {
           "name": "clock_value",
-          "line": 564
+          "line": 562
         },
         {
           "name": "TemplateLayer",
-          "line": 600
+          "line": 598
         },
         {
           "name": "TemplateInput",
-          "line": 655
+          "line": 653
         },
         {
           "name": "template_fields",
-          "line": 672
+          "line": 670
         },
         {
           "name": "is_field_char",
-          "line": 694
+          "line": 692
         },
         {
           "name": "placeholders",
-          "line": 699
+          "line": 697
         },
         {
           "name": "whole_placeholder",
-          "line": 724
+          "line": 722
         },
         {
           "name": "is_color",
-          "line": 731
+          "line": 729
         },
         {
           "name": "check_layer",
-          "line": 739
+          "line": 737
         },
         {
           "name": "prepare_template",
-          "line": 848
+          "line": 846
         },
         {
           "name": "parse_color",
-          "line": 938
+          "line": 936
         },
         {
           "name": "fill_fields",
-          "line": 959
+          "line": 957
         },
         {
           "name": "layer_image",
-          "line": 989
+          "line": 987
         },
         {
           "name": "engine_animation",
-          "line": 1012
+          "line": 1010
         },
         {
           "name": "graphic_spec",
-          "line": 1029
+          "line": 1027
         },
         {
           "name": "graphic_spec_for_channel",
-          "line": 1037
+          "line": 1035
         },
         {
           "name": "graphic_spec_for_records",
-          "line": 1045
+          "line": 1043
         },
         {
           "name": "graphic_spec_at",
-          "line": 1061
+          "line": 1059
         },
         {
           "name": "GraphicsTakes",
-          "line": 1155
+          "line": 1153
         },
         {
           "name": "GraphicsEditGuard",
-          "line": 1161
+          "line": 1159
         },
         {
           "name": "Drop",
-          "line": 1166
+          "line": 1164
         },
         {
           "name": "drop",
-          "line": 1167
+          "line": 1165
         },
         {
           "name": "TakeRecord",
-          "line": 1173
+          "line": 1171
         },
         {
           "name": "GraphicsTakes",
-          "line": 1183
+          "line": 1181
         },
         {
           "name": "begin_edit",
-          "line": 1184
+          "line": 1182
         },
         {
           "name": "invalidate",
-          "line": 1194
+          "line": 1192
         },
         {
           "name": "records",
-          "line": 1198
+          "line": 1196
         },
         {
           "name": "add",
-          "line": 1202
+          "line": 1200
         },
         {
           "name": "keep_only",
-          "line": 1207
+          "line": 1205
         },
         {
           "name": "GraphicOnAirView",
-          "line": 1217
+          "line": 1215
         },
         {
           "name": "graphics_on_air",
-          "line": 1226
+          "line": 1224
         },
         {
           "name": "TakeOutcome",
-          "line": 1250
+          "line": 1248
         },
         {
           "name": "draw_and_take",
-          "line": 1262
+          "line": 1260
         },
         {
           "name": "take_template",
-          "line": 1299
+          "line": 1297
         },
         {
           "name": "load_permanent_templates",
-          "line": 1373
+          "line": 1371
         },
         {
           "name": "DynamicScope",
-          "line": 1417
+          "line": 1415
         },
         {
           "name": "run_dynamic_graphics",
-          "line": 1424
+          "line": 1422
         },
         {
           "name": "refresh_dynamic_graphics",
-          "line": 1443
+          "line": 1441
         },
         {
           "name": "tests",
-          "line": 1633
+          "line": 1631
         },
         {
           "name": "text_layer",
-          "line": 1636
+          "line": 1634
         },
         {
           "name": "clock_formats_follow_channel_timezone_midnight_and_daylight_saving_time",
-          "line": 1644
+          "line": 1642
         },
         {
           "name": "shape_and_clock_specs_keep_geometry_and_only_clock_pixels_change_with_time",
-          "line": 1683
+          "line": 1681
         },
         {
           "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
-          "line": 1730
+          "line": 1728
         },
         {
           "name": "layers_take_defaults_and_are_checked",
-          "line": 1754
+          "line": 1752
         },
         {
           "name": "during_lshape_reads_back_what_it_writes",
-          "line": 1787
+          "line": 1785
         },
         {
           "name": "prepare_template_trims_and_keeps_field_images",
-          "line": 1796
+          "line": 1794
         },
         {
           "name": "fields_are_filled_and_unknown_braces_stay",
-          "line": 1832
+          "line": 1830
         },
         {
           "name": "colors_are_read_in_every_hex_form",
-          "line": 1844
+          "line": 1842
         },
         {
           "name": "a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields",
-          "line": 1855
+          "line": 1853
         },
         {
           "name": "a_video_layer_makes_the_template_an_lshape",
-          "line": 1892
+          "line": 1890
         }
       ]
     },
@@ -9692,9 +9759,9 @@
       ]
     },
     "backend/app/src/utils/schedule/graphics.rs": {
-      "sha256": "64baf47fb8fbf6f06de2c7747d100b7cf1016dc143ec3470626e0ea331f6db5e",
+      "sha256": "4d372cfb6be6219c1003abba76beb41844f30953b0598965207d2a1088478020",
       "language": "Rust",
-      "bytes": 5832,
+      "bytes": 8709,
       "symbols": [
         {
           "name": "GraphicsEventInput",
@@ -9702,35 +9769,39 @@
         },
         {
           "name": "default_enabled",
-          "line": 31
+          "line": 34
         },
         {
           "name": "prepare_graphics_event",
-          "line": 37
+          "line": 40
         },
         {
           "name": "GraphicsEvent",
-          "line": 90
+          "line": 94
         },
         {
           "name": "occurs_on",
-          "line": 91
+          "line": 95
         },
         {
           "name": "window_on",
-          "line": 105
+          "line": 109
+        },
+        {
+          "name": "validate_scheduled_template",
+          "line": 134
         },
         {
           "name": "tests",
-          "line": 129
+          "line": 212
         },
         {
           "name": "input",
-          "line": 135
+          "line": 218
         },
         {
           "name": "a_graphics_event_is_checked_and_placed_in_time",
-          "line": 154
+          "line": 238
         }
       ]
     },
@@ -11494,9 +11565,9 @@
       ]
     },
     "backend/app/tests/api/graphics.rs": {
-      "sha256": "622e91deff2c2ec21d0e356a37caa67c4f1a6cc6b7e401d2d66d647c15ecc359",
+      "sha256": "04eb1e3517d20b7853455dc49d3c8dda2b02d5646e75c31811b8986099590163",
       "language": "Rust",
-      "bytes": 37294,
+      "bytes": 43940,
       "symbols": [
         {
           "name": "send",
@@ -11553,6 +11624,18 @@
         {
           "name": "removing_a_lshape_assignment_clears_its_external_art_and_returns_full_screen",
           "line": 1194
+        },
+        {
+          "name": "model_schedules_validate_channel_ownership_fields_and_keep_legacy_events",
+          "line": 1273
+        },
+        {
+          "name": "scheduled_model_end_only_removes_its_own_take",
+          "line": 1358
+        },
+        {
+          "name": "hiding_an_unloaded_ticker_survives_startup_reload_without_changing_its_saved_default",
+          "line": 1406
         }
       ]
     },
@@ -13644,380 +13727,439 @@
       ]
     },
     "backend/engine/src/compositor/graphics.rs": {
-      "sha256": "6e2ebb7f8c31ab8037cd7e2d308d0df2bfd9ff7adbbafd448fa727940c56a98e",
+      "sha256": "25ac1cbb8a3dfed15a9e1300af7c356818fa00cafb478512f1f3f9294c6c4717",
       "language": "Rust",
-      "bytes": 62697,
+      "bytes": 64461,
       "symbols": [
         {
+          "name": "images",
+          "line": 18
+        },
+        {
           "name": "logo_layer_geometry",
-          "line": 33
+          "line": 36
         },
         {
           "name": "crate",
-          "line": 49
-        },
-        {
-          "name": "set_template",
           "line": 52
         },
         {
+          "name": "set_template",
+          "line": 55
+        },
+        {
           "name": "set_template_controlled",
-          "line": 62
+          "line": 65
         },
         {
           "name": "GraphicAnimation",
-          "line": 80
+          "line": 83
         },
         {
           "name": "GraphicContent",
-          "line": 97
+          "line": 100
         },
         {
           "name": "GraphicShape",
-          "line": 126
+          "line": 129
         },
         {
           "name": "GraphicLayerSpec",
-          "line": 135
+          "line": 138
         },
         {
           "name": "PictureWindow",
-          "line": 153
+          "line": 156
         },
         {
           "name": "GraphicSpec",
-          "line": 162
+          "line": 165
         },
         {
           "name": "RenderedLayer",
-          "line": 169
+          "line": 172
         },
         {
           "name": "RenderedGraphic",
-          "line": 184
+          "line": 188
         },
         {
           "name": "RoleImageBlend",
-          "line": 192
+          "line": 196
         },
         {
           "name": "picture_switch",
-          "line": 200
-        },
-        {
-          "name": "RenderedGraphic",
           "line": 204
         },
         {
-          "name": "picture_graphic",
-          "line": 205
-        },
-        {
-          "name": "role_levels",
+          "name": "RenderedGraphic",
           "line": 208
         },
         {
+          "name": "is_animated",
+          "line": 209
+        },
+        {
+          "name": "blend_steady",
+          "line": 216
+        },
+        {
+          "name": "picture_graphic",
+          "line": 222
+        },
+        {
+          "name": "role_levels",
+          "line": 225
+        },
+        {
           "name": "blend_role",
-          "line": 247
+          "line": 264
         },
         {
           "name": "exit_time",
-          "line": 281
+          "line": 298
         },
         {
           "name": "even_down",
-          "line": 296
+          "line": 313
         },
         {
           "name": "percent_px",
-          "line": 301
+          "line": 318
         },
         {
           "name": "inside_rounded",
-          "line": 306
+          "line": 323
         },
         {
           "name": "fill_rounded",
-          "line": 319
+          "line": 336
         },
         {
           "name": "cut_corners",
-          "line": 333
+          "line": 350
         },
         {
           "name": "render_shape",
-          "line": 351
+          "line": 368
         },
         {
           "name": "render_layer",
-          "line": 430
+          "line": 447
         },
         {
           "name": "render_graphic",
-          "line": 561
+          "line": 587
         },
         {
           "name": "ease",
-          "line": 618
+          "line": 664
         },
         {
           "name": "layer_level",
-          "line": 626
+          "line": 672
         },
         {
           "name": "blend_layer",
-          "line": 667
+          "line": 713
         },
         {
           "name": "blend_layer_with_visibility",
-          "line": 676
+          "line": 722
         },
         {
           "name": "OnAir",
-          "line": 729
+          "line": 782
         },
         {
           "name": "OnAir",
-          "line": 738
+          "line": 791
         },
         {
           "name": "out_since",
-          "line": 739
-        },
-        {
-          "name": "finished",
-          "line": 752
-        },
-        {
-          "name": "AlwaysOnSlot",
-          "line": 761
-        },
-        {
-          "name": "AlwaysOnSlot",
-          "line": 766
-        },
-        {
-          "name": "index",
-          "line": 767
-        },
-        {
-          "name": "AlwaysOn",
-          "line": 775
-        },
-        {
-          "name": "GraphicsState",
-          "line": 781
-        },
-        {
-          "name": "GraphicOnAir",
           "line": 792
         },
         {
-          "name": "GraphicsControl",
-          "line": 802
-        },
-        {
-          "name": "std",
-          "line": 804
-        },
-        {
-          "name": "fmt",
+          "name": "finished",
           "line": 805
         },
         {
+          "name": "AlwaysOnSlot",
+          "line": 814
+        },
+        {
+          "name": "AlwaysOnSlot",
+          "line": 819
+        },
+        {
+          "name": "index",
+          "line": 820
+        },
+        {
+          "name": "AlwaysOn",
+          "line": 828
+        },
+        {
+          "name": "GraphicsState",
+          "line": 834
+        },
+        {
+          "name": "GraphicOnAir",
+          "line": 845
+        },
+        {
           "name": "GraphicsControl",
-          "line": 812
+          "line": 855
+        },
+        {
+          "name": "std",
+          "line": 857
+        },
+        {
+          "name": "fmt",
+          "line": 858
+        },
+        {
+          "name": "GraphicsControl",
+          "line": 865
         },
         {
           "name": "channel_logo",
-          "line": 815
-        },
-        {
-          "name": "set_channel_logo",
-          "line": 825
-        },
-        {
-          "name": "state",
-          "line": 836
-        },
-        {
-          "name": "set_always_on",
-          "line": 842
-        },
-        {
-          "name": "refresh_always_on",
           "line": 868
         },
         {
-          "name": "set_always_on_visible",
-          "line": 882
+          "name": "set_channel_logo",
+          "line": 878
         },
         {
-          "name": "always_on_visible",
-          "line": 903
+          "name": "state",
+          "line": 889
         },
         {
-          "name": "clear_always_on",
-          "line": 911
+          "name": "set_always_on",
+          "line": 895
         },
         {
-          "name": "blend_always_on",
-          "line": 917
-        },
-        {
-          "name": "blend_always_on_at",
+          "name": "refresh_always_on",
           "line": 921
         },
         {
+          "name": "set_always_on_visible",
+          "line": 935
+        },
+        {
+          "name": "always_on_visible",
+          "line": 956
+        },
+        {
+          "name": "clear_always_on",
+          "line": 964
+        },
+        {
+          "name": "blend_always_on",
+          "line": 970
+        },
+        {
+          "name": "blend_always_on_at",
+          "line": 974
+        },
+        {
           "name": "set_persistent",
-          "line": 977
+          "line": 1030
         },
         {
           "name": "retain_persistent",
-          "line": 1011
+          "line": 1064
         },
         {
           "name": "persistent_visible",
-          "line": 1015
+          "line": 1068
         },
         {
           "name": "set_persistent_visible",
-          "line": 1019
+          "line": 1072
         },
         {
           "name": "take",
-          "line": 1042
+          "line": 1095
         },
         {
           "name": "update_graphic",
-          "line": 1076
+          "line": 1129
         },
         {
           "name": "take_out",
-          "line": 1087
+          "line": 1140
         },
         {
           "name": "take_all_out",
-          "line": 1105
+          "line": 1158
         },
         {
           "name": "on_air",
-          "line": 1115
+          "line": 1168
         },
         {
           "name": "picture_on_air",
-          "line": 1131
-        },
-        {
-          "name": "picture",
-          "line": 1142
-        },
-        {
-          "name": "picture_at",
-          "line": 1146
-        },
-        {
-          "name": "blend",
-          "line": 1180
-        },
-        {
-          "name": "blend_at",
           "line": 1184
         },
         {
+          "name": "picture",
+          "line": 1195
+        },
+        {
+          "name": "picture_at",
+          "line": 1199
+        },
+        {
+          "name": "blend",
+          "line": 1233
+        },
+        {
+          "name": "blend_at",
+          "line": 1237
+        },
+        {
           "name": "tests",
-          "line": 1224
+          "line": 1277
         },
         {
           "name": "black_frame",
-          "line": 1234
+          "line": 1287
         },
         {
           "name": "luma",
-          "line": 1242
+          "line": 1295
         },
         {
           "name": "white_box",
-          "line": 1246
+          "line": 1299
         },
         {
           "name": "new_shape_rasters_have_transparent_corners_correct_strokes_and_line_width",
-          "line": 1263
+          "line": 1316
         },
         {
           "name": "live_pixel_updates_preserve_take_duration_entry_and_exit_times",
-          "line": 1292
+          "line": 1345
         },
         {
           "name": "user_permanent_models_preserve_time_visibility_and_deterministic_order",
-          "line": 1313
+          "line": 1366
         },
         {
           "name": "permanent_roles_survive_expiry_queue_pressure_and_take_all_out",
-          "line": 1340
+          "line": 1393
         },
         {
           "name": "permanent_visibility_is_explicit_and_does_not_reset_on_repeated_commands",
-          "line": 1385
+          "line": 1438
         },
         {
           "name": "suppressing_a_permanent_logo_never_suppresses_the_ticker_or_moves_a_slide",
-          "line": 1437
+          "line": 1490
         },
         {
           "name": "a_picture_window_cannot_replace_a_permanent_role",
-          "line": 1480
+          "line": 1533
         },
         {
           "name": "empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged",
-          "line": 1521
+          "line": 1574
         },
         {
           "name": "a_box_lands_where_its_percentages_say",
-          "line": 1542
+          "line": 1595
         },
         {
           "name": "a_fade_comes_in_and_goes_out_over_its_time",
-          "line": 1565
+          "line": 1618
         },
         {
           "name": "a_duration_takes_the_graphic_out_by_itself",
-          "line": 1597
+          "line": 1650
         },
         {
           "name": "a_slide_starts_off_its_place_and_ends_on_it",
-          "line": 1619
+          "line": 1672
         },
         {
           "name": "taking_out_and_listing",
-          "line": 1642
+          "line": 1695
         },
         {
           "name": "a_graphic_for_another_frame_size_is_not_drawn",
-          "line": 1666
+          "line": 1719
         },
         {
           "name": "rounded_corners_are_cut",
-          "line": 1681
+          "line": 1734
         },
         {
           "name": "a_text_layer_draws_letters_on_its_fill",
-          "line": 1689
+          "line": 1742
         },
         {
           "name": "a_picture_template_is_an_lshape_with_its_layers_as_art",
-          "line": 1733
+          "line": 1786
         },
         {
           "name": "graphics_preview",
-          "line": 1798
+          "line": 1851
+        }
+      ]
+    },
+    "backend/engine/src/compositor/graphics/images/graphics.rs": {
+      "sha256": "fc936d68b47b63ab508965302c7fe90da94f06e0bbf380f330cc75de29f689a5",
+      "language": "Rust",
+      "bytes": 9274,
+      "symbols": [
+        {
+          "name": "ImageFrame",
+          "line": 25
+        },
+        {
+          "name": "ImageAnimation",
+          "line": 31
+        },
+        {
+          "name": "ImageAnimation",
+          "line": 38
+        },
+        {
+          "name": "current",
+          "line": 39
+        },
+        {
+          "name": "at",
+          "line": 43
+        },
+        {
+          "name": "CacheKey",
+          "line": 54
+        },
+        {
+          "name": "load_animation",
+          "line": 65
+        },
+        {
+          "name": "decode",
+          "line": 123
+        },
+        {
+          "name": "tests",
+          "line": 243
+        },
+        {
+          "name": "gif_frames_preserve_delays_transparency_and_loop_without_decoding_on_air",
+          "line": 247
         }
       ]
     },
     "backend/engine/src/compositor/logo.rs": {
-      "sha256": "e6b3e0bd0d505111771cbdf58c5738a1acf5e708dd4c8842a586781e9c502f36",
+      "sha256": "bf66bd3e4c98ec49a38c5042c083b155ddf277fbff7f088c9cb34076bbfa8b21",
       "language": "Rust",
-      "bytes": 47165,
+      "bytes": 55401,
       "symbols": [
         {
           "name": "LogoOverlay",
@@ -14025,282 +14167,294 @@
         },
         {
           "name": "LogoModel",
-          "line": 30
+          "line": 31
         },
         {
           "name": "LogoOverlay",
-          "line": 37
-        },
-        {
-          "name": "load",
           "line": 38
         },
         {
+          "name": "load",
+          "line": 39
+        },
+        {
           "name": "from_model",
-          "line": 69
+          "line": 76
         },
         {
           "name": "from_model_config",
-          "line": 101
+          "line": 109
         },
         {
           "name": "replaced_image",
-          "line": 128
+          "line": 136
         },
         {
           "name": "is_model",
-          "line": 143
+          "line": 151
         },
         {
           "name": "blend_model",
-          "line": 147
+          "line": 155
         },
         {
           "name": "moved_to",
-          "line": 177
+          "line": 185
         },
         {
           "name": "as_overlay",
-          "line": 200
+          "line": 208
         },
         {
           "name": "logo_dimensions",
-          "line": 214
+          "line": 230
         },
         {
           "name": "parse_logo_dimension",
-          "line": 247
+          "line": 263
         },
         {
           "name": "logo_position",
-          "line": 279
+          "line": 295
         },
         {
           "name": "eval_position_expr",
-          "line": 298
+          "line": 314
         },
         {
           "name": "blend_logo",
-          "line": 358
+          "line": 374
         },
         {
           "name": "LogoTransition",
-          "line": 375
+          "line": 391
         },
         {
           "name": "LogoTransitions",
-          "line": 385
+          "line": 401
         },
         {
           "name": "LogoTransitions",
-          "line": 394
+          "line": 410
         },
         {
           "name": "length",
-          "line": 395
+          "line": 411
         },
         {
           "name": "fade_seconds",
-          "line": 402
+          "line": 418
         },
         {
           "name": "switch",
-          "line": 407
+          "line": 423
         },
         {
           "name": "LogoControl",
-          "line": 417
+          "line": 433
         },
         {
           "name": "LogoOverride",
-          "line": 420
+          "line": 436
         },
         {
           "name": "Outgoing",
-          "line": 447
+          "line": 466
         },
         {
           "name": "LogoFrame",
-          "line": 455
+          "line": 474
         },
         {
           "name": "LogoOverride",
-          "line": 475
+          "line": 494
         },
         {
           "name": "level",
-          "line": 477
+          "line": 496
         },
         {
           "name": "hand_over",
-          "line": 497
+          "line": 516
         },
         {
           "name": "set_hidden",
-          "line": 509
+          "line": 528
         },
         {
           "name": "LogoState",
-          "line": 532
+          "line": 551
         },
         {
           "name": "fmt",
-          "line": 540
+          "line": 559
         },
         {
           "name": "fmt",
-          "line": 541
+          "line": 560
         },
         {
           "name": "LogoControl",
-          "line": 546
+          "line": 565
+        },
+        {
+          "name": "set_scheduled_visible",
+          "line": 568
+        },
+        {
+          "name": "abandon_scheduled_visibility",
+          "line": 618
         },
         {
           "name": "lock",
-          "line": 547
+          "line": 638
         },
         {
           "name": "is_visible",
-          "line": 553
+          "line": 644
         },
         {
           "name": "hide",
-          "line": 563
+          "line": 654
         },
         {
           "name": "show",
-          "line": 569
+          "line": 666
         },
         {
           "name": "set_transitions",
-          "line": 581
+          "line": 682
         },
         {
           "name": "transitions",
-          "line": 585
+          "line": 686
         },
         {
           "name": "replace",
-          "line": 592
+          "line": 693
         },
         {
           "name": "move_to",
-          "line": 624
+          "line": 725
         },
         {
           "name": "set_clip_position",
-          "line": 646
+          "line": 747
         },
         {
           "name": "set_clip_image",
-          "line": 660
+          "line": 761
         },
         {
           "name": "set_configured",
-          "line": 702
+          "line": 803
         },
         {
           "name": "set_model",
-          "line": 736
+          "line": 837
         },
         {
           "name": "refresh_model",
-          "line": 756
-        },
-        {
-          "name": "set_model_inner",
-          "line": 775
-        },
-        {
-          "name": "clip_transitions",
           "line": 857
         },
         {
+          "name": "set_model_inner",
+          "line": 876
+        },
+        {
+          "name": "clip_transitions",
+          "line": 968
+        },
+        {
           "name": "state",
-          "line": 885
+          "line": 996
         },
         {
           "name": "has_replacement",
-          "line": 898
+          "line": 1009
         },
         {
           "name": "frame",
-          "line": 908
+          "line": 1019
         },
         {
           "name": "frame_at",
-          "line": 912
+          "line": 1023
         },
         {
           "name": "tests",
-          "line": 951
+          "line": 1086
         },
         {
           "name": "logo_asset",
-          "line": 959
+          "line": 1094
         },
         {
           "name": "dynamic_role_refresh_preserves_the_active_fade_and_hidden_state",
-          "line": 973
+          "line": 1108
         },
         {
           "name": "a_layer_logo_matches_native_pixels_and_keeps_other_layers_during_image_overrides",
-          "line": 1026
+          "line": 1161
         },
         {
           "name": "a_clip_logo_is_drawn_until_the_next_clip_has_none",
-          "line": 1103
+          "line": 1238
         },
         {
           "name": "hiding_the_logo_fades_it_out_and_showing_fades_it_back",
-          "line": 1133
+          "line": 1268
         },
         {
           "name": "a_cut_hides_and_shows_the_logo_at_once",
-          "line": 1154
+          "line": 1289
         },
         {
           "name": "the_channel_sets_how_long_a_switch_takes",
-          "line": 1171
+          "line": 1306
         },
         {
           "name": "a_new_image_cross_fades_with_the_one_on_air",
-          "line": 1187
+          "line": 1322
         },
         {
           "name": "a_saved_logo_goes_on_air_without_a_restart",
-          "line": 1225
+          "line": 1360
         },
         {
           "name": "a_replacement_shows_until_the_logo_is_shown_again",
-          "line": 1262
+          "line": 1397
         },
         {
           "name": "the_logo_can_be_moved_and_put_back",
-          "line": 1298
+          "line": 1433
         },
         {
           "name": "a_clip_places_the_logo_unless_it_was_moved_from_outside",
-          "line": 1320
+          "line": 1455
         },
         {
           "name": "logo_position_accepts_corners_and_centers",
-          "line": 1341
+          "line": 1476
         },
         {
           "name": "logo_scale_accepts_output_percentages",
-          "line": 1364
+          "line": 1499
         },
         {
           "name": "logo_scale_rejects_invalid_percentages",
-          "line": 1376
+          "line": 1511
+        },
+        {
+          "name": "scheduled_logo_visibility_restores_disabled_and_hidden_states_across_refresh",
+          "line": 1516
         }
       ]
     },
     "backend/engine/src/compositor/lshape.rs": {
-      "sha256": "d3ece270e8ef7f2bd29fdcbda50d74d7648e7037bdc6b47d980b06a056a48e1e",
+      "sha256": "a0bc6484c00807276e2a099a553bf536f3bae60be29f9b8a4872ff0356022dd3",
       "language": "Rust",
-      "bytes": 36736,
+      "bytes": 38257,
       "symbols": [
         {
           "name": "lshape_phases",
@@ -14336,227 +14490,231 @@
         },
         {
           "name": "Rect",
-          "line": 102
+          "line": 103
         },
         {
           "name": "LShapeGraphic",
-          "line": 109
+          "line": 110
         },
         {
           "name": "from_parts",
-          "line": 112
+          "line": 113
+        },
+        {
+          "name": "set_animated_art",
+          "line": 139
         },
         {
           "name": "load",
-          "line": 137
+          "line": 143
         },
         {
           "name": "placed",
-          "line": 160
-        },
-        {
-          "name": "rect_at",
-          "line": 179
-        },
-        {
-          "name": "window",
           "line": 195
         },
         {
+          "name": "rect_at",
+          "line": 215
+        },
+        {
+          "name": "window",
+          "line": 231
+        },
+        {
           "name": "window_in",
-          "line": 199
+          "line": 235
         },
         {
           "name": "LShapePlacement",
-          "line": 222
-        },
-        {
-          "name": "LShapeControl",
-          "line": 233
-        },
-        {
-          "name": "LShapeState",
-          "line": 236
-        },
-        {
-          "name": "LShapeState",
-          "line": 257
-        },
-        {
-          "name": "level",
           "line": 258
         },
         {
-          "name": "set_on",
+          "name": "LShapeControl",
+          "line": 269
+        },
+        {
+          "name": "LShapeState",
           "line": 272
         },
         {
-          "name": "fmt",
-          "line": 283
+          "name": "LShapeState",
+          "line": 293
+        },
+        {
+          "name": "level",
+          "line": 294
+        },
+        {
+          "name": "set_on",
+          "line": 308
         },
         {
           "name": "fmt",
-          "line": 284
+          "line": 319
+        },
+        {
+          "name": "fmt",
+          "line": 320
         },
         {
           "name": "LShapeControl",
-          "line": 292
+          "line": 328
         },
         {
           "name": "set_rendered_graphic",
-          "line": 295
+          "line": 331
         },
         {
           "name": "lock",
-          "line": 336
+          "line": 372
         },
         {
           "name": "set_graphic",
-          "line": 342
+          "line": 378
         },
         {
           "name": "replace",
-          "line": 363
+          "line": 399
         },
         {
           "name": "replace_model_art",
-          "line": 375
+          "line": 411
         },
         {
           "name": "replace_graphic",
-          "line": 385
+          "line": 421
         },
         {
           "name": "place",
-          "line": 415
+          "line": 451
         },
         {
           "name": "placement",
-          "line": 439
+          "line": 475
         },
         {
           "name": "reset",
-          "line": 444
+          "line": 480
         },
         {
           "name": "set_clip_graphic",
-          "line": 453
+          "line": 489
         },
         {
           "name": "set_clip_model_art",
-          "line": 463
+          "line": 499
         },
         {
           "name": "set_clip_model_art_placed",
-          "line": 472
+          "line": 508
         },
         {
           "name": "set_clip_graphic_with_window",
-          "line": 481
+          "line": 517
         },
         {
           "name": "replacement",
-          "line": 550
+          "line": 586
         },
         {
           "name": "on",
-          "line": 558
+          "line": 594
         },
         {
           "name": "off",
-          "line": 563
+          "line": 599
         },
         {
           "name": "is_on",
-          "line": 568
+          "line": 604
         },
         {
           "name": "is_ready",
-          "line": 573
+          "line": 609
         },
         {
           "name": "frame",
-          "line": 583
+          "line": 619
         },
         {
           "name": "level_after",
-          "line": 602
+          "line": 638
         },
         {
           "name": "render_model_art",
-          "line": 610
+          "line": 646
         },
         {
           "name": "LShapeScaler",
-          "line": 650
+          "line": 686
         },
         {
           "name": "ScaleKey",
-          "line": 653
+          "line": 689
         },
         {
           "name": "apply_lshape",
-          "line": 657
+          "line": 693
         },
         {
           "name": "paste",
-          "line": 704
+          "line": 748
         },
         {
           "name": "marked_level",
-          "line": 728
+          "line": 772
         },
         {
           "name": "tests",
-          "line": 745
+          "line": 789
         },
         {
           "name": "loading_a_model_preserves_free_picture_geometry_and_on_air_state",
-          "line": 751
+          "line": 795
         },
         {
           "name": "model_art_replacement_and_clip_art_inherit_free_windows_without_changing_sdk_placement",
-          "line": 801
+          "line": 845
         },
         {
           "name": "graphic",
-          "line": 871
+          "line": 915
         },
         {
           "name": "the_window_sits_in_its_corner",
-          "line": 894
+          "line": 939
         },
         {
           "name": "a_corner_reads_back_as_its_name",
-          "line": 927
+          "line": 972
         },
         {
           "name": "a_move_from_outside_places_every_graphic_until_it_is_undone",
-          "line": 940
+          "line": 985
         },
         {
           "name": "the_picture_moves_from_the_full_screen_to_the_window",
-          "line": 986
+          "line": 1031
         },
         {
           "name": "the_frame_is_drawn_into_the_window_over_the_graphic",
-          "line": 1005
+          "line": 1050
         },
         {
           "name": "switching_animates_both_ways",
-          "line": 1033
+          "line": 1078
         },
         {
           "name": "a_swapped_or_clip_graphic_takes_the_channels_place",
-          "line": 1054
+          "line": 1099
         },
         {
           "name": "the_logo_goes_off_before_the_picture_shrinks",
-          "line": 1102
+          "line": 1147
         },
         {
           "name": "marked_stretches_ease_in_and_out",
-          "line": 1115
+          "line": 1160
         }
       ]
     },
@@ -15204,9 +15362,9 @@
       ]
     },
     "backend/engine/src/gstreamer.rs": {
-      "sha256": "e3c5c19dd20c7eca410d6531a4415dd6a80e7ba64c10b2e70d8df53cdb4cf5c7",
+      "sha256": "7f79f4bd329bcf5f48eabee3b097ffbdc96185e14daea5815f2080c554c02add",
       "language": "Rust",
-      "bytes": 7360,
+      "bytes": 7371,
       "symbols": [
         {
           "name": "init",
@@ -21391,9 +21549,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "52c8619dc9c859e90140b914f7f6d12fbb44dcca95922341af3f23e479e6d75d",
+      "sha256": "6ec3a4399d0eb867cd55c05e1e1d226f1b1440f8d889817a764150510a260827",
       "language": "Markdown",
-      "bytes": 80322,
+      "bytes": 80915,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -21439,15 +21597,69 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "b009b2661ee6badd5c334917c99fddd5a5f09cf6c5eca5b450c1067133d7a05f",
+      "sha256": "b8e3c29e3b3af8e44e0f0e852c303f3b1d1224255612f7fe255e5729f884183a",
       "language": "Markdown",
-      "bytes": 73677,
+      "bytes": 85193,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
       "sha256": "8da115f8485bf7b41c000c4cfa9e8193a69cf28d6a78307b6f0d1176eca72c63",
       "language": "JSON",
       "bytes": 4141,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-gif-restart-evidence.json": {
+      "sha256": "40ad3a1e31b0c68dbed1fa3c23775445b64242ee254daebe5f1ccf11b20f05ef",
+      "language": "JSON",
+      "bytes": 594,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-browser-evidence.json": {
+      "sha256": "b69073599c5e93fc3b2480b3b165a15a12aae08e3ceb828a0ec5443583367374",
+      "language": "JSON",
+      "bytes": 1587,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-browser-regressions-log.txt": {
+      "sha256": "3f22062a2ec8b03b72d25488ae2d4d9376194391c36480f83c05840606a2b6da",
+      "language": "Other",
+      "bytes": 746,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-browser-test-log.txt": {
+      "sha256": "7fd4b3717c6b45a835097632c140af9e2c9cdf9012e50628d5e44e339349fcdc",
+      "language": "Other",
+      "bytes": 4129,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-channel-log.txt": {
+      "sha256": "09b521e18d2fbfdb07f643310f4b2c1f19f2680d0592f9b6214edacf888a2ac7",
+      "language": "Other",
+      "bytes": 3361,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-hls-evidence.json": {
+      "sha256": "a5bf4b3eeda1e7a31e166e70b322ad8d7cd5a38dbc5285615dc65510588c2d26",
+      "language": "JSON",
+      "bytes": 11327,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-prior-channel-log.txt": {
+      "sha256": "dd953562fff1fbfafd8997d8b0d00501440af79fba437c2bc9d0716809b2ed20",
+      "language": "Other",
+      "bytes": 34965,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-rust-test-log.txt": {
+      "sha256": "f552af55f2d842684cfffb54fac4cb8b3761b88c8a3d932c62c56fc84cdc24bc",
+      "language": "Other",
+      "bytes": 63937,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-verification.json": {
+      "sha256": "f494218b17428125342062fc24c2f26affb4450edda0db843b1c69c371f3f610",
+      "language": "JSON",
+      "bytes": 1121,
       "symbols": []
     },
     "docs/graphics-handoff/api-models-browser-evidence.json": {
@@ -21714,16 +21926,70 @@
       "bytes": 9779,
       "symbols": []
     },
+    "docs/graphics-handoff/natural-full-output-evidence.json": {
+      "sha256": "d58939ecf85ca2ee4e7654102aed64d20c87c4901de4aa37849f4fb951051476",
+      "language": "JSON",
+      "bytes": 2086,
+      "symbols": []
+    },
     "docs/graphics-handoff/on-air-design.html": {
       "sha256": "aa5f97edc9c0051c4ed7c018336746f84441760429984b4b9137f6ab32c42225",
       "language": "HTML",
       "bytes": 25895,
       "symbols": []
     },
+    "docs/graphics-handoff/open-final-browser-test-log.txt": {
+      "sha256": "3f7dfa805228674814393947d35ddd005a87389f1473fb00b537c75a0a64e258",
+      "language": "Other",
+      "bytes": 3853,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-final-compatibility-evidence.json": {
+      "sha256": "c29a439ba5f1af5281913d1b67786f4be236562895e4bff9f401218fa63323e0",
+      "language": "JSON",
+      "bytes": 22186,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-final-parity-branch-channel-log.txt": {
+      "sha256": "22c35f4127d3bacbfae4518127c84aab289e5839126858a40df1c53438c9cf84",
+      "language": "Other",
+      "bytes": 2422,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-final-parity-branch-health.json": {
+      "sha256": "022c79baffcd9ac2a8d312247c4c61b79f20ab85916d132a458b0d1541c786aa",
+      "language": "JSON",
+      "bytes": 13122,
+      "symbols": []
+    },
     "docs/graphics-handoff/open-final-parity-evidence.json": {
-      "sha256": "a24d1cb62c431f5a3759742bbe154acf2c220a5d0800b92bda23c79eafa838bc",
+      "sha256": "2cbc8864c9b02f82931f4515f90bcb4892e2fd4e011302bf2f5ac4c18755d0bd",
       "language": "JSON",
       "bytes": 451132,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-final-parity-main-channel-log.txt": {
+      "sha256": "4b331c882e6627eeae5a9a0190df7ad6c73e1ffd4669d9d5e53f17d3ee8a734a",
+      "language": "Other",
+      "bytes": 2425,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-final-parity-main-health.json": {
+      "sha256": "7621b720bd69055e7c448846d9599d5cb01e34bfa50d2172e50ea6b89fcfc59d",
+      "language": "JSON",
+      "bytes": 13307,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-final-rust-test-log.txt": {
+      "sha256": "decedec3d692562815f1fe69ad9fbf6f229db7a500f3f79dc89c1b595c29e650",
+      "language": "Other",
+      "bytes": 63300,
+      "symbols": []
+    },
+    "docs/graphics-handoff/open-final-verification.json": {
+      "sha256": "6c7993e832671c49f1a32ed2689962f99b2bd393e5c7c3c1ef98ac47964ac734",
+      "language": "JSON",
+      "bytes": 1479,
       "symbols": []
     },
     "docs/graphics-handoff/open-templates-evidence.json": {
@@ -21739,15 +22005,15 @@
       "symbols": []
     },
     "docs/graphics-handoff/open-templates-review-index.json": {
-      "sha256": "0d05306dd44c83e5d9e73a90595b45a7a8678e7854e4a15e9a6e4d80e3d826a5",
+      "sha256": "fd4de3adff9d43a7739d6bd3698ac0d9f9a025ad6e61fefb6fdfc99cdc94e085",
       "language": "JSON",
-      "bytes": 2208,
+      "bytes": 2483,
       "symbols": []
     },
     "docs/graphics-handoff/open-templates-review.html": {
-      "sha256": "d4fa2e31dc46c76f6d57466706c751faf668727ff76f7e37f6d1b321860669bc",
+      "sha256": "0c1ffdb5f55dc3fc71bb4cc8fefa01348928bd312f1153959a595b53f3bc0dd4",
       "language": "HTML",
-      "bytes": 19108,
+      "bytes": 20150,
       "symbols": []
     },
     "docs/graphics-handoff/output-template-lshape-evidence.json": {
@@ -21804,10 +22070,28 @@
       "bytes": 7390,
       "symbols": []
     },
+    "docs/graphics-handoff/scheduled-template-deletion-evidence.json": {
+      "sha256": "75427f07f971a23398b88d5664250f007a76580d04face7afeeb143ab9784bf9",
+      "language": "JSON",
+      "bytes": 390,
+      "symbols": []
+    },
     "docs/graphics-handoff/shapes-clock-evidence.json": {
       "sha256": "101a2aeb22d6987bf6c15cbb043429c5f59e55920132efccb048fa8216b3f146",
       "language": "JSON",
       "bytes": 4009,
+      "symbols": []
+    },
+    "docs/graphics-handoff/template-removal-channel-log.txt": {
+      "sha256": "605b1d1197bc9d61b5b414a38be108f27abc63c1258bc97bec2f1acfc61f9823",
+      "language": "Other",
+      "bytes": 11885,
+      "symbols": []
+    },
+    "docs/graphics-handoff/template-removal-evidence.json": {
+      "sha256": "e09c6790cec64c3e594c31966e84dc6eca1a963aa8a481b45bbe76286b6da564",
+      "language": "JSON",
+      "bytes": 1875,
       "symbols": []
     },
     "docs/graphics-handoff/uploaded-font-evidence.json": {
@@ -21823,9 +22107,9 @@
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "894ca9280c70b0a938d8edd0e00ac2fd2b6392292d12400a14db6fcfa88a2d45",
+      "sha256": "4a662374daa87c800c3c4deaf1ecf7c765ea85dd9138758d041ccd6d0acfeb88",
       "language": "Markdown",
-      "bytes": 8076,
+      "bytes": 8721,
       "symbols": []
     },
     "docs/graphics-testing.md": {
@@ -21859,9 +22143,9 @@
       "symbols": []
     },
     "docs/logo.md": {
-      "sha256": "36d6b268809564cf9110b893d3c6bb9c38249dde6afbcc7e5edb60acf671d9c4",
+      "sha256": "7517240676111a0e089dc2eca1993aaa1de976a60d417cd681bc0a3627c584bb",
       "language": "Markdown",
-      "bytes": 15308,
+      "bytes": 17297,
       "symbols": []
     },
     "docs/ndi.md": {
@@ -21913,9 +22197,9 @@
       "symbols": []
     },
     "docs/scheduler.md": {
-      "sha256": "0a0bbdb386b16b2ffa4a6d9188be67703ef0740725a7b4faec6d6bd2d59bd8a0",
+      "sha256": "435aba2c43d479b24d39da5857623ecba20751aeda39d04353946538924ebbf5",
       "language": "Markdown",
-      "bytes": 9934,
+      "bytes": 13123,
       "symbols": []
     },
     "docs/scte35.md": {
@@ -22446,9 +22730,9 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsComposer.vue": {
-      "sha256": "e120664fb738f4f0f66752550b7961930e7c9708d69ab3d718c296eaf64b7e90",
+      "sha256": "94cbf8cd8d592cffe443e2c5fcaa8280d10cff34aefe40b179bbd5fbbedbc88f",
       "language": "Vue",
-      "bytes": 69993,
+      "bytes": 71428,
       "symbols": [
         {
           "name": "configStore",
@@ -22916,47 +23200,83 @@
         },
         {
           "name": "restoreLogoPlacement",
-          "line": 646
+          "line": 645
         },
         {
           "name": "layer",
-          "line": 647
+          "line": 646
         },
         {
           "name": "source",
-          "line": 657
+          "line": 656
         },
         {
           "name": "image",
-          "line": 658
+          "line": 657
         },
         {
           "name": "availableWidth",
-          "line": 666
+          "line": 665
         },
         {
           "name": "availableHeight",
-          "line": 667
+          "line": 666
         },
         {
           "name": "factor",
-          "line": 668
+          "line": 667
         },
         {
           "name": "width",
-          "line": 669
+          "line": 668
         },
         {
           "name": "height",
-          "line": 670
+          "line": 669
         },
         {
-          "name": "pickImage",
+          "name": "setImage",
           "line": 685
         },
         {
-          "name": "confirmBeforeUnload",
+          "name": "version",
+          "line": 686
+        },
+        {
+          "name": "geometry",
+          "line": 687
+        },
+        {
+          "name": "source",
+          "line": 690
+        },
+        {
+          "name": "image",
+          "line": 691
+        },
+        {
+          "name": "factor",
           "line": 695
+        },
+        {
+          "name": "width",
+          "line": 696
+        },
+        {
+          "name": "height",
+          "line": 697
+        },
+        {
+          "name": "pickImage",
+          "line": 715
+        },
+        {
+          "name": "layer",
+          "line": 721
+        },
+        {
+          "name": "confirmBeforeUnload",
+          "line": 740
         }
       ]
     },
@@ -23072,9 +23392,9 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsLibrary.vue": {
-      "sha256": "1a3be7367808f76d5a44cc7e9af80e2183e83b311918e42efb112f57f77d06db",
+      "sha256": "d3cc0a716d01ae220fd8497d9c12f4d9b7d8d168cdd267e293898b8a1c9b26b0",
       "language": "Vue",
-      "bytes": 15071,
+      "bytes": 15210,
       "symbols": [
         {
           "name": "configStore",
@@ -26503,85 +26823,161 @@
       ]
     },
     "frontend/src/components/schedule/GraphicsEventDialog.vue": {
-      "sha256": "58c47be71d805fa629f5b450e67ea0a536dc2c284beda8130e21df013a4e2096",
+      "sha256": "b38bb1b8b0767d8a62158b05b2d78894b5b9b1427d52b2ba98c3db33c6a05c2f",
       "language": "Vue",
-      "bytes": 7860,
+      "bytes": 14494,
       "symbols": [
         {
           "name": "props",
-          "line": 18
+          "line": 21
         },
         {
           "name": "emit",
-          "line": 22
+          "line": 25
         },
         {
           "name": "indexStore",
-          "line": 26
-        },
-        {
-          "name": "scheduleStore",
-          "line": 27
-        },
-        {
-          "name": "emptyActions",
           "line": 29
         },
         {
+          "name": "scheduleStore",
+          "line": 30
+        },
+        {
+          "name": "emptyActions",
+          "line": 32
+        },
+        {
           "name": "title",
-          "line": 42
-        },
-        {
-          "name": "date",
-          "line": 43
-        },
-        {
-          "name": "start",
-          "line": 44
-        },
-        {
-          "name": "end",
           "line": 45
         },
         {
-          "name": "repeatMode",
+          "name": "date",
           "line": 46
         },
         {
-          "name": "repeatDays",
+          "name": "start",
           "line": 47
         },
         {
-          "name": "actions",
+          "name": "end",
           "line": 48
         },
         {
-          "name": "picking",
+          "name": "repeatMode",
           "line": 49
         },
         {
-          "name": "saving",
+          "name": "repeatDays",
           "line": 50
         },
         {
-          "name": "error",
+          "name": "actions",
           "line": 51
         },
         {
-          "name": "event",
+          "name": "picking",
+          "line": 52
+        },
+        {
+          "name": "graphicsApi",
+          "line": 53
+        },
+        {
+          "name": "configStore",
+          "line": 54
+        },
+        {
+          "name": "templates",
+          "line": 56
+        },
+        {
+          "name": "permanentIds",
+          "line": 57
+        },
+        {
+          "name": "templateId",
+          "line": 58
+        },
+        {
+          "name": "fieldValues",
+          "line": 59
+        },
+        {
+          "name": "records",
           "line": 60
         },
         {
+          "name": "legacy",
+          "line": 61
+        },
+        {
+          "name": "loaded",
+          "line": 62
+        },
+        {
+          "name": "loadVersion",
+          "line": 63
+        },
+        {
+          "name": "selected",
+          "line": 64
+        },
+        {
+          "name": "isPermanent",
+          "line": 65
+        },
+        {
+          "name": "mappings",
+          "line": 66
+        },
+        {
+          "name": "mappedSources",
+          "line": 67
+        },
+        {
+          "name": "automaticValues",
+          "line": 70
+        },
+        {
+          "name": "previewValues",
+          "line": 71
+        },
+        {
+          "name": "saving",
+          "line": 75
+        },
+        {
+          "name": "error",
+          "line": 76
+        },
+        {
+          "name": "version",
+          "line": 81
+        },
+        {
+          "name": "event",
+          "line": 87
+        },
+        {
+          "name": "scenes",
+          "line": 109
+        },
+        {
+          "name": "chooseTemplate",
+          "line": 124
+        },
+        {
           "name": "toggleDay",
-          "line": 73
+          "line": 129
         },
         {
           "name": "pick",
-          "line": 77
+          "line": 133
         },
         {
           "name": "save",
-          "line": 85
+          "line": 141
         }
       ]
     },
@@ -32750,15 +33146,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "9fd93d659b46bfc5c15dc30e3c093e6b880b4bc7f000d37bcbc5f9c636bd2e5b",
+      "sha256": "98b4d29b05fc5edda773770a70260779198aff21db59ecf583dc81c7b320b0b6",
       "language": "TypeScript",
-      "bytes": 145053,
+      "bytes": 145764,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "3aa90eddb0c22e6786090d93a38599f727a3c0431025d9fadd811b1046f5516a",
+      "sha256": "3766cbe24f09b06258599a3feb9f71839b4fb7ece5a293a023afe8af6dc251ed",
       "language": "TypeScript",
-      "bytes": 151047,
+      "bytes": 151831,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -33467,9 +33863,9 @@
       ]
     },
     "frontend/src/types/schedule.d.ts": {
-      "sha256": "46309642c433476b31bfca8298740074d69878dc48494490a6acd82fb0017ff8",
+      "sha256": "e008d0b1c6db764c996684bc580fe978404cb33b9cc6e41e27afa31156378723",
       "language": "TypeScript",
-      "bytes": 4411,
+      "bytes": 4681,
       "symbols": [
         {
           "name": "ScheduleKind",
@@ -33493,67 +33889,67 @@
         },
         {
           "name": "GraphicsEventInput",
-          "line": 23
+          "line": 29
         },
         {
           "name": "ScheduleEvent",
-          "line": 25
+          "line": 33
         },
         {
           "name": "ScheduleEventInput",
-          "line": 46
+          "line": 54
         },
         {
           "name": "ScheduleOccurrence",
-          "line": 48
-        },
-        {
-          "name": "InterruptedClip",
           "line": 56
         },
         {
+          "name": "InterruptedClip",
+          "line": 64
+        },
+        {
           "name": "ActiveScheduleEvent",
-          "line": 63
+          "line": 71
         },
         {
           "name": "ScheduleStatus",
-          "line": 79
+          "line": 87
         },
         {
           "name": "LiveSource",
-          "line": 85
+          "line": 93
         },
         {
           "name": "LiveGuide",
-          "line": 95
+          "line": 103
         },
         {
           "name": "SignalTest",
-          "line": 102
+          "line": 110
         },
         {
           "name": "ProgramItem",
-          "line": 113
+          "line": 121
         },
         {
           "name": "GuideBlock",
-          "line": 124
-        },
-        {
-          "name": "ScheduleSourceItem",
           "line": 132
         },
         {
-          "name": "MediaDraft",
-          "line": 139
+          "name": "ScheduleSourceItem",
+          "line": 140
         },
         {
-          "name": "LiveDraft",
+          "name": "MediaDraft",
           "line": 147
         },
         {
+          "name": "LiveDraft",
+          "line": 155
+        },
+        {
           "name": "ScheduleDragItem",
-          "line": 157
+          "line": 165
         }
       ]
     },
@@ -35371,9 +35767,9 @@
       ]
     },
     "frontend/src/views/ScheduleView.vue": {
-      "sha256": "84646d4024a9607fca06a6fc2bde2128037cfda907d401be30471f5e2ffec3e7",
+      "sha256": "e6fa2338f24f38d7b7e48b56fdbdd2b81ce974f1aa563f291fedc5011fb59838",
       "language": "Vue",
-      "bytes": 54629,
+      "bytes": 54775,
       "symbols": [
         {
           "name": "configStore",
@@ -35745,71 +36141,71 @@
         },
         {
           "name": "actions",
-          "line": 494
+          "line": 498
         },
         {
           "name": "parts",
-          "line": 495
+          "line": 499
         },
         {
           "name": "newGraphics",
-          "line": 520
+          "line": 524
         },
         {
           "name": "editGraphics",
-          "line": 528
-        },
-        {
-          "name": "graphicsSaved",
           "line": 532
         },
         {
+          "name": "graphicsSaved",
+          "line": 536
+        },
+        {
           "name": "confirmDeleteGraphics",
-          "line": 537
+          "line": 541
         },
         {
           "name": "event",
-          "line": 538
+          "line": 542
         },
         {
           "name": "newMaterial",
-          "line": 554
+          "line": 558
         },
         {
           "name": "newLive",
-          "line": 562
+          "line": 566
         },
         {
           "name": "start",
-          "line": 563
+          "line": 567
         },
         {
           "name": "liveFromMaterial",
-          "line": 569
+          "line": 573
         },
         {
           "name": "start",
-          "line": 570
+          "line": 574
         },
         {
           "name": "saved",
-          "line": 583
+          "line": 587
         },
         {
           "name": "nextUp",
-          "line": 589
+          "line": 593
         },
         {
           "name": "openLinkedLive",
-          "line": 597
+          "line": 601
         },
         {
           "name": "path",
-          "line": 598
+          "line": 602
         },
         {
           "name": "live",
-          "line": 604
+          "line": 608
         }
       ]
     },
@@ -36134,6 +36530,12 @@
       "bytes": 937,
       "symbols": []
     },
+    "migrations/00034_graphics_template_schedule.sql": {
+      "sha256": "8748e893a0ae70bcfebbb58c3ee40516172d8961d32675798e1efcb2ca1162c1",
+      "language": "SQL",
+      "bytes": 139,
+      "symbols": []
+    },
     "package-lock.json": {
       "sha256": "26923cf06be3602cea8b1edeef2839769bb6f928f541bbb7c69e32b27c887cd7",
       "language": "JSON",
@@ -36217,9 +36619,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator.spec.ts": {
-      "sha256": "460687d848773b396afa551d737bdf7ad2148707bd4f80be085ba76b3ad0f6c2",
+      "sha256": "e6f02a30bc49dbaec80170ab630b85cea0ec626eef107e8dee9476dbb07b39c5",
       "language": "TypeScript",
-      "bytes": 56487,
+      "bytes": 61021,
       "symbols": [
         {
           "name": "api",
@@ -36262,10 +36664,57 @@
       "symbols": []
     },
     "qa/graphics/README.md": {
-      "sha256": "711e3d0c6bf6ab18f00d733625904c725008713de4a92d4f954892dfc76eb6dd",
+      "sha256": "d77c37b13b819cfeb6f96b28bd263b506f9d9c3262a56a37425a81071654deda",
       "language": "Markdown",
-      "bytes": 5443,
+      "bytes": 6701,
       "symbols": []
+    },
+    "qa/graphics/animated.py": {
+      "sha256": "be946dc640a8776bd407e6c419b5a762a80314ab78ac9369604cb1fb8b7ed1ef",
+      "language": "Python",
+      "bytes": 15584,
+      "symbols": [
+        {
+          "name": "main",
+          "line": 24
+        },
+        {
+          "name": "create",
+          "line": 82
+        },
+        {
+          "name": "image",
+          "line": 85
+        },
+        {
+          "name": "wait",
+          "line": 89
+        },
+        {
+          "name": "playlist_lines",
+          "line": 100
+        },
+        {
+          "name": "capture",
+          "line": 106
+        },
+        {
+          "name": "fresh",
+          "line": 109
+        },
+        {
+          "name": "schedule",
+          "line": 143
+        },
+        {
+          "name": "instances",
+          "line": 150
+        },
+        {
+          "name": "measure_logo_transition",
+          "line": 207
+        }
+      ]
     },
     "qa/graphics/compatibility.py": {
       "sha256": "8b88ef83d66cb5f3c7c49e79c0a494d72ec6e85da00d3df1368497780264c684",
@@ -36351,7 +36800,7 @@
       "symbols": []
     },
     "qa/graphics/parity.py": {
-      "sha256": "7fe92dd93d07123fca6ae3292932c541b1f04e218f433edd1fdf750bc1f54a9c",
+      "sha256": "a9e22ce85ba88b3f394d43662c459d193ec830b9b5f2864772a9f1940c7c7ac7",
       "language": "Python",
       "bytes": 14426,
       "symbols": [

@@ -987,13 +987,13 @@ export default {
         graphics: {
             new: 'Schedule graphics',
             edit: 'Scheduled graphics',
-            intro: 'Changes the logo (the channel’s too) and the L-shape (corner and size) at a time, and undoes it at the end. The programme goes on as it is.',
+            intro: 'Choose a Graphics template to air at the scheduled time without interrupting the programme.',
             titlePlaceholder: 'News sponsor',
             defaultTitle: 'Graphics',
             start: 'Starts',
             end: 'Ends (optional)',
             endHint:
-                'At the end the L-shape goes out and the logo comes back as the channel has it. Without an end, the change stays until another command.',
+                'At the end, only this graphic leaves; permanent models restore their previous visibility. Without an end, it stays until another command. Existing legacy events retain their actions.',
             save: 'Schedule',
             saved: 'Graphics scheduled.',
             removed: 'Graphics removed.',
@@ -1005,6 +1005,15 @@ export default {
             removeConfirm: 'Remove “{title}”? Its next times no longer happen.',
             summaryLogo: 'logo: {what}',
             summaryLShape: 'L-shape: {what}',
+            template: 'Graphics template',
+            chooseTemplate: 'Choose a template',
+            missingTemplate: 'Unavailable template (#{id})',
+            noTemplates: 'Create a template in Composer before scheduling.',
+            legacy: 'Keep this legacy event’s actions',
+            permanentHint:
+                'Permanent model: uses fields and sources saved in Composer. Scheduling activates visibility and restores the previous state at the end.',
+            record: 'Record from {name}',
+            savedRecord: 'Record saved in the template',
         },
         intro: 'What goes on air over the playlist.',
         materials: 'Materials',
@@ -1656,12 +1665,14 @@ export default {
                 'Rundowns (several, with items in order and guests) come in version 2.5. For now, pick the template here.',
         },
         library: {
-            snapshotRetained: 'scheduled action retained',
+            eventRetained: 'scheduled event retained',
+            deleteScheduled:
+                'Model schedules keep their event records but cannot air a deleted template. Legacy action snapshots are retained.',
             delete: 'Delete template',
             deleteTitle: 'Delete this template?',
             deleteConfirm: '“{name}” will be deleted. Restarting will not recreate it.',
             deleteUsed:
-                'This template is assigned or on air ({count} temporary instances). Deleting also removes it from air and detaches its assignments. Scheduled events retain their saved actions.',
+                'This template is assigned or on air ({count} temporary instances). Deleting also removes it from air and detaches its assignments. Scheduled events remain saved.',
             deleteAssets: 'Storage images and fonts will be preserved.',
             new: 'New template',
             filter: 'Filter by group',

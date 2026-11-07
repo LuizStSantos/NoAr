@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "template_id": 47,
+  "layers_unchanged": true,
+  "red_frames": 18,
+  "green_frames": 32,
+  "captures": [
+    "output-gif-after-restart-red.jpg",
+    "output-gif-after-restart-green.jpg"
+  ],
+  "segment_sha256": "3cc3acae85f631c4575fc3c42a33e330dad625f63f32e72bda71c6307f696256",
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "on_air",
+        "uptime": 24,
+        "output_age": 0.5
+      }
+    ]
+  },
+  "backend_binary_sha256": "9ac53ac5f0b2a53911daabbde4f6164c7fa37105789f6f5e39d4168c6a1c4286"
+}

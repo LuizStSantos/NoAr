@@ -4,6 +4,94 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Animated artwork, natural image insertion and template schedules
+
+This approved follow-up covers three operator requests:
+
+- **Composer images:** first upload/storage selection uses original pixels at
+  the channel output size, fitting down proportionally only when necessary.
+  Same-output artwork becomes X/Y 0 and width/height 100%; replacements retain
+  authored geometry. Actual browser interaction exercised full-frame insertion,
+  Undo, collision-safe re-upload, save/reload and desktop/phone layouts.
+- **Animated GIF:** native GStreamer decodes cached frames off the frame thread;
+  durations and transparency are preserved in logo, ordinary/permanent artwork
+  and L-shape backgrounds/overrides. Loops share a phase for matching loaded
+  file/geometry and continue through hide/show/refresh. New decoding or restart
+  starts a new sequence; browser GIF preview is independent. Limits are 10 MiB,
+  256 frames, 60 seconds, 32 MiB per decoded animation and 64 MiB per composition.
+  See [image behavior](../logo.md#image-sizing-and-animated-gif).
+- **Scheduler:** new events choose a Composer model, preview, manual fields and
+  source records, with second-level times and repetition. Legacy action events
+  retain their compatible editor and snapshot semantics. Migration `00034` only
+  adds the optional template reference; its test installs the real preceding
+  migrations, preserves old action bytes and repeats the migration runner.
+  A temporary event owns its take; end/edit/remove/disable retires only that
+  instance. Permanent visibility leases restore initial state after the last
+  overlap without changing startup enabled values. Saved permanent fields are
+  used, not per-event overrides. See [scheduler semantics](../scheduler.md#scheduled-graphics).
+
+The disabled-logo schedule path also enters/exits through its layer animations.
+A manual enable during pending exit supersedes deferred cleanup. Tests cover
+0/halfway/settled fade states, hidden/disabled restoration and manual precedence.
+New backend graphics modules keep the required `graphics.rs` basename. No old
+migration checksum or frozen legacy configuration is changed.
+
+Verification on GStreamer 1.26.2: **714 Rust tests passed / 14 ignored**, fmt,
+exact no-default/all-target Clippy and backend build passed. Vue types, ESLint,
+Prettier, QA TypeScript and production build passed. The fade/preview revision
+passed **33 browser tests** in a new empty fixture; the final ticker/controller
+revision passed all **four affected browser regressions** again. Actual pt-BR
+1440 px/390 px interaction exercised fields, record 2, a manual headline,
+save/reload, full-frame insertion/Undo, actual advancing Program and deletion.
+
+Actual HLS on the final normal binary proved:
+
+- Changing permanent and scheduled GIF frames with transparent pixels; a saved
+  manual GC survives the scheduled GIF's end.
+- Scheduled text and animated L-shape entry/exit; its corner video returns to
+  full frame, retaining the manual GC.
+- Overlapping schedules of a startup-disabled logo: the first end keeps it on,
+  the last restores off. The startup flag stays **0**. Its 400 ms fade has eight
+  observed intermediate HLS frames both entering and leaving.
+- Composer's uploaded 640×360 image becomes X/Y 0 and width/height 100; real HLS
+  fills all four corners with the intended artwork, within RGB tolerance 12.
+- A complete backend restart preserves the permanent GIF's ID and layers and
+  produces both animation states again.
+- Deleting a referenced template retains the event record; its editor reports an
+  unavailable model and disables Save until a valid selection is made. The
+  deletion warning distinguishes model references from legacy action snapshots.
+
+[Verification index](animated-schedule-verification.json),
+[HLS metrics/health](animated-schedule-hls-evidence.json),
+[browser authoring](animated-schedule-browser-evidence.json),
+[full-frame pixels](natural-full-output-evidence.json),
+[restart](animated-gif-restart-evidence.json),
+[deletion](scheduled-template-deletion-evidence.json).
+Static-layout/legacy-API parity and the review PDF follow as separate final checks.
+
+The isolated HLS execution has **zero channel ERROR entries** in its
+[scoped log](animated-schedule-channel-log.txt). The fixture's
+[prior accumulated log](animated-schedule-prior-channel-log.txt) preserves an
+earlier pre-final `Clip begin out of sync` (-12.044 s) during concurrent
+build/browser work. It is **not classified as an environment limitation** without
+a same-load baseline. This short isolated run is not a performance/soak proof;
+physical/desktop GIF output was not tested.
+
+| Part | Actual capture |
+| --- | --- |
+| GIF layer | [Composer](composer-animated-gif-pt-BR.jpg), [phone](composer-animated-gif-phone-pt-BR.jpg) |
+| Natural full-output image | [Desktop](composer-natural-full-output-pt-BR.jpg), [Undo](composer-natural-size-undo-pt-BR.jpg), [phone](composer-natural-full-output-phone-pt-BR.jpg), [HLS](output-natural-full-frame.jpg) |
+| Animated L-shape | [Composer](composer-animated-lshape-pt-BR.jpg), [phone](composer-animated-lshape-phone-pt-BR.jpg) |
+| Scheduler model, records and manual field | [Desktop](scheduler-template-fields-pt-BR.jpg), [phone](scheduler-template-fields-phone-pt-BR.jpg) |
+| Saved schedules | [Desktop](scheduler-template-list-pt-BR.jpg), [phone](scheduler-template-list-phone-pt-BR.jpg) |
+| Actual Program | [Desktop](animated-gif-program-pt-BR.jpg), [phone](animated-gif-program-phone-pt-BR.jpg) |
+| Referenced model deletion | [Desktop](templates-delete-scheduled-pt-BR.jpg), [phone](templates-delete-scheduled-phone-pt-BR.jpg) |
+| GIF changes in real HLS | [Red](output-gif-permanent-red.jpg), [green](output-gif-permanent-green.jpg) |
+| Scheduled GIF/text | [On](output-scheduled-gif-on.jpg), [out](output-scheduled-gif-off.jpg) |
+| Scheduled animated L-shape | [Red](output-scheduled-animated-lshape-on-red.jpg), [green](output-scheduled-animated-lshape-on-green.jpg), [out](output-scheduled-animated-lshape-off.jpg) |
+| Overlapping logo schedules | [On](output-scheduled-logo-overlap-on.jpg), [out](output-scheduled-logo-overlap-off.jpg), [fade in](output-scheduled-logo-fade-in.jpg), [fade out](output-scheduled-logo-fade-out.jpg) |
+| GIF after backend restart | [Red](output-gif-after-restart-red.jpg), [green](output-gif-after-restart-green.jpg) |
+
 ## Open templates: final parity and review package
 
 Implementation: `7f51b4df` on `claude/branch-review-opz967`, following stages

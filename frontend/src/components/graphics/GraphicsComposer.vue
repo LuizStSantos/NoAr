@@ -621,8 +621,7 @@ async function uploadImage(event: Event) {
                     },
                 )
 
-                rememberDraft()
-                layer.image = 'Graphics/' + name
+                await setImage(layer, 'Graphics/' + name)
                 note.value = t('graphics.composer.uploaded')
                 break
             } catch (uploadError) {
@@ -682,14 +681,60 @@ async function restoreLogoPlacement() {
     }
 }
 
-function pickImage(item: { path: string }) {
+/** Size only the first image in an empty layer; replacements retain authored geometry. */
+async function setImage(layer: TemplateLayer, path: string) {
+    const version = loadVersion
+    let geometry: Partial<TemplateLayer> = {}
+
+    if (!layer.image) {
+        const source = await storageImageUrl(configStore.channels[configStore.i], path)
+        const image = new Image()
+        image.src = source
+        await image.decode()
+
+        const factor = Math.min(1, frame.value.width / image.naturalWidth, frame.value.height / image.naturalHeight)
+        const width = (image.naturalWidth * factor * 100) / frame.value.width
+        const height = (image.naturalHeight * factor * 100) / frame.value.height
+        geometry = {
+            x: Math.max(0, Math.min(layer.x, 100 - width)),
+            y: Math.max(0, Math.min(layer.y, 100 - height)),
+            width,
+            height,
+        }
+    }
+
+    if (version !== loadVersion || !draft.value.layers.includes(layer)) {
+        return
+    }
+
+    rememberDraft()
+    Object.assign(layer, geometry, { image: path })
+    scaleBases.set(layer.id, { width: layer.width, height: layer.height })
+}
+
+async function pickImage(item: { path: string }) {
     if (!/\.(png|jpe?g|webp|gif)$/i.test(item.path)) {
         error.value = t('graphics.composer.imageOnly')
         return
     }
 
-    updateSelectedLayer({ image: item.path })
-    picking.value = false
+    const layer = selected.value
+
+    if (!layer || busy.value) {
+        return
+    }
+
+    busy.value = true
+    error.value = ''
+
+    try {
+        await setImage(layer, item.path)
+        picking.value = false
+    } catch (failure) {
+        error.value = failure instanceof Error ? failure.message : String(failure)
+    } finally {
+        busy.value = false
+    }
 }
 
 function confirmBeforeUnload(event: BeforeUnloadEvent) {

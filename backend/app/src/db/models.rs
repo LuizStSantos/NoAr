@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, str::FromStr};
+use std::{collections::HashMap, error::Error, fmt, str::FromStr};
 
 use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
@@ -704,6 +704,18 @@ text_enum!(ScheduleKind { Media => "media", Live => "live" });
 text_enum!(EntryMode { AfterClip => "after_clip", Interrupt => "interrupt" });
 text_enum!(AfterMode { Continue => "continue", Clock => "clock" });
 
+/// A model selected by a graphics schedule, with per-airing fields/records.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ScheduledGraphic {
+    pub template_id: i32,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub values: HashMap<String, String>,
+    #[serde(default)]
+    pub records: HashMap<i32, usize>,
+}
+
 /// A row of `graphics_events`: logo and L-shape changes at a set time,
 /// undone at the end. Times are in the channel time zone.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -711,7 +723,10 @@ pub struct GraphicsEvent {
     pub id: i32,
     pub channel_id: i32,
     pub title: String,
-    /// What it does to the logo and the L-shape.
+    /// Absent on legacy scene-action events.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<ScheduledGraphic>,
+    /// Legacy actions retained without rewriting existing schedules.
     pub actions: crate::utils::config::GraphicsScene,
     /// `YYYY-MM-DD`
     pub start_date: String,
@@ -732,6 +747,15 @@ impl FromRow<'_, SqliteRow> for GraphicsEvent {
             id: row.try_get("id")?,
             channel_id: row.try_get("channel_id")?,
             title: row.try_get("title")?,
+            template: row
+                .try_get::<Option<String>, _>("template")?
+                .map(|value| {
+                    serde_json::from_str(&value).map_err(|error| sqlx::Error::ColumnDecode {
+                        index: "template".to_string(),
+                        source: error.to_string().into(),
+                    })
+                })
+                .transpose()?,
             actions: serde_json::from_str(&actions).map_err(|e| sqlx::Error::ColumnDecode {
                 index: "actions".to_string(),
                 source: e.to_string().into(),

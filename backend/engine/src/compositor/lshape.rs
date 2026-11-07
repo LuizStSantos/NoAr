@@ -13,7 +13,7 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 
 use crate::{
-    compositor::graphics::{GraphicContent, GraphicSpec, render_graphic},
+    compositor::graphics::{GraphicContent, GraphicSpec, RenderedGraphic, render_graphic},
     utils::helper::even,
 };
 
@@ -93,6 +93,7 @@ pub struct LShapeConfig {
 #[derive(Clone)]
 pub struct LShapeGraphic {
     background: Arc<VideoFrame>,
+    animated_art: Option<Arc<RenderedGraphic>>,
     window: Rect,
     /// The window the graphic was made for, before any move from outside.
     home: Rect,
@@ -129,9 +130,14 @@ impl LShapeGraphic {
 
         Self {
             background: Arc::new(background),
+            animated_art: None,
             window,
             home: window,
         }
+    }
+
+    pub(crate) fn set_animated_art(&mut self, graphic: RenderedGraphic) {
+        self.animated_art = Some(Arc::new(graphic));
     }
 
     pub fn load(config: &LShapeConfig, width: u32, height: u32) -> Result<Self> {
@@ -149,8 +155,37 @@ impl LShapeGraphic {
 
         let home = window(config, width, height);
 
+        let spec = GraphicSpec {
+            layers: vec![crate::GraphicLayerSpec {
+                content: GraphicContent::Image {
+                    path: config.path.clone().into(),
+                },
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: crate::GraphicAnimation::None,
+                animation_out: crate::GraphicAnimation::None,
+                animation_ms: 0,
+                delay_ms: 0,
+            }],
+            picture: None,
+        };
+        let animated_art = if std::path::Path::new(&config.path)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("gif"))
+        {
+            let rendered = render_graphic(&spec, width, height)?;
+            rendered.is_animated().then(|| Arc::new(rendered))
+        } else {
+            None
+        };
+
         Ok(Self {
             background: Arc::new(background),
+            animated_art,
             window: home,
             home,
         })
@@ -169,6 +204,7 @@ impl LShapeGraphic {
 
         Self {
             background: self.background.clone(),
+            animated_art: self.animated_art.clone(),
             window,
             home: self.home,
         }
@@ -693,6 +729,14 @@ pub(crate) fn apply_lshape(
     let picture = context.run(frame)?;
 
     let mut composed = (*graphic.background).clone();
+
+    if let Some(art) = &graphic.animated_art {
+        composed.data_mut(0).fill(16);
+        composed.data_mut(1).fill(128);
+        composed.data_mut(2).fill(128);
+        art.blend_steady(&mut composed);
+    }
+
     paste(&picture, &mut composed, rect);
     composed.set_pts(frame.pts());
     *frame = composed;
@@ -885,6 +929,7 @@ mod tests {
 
         LShapeGraphic {
             background: Arc::new(background),
+            animated_art: None,
             window: home,
             home,
         }

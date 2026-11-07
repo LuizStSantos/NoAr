@@ -143,7 +143,7 @@ def run(root, name, binary, credentials):
     assert "ERROR" not in log, f"{name}: channel log contains errors"
     database = sqlite3.connect(directory / "noar.db")
     version = database.execute("SELECT max(version) FROM _sqlx_migrations").fetchone()[0]
-    assert version == (27 if name == "main" else 33)
+    assert version == (27 if name == "main" else 34)
     if name == "branch":
         enabled, layers = database.execute(
             "SELECT b.enabled,t.layers FROM graphics_channel_bindings b JOIN graphics_templates t "

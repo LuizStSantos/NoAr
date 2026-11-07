@@ -76,29 +76,55 @@ input instead, which takes over the channel on its own.
 
 ## Scheduled graphics
 
-**Schedule graphics** puts the logo and the L-shape on a timetable without
-touching what plays: at the start time NoAr applies the changes, and at the
-end time it undoes them (the L-shape goes off and the logo goes back to the
-channel's, where the channel puts it). Without an end, the change stays until
-something else changes it. An end before the start means the next day.
+**Schedule graphics** selects a layered template from Composer, with a preview,
+manual field values and optional records from its mapped data sources. Names and
+groups are the authored library labels. L-shape is a composition with a video
+window, not a separate kind of new scheduling form. The programme continues.
+Start/end accept seconds; events run once, daily or on selected weekdays.
+An end at/before the start ends the next day.
 
-Edit reusable scenes in **Graphics › Templates › Scenes › Manage scenes**.
-A scheduled graphics event stores its own action snapshot; editing a named
-scene later does not rewrite the event's saved actions.
+At the start, NoAr resolves the template ID in the event's channel and uses its
+current layers. The event stores the ID, field values and record selection, not
+a copy of the template. Editing a model therefore affects its next airing.
+A temporary airing keeps its rendered take, with ordinary clock/data refresh;
+permanent models share their channel controls. Missing/deleted models or missing
+artwork/initial data fail that occurrence explicitly in the log, without stopping
+the programme or recreating a deleted template. Template deletion warns about
+referencing events and preserves those event records. Uploaded font bytes persist
+with the database; ordinary system-font/glyph fallback remains unchanged.
 
-An event can:
+Temporary events get their own take ID. End, removal, disable or an event edit
+retires only that instance, leaving manual/other scheduled takes alone. An
+L-shape window enters/exits with the model; a previous native L-shape remains
+available underneath it. The normal follow/wait/skip rule applies to ordinary
+graphics. Waiting stays owned by the occurrence: an expired/deleted event cannot
+appear later when an L-shape ends.
 
-- bring the L-shape in or take it off, with its graphic, the corner the
-  picture goes to and its size;
-- show the channel's logo, hide it, or swap it for another image;
-- move the logo to one of nine places, back to the channel's place, or to a
-  free `X% × Y%` position.
+Logo/ticker assignments and compatible **Always on air** models activate
+visibility using their saved fields and source mappings; per-event field/record
+overrides are rejected for them. Their startup enabled setting is not changed in
+the database. Overlapping schedules share a visibility lease: the first captures
+the previous requested state, the last restores it. With unchanged model configuration, a timed event restores that runtime state
+even if an operator changed visibility during its interval. Saved configuration
+changes are ordinary authoring operations, not a database rollback by the event.
+A manual startup enable during deferred fade cleanup supersedes that cleanup. Without an
+end, it stays until another command; manually hiding an indefinite permanent
+composition relinquishes the lease without undoing the operator's hide.
 
-Scheduled graphics have their own lane on the timeline and a list under the
-day's events, where they are edited or removed. They repeat like the other
-events: once, every day or on chosen weekdays. NoAr checks them every second
-while the playout runs; one whose start passed more than a minute ago while
-the playout was stopped is applied only if its end is still ahead.
+On playout stop, owned temporary takes leave and permanent leases are restored.
+A restart during an interval re-applies it when its end is still ahead. An event
+without an end is caught up only within 60 seconds of its start. The worker checks
+once per second; this is not a frame-accurate external automation time signal.
+
+Existing scene-action events remain compatible and retain their original action
+snapshots. Their editor appears only when editing one of those events; uncheck
+**Keep this legacy event's actions** to replace it explicitly with a model
+selection. Migration `00034` adds a nullable template payload and never rewrites
+the old actions. Legacy ends retain the previous logo/L-shape reversal rules;
+editing a named quick scene does not rewrite a legacy event's action snapshot.
+
+Scheduled graphics have their own timeline lane and list. The selected model's
+name appears in the summary; edit/remove works from that list on desktop/phone.
 
 ## Guide
 
@@ -159,7 +185,35 @@ holds weekday bits: Sunday 1, Monday 2, Tuesday 4, Wednesday 8, Thursday 16,
 Friday 32, Saturday 64; `0` plays once on `start_date`, `62` is Monday to
 Friday, `127` every day. Paths are relative to the channel storage.
 
-Scheduled graphics:
+Scheduled model event (migration `00034` and later):
+
+```json
+{
+  "title": "News sponsor",
+  "template": {
+    "template_id": 12,
+    "values": { "headline": "Live bulletin" },
+    "records": { "3": 1 }
+  },
+  "start_date": "2026-11-08",
+  "start_time": "21:00:15",
+  "end_time": "21:05:00",
+  "repeat_days": 0,
+  "enabled": true
+}
+```
+
+`template_id` must belong to this channel and select a layered model rather than
+a quick scene. `records` uses source IDs and zero-based row indexes; nonempty
+manual values override mapped values, and empty values use automatic data.
+`values` accepts at most 64 fields of 1000 characters; `records` at most 16 sources.
+Permanent/assigned-logo/ticker selections require empty `values`/`records` and
+use their saved mappings. Responses add the model's name in `template.name`.
+Timing/repetition fields and the existing `/api/schedule/{id}/graphics` routes
+are unchanged. Legacy requests still accept `actions`; old responses omit
+`template` entirely when absent. New template events do not execute `actions`.
+
+Legacy scene-action event (preserved):
 
 ```json
 {

@@ -85,11 +85,10 @@ pub async fn channel_graphics(
         let on = match binding.role {
             GraphicsRole::Logo => manager.logo_control.is_visible(),
             GraphicsRole::Ticker => {
-                binding.enabled
-                    && manager
-                        .graphics_control
-                        .always_on_visible(noar_engine::AlwaysOnSlot::Ticker)
-                        == Some(true)
+                manager
+                    .graphics_control
+                    .always_on_visible(noar_engine::AlwaysOnSlot::Ticker)
+                    == Some(true)
             }
             GraphicsRole::Lshape => manager.lshape_control.is_on(),
         };
@@ -231,11 +230,10 @@ pub async fn control_channel_graphic(
                 }
             }
             GraphicsRole::Ticker => {
-                if on
-                    && manager
-                        .graphics_control
-                        .always_on_visible(noar_engine::AlwaysOnSlot::Ticker)
-                        .is_none()
+                if manager
+                    .graphics_control
+                    .always_on_visible(noar_engine::AlwaysOnSlot::Ticker)
+                    .is_none()
                 {
                     load_channel_ticker(manager).await?;
                 }

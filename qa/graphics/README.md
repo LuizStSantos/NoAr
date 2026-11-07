@@ -98,3 +98,26 @@ stops and flushes output. `compare` requires all 1000 raw PTS files and all 1000
 HLS timestamps; failures are reported without selecting matching subsets.
 Archives retain all common raw frames and both HLS segment sets; JPEG/PNG pairs
 illustrate selected frames. These runners must run sequentially.
+
+## Animated images and model schedules
+
+`animated.py` runs after the disposable browser setup, using the normally issued
+`browser-state.json` under its marked work root. It verifies the backend's Storage
+path belongs to that root, configures synthetic 640×360 HLS, and changes only
+that fixture. It replaces fixture playlists and creates graphics/events; do not
+run concurrent writers. It proves permanent/temporary GIF color changes and
+transparent pixels, scheduled text/GIF entry/exit, a scheduled animated L-shape,
+manual-take survival and overlapping logo schedules with startup visibility off.
+It saves actual decoded HLS frames, segment hashes, health and event payloads.
+The static migration-parity runner separately expects candidate schema `00034`.
+
+```sh
+NOAR_E2E_STAGING=1 NOAR_E2E_DISPOSABLE=1 python3 qa/graphics/animated.py \
+  --work-root /tmp/owned-animated-fixture \
+  --screenshots /tmp/owned-animated-fixture/captures
+```
+
+Requires the repository's synthetic `tests_assets/graphics.gif`, FFmpeg, NumPy,
+Pillow and native GStreamer GIF demux/decoder plugins. No external feeds or real
+operator media are used. Browser authoring and a complete backend restart remain
+separate checks; color changes alone do not establish those behaviors.

@@ -121,7 +121,7 @@ impl FrameConverter {
     }
 }
 
-fn copy_sample_frame(
+pub(crate) fn copy_sample_frame(
     buffer: &gst::BufferRef,
     info: &VideoInfo,
     format: PixelFormat,

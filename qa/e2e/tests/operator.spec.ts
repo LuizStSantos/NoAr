@@ -1009,3 +1009,81 @@ test('Composer maps live fields and On air selects records with manual overrides
     expect((await page.request.delete(`/api/graphics/1/templates/${template.id}`, { headers })).ok()).toBeTruthy()
     expect((await page.request.delete(`/api/graphics/1/sources/${source.id}`, { headers })).ok()).toBeTruthy()
 })
+
+test('new image layers use natural output geometry while replacements retain the edited size', async ({ page }) => {
+    await page.goto('/graphics/composer?channel=1')
+    await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Image', exact: true }).click()
+    const config = await api(page, '/api/playout/config/1')
+    const png = await page.evaluate(({ width, height }) => {
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')!.fillRect(0, 0, width, height)
+        return canvas.toDataURL('image/png').split(',')[1]!
+    }, config.output)
+    await page.getByLabel('Upload to Graphics/', { exact: true }).setInputFiles({
+        name: `full-output-${Date.now()}.png`,
+        mimeType: 'image/png',
+        buffer: Buffer.from(png, 'base64'),
+    })
+    for (const [name, value] of Object.entries({ X: '0', Y: '0', Width: '100', Height: '100' })) {
+        await expect(page.getByLabel(name, { exact: true })).toHaveValue(value)
+    }
+    await page.getByLabel('Width', { exact: true }).fill('50')
+    await page.getByLabel('Width', { exact: true }).press('Tab')
+    await page
+        .getByLabel('Upload to Graphics/', { exact: true })
+        .setInputFiles(resolve('../../tests_assets/graphics.gif'))
+    await expect(page.getByLabel('Image path or field', { exact: true })).toHaveValue(/graphics(?:-\d+)?\.gif$/)
+    await expect(page.getByLabel('Width', { exact: true })).toHaveValue('50')
+    await expect(page.getByLabel('Height', { exact: true })).toHaveValue('100')
+})
+
+test('Scheduler selects a Composer model with fields and preserves the selection after reload', async ({ page }) => {
+    await page.goto('/schedule')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const created = await page.request.post('/api/graphics/1/templates', {
+        headers,
+        data: {
+            name: `Schedule model ${Date.now()}`,
+            group: 'Scheduled graphics',
+            duration: 0,
+            layers: [{ id: 'headline', kind: 'text', text: '{headline}', x: 5, y: 75, width: 80, height: 12 }],
+        },
+    })
+    expect(created.ok(), await created.text()).toBeTruthy()
+    const model = await created.json()
+    await page.getByRole('button', { name: 'Schedule graphics', exact: true }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'Schedule graphics', exact: true })
+    await dialog.getByLabel('Graphics template', { exact: true }).selectOption(String(model.id))
+    await expect(dialog.getByLabel('L-shape', { exact: true })).toHaveCount(0)
+    const title = `Scheduled model event ${Date.now()}`
+    await dialog.getByLabel('Name', { exact: true }).fill(title)
+    await dialog.getByLabel('{headline}', { exact: true }).fill('Scheduled bulletin')
+    await dialog.getByLabel('Starts', { exact: true }).fill('23:58:00')
+    await dialog.getByLabel('Ends (optional)', { exact: true }).fill('00:02:00')
+    await dialog.getByRole('button', { name: 'Every day', exact: true }).click()
+    const response = page.waitForResponse(
+        (r) => r.url().endsWith('/api/schedule/1/graphics') && r.request().method() === 'POST',
+    )
+    await dialog.getByRole('button', { name: 'Schedule', exact: true }).click()
+    const saved = await response
+    expect(saved.ok(), await saved.text()).toBeTruthy()
+    const event = await saved.json()
+    expect(event.template.template_id).toBe(model.id)
+    expect(event.template.values.headline).toBe('Scheduled bulletin')
+    expect(event.repeat_days).toBe(127)
+    await expect(dialog).toBeHidden()
+    await page.reload()
+    const list = page.getByRole('region', { name: 'Graphics scheduled this day', exact: true })
+    const row = list.locator('li').filter({ hasText: title })
+    await expect(row).toContainText(model.name)
+    await row.getByRole('button', { name: 'Edit', exact: true }).click()
+    const edit = page.getByRole('dialog', { name: 'Scheduled graphics', exact: true })
+    await expect(edit.getByLabel('Graphics template', { exact: true })).toHaveValue(String(model.id))
+    await expect(edit.getByLabel('{headline}', { exact: true })).toHaveValue('Scheduled bulletin')
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})

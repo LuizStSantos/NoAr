@@ -18,6 +18,7 @@ use crate::{
 #[derive(Clone)]
 pub struct LogoOverlay {
     model: Option<Arc<LogoModel>>,
+    image_animation: Option<Arc<crate::compositor::graphics::images::ImageAnimation>>,
     pub frame: VideoFrame, // YUVA420P
     chroma_alpha: Vec<u8>,
     pub x: u32,
@@ -56,6 +57,12 @@ impl LogoOverlay {
 
         Ok(Self {
             model: None,
+            image_animation: crate::compositor::graphics::images::load_animation(
+                std::path::Path::new(&config.path),
+                width,
+                height,
+                0.0,
+            )?,
             chroma_alpha: chroma_alpha(&frame, width, height),
             frame,
             x: even(x),
@@ -88,6 +95,7 @@ impl LogoOverlay {
                 primary,
                 frame_size: (width, height),
             })),
+            image_animation: None,
             frame: VideoFrame::new(PixelFormat::Yuva420p, 2, 2),
             chroma_alpha: vec![0],
             x,
@@ -198,9 +206,17 @@ impl LogoOverlay {
     }
 
     fn as_overlay(&self) -> OverlayRef<'_> {
+        let animated = self
+            .image_animation
+            .as_ref()
+            .map(|animation| animation.current());
+        let (frame, alpha) = animated.map_or((&self.frame, &self.chroma_alpha), |image| {
+            (&image.frame, &image.alpha)
+        });
+
         OverlayRef {
-            frame: &self.frame,
-            chroma_alpha: &self.chroma_alpha,
+            frame,
+            chroma_alpha: alpha,
             chroma_alpha_stride: self.width as usize / 2,
             x: self.x as i32,
             y: self.y as i32,
@@ -418,6 +434,9 @@ pub struct LogoControl(Arc<Mutex<LogoOverride>>);
 
 #[derive(Default)]
 struct LogoOverride {
+    scheduled_hidden: Option<bool>,
+    scheduled_restore_hidden: Option<bool>,
+    configured_enabled: bool,
     layer_managed: bool,
     model_definition: Option<Arc<LogoOverlay>>,
     model_from: Vec<f64>,
@@ -544,6 +563,78 @@ impl fmt::Debug for LogoControl {
 }
 
 impl LogoControl {
+    /// A schedule temporarily enables the saved model without changing startup
+    /// configuration, replacement artwork or the operator's previous visibility.
+    pub fn set_scheduled_visible(&self, active: bool) {
+        let mut state = self.lock();
+
+        if active {
+            if state.scheduled_hidden.is_none() {
+                state.scheduled_hidden = Some(
+                    state
+                        .scheduled_restore_hidden
+                        .take()
+                        .unwrap_or(state.hidden),
+                );
+            }
+
+            let empty = state.configured.as_ref().is_none_or(Option::is_none)
+                && state.replacement.is_none()
+                && state.clip_image.is_none();
+
+            if empty {
+                // A disabled definition has no previous pixels. Enter its layers
+                // from zero instead of treating an unhidden empty slot as on air.
+                state.hidden = true;
+                state.from = 0.0;
+                state.switched_at = None;
+                state.model_from.clear();
+            }
+
+            state.configured = Some(state.model_definition.clone());
+            state.set_hidden(false);
+        } else if let Some(hidden) = state.scheduled_hidden.take() {
+            if !state.configured_enabled
+                && state.replacement.is_none()
+                && state.clip_image.is_none()
+            {
+                // Keep pixels through the layer exit, then restore the disabled
+                // definition and original raw hidden flag on the frame thread.
+                state.scheduled_restore_hidden = Some(hidden);
+                state.set_hidden(true);
+            } else {
+                state.configured = Some(if state.configured_enabled {
+                    state.model_definition.clone()
+                } else {
+                    None
+                });
+                state.set_hidden(hidden);
+            }
+        }
+    }
+
+    /// An indefinite airing relinquishes ownership after an operator hides it.
+    /// Keep that new visibility instead of restoring the older schedule snapshot.
+    pub fn abandon_scheduled_visibility(&self) {
+        let mut state = self.lock();
+
+        if state.scheduled_hidden.take().is_some() {
+            if !state.configured_enabled
+                && state.replacement.is_none()
+                && state.clip_image.is_none()
+            {
+                state.scheduled_restore_hidden = Some(state.hidden);
+                state.set_hidden(true);
+            } else {
+                state.configured = Some(if state.configured_enabled {
+                    state.model_definition.clone()
+                } else {
+                    None
+                });
+            }
+        }
+    }
+
     fn lock(&self) -> MutexGuard<'_, LogoOverride> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }
@@ -561,13 +652,23 @@ impl LogoControl {
 
     /// Fade the logo out, whichever image it is.
     pub fn hide(&self) {
-        self.lock().set_hidden(true);
+        let mut state = self.lock();
+
+        if state.scheduled_restore_hidden.is_some() {
+            state.scheduled_restore_hidden = Some(true);
+        }
+
+        state.set_hidden(true);
     }
 
     /// Fade the configured logo back in, dropping any replacement, which
     /// cross-fades to it when it is on air.
     pub fn show(&self) {
         let mut state = self.lock();
+
+        if state.scheduled_restore_hidden.is_some() {
+            state.scheduled_restore_hidden = Some(false);
+        }
 
         if state.replacement.is_some() {
             state.hand_over(Instant::now());
@@ -782,6 +883,16 @@ impl LogoControl {
         animate: bool,
     ) -> Result<()> {
         let (width, height) = size;
+        let enabled = {
+            let mut state = self.lock();
+            state.configured_enabled = enabled;
+
+            if enabled {
+                state.scheduled_restore_hidden = None;
+            }
+
+            enabled || state.scheduled_hidden.is_some() || state.scheduled_restore_hidden.is_some()
+        };
 
         {
             let state = self.lock();
@@ -911,6 +1022,30 @@ impl LogoControl {
 
     fn frame_at(&self, now: Instant) -> LogoFrame {
         let mut state = self.lock();
+        if let Some(hidden) = state.scheduled_restore_hidden {
+            let levels = state
+                .model_definition
+                .as_ref()
+                .and_then(|overlay| overlay.model.as_ref())
+                .map(|model| {
+                    model.graphic.role_levels(
+                        state
+                            .switched_at
+                            .map(|at| now.saturating_duration_since(at)),
+                        true,
+                        &state.model_from,
+                    )
+                });
+
+            if levels.is_none_or(|levels| levels.iter().all(|level| *level <= 0.0)) {
+                state.scheduled_restore_hidden = None;
+                state.configured = Some(None);
+                state.hidden = hidden;
+                state.switched_at = None;
+                state.from = if hidden { 0.0 } else { 1.0 };
+            }
+        }
+
         let switch = state.transitions.switch().as_secs_f64();
         let outgoing = state.outgoing.as_ref().and_then(|outgoing| {
             let left = 1.0 - now.saturating_duration_since(outgoing.since).as_secs_f64() / switch;
@@ -1376,5 +1511,91 @@ mod tests {
     fn logo_scale_rejects_invalid_percentages() {
         assert!(logo_dimensions(Some("0%:-1"), 400, 200, 1920, 1080).is_err());
         assert!(logo_dimensions(Some("nan%:-1"), 400, 200, 1920, 1080).is_err());
+    }
+    #[test]
+    fn scheduled_logo_visibility_restores_disabled_and_hidden_states_across_refresh() {
+        let control = LogoControl::default();
+        let spec = crate::GraphicSpec {
+            picture: None,
+            layers: vec![crate::GraphicLayerSpec {
+                content: crate::GraphicContent::Box {
+                    fill: crate::RgbaColor {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                        a: 255,
+                    },
+                },
+                x: 80.0,
+                y: 5.0,
+                width: 10.0,
+                height: 10.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: crate::GraphicAnimation::Fade,
+                animation_out: crate::GraphicAnimation::Fade,
+                animation_ms: 400,
+                delay_ms: 0,
+            }],
+        };
+        control
+            .set_model(Some(&spec), 0, None, false, 320, 180)
+            .unwrap();
+        assert!(!control.is_visible());
+        control.set_scheduled_visible(true);
+        let entered = control.lock().switched_at.unwrap();
+        assert!(control.frame_at(entered).visibility < 0.01);
+        assert!(
+            (control
+                .frame_at(entered + Duration::from_millis(200))
+                .visibility
+                - 0.5)
+                .abs()
+                < 0.01
+        );
+        control.set_scheduled_visible(true);
+        assert!(control.is_visible());
+        control
+            .refresh_model(Some(&spec), 0, None, false, 320, 180)
+            .unwrap();
+        assert!(control.is_visible());
+        // Simulate the fully entered interval without sleeping or changing a clock.
+        control.lock().switched_at = None;
+        control.set_scheduled_visible(false);
+        let at = control.lock().switched_at.unwrap();
+        assert!(!control.is_visible());
+        let fading = control.frame_at(at + Duration::from_millis(200));
+        assert!((fading.visibility - 0.5).abs() < 0.01);
+        control.frame_at(at + Duration::from_millis(500));
+        assert!(!control.state().hidden);
+        control.set_scheduled_visible(true);
+        control.lock().switched_at = None;
+        control.set_scheduled_visible(false);
+        control
+            .set_model(Some(&spec), 0, None, true, 320, 180)
+            .unwrap();
+        control.show();
+        control.frame_at(Instant::now() + Duration::from_secs(2));
+        assert!(
+            control.is_visible(),
+            "a manual startup enable must supersede pending schedule cleanup"
+        );
+        control
+            .set_model(Some(&spec), 0, None, true, 320, 180)
+            .unwrap();
+        control.hide();
+        control.set_scheduled_visible(true);
+        assert!(control.is_visible());
+        control.set_scheduled_visible(false);
+        assert!(!control.is_visible());
+        assert!(control.state().hidden);
+        control
+            .set_model(Some(&spec), 0, None, false, 320, 180)
+            .unwrap();
+        control.set_scheduled_visible(true);
+        control.hide();
+        control.abandon_scheduled_visibility();
+        assert!(!control.is_visible());
+        assert!(control.state().hidden);
     }
 }

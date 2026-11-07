@@ -8,6 +8,9 @@ use log::*;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 
+#[path = "graphics_schedule/graphics.rs"]
+mod templates;
+
 use crate::{
     api::routes::{apply_graphics, revert_graphics},
     db::handles,
@@ -27,6 +30,7 @@ type Done = HashSet<(i32, NaiveDateTime, bool)>;
 
 pub async fn run_graphics_ticker(manager: ChannelManager, cancel: CancellationToken) {
     let mut done = Done::new();
+    let mut templates = templates::TemplateSchedules::default();
 
     loop {
         tokio::select! {
@@ -34,15 +38,18 @@ pub async fn run_graphics_ticker(manager: ChannelManager, cancel: CancellationTo
             _ = sleep(TICK) => {}
         }
 
-        if let Err(error) = tick(&manager, &mut done).await {
+        if let Err(error) = tick(&manager, &mut done, &mut templates).await {
             warn!(channel = manager.id; "Scheduled graphics: {error}");
         }
     }
+
+    templates.stop(&manager);
 }
 
 async fn tick(
     manager: &ChannelManager,
     done: &mut Done,
+    templates: &mut templates::TemplateSchedules,
 ) -> Result<(), crate::utils::errors::ServiceError> {
     let events = handles::select_graphics_events(&manager.db_pool, manager.id).await?;
     let timezone = manager.config.read().await.channel.timezone;
@@ -50,7 +57,9 @@ async fn tick(
     let grace = TimeDelta::try_seconds(GRACE_SECONDS).unwrap_or_default();
     let day = TimeDelta::try_days(1).unwrap_or_default();
 
-    for event in &events {
+    templates.tick(manager, &events, now, done).await?;
+
+    for event in events.iter().filter(|event| event.template.is_none()) {
         for date in [(now - day).date(), now.date()] {
             let Some((start, end)) = event.window_on(date) else {
                 continue;

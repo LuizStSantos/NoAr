@@ -17,7 +17,10 @@ use crate::{
 pub struct GraphicsEventInput {
     #[serde(default)]
     pub title: String,
+    #[serde(default)]
     pub actions: GraphicsScene,
+    #[serde(default)]
+    pub template: Option<crate::db::models::ScheduledGraphic>,
     pub start_date: String,
     pub start_time: String,
     #[serde(default)]
@@ -78,6 +81,7 @@ pub fn prepare_graphics_event(
         id,
         channel_id,
         title,
+        template: input.template,
         actions,
         start_date: start_date.format("%Y-%m-%d").to_string(),
         start_time: start_time.format("%H:%M:%S").to_string(),
@@ -125,6 +129,85 @@ impl GraphicsEvent {
     }
 }
 
+/// Validate ownership/renderability before persisting a model schedule. Legacy
+/// action events keep their original API shape and validation.
+pub async fn validate_scheduled_template(
+    manager: &crate::player::controller::ChannelManager,
+    event: &mut GraphicsEvent,
+) -> Result<(), ServiceError> {
+    let Some(selection) = &mut event.template else {
+        return Ok(());
+    };
+    let template = crate::db::handles::select_graphics_template(
+        &manager.db_pool,
+        manager.id,
+        selection.template_id,
+    )
+    .await?
+    .ok_or_else(|| {
+        ServiceError::NotFound("Graphics template not found in this channel".to_string())
+    })?;
+    let scenes =
+        crate::db::handles::select_graphics_scene_templates(&manager.db_pool, manager.id).await?;
+
+    if scenes.iter().any(|(id, _)| *id == template.id) {
+        return Err(ServiceError::BadRequest(
+            "Choose a layered template, not a legacy quick scene".to_string(),
+        ));
+    }
+
+    let bindings =
+        crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
+    let permanent = template.always_on == Some(true)
+        || bindings.iter().any(|binding| {
+            binding.template_id == template.id
+                && binding.role != crate::db::models::GraphicsRole::Lshape
+        });
+
+    if selection.values.len() > 64
+        || selection
+            .values
+            .values()
+            .any(|value| value.chars().count() > 1000)
+        || selection.records.len() > 16
+    {
+        return Err(ServiceError::BadRequest(
+            "Scheduled fields exceed their limits".to_string(),
+        ));
+    }
+
+    if permanent && (!selection.values.is_empty() || !selection.records.is_empty()) {
+        return Err(ServiceError::BadRequest(
+            "Always-on models use their saved fields and data mappings".to_string(),
+        ));
+    }
+
+    let config = manager.config.read().await.clone();
+    if permanent && !crate::utils::graphics::graphic_has_content(&template, &config) {
+        return Err(ServiceError::BadRequest(
+            "Configure the permanent model before scheduling it".to_string(),
+        ));
+    }
+
+    let spec = crate::utils::graphics::graphic_spec_for_records(
+        &template,
+        &selection.values,
+        &selection.records,
+        &config,
+    )?;
+    tokio::task::spawn_blocking(move || {
+        noar_engine::render_graphic(&spec, config.output.width, config.output.height)
+    })
+    .await
+    .map_err(|_| ServiceError::InternalServerError)?
+    .map_err(|error| {
+        ServiceError::BadRequest(format!("Scheduled model cannot be rendered: {error:#}"))
+    })?;
+    selection.name = template.name;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -135,6 +218,7 @@ mod tests {
     fn input(start: &str, end: Option<&str>, repeat_days: u8) -> GraphicsEventInput {
         GraphicsEventInput {
             title: " Patrocínio ".to_string(),
+            template: None,
             actions: GraphicsScene {
                 logo: SceneLogo::Hide,
                 lshape: SceneLShape::On,

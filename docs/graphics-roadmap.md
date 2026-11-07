@@ -117,3 +117,12 @@ HTTP JSON), layer field mappings, On air record/manual selection and last-good
 records. See the [operator guide](graphics-data-sources.md) and graphics handoff
 for actual executed checks. This does not implement private Google OAuth,
 custom HTTP headers, rundowns or the whole broader integration roadmap.
+
+### Animated artwork and model schedules
+
+The approved follow-up adds animated GIF image layers and natural-size first
+image insertion. Scheduler's new events select Composer models, values and
+source records rather than the old logo/L-shape action form; existing action
+snapshots remain compatible. Migration `00034` adds the optional model reference.
+See the current handoff for the exact tested revision, actual HLS/browser proofs
+and the separate unchanged-static-layout parity check.

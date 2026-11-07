@@ -758,6 +758,7 @@ pub async fn add_graphics_event(
     let mut event =
         crate::utils::schedule::graphics::prepare_graphics_event(&storage, id, 0, input)?;
 
+    crate::utils::schedule::graphics::validate_scheduled_template(&manager, &mut event).await?;
     event.id = handles::insert_graphics_event(&state.pool, &event).await?;
 
     Ok(Json(event))
@@ -773,8 +774,9 @@ pub async fn update_graphics_event(
 ) -> Result<Json<crate::db::models::GraphicsEvent>, ServiceError> {
     let manager = authorized_manager(&state, id, &user, &details).await?;
     let storage = manager.config.read().await.channel.storage.clone();
-    let event =
+    let mut event =
         crate::utils::schedule::graphics::prepare_graphics_event(&storage, id, event_id, input)?;
+    crate::utils::schedule::graphics::validate_scheduled_template(&manager, &mut event).await?;
 
     if !handles::update_graphics_event(&state.pool, &event).await? {
         return Err(ServiceError::NotFound(format!(

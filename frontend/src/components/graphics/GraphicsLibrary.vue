@@ -253,9 +253,12 @@ watch(channelId, () => {
             {{ t('graphics.composer.alwaysOn') }} ·
             {{ t(deleteUsage.on ? 'graphics.assigned.on' : 'graphics.assigned.off') }}
         </p>
+        <p v-if="deleteUsage?.events.length" class="text-sm text-muted">
+            {{ t('graphics.library.deleteScheduled') }}
+        </p>
         <ul v-if="deleteUsage?.events.length" class="text-sm text-muted">
             <li v-for="event in deleteUsage.events" :key="event.id">
-                {{ event.title }} · {{ t('graphics.library.snapshotRetained') }}
+                {{ event.title }} · {{ t('graphics.library.eventRetained') }}
             </li>
         </ul>
         <p class="text-xs text-muted">{{ t('graphics.library.deleteAssets') }}</p>

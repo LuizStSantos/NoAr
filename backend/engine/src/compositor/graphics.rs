@@ -12,7 +12,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result, anyhow, ensure};
+
+#[path = "graphics/images/graphics.rs"]
+pub(crate) mod images;
 
 use crate::{
     compositor::{
@@ -169,6 +172,7 @@ pub struct GraphicSpec {
 struct RenderedLayer {
     frame: VideoFrame,
     chroma_alpha: Vec<u8>,
+    image_animation: Option<Arc<images::ImageAnimation>>,
     x: i32,
     y: i32,
     width: u32,
@@ -202,6 +206,19 @@ fn picture_switch() -> Duration {
 }
 
 impl RenderedGraphic {
+    pub(crate) fn is_animated(&self) -> bool {
+        self.layers
+            .iter()
+            .any(|layer| layer.image_animation.is_some())
+    }
+
+    /// Fully entered artwork, including GIF frame selection, without I/O.
+    pub(crate) fn blend_steady(&self, frame: &mut VideoFrame) {
+        for layer in &self.layers {
+            blend_layer(frame, layer, 1.0, GraphicAnimation::None);
+        }
+    }
+
     pub(crate) fn picture_graphic(&self) -> Option<&LShapeGraphic> {
         self.picture.as_deref()
     }
@@ -442,6 +459,10 @@ fn render_layer(
     }
 
     let radius = layer.radius.max(0.0) / 100.0 * f64::from(frame_height);
+    let image_animation = match &layer.content {
+        GraphicContent::Image { path } => images::load_animation(path, width, height, radius)?,
+        _ => None,
+    };
     let frame = match &layer.content {
         GraphicContent::Box { fill } => {
             let mut rgba = vec![0_u8; width as usize * height as usize * 4];
@@ -512,38 +533,43 @@ fn render_layer(
             rgba_to_yuva420p(&rgba, width, height)?
         }
         GraphicContent::Image { path } => {
-            let decoded = crate::gstreamer::load_image(&path.to_string_lossy())
-                .with_context(|| format!("failed to load graphic image {}", path.display()))?;
-            let mut frame = crate::gstreamer::FrameConverter::new(
-                &decoded,
-                PixelFormat::Yuva420p,
-                width,
-                height,
-            )?
-            .run(&decoded)?;
+            if let Some(animation) = &image_animation {
+                animation.current().frame.clone()
+            } else {
+                let decoded = crate::gstreamer::load_image(&path.to_string_lossy())
+                    .with_context(|| format!("failed to load graphic image {}", path.display()))?;
+                let mut frame = crate::gstreamer::FrameConverter::new(
+                    &decoded,
+                    PixelFormat::Yuva420p,
+                    width,
+                    height,
+                )?
+                .run(&decoded)?;
 
-            if radius > 0.0 {
-                let stride = frame.stride(3);
-                let alpha = frame.data_mut(3);
-                let mut mask = vec![255_u8; width as usize * height as usize * 4];
-                cut_corners(&mut mask, width, height, radius);
+                if radius > 0.0 {
+                    let stride = frame.stride(3);
+                    let alpha = frame.data_mut(3);
+                    let mut mask = vec![255_u8; width as usize * height as usize * 4];
+                    cut_corners(&mut mask, width, height, radius);
 
-                for row in 0..height as usize {
-                    for column in 0..width as usize {
-                        if mask[(row * width as usize + column) * 4 + 3] == 0 {
-                            alpha[row * stride + column] = 0;
+                    for row in 0..height as usize {
+                        for column in 0..width as usize {
+                            if mask[(row * width as usize + column) * 4 + 3] == 0 {
+                                alpha[row * stride + column] = 0;
+                            }
                         }
                     }
                 }
-            }
 
-            frame
+                frame
+            }
         }
     };
 
     Ok(Some(RenderedLayer {
         chroma_alpha: chroma_alpha(&frame, width, height),
         frame,
+        image_animation,
         x: x as i32,
         y: y as i32,
         width,
@@ -577,6 +603,16 @@ pub fn render_graphic(
         }
     }
 
+    let animation_bytes: usize = layers
+        .iter()
+        .filter_map(|layer| layer.image_animation.as_ref())
+        .map(|animation| animation.bytes)
+        .sum();
+    ensure!(
+        animation_bytes <= 64 * 1024 * 1024,
+        "GIF frames exceed 64 MiB in this composition"
+    );
+
     let Some(window) = spec.picture else {
         return Ok(RenderedGraphic {
             layers,
@@ -598,13 +634,23 @@ pub fn render_graphic(
     }
 
     let px = |percent: f64, total: u32| percent_px(percent, total).max(0) as u32;
-    let graphic = LShapeGraphic::from_parts(
+    let animated = layers.iter().any(|layer| layer.image_animation.is_some());
+    let mut graphic = LShapeGraphic::from_parts(
         background,
         px(window.x, frame_width),
         px(window.y, frame_height),
         px(window.width, frame_width),
         px(window.height, frame_height),
     );
+
+    if animated {
+        graphic.set_animated_art(RenderedGraphic {
+            layers,
+            frame_width,
+            frame_height,
+            picture: None,
+        });
+    }
 
     Ok(RenderedGraphic {
         layers: Vec::new(),
@@ -710,11 +756,18 @@ fn blend_layer_with_visibility(
         return;
     }
 
+    let animated = layer
+        .image_animation
+        .as_ref()
+        .map(|animation| animation.current());
+    let (pixels, alpha) = animated.map_or((&layer.frame, &layer.chroma_alpha), |frame| {
+        (&frame.frame, &frame.alpha)
+    });
     blend_overlay(
         target,
         OverlayRef {
-            frame: &layer.frame,
-            chroma_alpha: &layer.chroma_alpha,
+            frame: pixels,
+            chroma_alpha: alpha,
             chroma_alpha_stride: layer.width as usize / 2,
             x,
             y,

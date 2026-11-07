@@ -987,13 +987,13 @@ export default {
         graphics: {
             new: 'Agendar grafismo',
             edit: 'Grafismo agendado',
-            intro: 'Muda a logo (inclusive a do canal) e o L-shape (canto e tamanho) num horário, e desfaz no fim. A programação continua como está.',
+            intro: 'Escolha um modelo de Grafismo para entrar no horário marcado, sem interromper a programação.',
             titlePlaceholder: 'Patrocínio do jornal',
             defaultTitle: 'Grafismo',
             start: 'Começa',
             end: 'Termina (opcional)',
             endHint:
-                'No fim, o L-shape sai e a logo volta como o canal define. Sem fim, a mudança fica até outro comando.',
+                'Ao terminar, retira apenas este grafismo e restaura a visibilidade anterior dos modelos permanentes. Sem término, permanece até outro comando. Eventos antigos mantêm suas ações.',
             save: 'Agendar',
             saved: 'Grafismo agendado.',
             removed: 'Grafismo removido.',
@@ -1005,6 +1005,15 @@ export default {
             removeConfirm: 'Remover “{title}”? As próximas vezes não acontecem mais.',
             summaryLogo: 'logo: {what}',
             summaryLShape: 'L-shape: {what}',
+            template: 'Modelo de Grafismo',
+            chooseTemplate: 'Escolha um modelo',
+            missingTemplate: 'Modelo indisponível (#{id})',
+            noTemplates: 'Crie um modelo no Composer antes de agendar.',
+            legacy: 'Manter as ações deste agendamento antigo',
+            permanentHint:
+                'Modelo permanente: usa os campos e as fontes salvos no Composer. O agendamento ativa sua visibilidade e restaura o estado anterior ao terminar.',
+            record: 'Registro de {name}',
+            savedRecord: 'Registro salvo no modelo',
         },
         intro: 'O que entra por cima da playlist.',
         materials: 'Materiais',
@@ -1666,12 +1675,14 @@ export default {
                 'Roteiros (vários, com itens em ordem e convidados) chegam na versão 2.5. Por enquanto, escolha o modelo aqui.',
         },
         library: {
-            snapshotRetained: 'ação agendada preservada',
+            eventRetained: 'agendamento preservado',
+            deleteScheduled:
+                'Agendamentos por modelo ficam salvos, mas não podem exibir um modelo excluído. As ações dos agendamentos antigos são preservadas.',
             delete: 'Excluir modelo',
             deleteTitle: 'Excluir este modelo?',
             deleteConfirm: '“{name}” será excluído. Ele não será recriado ao reiniciar.',
             deleteUsed:
-                'Este modelo tem vínculos ou está no ar ({count} instâncias temporárias). Excluir também o retira do ar e remove seus vínculos. Eventos agendados mantêm suas ações salvas.',
+                'Este modelo tem vínculos ou está no ar ({count} instâncias temporárias). Excluir também o retira do ar e remove seus vínculos. Os agendamentos continuam salvos.',
             deleteAssets: 'Imagens e fontes do Armazenamento serão preservadas.',
             new: 'Novo modelo',
             filter: 'Filtrar por grupo',

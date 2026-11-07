@@ -13,6 +13,9 @@ one is tagged.
 
 ### Fixed
 
+- Preserve a ticker hide issued before its runtime definition loads, including
+  the next playout start, without changing its saved startup visibility.
+
 - Clear external and clip artwork/placement when an assigned template is deleted
   or its compatibility binding is removed; leaving L-shape returns to full screen.
 
@@ -22,6 +25,13 @@ one is tagged.
   preserve the assigned model's freely positioned picture window.
 
 ### Added
+
+- Schedule Composer models with previews, fields, data records and second-level
+  time inputs; retain legacy action events through migration `00034`. Each timed
+  composition owns its take, and permanent visibility leases restore prior state.
+- Play bounded animated GIFs with transparency and per-frame delays in image
+  layers, logo and L-shape artwork. First image insertion uses natural output
+  geometry, including full-frame artwork; replacements retain authored layout.
 
 - Add Graphics Data sources for uploaded/published CSV (including public Google
   Sheets CSV), RSS/Atom and HTTP JSON, with Composer field mappings, record

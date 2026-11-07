@@ -1267,3 +1267,194 @@ async fn removing_a_lshape_assignment_clears_its_external_art_and_returns_full_s
     assert!(manager.lshape_control.replacement().is_none());
     assert!(manager.lshape_control.placement().is_none());
 }
+
+#[tokio::test]
+#[serial]
+async fn model_schedules_validate_channel_ownership_fields_and_keep_legacy_events() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let (_, model) = send(&fixture, "POST", "/api/graphics/1/templates", Some(&admin), json!({
+        "name":"Scheduled title", "layers":[{"id":"title", "kind":"text", "text":"{headline}", "x":10,"y":10,"width":70,"height":10}]
+    })).await;
+    let body = json!({"title":"News", "start_date":"2026-11-08", "start_time":"23:58:00", "end_time":"00:02:00", "repeat_days":127,
+        "template":{"template_id":model["id"],"values":{"headline":"Live bulletin"},"records":{}}});
+    let (status, event) = send(
+        &fixture,
+        "POST",
+        "/api/schedule/1/graphics",
+        Some(&admin),
+        body.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{event}");
+    assert_eq!(event["template"]["name"], "Scheduled title");
+    assert_eq!(event["template"]["values"]["headline"], "Live bulletin");
+    let id = event["id"].as_i64().unwrap();
+    let (_, events) = send(
+        &fixture,
+        "GET",
+        "/api/schedule/1/graphics",
+        Some(&admin),
+        json!(null),
+    )
+    .await;
+    assert_eq!(events[0]["template"], event["template"]);
+    let mut invalid = body.clone();
+    invalid["template"]["template_id"] = json!(i32::MAX);
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/schedule/1/graphics",
+            Some(&admin),
+            invalid
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/schedule/2/graphics",
+            Some(&admin),
+            body.clone()
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+    let mut updated = body;
+    updated["template"]["values"]["headline"] = json!("Updated bulletin");
+    assert_eq!(
+        send(
+            &fixture,
+            "PUT",
+            &format!("/api/schedule/1/graphics/{id}"),
+            Some(&admin),
+            updated
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (_, usage) = send(
+        &fixture,
+        "GET",
+        &format!("/api/graphics/1/templates/{}/usage", model["id"]),
+        Some(&admin),
+        json!(null),
+    )
+    .await;
+    assert_eq!(usage["events"][0]["id"], id);
+    let (_,legacy)=send(&fixture,"POST","/api/schedule/1/graphics",Some(&admin),json!({"title":"Existing actions","start_date":"2026-11-08","start_time":"12:00","actions":{"logo":"hide","lshape":"on"}})).await;
+    assert!(legacy.get("template").is_none());
+    assert_eq!(legacy["actions"]["lshape"], "on");
+}
+
+#[tokio::test]
+#[serial]
+async fn scheduled_model_end_only_removes_its_own_take() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    manager.config.write().await.channel.timezone = Some("UTC".parse().unwrap());
+    let (_,template)=send(&fixture,"POST","/api/graphics/1/templates",Some(&admin),json!({"name":"Scheduled overlay","layers":[{"id":"box","kind":"box","x":5,"y":5,"width":20,"height":10,"fill":"#ff0000"}]})).await;
+    let (_, manual) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&admin),
+        json!({"template_id":template["id"],"duration":0}),
+    )
+    .await;
+    let manual_id = manual["take_id"].as_u64().unwrap();
+    let now = chrono::Utc::now();
+    let end = now + chrono::TimeDelta::seconds(5);
+    let (status,event)=send(&fixture,"POST","/api/schedule/1/graphics",Some(&admin),json!({"title":"Owned airing","start_date":now.format("%Y-%m-%d").to_string(),"start_time":now.format("%H:%M:%S").to_string(),"end_time":end.format("%H:%M:%S").to_string(),"template":{"template_id":template["id"],"values":{},"records":{}}})).await;
+    assert_eq!(status, StatusCode::OK, "{event}");
+    let cancel = CancellationToken::new();
+    let task = tokio::spawn(noar::player::graphics_schedule::run_graphics_ticker(
+        manager.clone(),
+        cancel.clone(),
+    ));
+    let mut observed = false;
+
+    for _ in 0..20 {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        if manager.graphics_control.on_air().len() == 2 {
+            observed = true;
+            break;
+        }
+    }
+
+    assert!(
+        observed,
+        "scheduled take did not start alongside the manual instance"
+    );
+    tokio::time::sleep(std::time::Duration::from_secs(6)).await;
+    let remaining = manager.graphics_control.on_air();
+    assert_eq!(remaining.len(), 1);
+    assert_eq!(remaining[0].id, manual_id);
+    cancel.cancel();
+    task.await.unwrap();
+}
+
+#[tokio::test]
+#[serial]
+async fn hiding_an_unloaded_ticker_survives_startup_reload_without_changing_its_saved_default() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let (_,model)=send(&fixture,"POST","/api/graphics/1/templates",Some(&admin),json!({"name":"Stopped ticker","always_on":true,"layers":[{"id":"text","kind":"text","text":"Saved bulletin","x":10,"y":70,"width":80,"height":10}]})).await;
+    let id = model["id"].as_i64().unwrap();
+    let (status, body) = send(
+        &fixture,
+        "PUT",
+        &format!("/api/graphics/1/templates/{id}/assignment"),
+        Some(&admin),
+        json!({"role":"ticker"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    manager
+        .graphics_control
+        .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
+    assert!(
+        manager
+            .graphics_control
+            .always_on_visible(noar_engine::AlwaysOnSlot::Ticker)
+            .is_none()
+    );
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            &format!("/api/graphics/1/channel/{id}"),
+            Some(&admin),
+            json!({"on":false})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    noar::utils::graphics::load_channel_ticker(&manager)
+        .await
+        .unwrap();
+    assert_eq!(
+        manager
+            .graphics_control
+            .always_on_visible(noar_engine::AlwaysOnSlot::Ticker),
+        Some(false)
+    );
+    assert!(
+        handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .iter()
+            .find(|binding| binding.template_id == id as i32)
+            .unwrap()
+            .enabled
+    );
+}

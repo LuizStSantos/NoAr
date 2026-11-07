@@ -12,6 +12,12 @@ declare global {
         channel_id: number
         title: string
         actions: import('@/types/playout_config').GraphicsScene
+        template?: {
+            template_id: number
+            name?: string
+            values: Record<string, string>
+            records: Record<string, number>
+        } | null
         start_date: string
         start_time: string
         /** None leaves the change on. */
@@ -20,7 +26,9 @@ declare global {
         enabled: boolean
     }
 
-    type GraphicsEventInput = Omit<GraphicsEvent, 'id' | 'channel_id'>
+    type GraphicsEventInput = Omit<GraphicsEvent, 'id' | 'channel_id' | 'actions'> & {
+        actions?: import('@/types/playout_config').GraphicsScene
+    }
 
     interface ScheduleEvent {
         id: number

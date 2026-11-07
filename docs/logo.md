@@ -3,7 +3,7 @@
 
 When a logo model is assigned and enabled, NoAr puts it over the picture of everything it plays: clips,
 scheduled lives and live ingest. Everything about it is in the **Graphics**
-tab of the main menu. Its navigation has five pages:
+tab of the main menu. Its navigation has six pages:
 
 - **On air**: model preview, real program monitor, temporary take/out,
   logo/ticker visibility and channel L-shape entry/exit (every user);
@@ -11,6 +11,7 @@ tab of the main menu. Its navigation has five pages:
   names. Use **Edit** to open their layers in Composer. Optional logo/L-shape/
   ticker assignments identify the targets of compatibility controls without
   reserving a group. **Manage scenes** also works before the first scene exists;
+- **Data sources**: CSV/public Sheets CSV, RSS/Atom or HTTP JSON mapped to fields;
 - **XMLTV logo**: the independent guide icon, with storage selection and preview;
 - **Subtitles**: the WebVTT subtitles of the HLS output;
 - **External control (API)**: the graphics key and a tutorial for encoders.
@@ -36,9 +37,36 @@ A fresh installation or new channel starts with only one removable **Logo**
 example; no empty ticker or L-shape cards are created. Upgrades retain existing
 models. Names and groups are yours to edit, and **Delete template** also works
 on assigned models. Its confirmation lists live use and retained event actions.
-Deleting detaches assignments and preserves uploaded assets. Scheduled events
-keep their saved actions and may still run later. Startup does not recreate
+Deleting detaches assignments and preserves uploaded assets. Legacy scheduled events keep their saved actions and may still run later.
+Model schedules retain their reference; a missing template is logged and skipped. Startup does not recreate
 removed examples. A missing legacy editor target opens Templates.
+
+## Image sizing and animated GIF
+
+The first upload/storage selection in an empty image layer uses its natural
+pixel size relative to the channel output, with proportional fit-down only when
+it exceeds the output. Position is clamped inside the canvas. An image with the
+same dimensions as the output becomes X/Y 0 and width/height 100%. Replacing an
+existing image preserves its authored position and size. Undo restores the prior
+image/geometry; the logo's explicit natural-size/corner repair remains available.
+
+GIF animation is decoded by GStreamer before publishing a composition, then
+cached frames are selected by their durations on air, preserving transparency.
+It works in ordinary/permanent compositions, channel logo and L-shape artwork,
+and their image overrides. GIFs play as continuous loops; finite file repeat
+counts are not used. Use template duration, event end or take-out to stop one.
+Hide/show does not reset an already loaded sequence. Matching file identity,
+size and radius share a loop phase across models/refreshes; a new decode, changed
+geometry/file or backend restart starts a new sequence. Browser GIF preview runs
+independently and is not frame-synchronized to Program.
+
+Limits: 10 MiB file, 256 frames, 60-second cycle, 32 MiB decoded GIF buffers at
+its rendered size and 64 MiB GIF buffers per composition. Source dimensions are
+bounded too. Invalid/unsupported/oversized animations fail preflight or take
+explicitly, instead of silently becoming a still. Native GIF demux/decoder
+plugins from GStreamer's libav plugin are required. PNG/JPEG/WebP still-image
+rendering retains its previous path. See the [executed handoff](graphics-handoff/README.md)
+for actual output proofs and untested output/device boundaries.
 
 ## Placing the logo
 
@@ -263,8 +291,9 @@ http://<server>:8787/scene/<channel>/intervalo-comercial?key=<KEY>
 to copy. A scene applies the L-shape graphic and place first, then the logo,
 then the L-shape in or out, so the picture shrinks straight to its corner.
 
-A scene's changes can also be put on a timetable in the
-[Scheduler](scheduler.md#scheduled-graphics), and are undone when it ends.
+Existing scene-action schedules keep their compatible reversal behavior. New
+[Scheduler](scheduler.md#scheduled-graphics) events select Composer models,
+including L-shape artwork and its video window.
 
 ## Logo in the guide
 
