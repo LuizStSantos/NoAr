@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "8a160c5eafab4078347f76cda8c6576ab84ab13a9a3d5e09e861d22477b28702",
+      "sha256": "0d4b0db681400e3954d4ac6794f20387827eb3d52d68675e74cbc3b1708d75ac",
       "language": "Markdown",
-      "bytes": 57702,
+      "bytes": 57853,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -21597,9 +21597,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "b8e3c29e3b3af8e44e0f0e852c303f3b1d1224255612f7fe255e5729f884183a",
+      "sha256": "70b18625db03cf1c1fdc215c8a808038210244d5f30b573d1480ca7007d281c9",
       "language": "Markdown",
-      "bytes": 85193,
+      "bytes": 88408,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -21612,6 +21612,30 @@
       "sha256": "40ad3a1e31b0c68dbed1fa3c23775445b64242ee254daebe5f1ccf11b20f05ef",
       "language": "JSON",
       "bytes": 594,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-parity-branch-channel-log.txt": {
+      "sha256": "6b9019414a3f8d7838c33dc061ef25d46d9e3eff08903336f13f84cad5b9077f",
+      "language": "Other",
+      "bytes": 2426,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-parity-branch-health.json": {
+      "sha256": "f3108ccd61fe0661a559c18f4d600b0b550b915b2ce28e44c83b5cedd82bdb60",
+      "language": "JSON",
+      "bytes": 12568,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-parity-main-channel-log.txt": {
+      "sha256": "4b331c882e6627eeae5a9a0190df7ad6c73e1ffd4669d9d5e53f17d3ee8a734a",
+      "language": "Other",
+      "bytes": 2425,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-parity-main-health.json": {
+      "sha256": "7621b720bd69055e7c448846d9599d5cb01e34bfa50d2172e50ea6b89fcfc59d",
+      "language": "JSON",
+      "bytes": 13307,
       "symbols": []
     },
     "docs/graphics-handoff/animated-schedule-browser-evidence.json": {
@@ -21638,16 +21662,40 @@
       "bytes": 3361,
       "symbols": []
     },
+    "docs/graphics-handoff/animated-schedule-compatibility-evidence.json": {
+      "sha256": "5fc5b7a529dbd694fea3b6b9a89923346af1658bded2bb6f5edcae075326a73f",
+      "language": "JSON",
+      "bytes": 22243,
+      "symbols": []
+    },
     "docs/graphics-handoff/animated-schedule-hls-evidence.json": {
       "sha256": "a5bf4b3eeda1e7a31e166e70b322ad8d7cd5a38dbc5285615dc65510588c2d26",
       "language": "JSON",
       "bytes": 11327,
       "symbols": []
     },
+    "docs/graphics-handoff/animated-schedule-parity-evidence.json": {
+      "sha256": "a3b62481d6b91d9de4edb3cb2311321e79a15b5ac19090529803dc8aecb3e530",
+      "language": "JSON",
+      "bytes": 451130,
+      "symbols": []
+    },
     "docs/graphics-handoff/animated-schedule-prior-channel-log.txt": {
       "sha256": "dd953562fff1fbfafd8997d8b0d00501440af79fba437c2bc9d0716809b2ed20",
       "language": "Other",
       "bytes": 34965,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-review-index.json": {
+      "sha256": "39d80c7bb84299da9adf901560588bcb63a53cb456850c5cc233e52df5080f20",
+      "language": "JSON",
+      "bytes": 1528,
+      "symbols": []
+    },
+    "docs/graphics-handoff/animated-schedule-review.html": {
+      "sha256": "514e76152a38bec95902126cceabca28026aa08930be6a5f71e6336c97555410",
+      "language": "HTML",
+      "bytes": 13403,
       "symbols": []
     },
     "docs/graphics-handoff/animated-schedule-rust-test-log.txt": {
@@ -21657,9 +21705,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/animated-schedule-verification.json": {
-      "sha256": "f494218b17428125342062fc24c2f26affb4450edda0db843b1c69c371f3f610",
+      "sha256": "319ce0e65702ab32377daacbfda2ab99e60232e480db7a59aabe9feea3e9e59d",
       "language": "JSON",
-      "bytes": 1121,
+      "bytes": 1769,
       "symbols": []
     },
     "docs/graphics-handoff/api-models-browser-evidence.json": {
@@ -21708,6 +21756,18 @@
       "sha256": "8a073f8572c28c0d9b76f88e0a64543f6a6692b0cd709ecf7e5fb314f211f1a5",
       "language": "HTML",
       "bytes": 44699,
+      "symbols": []
+    },
+    "docs/graphics-handoff/composer-guides-browser-regressions-log.txt": {
+      "sha256": "bc4dbd38fd2538322d7c00e86a9a23e4678059bf0708ac13c84d1c6a1694ae8c",
+      "language": "Other",
+      "bytes": 589,
+      "symbols": []
+    },
+    "docs/graphics-handoff/composer-guides-evidence.json": {
+      "sha256": "484f72e3cded84004227eba6f8cb2aab1822a3cad8314c7e9380c6db8c118434",
+      "language": "JSON",
+      "bytes": 1786,
       "symbols": []
     },
     "docs/graphics-handoff/control-api-design.html": {
@@ -22143,9 +22203,9 @@
       "symbols": []
     },
     "docs/logo.md": {
-      "sha256": "7517240676111a0e089dc2eca1993aaa1de976a60d417cd681bc0a3627c584bb",
+      "sha256": "591d346e4a68d75a77f7a395a4993a1cf656559362fb8fd87d90474c3bfcaf89",
       "language": "Markdown",
-      "bytes": 17297,
+      "bytes": 18001,
       "symbols": []
     },
     "docs/ndi.md": {
@@ -22730,9 +22790,9 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsComposer.vue": {
-      "sha256": "94cbf8cd8d592cffe443e2c5fcaa8280d10cff34aefe40b179bbd5fbbedbc88f",
+      "sha256": "d378c2eee178d932c9ef766b45a55321415bd1f04d50cad4ba65a6265eebbef2",
       "language": "Vue",
-      "bytes": 71428,
+      "bytes": 73037,
       "symbols": [
         {
           "name": "configStore",
@@ -22859,424 +22919,428 @@
           "line": 76
         },
         {
-          "name": "guideV",
-          "line": 77
-        },
-        {
-          "name": "guideH",
+          "name": "showSafeAreas",
           "line": 78
         },
         {
-          "name": "scaleBases",
+          "name": "guideV",
+          "line": 79
+        },
+        {
+          "name": "guideH",
           "line": 80
         },
         {
-          "name": "output",
-          "line": 81
-        },
-        {
-          "name": "frame",
+          "name": "scaleBases",
           "line": 82
         },
         {
-          "name": "time",
+          "name": "output",
           "line": 83
         },
         {
-          "name": "playing",
+          "name": "frame",
           "line": 84
         },
         {
-          "name": "timelineEnd",
+          "name": "time",
           "line": 85
         },
         {
+          "name": "playing",
+          "line": 86
+        },
+        {
+          "name": "timelineEnd",
+          "line": 87
+        },
+        {
           "name": "animationFrame",
-          "line": 92
-        },
-        {
-          "name": "loadVersion",
-          "line": 93
-        },
-        {
-          "name": "drag",
           "line": 94
         },
         {
+          "name": "loadVersion",
+          "line": 95
+        },
+        {
+          "name": "drag",
+          "line": 96
+        },
+        {
           "name": "dirty",
-          "line": 97
+          "line": 99
         },
         {
           "name": "uploadFont",
-          "line": 101
-        },
-        {
-          "name": "input",
-          "line": 102
-        },
-        {
-          "name": "file",
           "line": 103
         },
         {
-          "name": "id",
+          "name": "input",
           "line": 104
         },
         {
-          "name": "layerId",
+          "name": "file",
           "line": 105
         },
         {
-          "name": "version",
+          "name": "id",
           "line": 106
         },
         {
+          "name": "layerId",
+          "line": 107
+        },
+        {
+          "name": "version",
+          "line": 108
+        },
+        {
           "name": "asset",
-          "line": 116
+          "line": 118
         },
         {
           "name": "mapField",
-          "line": 137
+          "line": 139
         },
         {
           "name": "selectFieldSource",
-          "line": 151
-        },
-        {
-          "name": "id",
-          "line": 152
-        },
-        {
-          "name": "source",
           "line": 153
         },
         {
+          "name": "id",
+          "line": 154
+        },
+        {
+          "name": "source",
+          "line": 155
+        },
+        {
           "name": "changeFieldMapping",
-          "line": 156
+          "line": 158
         },
         {
           "name": "current",
-          "line": 157
+          "line": 159
         },
         {
           "name": "rememberDraft",
-          "line": 163
+          "line": 165
         },
         {
           "name": "undo",
-          "line": 173
+          "line": 175
         },
         {
           "name": "previous",
-          "line": 174
+          "line": 176
         },
         {
           "name": "updateSelectedLayer",
-          "line": 190
+          "line": 192
         },
         {
           "name": "setAlwaysOn",
-          "line": 204
+          "line": 206
         },
         {
           "name": "videoCorner",
-          "line": 210
+          "line": 212
         },
         {
           "name": "layer",
-          "line": 211
+          "line": 213
         },
         {
           "name": "horizontal",
-          "line": 217
+          "line": 219
         },
         {
           "name": "vertical",
-          "line": 218
+          "line": 220
         },
         {
           "name": "setVideoWindow",
-          "line": 223
+          "line": 225
         },
         {
           "name": "percent",
-          "line": 228
-        },
-        {
-          "name": "width",
-          "line": 229
-        },
-        {
-          "name": "height",
           "line": 230
         },
         {
-          "name": "x",
+          "name": "width",
           "line": 231
         },
         {
-          "name": "y",
+          "name": "height",
           "line": 232
         },
         {
+          "name": "x",
+          "line": 233
+        },
+        {
+          "name": "y",
+          "line": 234
+        },
+        {
           "name": "setDimension",
-          "line": 241
+          "line": 243
         },
         {
           "name": "number",
-          "line": 246
+          "line": 248
         },
         {
           "name": "axis",
-          "line": 252
+          "line": 254
         },
         {
           "name": "formatDimension",
-          "line": 262
-        },
-        {
-          "name": "value",
-          "line": 263
-        },
-        {
-          "name": "axis",
           "line": 264
         },
         {
+          "name": "value",
+          "line": 265
+        },
+        {
+          "name": "axis",
+          "line": 266
+        },
+        {
           "name": "setScale",
-          "line": 268
+          "line": 270
         },
         {
           "name": "layer",
-          "line": 269
+          "line": 271
         },
         {
           "name": "base",
-          "line": 275
+          "line": 277
         },
         {
           "name": "scaleValue",
-          "line": 281
+          "line": 283
         },
         {
           "name": "addLayer",
-          "line": 286
+          "line": 288
         },
         {
           "name": "layer",
-          "line": 296
+          "line": 298
         },
         {
           "name": "setShape",
-          "line": 333
+          "line": 335
         },
         {
           "name": "removeLayer",
-          "line": 341
+          "line": 343
         },
         {
           "name": "layer",
-          "line": 342
+          "line": 344
         },
         {
           "name": "toggleLayer",
-          "line": 358
+          "line": 360
         },
         {
           "name": "startDrag",
-          "line": 363
+          "line": 365
         },
         {
           "name": "moveLayer",
-          "line": 384
+          "line": 386
         },
         {
           "name": "layer",
-          "line": 389
+          "line": 391
         },
         {
           "name": "original",
-          "line": 395
-        },
-        {
-          "name": "dx",
-          "line": 396
-        },
-        {
-          "name": "dy",
           "line": 397
         },
         {
+          "name": "dx",
+          "line": 398
+        },
+        {
+          "name": "dy",
+          "line": 399
+        },
+        {
           "name": "snap",
-          "line": 400
+          "line": 402
         },
         {
           "name": "targets",
-          "line": 401
+          "line": 403
         },
         {
           "name": "patch",
-          "line": 410
+          "line": 412
         },
         {
           "name": "endDrag",
-          "line": 420
+          "line": 422
         },
         {
           "name": "seekPreview",
-          "line": 430
+          "line": 432
         },
         {
           "name": "stopPreview",
-          "line": 435
+          "line": 437
         },
         {
           "name": "playPreview",
-          "line": 441
+          "line": 443
         },
         {
           "name": "start",
-          "line": 447
-        },
-        {
-          "name": "tick",
           "line": 449
         },
         {
+          "name": "tick",
+          "line": 451
+        },
+        {
           "name": "loadEditor",
-          "line": 462
+          "line": 464
         },
         {
           "name": "version",
-          "line": 463
+          "line": 465
         },
         {
           "name": "id",
-          "line": 471
+          "line": 473
         },
         {
           "name": "saveTemplate",
-          "line": 531
+          "line": 533
         },
         {
           "name": "result",
-          "line": 539
+          "line": 541
         },
         {
           "name": "uploadImage",
-          "line": 578
-        },
-        {
-          "name": "input",
-          "line": 579
-        },
-        {
-          "name": "original",
           "line": 580
         },
         {
-          "name": "layer",
+          "name": "input",
           "line": 581
         },
         {
-          "name": "channel",
+          "name": "original",
           "line": 582
         },
         {
+          "name": "layer",
+          "line": 583
+        },
+        {
+          "name": "channel",
+          "line": 584
+        },
+        {
           "name": "cleanedName",
-          "line": 588
+          "line": 590
         },
         {
           "name": "number",
-          "line": 607
+          "line": 609
         },
         {
           "name": "name",
-          "line": 610
+          "line": 612
         },
         {
           "name": "file",
-          "line": 611
+          "line": 613
         },
         {
           "name": "restoreLogoPlacement",
-          "line": 645
+          "line": 647
         },
         {
           "name": "layer",
-          "line": 646
+          "line": 648
         },
         {
           "name": "source",
-          "line": 656
+          "line": 658
         },
         {
           "name": "image",
-          "line": 657
+          "line": 659
         },
         {
           "name": "availableWidth",
-          "line": 665
-        },
-        {
-          "name": "availableHeight",
-          "line": 666
-        },
-        {
-          "name": "factor",
           "line": 667
         },
         {
-          "name": "width",
+          "name": "availableHeight",
           "line": 668
         },
         {
-          "name": "height",
+          "name": "factor",
           "line": 669
         },
         {
-          "name": "setImage",
-          "line": 685
-        },
-        {
-          "name": "version",
-          "line": 686
-        },
-        {
-          "name": "geometry",
-          "line": 687
-        },
-        {
-          "name": "source",
-          "line": 690
-        },
-        {
-          "name": "image",
-          "line": 691
-        },
-        {
-          "name": "factor",
-          "line": 695
-        },
-        {
           "name": "width",
-          "line": 696
+          "line": 670
         },
         {
           "name": "height",
+          "line": 671
+        },
+        {
+          "name": "setImage",
+          "line": 687
+        },
+        {
+          "name": "version",
+          "line": 688
+        },
+        {
+          "name": "geometry",
+          "line": 689
+        },
+        {
+          "name": "source",
+          "line": 692
+        },
+        {
+          "name": "image",
+          "line": 693
+        },
+        {
+          "name": "factor",
           "line": 697
         },
         {
+          "name": "width",
+          "line": 698
+        },
+        {
+          "name": "height",
+          "line": 699
+        },
+        {
           "name": "pickImage",
-          "line": 715
+          "line": 717
         },
         {
           "name": "layer",
-          "line": 721
+          "line": 723
         },
         {
           "name": "confirmBeforeUnload",
-          "line": 740
+          "line": 742
         }
       ]
     },
@@ -33146,15 +33210,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "98b4d29b05fc5edda773770a70260779198aff21db59ecf583dc81c7b320b0b6",
+      "sha256": "f024257d0598490af6026abca9426b7f5021c3e2ecc499302b8ed15a85dc9e51",
       "language": "TypeScript",
-      "bytes": 145764,
+      "bytes": 146002,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "3766cbe24f09b06258599a3feb9f71839b4fb7ece5a293a023afe8af6dc251ed",
+      "sha256": "154c2aed819ded52a3e62e33306fbecf2263d16a382c68b777c42c2027739192",
       "language": "TypeScript",
-      "bytes": 151831,
+      "bytes": 152099,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -36794,9 +36858,9 @@
       ]
     },
     "qa/graphics/parity-criteria.md": {
-      "sha256": "e2092f8e55e06f2694d6eba476866e136ce2c43bf64f17dfac156489166e4aa4",
+      "sha256": "bcefda8e7e09d9164197617614ee06eef3f48df06bb793f1c0aa8cdea230bce8",
       "language": "Markdown",
-      "bytes": 4308,
+      "bytes": 4770,
       "symbols": []
     },
     "qa/graphics/parity.py": {

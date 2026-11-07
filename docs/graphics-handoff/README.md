@@ -4,6 +4,33 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Composer checkerboard and optional safety guides
+
+The Composer canvas now uses a neutral transparency checkerboard with a 10%
+coordinate grid. **Safety margins** toggles white action guides 5% from each
+edge and yellow text guides 10% from each edge. The checkbox starts off and the
+aids stay local to the editor, outside template data and On air. Guides are
+above artwork and do not intercept layer gestures. See the
+[operator guide](../logo.md#composer-canvas-guides).
+
+Verification: Vue types, full frontend ESLint, changed-file Prettier and the
+production frontend build passed. All **three original Composer regressions**
+passed in a fresh disposable installation. Additional actual pt-BR browser
+interaction at 1440/390 px verified checkbox toggling without API writes,
+5%/10% guide positions, no horizontal overflow, dragging through the guides,
+saving/reloading authored layers, guides above opaque full-frame artwork and
+absence from On air. No browser page errors were observed.
+[Browser measurements](composer-guides-evidence.json),
+[regression log](composer-guides-browser-regressions-log.txt),
+[guides over full-frame artwork](composer-safety-margins-over-artwork-pt-BR.jpg).
+No Rust, API or migration files changed in this follow-up; media-output and
+Rust suites were not repeated for this editor-only change.
+
+| View | Guides off | Guides on |
+| --- | --- | --- |
+| Desktop, pt-BR | [Checkerboard](composer-checkerboard-pt-BR.jpg) | [Safety margins](composer-safety-margins-pt-BR.jpg) |
+| Phone, pt-BR | [Checkerboard](composer-checkerboard-phone-pt-BR.jpg) | [Safety margins](composer-safety-margins-phone-pt-BR.jpg) |
+
 ## Animated artwork, natural image insertion and template schedules
 
 Implementation: `e80a27bf` on `claude/branch-review-opz967`.

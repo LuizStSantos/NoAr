@@ -74,6 +74,8 @@ const picking = ref(false)
 const proportional = ref(false)
 const unit = ref('%')
 const canvas = ref<HTMLElement>()
+// Canvas aids are local to the editor and never enter the saved template.
+const showSafeAreas = ref(false)
 const guideV = ref(false)
 const guideH = ref(false)
 // Scale presets use the created or loaded size, so consecutive presets never compound.
@@ -1031,10 +1033,16 @@ onBeforeUnmount(() => {
             </aside>
             <main class="min-w-0 flex flex-col gap-3">
                 <div class="flex flex-wrap gap-3 items-center text-xs text-muted">
-                    <span>{{ t('graphics.onAir.preview') }}</span
-                    ><span>{{ t('graphics.composer.safeArea') }}</span
-                    ><span class="ml-auto font-mono">{{ time?.toFixed(2) ?? '0.00' }} s</span>
+                    <span>{{ t('graphics.onAir.preview') }}</span>
+                    <label class="flex items-center gap-2 cursor-pointer min-h-9">
+                        <input v-model="showSafeAreas" type="checkbox" class="checkbox checkbox-sm" />
+                        {{ t('graphics.composer.safeArea') }}
+                    </label>
+                    <span class="ml-auto font-mono">{{ time?.toFixed(2) ?? '0.00' }} s</span>
                 </div>
+                <p v-if="showSafeAreas" class="m-0 text-xs text-muted">
+                    {{ t('graphics.composer.safeAreaHint') }}
+                </p>
                 <div
                     ref="canvas"
                     class="relative touch-none select-none"
@@ -1047,10 +1055,21 @@ onBeforeUnmount(() => {
                         :template="preview"
                         :values="sampleValues"
                         :time="time"
-                        class="rounded-field border border-line-strong bg-[linear-gradient(180deg,#5b7da6_0%,#3f5f86_55%,#3f6b2f_55%,#2f5524_100%)]"
+                        class="composer-canvas rounded-field border border-line-strong"
                     >
                         <template #overlay>
-                            <div class="absolute inset-[5%] border border-dashed border-white/30 pointer-events-none" />
+                            <template v-if="showSafeAreas">
+                                <div
+                                    class="composer-safe-area composer-action-safe"
+                                    role="img"
+                                    :aria-label="t('graphics.composer.actionSafe')"
+                                />
+                                <div
+                                    class="composer-safe-area composer-title-safe"
+                                    role="img"
+                                    :aria-label="t('graphics.composer.titleSafe')"
+                                />
+                            </template>
                             <div
                                 v-if="guideV"
                                 class="absolute left-1/2 inset-y-0 border-l border-cyan-300 pointer-events-none"
@@ -1619,6 +1638,32 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.composer-canvas {
+    background-color: #24272c;
+    background-image:
+        linear-gradient(to right, #ffffff24 1px, transparent 1px),
+        linear-gradient(to bottom, #ffffff24 1px, transparent 1px),
+        conic-gradient(#30343a 25%, transparent 0 50%, #30343a 0 75%, transparent 0);
+    background-size:
+        10% 10%,
+        10% 10%,
+        20px 20px;
+}
+.composer-safe-area {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+    border: 1px dashed;
+    box-shadow: 0 0 0 1px #0009;
+}
+.composer-action-safe {
+    inset: 5%;
+    border-color: #fff;
+}
+.composer-title-safe {
+    inset: 10%;
+    border-color: #fbbf24;
+}
 .composer-grid {
     display: grid;
     gap: 1rem;

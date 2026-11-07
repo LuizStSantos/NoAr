@@ -41,6 +41,18 @@ Deleting detaches assignments and preserves uploaded assets. Legacy scheduled ev
 Model schedules retain their reference; a missing template is logged and skipped. Startup does not recreate
 removed examples. A missing legacy editor target opens Templates.
 
+## Composer canvas guides
+
+Composer uses a neutral checkerboard for transparency, with grid lines every
+10% of the output to help position layers. Enable **Safety margins** above the
+canvas to show two guides: white at 5% from each edge for action, yellow at 10%
+for text. These insets leave a 90% action area and an 80% text area.
+The guides scale with the canvas on desktop and phone, and pointer gestures
+pass through them. They are local editor aids: they do not add layers, modify
+the model, appear in On air or change the output. The checkbox starts off when
+the editor is opened/reloaded. Opaque full-frame artwork covers the checkerboard;
+enabled safety guides remain visible above the artwork.
+
 ## Image sizing and animated GIF
 
 The first upload/storage selection in an empty image layer uses its natural

@@ -26,6 +26,9 @@ one is tagged.
 
 ### Added
 
+- Replace Composer's scenery background with a neutral checkerboard and 10%
+  grid, plus optional action/text safety guides at 5%/10% from each edge.
+
 - Schedule Composer models with previews, fields, data records and second-level
   time inputs; retain legacy action events through migration `00034`. Each timed
   composition owns its take, and permanent visibility leases restore prior state.
