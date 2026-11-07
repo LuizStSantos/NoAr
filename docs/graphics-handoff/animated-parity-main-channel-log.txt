@@ -1,0 +1,14 @@
+<span class="log-gray">[2026-11-07 06:42:36.255760+00:00]</span> <span class="level-debug">[DEBUG]</span> Start NoAr v2.2.1, channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-07 06:42:36.466672+00:00]</span> <span class="level-info">[ INFO]</span> Output connected to udp://127.0.0.1:40250
+<span class="log-gray">[2026-11-07 06:42:36.469183+00:00]</span> <span class="level-info">[ INFO]</span> Playout in folder mode
+<span class="log-gray">[2026-11-07 06:42:36.469843+00:00]</span> <span class="level-debug">[DEBUG]</span> Monitor folder: <span class="log-addr">"/workspace/noar-cloud/open-final-parity/media"</span>
+<span class="log-gray">[2026-11-07 06:42:36.496455+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:00:40.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-parity/media/deterministic.mp4</span>
+<span class="log-gray">[2026-11-07 06:42:36.548814+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 49.455206ms; output video=0, audio=0
+<span class="log-gray">[2026-11-07 06:42:36.554927+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 312.513µs; seek=None
+<span class="log-gray">[2026-11-07 06:43:16.564464+00:00]</span> <span class="level-info">[ INFO]</span> Sort files
+<span class="log-gray">[2026-11-07 06:43:16.567164+00:00]</span> <span class="level-info">[ INFO]</span> Play for <span class="log-number">00:00:40.000</span>: <span class="log-addr">/workspace/noar-cloud/open-final-parity/media/deterministic.mp4</span>
+<span class="log-gray">[2026-11-07 06:43:16.637921+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source opened in 67.528672ms; output video=1000, audio=1920000
+<span class="log-gray">[2026-11-07 06:43:16.644770+00:00]</span> <span class="level-debug">[DEBUG]</span> GStreamer source started in 338.985µs; seek=None
+<span class="log-gray">[2026-11-07 06:43:19.983073+00:00]</span> <span class="level-debug">[DEBUG]</span> Deactivate playout and stop all child processes from channel: <span class="log-number">1</span>
+<span class="log-gray">[2026-11-07 06:43:20.095266+00:00]</span> <span class="level-info">[ INFO]</span> Sort files
+<span class="log-gray">[2026-11-07 06:43:20.416974+00:00]</span> <span class="level-debug">[DEBUG]</span> Stop all child processes from channel: <span class="log-number">1</span>

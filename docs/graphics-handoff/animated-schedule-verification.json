@@ -26,10 +26,28 @@
   "natural_image": "natural-full-output-evidence.json",
   "restart": "animated-gif-restart-evidence.json",
   "deletion": "scheduled-template-deletion-evidence.json",
-  "legacy_and_static_parity": "PENDING_SEPARATE_FINAL_VERIFICATION",
+  "legacy_and_static_parity": {
+    "status": "PASS",
+    "legacy_responses": 76,
+    "xmltv_cases": 2,
+    "raw_frames_exact": 1000,
+    "aligned_hls_frames": 1000,
+    "maximum_observed_hls_channel_error": 0,
+    "compatibility_evidence": "animated-schedule-compatibility-evidence.json",
+    "parity_evidence": "animated-schedule-parity-evidence.json",
+    "scope": "Unchanged static 2.2.1 layout and transition fixture; GIFs/template schedules are proved separately."
+  },
   "not_run": [
     "Physical/desktop output for GIFs",
     "Formal soak",
     "Same-load baseline classification of the earlier pre-final clip-sync error"
-  ]
+  ],
+  "implementation_commit": "e80a27bf",
+  "review": {
+    "pdf": "animated-schedule-review.pdf",
+    "html": "animated-schedule-review.html",
+    "index": "animated-schedule-review-index.json",
+    "screenshots": 34,
+    "pdf_pages": 35
+  }
 }

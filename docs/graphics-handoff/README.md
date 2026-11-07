@@ -6,6 +6,8 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 
 ## Animated artwork, natural image insertion and template schedules
 
+Implementation: `e80a27bf` on `claude/branch-review-opz967`.
+
 This approved follow-up covers three operator requests:
 
 - **Composer images:** first upload/storage selection uses original pixels at
@@ -67,7 +69,31 @@ Actual HLS on the final normal binary proved:
 [full-frame pixels](natural-full-output-evidence.json),
 [restart](animated-gif-restart-evidence.json),
 [deletion](scheduled-template-deletion-evidence.json).
-Static-layout/legacy-API parity and the review PDF follow as separate final checks.
+Final compatibility on this implementation passed **76 exact HTTP responses**
+and both XMLTV cases against released 2.2.1:
+[API/XMLTV evidence](animated-schedule-compatibility-evidence.json).
+The unchanged deterministic 40-second static-layout scenario also passed all
+**1,000 raw YUV frames byte for byte** and **1,000 aligned HLS frames** with
+observed error zero in the logo, full-frame L-shape and ticker regions, including
+logo fades and L-shape transitions. No geometry or timing adjustment was used.
+The unchanged HLS limits are MAE ≤ 0.75, 99.9th percentile ≤ 8 and maximum ≤ 32.
+Segments 0–20 match; segment 21 is post-roll outside tested PTS 0–999. The
+2.2.1 ticker region is empty; new GIFs and scheduled models use the separate
+actual HLS proofs above. The isolated capture worktree adds only the approved
+pre-encode observation hook; the normal binary has no capture hook.
+[Metrics and binary hashes](animated-schedule-parity-evidence.json),
+[comparison sheet](animated-parity-review.jpg),
+[reference health](animated-parity-main-health.json),
+[candidate health](animated-parity-branch-health.json),
+[reference log](animated-parity-main-channel-log.txt),
+[candidate log](animated-parity-branch-channel-log.txt).
+
+Review this update's **34 screenshots**, including pt-BR desktop/phone and real
+HLS, in the [35-page PDF](animated-schedule-review.pdf),
+[HTML gallery](animated-schedule-review.html) or
+[image index](animated-schedule-review-index.json). Individual images are at
+most 1440 px wide; sampled parity frames/differences are also saved as
+`output-animated-parity-*`.
 
 The isolated HLS execution has **zero channel ERROR entries** in its
 [scoped log](animated-schedule-channel-log.txt). The fixture's

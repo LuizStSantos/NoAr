@@ -67,3 +67,12 @@ models). The fixture still has no clock, mapped feed or enabled application
 ticker, because released 2.2.1 has no equivalent of those new layers. New-layer
 proofs are recorded separately. This changes the expected migrated schema, not
 the frame count, geometry, temporal alignment or pixel acceptance thresholds.
+
+## Animated artwork and template-schedule repeat
+
+The animated-artwork follow-up repeats the same criteria with candidate
+migrations through 00034 (optional model references for scheduled graphics).
+The unchanged 2.2.1 fixture still uses static images and an empty ticker region;
+GIF animation and timed model ownership have separate actual HLS evidence.
+This schema update does not change any frame, geometry, timing or compression
+acceptance threshold above.
