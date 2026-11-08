@@ -1,0 +1,49 @@
+
+> noar-isolated-e2e@0.1.0 test
+> playwright test
+
+
+Running 38 tests using 1 worker
+
+(node:74600) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/graphics-preview.spec.ts:7:5 › Models, On air and Composer share a neutral checkerboard on desktop and phone (3.5s)
+  ✓   2 [chromium] › tests/graphics-scroll.spec.ts:11:5 › Composer saves scrolling data fields, previews both directions, and edits them on a phone (4.1s)
+  ✓   3 [chromium] › tests/login-navigation.spec.ts:3:5 › login shows credentials fields and password toggle works (430ms)
+  ✓   4 [chromium] › tests/login-navigation.spec.ts:15:5 › protected schedule page sends unauthenticated user to login (430ms)
+  ✓   5 [chromium] › tests/maintenance.spec.ts:6:5 › Storage folder dialogs keep create, cancel, rename, move and delete behavior (3.2s)
+  ✓   6 [chromium] › tests/maintenance.spec.ts:59:5 › Report loading errors clear stale export data and recover after changing the day (917ms)
+  ✓   7 [chromium] › tests/operator.spec.ts:15:5 › playlist edits, undo/redo and save survive a full reload (2.3s)
+  ✓   8 [chromium] › tests/operator.spec.ts:54:5 › schedule create, edit and delete persist through the real API and reload (2.6s)
+  ✓   9 [chromium] › tests/operator.spec.ts:107:5 › a failed playlist load cannot overwrite the saved day (1.4s)
+  ✓  10 [chromium] › tests/operator.spec.ts:159:5 › schedule modal moves, traps and restores keyboard focus and closes on Escape (1.0s)
+  ✓  11 [chromium] › tests/operator.spec.ts:174:5 › a scheduled event is stored for the backend restart check (1.2s)
+  ✓  12 [chromium] › tests/operator.spec.ts:187:5 › graphics Composer saves layers, fields, artwork and animation through the real API (4.6s)
+  ✓  13 [chromium] › tests/operator.spec.ts:330:5 › graphics Composer keeps unsaved layers after conflicts and a failed update (2.0s)
+  ✓  14 [chromium] › tests/operator.spec.ts:372:5 › graphics Composer cannot overwrite a template after a failed load (1.1s)
+  ✓  15 [chromium] › tests/operator.spec.ts:389:5 › assigned channel models use dedicated controls and layered Composer (3.2s)
+  ✓  16 [chromium] › tests/operator.spec.ts:440:5 › channel graphics editors replace legacy navigation and retain bookmarked links (4.0s)
+  ✓  17 [chromium] › tests/operator.spec.ts:496:5 › the library can create the first scene after legacy menu removal (2.0s)
+  ✓  18 [chromium] › tests/operator.spec.ts:531:5 › the XMLTV logo tab saves its independent guide icon without changing layers (1.8s)
+  ✓  19 [chromium] › tests/operator.spec.ts:567:5 › the API tutorial uses actual model IDs, separates tokens and keys, and stays read-only (1.7s)
+  ✓  20 [chromium] › tests/operator.spec.ts:652:5 › Composer adds every layer when the secure UUID browser API is unavailable (1.9s)
+  ✓  21 [chromium] › tests/operator.spec.ts:692:5 › the channel logo can explicitly restore its natural size and corner with undo (2.1s)
+  ✓  22 [chromium] › tests/operator.spec.ts:735:5 › On air uses permanent model controls and the Player only reports graphics state (1.7s)
+  ✓  23 [chromium] › tests/operator.spec.ts:774:5 › free template names and groups support permanent compositions and deletion (2.2s)
+  ✓  24 [chromium] › tests/operator.spec.ts:807:5 › Composer authors shape primitives and a live server-time clock (3.6s)
+  ✓  25 [chromium] › tests/operator.spec.ts:862:5 › Composer uploads immutable fonts used by text and live clock previews (2.0s)
+  ✓  26 [chromium] › tests/operator.spec.ts:923:5 › Data sources create, edit, refresh and delete uploaded CSV on desktop and phone (1.5s)
+  ✓  27 [chromium] › tests/operator.spec.ts:959:5 › Composer maps live fields and On air selects records with manual overrides (2.3s)
+  ✓  28 [chromium] › tests/operator.spec.ts:1013:5 › new image layers use natural output geometry while replacements retain the edited size (1.5s)
+  ✓  29 [chromium] › tests/operator.spec.ts:1043:5 › Scheduler selects a Composer model with fields and preserves the selection after reload (1.8s)
+  ✓  30 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /player (394ms)
+  ✓  31 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /playlist (356ms)
+  ✓  32 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /schedule (408ms)
+  ✓  33 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /graphics (421ms)
+  ✓  34 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /media (411ms)
+  ✓  35 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /report (433ms)
+  ✓  36 [chromium] › tests/protected-routes.spec.ts:6:7 › anonymous visitor cannot view protected /configure (391ms)
+  ✓  37 [chromium] › tests/public-api.spec.ts:4:5 › setup endpoint exposes expected public contract (23ms)
+  ✓  38 [chromium] › tests/storage.spec.ts:18:5 › Storage downloads original video, image and WebVTT files and recovers from denied access tickets (2.8s)
+
+  38 passed (1.2m)

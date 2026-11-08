@@ -124,6 +124,10 @@ paths start at `frontend/src/`. Props are inputs and emitted commands/patches ar
 outputs. The document owner records one undo snapshot per pointer gesture.
 Typed inputs and explicit patches keep mutation sources traceable. Editor
 checkboxes, snapping guides and the checkerboard never enter saved model JSON.
+`TemplatePreview.vue` owns the neutral checkerboard for library cards, On air
+Preview and Composer. Composer adds its alignment grid through the shared CSS
+background variable, plus optional safe-area guides. Program remains the real
+video monitor; preview styling never changes encoded output.
 
 `GraphicsSubtitles.vue` owns the active VTT settings page.
 `GraphicsControlApi.vue` owns the existing controller key/examples within the

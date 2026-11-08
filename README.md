@@ -161,7 +161,8 @@ artwork, and the Report for what aired.
 - **Docker-only install**: one command, then a setup page in the browser.
 
 The interface is in English and Brazilian Portuguese. All screenshots below
-show **dark mode**, in English, on the synthetic **Example TV** demo channel.
+show **dark mode**, in English, at **1440×1000 pixels**, on the synthetic
+**Example TV** demo channel.
 Its programmes, artwork, templates and market records are examples.
 The [screenshot guide](qa/screenshots/README.md) rebuilds and verifies the gallery.
 
@@ -203,19 +204,21 @@ comes back, next to where the logo goes off.
 
 ![Marks in a video](docs/images/marks.png)
 
-**Graphics › Templates**: a channel logo, a live clock, a mapped information
-panel, a presenter lower third and a sponsor window, in custom groups. Models
-have the controls appropriate to their assignment and open in Composer.
+**Graphics › Templates**: custom groups, thumbnails on a neutral transparency
+checkerboard and controls appropriate to each model's assignment. Edit opens
+Composer; scroll or filter groups to see the other templates.
 
 ![Graphics templates in dark mode](docs/images/graphics.png)
 
 **Composer**: image, shape and text layers, named fields, resize handles,
 percent/pixel geometry, font upload, animation timing and editor safety margins.
+The shared checkerboard gains an alignment grid in the editor.
 
 ![Composer in dark mode](docs/images/composer.png)
 
 **Graphics › On air**: fill the presenter fields on the preview, compare them
 with the real program monitor, take graphics in/out and control always-on models.
+Preview uses the same checkerboard as Templates; Program shows the actual video.
 
 ![Graphics On air in dark mode](docs/images/onair.png)
 

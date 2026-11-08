@@ -4,6 +4,47 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Shared checkerboard and matching README screenshot dimensions
+
+Templates, On air Preview and Composer now share one neutral transparency
+checkerboard in `TemplatePreview.vue`. The blue/green scenery backgrounds were
+removed from the library and On air. Composer adds its existing alignment grid
+and optional safe-area guides to the shared pattern. Program shows the real
+video; these preview backgrounds are not part of saved models or encoded output.
+
+All **14 README gallery PNGs were recaptured at exactly 1440×1000 pixels**,
+in dark mode, from the production frontend with the owned Example TV demo and
+its actual running backend. Templates now uses a viewport capture too. The
+helper fixes device scale to 1 and asserts PNG width/height after every capture,
+plus theme, document width and the shared preview's computed background styles.
+The screenshot guide and README captions describe scrolling/filtering groups.
+
+Executed: Vue types, ESLint, changed-code Prettier, QA types, production build,
+architecture checks and **38 Chromium browser tests passed**. The new regression
+checks all three preview backgrounds at 1440×1000 and 390×844 in dark pt-BR,
+retains Composer's two grid gradients and safety guides, and confirms Program
+does not use the authoring preview. The gallery capture passed all 14 screens,
+with two advancing real-video checks, no page errors and `/health` `ok` / `on_air`.
+All PNG dimensions, image hashes and preview-source hashes were checked again.
+
+[Gallery evidence](../images/readme-captures.json),
+[UI evidence](preview-checkerboard-verification.json),
+[browser suite](preview-checkerboard-browser-test-log.txt).
+
+Screenshots:
+[Templates desktop](preview-checkerboard-templates-1440-pt-BR.jpg),
+[On air desktop](preview-checkerboard-onair-1440-pt-BR.jpg),
+[Composer desktop](preview-checkerboard-composer-1440-pt-BR.jpg),
+[Templates phone](preview-checkerboard-templates-390-pt-BR.jpg),
+[On air phone](preview-checkerboard-onair-390-pt-BR.jpg),
+[Composer phone](preview-checkerboard-composer-390-pt-BR.jpg).
+Phone QA captures are full-page evidence; the README gallery uses only the
+fixed-size PNGs in `docs/images/`.
+
+No Rust/server source changed. NOT_RUN for this UI correction: Rust/media-renderer
+suites, new HLS raw-frame parity, Firefox/Safari and physical devices. Earlier
+scrolling renderer evidence below retains its original scope.
+
 ## Scrolling text and live information
 
 Text layers now support continuous horizontal movement in Composer: static,
@@ -84,7 +125,8 @@ dark mode, at most 1440 px wide, using an owned disposable Example TV database
 and synthetic media. The capture run checked `ffp-dark` on every screen,
 document width, advancing video in Player and Graphics On air, and `/health`
 (`ok`, channel `on_air`). It recorded no browser page errors. The gallery adds
-Composer, On air and Data sources; Templates includes all demo groups.
+Composer, On air and Data sources. Templates originally used a full-page capture
+for all groups; the fixed-size gallery above supersedes that capture.
 
 See the [capture evidence](../images/readme-captures.json) for image hashes,
 dimensions, video checks and application revision, and the

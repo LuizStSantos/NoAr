@@ -175,12 +175,10 @@ function endInteraction() {
 </template>
 
 <style scoped>
-.composer-canvas {
-    background-color: #24272c;
+.composer-canvas.graphics-preview {
     background-image:
         linear-gradient(to right, #ffffff24 1px, transparent 1px),
-        linear-gradient(to bottom, #ffffff24 1px, transparent 1px),
-        conic-gradient(#30343a 25%, transparent 0 50%, #30343a 0 75%, transparent 0);
+        linear-gradient(to bottom, #ffffff24 1px, transparent 1px), var(--graphics-preview-checker);
     background-size:
         10% 10%,
         10% 10%,

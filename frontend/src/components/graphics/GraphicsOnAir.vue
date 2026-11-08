@@ -266,7 +266,7 @@ onMounted(() => {
                         :template="selected"
                         :values="selectedValues"
                         :records="selectedRecords"
-                        class="rounded-field border border-success/60 bg-[linear-gradient(180deg,#38596d_0%,#38596d_60%,#31543e_60%,#31543e_100%)]"
+                        class="rounded-field border border-success/60"
                     >
                         <template #overlay>
                             <div

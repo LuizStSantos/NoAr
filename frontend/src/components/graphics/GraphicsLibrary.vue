@@ -291,11 +291,7 @@ watch(channelId, () => {
                 :data-kind="card.assigned?.kind ?? 'template'"
                 class="card-box overflow-hidden flex flex-col"
             >
-                <TemplatePreview
-                    :template="card.template"
-                    :values="sample(card.template)"
-                    class="bg-[linear-gradient(180deg,#5b7da6_0%,#3f5f86_55%,#3f6b2f_55%,#2f5524_100%)]"
-                >
+                <TemplatePreview :template="card.template" :values="sample(card.template)">
                     <template #overlay>
                         <span
                             v-if="

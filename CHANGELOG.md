@@ -29,6 +29,11 @@ one is tagged.
 
 ### Fixed
 
+- Share Composer's neutral transparency checkerboard with On air and template
+  thumbnails; keep alignment grids and safety margins specific to the editor.
+- Capture every README gallery image at exactly 1440×1000 in dark mode, including
+  Templates, and reject PNG dimension mismatches in the screenshot helper.
+
 - Preserve a ticker hide issued before its runtime definition loads, including
   the next playout start, without changing its saved startup visibility.
 

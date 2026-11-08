@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "9d18938a20f93dfce6bd9f55f263c38134265c3eb3aeb0abb4da28e0531ede79",
+      "sha256": "26cc1138921cf700c09aef66be9c3d2a257b5501066555d12c7285b72be9eaf2",
       "language": "Markdown",
-      "bytes": 59192,
+      "bytes": 59507,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1011,9 +1011,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "2ede730477d68264f90ddaf466555ce8bc8459d1ae29b4911bb99d20be23dbb4",
+      "sha256": "b7b05a955d399c3e8baefb678ede21cc3e157c71b5e29b3d0d30e51ccdbc1e33",
       "language": "Markdown",
-      "bytes": 16456,
+      "bytes": 16616,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -21956,9 +21956,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "9826210e5a7dd96ec0f0a155a2d6c3e6dc5b836a0ffa992f4f241bd1da0e7110",
+      "sha256": "842ae393e329046d4cb96efa5f2dd674313e4132568776dcaa157e16d8d95c0b",
       "language": "Markdown",
-      "bytes": 102573,
+      "bytes": 105038,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -22627,6 +22627,18 @@
       "bytes": 8536,
       "symbols": []
     },
+    "docs/graphics-handoff/preview-checkerboard-browser-test-log.txt": {
+      "sha256": "3277119bdedea559837b5a434be23faaafd2cecd1054251af4cb2a87a9f34eb3",
+      "language": "Other",
+      "bytes": 5437,
+      "symbols": []
+    },
+    "docs/graphics-handoff/preview-checkerboard-verification.json": {
+      "sha256": "a49fd5c96ebe6553dcc34af511fea08a649d4d5d5f370eb74b2db37a4e767966",
+      "language": "JSON",
+      "bytes": 2649,
+      "symbols": []
+    },
     "docs/graphics-handoff/review-channel.log": {
       "sha256": "137a7446b4059517c83f79976f966b14934e528eb6ad07f37ecc13114f46c066",
       "language": "Other",
@@ -22760,9 +22772,9 @@
       "symbols": []
     },
     "docs/graphics-maintenance.md": {
-      "sha256": "93f0a8dad2e6507ca2a0c631515621f1e3311019604c27204db343ae8596d954",
+      "sha256": "5b251c050f81ad7cf7978faf2aeb2e08fefbe1e12f668474fb86e0ad7ab9c66f",
       "language": "Markdown",
-      "bytes": 13971,
+      "bytes": 14266,
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
@@ -22790,9 +22802,9 @@
       "symbols": []
     },
     "docs/images/readme-captures.json": {
-      "sha256": "d8d1fa4b27302246a9947c246b2ce0a1d5849c2400547090e5e320aab46a1686",
+      "sha256": "cccd84b3096936fa6ba825c58520317a1ff49bb6e5cceaf8d497606151b077f8",
       "language": "JSON",
-      "bytes": 4508,
+      "bytes": 6825,
       "symbols": []
     },
     "docs/ingest_error.md": {
@@ -24132,9 +24144,9 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsLibrary.vue": {
-      "sha256": "d3cc0a716d01ae220fd8497d9c12f4d9b7d8d168cdd267e293898b8a1c9b26b0",
+      "sha256": "eafd19c7952f4a320c05f6e518eda67420402fec6bc341f090272d5e68b62b40",
       "language": "Vue",
-      "bytes": 15210,
+      "bytes": 15048,
       "symbols": [
         {
           "name": "configStore",
@@ -24279,9 +24291,9 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsOnAir.vue": {
-      "sha256": "6201cc5339ac1304c2f7154dbd8c536e5e32b2c55cdcdb62e1bb3bcca3d3b962",
+      "sha256": "bfaaa1a37c260e42fa1191e469009c4c623bd8e19ea22a030a6220a86e743ca4",
       "language": "Vue",
-      "bytes": 22958,
+      "bytes": 22881,
       "symbols": [
         {
           "name": "route",
@@ -24855,9 +24867,9 @@
       ]
     },
     "frontend/src/components/graphics/TemplatePreview.vue": {
-      "sha256": "70b54491bdb59cad77d4c18b218bfd4a7dcedc44585f0dbd7a81a150508a6141",
+      "sha256": "5100428f01b80abff7655de01205e2d625ce5e41cd31e9f7f5abd131753e342f",
       "language": "Vue",
-      "bytes": 9837,
+      "bytes": 10129,
       "symbols": [
         {
           "name": "props",
@@ -24958,9 +24970,9 @@
       ]
     },
     "frontend/src/components/graphics/composer/ComposerCanvas.vue": {
-      "sha256": "cc724c274dd2080d1f5b8119b528784cdf5244c61cc83fbf3b178b4b5606bf44",
+      "sha256": "1515c13151c0da4f119630c0a1919b4009ccb0cdd7130167c1c185b7b1ed7992",
       "language": "Vue",
-      "bytes": 8077,
+      "bytes": 8010,
       "symbols": [
         {
           "name": "props",
@@ -37246,6 +37258,12 @@
         }
       ]
     },
+    "qa/e2e/tests/graphics-preview.spec.ts": {
+      "sha256": "933a0ff82c04f6acf1ec9e3417453517382205c8445626b456c09bc95779569a",
+      "language": "TypeScript",
+      "bytes": 3026,
+      "symbols": []
+    },
     "qa/e2e/tests/graphics-scroll.spec.ts": {
       "sha256": "818743ff5f76eea291805196b0a419d463ad065183ae274b6ec2f09922d79141",
       "language": "TypeScript",
@@ -38098,9 +38116,9 @@
       ]
     },
     "qa/screenshots/README.md": {
-      "sha256": "93d85c97062225acf3915d33e5afebca9835675cf8e47726acb5c644cc322631",
+      "sha256": "29fdbdc1469aaa06fd4b879582e157f8e82795f012e887bbe6a5d1304d763bba",
       "language": "Markdown",
-      "bytes": 4283,
+      "bytes": 4601,
       "symbols": []
     },
     "qa/screenshots/build_demo.py": {
@@ -38167,9 +38185,9 @@
       ]
     },
     "qa/screenshots/capture.cjs": {
-      "sha256": "d16f9c0c54b56efc49a9580dfc271f23f3f18cbd87dba3d33571988950d74b50",
+      "sha256": "37e354ee968b8cd678a11a15442f2defd1ab4fe724346d9a06921412aed5b2d8",
       "language": "Other",
-      "bytes": 11907,
+      "bytes": 13708,
       "symbols": []
     },
     "qa/soak/.gitignore": {

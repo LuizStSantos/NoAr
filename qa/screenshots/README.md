@@ -88,9 +88,13 @@ every picture. It also checks document width and real video advancement.
 The complete set has **14 screens**: login, Player, Scheduler, Storage, Playlist,
 adding a programme folder, assembled-program editor, video marks, Templates,
 Composer, Graphics On air, Data sources, Report and Output settings. Viewport
-size is 1440×1000; Templates uses a full-page capture to include every group.
-`readme-captures.json` records hashes/dimensions, actual theme, health, page errors
-and video checks. Review the pictures visually before committing them.
+and every PNG have exactly **1440×1000 pixels**, at device scale 1. Templates
+uses the same viewport capture as the other screens; scroll or filter groups
+in the application to inspect the remaining cards. The helper asserts both
+PNG dimensions after every capture, preventing a full-page or scale mismatch.
+`readme-captures.json` records image hashes/dimensions, actual theme, preview
+background styles, health, page errors, video checks and working-source hashes
+for the four preview components. Review the pictures visually before committing them.
 
 To inspect selected screens, keep partial evidence outside the published set:
 

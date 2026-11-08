@@ -1,0 +1,76 @@
+{
+  "status": "PASS",
+  "base_revision": "45e4265710f1451618f1ef79a94334dca87d4439",
+  "source_sha256": {
+    "frontend/src/components/graphics/TemplatePreview.vue": "5100428f01b80abff7655de01205e2d625ce5e41cd31e9f7f5abd131753e342f",
+    "frontend/src/components/graphics/GraphicsLibrary.vue": "eafd19c7952f4a320c05f6e518eda67420402fec6bc341f090272d5e68b62b40",
+    "frontend/src/components/graphics/GraphicsOnAir.vue": "bfaaa1a37c260e42fa1191e469009c4c623bd8e19ea22a030a6220a86e743ca4",
+    "frontend/src/components/graphics/composer/ComposerCanvas.vue": "1515c13151c0da4f119630c0a1919b4009ccb0cdd7130167c1c185b7b1ed7992",
+    "qa/e2e/tests/graphics-preview.spec.ts": "933a0ff82c04f6acf1ec9e3417453517382205c8445626b456c09bc95779569a",
+    "qa/screenshots/capture.cjs": "37e354ee968b8cd678a11a15442f2defd1ab4fe724346d9a06921412aed5b2d8"
+  },
+  "frontend": {
+    "types": "PASS",
+    "eslint": "PASS",
+    "prettier_changed_code": "PASS",
+    "qa_types": "PASS",
+    "production_build": "PASS",
+    "browser_tests": 38
+  },
+  "architecture": {
+    "status": "PASS",
+    "rust_files_scanned": 199,
+    "findings": []
+  },
+  "screenshots": [
+    {
+      "file": "preview-checkerboard-composer-1440-pt-BR.jpg",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "6e0b785af0f6cdece2b6e4c5db35356357f49b0fa862753e0eb398155e15f894"
+    },
+    {
+      "file": "preview-checkerboard-composer-390-pt-BR.jpg",
+      "width": 390,
+      "height": 2371,
+      "sha256": "aeba3f6618aa18afa33ab77f882888a5219174cb18e2b8e19177660ed8a053b5"
+    },
+    {
+      "file": "preview-checkerboard-onair-1440-pt-BR.jpg",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "39b9246c6e5c7698b8d73e09e9f72ab37409024aa34d4c634a87060eb360f1d6"
+    },
+    {
+      "file": "preview-checkerboard-onair-390-pt-BR.jpg",
+      "width": 390,
+      "height": 1713,
+      "sha256": "3fae651808c853629ce2a001c18bf990239535c69785ebcc314b9c726436d04b"
+    },
+    {
+      "file": "preview-checkerboard-templates-1440-pt-BR.jpg",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "97e5da99744bc4399f5122bd4649c6364fa9598d88a933f3a10ce47b144c1805"
+    },
+    {
+      "file": "preview-checkerboard-templates-390-pt-BR.jpg",
+      "width": 390,
+      "height": 1931,
+      "sha256": "20770edad92b3d44ba928bc0f7213d9b24df63b7b98be1742a91e1e1ab3946fe"
+    }
+  ],
+  "readme_gallery": {
+    "count": 14,
+    "width": 1440,
+    "height": 1000,
+    "theme": "ffp-dark",
+    "evidence": "../images/readme-captures.json"
+  },
+  "not_run": [
+    "Rust/media-renderer suites (no server changes)",
+    "New HLS raw-frame parity",
+    "Firefox/Safari",
+    "Physical devices"
+  ]
+}

@@ -51,6 +51,21 @@ const evidence = {
         encoding: 'utf8',
     }).trim(),
 }
+// Record working-source hashes as captures can precede their final commit.
+evidence.application_source_sha256 = Object.fromEntries(
+    [
+        'frontend/src/components/graphics/TemplatePreview.vue',
+        'frontend/src/components/graphics/GraphicsLibrary.vue',
+        'frontend/src/components/graphics/GraphicsOnAir.vue',
+        'frontend/src/components/graphics/composer/ComposerCanvas.vue',
+    ].map((file) => [
+        file,
+        crypto
+            .createHash('sha256')
+            .update(fs.readFileSync(path.join(__dirname, '..', '..', file)))
+            .digest('hex'),
+    ]),
+)
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function login(page) {
@@ -85,21 +100,48 @@ async function shot(page, name) {
     const geometry = await page.evaluate(() => ({
         theme: document.documentElement.getAttribute('data-theme'),
         viewport: innerWidth,
+        viewport_height: innerHeight,
+        device_scale: devicePixelRatio,
         scroll: document.documentElement.scrollWidth,
         prefers_dark: matchMedia('(prefers-color-scheme: dark)').matches,
     }))
     expect(geometry.scroll, `${name}: document overflow`).toBeLessThanOrEqual(geometry.viewport)
+    let previewBackground
+
+    if (['graphics', 'composer', 'onair'].includes(name)) {
+        previewBackground = await page
+            .locator('.graphics-preview')
+            .first()
+            .evaluate((element) => {
+                const style = getComputedStyle(element)
+
+                return { color: style.backgroundColor, image: style.backgroundImage, size: style.backgroundSize }
+            })
+        expect(previewBackground.color).toBe('rgb(36, 39, 44)')
+        expect(previewBackground.image).toContain('conic-gradient')
+        expect(previewBackground.size).toContain('20px 20px')
+
+        if (name === 'composer') {
+            expect(previewBackground.image.match(/linear-gradient/g)).toHaveLength(2)
+        } else {
+            expect(previewBackground.image).not.toContain('linear-gradient')
+        }
+    }
+
     await page.screenshot({
         path: path.join(out, `${name}.png`),
         animations: 'disabled',
-        fullPage: name === 'graphics',
+        fullPage: false,
     })
     const contents = fs.readFileSync(path.join(out, `${name}.png`))
+    expect(contents.readUInt32BE(16), `${name}: image width`).toBe(evidence.viewport.width)
+    expect(contents.readUInt32BE(20), `${name}: image height`).toBe(evidence.viewport.height)
     evidence.captures.push({
         file: `${name}.png`,
         width: contents.readUInt32BE(16),
         height: contents.readUInt32BE(20),
         sha256: crypto.createHash('sha256').update(contents).digest('hex'),
+        ...(previewBackground ? { preview_background: previewBackground } : {}),
         ...geometry,
     })
     console.log(`PASS dark capture: docs/images/${name}.png`)
@@ -248,6 +290,7 @@ async function main() {
     })
     const context = await browser.newContext({
         viewport: evidence.viewport,
+        deviceScaleFactor: 1,
         colorScheme: 'dark',
         locale: evidence.language,
         timezoneId: 'America/Sao_Paulo',

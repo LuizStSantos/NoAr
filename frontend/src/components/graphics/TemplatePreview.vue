@@ -135,7 +135,7 @@ function shapeSize(layer: TemplateLayer) {
 }
 </script>
 <template>
-    <div class="relative w-full aspect-video overflow-hidden [container-type:size]">
+    <div class="graphics-preview relative w-full aspect-video overflow-hidden [container-type:size]">
         <slot />
         <p
             v-if="dataMissing"
@@ -231,3 +231,12 @@ function shapeSize(layer: TemplateLayer) {
         <slot name="overlay" />
     </div>
 </template>
+
+<style scoped>
+.graphics-preview {
+    --graphics-preview-checker: conic-gradient(#30343a 25%, transparent 0 50%, #30343a 0 75%, transparent 0);
+    background-color: #24272c;
+    background-image: var(--graphics-preview-checker);
+    background-size: 20px 20px;
+}
+</style>
