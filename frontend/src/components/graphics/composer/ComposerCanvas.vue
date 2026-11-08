@@ -115,6 +115,7 @@ function endInteraction() {
             :template="template"
             :values="values"
             :time="time"
+            :animate-text="false"
             class="composer-canvas rounded-field border border-line-strong"
         >
             <template #overlay>

@@ -638,6 +638,26 @@ pub(crate) fn render_text_block(
     width: u32,
     height: u32,
 ) -> Result<Vec<u8>> {
+    render_graphic_text(text, style, Some(width), height).map(|(_, pixels)| pixels)
+}
+
+/// Shape a complete single line before allocating its bounded scrolling strip.
+pub(crate) fn render_text_line(
+    text: &str,
+    style: &TextStyle<'_>,
+    height: u32,
+) -> Result<(u32, Vec<u8>)> {
+    let line = text.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    render_graphic_text(&line, style, None, height)
+}
+
+fn render_graphic_text(
+    text: &str,
+    style: &TextStyle<'_>,
+    width: Option<u32>,
+    height: u32,
+) -> Result<(u32, Vec<u8>)> {
     let TextStyle {
         font_family,
         font_size,
@@ -650,12 +670,7 @@ pub(crate) fn render_text_block(
         return Err(anyhow!("text font size must be a positive number"));
     }
 
-    let mut rgba = vec![0_u8; width as usize * height as usize * 4];
-
-    if text.trim().is_empty() || width < 2 || height < 2 {
-        return Ok(rgba);
-    }
-
+    let scrolling = width.is_none();
     let line_height = (font_size * 1.2).ceil();
     let mut renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
     let TextRenderer {
@@ -670,8 +685,12 @@ pub(crate) fn render_text_block(
         attrs = attrs.family(Family::Name(family));
     }
 
-    buffer.set_size(Some(width as f32), None);
-    buffer.set_wrap(Wrap::WordOrGlyph);
+    buffer.set_size(width.map(|width| width as f32), None);
+    buffer.set_wrap(if scrolling {
+        Wrap::None
+    } else {
+        Wrap::WordOrGlyph
+    });
     buffer.set_text(
         text,
         &attrs,
@@ -683,6 +702,21 @@ pub(crate) fn render_text_block(
         }),
     );
     buffer.shape_until_scroll(font_system, false);
+
+    let measured = buffer
+        .layout_runs()
+        .map(|run| run.line_w)
+        .fold(0.0_f32, f32::max);
+    let width = width.unwrap_or(((measured.ceil() as u32 + 3) & !1).max(2));
+    anyhow::ensure!(
+        !scrolling || (width <= 32768 && u64::from(width) * u64::from(height) <= 8 * 1024 * 1024),
+        "scrolling text strip exceeds 32768 pixels or 32 MiB; reduce text or font size"
+    );
+    let mut rgba = vec![0_u8; width as usize * height as usize * 4];
+
+    if text.trim().is_empty() || width < 2 || height < 2 {
+        return Ok((width, rgba));
+    }
 
     let text_height: f32 = buffer.layout_runs().map(|run| run.line_height).sum();
     let top = ((height as f32 - text_height) / 2.0).round() as i32;
@@ -709,7 +743,7 @@ pub(crate) fn render_text_block(
 
     trim_glyph_cache(swash_cache, cache_checked);
 
-    Ok(rgba)
+    Ok((width, rgba))
 }
 
 pub(crate) fn rgba_to_yuva420p(rgba: &[u8], width: u32, height: u32) -> Result<VideoFrame> {

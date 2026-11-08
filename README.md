@@ -95,8 +95,9 @@ artwork, and the Report for what aired.
 - **Data sources**: CSV files and public Sheets CSV links, RSS/Atom feeds and
   HTTP JSON supply fields such as prices, scores and headlines. Choose a record,
   refresh it periodically and retain the last good values when a provider fails
-  ([docs](docs/graphics-data-sources.md)). Values update in place; continuous
-  scrolling-text controls are still pending in Composer.
+  ([docs](docs/graphics-data-sources.md)). Values update in place. Text layers
+  can scroll continuously in either direction, with speed and repeat spacing
+  set in Composer; this works with manual text and mapped fields.
 - **On air**, **Templates**, **Data sources**, **XMLTV logo**, **Subtitles** and
   **External control (API)** are the Graphics navigation. The logo and L-shape
   are edited as layers in Composer. The logo fades or cuts, cross-fades when

@@ -42,6 +42,11 @@ one is tagged.
 
 ### Added
 
+- Author continuous left/right scrolling on Composer text layers, with output-pixel
+  speed, repeat spacing, clipped previews, manual fields and live data mappings.
+  Temporary and permanent models share the existing take clock; static models
+  retain their behavior without a database migration.
+
 - Download stored media and sidecar files from Storage, with fresh access tickets
   for list, image-grid and viewer actions; accept WebVTT subtitle uploads.
 

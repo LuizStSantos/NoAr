@@ -58,6 +58,41 @@ Do not run browser/model writers or these runners concurrently: they intentional
 candidate channel. HTTP equality and sampled settled HLS frames do not prove
 aligned frame-by-frame migration parity, hardware output, A/V sync or a soak.
 
+## Scrolling text output
+
+After the authenticated browser suite has prepared an owned installation,
+`scroll.py` uses its private Playwright session file. The backend must log to
+`<work-root>/backend.log`, and channel-1 storage must equal `<work-root>/media`.
+The marker and staging flags above are mandatory. Keep sessions outside Git.
+
+```sh
+NOAR_E2E_STAGING=1 NOAR_E2E_DISPOSABLE=1 python3 qa/graphics/scroll.py \
+  --work-root /tmp/owned-graphics \
+  --session-file /tmp/owned-graphics/session.json \
+  --artifacts /tmp/owned-graphics/captures \
+  --container noar-dev
+```
+
+Omit `--container` for locally installed FFmpeg/ffprobe test tools. This runner
+stops its channel, clears schedules/transient graphics, hides permanent models,
+and authors a synthetic blue programme plus a scrolling CSV model. Reruns remove
+only its named model/source and `scroll*.ts/m3u8` files in the owned output.
+It leaves that model on air for inspection. Use a separate fixture from other QA.
+
+Six stages cover manual leftward text, mapped rightward data, permanent text,
+live CSV replacement, hiding and restoring. Each retains a completed `.ts`,
+two decoded JPEGs one second apart, PTS, segment hash, health and movement
+metrics. At 80 output px/s, displacement must be ±80 px for one second, within
+2 px for 4:2:0 snapping, frame scheduling and compression; matched white-glyph column profiles must
+have mean absolute error below 1 pixel per column. Hidden stages require zero
+white text pixels. The manual stage also checks half-opacity text/fill as one
+layer: its foreground detection threshold is 80 instead of 190, and the
+brightest red-channel glyph sample must retain blue ≥232 with red 115–145.
+This catches applying opacity separately to text and fill. A blue background
+check confirms the actual programme;
+the scoped backend log must contain no ERROR entries. This measures horizontal
+motion and visibility, not encoder byte identity, device output or a soak.
+
 ## Paired desktop and migration parity
 
 `desktop.py` runs inside the GStreamer container with equivalent pre-created

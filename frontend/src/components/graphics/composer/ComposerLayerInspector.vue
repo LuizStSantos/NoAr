@@ -26,6 +26,15 @@ function setShape(shape: NonNullable<TemplateLayer['shape']>) {
         ...(shape === 'line' ? { stroke: props.selected?.stroke || '#ffffff', fill: null } : {}),
     })
 }
+
+function setScroll(direction: string) {
+    emit('updateLayer', {
+        scroll:
+            direction === 'left' || direction === 'right'
+                ? { speed: 80, gap: 80, ...props.selected?.scroll, direction }
+                : null,
+    })
+}
 </script>
 <template>
     <aside class="card-box p-3 flex flex-col gap-3 min-w-0" :aria-label="t('graphics.composer.properties')">
@@ -87,6 +96,62 @@ function setShape(shape: NonNullable<TemplateLayer['shape']>) {
                 <p v-if="selected.kind === 'text'" class="m-0 text-xs text-muted">
                     {{ t('graphics.composer.fieldsHint') }}
                 </p>
+                <fieldset v-if="selected.kind === 'text'" class="flex flex-col gap-2 border-t border-line pt-3">
+                    <legend class="text-sm font-semibold">{{ t('graphics.composer.scroll.title') }}</legend>
+                    <label class="field-label">
+                        {{ t('graphics.composer.scroll.direction') }}
+                        <select
+                            class="field-input"
+                            :value="selected.scroll?.direction || 'none'"
+                            @change="setScroll(($event.target as HTMLSelectElement).value)"
+                        >
+                            <option value="none">{{ t('graphics.composer.scroll.none') }}</option>
+                            <option value="left">{{ t('graphics.composer.scroll.left') }}</option>
+                            <option value="right">{{ t('graphics.composer.scroll.right') }}</option>
+                        </select>
+                    </label>
+                    <template v-if="selected.scroll">
+                        <label class="field-label">
+                            {{ t('graphics.composer.scroll.speed') }}
+                            <input
+                                class="field-input"
+                                type="number"
+                                min="1"
+                                max="2000"
+                                step="1"
+                                :value="selected.scroll.speed"
+                                @change="
+                                    emit('updateLayer', {
+                                        scroll: {
+                                            ...selected.scroll,
+                                            speed: Number(($event.target as HTMLInputElement).value),
+                                        },
+                                    })
+                                "
+                            />
+                        </label>
+                        <label class="field-label">
+                            {{ t('graphics.composer.scroll.gap') }}
+                            <input
+                                class="field-input"
+                                type="number"
+                                min="0"
+                                max="4096"
+                                step="1"
+                                :value="selected.scroll.gap"
+                                @change="
+                                    emit('updateLayer', {
+                                        scroll: {
+                                            ...selected.scroll,
+                                            gap: Number(($event.target as HTMLInputElement).value),
+                                        },
+                                    })
+                                "
+                            />
+                        </label>
+                        <p class="text-xs text-muted m-0">{{ t('graphics.composer.scroll.hint') }}</p>
+                    </template>
+                </fieldset>
                 <label class="field-label"
                     >{{ t('graphics.composer.font')
                     }}<select

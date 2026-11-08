@@ -1507,6 +1507,16 @@ export default {
             sourceRecord: 'Registro de {name}',
         },
         composer: {
+            scroll: {
+                title: 'Texto em movimento',
+                direction: 'Movimento do texto',
+                none: 'Texto parado',
+                left: 'Da direita para a esquerda',
+                right: 'Da esquerda para a direita',
+                speed: 'Velocidade (px/s da saída)',
+                gap: 'Intervalo da repetição (px da saída)',
+                hint: 'Repete em uma linha, dentro desta camada. Reproduza a linha do tempo para ver. Aceita campos manuais e fontes de dados.',
+            },
             uploadFont: 'Enviar fonte',
             fontUploading: 'Enviando fonte…',
             fontUnavailable: 'Fonte enviada indisponível; a prévia pode usar uma fonte alternativa.',
@@ -1838,7 +1848,7 @@ export default {
             lshapeLayers:
                 'L-shape: camadas da arte mais a janela de vídeo. Entrar/voltar usa esse modelo. Trocar só a imagem mantém a janela; informar canto/tamanho muda a janela temporariamente.',
             tickerLayers:
-                'Letreiro: texto permanente, inclusive com campos de fontes de dados. Relógios ao vivo usam uma camada própria no Composer. Rolagem de texto ainda não está implementada.',
+                'Letreiro: texto permanente, com movimento e campos de fontes de dados. Defina direção, velocidade e intervalo no Composer. Relógios usam uma camada própria.',
             permanentState:
                 'Sempre no ar carrega modelos compatíveis ao iniciar, inclusive modelos livres, até 16 por canal. Nome e grupo são definidos por você; o vínculo de controle é opcional. O interruptor No ar / Fora controla a visibilidade atual. O L-shape entra e sai por comando.',
             legacyModels:

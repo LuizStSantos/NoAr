@@ -108,6 +108,15 @@ struct Rect {
 }
 
 impl LShapeGraphic {
+    fn inherit_motion(&mut self, previous: &Self) {
+        if let (Some(next), Some(previous)) = (
+            self.animated_art.as_mut().and_then(Arc::get_mut),
+            &previous.animated_art,
+        ) {
+            next.inherit_motion(previous);
+        }
+    }
+
     /// A graphic from a background already at the output's size and the
     /// window the picture takes in it, in pixels.
     pub(crate) fn from_parts(
@@ -330,7 +339,7 @@ impl LShapeControl {
     /// replacement, placement or clip override.
     pub(crate) fn set_rendered_graphic(
         &self,
-        graphic: Option<Arc<LShapeGraphic>>,
+        mut graphic: Option<Arc<LShapeGraphic>>,
         spec: &GraphicSpec,
         primary: usize,
     ) -> Result<()> {
@@ -338,14 +347,21 @@ impl LShapeControl {
         let placement = state.placement;
         let model = (spec.clone(), primary);
 
+        if let (Some(next), Some(previous)) =
+            (graphic.as_mut().and_then(Arc::get_mut), &state.graphic)
+        {
+            next.inherit_motion(previous);
+        }
+
         if let Some(graphic) = &graphic {
             let (width, height) = (graphic.background.width(), graphic.background.height());
 
             if state.replacement_uses_model
                 && let Some(path) = &state.replacement_image
-                && let Some((label, _)) = &state.replacement
+                && let Some((label, old)) = &state.replacement
             {
-                let replacement = render_model_art(&model, path, width, height)?;
+                let mut replacement = render_model_art(&model, path, width, height)?;
+                replacement.inherit_motion(old);
                 state.replacement = Some((label.clone(), Arc::new(replacement.placed(placement))));
             }
 
@@ -353,6 +369,7 @@ impl LShapeControl {
                 && let Some((config, old)) = &state.clip
             {
                 let mut clip = render_model_art(&model, &config.path, width, height)?;
+                clip.inherit_motion(old);
 
                 if !state.clip_inherits_window {
                     clip.home = old.home;
@@ -790,6 +807,68 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
+
+    #[test]
+    fn refreshing_scrolling_artwork_preserves_its_motion_epoch() {
+        let control = LShapeControl::default();
+        let spec = crate::GraphicSpec {
+            picture: Some(crate::PictureWindow {
+                x: 25.0,
+                y: 0.0,
+                width: 75.0,
+                height: 75.0,
+            }),
+            layers: vec![crate::GraphicLayerSpec {
+                content: crate::GraphicContent::Text {
+                    text: "Scrolling artwork".to_string(),
+                    scroll: Some(crate::GraphicTextScroll {
+                        direction: crate::ScrollDirection::Left,
+                        speed: 80.0,
+                        gap: 40,
+                    }),
+                    font_family: None,
+                    font_size: 6.0,
+                    bold: false,
+                    color: crate::RgbaColor::opaque(255, 255, 255),
+                    align: crate::BlockAlign::Left,
+                    fill: None,
+                },
+                x: 5.0,
+                y: 80.0,
+                width: 90.0,
+                height: 10.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: crate::GraphicAnimation::None,
+                animation_out: crate::GraphicAnimation::None,
+                animation_ms: 0,
+                delay_ms: 0,
+            }],
+        };
+        control.set_template(&spec, 320, 180).unwrap();
+        let epoch = control
+            .lock()
+            .graphic
+            .as_ref()
+            .unwrap()
+            .animated_art
+            .as_ref()
+            .unwrap()
+            .layers[0]
+            .prepared_at;
+        control.set_template(&spec, 320, 180).unwrap();
+        let next = control
+            .lock()
+            .graphic
+            .as_ref()
+            .unwrap()
+            .animated_art
+            .as_ref()
+            .unwrap()
+            .layers[0]
+            .prepared_at;
+        assert_eq!(next, epoch);
+    }
 
     #[test]
     fn loading_a_model_preserves_free_picture_geometry_and_on_air_state() {

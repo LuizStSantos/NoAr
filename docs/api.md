@@ -385,7 +385,14 @@ Templates opens Composer for channel logo/ticker/L-shape models. Scenes retain
 their action editor at `/graphics/channel/scene`. Old channel-model and legacy
 UI URLs resolve their binding and redirect with the channel preserved; the old
 logo `#ticker` link opens the ticker model. These redirects do not change legacy
-HTTP control endpoints. Ticker layers are static text, without scrolling or a clock. The separate
+HTTP control endpoints. Text layers support optional `scroll` configuration:
+`{"direction":"left","speed":80,"gap":80}` (or `"right"`). Speed is output
+pixels per second, from 1 to 2000; gap is 0–4096 output pixels. Omitted/null
+means static text. Non-text layers reject scrolling. The prepared line is
+clipped to the layer and repeats; fields/data mappings retain their existing
+semantics and refresh without restarting the take clock. See the
+[scrolling guide](graphics-data-sources.md#scroll-text-and-live-information).
+Clock layers remain a separate kind. The separate
 `/graphics/xmltv` tab edits `processing.guide_logo`, the independent guide icon,
 through the existing configuration API; it does not change on-air model layers.
 

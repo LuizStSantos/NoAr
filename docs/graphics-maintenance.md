@@ -77,12 +77,25 @@ responsibility. Consumers import Rust module paths rather than disk filenames.
 | Rasterization and layer animation/blending | `backend/engine/src/compositor/graphics/rendering/graphics.rs` |
 | Shared pixel geometry and masks | `backend/engine/src/compositor/graphics/geometry/graphics.rs` |
 | Cached animated image decoding and frame selection | `backend/engine/src/compositor/graphics/images/graphics.rs` |
+| Prepared scrolling text strips and clipped repetition | `backend/engine/src/compositor/graphics/scroll/graphics.rs` |
 | Specialized logo control/transition implementation | `backend/engine/src/compositor/graphics/logo/graphics.rs` |
 | Specialized picture-window control/transition implementation | `backend/engine/src/compositor/graphics/lshape/graphics.rs` |
 
 The old top-level `api/routes/logo.rs` and `compositor/{logo,lshape}.rs` are
 removed. Root engine exports such as `LogoControl` and `LShapeControl` remain
 available; callers do not need to know the new private compositor layout.
+
+Scrolling is optional layer JSON owned by the template schema, not a channel
+setting or a separate ticker renderer. The engine prepares one complete glyph
+strip using the shared text/font renderer, then blends clipped references on
+each frame. Temporary and permanent composition pass their existing take clock,
+so data refreshes preserve elapsed motion. `ScrollingText.vue` approximates that
+motion in browser previews; L-shape artwork refresh also inherits the previous
+prepared artwork epoch, including model-based replacement and clip artwork.
+Composer owns authored timeline time and leaves the
+edit canvas static. The Program monitor still shows actual output. See the
+[operator/schema guide](graphics-data-sources.md#scroll-text-and-live-information)
+and `qa/graphics/scroll.py` for the scoped HLS displacement check.
 The specializations preserve their existing algorithms, synchronization,
 transitions and processing order.
 
@@ -100,6 +113,7 @@ child panels do not fetch/save models or hold another copy of the document.
 | `graphics/composer/ComposerLayerInspector.vue` | Typed patches for appearance, text, shapes, fonts, clocks and animation; slots for document-owned geometry/media controls |
 | `graphics/composer/ComposerFieldMappings.vue` | Source, column and row mapping commands |
 | `graphics/composer/ComposerTimeline.vue` | Timeline display and playhead commands |
+| `graphics/ScrollingText.vue` | Measured single-line browser preview, automatic animation lifecycle and deterministic Composer playhead rendering |
 | `composables/graphicsComposerGeometry.ts` | Percent/pixel conversion, proportional sizing, scale bases and video-window presets |
 | `composables/graphicsComposerPreview.ts` | Preview time, animation frame ownership and unmount cleanup |
 | `composables/graphicsImages.ts` | Authorized storage image preview URLs |

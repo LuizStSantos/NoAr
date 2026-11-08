@@ -1503,6 +1503,16 @@ export default {
             sourceRecord: 'Record from {name}',
         },
         composer: {
+            scroll: {
+                title: 'Scrolling text',
+                direction: 'Text movement',
+                none: 'Static text',
+                left: 'Right to left',
+                right: 'Left to right',
+                speed: 'Speed (output px/s)',
+                gap: 'Repeat gap (output px)',
+                hint: 'Loops inside this layer in a single line. Play the timeline to preview. Manual and data-source fields work here too.',
+            },
             uploadFont: 'Upload font',
             fontUploading: 'Uploading font…',
             fontUnavailable: 'Uploaded font unavailable; preview may use a fallback.',
@@ -1828,7 +1838,7 @@ export default {
             lshapeLayers:
                 'L-shape: artwork layers plus a video window. Enter/leave uses this model. An image-only override keeps its window; an explicit corner/size command temporarily overrides it.',
             tickerLayers:
-                'Ticker: permanent text, including mapped data fields. Live clocks use their own Composer layer. Text scrolling is not implemented.',
+                'Ticker: permanent text, including scrolling and mapped data fields. Set direction, speed and repeat gap in Composer. Live clocks use their own layer.',
             permanentState:
                 'Always on air loads compatible models at startup, including free compositions, up to 16 per channel. You choose names and groups; a control assignment is optional. The On air / Off switch controls current visibility. An L-shape enters and leaves on command.',
             legacyModels:

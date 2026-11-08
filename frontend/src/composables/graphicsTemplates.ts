@@ -5,6 +5,7 @@ import { useConfig } from '@/stores/config'
 
 /** A layer of a graphics template; positions and sizes in percent of the frame. */
 export interface TemplateLayer {
+    scroll?: { direction: 'left' | 'right'; speed: number; gap: number } | null
     data_fields?: Record<string, DataField>
     id: string
     name: string

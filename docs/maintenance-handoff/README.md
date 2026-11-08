@@ -124,5 +124,6 @@ processes, port and sockets were closed and checked.
 long-duration soak, same-run desktop comparison with 2.2.1, the full raw-frame
 parity repeat and independent full-source audit. Native live-source drag was
 NOT_RUN because the fixture contains no live inputs. Continuous scrolling
-text/feed authoring remains outside this refactor and pending in the Graphics
-roadmap. No merge, release or main-branch push belongs to this handoff.
+text/feed authoring remained outside this refactor; its subsequent implementation
+and executed evidence belong to the [Graphics handoff](../graphics-handoff/README.md).
+No merge, release or main-branch push belongs to this handoff.

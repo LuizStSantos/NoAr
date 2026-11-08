@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGraphicsFonts } from '@/composables/graphicsFonts'
+import ScrollingText from '@/components/graphics/ScrollingText.vue'
 
 import { sourceBindings, sourceValues, useGraphicsSources } from '@/composables/graphicsSources'
 import { useGraphicsClock } from '@/composables/graphicsClock'
@@ -14,12 +15,16 @@ import { useConfig } from '@/stores/config'
  * boxes, texts and images in percent of the frame, sizes in percent of its
  * height. An approximation for choosing and checking, not the air.
  */
-const props = defineProps<{
-    template: GraphicsTemplate | null | undefined
-    values?: Record<string, string>
-    records?: Record<string, number>
-    time?: number
-}>()
+const props = withDefaults(
+    defineProps<{
+        template: GraphicsTemplate | null | undefined
+        values?: Record<string, string>
+        records?: Record<string, number>
+        time?: number
+        animateText?: boolean
+    }>(),
+    { animateText: true },
+)
 
 const { t } = useI18n()
 const { fontError } = useGraphicsFonts(() => props.template?.layers ?? [])
@@ -152,13 +157,27 @@ function shapeSize(layer: TemplateLayer) {
             class="absolute overflow-hidden flex items-center"
             :style="boxStyle(layer)"
         >
+            <ScrollingText
+                v-if="layer.kind === 'text' && layer.scroll"
+                :layer="layer"
+                :text="fillFields(layer.text, effectiveValues)"
+                :output-width="configStore.playout.output?.width || 1920"
+                :time="time"
+                :animate="animateText !== false"
+                :style="{
+                    color: layer.color,
+                    fontSize: `${layer.font_size}cqh`,
+                    fontWeight: layer.bold ? '700' : '400',
+                    fontFamily: layer.font_family || undefined,
+                }"
+            />
             <span
                 v-if="layer.kind === 'video'"
                 class="w-full h-full flex items-center justify-center bg-slate-700 text-white border border-white/40 text-[3cqh]"
                 >VIDEO</span
             >
             <span
-                v-if="layer.kind === 'text' || layer.kind === 'clock'"
+                v-if="(layer.kind === 'text' && !layer.scroll) || layer.kind === 'clock'"
                 class="w-full flex leading-[1.2] whitespace-pre-wrap break-words"
                 :style="textStyle(layer)"
             >

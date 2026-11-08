@@ -3,7 +3,10 @@
 //! Rasterization (including image I/O) runs before a model is published; the
 //! blending helpers only read prepared layers and cached animation frames.
 
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::{Context, Result, anyhow, ensure};
 
@@ -122,6 +125,7 @@ fn render_layer(
         GraphicContent::Image { path } => images::load_animation(path, width, height, radius)?,
         _ => None,
     };
+    let mut scroll = None;
     let frame = match &layer.content {
         GraphicContent::Box { fill } => {
             let mut rgba = vec![0_u8; width as usize * height as usize * 4];
@@ -147,6 +151,7 @@ fn render_layer(
         }
         GraphicContent::Text {
             text,
+            scroll: options,
             font_family,
             font_size,
             bold,
@@ -168,7 +173,14 @@ fn render_layer(
                 color: *color,
                 align: *align,
             };
-            let text_rgba = render_text_block(text, &style, inner, height)?;
+            let text_rgba = if let Some(options) = options {
+                scroll = Some(super::scroll::RenderedScroll::prepare(
+                    text, &style, height, *options,
+                )?);
+                vec![0; inner as usize * height as usize * 4]
+            } else {
+                render_text_block(text, &style, inner, height)?
+            };
             let mut rgba = vec![0_u8; width as usize * height as usize * 4];
 
             if let Some(fill) = fill {
@@ -229,6 +241,8 @@ fn render_layer(
         chroma_alpha: chroma_alpha(&frame, width, height),
         frame,
         image_animation,
+        scroll,
+        prepared_at: Instant::now(),
         x: x as i32,
         y: y as i32,
         width,
@@ -255,13 +269,21 @@ pub fn render_graphic(
     }
 
     let mut layers = Vec::with_capacity(spec.layers.len());
+    let mut scroll_bytes = 0;
 
     for layer in &spec.layers {
         if let Some(rendered) = render_layer(layer, frame_width, frame_height)? {
+            scroll_bytes += rendered
+                .scroll
+                .as_ref()
+                .map_or(0, super::scroll::RenderedScroll::bytes);
+            ensure!(
+                scroll_bytes <= 64 * 1024 * 1024,
+                "scrolling text exceeds 64 MiB in this composition"
+            );
             layers.push(rendered);
         }
     }
-
     let animation_bytes: usize = layers
         .iter()
         .filter_map(|layer| layer.image_animation.as_ref())
@@ -289,11 +311,19 @@ pub fn render_graphic(
     background.data_mut(2).fill(128);
 
     for layer in &layers {
-        blend_layer(&mut background, layer, 1.0, GraphicAnimation::None);
+        blend_layer(
+            &mut background,
+            layer,
+            1.0,
+            GraphicAnimation::None,
+            Duration::ZERO,
+        );
     }
 
     let px = |percent: f64, total: u32| percent_px(percent, total).max(0) as u32;
-    let animated = layers.iter().any(|layer| layer.image_animation.is_some());
+    let animated = layers
+        .iter()
+        .any(|layer| layer.image_animation.is_some() || layer.scroll.is_some());
     let mut graphic = LShapeGraphic::from_parts(
         background,
         px(window.x, frame_width),
@@ -374,8 +404,9 @@ pub(super) fn blend_layer(
     layer: &RenderedLayer,
     level: f64,
     animation: GraphicAnimation,
+    elapsed: Duration,
 ) {
-    blend_layer_with_visibility(target, layer, level, animation, 1.0);
+    blend_layer_with_visibility(target, layer, level, animation, 1.0, elapsed);
 }
 
 pub(super) fn blend_layer_with_visibility(
@@ -384,6 +415,7 @@ pub(super) fn blend_layer_with_visibility(
     level: f64,
     animation: GraphicAnimation,
     visibility: f64,
+    elapsed: Duration,
 ) {
     if level <= 0.0 || visibility <= 0.0 {
         return;
@@ -422,20 +454,26 @@ pub(super) fn blend_layer_with_visibility(
     let (pixels, alpha) = animated.map_or((&layer.frame, &layer.chroma_alpha), |frame| {
         (&frame.frame, &frame.alpha)
     });
-    blend_overlay(
-        target,
-        OverlayRef {
-            frame: pixels,
-            chroma_alpha: alpha,
-            chroma_alpha_stride: layer.width as usize / 2,
-            x,
-            y,
-            width,
-            height: layer.height,
-            opacity: layer.opacity,
-        },
-        opacity * visibility,
-    );
+    let overlay = OverlayRef {
+        frame: pixels,
+        chroma_alpha: alpha,
+        chroma_alpha_stride: layer.width as usize / 2,
+        x,
+        y,
+        width: layer.width,
+        height: layer.height,
+        opacity: layer.opacity,
+    };
+
+    if let Some(scroll) = &layer.scroll {
+        scroll.blend(target, overlay, width, elapsed, opacity * visibility);
+    } else {
+        blend_overlay(
+            target,
+            OverlayRef { width, ..overlay },
+            opacity * visibility,
+        );
+    }
 }
 
 #[cfg(test)]

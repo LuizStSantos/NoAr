@@ -51,7 +51,7 @@ pub use compositor::graphics::lshape::{
 pub use compositor::graphics::{
     AlwaysOnSlot, GraphicAnimation, GraphicContent, GraphicLayerSpec, GraphicOnAir, GraphicShape,
     GraphicSpec, GraphicsControl, MAX_GRAPHICS_ON_AIR, PictureWindow, RenderedGraphic,
-    logo_layer_geometry, render_graphic,
+    ScrollDirection, TextScroll as GraphicTextScroll, logo_layer_geometry, render_graphic,
 };
 pub use compositor::text::BlockAlign;
 pub use convert::{ConvertTarget, MediaShape, convert_to_output, probe_shape, video_matches};

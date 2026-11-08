@@ -59,6 +59,40 @@ Other mapped values continue updating during the take without restarting its
 entry animation, elapsed time or duration. Permanent templates use their saved
 mapping/record and require literal or fully mapped content.
 
+## Scroll text and live information
+
+Select a **Text** layer in Composer and find **Scrolling text**. Choose
+**Right to left** or **Left to right**. **Static text** disables scrolling.
+Speed is 1–2000 output pixels per second; repeat gap is 0–4096 output pixels.
+The default speed/gap are both 80. Preview sizes scale these output units.
+The whole text runs as one line, clipped to the layer's rectangle, then repeats
+with the configured space between copies. Newlines and other whitespace become
+single spaces. Font, colour, opacity, fill and entry/exit animations still apply.
+Alignment applies to static text; scrolling always follows its chosen direction.
+
+Use literal text, manual `{fields}` or the existing source/column/record mapping.
+For example, `USD {price} · {headline}` can combine a spreadsheet price and an
+RSS title. Scrolling uses the selected record, not every record in an RSS feed;
+it does not add an automatic record rotation or concatenate the whole feed.
+Mapped values refresh during a take; manual overrides and last-good source
+records follow the same rules as static text. A refresh retains the take clock
+and motion elapsed time. A changed text width changes the repetition spacing
+around the new content; updates do not wait for a whole scrolling cycle.
+
+The edit canvas shows the beginning of the text while you arrange the layer.
+Use **Play entry** or the timeline playhead to inspect movement. On air's preview
+animates automatically; its Program monitor remains the actual output. For a
+permanent crawl, enable **Always on air**, save, and use its Templates switch.
+Showing a hidden model starts a new entry; refreshing data retains the active
+take's clock. No ticker assignment is required for a free permanent model.
+
+Text is shaped and rasterized outside the frame thread; frames blend cached
+strips without loading fonts or fetching providers. A strip is limited to
+32768 pixels wide and 32 MiB of RGBA pixels, and the composition to 64 MiB of
+prepared scrolling pixels. Reduce text/font size if preparation rejects a strip.
+Existing models without a `scroll` property remain static; this JSON addition
+requires no database migration and does not change legacy control routes.
+
 ## When information changes or fails
 
 Public URL sources poll while playout runs, with a configurable 5–3600 second

@@ -16,6 +16,7 @@ fn label(text: &str, x: f64, y: f64, width: f64, height: f64) -> GraphicSpec {
         layers: vec![GraphicLayerSpec {
             content: GraphicContent::Text {
                 text: text.to_string(),
+                scroll: None,
                 font_family: None,
                 font_size: 4.0,
                 bold: true,

@@ -129,9 +129,26 @@ fn default_stroke_width() -> f64 {
     0.25
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScrollDirection {
+    Left,
+    Right,
+}
+
+/// Optional scrolling is stored with the layer, never in channel settings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TextScroll {
+    pub direction: ScrollDirection,
+    pub speed: f64,
+    pub gap: u32,
+}
+
 /// Optional new controls flatten into the existing layer JSON, preserving old layouts.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayerStyle {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll: Option<TextScroll>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub data_fields: HashMap<String, sources::DataField>,
     #[serde(default)]
@@ -149,6 +166,7 @@ pub struct LayerStyle {
 impl Default for LayerStyle {
     fn default() -> Self {
         Self {
+            scroll: None,
             data_fields: HashMap::new(),
             shape: ShapeKind::Rectangle,
             stroke: None,
@@ -336,6 +354,20 @@ fn is_color(value: &str) -> bool {
 }
 
 fn check_layer(layer: &TemplateLayer) -> Result<(), String> {
+    if let Some(scroll) = &layer.style.scroll {
+        if layer.kind != LayerKind::Text {
+            return Err("only text layers support scrolling".to_string());
+        }
+
+        if !scroll.speed.is_finite() || !(1.0..=2000.0).contains(&scroll.speed) {
+            return Err("scroll speed must be 1 to 2000 output pixels per second".to_string());
+        }
+
+        if scroll.gap > 4096 {
+            return Err("scroll gap must be 0 to 4096 output pixels".to_string());
+        }
+    }
+
     if !layer.style.stroke_width.is_finite() || !(0.0..=20.0).contains(&layer.style.stroke_width) {
         return Err("stroke width is percent of output height, from 0 to 20".to_string());
     }
@@ -701,28 +733,40 @@ fn graphic_spec_at(
                     }
                 }
             }
-            LayerKind::Text | LayerKind::Clock => noar_engine::GraphicContent::Text {
-                text: if layer.kind == LayerKind::Clock {
-                    clock_value(layer, now, timezone)?
-                } else {
-                    fill_fields(&layer.text, values)
-                },
-                font_family: layer.font_family.clone(),
-                font_size: layer.font_size,
-                bold: layer.bold,
-                color: parse_color(&layer.color).unwrap_or(noar_engine::RgbaColor {
-                    r: 255,
-                    g: 255,
-                    b: 255,
-                    a: 255,
-                }),
-                align: match layer.align {
-                    TextAlign::Left => noar_engine::BlockAlign::Left,
-                    TextAlign::Center => noar_engine::BlockAlign::Center,
-                    TextAlign::Right => noar_engine::BlockAlign::Right,
-                },
-                fill,
-            },
+            LayerKind::Text | LayerKind::Clock => {
+                noar_engine::GraphicContent::Text {
+                    scroll: layer.style.scroll.as_ref().map(|scroll| {
+                        noar_engine::GraphicTextScroll {
+                            direction: match scroll.direction {
+                                ScrollDirection::Left => noar_engine::ScrollDirection::Left,
+                                ScrollDirection::Right => noar_engine::ScrollDirection::Right,
+                            },
+                            speed: scroll.speed,
+                            gap: scroll.gap,
+                        }
+                    }),
+                    text: if layer.kind == LayerKind::Clock {
+                        clock_value(layer, now, timezone)?
+                    } else {
+                        fill_fields(&layer.text, values)
+                    },
+                    font_family: layer.font_family.clone(),
+                    font_size: layer.font_size,
+                    bold: layer.bold,
+                    color: parse_color(&layer.color).unwrap_or(noar_engine::RgbaColor {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                        a: 255,
+                    }),
+                    align: match layer.align {
+                        TextAlign::Left => noar_engine::BlockAlign::Left,
+                        TextAlign::Center => noar_engine::BlockAlign::Center,
+                        TextAlign::Right => noar_engine::BlockAlign::Right,
+                    },
+                    fill,
+                }
+            }
             LayerKind::Image => {
                 match layer_image(layer.image.as_deref().unwrap_or_default(), values, storage)? {
                     Some(path) => noar_engine::GraphicContent::Image { path },
@@ -758,6 +802,67 @@ mod tests {
             "id": id, "x": 5, "y": 80, "width": 40, "height": 8, "text": text
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn scrolling_is_optional_validated_and_resolves_fields_into_the_engine() {
+        let mut layer = text_layer("news", "{headline} · {price}");
+        assert!(layer.style.scroll.is_none());
+        assert!(
+            serde_json::to_value(&layer)
+                .unwrap()
+                .get("scroll")
+                .is_none()
+        );
+        layer.style.scroll = Some(TextScroll {
+            direction: ScrollDirection::Left,
+            speed: 80.0,
+            gap: 40,
+        });
+        assert!(check_layer(&layer).is_ok());
+        let saved: TemplateLayer =
+            serde_json::from_value(serde_json::to_value(&layer).unwrap()).unwrap();
+        assert_eq!(saved, layer);
+        let template = GraphicsTemplate {
+            layers: vec![layer.clone()],
+            ..Default::default()
+        };
+        let values = HashMap::from([
+            ("headline".to_string(), "São Paulo".to_string()),
+            ("price".to_string(), "5.10".to_string()),
+        ]);
+        let spec = graphic_spec_at(
+            &template,
+            &values,
+            &std::env::temp_dir(),
+            chrono::Utc::now(),
+            None,
+        )
+        .unwrap();
+        let noar_engine::GraphicContent::Text {
+            text,
+            scroll: Some(scroll),
+            ..
+        } = &spec.layers[0].content
+        else {
+            panic!("scrolling text was not passed to the engine");
+        };
+        assert_eq!(text, "São Paulo · 5.10");
+        assert_eq!(scroll.speed, 80.0);
+        assert_eq!(scroll.gap, 40);
+        assert_eq!(scroll.direction, noar_engine::ScrollDirection::Left);
+        layer.kind = LayerKind::Clock;
+        assert!(check_layer(&layer).is_err());
+        layer.kind = LayerKind::Text;
+
+        for speed in [0.0, -1.0, 2001.0, f64::NAN, f64::INFINITY] {
+            layer.style.scroll.as_mut().unwrap().speed = speed;
+            assert!(check_layer(&layer).is_err());
+        }
+
+        layer.style.scroll.as_mut().unwrap().speed = 80.0;
+        layer.style.scroll.as_mut().unwrap().gap = 4097;
+        assert!(check_layer(&layer).is_err());
     }
 
     #[test]

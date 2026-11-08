@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "32415e85726cc7dfe36f011eac493280a3548e2f8925b246098d2b1e0ea86a70",
+      "sha256": "9d18938a20f93dfce6bd9f55f263c38134265c3eb3aeb0abb4da28e0531ede79",
       "language": "Markdown",
-      "bytes": 58894,
+      "bytes": 59192,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1011,9 +1011,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "5b8473c7a207a287c9aed30947c80e0a5f9dfd33f827a415d1d74c75c995dee8",
+      "sha256": "2ede730477d68264f90ddaf466555ce8bc8459d1ae29b4911bb99d20be23dbb4",
       "language": "Markdown",
-      "bytes": 16369,
+      "bytes": 16456,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -4778,9 +4778,9 @@
       ]
     },
     "backend/app/src/graphics/templates/graphics.rs": {
-      "sha256": "aab30c6789be5666422c223d56581a5580f4dc030f77ceb71fa6dbe02169d701",
+      "sha256": "a3fb18bcd755d2d009cea18c767cf72447322d0dafc84f7a191f8e4bd788fc53",
       "language": "Rust",
-      "bytes": 33544,
+      "bytes": 37355,
       "symbols": [
         {
           "name": "LayerKind",
@@ -4843,136 +4843,148 @@
           "line": 128
         },
         {
-          "name": "LayerStyle",
+          "name": "ScrollDirection",
           "line": 134
         },
         {
-          "name": "Default",
+          "name": "TextScroll",
+          "line": 141
+        },
+        {
+          "name": "LayerStyle",
           "line": 149
         },
         {
+          "name": "Default",
+          "line": 166
+        },
+        {
           "name": "default",
-          "line": 150
+          "line": 167
         },
         {
           "name": "clock_value",
-          "line": 163
+          "line": 181
         },
         {
           "name": "TemplateLayer",
-          "line": 199
+          "line": 217
         },
         {
           "name": "TemplateInput",
-          "line": 254
+          "line": 272
         },
         {
           "name": "template_fields",
-          "line": 271
+          "line": 289
         },
         {
           "name": "is_field_char",
-          "line": 293
+          "line": 311
         },
         {
           "name": "placeholders",
-          "line": 298
+          "line": 316
         },
         {
           "name": "whole_placeholder",
-          "line": 323
+          "line": 341
         },
         {
           "name": "is_color",
-          "line": 330
+          "line": 348
         },
         {
           "name": "check_layer",
-          "line": 338
+          "line": 356
         },
         {
           "name": "prepare_template",
-          "line": 447
+          "line": 479
         },
         {
           "name": "parse_color",
-          "line": 537
+          "line": 569
         },
         {
           "name": "fill_fields",
-          "line": 558
+          "line": 590
         },
         {
           "name": "layer_image",
-          "line": 588
+          "line": 620
         },
         {
           "name": "engine_animation",
-          "line": 611
+          "line": 643
         },
         {
           "name": "graphic_spec",
-          "line": 628
-        },
-        {
-          "name": "graphic_spec_for_channel",
-          "line": 636
-        },
-        {
-          "name": "graphic_spec_for_records",
-          "line": 644
-        },
-        {
-          "name": "graphic_spec_at",
           "line": 660
         },
         {
+          "name": "graphic_spec_for_channel",
+          "line": 668
+        },
+        {
+          "name": "graphic_spec_for_records",
+          "line": 676
+        },
+        {
+          "name": "graphic_spec_at",
+          "line": 692
+        },
+        {
           "name": "tests",
-          "line": 753
+          "line": 797
         },
         {
           "name": "text_layer",
-          "line": 756
+          "line": 800
+        },
+        {
+          "name": "scrolling_is_optional_validated_and_resolves_fields_into_the_engine",
+          "line": 808
         },
         {
           "name": "clock_formats_follow_channel_timezone_midnight_and_daylight_saving_time",
-          "line": 764
+          "line": 869
         },
         {
           "name": "shape_and_clock_specs_keep_geometry_and_only_clock_pixels_change_with_time",
-          "line": 803
+          "line": 908
         },
         {
           "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
-          "line": 850
+          "line": 955
         },
         {
           "name": "layers_take_defaults_and_are_checked",
-          "line": 874
+          "line": 979
         },
         {
           "name": "during_lshape_reads_back_what_it_writes",
-          "line": 907
+          "line": 1012
         },
         {
           "name": "prepare_template_trims_and_keeps_field_images",
-          "line": 916
+          "line": 1021
         },
         {
           "name": "fields_are_filled_and_unknown_braces_stay",
-          "line": 952
+          "line": 1057
         },
         {
           "name": "colors_are_read_in_every_hex_form",
-          "line": 964
+          "line": 1069
         },
         {
           "name": "a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields",
-          "line": 975
+          "line": 1080
         },
         {
           "name": "a_video_layer_makes_the_template_an_lshape",
-          "line": 1012
+          "line": 1117
         }
       ]
     },
@@ -12224,9 +12236,9 @@
       ]
     },
     "backend/engine/examples/graphics.rs": {
-      "sha256": "05dcbf8821590bfed0c167a84559e21fac502049bb7338f74d81a1498082ad3e",
+      "sha256": "63fc24cffb93a53cab2df6288872fa6465191355aa954483012950b4bcfe0414",
       "language": "Rust",
-      "bytes": 3759,
+      "bytes": 3789,
       "symbols": [
         {
           "name": "label",
@@ -12234,11 +12246,11 @@
         },
         {
           "name": "play_stage",
-          "line": 40
+          "line": 41
         },
         {
           "name": "main",
-          "line": 51
+          "line": 52
         }
       ]
     },
@@ -13890,9 +13902,9 @@
       ]
     },
     "backend/engine/src/compositor/graphics.rs": {
-      "sha256": "c2515ceb3a0efcd5f68136ae1e4504bd6a588e505c7d546e1cdbcb2eeede1e77",
+      "sha256": "aa9b53d6e219e68cde21dbee6141dea9f43e19475b29f25a1343c15d0e0ec432",
       "language": "Rust",
-      "bytes": 48740,
+      "bytes": 52076,
       "symbols": [
         {
           "name": "geometry",
@@ -13915,320 +13927,332 @@
           "line": 29
         },
         {
+          "name": "scroll",
+          "line": 31
+        },
+        {
           "name": "logo_layer_geometry",
-          "line": 46
+          "line": 49
         },
         {
           "name": "crate",
-          "line": 62
-        },
-        {
-          "name": "set_template",
           "line": 65
         },
         {
+          "name": "set_template",
+          "line": 68
+        },
+        {
           "name": "set_template_controlled",
-          "line": 75
+          "line": 78
         },
         {
           "name": "GraphicAnimation",
-          "line": 93
+          "line": 96
         },
         {
           "name": "GraphicContent",
-          "line": 110
+          "line": 113
         },
         {
           "name": "GraphicShape",
-          "line": 139
+          "line": 143
         },
         {
           "name": "GraphicLayerSpec",
-          "line": 148
+          "line": 152
         },
         {
           "name": "PictureWindow",
-          "line": 166
+          "line": 170
         },
         {
           "name": "GraphicSpec",
-          "line": 175
+          "line": 179
         },
         {
           "name": "RenderedLayer",
-          "line": 182
+          "line": 186
         },
         {
           "name": "RenderedGraphic",
-          "line": 198
+          "line": 204
         },
         {
           "name": "RoleImageBlend",
-          "line": 206
+          "line": 212
         },
         {
           "name": "picture_switch",
-          "line": 214
+          "line": 220
         },
         {
           "name": "RenderedGraphic",
-          "line": 218
+          "line": 224
         },
         {
-          "name": "is_animated",
-          "line": 219
-        },
-        {
-          "name": "blend_steady",
+          "name": "inherit_motion",
           "line": 226
         },
         {
+          "name": "is_animated",
+          "line": 236
+        },
+        {
+          "name": "blend_steady",
+          "line": 243
+        },
+        {
           "name": "picture_graphic",
-          "line": 232
+          "line": 255
         },
         {
           "name": "role_levels",
-          "line": 235
+          "line": 258
         },
         {
           "name": "blend_role",
-          "line": 274
+          "line": 297
         },
         {
           "name": "exit_time",
-          "line": 308
+          "line": 338
         },
         {
           "name": "OnAir",
-          "line": 322
+          "line": 352
         },
         {
           "name": "OnAir",
-          "line": 331
+          "line": 361
         },
         {
           "name": "out_since",
-          "line": 332
+          "line": 362
         },
         {
           "name": "finished",
-          "line": 345
+          "line": 375
         },
         {
           "name": "AlwaysOnSlot",
-          "line": 354
+          "line": 384
         },
         {
           "name": "AlwaysOnSlot",
-          "line": 359
+          "line": 389
         },
         {
           "name": "index",
-          "line": 360
+          "line": 390
         },
         {
           "name": "AlwaysOn",
-          "line": 368
-        },
-        {
-          "name": "GraphicsState",
-          "line": 374
-        },
-        {
-          "name": "GraphicOnAir",
-          "line": 385
-        },
-        {
-          "name": "GraphicsControl",
-          "line": 395
-        },
-        {
-          "name": "std",
-          "line": 397
-        },
-        {
-          "name": "fmt",
           "line": 398
         },
         {
+          "name": "GraphicsState",
+          "line": 404
+        },
+        {
+          "name": "GraphicOnAir",
+          "line": 415
+        },
+        {
           "name": "GraphicsControl",
-          "line": 405
+          "line": 425
         },
         {
-          "name": "channel_logo",
-          "line": 408
+          "name": "std",
+          "line": 427
         },
         {
-          "name": "set_channel_logo",
-          "line": 418
+          "name": "fmt",
+          "line": 428
         },
         {
-          "name": "state",
-          "line": 429
-        },
-        {
-          "name": "set_always_on",
+          "name": "GraphicsControl",
           "line": 435
         },
         {
+          "name": "channel_logo",
+          "line": 438
+        },
+        {
+          "name": "set_channel_logo",
+          "line": 448
+        },
+        {
+          "name": "state",
+          "line": 459
+        },
+        {
+          "name": "set_always_on",
+          "line": 465
+        },
+        {
           "name": "refresh_always_on",
-          "line": 461
+          "line": 491
         },
         {
           "name": "set_always_on_visible",
-          "line": 475
+          "line": 505
         },
         {
           "name": "always_on_visible",
-          "line": 496
+          "line": 526
         },
         {
           "name": "clear_always_on",
-          "line": 504
+          "line": 534
         },
         {
           "name": "blend_always_on",
-          "line": 510
+          "line": 540
         },
         {
           "name": "blend_always_on_at",
-          "line": 514
+          "line": 544
         },
         {
           "name": "set_persistent",
-          "line": 570
+          "line": 607
         },
         {
           "name": "retain_persistent",
-          "line": 604
+          "line": 641
         },
         {
           "name": "persistent_visible",
-          "line": 608
+          "line": 645
         },
         {
           "name": "set_persistent_visible",
-          "line": 612
+          "line": 649
         },
         {
           "name": "take",
-          "line": 635
+          "line": 672
         },
         {
           "name": "update_graphic",
-          "line": 669
+          "line": 706
         },
         {
           "name": "take_out",
-          "line": 680
+          "line": 717
         },
         {
           "name": "take_all_out",
-          "line": 698
-        },
-        {
-          "name": "on_air",
-          "line": 708
-        },
-        {
-          "name": "picture_on_air",
-          "line": 724
-        },
-        {
-          "name": "picture",
           "line": 735
         },
         {
+          "name": "on_air",
+          "line": 745
+        },
+        {
+          "name": "picture_on_air",
+          "line": 761
+        },
+        {
+          "name": "picture",
+          "line": 772
+        },
+        {
           "name": "picture_at",
-          "line": 739
+          "line": 776
         },
         {
           "name": "blend",
-          "line": 773
+          "line": 810
         },
         {
           "name": "blend_at",
-          "line": 777
+          "line": 814
         },
         {
           "name": "tests",
-          "line": 817
+          "line": 860
         },
         {
           "name": "black_frame",
-          "line": 829
+          "line": 872
         },
         {
           "name": "luma",
-          "line": 837
+          "line": 880
         },
         {
           "name": "white_box",
-          "line": 841
+          "line": 884
         },
         {
           "name": "live_pixel_updates_preserve_take_duration_entry_and_exit_times",
-          "line": 858
+          "line": 901
+        },
+        {
+          "name": "scrolling_refresh_preserves_motion_phase_for_temporary_and_permanent_takes",
+          "line": 922
         },
         {
           "name": "user_permanent_models_preserve_time_visibility_and_deterministic_order",
-          "line": 879
+          "line": 970
         },
         {
           "name": "permanent_roles_survive_expiry_queue_pressure_and_take_all_out",
-          "line": 906
+          "line": 997
         },
         {
           "name": "permanent_visibility_is_explicit_and_does_not_reset_on_repeated_commands",
-          "line": 951
+          "line": 1042
         },
         {
           "name": "suppressing_a_permanent_logo_never_suppresses_the_ticker_or_moves_a_slide",
-          "line": 1003
+          "line": 1094
         },
         {
           "name": "a_picture_window_cannot_replace_a_permanent_role",
-          "line": 1046
+          "line": 1137
         },
         {
           "name": "empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged",
-          "line": 1087
+          "line": 1178
         },
         {
           "name": "a_box_lands_where_its_percentages_say",
-          "line": 1108
+          "line": 1199
         },
         {
           "name": "a_fade_comes_in_and_goes_out_over_its_time",
-          "line": 1131
+          "line": 1222
         },
         {
           "name": "a_duration_takes_the_graphic_out_by_itself",
-          "line": 1163
+          "line": 1254
         },
         {
           "name": "a_slide_starts_off_its_place_and_ends_on_it",
-          "line": 1185
+          "line": 1276
         },
         {
           "name": "taking_out_and_listing",
-          "line": 1208
+          "line": 1299
         },
         {
           "name": "a_graphic_for_another_frame_size_is_not_drawn",
-          "line": 1232
+          "line": 1323
         },
         {
           "name": "a_text_layer_draws_letters_on_its_fill",
-          "line": 1247
+          "line": 1338
         },
         {
           "name": "a_picture_template_is_an_lshape_with_its_layers_as_art",
-          "line": 1291
+          "line": 1383
         },
         {
           "name": "graphics_preview",
-          "line": 1361
+          "line": 1453
         }
       ]
     },
@@ -14610,9 +14634,9 @@
       ]
     },
     "backend/engine/src/compositor/graphics/lshape/graphics.rs": {
-      "sha256": "47615bf5190f827caba17ea39e7a753f3634ee7e8b126fce208b6c3106091d1f",
+      "sha256": "977649ec49871f2ea8bfa64df23462c072058ffb1fa3bd6ac276035d94cb7e67",
       "language": "Rust",
-      "bytes": 38250,
+      "bytes": 40799,
       "symbols": [
         {
           "name": "lshape_phases",
@@ -14655,267 +14679,342 @@
           "line": 110
         },
         {
+          "name": "inherit_motion",
+          "line": 111
+        },
+        {
           "name": "from_parts",
-          "line": 113
+          "line": 122
         },
         {
           "name": "set_animated_art",
-          "line": 139
+          "line": 148
         },
         {
           "name": "load",
-          "line": 143
+          "line": 152
         },
         {
           "name": "placed",
-          "line": 195
+          "line": 204
         },
         {
           "name": "rect_at",
-          "line": 215
+          "line": 224
         },
         {
           "name": "window",
-          "line": 231
+          "line": 240
         },
         {
           "name": "window_in",
-          "line": 235
+          "line": 244
         },
         {
           "name": "LShapePlacement",
-          "line": 258
+          "line": 267
         },
         {
           "name": "LShapeControl",
-          "line": 269
+          "line": 278
         },
         {
           "name": "LShapeState",
-          "line": 272
+          "line": 281
         },
         {
           "name": "LShapeState",
-          "line": 293
+          "line": 302
         },
         {
           "name": "level",
-          "line": 294
+          "line": 303
         },
         {
           "name": "set_on",
-          "line": 308
+          "line": 317
         },
         {
           "name": "fmt",
-          "line": 319
-        },
-        {
-          "name": "fmt",
-          "line": 320
-        },
-        {
-          "name": "LShapeControl",
           "line": 328
         },
         {
+          "name": "fmt",
+          "line": 329
+        },
+        {
+          "name": "LShapeControl",
+          "line": 337
+        },
+        {
           "name": "set_rendered_graphic",
-          "line": 331
+          "line": 340
         },
         {
           "name": "lock",
-          "line": 372
+          "line": 389
         },
         {
           "name": "set_graphic",
-          "line": 378
+          "line": 395
         },
         {
           "name": "replace",
-          "line": 399
+          "line": 416
         },
         {
           "name": "replace_model_art",
-          "line": 411
+          "line": 428
         },
         {
           "name": "replace_graphic",
-          "line": 421
+          "line": 438
         },
         {
           "name": "place",
-          "line": 451
+          "line": 468
         },
         {
           "name": "placement",
-          "line": 475
+          "line": 492
         },
         {
           "name": "reset",
-          "line": 480
+          "line": 497
         },
         {
           "name": "set_clip_graphic",
-          "line": 489
+          "line": 506
         },
         {
           "name": "set_clip_model_art",
-          "line": 499
+          "line": 516
         },
         {
           "name": "set_clip_model_art_placed",
-          "line": 508
+          "line": 525
         },
         {
           "name": "set_clip_graphic_with_window",
-          "line": 517
+          "line": 534
         },
         {
           "name": "replacement",
-          "line": 586
+          "line": 603
         },
         {
           "name": "on",
-          "line": 594
+          "line": 611
         },
         {
           "name": "off",
-          "line": 599
+          "line": 616
         },
         {
           "name": "is_on",
-          "line": 604
+          "line": 621
         },
         {
           "name": "is_ready",
-          "line": 609
+          "line": 626
         },
         {
           "name": "frame",
-          "line": 619
+          "line": 636
         },
         {
           "name": "level_after",
-          "line": 638
+          "line": 655
         },
         {
           "name": "render_model_art",
-          "line": 646
+          "line": 663
         },
         {
           "name": "LShapeScaler",
-          "line": 686
+          "line": 703
         },
         {
           "name": "ScaleKey",
-          "line": 689
+          "line": 706
         },
         {
           "name": "apply_lshape",
-          "line": 693
+          "line": 710
         },
         {
           "name": "paste",
-          "line": 748
+          "line": 765
         },
         {
           "name": "marked_level",
-          "line": 772
-        },
-        {
-          "name": "tests",
           "line": 789
         },
         {
+          "name": "tests",
+          "line": 806
+        },
+        {
+          "name": "refreshing_scrolling_artwork_preserves_its_motion_epoch",
+          "line": 812
+        },
+        {
           "name": "loading_a_model_preserves_free_picture_geometry_and_on_air_state",
-          "line": 795
+          "line": 874
         },
         {
           "name": "model_art_replacement_and_clip_art_inherit_free_windows_without_changing_sdk_placement",
-          "line": 845
+          "line": 924
         },
         {
           "name": "graphic",
-          "line": 915
+          "line": 994
         },
         {
           "name": "the_window_sits_in_its_corner",
-          "line": 939
+          "line": 1018
         },
         {
           "name": "a_corner_reads_back_as_its_name",
-          "line": 972
+          "line": 1051
         },
         {
           "name": "a_move_from_outside_places_every_graphic_until_it_is_undone",
-          "line": 985
+          "line": 1064
         },
         {
           "name": "the_picture_moves_from_the_full_screen_to_the_window",
-          "line": 1031
+          "line": 1110
         },
         {
           "name": "the_frame_is_drawn_into_the_window_over_the_graphic",
-          "line": 1050
+          "line": 1129
         },
         {
           "name": "switching_animates_both_ways",
-          "line": 1078
+          "line": 1157
         },
         {
           "name": "a_swapped_or_clip_graphic_takes_the_channels_place",
-          "line": 1099
+          "line": 1178
         },
         {
           "name": "the_logo_goes_off_before_the_picture_shrinks",
-          "line": 1147
+          "line": 1226
         },
         {
           "name": "marked_stretches_ease_in_and_out",
-          "line": 1160
+          "line": 1239
         }
       ]
     },
     "backend/engine/src/compositor/graphics/rendering/graphics.rs": {
-      "sha256": "99ba1c96125adc81e63d45ee9d7590ccad62198581f65f2d686224f89de0f822",
+      "sha256": "03944e12822931ceee54f9af4a3afce1ba87271295cedeafa672bd2ed0494001",
       "language": "Rust",
-      "bytes": 15274,
+      "bytes": 16403,
       "symbols": [
         {
           "name": "render_shape",
-          "line": 27
+          "line": 30
         },
         {
           "name": "render_layer",
-          "line": 106
+          "line": 109
         },
         {
           "name": "render_graphic",
-          "line": 246
+          "line": 260
         },
         {
           "name": "ease",
-          "line": 323
+          "line": 353
         },
         {
           "name": "layer_level",
-          "line": 331
+          "line": 361
         },
         {
           "name": "blend_layer",
-          "line": 372
+          "line": 402
         },
         {
           "name": "blend_layer_with_visibility",
-          "line": 381
+          "line": 412
         },
         {
           "name": "tests",
-          "line": 442
+          "line": 480
         },
         {
           "name": "new_shape_rasters_have_transparent_corners_correct_strokes_and_line_width",
-          "line": 453
+          "line": 491
+        }
+      ]
+    },
+    "backend/engine/src/compositor/graphics/scroll/graphics.rs": {
+      "sha256": "0a5b5183f64a2977cd8e288e149e5db3411a620c15703a12feebfce6f91239b6",
+      "language": "Rust",
+      "bytes": 12264,
+      "symbols": [
+        {
+          "name": "ScrollDirection",
+          "line": 18
+        },
+        {
+          "name": "tests",
+          "line": 24
+        },
+        {
+          "name": "strip",
+          "line": 29
+        },
+        {
+          "name": "movement_uses_elapsed_time_output_pixels_and_authored_repeat_gap",
+          "line": 48
+        },
+        {
+          "name": "background",
+          "line": 85
+        },
+        {
+          "name": "scrolling_is_clipped_to_the_layer_and_respects_opacity",
+          "line": 104
+        },
+        {
+          "name": "a_scrolling_layer_applies_opacity_once_to_text_and_fill",
+          "line": 132
+        },
+        {
+          "name": "full_text_is_shaped_without_wrapping_and_oversized_strips_are_rejected",
+          "line": 163
+        },
+        {
+          "name": "TextScroll",
+          "line": 186
+        },
+        {
+          "name": "RenderedScroll",
+          "line": 192
+        },
+        {
+          "name": "RenderedScroll",
+          "line": 198
+        },
+        {
+          "name": "prepare",
+          "line": 199
+        },
+        {
+          "name": "bytes",
+          "line": 227
+        },
+        {
+          "name": "positions",
+          "line": 233
+        },
+        {
+          "name": "blend",
+          "line": 262
         }
       ]
     },
@@ -14998,9 +15097,9 @@
       ]
     },
     "backend/engine/src/compositor/text.rs": {
-      "sha256": "b21450247d238b90ecf7a0344abe1f8f5d6d7345f1b66c39558043a7938ef257",
+      "sha256": "475bc8894d70104f4b734ac828d9a6de9719c62cde0c94d90c6ee847f5123592",
       "language": "Rust",
-      "bytes": 31685,
+      "bytes": 32773,
       "symbols": [
         {
           "name": "trim_glyph_cache",
@@ -15115,112 +15214,120 @@
           "line": 635
         },
         {
+          "name": "render_text_line",
+          "line": 645
+        },
+        {
+          "name": "render_graphic_text",
+          "line": 655
+        },
+        {
           "name": "rgba_to_yuva420p",
-          "line": 715
+          "line": 749
         },
         {
           "name": "rgb_to_yuv",
-          "line": 762
+          "line": 796
         },
         {
           "name": "text_position",
-          "line": 772
+          "line": 806
         },
         {
           "name": "seconds_to_frames",
-          "line": 780
-        },
-        {
-          "name": "rgba_color",
-          "line": 788
-        },
-        {
-          "name": "alpha_composite",
-          "line": 793
-        },
-        {
-          "name": "draw_box",
-          "line": 802
-        },
-        {
-          "name": "clamp_u8",
           "line": 814
         },
         {
+          "name": "rgba_color",
+          "line": 822
+        },
+        {
+          "name": "alpha_composite",
+          "line": 827
+        },
+        {
+          "name": "draw_box",
+          "line": 836
+        },
+        {
+          "name": "clamp_u8",
+          "line": 848
+        },
+        {
           "name": "even_signed",
-          "line": 819
+          "line": 853
         },
         {
           "name": "PixelRect",
-          "line": 823
+          "line": 857
         },
         {
           "name": "PixelRect",
-          "line": 830
+          "line": 864
         },
         {
           "name": "new",
-          "line": 831
-        },
-        {
-          "name": "Bounds",
-          "line": 858
-        },
-        {
-          "name": "Bounds",
           "line": 865
         },
         {
-          "name": "include",
-          "line": 866
-        },
-        {
-          "name": "finish",
-          "line": 873
-        },
-        {
-          "name": "ResolvedBounds",
-          "line": 885
-        },
-        {
-          "name": "ResolvedBounds",
+          "name": "Bounds",
           "line": 892
         },
         {
+          "name": "Bounds",
+          "line": 899
+        },
+        {
+          "name": "include",
+          "line": 900
+        },
+        {
+          "name": "finish",
+          "line": 907
+        },
+        {
+          "name": "ResolvedBounds",
+          "line": 919
+        },
+        {
+          "name": "ResolvedBounds",
+          "line": 926
+        },
+        {
           "name": "expand",
-          "line": 893
+          "line": 927
         },
         {
           "name": "cache_tests",
-          "line": 906
+          "line": 940
         },
         {
           "name": "key",
-          "line": 909
+          "line": 943
         },
         {
           "name": "retains_small_cache_but_releases_excess_entries",
-          "line": 922
+          "line": 956
         },
         {
           "name": "releases_large_raster_even_with_few_entries",
-          "line": 937
-        },
-        {
-          "name": "repeated_growth_retains_headroom_and_reuses_unchanged_cache",
-          "line": 949
-        },
-        {
-          "name": "changing_text_render_stress",
           "line": 971
         },
         {
+          "name": "repeated_growth_retains_headroom_and_reuses_unchanged_cache",
+          "line": 983
+        },
+        {
+          "name": "changing_text_render_stress",
+          "line": 1005
+        },
+        {
           "name": "uploaded_font_tests",
-          "line": 994
+          "line": 1028
         },
         {
           "name": "validated_upload_selects_its_exact_bytes_by_immutable_family",
-          "line": 998
+          "line": 1032
         }
       ]
     },
@@ -16083,9 +16190,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "799dd4dd940642fb7a417c74f42aef46db0730f8d6ecf496d42b7b5463af07f2",
+      "sha256": "afc7f00a84d045a76053bb5408599023453b9f5b1e882ec31287d122a6fb1be5",
       "language": "Rust",
-      "bytes": 46255,
+      "bytes": 46305,
       "symbols": [
         {
           "name": "analysis",
@@ -21801,9 +21908,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "6ec3a4399d0eb867cd55c05e1e1d226f1b1440f8d889817a764150510a260827",
+      "sha256": "e8ccbe971f6d22dd350fa5afce5c2da05348644097de44523f81755a5c4a8b87",
       "language": "Markdown",
-      "bytes": 80915,
+      "bytes": 81392,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -21843,15 +21950,15 @@
       "symbols": []
     },
     "docs/graphics-data-sources.md": {
-      "sha256": "021fcb426370d626ee6fb22c31c175ba4368643a0ae9cc257d23e3078b71c8af",
+      "sha256": "6091ae2ff6d8a13171aadd5aa3d4fbcc7e9a0fae08b4acf759146a51f4043ddc",
       "language": "Markdown",
-      "bytes": 5649,
+      "bytes": 7868,
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "4f606402df6eb4efa6f1ed5ec6ebeac28e07135ad3e753290cf2889f6476bb13",
+      "sha256": "9826210e5a7dd96ec0f0a155a2d6c3e6dc5b836a0ffa992f4f241bd1da0e7110",
       "language": "Markdown",
-      "bytes": 98356,
+      "bytes": 102573,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -22544,6 +22651,54 @@
       "bytes": 390,
       "symbols": []
     },
+    "docs/graphics-handoff/scroll-browser-test-log.txt": {
+      "sha256": "851f4fb71126ddc17d372600a47624ac95db10a1a9b17a862f0d96ae4a85e2ce",
+      "language": "Other",
+      "bytes": 5288,
+      "symbols": []
+    },
+    "docs/graphics-handoff/scroll-channel-log.txt": {
+      "sha256": "fd3c0880500967fa787b3514af5b62b52e6397bb2212dffd8f8ca2a758fb10e5",
+      "language": "Other",
+      "bytes": 6701,
+      "symbols": []
+    },
+    "docs/graphics-handoff/scroll-health.json": {
+      "sha256": "ba7ea2aca306a0a46a9e20945ac9edef08f0eb0144d5163c20c514daadf065df",
+      "language": "JSON",
+      "bytes": 1562,
+      "symbols": []
+    },
+    "docs/graphics-handoff/scroll-hls-evidence.json": {
+      "sha256": "8858dea72bf137948df8fe1f2a60d7063c7862e2290ae009271172ec28582175",
+      "language": "JSON",
+      "bytes": 4768,
+      "symbols": []
+    },
+    "docs/graphics-handoff/scroll-onair-browser-evidence.json": {
+      "sha256": "444989e315b0ac29cf3eb228dc6e22c5432e59b93189a207a15b1d004e3a1f5a",
+      "language": "JSON",
+      "bytes": 336,
+      "symbols": []
+    },
+    "docs/graphics-handoff/scroll-restart-evidence.json": {
+      "sha256": "e8ed2f7bcc16ac2678e6e34ed526736aa412fcc4e29c286d2e55173797854097",
+      "language": "JSON",
+      "bytes": 390,
+      "symbols": []
+    },
+    "docs/graphics-handoff/scroll-rust-verification-log.txt": {
+      "sha256": "19a46005ac55af4e086474f390887de271be95305737243ff6aa1e7f7b43d01b",
+      "language": "Other",
+      "bytes": 65726,
+      "symbols": []
+    },
+    "docs/graphics-handoff/scroll-verification.json": {
+      "sha256": "8eac02d5235f811b61defd4ec94fc02d5ebbbeff577a74bffb4e65beb3a51fe9",
+      "language": "JSON",
+      "bytes": 6298,
+      "symbols": []
+    },
     "docs/graphics-handoff/shapes-clock-evidence.json": {
       "sha256": "101a2aeb22d6987bf6c15cbb043429c5f59e55920132efccb048fa8216b3f146",
       "language": "JSON",
@@ -22605,15 +22760,15 @@
       "symbols": []
     },
     "docs/graphics-maintenance.md": {
-      "sha256": "ae962c318ba3ffdc1828284570b2d4f503f61fe8eb4c05abde9189d425cc5621",
+      "sha256": "93f0a8dad2e6507ca2a0c631515621f1e3311019604c27204db343ae8596d954",
       "language": "Markdown",
-      "bytes": 12876,
+      "bytes": 13971,
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
-      "sha256": "1cabb70876cc2639d9f7f2fa5c91c6bc06aaa8cafaabfbffef9eb695d37b3d16",
+      "sha256": "00d9b643824ccbe13b020e2eed5798a3f0062df9afea1faad3850fe367f604e3",
       "language": "Markdown",
-      "bytes": 8923,
+      "bytes": 8971,
       "symbols": []
     },
     "docs/graphics-testing.md": {
@@ -22659,9 +22814,9 @@
       "symbols": []
     },
     "docs/maintenance-handoff/README.md": {
-      "sha256": "cc90e20e21d31cba6422b5ab29a808bf6bfc529100753f5ea5e2b89aa9f73879",
+      "sha256": "50234ab161f2cd1e0597a7db5b757e920a86a2c8b93e202603a5203df040fd27",
       "language": "Markdown",
-      "bytes": 8384,
+      "bytes": 8466,
       "symbols": []
     },
     "docs/maintenance-handoff/architecture-evidence.json": {
@@ -24616,113 +24771,196 @@
         }
       ]
     },
-    "frontend/src/components/graphics/TemplatePreview.vue": {
-      "sha256": "5a411c2cb92822f7f7cde752883af8c24654d07202db8182da7f2eb86302d11f",
+    "frontend/src/components/graphics/ScrollingText.vue": {
+      "sha256": "1c6b45ff330fda9cba0c1ec7577c0aa1f3ecb46277b62befd8efc1233ae82c53",
       "language": "Vue",
-      "bytes": 9038,
+      "bytes": 2857,
       "symbols": [
         {
           "name": "props",
+          "line": 8
+        },
+        {
+          "name": "viewport",
+          "line": 15
+        },
+        {
+          "name": "measure",
+          "line": 16
+        },
+        {
+          "name": "viewportPixels",
           "line": 17
         },
         {
-          "name": "effectiveValues",
-          "line": 27
-        },
-        {
-          "name": "dataMissing",
-          "line": 31
-        },
-        {
-          "name": "configStore",
-          "line": 34
-        },
-        {
-          "name": "images",
-          "line": 36
-        },
-        {
-          "name": "imageVersion",
-          "line": 37
-        },
-        {
-          "name": "layers",
-          "line": 39
-        },
-        {
-          "name": "imagePath",
-          "line": 41
-        },
-        {
-          "name": "image",
-          "line": 42
-        },
-        {
-          "name": "field",
-          "line": 43
-        },
-        {
-          "name": "version",
-          "line": 56
-        },
-        {
-          "name": "urls",
-          "line": 57
-        },
-        {
-          "name": "boxStyle",
-          "line": 70
+          "name": "textPixels",
+          "line": 18
         },
         {
           "name": "elapsed",
-          "line": 71
+          "line": 19
         },
         {
-          "name": "duration",
-          "line": 72
+          "name": "started",
+          "line": 20
         },
         {
-          "name": "progress",
-          "line": 73
+          "name": "line",
+          "line": 21
         },
         {
-          "name": "leaving",
-          "line": 74
+          "name": "offsets",
+          "line": 45
         },
         {
-          "name": "amount",
+          "name": "width",
+          "line": 54
+        },
+        {
+          "name": "scale",
+          "line": 55
+        },
+        {
+          "name": "textWidth",
+          "line": 56
+        },
+        {
+          "name": "period",
+          "line": 57
+        },
+        {
+          "name": "time",
+          "line": 58
+        },
+        {
+          "name": "distance",
+          "line": 59
+        },
+        {
+          "name": "first",
+          "line": 60
+        },
+        {
+          "name": "last",
+          "line": 61
+        },
+        {
+          "name": "left",
+          "line": 64
+        },
+        {
+          "name": "x",
+          "line": 65
+        }
+      ]
+    },
+    "frontend/src/components/graphics/TemplatePreview.vue": {
+      "sha256": "70b54491bdb59cad77d4c18b218bfd4a7dcedc44585f0dbd7a81a150508a6141",
+      "language": "Vue",
+      "bytes": 9837,
+      "symbols": [
+        {
+          "name": "props",
+          "line": 18
+        },
+        {
+          "name": "effectiveValues",
+          "line": 32
+        },
+        {
+          "name": "dataMissing",
+          "line": 36
+        },
+        {
+          "name": "configStore",
+          "line": 39
+        },
+        {
+          "name": "images",
+          "line": 41
+        },
+        {
+          "name": "imageVersion",
+          "line": 42
+        },
+        {
+          "name": "layers",
+          "line": 44
+        },
+        {
+          "name": "imagePath",
+          "line": 46
+        },
+        {
+          "name": "image",
+          "line": 47
+        },
+        {
+          "name": "field",
+          "line": 48
+        },
+        {
+          "name": "version",
+          "line": 61
+        },
+        {
+          "name": "urls",
+          "line": 62
+        },
+        {
+          "name": "boxStyle",
           "line": 75
         },
         {
-          "name": "animation",
+          "name": "elapsed",
           "line": 76
         },
         {
-          "name": "offset",
+          "name": "duration",
           "line": 77
         },
         {
-          "name": "transform",
+          "name": "progress",
           "line": 78
         },
         {
+          "name": "leaving",
+          "line": 79
+        },
+        {
+          "name": "amount",
+          "line": 80
+        },
+        {
+          "name": "animation",
+          "line": 81
+        },
+        {
+          "name": "offset",
+          "line": 82
+        },
+        {
+          "name": "transform",
+          "line": 83
+        },
+        {
           "name": "textStyle",
-          "line": 111
+          "line": 116
         },
         {
           "name": "shapeSize",
-          "line": 122
+          "line": 127
         },
         {
           "name": "output",
-          "line": 123
+          "line": 128
         }
       ]
     },
     "frontend/src/components/graphics/composer/ComposerCanvas.vue": {
-      "sha256": "03ff19957ef012cb3941c338e76f3f9110e237921ae3258a2f484287a3f9dfc3",
+      "sha256": "cc724c274dd2080d1f5b8119b528784cdf5244c61cc83fbf3b178b4b5606bf44",
       "language": "Vue",
-      "bytes": 8043,
+      "bytes": 8077,
       "symbols": [
         {
           "name": "props",
@@ -24838,9 +25076,9 @@
       ]
     },
     "frontend/src/components/graphics/composer/ComposerLayerInspector.vue": {
-      "sha256": "7f03bfdaeee3206a1a3a08a41bdb15937db591766a642d2b00b1edb285628cc8",
+      "sha256": "2880de9e1e62ba69da71973a8bf7ada2d58dc17a2c7fd3f5241c497e9d674aeb",
       "language": "Vue",
-      "bytes": 13348,
+      "bytes": 16662,
       "symbols": [
         {
           "name": "props",
@@ -24853,6 +25091,10 @@
         {
           "name": "setShape",
           "line": 22
+        },
+        {
+          "name": "setScroll",
+          "line": 30
         }
       ]
     },
@@ -32516,9 +32758,9 @@
       ]
     },
     "frontend/src/composables/graphicsTemplates.ts": {
-      "sha256": "e32ae892777050506017f589434a9a824a81d47544ad40fd7d99b1af84e261e5",
+      "sha256": "f3ccaf8a5682dda38c38d85da5c9b003930caf82934a3429af67b1864f4d460c",
       "language": "TypeScript",
-      "bytes": 9157,
+      "bytes": 9237,
       "symbols": [
         {
           "name": "TemplateLayer",
@@ -32526,75 +32768,75 @@
         },
         {
           "name": "LayerAnimation",
-          "line": 41
+          "line": 42
         },
         {
           "name": "TemplateInput",
-          "line": 53
+          "line": 54
         },
         {
           "name": "truncateUploadFilename",
-          "line": 56
+          "line": 57
         },
         {
           "name": "sanitizeGraphicsUploadFilename",
-          "line": 76
+          "line": 77
         },
         {
           "name": "graphicsUploadFilename",
-          "line": 90
+          "line": 91
         },
         {
           "name": "fitLayer",
-          "line": 104
+          "line": 105
         },
         {
           "name": "templateFields",
-          "line": 131
+          "line": 132
         },
         {
           "name": "GraphicsTemplate",
-          "line": 144
+          "line": 145
         },
         {
           "name": "ChannelGraphic",
-          "line": 156
+          "line": 157
         },
         {
           "name": "TemplateUsage",
-          "line": 164
+          "line": 165
         },
         {
           "name": "GraphicOnAir",
-          "line": 173
+          "line": 174
         },
         {
           "name": "TakeResult",
-          "line": 181
+          "line": 182
         },
         {
           "name": "fillFields",
-          "line": 184
+          "line": 185
         },
         {
           "name": "fieldList",
-          "line": 189
+          "line": 190
         },
         {
           "name": "onAirSince",
-          "line": 193
+          "line": 194
         },
         {
           "name": "useGraphicsApi",
-          "line": 200
+          "line": 201
         },
         {
           "name": "base",
-          "line": 204
+          "line": 205
         },
         {
           "name": "headers",
-          "line": 205
+          "line": 206
         }
       ]
     },
@@ -33844,15 +34086,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "4e630d98df46f23f4d56ec8434657e697234d5e32c883973d4c892a759a3c339",
+      "sha256": "94936418b63c0715d7838e6401ec34f0ef3a0b158379f20e111a4629d9f53a3e",
       "language": "TypeScript",
-      "bytes": 146046,
+      "bytes": 146538,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "6cdb8c2f592ee42157267975cf283954255f19a959e6ee46798da3c0269f623c",
+      "sha256": "3c3f34991474fbaddd83d90e975d7cf18828f3b27eb926b0eaadb1a90582eb25",
       "language": "TypeScript",
-      "bytes": 152208,
+      "bytes": 152733,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -37004,6 +37246,25 @@
         }
       ]
     },
+    "qa/e2e/tests/graphics-scroll.spec.ts": {
+      "sha256": "818743ff5f76eea291805196b0a419d463ad065183ae274b6ec2f09922d79141",
+      "language": "TypeScript",
+      "bytes": 7967,
+      "symbols": [
+        {
+          "name": "headers",
+          "line": 7
+        },
+        {
+          "name": "set",
+          "line": 31
+        },
+        {
+          "name": "position",
+          "line": 46
+        }
+      ]
+    },
     "qa/e2e/tests/login-navigation.spec.ts": {
       "sha256": "31501770c65d399e40dbf12d04eb08515aa212cf74ee5f8c50c15ea156f66d73",
       "language": "TypeScript",
@@ -37073,9 +37334,9 @@
       "symbols": []
     },
     "qa/graphics/README.md": {
-      "sha256": "d77c37b13b819cfeb6f96b28bd263b506f9d9c3262a56a37425a81071654deda",
+      "sha256": "0b8c93a8078ef590772383af70db7172778071d8ff5bf9efff3d439e1f21fa58",
       "language": "Markdown",
-      "bytes": 6701,
+      "bytes": 8664,
       "symbols": []
     },
     "qa/graphics/animated.py": {
@@ -37248,6 +37509,41 @@
       "language": "Other",
       "bytes": 1690,
       "symbols": []
+    },
+    "qa/graphics/scroll.py": {
+      "sha256": "0d576bb2ed3d1592e0e216946da6b27a5203df3911d4171e08cfc4718cf461b7",
+      "language": "Python",
+      "bytes": 12548,
+      "symbols": [
+        {
+          "name": "main",
+          "line": 18
+        },
+        {
+          "name": "api",
+          "line": 36
+        },
+        {
+          "name": "media",
+          "line": 59
+        },
+        {
+          "name": "until",
+          "line": 64
+        },
+        {
+          "name": "capture",
+          "line": 137
+        },
+        {
+          "name": "fresh",
+          "line": 140
+        },
+        {
+          "name": "profile",
+          "line": 162
+        }
+      ]
     },
     "qa/gstreamer/.gitignore": {
       "sha256": "11f681d10856a600de2e1d06a7d299992a64b3c3945a21494a37c75da104e430",

@@ -1,0 +1,190 @@
+{
+  "status": "PASS",
+  "width": 640,
+  "height": 360,
+  "fps": 25,
+  "speed": 80,
+  "compression_tolerance_px": 2,
+  "stages": [
+    {
+      "name": "manual-left",
+      "segment_sha256": "9c838b5e8fce3bae8e09f705eef95eb530b4181b3000de0e8110e31c7695464c",
+      "frame_pts": [
+        "3606.000000",
+        "3607.000000"
+      ],
+      "screenshot": "output-scroll-manual-left.jpg",
+      "later_screenshot": "output-scroll-manual-left-later.jpg",
+      "text_pixels": 419,
+      "text_threshold": 80,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 13,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "direction": "left",
+      "displacement_px": -82,
+      "expected_px": -80.0,
+      "profile_error": 0.0,
+      "half_opacity_peak_rgb": [
+        129,
+        129,
+        255
+      ]
+    },
+    {
+      "name": "data-right",
+      "segment_sha256": "ea48feeb6cedd88258935980ad7d73f7389536646daceb26a221fc6029a43fbc",
+      "frame_pts": [
+        "3614.000000",
+        "3615.000000"
+      ],
+      "screenshot": "output-scroll-data-right.jpg",
+      "later_screenshot": "output-scroll-data-right-later.jpg",
+      "text_pixels": 188,
+      "text_threshold": 190,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 21,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "direction": "right",
+      "displacement_px": 82,
+      "expected_px": 80.0,
+      "profile_error": 0.0
+    },
+    {
+      "name": "permanent-left",
+      "segment_sha256": "1d053a1f5499496d0f8b09b294fdccb7ac55effa33aeb458f4216abefb989e4c",
+      "frame_pts": [
+        "3622.000000",
+        "3623.000000"
+      ],
+      "screenshot": "output-scroll-permanent-left.jpg",
+      "later_screenshot": "output-scroll-permanent-left-later.jpg",
+      "text_pixels": 331,
+      "text_threshold": 190,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 29,
+            "output_age": 0.3
+          }
+        ]
+      },
+      "direction": "left",
+      "displacement_px": -82,
+      "expected_px": -80.0,
+      "profile_error": 0.0
+    },
+    {
+      "name": "data-updated",
+      "segment_sha256": "3953c7b6cbc77cd6ec638cf350f782a822ef5fc7a380a18ef29e060952488f01",
+      "frame_pts": [
+        "3630.000000",
+        "3631.000000"
+      ],
+      "screenshot": "output-scroll-data-updated.jpg",
+      "later_screenshot": "output-scroll-data-updated-later.jpg",
+      "text_pixels": 1228,
+      "text_threshold": 190,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 36,
+            "output_age": 0.2
+          }
+        ]
+      },
+      "direction": "left",
+      "displacement_px": -80,
+      "expected_px": -80.0,
+      "profile_error": 0.0
+    },
+    {
+      "name": "hidden",
+      "segment_sha256": "536fa14e0f7ff9b04a56a3ab7da55eb3637f328caab767eff567041e87d6dedc",
+      "frame_pts": [
+        "3638.000000",
+        "3639.000000"
+      ],
+      "screenshot": "output-scroll-hidden.jpg",
+      "later_screenshot": "output-scroll-hidden-later.jpg",
+      "text_pixels": 0,
+      "text_threshold": 190,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 45,
+            "output_age": 0.4
+          }
+        ]
+      }
+    },
+    {
+      "name": "restored",
+      "segment_sha256": "fa6b3fdf021d5fdbfb8ba5668bea0ad2a7bed60d13dbaae0015fa7317328c587",
+      "frame_pts": [
+        "3646.000000",
+        "3647.000000"
+      ],
+      "screenshot": "output-scroll-restored.jpg",
+      "later_screenshot": "output-scroll-restored-later.jpg",
+      "text_pixels": 350,
+      "text_threshold": 190,
+      "health": {
+        "status": "ok",
+        "version": "2.2.1",
+        "channels": [
+          {
+            "id": 1,
+            "state": "on_air",
+            "uptime": 52,
+            "output_age": 0.2
+          }
+        ]
+      },
+      "direction": "left",
+      "displacement_px": -80,
+      "expected_px": -80.0,
+      "profile_error": 0.0
+    }
+  ],
+  "template_id": 22,
+  "source_id": 6,
+  "source_after_refresh": {
+    "revision": 2,
+    "rows": [
+      {
+        "headline": "UPDATED 22222222 - NoAr scrolling data - Sao Paulo - USD 5.20 - EUR 6.30 - Broadcast news"
+      }
+    ]
+  },
+  "channel_errors": 0
+}

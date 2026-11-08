@@ -27,10 +27,13 @@ pub mod logo;
 pub mod lshape;
 #[path = "graphics/rendering/graphics.rs"]
 mod rendering;
+#[path = "graphics/scroll/graphics.rs"]
+mod scroll;
 
 use crate::{compositor::text::BlockAlign, frame::VideoFrame, utils::config::RgbaColor};
 
 pub use rendering::render_graphic;
+pub use scroll::{ScrollDirection, TextScroll};
 
 use self::{
     lshape::{LSHAPE_SWITCH_SECONDS, LShapeGraphic},
@@ -110,6 +113,7 @@ pub enum GraphicAnimation {
 pub enum GraphicContent {
     Text {
         text: String,
+        scroll: Option<TextScroll>,
         font_family: Option<String>,
         /// Percent of the frame height.
         font_size: f64,
@@ -183,6 +187,8 @@ struct RenderedLayer {
     frame: VideoFrame,
     chroma_alpha: Vec<u8>,
     image_animation: Option<Arc<images::ImageAnimation>>,
+    scroll: Option<scroll::RenderedScroll>,
+    prepared_at: Instant,
     x: i32,
     y: i32,
     width: u32,
@@ -216,16 +222,33 @@ fn picture_switch() -> Duration {
 }
 
 impl RenderedGraphic {
+    /// Retain steady artwork's clock when a channel model's data is rerasterized.
+    fn inherit_motion(&mut self, previous: &Self) {
+        let Some(epoch) = previous.layers.iter().map(|layer| layer.prepared_at).min() else {
+            return;
+        };
+
+        for layer in &mut self.layers {
+            layer.prepared_at = epoch;
+        }
+    }
+
     pub(crate) fn is_animated(&self) -> bool {
         self.layers
             .iter()
-            .any(|layer| layer.image_animation.is_some())
+            .any(|layer| layer.image_animation.is_some() || layer.scroll.is_some())
     }
 
     /// Fully entered artwork, including GIF frame selection, without I/O.
     pub(crate) fn blend_steady(&self, frame: &mut VideoFrame) {
         for layer in &self.layers {
-            blend_layer(frame, layer, 1.0, GraphicAnimation::None);
+            blend_layer(
+                frame,
+                layer,
+                1.0,
+                GraphicAnimation::None,
+                layer.prepared_at.elapsed(),
+            );
         }
     }
 
@@ -300,7 +323,14 @@ impl RenderedGraphic {
             } else {
                 1.0
             };
-            blend_layer_with_visibility(frame, layer, level, animation, visibility * factor);
+            blend_layer_with_visibility(
+                frame,
+                layer,
+                level,
+                animation,
+                visibility * factor,
+                layer.prepared_at.elapsed(),
+            );
         }
     }
 
@@ -561,7 +591,14 @@ impl GraphicsControl {
 
                 // Apply visibility to final opacity, not animation progress:
                 // hiding the logo must not move a completed slide backwards.
-                blend_layer_with_visibility(frame, layer, level, animation, visibility);
+                blend_layer_with_visibility(
+                    frame,
+                    layer,
+                    level,
+                    animation,
+                    visibility,
+                    since_take.saturating_sub(layer.delay),
+                );
             }
         }
     }
@@ -807,7 +844,13 @@ impl GraphicsControl {
 
             for layer in &graphic.layers {
                 let (level, animation) = layer_level(layer, since_take, since_out);
-                blend_layer(frame, layer, level, animation);
+                blend_layer(
+                    frame,
+                    layer,
+                    level,
+                    animation,
+                    since_take.saturating_sub(layer.delay),
+                );
             }
         }
     }
@@ -873,6 +916,54 @@ mod tests {
         assert_eq!(state.on_air[0].taken_at, entered);
         assert_eq!(state.on_air[0].taken_out_at, leaving);
         assert_eq!(state.on_air[0].out_after, Some(Duration::from_secs(3)));
+    }
+
+    #[test]
+    fn scrolling_refresh_preserves_motion_phase_for_temporary_and_permanent_takes() {
+        let control = GraphicsControl::default();
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![GraphicLayerSpec {
+                content: GraphicContent::Text {
+                    text: "Markets · São Paulo · USD 5.10".to_string(),
+                    scroll: Some(TextScroll {
+                        direction: ScrollDirection::Left,
+                        speed: 80.0,
+                        gap: 40,
+                    }),
+                    font_family: None,
+                    font_size: 6.0,
+                    bold: false,
+                    color: WHITE,
+                    align: BlockAlign::Left,
+                    fill: None,
+                },
+                width: 80.0,
+                height: 20.0,
+                ..white_box(10.0, 70.0, GraphicAnimation::None)
+            }],
+        };
+        let id = control.take(render_graphic(&spec, 320, 180).unwrap(), None);
+        control
+            .set_persistent(42, render_graphic(&spec, 320, 180).unwrap())
+            .unwrap();
+        let now = Instant::now() + Duration::from_secs(1);
+        let mut before = black_frame(320, 180);
+        control.blend_at(&mut before, now);
+        control.blend_always_on_at(&mut before, 1.0, now);
+        assert!(control.update_graphic(id, render_graphic(&spec, 320, 180).unwrap()));
+        control
+            .set_persistent(42, render_graphic(&spec, 320, 180).unwrap())
+            .unwrap();
+        let mut after = black_frame(320, 180);
+        control.blend_at(&mut after, now);
+        control.blend_always_on_at(&mut after, 1.0, now);
+        assert_eq!(before.data(0), after.data(0));
+        assert!(after.data(0).iter().any(|&luma| luma > 16));
+        let mut later = black_frame(320, 180);
+        control.blend_at(&mut later, now + Duration::from_millis(500));
+        control.blend_always_on_at(&mut later, 1.0, now + Duration::from_millis(500));
+        assert_ne!(after.data(0), later.data(0));
     }
 
     #[test]
@@ -1250,6 +1341,7 @@ mod tests {
             layers: vec![GraphicLayerSpec {
                 content: GraphicContent::Text {
                     text: "NoAr".to_string(),
+                    scroll: None,
                     font_family: None,
                     font_size: 20.0,
                     bold: true,
@@ -1378,6 +1470,7 @@ mod tests {
         };
         let text = |text: &str, size, bold, fg, fill| GraphicContent::Text {
             text: text.to_string(),
+            scroll: None,
             font_family: None,
             font_size: size,
             bold,

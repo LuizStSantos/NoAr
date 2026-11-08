@@ -4,11 +4,80 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Scrolling text and live information
+
+Text layers now support continuous horizontal movement in Composer: static,
+right to left or left to right, with speed in output px/s and repeat spacing
+in output pixels. Literal text, operator fields and existing CSV/RSS/JSON
+field mappings use the same layer path. Sources still select one record;
+this does not concatenate a complete feed, rotate records or add vertical rolls.
+Use the [operator guide](../graphics-data-sources.md#scroll-text-and-live-information)
+for authoring, units and limits.
+
+The engine prepares a bounded single-line glyph strip outside the frame thread.
+Frames blend cached pixels inside the layer rectangle, applying text/fill
+opacity together once. Entry/exit animation and delay remain layer controls.
+Temporary/permanent updates retain the existing take clock; L-shape artwork
+updates inherit the preceding artwork epoch. Existing JSON without `scroll`
+stays static; no migration or frozen legacy-column update is needed.
+The edit canvas stays still; its timeline previews movement. On air animates
+the browser preview and keeps Program as the actual output.
+
+Executed in an owned disposable SQLite installation with **GStreamer 1.26.2**:
+
+- `cargo fmt --all`, exact no-default/all-target Clippy with denied warnings,
+  **721 Rust tests passed / 14 ignored**, and normal backend build.
+- Vue types, ESLint, changed-code Prettier, QA types and production frontend
+  build passed; architecture checks found no boundary violations.
+- **37 browser tests passed** against the production frontend, including
+  scroll direction, speed/gap/undo, saving/reloading source mappings, record
+  selection, manual overrides, invalid speed and dark pt-BR desktop/phone.
+  The focused scroll test passed again after the final engine opacity change.
+- Actual **640×360/25 fps HLS**: manual leftward text at half opacity, mapped
+  rightward text, permanent leftward text, live CSV replacement, hide and restore.
+  Completed TS segments retained two frames one second apart. Motion matched
+  **80 ± 2 px/s**, with zero error in the matched glyph profiles. The 2 px
+  tolerance covers 4:2:0 snapping, frame scheduling and compression; this is
+  a displacement check, not encoder byte identity or legacy migration parity.
+  Half-opacity white text over blue measured RGB **129,129,255**, confirming
+  the text/fill group does not apply opacity twice. Hidden frames had no text.
+- A real application restart preserved the model and cached source exactly,
+  restored the permanent model and produced moving text in fresh HLS segments.
+  All recorded health checks were `ok` / `on_air`; the scoped HLS log had
+  **zero ERROR entries**. The final On air browser capture checked advancing
+  actual video, moving source preview and no page errors.
+
+[Verification and source hashes](scroll-verification.json),
+[Rust log](scroll-rust-verification-log.txt),
+[browser suite](scroll-browser-test-log.txt),
+[HLS measurements](scroll-hls-evidence.json),
+[restart](scroll-restart-evidence.json),
+[On air browser](scroll-onair-browser-evidence.json),
+[health](scroll-health.json), [scoped channel log](scroll-channel-log.txt).
+
+Screenshots: [Composer](composer-scroll-pt-BR.jpg),
+[phone](composer-scroll-phone-pt-BR.jpg), [On air](scroll-onair-pt-BR.jpg),
+[manual half opacity](output-scroll-manual-left.jpg),
+[one second later](output-scroll-manual-left-later.jpg),
+[rightward data](output-scroll-data-right.jpg),
+[permanent model](output-scroll-permanent-left.jpg),
+[updated USD 5.20](output-scroll-data-updated-later.jpg),
+[hidden](output-scroll-hidden.jpg), [restored](output-scroll-restored.jpg),
+[after restart](output-scroll-restarted.jpg).
+All are at most 1440 px wide. Browser-test models were removed from the owned
+fixture before the final On air screenshot to show the scrolling example alone.
+
+NOT_RUN for this addition: Firefox/Safari, live public RSS/JSON providers,
+physical desktop/SDI/NDI devices, GPU encoders, a long-duration soak and a new
+2.2.1 frame-parity/API comparison. Provider parsing/last-good unit tests remain
+part of the executed Rust suite; actual scrolling output used manual text/CSV.
+
 ## README dark-mode gallery refresh
 
 The project [README](../../README.md) now describes the layered Composer,
 custom groups, clocks, fonts, data sources, template scheduling and Storage
-downloads. Continuous text scrolling remains explicitly pending.
+downloads. Continuous text scrolling was still pending at that revision;
+the delivery above supersedes that status.
 
 All **14 gallery screenshots** were captured from the actual English UI in
 dark mode, at most 1440 px wide, using an owned disposable Example TV database
@@ -49,7 +118,7 @@ before the clean full-suite repeat. The [Storage guide](../storage.md) explains
 current-file downloads and [Closed captions](../closed_captions.md) documents
 UTF-8 sidecars, same-name pairing, HLS settings, empty-file fallback and client
 CC selection. Composer data fields refresh in place; continuous text/feed
-scrolling controls are **still pending** and were not added in this change.
+scrolling controls were **still pending** in that delivery; see the addition above.
 
 Verification on an owned disposable SQLite installation with **GStreamer
 1.26.2**: fmt, exact no-default/all-target Clippy, **714 Rust tests passed / 14
