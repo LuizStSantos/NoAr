@@ -6,19 +6,11 @@ import { useEventListener } from '@vueuse/core'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { stringFormatter } from '@/composables/helper'
 
-/** One image of the open folder, with the address it can be shown from. */
-export interface ViewerImage {
-    key: string
-    name: string
-    url: string | null
-    size: number
-    /** Width × height once the image has loaded. */
-    dims: string | null
-}
+import type { StorageViewerImage } from '@/composables/storageImages'
 
 /** The open folder's images one at a time, in a full-screen viewer. */
 const props = defineProps<{
-    images: ViewerImage[]
+    images: StorageViewerImage[]
     folder: string
     /** Name of the image that is the folder's poster or wide image, if any. */
     poster: string | null
@@ -72,7 +64,7 @@ function go(step: number) {
     }
 }
 
-function loaded(event: Event, item: ViewerImage) {
+function loaded(event: Event, item: StorageViewerImage) {
     const element = event.target as HTMLImageElement
 
     if (!item.dims && element.naturalWidth) {

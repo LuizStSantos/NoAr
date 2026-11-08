@@ -13,6 +13,12 @@ one is tagged.
 
 ### Changed
 
+- Separate configuration updates, scheduled playback, XMLTV serialization and
+  native output policy into domain owners; split playlist, Scheduler, Storage,
+  report and device-discovery coordination from their presentation panels.
+  Preserve APIs, migrations and operator behavior, document source ownership,
+  and guard presentation/data boundaries in architecture checks.
+
 - Organize logo, L-shape and model rendering under the Graphics domain; move
   shared controller actions out of HTTP handlers and separate Composer panels.
 - Remove unreachable legacy graphics editors, give subtitles/controller examples

@@ -4,6 +4,15 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Cross-project organization follow-up
+
+The follow-up expands maintainability work beyond Graphics to application
+configuration, scheduled playback, XMLTV, engine output policy/desktop recording,
+and frontend playlist, Scheduler, Storage, reports and output discovery.
+See the [project handoff](../maintenance-handoff/README.md) for this revision's
+executed checks and scope, and the [maintenance guide](../maintenance.md) for
+source ownership. Earlier Graphics evidence below retains its original scope.
+
 ## Storage downloads and WebVTT subtitle guidance
 
 Storage now offers native browser downloads in file rows, image cards and the

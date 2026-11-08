@@ -46,6 +46,43 @@ def production_code(source: str) -> str:
     return source
 
 
+# These panels receive data and emit commands. Loading and mutations belong to
+# their page/composable owners; importing a store here silently creates another
+# state owner. This narrow check complements type checking and browser tests.
+PRESENTATION_PANELS = (
+    'components/player/playlist/*.vue',
+    'components/schedule/ScheduleTimeline.vue',
+    'components/schedule/ScheduleEventList.vue',
+    'components/schedule/ScheduleGraphicsList.vue',
+    'components/storage/StorageImageGrid.vue',
+    'components/storage/StorageFileDialogs.vue',
+)
+PANEL_DEPENDENCY = re.compile(r"(?:from\s*|import\s*)['\"](@/stores/[^'\"]+|@/composables/authFetch)['\"]")
+JS_STRINGS = re.compile(r"'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`", re.DOTALL)
+PANEL_NETWORK = re.compile(r'\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(')
+
+
+def panel_violations(root: Path) -> list[dict]:
+    findings = []
+    frontend = root / 'frontend/src'
+    for pattern in PRESENTATION_PANELS:
+        for path in sorted(frontend.glob(pattern)):
+            source = path.read_text().split('</script>', 1)[0]
+            # Preserve import strings while excluding comments from edge checks.
+            imports = NON_CODE.sub(lambda match: re.sub(r'[^\n]', ' ', match.group())
+                                   if match.group().startswith(('//', '/*')) else match.group(), source)
+            network_code = JS_STRINGS.sub(
+                lambda match: re.sub(r'[^\n]', ' ', match.group()), production_code(source))
+            for rule, code, expression in (
+                ('panel-depends-on-data-owner', imports, PANEL_DEPENDENCY),
+                ('panel-opens-network', network_code, PANEL_NETWORK),
+            ):
+                for match in expression.finditer(code):
+                    findings.append({'rule': rule, 'path': path.relative_to(root).as_posix(),
+                                     'line': code.count('\n', 0, match.start()) + 1})
+    return findings
+
+
 def violations(root: Path) -> tuple[list[dict], int]:
     findings, scanned = [], 0
     for crate in ('app', 'engine'):
@@ -64,6 +101,8 @@ def violations(root: Path) -> tuple[list[dict], int]:
             for rule, pattern in rules:
                 for match in pattern.finditer(code):
                     findings.append({'rule': rule, 'path': relative, 'line': code.count('\n', 0, match.start()) + 1})
+    findings.extend(panel_violations(root))
+
     return findings, scanned
 
 

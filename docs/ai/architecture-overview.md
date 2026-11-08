@@ -26,3 +26,12 @@ See [Graphics architecture and maintenance](../graphics-maintenance.md) for the
 source ownership table, dependency diagram, compatibility rules, extension guide
 and executable architecture checks. Run `python3 qa/architecture/check.py` after
 moving service/API/data code; CI runs it too.
+
+## Project maintenance owners
+
+See [Architecture and maintenance](../maintenance.md) for the cross-project
+owner table and configuration-save, playlist, Scheduler, Storage, report, XMLTV
+and native-output flows. Extracted UI panels use typed inputs/commands;
+application save operations remain independent of HTTP adapters. The
+[maintenance handoff](../maintenance-handoff/README.md) records executed checks
+and the precise scope of the organization pass.

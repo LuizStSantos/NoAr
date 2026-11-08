@@ -36,7 +36,7 @@ export interface SettingsSection {
 
 const ALL = ['global_admin', 'channel_admin', 'user']
 const ADMINS = ['global_admin', 'channel_admin']
-const PROCESSING_LOGO = [
+const PROCESSING_GRAPHICS_KEYS = [
     'add_logo',
     'logo',
     'logo_scale',
@@ -69,7 +69,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         keys: ['playlist', 'storage', 'processing.mode'],
         restarts: true,
     },
-    { name: 'logo', group: 'channel', roles: ADMINS, keys: PROCESSING_LOGO, elsewhere: '/graphics' },
+    // Keep the section identifier stable for existing dirty/save and translation contracts.
+    { name: 'logo', group: 'channel', roles: ADMINS, keys: PROCESSING_GRAPHICS_KEYS, elsewhere: '/graphics' },
     { name: 'audio', group: 'channel', roles: ADMINS, keys: ['audio'] },
     { name: 'recording', group: 'channel', roles: ADMINS, keys: ['recording'] },
     { name: 'breaks', group: 'channel', roles: ADMINS, keys: ['scte35'], restarts: true },

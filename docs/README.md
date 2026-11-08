@@ -72,5 +72,7 @@ Portuguese and English; menus are named here in English.
 ## Development
 
 - **[Development](developer.md)**: build and run NoAr from source.
+- **[Architecture and maintenance](maintenance.md)**: source ownership, state
+  boundaries, extension recipes and regression checks across the project.
 - **[SCTE-35 study](scte35.md)**: what SCTE-35 is, the signal NoAr settled
   on, what Pluto TV and Samsung TV Plus ask, and the plan for MediaMTX.

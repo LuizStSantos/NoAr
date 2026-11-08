@@ -1,6 +1,7 @@
 ## Architecture and maintenance
 
-Use the [repository architecture map](ai/architecture-overview.md) for navigation
+Use the [repository architecture map](ai/architecture-overview.md) for navigation,
+the [project maintenance guide](maintenance.md) for cross-project ownership,
 and [Graphics maintenance guide](graphics-maintenance.md) for the graphics
 module boundaries, Composer contracts and safe extension workflow. CI checks
 layer dependencies with `python3 qa/architecture/check.py` alongside Cargo and

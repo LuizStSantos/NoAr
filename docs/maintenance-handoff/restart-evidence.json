@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "paths": [
+    "/api/schedule/1/events",
+    "/api/playlist/1?date=2026-11-07",
+    "/api/playlist/1?date=2026-11-08"
+  ],
+  "playlist_count": 2,
+  "scheduled_events": 1,
+  "response_sha256": {
+    "/api/schedule/1/events": "65f6a37e13874f95240d86365d27be7e284466a7e0974b57a11e36e8b2456a17",
+    "/api/playlist/1?date=2026-11-07": "e1760d76f9c37f4a0929ab85f9c7e0283d35c91b0dda1704bc87a352bcd531ea",
+    "/api/playlist/1?date=2026-11-08": "271250c6fd36c977d89bca0786a3e396decc3457ba0a24c23bb01f04489e3dfe"
+  },
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "stopped",
+        "uptime": null,
+        "output_age": null
+      }
+    ]
+  }
+}

@@ -14,31 +14,37 @@ import { useUploads } from '@/stores/uploads'
 import CommercialCard from '@/components/storage/CommercialCard.vue'
 import FolderTree from '@/components/storage/FolderTree.vue'
 import FolderBadge from '@/components/storage/FolderBadge.vue'
-import ImageViewer, { type ViewerImage } from '@/components/storage/ImageViewer.vue'
+import ImageViewer from '@/components/storage/ImageViewer.vue'
 import LiveCard from '@/components/storage/LiveCard.vue'
 import LogoMarksEditor from '@/components/storage/LogoMarksEditor.vue'
 import LiveEditor from '@/components/storage/LiveEditor.vue'
 import ProgramEditor from '@/components/storage/ProgramEditor.vue'
 import SheetCard from '@/components/storage/SheetCard.vue'
 import SheetEditor from '@/components/storage/SheetEditor.vue'
+import StorageFileDialogs from '@/components/storage/StorageFileDialogs.vue'
+import StorageImageGrid from '@/components/storage/StorageImageGrid.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import VideoPlayer from '@/components/utils/VideoPlayer.vue'
 
 import { authFetch } from '@/composables/authFetch'
 import { type Conversion, useConversions } from '@/composables/conversions'
-import { createFilePreviewUrl, downloadStorageFile } from '@/composables/fileAccess'
+import { createFilePreviewUrl } from '@/composables/fileAccess'
 import { stringFormatter } from '@/composables/helper'
 import {
     LIVES_FOLDER,
-    baseName,
     guideEntries,
-    imageUrl,
     markCommercial,
     readSheet,
     storageJoin,
     type GuideEntry,
     uploadArtwork,
 } from '@/composables/storage'
+import { useStorageFileActions, type StorageRow as Row } from '@/composables/storageFileActions'
+import {
+    storageImageKey as imageKey,
+    useStorageImages,
+    type StorageFileView as FileView,
+} from '@/composables/storageImages'
 
 const { t, locale } = useI18n()
 const configStore = useConfig()
@@ -53,12 +59,6 @@ const uploads = useUploads()
 const DRAG_TYPE = 'application/x-noar-files'
 const IMAGE_TYPES = ['jpg', 'jpeg', 'png', 'webp', 'gif']
 
-interface Row {
-    name: string
-    folder: boolean
-    file?: FileObject
-}
-
 const channelId = computed(() => configStore.channels[configStore.i]?.id ?? 0)
 const current = computed(() => storageJoin(mediaStore.folderTree.source))
 const crumbs = computed(() => {
@@ -69,8 +69,6 @@ const crumbs = computed(() => {
         ...parts.map((name, index) => ({ name, path: parts.slice(0, index + 1).join('/') })),
     ]
 })
-
-type FileView = 'videos' | 'images' | 'all'
 
 const FILE_VIEWS: FileView[] = ['videos', 'images', 'all']
 
@@ -88,16 +86,29 @@ const treeVersion = ref(0)
 const disk = ref<{ total: number; free: number } | null>(null)
 const dropActive = ref(false)
 const uploadInput = ref<HTMLInputElement>()
-const downloading = ref(false)
 
-const renameTarget = ref<Row | null>(null)
-const renameValue = ref('')
-const showCreate = ref(false)
-const newFolderName = ref('')
-const deleteNames = ref<string[]>([])
-const deleteRecursive = ref(false)
-const moveNames = ref<string[]>([])
-const moveTarget = ref('')
+const {
+    renameTarget,
+    renameValue,
+    showCreate,
+    newFolderName,
+    deleteNames,
+    deleteRecursive,
+    deleteHasFolder,
+    moveNames,
+    moveTarget,
+    downloading,
+    failed,
+    move,
+    startRename,
+    finishRename,
+    finishCreate,
+    finishDelete,
+    startMove,
+    finishMove,
+    downloadFile,
+} = useStorageFileActions({ channelId, current, selected, folders: () => mediaStore.folderTree.folders, refresh })
+
 const preview = ref<{ name: string; options: any; failed: boolean } | null>(null)
 
 useHead({ title: computed(() => t('storage.title')) })
@@ -161,68 +172,14 @@ const shownImages = computed(() => {
     return images.value.filter((file) => !needle || file.name.toLowerCase().includes(needle))
 })
 
-// Images are shown from short-lived addresses, fetched a few at a time.
-const imageUrls = reactive(new Map<string, string>())
-const imageDims = reactive(new Map<string, string>())
-const retried = new Set<string>()
-let imagesFolder: string | null = null
-
-/** Changes when the file does, so a replaced image is not taken from the cache. */
-function imageKey(file: FileObject): string {
-    return `${file.name}:${file.modified ?? ''}:${file.size ?? ''}`
-}
-
-async function loadImageUrls() {
-    const folder = current.value
-
-    if (imagesFolder !== folder) {
-        imageUrls.clear()
-        imageDims.clear()
-        retried.clear()
-        imagesFolder = folder
-    }
-
-    if (view.value === 'videos' || !channelId.value) {
-        return
-    }
-
-    const queue = images.value.filter((file) => !imageUrls.has(imageKey(file)))
-
-    async function worker() {
-        for (let file = queue.shift(); file; file = queue.shift()) {
-            try {
-                const url = await imageUrl(channelId.value, storageJoin(folder, file.name))
-
-                if (folder === current.value) {
-                    imageUrls.set(imageKey(file), url)
-                }
-            } catch {
-                // The row keeps its icon.
-            }
-        }
-    }
-
-    await Promise.all([worker(), worker(), worker(), worker()])
-}
-
-/** An address expired (they last a quarter of an hour): ask for a new one once. */
-function imageFailed(file: FileObject) {
-    const key = imageKey(file)
-
-    if (!retried.has(key)) {
-        retried.add(key)
-        imageUrls.delete(key)
-        loadImageUrls()
-    }
-}
-
-function imageLoaded(event: Event, file: FileObject) {
-    const element = event.target as HTMLImageElement
-
-    if (element.naturalWidth) {
-        imageDims.set(imageKey(file), `${element.naturalWidth}×${element.naturalHeight}`)
-    }
-}
+const { imageUrls, imageDims, imageFailed, imageLoaded, viewerIndex, viewerImages, openViewer } = useStorageImages({
+    channelId,
+    current,
+    view,
+    images,
+    shownImages,
+})
+const viewerBusy = ref(false)
 
 const imagesSummary = computed(() => {
     const bytes = images.value.reduce((sum, file) => sum + (file.size ?? 0), 0)
@@ -257,37 +214,6 @@ function artworkHere(path: string | null | undefined): string | null {
 
 const posterHere = computed(() => artworkHere(sheet.value?.poster))
 const backdropHere = computed(() => artworkHere(sheet.value?.backdrop))
-
-const viewerIndex = ref<number | null>(null)
-const viewerBusy = ref(false)
-const viewerImages = computed<ViewerImage[]>(() =>
-    shownImages.value.map((file) => ({
-        key: imageKey(file),
-        name: file.name,
-        url: imageUrls.get(imageKey(file)) ?? null,
-        size: file.size ?? 0,
-        dims: imageDims.get(imageKey(file)) ?? null,
-    })),
-)
-
-// The image on screen was deleted or renamed away.
-watch(
-    () => viewerImages.value.length,
-    (length) => {
-        if (viewerIndex.value !== null && viewerIndex.value >= length) {
-            viewerIndex.value = length ? length - 1 : null
-        }
-    },
-)
-
-function openViewer(name: string) {
-    const position = shownImages.value.findIndex((file) => file.name === name)
-
-    if (position >= 0) {
-        viewerIndex.value = position
-        loadImageUrls()
-    }
-}
 
 /** Make an image of the folder its poster or wide image. */
 async function useAsArtwork(kind: ArtworkKind, name: string) {
@@ -674,8 +600,6 @@ watch(view, (value) => {
     selected.value = []
 })
 
-watch([() => mediaStore.folderTree.files, view], () => loadImageUrls())
-
 function toggle(name: string) {
     selected.value = selected.value.includes(name)
         ? selected.value.filter((item) => item !== name)
@@ -684,40 +608,6 @@ function toggle(name: string) {
 
 function toggleAll() {
     selected.value = allSelected.value ? [] : rows.value.map((row) => row.name)
-}
-
-function failed(error: any) {
-    indexStore.msgAlert('error', t('storage.actionFailed', { error: error?.data ?? error?.message ?? error }), 6)
-}
-
-async function move(names: string[], target: string) {
-    const from = current.value
-
-    if (target === from) {
-        indexStore.msgAlert('warning', t('storage.moveSame'), 3)
-        return
-    }
-
-    try {
-        for (const name of names) {
-            if (storageJoin(from, name) === target || target.startsWith(`${storageJoin(from, name)}/`)) {
-                continue
-            }
-
-            await authFetch(`/api/file/${channelId.value}/rename`, {
-                method: 'POST',
-                headers: configStore.contentType,
-                body: JSON.stringify({
-                    source: `/${storageJoin(from, name)}`,
-                    target: `/${storageJoin(target, name)}`,
-                }),
-            })
-        }
-    } catch (e) {
-        failed(e)
-    }
-
-    await refresh()
 }
 
 // Moving with drag and drop: rows go onto the tree, folder rows or the path.
@@ -849,113 +739,6 @@ async function onSheetSaved(next: MediaSheet) {
     treeVersion.value++
 }
 
-// Rename, create, delete and move dialogs.
-function startRename(row: Row) {
-    renameTarget.value = row
-    renameValue.value = row.name
-}
-
-async function finishRename(confirmed: boolean) {
-    const row = renameTarget.value
-    const name = renameValue.value.trim()
-
-    renameTarget.value = null
-
-    if (!confirmed || !row || !name || name === row.name) {
-        return
-    }
-
-    try {
-        await authFetch(`/api/file/${channelId.value}/rename`, {
-            method: 'POST',
-            headers: configStore.contentType,
-            body: JSON.stringify({
-                source: `/${storageJoin(current.value, row.name)}`,
-                target: `/${storageJoin(current.value, name)}`,
-            }),
-        })
-    } catch (e) {
-        failed(e)
-    }
-
-    await refresh()
-}
-
-async function finishCreate(confirmed: boolean) {
-    const name = newFolderName.value.trim()
-
-    showCreate.value = false
-    newFolderName.value = ''
-
-    if (!confirmed || !name) {
-        return
-    }
-
-    if (mediaStore.folderTree.folders.some((folder) => folder.name === name)) {
-        indexStore.msgAlert('warning', t('storage.folderExists'), 3)
-        return
-    }
-
-    try {
-        await authFetch(`/api/file/${channelId.value}/create-folder`, {
-            method: 'POST',
-            headers: configStore.contentType,
-            body: JSON.stringify({ source: `/${storageJoin(current.value, name)}` }),
-        })
-        indexStore.msgAlert('success', t('storage.folderCreated'), 2)
-    } catch (e) {
-        failed(e)
-    }
-
-    await refresh()
-}
-
-const deleteHasFolder = computed(() =>
-    deleteNames.value.some((name) => mediaStore.folderTree.folders.some((folder) => folder.name === name)),
-)
-
-async function finishDelete(confirmed: boolean) {
-    const names = deleteNames.value
-    const recursive = deleteRecursive.value
-
-    deleteNames.value = []
-    deleteRecursive.value = false
-
-    if (!confirmed) {
-        return
-    }
-
-    try {
-        for (const name of names) {
-            await authFetch(`/api/file/${channelId.value}/remove`, {
-                method: 'POST',
-                headers: configStore.contentType,
-                body: JSON.stringify({ source: `/${storageJoin(current.value, name)}`, recursive }),
-            })
-        }
-    } catch (e) {
-        failed(e)
-    }
-
-    selected.value = selected.value.filter((name) => !names.includes(name))
-    await refresh()
-}
-
-function startMove(names: string[]) {
-    moveNames.value = names
-    moveTarget.value = current.value
-}
-
-async function finishMove(confirmed: boolean) {
-    const names = moveNames.value
-
-    moveNames.value = []
-
-    if (confirmed && names.length) {
-        await move(names, moveTarget.value)
-    }
-}
-
 function openLogoMarks(row: Row, kind: 'trim' | 'hide' = 'hide') {
     logoMarksKind.value = kind
     logoMarksLength.value = row.file?.duration ?? 0
@@ -990,24 +773,6 @@ async function openPreview(row: Row) {
         }
     } catch (e) {
         failed(e)
-    }
-}
-
-async function downloadFile(row: Row) {
-    if (row.folder || downloading.value) {
-        return
-    }
-
-    const id = channelId.value
-    const path = `/${storageJoin(current.value, row.name)}`
-    downloading.value = true
-
-    try {
-        await downloadStorageFile(id, path, row.name)
-    } catch (error) {
-        failed(error)
-    } finally {
-        downloading.value = false
     }
 }
 
@@ -1209,108 +974,25 @@ const uploadAccept = computed(() =>
                         </button>
                     </div>
 
-                    <div v-if="view === 'images' && !isLiveFolder" class="relative">
-                        <div
-                            v-if="mediaStore.isLoading"
-                            class="absolute inset-0 z-10 flex justify-center pt-10 bg-base-100/60"
-                        >
-                            <span class="loading loading-spinner loading-lg" />
-                        </div>
-                        <ul
-                            v-if="shownImages.length"
-                            class="m-0 p-4 list-none grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3.5"
-                        >
-                            <li
-                                v-for="file in shownImages"
-                                :key="file.name"
-                                class="group relative bg-raised border border-line rounded-xl overflow-hidden hover:border-line-strong focus-within:border-accent"
-                                draggable="true"
-                                @dragstart="dragRow($event, { name: file.name, folder: false, file })"
-                            >
-                                <button
-                                    type="button"
-                                    class="w-full h-[150px] bg-base-300 border-0 p-0 cursor-pointer flex items-center justify-center"
-                                    :aria-label="t('storage.images.view', { name: file.name })"
-                                    @click="openViewer(file.name)"
-                                >
-                                    <img
-                                        v-if="imageUrls.get(imageKey(file))"
-                                        :src="imageUrls.get(imageKey(file))"
-                                        alt=""
-                                        class="max-w-full max-h-full object-contain"
-                                        loading="lazy"
-                                        @load="imageLoaded($event, file)"
-                                        @error="imageFailed(file)"
-                                    />
-                                    <i v-else class="bi bi-image text-2xl text-muted" aria-hidden="true" />
-                                </button>
-                                <div
-                                    class="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                                >
-                                    <button
-                                        type="button"
-                                        class="btn-icon bg-base-100/90 text-base-content"
-                                        :aria-label="t('storage.images.view', { name: file.name })"
-                                        @click="openViewer(file.name)"
-                                    >
-                                        <i class="bi bi-eye" aria-hidden="true" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="btn-icon bg-base-100/90 text-base-content"
-                                        :aria-label="t('storage.download', { name: file.name })"
-                                        :title="t('storage.download', { name: file.name })"
-                                        :disabled="downloading"
-                                        @click="downloadFile({ name: file.name, folder: false, file })"
-                                    >
-                                        <i class="bi bi-download" aria-hidden="true" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="btn-icon bg-base-100/90 text-base-content"
-                                        :aria-label="t('storage.rename', { name: file.name })"
-                                        @click="startRename({ name: file.name, folder: false, file })"
-                                    >
-                                        <i class="bi bi-pencil" aria-hidden="true" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="btn-icon bg-base-100/90 text-error"
-                                        :aria-label="t('storage.remove', { name: file.name })"
-                                        @click="deleteNames = [file.name]"
-                                    >
-                                        <i class="bi bi-trash" aria-hidden="true" />
-                                    </button>
-                                </div>
-                                <div class="px-3 py-2.5 flex flex-col gap-1 text-[13px]">
-                                    <span class="truncate" :title="file.name">{{ file.name }}</span>
-                                    <span class="font-mono text-xs text-muted">{{
-                                        [imageDims.get(imageKey(file)), fileSize(file.size ?? 0, 1) || '0 B']
-                                            .filter(Boolean)
-                                            .join(' · ')
-                                    }}</span>
-                                    <span
-                                        v-if="file.name === posterHere"
-                                        class="self-start text-[11px] text-ok border border-ok/40 rounded-md px-1.5 leading-4"
-                                    >
-                                        {{ t(`storage.images.posterBadge.${artworkOwner}`) }}
-                                    </span>
-                                    <span
-                                        v-if="file.name === backdropHere"
-                                        class="self-start text-[11px] text-ok border border-ok/40 rounded-md px-1.5 leading-4"
-                                    >
-                                        {{ t('storage.images.backdropBadge') }}
-                                    </span>
-                                </div>
-                            </li>
-                        </ul>
-                        <p v-else-if="filter" class="m-0 px-4 py-6 text-muted">
-                            {{ t('storage.noMatch', { filter }) }}
-                        </p>
-                        <p v-else-if="!mediaStore.isLoading" class="m-0 px-4 pt-6 pb-2 text-muted">
-                            {{ t('storage.images.empty') }} {{ t('storage.images.emptyHint') }}
-                        </p>
-                    </div>
+                    <StorageImageGrid
+                        v-if="view === 'images' && !isLiveFolder"
+                        :images="shownImages"
+                        :image-urls="imageUrls"
+                        :image-dims="imageDims"
+                        :loading="mediaStore.isLoading"
+                        :downloading="downloading"
+                        :filter="filter"
+                        :poster-here="posterHere"
+                        :backdrop-here="backdropHere"
+                        :owner="artworkOwner"
+                        @drag="(event, file) => dragRow(event, { name: file.name, folder: false, file })"
+                        @open="openViewer"
+                        @loaded="imageLoaded"
+                        @failed="imageFailed"
+                        @download="(file) => downloadFile({ name: file.name, folder: false, file })"
+                        @rename="(file) => startRename({ name: file.name, folder: false, file })"
+                        @remove="deleteNames = [$event]"
+                    />
 
                     <div v-else class="relative overflow-x-auto">
                         <div
@@ -1681,61 +1363,23 @@ const uploadAccept = computed(() =>
             @open="editorPath = $event"
         />
 
-        <GenericModal :show="renameTarget !== null" :title="t('storage.renameTitle')" :modal-action="finishRename">
-            <label class="field-label w-[min(420px,80vw)]">
-                {{ t('storage.newName') }}
-                <input v-model="renameValue" class="field-input" autofocus @keydown.enter="finishRename(true)" />
-            </label>
-        </GenericModal>
-
-        <GenericModal :show="showCreate" :title="t('storage.createTitle')" :modal-action="finishCreate">
-            <label class="field-label w-[min(420px,80vw)]">
-                {{ t('storage.folderName') }}
-                <input v-model="newFolderName" class="field-input" autofocus @keydown.enter="finishCreate(true)" />
-            </label>
-        </GenericModal>
-
-        <GenericModal
-            :show="deleteNames.length > 0"
-            :title="t('storage.deleteTitle')"
-            :ok-label="t('storage.delete')"
-            danger
-            :modal-action="finishDelete"
-        >
-            <div class="flex flex-col gap-3 w-[min(460px,80vw)]">
-                <p class="m-0">{{ t('storage.deleteQuestion', { count: deleteNames.length }, deleteNames.length) }}</p>
-                <ul class="m-0 ps-5 max-h-40 overflow-y-auto font-mono text-[13px] text-muted">
-                    <li v-for="name in deleteNames" :key="name">{{ name }}</li>
-                </ul>
-                <label v-if="deleteHasFolder" class="flex items-center gap-2.5 cursor-pointer">
-                    <input v-model="deleteRecursive" type="checkbox" class="checkbox checkbox-sm checkbox-accent" />
-                    {{ t('storage.deleteRecursive') }}
-                </label>
-            </div>
-        </GenericModal>
-
-        <GenericModal
-            :show="moveNames.length > 0"
-            :title="t('storage.moveTitle', { count: moveNames.length }, moveNames.length)"
-            :ok-label="t('storage.moveHere')"
-            :ok-disabled="moveTarget === current"
-            :modal-action="finishMove"
-        >
-            <div class="flex flex-col gap-2 w-[min(460px,80vw)]">
-                <ul class="m-0 p-1 max-h-[50vh] overflow-y-auto border border-line rounded-field">
-                    <FolderTree
-                        :channel-id="channelId"
-                        path=""
-                        :label="t('storage.root')"
-                        :current="moveTarget"
-                        @open="moveTarget = $event"
-                    />
-                </ul>
-                <p class="m-0 text-[13px] text-muted">
-                    {{ t('storage.moveTarget', { folder: moveTarget ? baseName(moveTarget) : t('storage.root') }) }}
-                </p>
-            </div>
-        </GenericModal>
+        <StorageFileDialogs
+            v-model:rename-value="renameValue"
+            :show-create="showCreate"
+            v-model:new-folder-name="newFolderName"
+            v-model:delete-recursive="deleteRecursive"
+            v-model:move-target="moveTarget"
+            :channel-id="channelId"
+            :current="current"
+            :rename-open="renameTarget !== null"
+            :delete-names="deleteNames"
+            :delete-has-folder="deleteHasFolder"
+            :move-names="moveNames"
+            @confirm-rename="finishRename"
+            @confirm-create="finishCreate"
+            @confirm-delete="finishDelete"
+            @confirm-move="finishMove"
+        />
 
         <GenericModal
             :show="preview !== null"

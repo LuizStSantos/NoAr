@@ -64,5 +64,25 @@ fn production() { sqlx::query("SELECT 1"); }
 '''), {'sql-outside-data-layer'})
 
 
+    def test_presentational_panels_do_not_own_stores_or_http(self):
+        path = 'frontend/src/components/storage/StorageImageGrid.vue'
+        for code in (
+            "import { useConfig } from '@/stores/config'",
+            "import { authFetch } from '@/composables/authFetch'",
+        ):
+            self.assertEqual(self.inspect(path, code), {'panel-depends-on-data-owner'})
+        self.assertEqual(self.inspect(path, 'fetch(url)'), {'panel-opens-network'})
+
+    def test_panels_allow_typed_commands_and_ignore_network_examples(self):
+        path = 'frontend/src/components/player/playlist/PlaylistDayDialogs.vue'
+        self.assertEqual(self.inspect(path, """
+// Do not import { authFetch } from '@/composables/authFetch'
+const hint = 'fetch(url)';
+const emit = defineEmits<{ save: [] }>();
+"""), set())
+        self.assertEqual(self.inspect('frontend/src/composables/reportData.ts',
+                                      "import { authFetch } from '@/composables/authFetch'"), set())
+
+
 if __name__ == '__main__':
     unittest.main()
