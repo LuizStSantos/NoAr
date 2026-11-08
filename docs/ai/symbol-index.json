@@ -21956,9 +21956,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "842ae393e329046d4cb96efa5f2dd674313e4132568776dcaa157e16d8d95c0b",
+      "sha256": "5175fe46f695c661772837e5ce5515aabd2f34a05ff2a1474d052e763c85692a",
       "language": "Markdown",
-      "bytes": 105038,
+      "bytes": 109076,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -22211,6 +22211,90 @@
       "sha256": "8693ba41aeabeabd223cc00f26bbf6b722ade28ad834aa84a77bdab0ecb7585e",
       "language": "Other",
       "bytes": 60332,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/README.md": {
+      "sha256": "4049fc7672170db611da6f4c22e4cff417a56ae8a236d3b16bf6e53aa0e99e35",
+      "language": "Markdown",
+      "bytes": 5410,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/analysis.json": {
+      "sha256": "b4d1e79e7d637e53f5738f33cf129ce3c6d0d38e4127881a60ffa81737630662",
+      "language": "JSON",
+      "bytes": 6970,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/before-runtime-alignment-report.json": {
+      "sha256": "c7b9988f76ccf8210fe17a623498b654c5098d7bfd1bddffa30cffbea45f5e45",
+      "language": "JSON",
+      "bytes": 7225,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/browser-actions.json": {
+      "sha256": "18cb8b91add09f21fb123700d76c65865fb8d66a12fc567e214f51c3582d788b",
+      "language": "JSON",
+      "bytes": 363,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/browser-monitor-proof.json": {
+      "sha256": "a4100c6d8f438affc2e4befd735521f350a701a5f003c25afddba2ba134e368d",
+      "language": "JSON",
+      "bytes": 1095,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/clip-mark-frames.json": {
+      "sha256": "e779abe7defac2998ad996a26cc8194083c9cf61914a19299dd7c73e88eb1d2c",
+      "language": "JSON",
+      "bytes": 645,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/native-runtime-provenance.txt": {
+      "sha256": "5d6dea932c205bb92a4273f52b9dd5abfe88b83d71000df8ddea31a3327473b4",
+      "language": "Other",
+      "bytes": 363,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/native-udp-track-probe.json": {
+      "sha256": "3bc2a8c01c5e9aef94f884ee477ed65cf3fc55574df373a547c67baca80b40cd",
+      "language": "JSON",
+      "bytes": 360,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/permanent-animation-check.json": {
+      "sha256": "0c52cb62ffd8c2a7b024c02d214da917d56247affc909db76e5f7a862ce50963",
+      "language": "JSON",
+      "bytes": 384,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/raw-report.json": {
+      "sha256": "60e9cc7defc945c5f242d2f3b8f7a9242eafe3a88dc18471ab31fd133fe84c7f",
+      "language": "JSON",
+      "bytes": 8836,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/scenario.json": {
+      "sha256": "b75d7106e2b24dc657706ec9d5c045979e0bc91a26259c016eb5a2916f73db72",
+      "language": "JSON",
+      "bytes": 345,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/sha256-manifest.json": {
+      "sha256": "b6036e550a3c12fad3a3e389cea5f80bd52295de61f987364a3e438e0fe87516",
+      "language": "JSON",
+      "bytes": 5706,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/summary.json": {
+      "sha256": "776a50cf7b6ec5661fd6bee5991f551bb3806dbadb3793b36538b939e2648bf9",
+      "language": "JSON",
+      "bytes": 5692,
+      "symbols": []
+    },
+    "docs/graphics-handoff/fire-test-2026-11-08/toolkit-verification.json": {
+      "sha256": "665ef8e6734a1208a6fb1735cb81696122261cdb715ece3a0f8ef8511e7a293d",
+      "language": "JSON",
+      "bytes": 792,
       "symbols": []
     },
     "docs/graphics-handoff/graphics-test-compose-evidence.json": {
@@ -37351,6 +37435,197 @@
       "bytes": 254,
       "symbols": []
     },
+    "qa/fire/README.md": {
+      "sha256": "c6cf39b664f71d3a861b059b399b90f0abb99151982c368017be1add98399172",
+      "language": "Markdown",
+      "bytes": 7166,
+      "symbols": []
+    },
+    "qa/fire/analyse.py": {
+      "sha256": "68258ae50d24868016ba4080220ca102aa5e3326afae01bc5a9d6f317dc2454d",
+      "language": "Python",
+      "bytes": 15052,
+      "symbols": [
+        {
+          "name": "clip_lshape_frames",
+          "line": 17
+        },
+        {
+          "name": "count",
+          "line": 42
+        },
+        {
+          "name": "analyse",
+          "line": 74
+        }
+      ]
+    },
+    "qa/fire/browser.cjs": {
+      "sha256": "ee18721d416d68361e2fb691781853e6496db14baac78bcd2fad63e59d7a0bfe",
+      "language": "Other",
+      "bytes": 9248,
+      "symbols": []
+    },
+    "qa/fire/mediamtx.yml": {
+      "sha256": "8d9deabdbfd1858a588eb10cee8842cd200376a1711843245f565b18958bf180",
+      "language": "YAML",
+      "bytes": 518,
+      "symbols": []
+    },
+    "qa/fire/monitor.cjs": {
+      "sha256": "0d5cbcb870f92c217f9290c976ccd06f102165cb736a487eef3e271ca5746c44",
+      "language": "Other",
+      "bytes": 6485,
+      "symbols": []
+    },
+    "qa/fire/observe.py": {
+      "sha256": "d3a1d140410ea3bd541e07408a437df305d61e7bc7596394852e2c258ce0e865",
+      "language": "Python",
+      "bytes": 3543,
+      "symbols": [
+        {
+          "name": "observe",
+          "line": 12
+        },
+        {
+          "name": "request",
+          "line": 21
+        }
+      ]
+    },
+    "qa/fire/run.py": {
+      "sha256": "ab7706f36b97a3ad7fb400ba7a2f4db7ce68e5adfb5e9c09c4b572a442ad8ded",
+      "language": "Python",
+      "bytes": 31533,
+      "symbols": [
+        {
+          "name": "write_json",
+          "line": 26
+        },
+        {
+          "name": "FireTest",
+          "line": 32
+        },
+        {
+          "name": "__init__",
+          "line": 33
+        },
+        {
+          "name": "log",
+          "line": 59
+        },
+        {
+          "name": "api",
+          "line": 66
+        },
+        {
+          "name": "start",
+          "line": 82
+        },
+        {
+          "name": "stop",
+          "line": 90
+        },
+        {
+          "name": "tool",
+          "line": 99
+        },
+        {
+          "name": "create_media",
+          "line": 102
+        },
+        {
+          "name": "model",
+          "line": 123
+        },
+        {
+          "name": "setup",
+          "line": 126
+        },
+        {
+          "name": "configure_hls",
+          "line": 258
+        },
+        {
+          "name": "time_at",
+          "line": 265
+        },
+        {
+          "name": "schedule",
+          "line": 268
+        },
+        {
+          "name": "publish",
+          "line": 276
+        },
+        {
+          "name": "archive",
+          "line": 291
+        },
+        {
+          "name": "capture",
+          "line": 325
+        },
+        {
+          "name": "action",
+          "line": 346
+        },
+        {
+          "name": "run",
+          "line": 379
+        },
+        {
+          "name": "close",
+          "line": 459
+        },
+        {
+          "name": "main",
+          "line": 491
+        }
+      ]
+    },
+    "qa/fire/test_archive.py": {
+      "sha256": "784c9c52557007378f0c3c11d8273c6168881203411c2766d67041b9abc96028",
+      "language": "Python",
+      "bytes": 3802,
+      "symbols": [
+        {
+          "name": "ArchiveTests",
+          "line": 13
+        },
+        {
+          "name": "fixture",
+          "line": 14
+        },
+        {
+          "name": "test_restart_preserves_old_references_without_copying_them_into_the_new_clock",
+          "line": 21
+        },
+        {
+          "name": "test_a_playlist_cannot_copy_a_segment_outside_the_owned_fixture",
+          "line": 49
+        },
+        {
+          "name": "test_old_native_runtime_is_refused_before_backend_or_media_start",
+          "line": 62
+        },
+        {
+          "name": "test_new_core_with_an_old_decoder_plugin_is_also_refused",
+          "line": 75
+        }
+      ]
+    },
+    "qa/fire/udp_tracks.py": {
+      "sha256": "48036c1aebea4c00c788e331a53820963f34e5b2a4d5f01f06b0c604483488ca",
+      "language": "Python",
+      "bytes": 2965,
+      "symbols": [
+        {
+          "name": "exercise",
+          "line": 12
+        }
+      ]
+    },
     "qa/graphics/README.md": {
       "sha256": "0b8c93a8078ef590772383af70db7172778071d8ff5bf9efff3d439e1f21fa58",
       "language": "Markdown",
@@ -38227,9 +38502,9 @@
       "symbols": []
     },
     "qa/soak/picture.py": {
-      "sha256": "e92d579c1c20580a69f95cbb22a151eeb71b2ed714c22aa6a87ec3332095a918",
+      "sha256": "5033b8ab32a023a61c5097a6247ad680f9331ca450e4b7dcfd6a0064800e4d44",
       "language": "Python",
-      "bytes": 6107,
+      "bytes": 6219,
       "symbols": [
         {
           "name": "PictureTracker",
@@ -38261,23 +38536,23 @@
         },
         {
           "name": "start",
-          "line": 87
+          "line": 89
         },
         {
           "name": "_run",
-          "line": 92
+          "line": 94
         },
         {
           "name": "_end_process",
-          "line": 126
+          "line": 128
         },
         {
           "name": "sample",
-          "line": 135
+          "line": 137
         },
         {
           "name": "close",
-          "line": 141
+          "line": 143
         }
       ]
     },
@@ -38357,9 +38632,9 @@
       ]
     },
     "qa/soak/test_picture.py": {
-      "sha256": "acfe772da2a6a92b2e8b5c602248d7f64e941658fe7ce407e51c4758a21163f7",
+      "sha256": "7c26bbbfaf58596d1ce26dfccbcdb5db05663adffffb4598aa3a078e1048ba25",
       "language": "Python",
-      "bytes": 4413,
+      "bytes": 5762,
       "symbols": [
         {
           "name": "PictureTrackerTests",
@@ -38398,16 +38673,20 @@
           "line": 61
         },
         {
-          "name": "exercise",
+          "name": "test_moving_overlay_cannot_hide_a_frozen_video_roi",
           "line": 62
         },
         {
+          "name": "exercise",
+          "line": 93
+        },
+        {
           "name": "test_real_decoder_detects_repeated_static_pictures_across_reconnects",
-          "line": 95
+          "line": 126
         },
         {
           "name": "test_real_decoder_accepts_moving_pictures",
-          "line": 98
+          "line": 129
         }
       ]
     },

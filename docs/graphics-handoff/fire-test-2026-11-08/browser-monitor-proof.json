@@ -1,0 +1,57 @@
+{
+  "video": [
+    {
+      "screen": "desktop",
+      "width": 640,
+      "height": 360,
+      "previousTime": 42.2,
+      "currentTime": 42.266,
+      "previousFrames": 163,
+      "presentedFrames": 164
+    },
+    {
+      "screen": "phone",
+      "width": 640,
+      "height": 360,
+      "previousTime": 42.4,
+      "currentTime": 42.466,
+      "previousFrames": 166,
+      "presentedFrames": 167
+    }
+  ],
+  "page_errors": [],
+  "text": "BROWSER 23:39:56",
+  "take": {
+    "state": "on_air",
+    "take_id": 3
+  },
+  "media": {
+    "audio": {
+      "peak_db": -23.4,
+      "rms_db": -26.4
+    },
+    "elapsed": 13.343,
+    "failure": null,
+    "index": null,
+    "media": {
+      "ad": false,
+      "duration": 119.07,
+      "in": 0,
+      "out": 119.07,
+      "source": "udp://127.0.0.1:5004",
+      "title": "Browser monitor proof"
+    },
+    "mode": "playlist",
+    "output_link": {
+      "connections": 0,
+      "destination": null,
+      "error": null,
+      "seconds": null,
+      "state": "idle"
+    },
+    "shift": -128.809,
+    "uptime": 19
+  },
+  "templates": 8,
+  "status": "PASS"
+}

@@ -1,0 +1,20 @@
+{
+  "factory": "uridecodebin3",
+  "native_version": "gst-inspect-1.0 version 1.26.11",
+  "phases": [
+    {
+      "audio_only": false,
+      "receiver_exit": null
+    },
+    {
+      "audio_only": true,
+      "receiver_exit": null
+    },
+    {
+      "audio_only": false,
+      "receiver_exit": null
+    }
+  ],
+  "exit_before_cleanup": null,
+  "survived": true
+}

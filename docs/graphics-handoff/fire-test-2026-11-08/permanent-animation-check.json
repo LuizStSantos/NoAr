@@ -1,0 +1,22 @@
+[
+  {
+    "layer": "GIF",
+    "segment": "g0-fire_1794179664159299659_25523_20.ts",
+    "frames": [
+      0,
+      13
+    ],
+    "mean_rgb_delta": 2.207908163265306,
+    "changed": true
+  },
+  {
+    "layer": "clock",
+    "segment": "g0-fire_1794179664159299659_25523_20.ts",
+    "frames": [
+      0,
+      30
+    ],
+    "mean_rgb_delta": 3.6727120535714284,
+    "changed": true
+  }
+]

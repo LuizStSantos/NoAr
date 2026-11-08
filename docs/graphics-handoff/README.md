@@ -4,6 +4,70 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## Integrated fire test — 2026-11-08
+
+**Result: `PASS_WITH_CAPTURE_RECHECK`, not a clean PASS.** One actual channel
+ran the complete 900-second scenario against disposable SQLite and local
+synthetic sources. All 43 final checks passed. The raw runner result remains
+`FAIL` because one short clip-mark screenshot sampled an exit animation;
+43 consecutive decoded frames independently verified the expected artwork,
+lower-left video and border. Both images and the original incident are kept.
+This does not certify frame-accurate transition timing.
+
+Executed: Scheduler created the SRT live and timed graphic through Chromium;
+SRT, RTMP, UDP and HLS entered automatically; Clock/Continue returns, a scheduled
+commercial, clip-specific logo/artwork, logo swap/move, scene, L-shape with GC,
+manual/scheduled graphic overlap, CSV crawl update, clock, animated GIF,
+playout restart and five short GCs. The restart preserved permanent models and
+CSV value `5.20`. Independent audio checks found 880 Hz in all selected live
+segments and 550 Hz in the commercial.
+
+The archive contains 451 original TS segments in two output generations. Both
+fully decode; video DTS advances by 40 ms and audio by at most 21.344 ms, with
+A/V tail differences below 59 ms. No intra-segment continuity/transport errors
+were found. Cross-file muxer counter restarts are recorded separately.
+The primary backend log has no `ERROR` or fatal lines, but **seven warnings**, including
+one 1.0 s pacing reset during deliberate SRT loss. During audio-only UDP, the
+video-only ROI held its picture for up to **21.513 s** before recovery. These
+faults had explicit grace windows; this is not seamless recovery certification.
+Whether video loss should switch to waiting/filler sooner remains a follow-up.
+
+The initial development runtime 1.26.2 reproduced its known native decodebin3
+abort. Docker already ships corrected GStreamer core/base/libav **1.26.11**;
+those exact libraries were extracted read-only from the available stable image.
+The final run used the unchanged decoder and the **same NoAr binary hash** as
+the initial run. The provisional decoder experiment was removed: no backend,
+API, migration or UI product source changed for this task.
+
+Executed on the aligned runtime: fmt, exact no-default-features Clippy/all
+targets/deny warnings, Rust suite **721 passed / 14 ignored**, build, **13**
+picture/soak observer tests and **4** fixture/preflight tests. Node/Python syntax,
+ESLint and changed JavaScript Prettier checks passed. A separate browser proof
+waited for two presented video frames on dark pt-BR desktop and phone, confirmed
+live UDP and a uniquely labelled GC, verified all 8 saved models through the
+API, and captured Scheduler and the Models viewport. The earlier black capture after reload is retained as transient evidence.
+
+[Report, logs and all prints](fire-test-2026-11-08/README.md),
+[summary](fire-test-2026-11-08/summary.json),
+[analysis](fire-test-2026-11-08/analysis.json),
+[raw result](fire-test-2026-11-08/raw-report.json),
+[reproducible harness](../../qa/fire/README.md).
+
+Prints: [On air](fire-test-2026-11-08/fire-onair-verified-pt-BR.jpg),
+[phone](fire-test-2026-11-08/fire-onair-verified-mobile-pt-BR.jpg),
+[Scheduler](fire-test-2026-11-08/fire-scheduler-pt-BR.jpg),
+[Models](fire-test-2026-11-08/fire-models-pt-BR.jpg),
+[HLS L-shape/GC](fire-test-2026-11-08/output-fire-lshape-and-gc.jpg),
+[aligned clip mark](fire-test-2026-11-08/output-fire-clip-lshape-aligned.jpg),
+[original transition snapshot](fire-test-2026-11-08/output-fire-clip-lshape.jpg).
+Desktop screenshots are 1440×1000; phone is 390 px wide/full-page; output is 640×360.
+
+NOT_RUN: 24-hour soak, physical SDI/NDI, desktop audio, WAN impairments,
+multi-channel capacity, output RTMP/SRT/UDP and transition parity. The runner and browser driver
+were loaded before the snapshot/readiness refinements; its exact loaded-source
+hash was not captured. Final helper hashes identify the committed tools, not
+an unperformed clean online rerun of that later adjustment.
+
 ## Shared checkerboard and matching README screenshot dimensions
 
 Templates, On air Preview and Composer now share one neutral transparency

@@ -1,0 +1,21 @@
+{
+  "receipts": [
+    {
+      "action": "logo-hidden-in-browser",
+      "at": 50.51300001144409
+    },
+    {
+      "action": "logo-shown-in-browser",
+      "at": 58.09100008010864
+    },
+    {
+      "action": "gc-taken-in-browser",
+      "at": 131.09899997711182,
+      "take": {
+        "state": "on_air",
+        "take_id": 1
+      }
+    }
+  ],
+  "errors": []
+}

@@ -70,10 +70,12 @@ class PictureTracker:
 class PictureMonitor:
     """Continuously decode a local test output, reconnecting without resetting deadlines."""
 
-    def __init__(self, url: str, directory: Path, name: str = 'output', limit: float = FREEZE_LIMIT):
+    def __init__(self, url: str, directory: Path, name: str = 'output', limit: float = FREEZE_LIMIT,
+                 video_filter: str | None = None):
         self.url = url
         self.directory = directory
         self.name = name
+        self.video_filter = video_filter or f'fps={FRAME_RATE},scale={WIDTH}:{HEIGHT},format=gray'
         self.ffmpeg = shutil.which('ffmpeg')
         if not self.ffmpeg:
             raise RuntimeError('Decoded-picture checks require ffmpeg on the test host')
@@ -95,7 +97,7 @@ class PictureMonitor:
             while not self.stop.is_set():
                 command = [self.ffmpeg, '-nostdin', '-hide_banner', '-loglevel', 'warning',
                            '-threads', '1', '-i', self.url, '-map', '0:v:0', '-an',
-                           '-vf', f'fps={FRAME_RATE},scale={WIDTH}:{HEIGHT},format=gray',
+                           '-vf', self.video_filter,
                            '-threads', '1', '-f', 'rawvideo', 'pipe:1']
                 with self.lock:
                     if self.stop.is_set():
