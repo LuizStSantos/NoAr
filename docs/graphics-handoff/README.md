@@ -4,6 +4,28 @@ Branch: `claude/branch-review-opz967`. Read this file, then
 [`../graphics-roadmap.md`](../graphics-roadmap.md), `CLAUDE.md` and
 `backend/AGENTS.md` before changing anything.
 
+## README dark-mode gallery refresh
+
+The project [README](../../README.md) now describes the layered Composer,
+custom groups, clocks, fonts, data sources, template scheduling and Storage
+downloads. Continuous text scrolling remains explicitly pending.
+
+All **14 gallery screenshots** were captured from the actual English UI in
+dark mode, at most 1440 px wide, using an owned disposable Example TV database
+and synthetic media. The capture run checked `ffp-dark` on every screen,
+document width, advancing video in Player and Graphics On air, and `/health`
+(`ok`, channel `on_air`). It recorded no browser page errors. The gallery adds
+Composer, On air and Data sources; Templates includes all demo groups.
+
+See the [capture evidence](../images/readme-captures.json) for image hashes,
+dimensions, video checks and application revision, and the
+[reproduction guide](../../qa/screenshots/README.md) for isolated setup.
+Screenshot helpers were syntax-checked; the capture helper was formatted.
+The final seeder refinements were applied through the same API operations in
+the owned fixture, but the final seeder revision was not rerun end to end on
+another fresh database. No product or Rust source changed; the Rust and full
+browser regression suites were not rerun for this documentation update.
+
 ## Cross-project organization follow-up
 
 The follow-up expands maintainability work beyond Graphics to application

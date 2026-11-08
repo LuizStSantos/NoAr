@@ -13,7 +13,7 @@ Machine-generated navigation index; verify behavior against current source code.
 - `assets/`: 1 indexed files
 - `backend/`: 230 indexed files
 - `docker/`: 4 indexed files
-- `docs/`: 186 indexed files
+- `docs/`: 187 indexed files
 - `frontend/`: 175 indexed files
 - `migrations/`: 34 indexed files
 - `qa/`: 70 indexed files
@@ -22,7 +22,7 @@ Machine-generated navigation index; verify behavior against current source code.
 ## Languages and formats
 
 - Rust: 224
-- JSON: 109
+- JSON: 110
 - Vue: 107
 - Markdown: 99
 - Other: 82

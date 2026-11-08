@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 """Fill a disposable NoAr server with the demo channel the README screenshots show.
 
-Run it against a fresh server whose setup is not done yet; it never touches
-anything but that server and its storage folder:
-
-    python3 qa/screenshots/build_demo.py --url http://127.0.0.1:8787 \
-        --storage /srv/noar-stage/media/1
-
-It completes the setup (user ``admin``, password from ``--password``), makes
+Follow qa/screenshots/README.md to create an owned, fresh loopback server.
+Explicit disposable-staging opt-in is required. It completes setup (user
+``admin``, password from ``--password-file`` or ``--password``), makes
 title-card videos with FFmpeg, writes their guide sheets and artwork, a
 commercials folder, a live, an assembled program, marks, today's playlist, a
 few scheduled events and the channel logo, then starts the playout.
@@ -18,14 +14,18 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import shutil
 import subprocess
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 ROOT = Path(__file__).resolve().parents[2]
+DEMO_TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
 # (folder, file stem, title, subtitle, colors, minutes)
 VIDEOS = [
@@ -70,7 +70,7 @@ class Api:
 
 
 def run(*command: str) -> None:
-    subprocess.run(command, check=True, capture_output=True)
+    subprocess.run(command, check=True, capture_output=True, timeout=120)
 
 
 def card(target: Path, title: str, subtitle: str, colors: tuple[str, str], size: str) -> None:
@@ -80,7 +80,7 @@ def card(target: Path, title: str, subtitle: str, colors: tuple[str, str], size:
     big = height // 7 if width >= height else width // 9
     small = big // 2
     run(
-        "ffmpeg", "-y", "-v", "error",
+        "ffmpeg", "-y", "-v", "error", "-threads", "2", "-filter_threads", "1",
         "-f", "lavfi", "-i", f"gradients=s={size}:c0={top}:c1={bottom}:x0=0:y0=0:x1={width}:y1={height}:d=1",
         "-vf",
         f"drawtext=fontfile={FONT}:text='{title}':fontsize={big}:fontcolor=white:"
@@ -99,7 +99,7 @@ def video(target: Path, picture: Path, seconds: int) -> None:
         "-loop", "1", "-framerate", "25", "-i", str(picture),
         "-f", "lavfi", "-i", "sine=frequency=220:sample_rate=48000",
         "-t", "10", "-c:v", "libx264", "-preset", "ultrafast", "-tune", "stillimage",
-        "-pix_fmt", "yuv420p", "-g", "50", "-c:a", "aac", "-b:a", "64k", "-af", "volume=0.05",
+        "-pix_fmt", "yuv420p", "-g", "50", "-threads", "2", "-c:a", "aac", "-b:a", "64k", "-af", "volume=0.05",
         "-shortest", str(segment),
     )
     run(
@@ -223,8 +223,70 @@ def playlist(api: Api, storage: Path, lengths: dict[str, float], start: str) -> 
             total += length
             if total >= 24 * 3600:
                 break
-    today = dt.date.today().isoformat()
+    today = dt.datetime.now(DEMO_TIMEZONE).date().isoformat()
     api.call("POST", "/api/playlist/1", {"channel": "Example TV", "date": today, "program": items})
+
+
+def graphics(api: Api) -> dict[str, int]:
+    """Author examples through the same model/source endpoints used by Composer."""
+    logo = next(item["template"] for item in api.call("GET", "/api/graphics/1/channel")
+                if item["kind"] == "logo")
+    logo.update(name="Example TV logo", group="Channel", always_on=True)
+    logo["layers"][0].update(image="00-assets/logo.png", x=90, y=4, width=8, height=14.222222,
+                             opacity=0.9, animation_in="fade", animation_out="fade", animation_ms=400)
+    api.call("PUT", f"/api/graphics/1/templates/{logo['id']}", logo)
+    api.call("POST", f"/api/graphics/1/channel/{logo['id']}", {"on": True})
+    source = api.call("POST", "/api/graphics/1/sources", {
+        "name": "Market snapshot", "kind": "csv", "interval": 30,
+        "document": "symbol,price,change\nUSD,5.10,+0.35%\nEUR,5.60,-0.12%\n",
+    })
+
+    def layer(identifier: str, kind: str, x: float, y: float,
+              width: float, height: float, **content: object) -> dict:
+        return {
+            "id": identifier, "name": identifier.replace("-", " ").title(), "kind": kind,
+            "visible": True, "x": x, "y": y, "width": width, "height": height,
+            "animation_in": "fade", "animation_out": "fade", "animation_ms": 400,
+            **content,
+        }
+
+    def model(name: str, group: str, layers: list[dict], always_on: bool = False) -> dict:
+        return api.call("POST", "/api/graphics/1/templates", {
+            "name": name, "group": group, "duration": 0,
+            "during_lshape": "follow", "always_on": always_on, "layers": layers,
+        })
+
+    lower_third = model("Presenter", "Programmes", [
+        layer("nameplate", "box", 5, 74, 75, 21, fill="#14213d", radius=1.2, shape="rounded"),
+        layer("accent", "box", 5, 74, 1, 21, fill="#f28c18"),
+        layer("programme-image", "image", 7, 78, 8, 14, image="00-assets/logo.png"),
+        layer("presenter-name", "text", 18, 77, 59, 8, text="{name}", font_size=5.5, bold=True),
+        layer("presenter-role", "text", 18, 86, 59, 6, text="{role}", font_size=3.4, color="#e7e9ed"),
+    ])
+    sponsor = model("Sponsor window", "Sponsorship", [
+        layer("backdrop", "box", 0, 0, 100, 100, fill="#14213d"),
+        layer("sidebar", "box", 0, 0, 28, 100, fill="#f28c18"),
+        layer("channel-name", "text", 3, 10, 23, 18, text="EXAMPLE\nTV", font_size=5.5, bold=True),
+        layer("sponsor-message", "text", 32, 80, 64, 12, text="Your programme. Our partner.", font_size=4.5),
+        layer("video-window", "video", 30, 0, 70, 70),
+    ])
+    api.call("PUT", f"/api/graphics/1/templates/{sponsor['id']}/assignment", {"role": "lshape"})
+    clock = model("Studio clock", "Channel", [
+        layer("clock", "clock", 5, 5, 20, 8, font_size=4.5, bold=True,
+              fill="#14213d", clock_format="HH:mm:ss", clock_timezone="America/Sao_Paulo"),
+    ], always_on=True)
+    market = model("Market update", "Information", [
+        layer("market-panel", "box", 5, 77, 51, 16, fill="#14213d", radius=1, shape="rounded"),
+        layer("quote", "text", 8, 80, 45, 10, text="{symbol}  {price}  {change}", font_size=4.5,
+              data_fields={field: {"source_id": source["id"], "column": field, "row": 0}
+                           for field in ["symbol", "price", "change"]}),
+    ])
+    models = {"logo": logo["id"], "presenter": lower_third["id"], "lshape": sponsor["id"],
+              "clock": clock["id"], "market": market["id"]}
+    for template in api.call("GET", "/api/graphics/1/templates"):
+        if template["id"] not in models.values():
+            api.call("DELETE", f"/api/graphics/1/templates/{template['id']}")
+    return {**models, "source": source["id"]}
 
 
 def main() -> None:
@@ -232,22 +294,39 @@ def main() -> None:
     parser.add_argument("--url", default="http://127.0.0.1:8787")
     parser.add_argument("--storage", type=Path, required=True, help="channel 1 storage folder")
     parser.add_argument("--password", default="Example-2026")
+    parser.add_argument("--password-file", type=Path, help="private file containing the disposable password")
     args = parser.parse_args()
+    target = urllib.parse.urlparse(args.url)
+    if (os.environ.get("NOAR_E2E_STAGING") != "1"
+            or os.environ.get("NOAR_E2E_DISPOSABLE") != "1"
+            or target.hostname not in {"127.0.0.1", "localhost", "::1"}
+            or target.scheme not in {"http", "https"}):
+        raise SystemExit("Explicit loopback disposable staging opt-in is required")
+    storage = args.storage.resolve()
+    if not (storage.parent / ".qa-readme-owned").is_file():
+        raise SystemExit("Missing owned README demo marker beside the storage folder")
+    password = args.password_file.read_text().strip() if args.password_file else args.password
     api = Api(args.url)
 
     status = api.call("GET", "/api/setup")
-    if isinstance(status, dict) and status.get("required"):
-        settings = dict(status["settings"])
-        settings.update(username="admin", mail="admin@example.com", password=args.password, two_factor=False)
-        api.call("POST", "/api/setup", settings)
-    login = api.call("POST", "/auth/login", {"username": "admin", "password": args.password})
+    if not isinstance(status, dict) or not status.get("required"):
+        raise SystemExit("Refusing an already initialized server; use a fresh disposable database")
+    settings = dict(status["settings"])
+    if Path(settings["storage"]).resolve() != storage:
+        raise SystemExit("The setup storage does not match the owned demo folder")
+    settings.update(username="admin", mail="admin@example.invalid", password=password,
+                    two_factor=False, shared=False)
+    api.call("POST", "/api/setup", settings)
+    login = api.call("POST", "/auth/login", {"username": "admin", "password": password})
     api.token = login["access"]
 
     channel = api.call("GET", "/api/channel/1")
+    if Path(channel["storage"]).resolve() != storage:
+        raise SystemExit("The channel storage does not match the owned demo folder")
     channel["name"] = "Example TV"
+    channel["timezone"] = "America/Sao_Paulo"
     api.call("PATCH", "/api/channel/1", channel)
 
-    storage = args.storage
     lengths = build_media(storage)
     api.call("PUT", "/api/file/1/commercial", {"path": "Commercials", "commercial": True})
     sheets(api)
@@ -267,32 +346,50 @@ def main() -> None:
     )
 
     config = api.call("GET", "/api/playout/config/1")
-    config["processing"].update(add_logo=True, logo="00-assets/logo.png", logo_scale="8%:-1",
-                                logo_position="W-w-24:24", logo_opacity=0.9)
+    output = next(item for item in api.call("GET", "/api/playout/outputs/1") if item["name"] == "hls")
+    config["output"].update(id=output["id"], mode="hls", width=1280, height=720, fps=25,
+                            video_codec="libx264", audio_codec="aac", audio_bitrate=128,
+                            hls_segment_duration=2, hls_list_size=12, hls_variants=[])
+    config["output"]["video_options"]["preset"] = "ultrafast"
+    config["processing"]["mode"] = "playlist"
+    config["playlist"].update(day_start="00:00:00", length="24:00:00", infinit=False)
+    config["recording"]["enable"] = False
     api.call("PUT", "/api/playout/config/1", config)
+    models = graphics(api)
 
     playlist(api, storage, lengths, config["playlist"]["day_start"])
 
-    # Events still ahead when the pictures are taken: graphics in the next
-    # hour, the break an hour later and the live after that.
-    now = dt.datetime.now()
+    # Keep every event ahead of capture time, using the channel's timezone.
+    now = dt.datetime.now(DEMO_TIMEZONE)
     today = now.date().isoformat()
-    hour = min(now.hour + 1, 19)
+    graphic_time = now + dt.timedelta(minutes=25)
+    break_time = now + dt.timedelta(minutes=55)
+    live_time = now + dt.timedelta(minutes=85)
+    live_end = live_time + dt.timedelta(minutes=45)
     for event in [
         {"kind": "media", "sources": ["Commercials/Spot Car.mp4", "Commercials/Spot Coffee.mp4"],
-         "title": "Afternoon break", "start_date": today, "start_time": f"{hour + 1:02}:00", "entry_mode": "after_clip",
+         "title": "Programme break", "start_date": break_time.date().isoformat(), "start_time": break_time.strftime("%H:%M:%S"), "entry_mode": "after_clip",
          "after_mode": "continue", "repeat_days": 127},
         {"kind": "live", "sources": ["Lives/City Live/signal.live"], "title": "City Live",
-         "start_date": today, "start_time": f"{hour + 2:02}:00", "end_time": f"{hour + 3:02}:00", "entry_mode": "interrupt",
+         "start_date": live_time.date().isoformat(), "start_time": live_time.strftime("%H:%M:%S"), "end_time": live_end.strftime("%H:%M:%S"), "entry_mode": "interrupt",
          "after_mode": "clock", "show_in_guide": True},
     ]:
         api.call("POST", "/api/schedule/1", event)
     api.call("POST", "/api/schedule/1/graphics", {
-        "title": "Sponsor L-shape", "start_date": today, "start_time": f"{hour:02}:00", "end_time": f"{hour:02}:05",
-        "actions": {"lshape": "on", "lshape_corner": "bottom-right", "logo": "hide"},
+        "title": "Sponsor window", "start_date": graphic_time.date().isoformat(),
+        "start_time": graphic_time.strftime("%H:%M:%S"),
+        "end_time": (graphic_time + dt.timedelta(minutes=5)).strftime("%H:%M:%S"),
+        "template": {"template_id": models["lshape"], "name": "Sponsor window", "values": {}, "records": {}},
     })
 
     api.call("POST", "/api/control/1/process", {"command": "start"})
+    api.call("POST", "/api/graphics/1/take", {
+        "template_id": models["presenter"], "fields": {"name": "Rita Souza", "role": "Host · Example TV"},
+        "duration": 0,
+    })
+    (storage.parent / "demo-manifest.json").write_text(json.dumps({
+        "channel": "Example TV", "storage": str(storage), "templates": models, "date": today,
+    }, indent=2) + "\n")
     print("Demo channel ready: Example TV, user admin")
 
 

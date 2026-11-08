@@ -1,0 +1,181 @@
+{
+  "theme": "dark",
+  "language": "en-US",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "captures": [
+    {
+      "file": "login.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "c8f13bda62a58c36a27cca410d4f6b7d063fa5c2211f22fd541710530fce266c",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "player.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "5928f2c416cbbeb098a95f2124b32eb94dae40a31c5463c063144ecb0730faf1",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "scheduler.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "6f604ec3261fb9046ec157ff10a75abbd2b5d418165dda11a47c70c63327d223",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "storage.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "55634923f8e39b99305b818055b8039be495e9a5a1567cd4fef0fd6148abec1c",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "builder.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "80e15991ffbf270449213088b9f4d1e54184e2ab30edf2a720de96f8da19ac28",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "program-folder.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "513ca1b58d9c184d603320836a2e1bcfe75a27143fe14bb2f25f69e67f54591b",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "program-editor.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "397577ac8fd4255d782041b44aa124c63e90b8f3abfeb66a3d246cfaa7bbc1b1",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "marks.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "2620dfc3831635416ad8da305fcd09f757c7ec19edeebadc14c00bcaaf915135",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "graphics.png",
+      "width": 1440,
+      "height": 1694,
+      "sha256": "e7a4a7339de2cec23ad1ef4a7028e0c0e24d6d4d7c3d64383e76787487311b67",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "composer.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "89a8dd9e5ac462511c71865b228848cdfa02ef20974210dbcc4aadbcf69fbcd5",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "onair.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "b706f5f41f04bc3d301601e40b5411242f5d2faed01e71e377dfa3d805604986",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "data-sources.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "97a257c4f06d91b6e0da1154c43b91540648e5e579d15135fdada7ada0e54acd",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "report.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e256c5a24e9852eb15113ada301f78982932f4e85b9355b741b8a89373f8e391",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "settings.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "6a3f1a70e1ee0030e9231df15ff7247f55af61844814dcc270ec4a48b9368233",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "scroll": 1425,
+      "prefers_dark": true
+    }
+  ],
+  "video_checks": [
+    {
+      "screen": "player",
+      "previous_time": 7.273312,
+      "width": 640,
+      "height": 360,
+      "time": 7.29015
+    },
+    {
+      "screen": "onair",
+      "previous_time": 25.36741,
+      "width": 640,
+      "height": 360,
+      "time": 25.374082
+    }
+  ],
+  "page_errors": [],
+  "application_revision": "61628d7c4000dec4972f68a5f15e8e116e55be82",
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "on_air",
+        "uptime": 250,
+        "output_age": 0.1
+      }
+    ]
+  },
+  "status": "PASS"
+}

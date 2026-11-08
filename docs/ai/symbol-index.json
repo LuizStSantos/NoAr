@@ -1011,9 +1011,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "e63e09adabe2bf9b3326f27b5dba7ab4e0a87dbefcfaeed5a6013d0eb799de72",
+      "sha256": "5b8473c7a207a287c9aed30947c80e0a5f9dfd33f827a415d1d74c75c995dee8",
       "language": "Markdown",
-      "bytes": 14251,
+      "bytes": 16369,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -21849,9 +21849,9 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "37cbf1a712844284a7bb8c45ca2dc4f0374feaafc6278f07b13b7191aeb985a6",
+      "sha256": "4f606402df6eb4efa6f1ed5ec6ebeac28e07135ad3e753290cf2889f6476bb13",
       "language": "Markdown",
-      "bytes": 97061,
+      "bytes": 98356,
       "symbols": []
     },
     "docs/graphics-handoff/always-on-a-evidence.json": {
@@ -22634,6 +22634,12 @@
       "bytes": 8441,
       "symbols": []
     },
+    "docs/images/readme-captures.json": {
+      "sha256": "d8d1fa4b27302246a9947c246b2ce0a1d5849c2400547090e5e320aab46a1686",
+      "language": "JSON",
+      "bytes": 4508,
+      "symbols": []
+    },
     "docs/ingest_error.md": {
       "sha256": "6acb3b504b4e6679af359c20f2dd405dfee418ef92d3facbd65f4303fb02295d",
       "language": "Markdown",
@@ -22701,9 +22707,9 @@
       "symbols": []
     },
     "docs/maintenance-handoff/frontend-production-log.txt": {
-      "sha256": "e7cb0d5046718ae16427aee353991f7d4c316e6b2bccaa09e23aeeeebc78f0ad",
+      "sha256": "a3873b9ec20110f81352431fd75ab56a2b798e38837468160565b20fa8778c77",
       "language": "Other",
-      "bytes": 14146,
+      "bytes": 14145,
       "symbols": []
     },
     "docs/maintenance-handoff/hls-analysis.m3u8": {
@@ -37796,15 +37802,15 @@
       ]
     },
     "qa/screenshots/README.md": {
-      "sha256": "150e568bf7f9bd7228f58ae848f39dd0e7babe9b808291792842b5049072965b",
+      "sha256": "93d85c97062225acf3915d33e5afebca9835675cf8e47726acb5c644cc322631",
       "language": "Markdown",
-      "bytes": 1328,
+      "bytes": 4283,
       "symbols": []
     },
     "qa/screenshots/build_demo.py": {
-      "sha256": "33d88390097b97f637f450ce58a9e53c13b16c8b761c1e7f0ef5109674d91b14",
+      "sha256": "a90f91e2f626dfca726fee46ae6fb47f6d27bbe89cf8c6fa138d347406be10d4",
       "language": "Python",
-      "bytes": 13979,
+      "bytes": 20134,
       "symbols": [
         {
           "name": "Api",
@@ -37847,15 +37853,27 @@
           "line": 196
         },
         {
-          "name": "main",
+          "name": "graphics",
           "line": 230
+        },
+        {
+          "name": "layer",
+          "line": 244
+        },
+        {
+          "name": "model",
+          "line": 253
+        },
+        {
+          "name": "main",
+          "line": 292
         }
       ]
     },
     "qa/screenshots/capture.cjs": {
-      "sha256": "20931c3cf4be4b1f841a710012c965722cec1dd455df54ca45138a90ef1498ff",
+      "sha256": "d16f9c0c54b56efc49a9580dfc271f23f3f18cbd87dba3d33571988950d74b50",
       "language": "Other",
-      "bytes": 6227,
+      "bytes": 11907,
       "symbols": []
     },
     "qa/soak/.gitignore": {
