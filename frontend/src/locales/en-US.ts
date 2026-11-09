@@ -1521,6 +1521,9 @@ export default {
             sourceRecord: 'Record from {name}',
         },
         composer: {
+            orderHint: 'The layer at the top of the list is in front. Use the arrows to change the order.',
+            toFront: 'Bring {name} forward',
+            toBack: 'Send {name} backward',
             scroll: {
                 title: 'Scrolling text',
                 direction: 'Text movement',
@@ -1568,7 +1571,7 @@ export default {
             templateName: 'Template name',
             undo: 'Undo',
             stop: 'Stop preview',
-            play: 'Play entry',
+            play: 'Play the animation (in, hold and out)',
             saveTemplate: 'Save template',
             openOnAir: 'Open in On air',
             group: 'Group',

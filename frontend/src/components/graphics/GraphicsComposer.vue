@@ -83,12 +83,6 @@ const fontUploading = ref(false)
 const groups = ref<string[]>([])
 const assignment = ref('')
 const originalAssignment = ref('')
-const controlImage = computed({
-    get: () => draft.value.control_layer_id ?? draft.value.layers.find((layer) => layer.kind === 'image')?.id ?? null,
-    set: (id: string | null) => {
-        draft.value.control_layer_id = id
-    },
-})
 const navigationPending = ref(false)
 const saving = ref(false)
 const busy = ref(false)
@@ -112,7 +106,13 @@ const {
     rememberScaleBase,
     resetScaleBases,
 } = useComposerGeometry(selected, frame, updateSelectedLayer)
-const { time, playing, timelineEnd, seekPreview, stopPreview, playPreview } = useComposerPreview(() => draft.value)
+const { time, playing, timelineEnd, previewDuration, seekPreview, stopPreview, playPreview } = useComposerPreview(
+    () => draft.value,
+)
+/** While the preview plays or is scrubbed, the template leaves after its preview time, so its exit shows too. */
+const canvasTemplate = computed(() =>
+    time.value === undefined ? preview.value : { ...preview.value, duration: previewDuration.value },
+)
 let loadVersion = 0
 let saveNavigation: { version: number; channel: number | undefined; template: number } | undefined
 let interactionSnapshot: string | undefined
@@ -293,6 +293,22 @@ function removeLayer(id: string) {
     }
 
     note.value = t('graphics.composer.removed', { name: layerName(layer) })
+}
+
+/** Move a layer one step in front of (drawn after) or behind the next one. */
+function moveLayer(id: string, toward: 'front' | 'back') {
+    const layers = draft.value.layers
+    const index = layers.findIndex((layer) => layer.id === id)
+    const target = toward === 'front' ? index + 1 : index - 1
+
+    if (editorLocked.value || index < 0 || target < 0 || target >= layers.length) {
+        return
+    }
+
+    rememberDraft()
+    const reordered = [...layers]
+    ;[reordered[index], reordered[target]] = [reordered[target]!, reordered[index]!]
+    draft.value.layers = reordered
 }
 
 function toggleLayer(layer: TemplateLayer) {
@@ -794,6 +810,12 @@ onBeforeUnmount(() => {
         :inert="editorLocked"
         :aria-busy="busy"
     >
+        <RouterLink
+            :to="{ name: 'graphics-templates', query: { channel: channelId } }"
+            class="inline-flex items-center gap-2 self-start min-h-9 text-sm font-medium text-accent-text"
+        >
+            <i class="bi bi-arrow-left" aria-hidden="true" />{{ t('graphics.editor.back') }}
+        </RouterLink>
         <header class="flex flex-wrap items-end gap-3">
             <label class="field-label flex-auto min-w-48"
                 >{{ t('graphics.composer.title') }}
@@ -812,6 +834,7 @@ onBeforeUnmount(() => {
                 {{ t('graphics.composer.undo') }}
             </button>
             <button class="btn-quiet" :disabled="!draft.layers.length" @click="playPreview">
+                <i class="bi" :class="playing ? 'bi-stop-fill' : 'bi-play-fill'" aria-hidden="true" />
                 {{ t(playing ? 'graphics.composer.stop' : 'graphics.composer.play') }}
             </button>
             <button class="btn-main" :disabled="busy || !editorReady" @click="saving = !saving">
@@ -822,9 +845,6 @@ onBeforeUnmount(() => {
                 class="btn-quiet"
                 >{{ t('graphics.composer.openOnAir') }}</RouterLink
             >
-            <RouterLink :to="{ name: 'graphics-templates', query: { channel: channelId } }" class="link-accent">{{
-                t('graphics.onAir.library')
-            }}</RouterLink>
         </header>
         <div v-if="error" role="alert" class="text-error">
             {{ error }}
@@ -859,30 +879,6 @@ onBeforeUnmount(() => {
             <button type="button" class="btn-quiet" :disabled="busy" @click="saving = false">
                 {{ t('graphics.composer.cancel') }}
             </button>
-            <label class="field-label flex-1 min-w-48"
-                >{{ t('graphics.composer.assignment') }}
-                <select v-model="assignment" class="field-input" :aria-label="t('graphics.composer.assignment')">
-                    <option value="">{{ t('graphics.composer.noAssignment') }}</option>
-                    <option v-for="role in ['logo', 'ticker', 'lshape']" :key="role" :value="role">
-                        {{ t(`graphics.assigned.${role}`) }}
-                    </option>
-                </select>
-            </label>
-            <label v-if="['logo', 'lshape'].includes(assignment)" class="field-label flex-1 min-w-48"
-                >{{ t('graphics.composer.controlImage') }}
-                <select v-model="controlImage" :aria-label="t('graphics.composer.controlImage')" class="field-input">
-                    <option :value="draft.layers.find((layer) => layer.kind === 'image')?.id ?? null">
-                        {{ t('graphics.composer.firstImage') }}
-                    </option>
-                    <option
-                        v-for="layer in draft.layers.filter((layer) => layer.kind === 'image').slice(1)"
-                        :key="layer.id"
-                        :value="layer.id"
-                    >
-                        {{ layerName(layer) || layer.id }}
-                    </option>
-                </select>
-            </label>
             <button class="btn-main" :disabled="busy || !draft.name.trim()">{{ t('graphics.composer.save') }}</button>
             <ComposerFieldMappings :fields="fields" :template="preview" :sources="dataSources" @map="mapField">
                 <RouterLink
@@ -905,11 +901,12 @@ onBeforeUnmount(() => {
                 @add="addLayer"
                 @toggle="toggleLayer"
                 @remove="removeLayer"
+                @move="moveLayer"
             />
             <main class="min-w-0 flex flex-col gap-3">
                 <ComposerCanvas
                     v-model:selected-id="selectedId"
-                    :template="preview"
+                    :template="canvasTemplate"
                     :values="sampleValues"
                     :time="time"
                     :proportional="proportional"
@@ -927,7 +924,7 @@ onBeforeUnmount(() => {
                 <ComposerTimeline
                     v-model:selected-id="selectedId"
                     :layers="draft.layers"
-                    :duration="draft.duration"
+                    :duration="previewDuration"
                     :time="time"
                     :end="timelineEnd"
                     @seek="seekPreview"

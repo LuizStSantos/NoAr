@@ -1525,6 +1525,9 @@ export default {
             sourceRecord: 'Registro de {name}',
         },
         composer: {
+            orderHint: 'A camada do topo da lista fica na frente. Use as setas para mudar a ordem.',
+            toFront: 'Trazer {name} para frente',
+            toBack: 'Mandar {name} para trás',
             scroll: {
                 title: 'Texto em movimento',
                 direction: 'Movimento do texto',
@@ -1578,7 +1581,7 @@ export default {
             templateName: 'Nome do modelo',
             undo: 'Desfazer',
             stop: 'Parar prévia',
-            play: 'Ver a entrada',
+            play: 'Ver a animação (entra, fica e sai)',
             saveTemplate: 'Salvar modelo',
             openOnAir: 'Abrir no ar',
             group: 'Grupo',

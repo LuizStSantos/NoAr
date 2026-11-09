@@ -76,6 +76,10 @@ one is tagged.
 - Graphics cues in a video's marks (Storage › Marks › Graphics): at a time of
   the video, put a template on air for a time or until taken off, or take one
   off. They run while the video plays, from wherever it starts.
+- Composer: change the order of layers (the layer at the top of the list is in
+  front), play the whole animation (in, hold and out, also for templates that
+  stay until taken off), and a clear "Back to templates" link at the top. The
+  control assignment and "image controlled by the API" fields are gone.
 
 - Author continuous left/right scrolling on Composer text layers, with output-pixel
   speed, repeat spacing, clipped previews, manual fields and live data mappings.

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
@@ -6,16 +7,20 @@ import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 import { type TemplateLayer, templateFields } from '@/composables/graphicsTemplates'
 
 /** The document owner performs all add/remove/visibility changes. */
-defineProps<{ layers: TemplateLayer[]; alwaysOn?: boolean | null }>()
+const props = defineProps<{ layers: TemplateLayer[]; alwaysOn?: boolean | null }>()
 const selectedId = defineModel<string>('selectedId', { required: true })
 const adding = defineModel<boolean>('adding', { required: true })
 const emit = defineEmits<{
     add: [kind: TemplateLayer['kind']]
     remove: [layerId: string]
     toggle: [layer: TemplateLayer]
+    move: [layerId: string, toward: 'front' | 'back']
 }>()
 const { t } = useI18n()
 const { layerName } = useGraphicsDisplayNames()
+
+/** The layer drawn last is in front: it is listed first. */
+const stacked = computed(() => [...props.layers].reverse())
 </script>
 <template>
     <aside class="card-box p-3 flex flex-col gap-3 min-w-0" :aria-label="t('graphics.composer.layers')">
@@ -49,8 +54,9 @@ const { layerName } = useGraphicsDisplayNames()
             </button>
         </div>
         <p v-if="!layers.length" class="m-0 text-sm text-muted">{{ t('graphics.composer.empty') }}</p>
+        <p v-else class="m-0 text-xs text-muted">{{ t('graphics.composer.orderHint') }}</p>
         <div
-            v-for="layer in layers"
+            v-for="(layer, index) in stacked"
             :key="layer.id"
             class="flex items-center border rounded-field min-w-0"
             :class="[
@@ -71,6 +77,26 @@ const { layerName } = useGraphicsDisplayNames()
                         .join(' ')
                 }}</span>
             </button>
+            <div class="flex flex-col">
+                <button
+                    class="btn-icon min-h-6 min-w-8"
+                    :aria-label="t('graphics.composer.toFront', { name: layerName(layer) })"
+                    :title="t('graphics.composer.toFront', { name: layerName(layer) })"
+                    :disabled="index === 0"
+                    @click="emit('move', layer.id, 'front')"
+                >
+                    <i class="bi bi-chevron-up" />
+                </button>
+                <button
+                    class="btn-icon min-h-6 min-w-8"
+                    :aria-label="t('graphics.composer.toBack', { name: layerName(layer) })"
+                    :title="t('graphics.composer.toBack', { name: layerName(layer) })"
+                    :disabled="index === stacked.length - 1"
+                    @click="emit('move', layer.id, 'back')"
+                >
+                    <i class="bi bi-chevron-down" />
+                </button>
+            </div>
             <button
                 class="btn-icon min-h-9 min-w-9"
                 :aria-label="

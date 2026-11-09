@@ -318,7 +318,7 @@ test('graphics Composer saves layers, fields, artwork and animation through the 
     await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
     await page.reload()
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
-    await page.getByRole('link', { name: 'See templates', exact: true }).click()
+    await page.getByRole('link', { name: 'Back to templates', exact: true }).click()
     const card = page.getByRole('article').filter({ hasText: name })
     await card.getByRole('link', { name: 'Edit', exact: true }).click()
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
@@ -454,7 +454,7 @@ test('channel graphics editors replace legacy navigation and retain bookmarked l
         await expect(edit).toHaveAttribute('href', /graphics\/composer.*template=/)
         await edit.click()
         await expect(page.getByLabel('Template name', { exact: true })).toBeVisible()
-        await page.getByRole('link', { name: 'See templates', exact: true }).click()
+        await page.getByRole('link', { name: 'Back to templates', exact: true }).click()
         await expect(page).toHaveURL(/graphics\/templates\?channel=1/)
     }
 
@@ -695,7 +695,7 @@ test('free template names and groups support permanent compositions and deletion
     await page.getByLabel('Template name', { exact: true }).fill(name)
     await page.getByRole('button', { name: 'Save template', exact: true }).click()
     await page.getByLabel('Group', { exact: true }).fill('My programme')
-    await expect(page.getByLabel('Control assignment (optional)', { exact: true })).toHaveValue('')
+    await expect(page.getByLabel('Control assignment (optional)', { exact: true })).toHaveCount(0)
     const posted = page.waitForResponse(
         (response) => response.url().endsWith('/api/graphics/1/templates') && response.request().method() === 'POST',
     )

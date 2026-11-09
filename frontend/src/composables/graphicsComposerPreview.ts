@@ -6,12 +6,20 @@ import type { TemplateInput } from '@/composables/graphicsTemplates'
 export function useComposerPreview(getTemplate: () => Pick<TemplateInput, 'duration' | 'layers'>) {
     const time = ref<number>()
     const playing = ref(false)
+    /** How long the preview holds the template before its exit: its own time, or a short hold for one that stays until taken out. */
+    const previewDuration = computed(() => {
+        const template = getTemplate()
+
+        if (template.duration > 0) {
+            return template.duration
+        }
+
+        const entered = Math.max(0, ...template.layers.map((layer) => (layer.delay_ms + layer.animation_ms) / 1000))
+
+        return entered + 1.5
+    })
     const timelineEnd = computed(
-        () =>
-            Math.max(
-                getTemplate().duration || 5,
-                ...getTemplate().layers.map((layer) => (layer.delay_ms + layer.animation_ms) / 1000),
-            ) + Math.max(0.4, ...getTemplate().layers.map((layer) => layer.animation_ms / 1000)),
+        () => previewDuration.value + Math.max(0.4, ...getTemplate().layers.map((layer) => layer.animation_ms / 1000)),
     )
     let animationFrame = 0
 
@@ -49,5 +57,5 @@ export function useComposerPreview(getTemplate: () => Pick<TemplateInput, 'durat
 
     onBeforeUnmount(stopPreview)
 
-    return { time, playing, timelineEnd, seekPreview, stopPreview, playPreview }
+    return { time, playing, timelineEnd, previewDuration, seekPreview, stopPreview, playPreview }
 }
