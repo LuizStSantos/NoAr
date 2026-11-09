@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -19,36 +19,44 @@ let requestVersion = 0
 
 async function openModel() {
     const version = ++requestVersion
+    const requestedChannel = channelId.value
+    const requestedKind = kind.value
+    const requestedRoute = route.fullPath
     error.value = ''
 
-    if (kind.value === 'scene' || !channelId.value) {
+    if (requestedKind === 'scene' || !requestedChannel) {
         return
     }
 
     try {
         const models = await api.channel()
 
-        if (version !== requestVersion) {
+        if (version !== requestVersion || requestedRoute !== route.fullPath || requestedChannel !== channelId.value) {
             return
         }
 
-        const model = models.find((model) => model.kind === kind.value)
+        const model = models.find((model) => model.kind === requestedKind)
 
         if (!model) {
-            await router.replace({ name: 'graphics-templates', query: { channel: channelId.value } })
+            await router.replace({ name: 'graphics-templates', query: { channel: requestedChannel } })
             return
         }
 
         await router.replace({
             name: 'graphics-composer',
-            query: { channel: channelId.value, template: model.template.id },
+            query: { channel: requestedChannel, template: model.template.id },
         })
     } catch {
-        error.value = t('graphics.templates.loadFailed')
+        if (version === requestVersion) {
+            error.value = t('graphics.templates.loadFailed')
+        }
     }
 }
 
 watch([kind, channelId], openModel, { immediate: true })
+onBeforeUnmount(() => {
+    ++requestVersion
+})
 </script>
 <template>
     <div class="flex flex-col gap-4" data-testid="channel-graphics-editor">

@@ -9,7 +9,7 @@ use crate::{
         handles,
         models::{GraphicsEvent, GraphicsRole},
     },
-    graphics::{DuringLShape, TakeOutcome, take_template},
+    graphics::{DuringLShape, TakeOutcome, take_template_locked},
     player::controller::ChannelManager,
     utils::errors::ServiceError,
 };
@@ -149,7 +149,7 @@ impl TemplateSchedules {
         manager: &ChannelManager,
         event: &GraphicsEvent,
     ) -> Result<Option<Activation>, ServiceError> {
-        let _editing = manager.graphics_takes.begin_edit().await;
+        let _publication = manager.graphics_takes.lock_publication().await;
         let selection = event
             .template
             .as_ref()
@@ -264,7 +264,7 @@ impl TemplateSchedules {
             template.during_lshape = DuringLShape::Follow;
         }
 
-        let take = take_template(
+        let take = take_template_locked(
             manager,
             template,
             selection.values.clone(),

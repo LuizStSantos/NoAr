@@ -148,9 +148,17 @@ channel-logo renderer.
 - HTTP adapters own authorization and response serialization. Shared application
   operations return ordinary values, not Axum `Json` wrappers. Scheduler events
   and HTTP requests call the same `apply_scene_actions`/`revert_scene_actions`.
-- Acquire the existing graphics edit guard when modifying definitions or taking
-  a model. Preserve revision invalidation and stale-load checks. Do not hold a
-  database/configuration lock while performing blocking native decoding.
+- Definition edits invalidate queued/prepared takes; runtime visibility controls
+  and take publication serialize without invalidating unrelated waiting commands.
+  Preserve generation checks across asynchronous work and final publication.
+  Lifecycle cancellation must not wait for image decoding. Do not hold a
+  database/configuration or frame-critical control lock during native decoding.
+- Composer creates/updates content and optional channel assignment atomically;
+  database helpers own the single transaction, including demotion of a replaced
+  permanent model. Display localization never rewrites converted saved names.
+- A failed optional permanent artwork load is isolated from healthy models.
+  Database errors still propagate; do not report a broken database as an absent
+  optional image.
 - A scheduled temporary graphic owns a take ID. End/removal must retire only
   that take; permanent visibility uses the existing overlapping-event leases.
 - GIF caches, decode limits and phase behavior are documented in the
@@ -221,3 +229,13 @@ playlist editing and general output configuration keep their existing owners.
 Their size alone does not justify changing timing-sensitive or unrelated logic.
 The handoff records which paths were executed; this structural refactor does not
 constitute a production deployment, a physical-device test or a long-running soak.
+
+## Processing measurement boundaries
+
+With `processing-bench`, `graphics_blend` sums the disjoint temporary, permanent,
+role-logo and animated L-shape artwork blend scopes. Several scopes execute per
+output frame, including empty loops: average per-call time is not the cost of
+one complete frame. Use total measured time over observed output frames and
+whole-process CPU/RSS for comparisons. Native preparation, asynchronous data
+fetching, L-shape video scaling/copying, and encoder/muxer work are outside this
+stage. Normal builds use the existing inline no-op benchmark wrappers.

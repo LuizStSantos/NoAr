@@ -238,6 +238,7 @@ fn render_layer(
     };
 
     Ok(Some(RenderedLayer {
+        source_index: 0,
         chroma_alpha: chroma_alpha(&frame, width, height),
         frame,
         image_animation,
@@ -271,8 +272,9 @@ pub fn render_graphic(
     let mut layers = Vec::with_capacity(spec.layers.len());
     let mut scroll_bytes = 0;
 
-    for layer in &spec.layers {
-        if let Some(rendered) = render_layer(layer, frame_width, frame_height)? {
+    for (source_index, layer) in spec.layers.iter().enumerate() {
+        if let Some(mut rendered) = render_layer(layer, frame_width, frame_height)? {
+            rendered.source_index = source_index;
             scroll_bytes += rendered
                 .scroll
                 .as_ref()
@@ -417,12 +419,24 @@ pub(super) fn blend_layer_with_visibility(
     visibility: f64,
     elapsed: Duration,
 ) {
+    blend_layer_at(target, layer, level, animation, visibility, elapsed, (0, 0));
+}
+
+pub(super) fn blend_layer_at(
+    target: &mut VideoFrame,
+    layer: &RenderedLayer,
+    level: f64,
+    animation: GraphicAnimation,
+    visibility: f64,
+    elapsed: Duration,
+    offset: (i32, i32),
+) {
     if level <= 0.0 || visibility <= 0.0 {
         return;
     }
 
-    let mut x = layer.x;
-    let mut y = layer.y;
+    let mut x = layer.x + offset.0;
+    let mut y = layer.y + offset.1;
     let mut width = layer.width;
     let mut opacity = level;
     let away = 1.0 - level;

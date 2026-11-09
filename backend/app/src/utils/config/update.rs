@@ -237,7 +237,13 @@ pub(crate) async fn apply_config_update(
     .await?;
     handles::update_recording_on(&mut transaction, id, &data.recording).await?;
     handles::update_scte35_on(&mut transaction, id, &data.scte35).await?;
-    handles::update_configuration_on(&mut transaction, config_id, data).await?;
+    handles::update_configuration_with_projection_on(
+        &mut transaction,
+        config_id,
+        data,
+        (config.output.width, config.output.height),
+    )
+    .await?;
     transaction.commit().await?;
     let new_config = get_config(pool, id).await?;
     let mut queues = mail_queues.lock().await;

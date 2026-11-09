@@ -108,7 +108,7 @@ struct Rect {
 }
 
 impl LShapeGraphic {
-    fn inherit_motion(&mut self, previous: &Self) {
+    pub(super) fn inherit_motion(&mut self, previous: &Self) {
         if let (Some(next), Some(previous)) = (
             self.animated_art.as_mut().and_then(Arc::get_mut),
             &previous.animated_art,
@@ -279,6 +279,7 @@ pub struct LShapeControl(Arc<Mutex<LShapeState>>);
 
 #[derive(Default)]
 struct LShapeState {
+    model_generation: u64,
     model: Option<(GraphicSpec, usize)>,
     replacement_image: Option<String>,
     replacement_uses_model: bool,
@@ -335,55 +336,143 @@ impl fmt::Debug for LShapeControl {
 }
 
 impl LShapeControl {
+    pub(super) fn begin_model_update(&self) -> u64 {
+        let mut state = self.lock();
+        state.model_generation = state.model_generation.wrapping_add(1);
+
+        state.model_generation
+    }
+
     /// Replace the channel model without changing its on/off phase, remote
     /// replacement, placement or clip override.
     pub(crate) fn set_rendered_graphic(
         &self,
-        mut graphic: Option<Arc<LShapeGraphic>>,
+        graphic: Option<Arc<LShapeGraphic>>,
         spec: &GraphicSpec,
         primary: usize,
+        generation: u64,
     ) -> Result<()> {
-        let mut state = self.lock();
-        let placement = state.placement;
-        let model = (spec.clone(), primary);
+        self.set_rendered_graphic_with(graphic, spec, primary, generation, render_model_art)
+    }
 
-        if let (Some(next), Some(previous)) =
-            (graphic.as_mut().and_then(Arc::get_mut), &state.graphic)
-        {
-            next.inherit_motion(previous);
-        }
+    fn set_rendered_graphic_with(
+        &self,
+        graphic: Option<Arc<LShapeGraphic>>,
+        spec: &GraphicSpec,
+        primary: usize,
+        generation: u64,
+        render: impl FnMut(&(GraphicSpec, usize), &str, u32, u32) -> Result<LShapeGraphic>,
+    ) -> Result<()> {
+        self.set_rendered_graphic_guarded(graphic, (spec, primary), generation, render, || Some(()))
+    }
 
-        if let Some(graphic) = &graphic {
-            let (width, height) = (graphic.background.width(), graphic.background.height());
+    pub(super) fn set_rendered_graphic_guarded<G>(
+        &self,
+        mut graphic: Option<Arc<LShapeGraphic>>,
+        definition: (&GraphicSpec, usize),
+        generation: u64,
+        mut render: impl FnMut(&(GraphicSpec, usize), &str, u32, u32) -> Result<LShapeGraphic>,
+        mut before_commit: impl FnMut() -> Option<G>,
+    ) -> Result<()> {
+        let model = (definition.0.clone(), definition.1);
 
-            if state.replacement_uses_model
-                && let Some(path) = &state.replacement_image
-                && let Some((label, old)) = &state.replacement
-            {
-                let mut replacement = render_model_art(&model, path, width, height)?;
-                replacement.inherit_motion(old);
-                state.replacement = Some((label.clone(), Arc::new(replacement.placed(placement))));
-            }
+        loop {
+            let (
+                previous,
+                replacement,
+                replacement_image,
+                clip,
+                use_replacement,
+                use_clip,
+                inherit_window,
+            ) = {
+                let state = self.lock();
 
-            if state.clip_uses_model
-                && let Some((config, old)) = &state.clip
-            {
-                let mut clip = render_model_art(&model, &config.path, width, height)?;
-                clip.inherit_motion(old);
-
-                if !state.clip_inherits_window {
-                    clip.home = old.home;
-                    clip.window = old.home;
+                if state.model_generation != generation {
+                    return Ok(());
                 }
 
-                state.clip = Some((config.clone(), Arc::new(clip)));
+                (
+                    state.graphic.clone(),
+                    state.replacement.clone(),
+                    state.replacement_image.clone(),
+                    state.clip.clone(),
+                    state.replacement_uses_model,
+                    state.clip_uses_model,
+                    state.clip_inherits_window,
+                )
+            };
+
+            if let (Some(next), Some(previous)) =
+                (graphic.as_mut().and_then(Arc::get_mut), &previous)
+            {
+                next.inherit_motion(previous);
             }
+
+            let mut next_replacement = None;
+            let mut next_clip = None;
+
+            if let Some(graphic) = &graphic {
+                let (width, height) = (graphic.background.width(), graphic.background.height());
+
+                // Preparing overrides can decode images; frames must remain able
+                // to snapshot the current artwork throughout that work.
+                if use_replacement
+                    && let Some(path) = &replacement_image
+                    && let Some((label, old)) = &replacement
+                {
+                    let mut next = render(&model, path, width, height)?;
+                    next.inherit_motion(old);
+                    next_replacement = Some((label.clone(), next));
+                }
+
+                if use_clip && let Some((config, old)) = &clip {
+                    let mut next = render(&model, &config.path, width, height)?;
+                    next.inherit_motion(old);
+
+                    if !inherit_window {
+                        next.home = old.home;
+                        next.window = old.home;
+                    }
+
+                    next_clip = Some((config.clone(), Arc::new(next)));
+                }
+            }
+
+            let Some(_publication) = before_commit() else {
+                return Ok(());
+            };
+            let mut state = self.lock();
+
+            if state.model_generation != generation {
+                return Ok(());
+            }
+
+            if !super::same_prepared(
+                state.replacement.as_ref().map(|(_, image)| image),
+                replacement.as_ref().map(|(_, image)| image),
+            ) || !super::same_prepared(
+                state.clip.as_ref().map(|(_, image)| image),
+                clip.as_ref().map(|(_, image)| image),
+            ) {
+                continue;
+            }
+
+            let placement = state.placement;
+
+            if let Some((label, next)) = next_replacement {
+                state.replacement = Some((label, Arc::new(next.placed(placement))));
+            }
+
+            if next_clip.is_some() {
+                state.clip = next_clip;
+            }
+
+            state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
+            state.model = Some(model);
+
+            return Ok(());
         }
-
-        state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
-        state.model = Some(model);
-
-        Ok(())
     }
 
     fn lock(&self) -> MutexGuard<'_, LShapeState> {
@@ -398,12 +487,17 @@ impl LShapeControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
+        let generation = self.begin_model_update();
         let graphic = config
             .map(|config| LShapeGraphic::load(config, width, height))
             .transpose()?;
         let mut state = self.lock();
-        let placement = state.placement;
 
+        if state.model_generation != generation {
+            return Ok(());
+        }
+
+        let placement = state.placement;
         state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
         state.model = None;
 
@@ -660,7 +754,7 @@ impl LShapeControl {
     }
 }
 
-fn render_model_art(
+pub(super) fn render_model_art(
     model: &(GraphicSpec, usize),
     path: &str,
     width: u32,
@@ -809,9 +903,69 @@ mod tests {
     use super::*;
 
     #[test]
-    fn refreshing_scrolling_artwork_preserves_its_motion_epoch() {
+    fn cancelled_owner_cannot_publish_an_lshape_after_preparation() {
+        use std::sync::{
+            Barrier,
+            atomic::{AtomicBool, Ordering},
+        };
+
         let control = LShapeControl::default();
-        let spec = crate::GraphicSpec {
+        let original = crate::GraphicSpec {
+            layers: Vec::new(),
+            picture: Some(crate::PictureWindow {
+                x: 25.0,
+                y: 0.0,
+                width: 75.0,
+                height: 75.0,
+            }),
+        };
+        let next = crate::GraphicSpec {
+            layers: Vec::new(),
+            picture: Some(crate::PictureWindow {
+                x: 50.0,
+                y: 50.0,
+                width: 50.0,
+                height: 50.0,
+            }),
+        };
+        control.set_template(&original, 320, 180).unwrap();
+        let original_window = control.lock().graphic.as_ref().unwrap().window;
+        let allowed = Arc::new(AtomicBool::new(true));
+        let prepared = Arc::new(Barrier::new(2));
+        let release = Arc::new(Barrier::new(2));
+        let worker_control = control.clone();
+        let worker_allowed = allowed.clone();
+        let worker_prepared = prepared.clone();
+        let worker_release = release.clone();
+        let worker = std::thread::spawn(move || {
+            let mut calls = 0;
+            worker_control
+                .set_template_controlled_guarded(&next, usize::MAX, (320, 180), || {
+                    calls += 1;
+
+                    if calls == 2 {
+                        worker_prepared.wait();
+                        worker_release.wait();
+                    }
+
+                    worker_allowed.load(Ordering::SeqCst).then_some(())
+                })
+                .unwrap();
+        });
+        prepared.wait();
+        let frames_unlocked = control.0.try_lock().is_ok();
+        allowed.store(false, Ordering::SeqCst);
+        release.wait();
+        worker.join().unwrap();
+        assert!(frames_unlocked, "preparation must leave frames unlocked");
+        assert_eq!(
+            control.lock().graphic.as_ref().unwrap().window,
+            original_window
+        );
+    }
+
+    fn scrolling_spec() -> crate::GraphicSpec {
+        crate::GraphicSpec {
             picture: Some(crate::PictureWindow {
                 x: 25.0,
                 y: 0.0,
@@ -844,7 +998,13 @@ mod tests {
                 animation_ms: 0,
                 delay_ms: 0,
             }],
-        };
+        }
+    }
+
+    #[test]
+    fn refreshing_scrolling_artwork_preserves_its_motion_epoch() {
+        let control = LShapeControl::default();
+        let spec = scrolling_spec();
         control.set_template(&spec, 320, 180).unwrap();
         let epoch = control
             .lock()
@@ -868,6 +1028,137 @@ mod tests {
             .layers[0]
             .prepared_at;
         assert_eq!(next, epoch);
+    }
+
+    #[test]
+    fn temporary_picture_refresh_inherits_nested_scroll_epoch() {
+        let control = crate::GraphicsControl::default();
+        let spec = scrolling_spec();
+        let mut initial = render_graphic(&spec, 320, 180).unwrap();
+        let epoch = Instant::now() - Duration::from_secs(5);
+        let picture = Arc::get_mut(initial.picture.as_mut().unwrap()).unwrap();
+        Arc::get_mut(picture.animated_art.as_mut().unwrap())
+            .unwrap()
+            .layers[0]
+            .prepared_at = epoch;
+        let id = control.take(initial, Some(Duration::from_secs(30)));
+        let entered = control.state().on_air[0].taken_at;
+        control.take_out(id);
+        let leaving = control.state().on_air[0].taken_out_at;
+        assert!(control.update_graphic(id, render_graphic(&spec, 320, 180).unwrap()));
+        let state = control.state();
+        let take = &state.on_air[0];
+        let art = take
+            .graphic
+            .picture
+            .as_ref()
+            .unwrap()
+            .animated_art
+            .as_ref()
+            .unwrap();
+        assert_eq!(art.layers[0].prepared_at, epoch);
+        assert_eq!(take.taken_at, entered);
+        assert_eq!(take.taken_out_at, leaving);
+        assert_eq!(take.out_after, Some(Duration::from_secs(30)));
+    }
+
+    #[test]
+    fn model_override_refresh_prepares_without_frame_lock_and_keeps_newer_controls() {
+        let control = LShapeControl::default();
+        let spec = scrolling_spec();
+        control.set_template(&spec, 320, 180).unwrap();
+        {
+            let mut state = control.lock();
+            let graphic = state.graphic.as_ref().unwrap().clone();
+            state.replacement = Some(("old".to_string(), graphic.clone()));
+            state.replacement_image = Some("old.png".to_string());
+            state.replacement_uses_model = true;
+            state.clip = Some((
+                LShapeConfig {
+                    path: "clip.png".to_string(),
+                    scale: 60.0,
+                    corner: LShapeCorner::TopRight,
+                },
+                graphic,
+            ));
+            state.clip_uses_model = true;
+        }
+        let next = render_graphic(&spec, 320, 180).unwrap().picture;
+        let mut preparations = 0;
+        control
+            .set_rendered_graphic_with(
+                next,
+                &spec,
+                0,
+                control.begin_model_update(),
+                |_, _, width, height| {
+                    preparations += 1;
+                    assert!(
+                        control.0.try_lock().is_ok(),
+                        "override preparation holds the frame mutex"
+                    );
+                    assert!(control.frame(1.0).is_some());
+                    if preparations == 1 {
+                        control.reset();
+                        control.set_clip_graphic(None, width, height).unwrap();
+                        control
+                            .place(Some(LShapePlacement {
+                                corner: LShapeCorner::BottomLeft,
+                                scale: Some(60.0),
+                            }))
+                            .unwrap();
+                    }
+
+                    Ok(render_graphic(&spec, width, height)
+                        .unwrap()
+                        .picture
+                        .unwrap()
+                        .as_ref()
+                        .clone())
+                },
+            )
+            .unwrap();
+        let state = control.lock();
+        assert!(preparations >= 1);
+        assert!(state.replacement.is_none());
+        assert!(state.clip.is_none());
+        assert_eq!(state.graphic.as_ref().unwrap().window.x, 0);
+        assert!(state.graphic.as_ref().unwrap().window.y > 0);
+    }
+
+    #[test]
+    fn older_lshape_override_preparation_cannot_publish_after_a_model_clear() {
+        let control = LShapeControl::default();
+        let spec = scrolling_spec();
+        control.set_template(&spec, 320, 180).unwrap();
+        {
+            let mut state = control.lock();
+            state.replacement = Some(("old".to_string(), state.graphic.as_ref().unwrap().clone()));
+            state.replacement_image = Some("old.png".to_string());
+            state.replacement_uses_model = true;
+        }
+        let next = render_graphic(&spec, 320, 180).unwrap().picture;
+        control
+            .set_rendered_graphic_with(
+                next,
+                &spec,
+                0,
+                control.begin_model_update(),
+                |_, _, width, height| {
+                    control.set_graphic(None, width, height).unwrap();
+
+                    Ok(render_graphic(&spec, width, height)
+                        .unwrap()
+                        .picture
+                        .unwrap()
+                        .as_ref()
+                        .clone())
+                },
+            )
+            .unwrap();
+        let state = control.lock();
+        assert!(state.graphic.is_none());
+        assert!(state.model.is_none());
     }
 
     #[test]

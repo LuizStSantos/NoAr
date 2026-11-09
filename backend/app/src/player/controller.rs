@@ -687,6 +687,8 @@ impl ChannelManager {
 
     /// No matter what is running, terminate them all.
     pub async fn stop_all(&self, permanent: bool) {
+        self.graphics_takes.cancel_pending();
+
         let channel_id = self.id;
 
         if permanent {

@@ -3,7 +3,7 @@
 //! These operations share runtime handles with clip marks and external commands;
 //! template validation and temporary-take ownership live in the parent domain.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::atomic::Ordering};
 
 use serde::Serialize;
 
@@ -12,8 +12,8 @@ use crate::{
 };
 
 use super::{
-    LayerKind, fill_fields, graphic_spec_for_channel, load_permanent_templates, sources,
-    templates::layer_image,
+    LayerKind, fill_fields, graphic_spec_for_channel, load_permanent_templates,
+    load_permanent_templates_at_version, sources, templates::layer_image,
 };
 
 /// Whether a saved model has visible artwork or text, not just a picture window.
@@ -200,7 +200,8 @@ pub async fn control_channel_graphic(
                     (running.output.width, running.output.height)
                 });
             crate::player::output::load_logo(manager, &config, width, height);
-            manager.update_config(config).await;
+            // Visibility projection does not change an authored composition.
+            *manager.config.write().await = config;
         }
 
         match binding.role {
@@ -341,23 +342,37 @@ pub async fn clear_removed_channel_graphic(
 /// Restore the bound permanent text model. Released 2.2.1 has no persisted
 /// ticker settings, so conversion creates an empty, disabled binding.
 pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), ServiceError> {
+    let version = manager.graphics_takes.version.load(Ordering::SeqCst);
+    load_channel_ticker_inner(manager, version).await?;
+    // Independent permanent models still load when bound ticker artwork fails.
+    load_permanent_templates_at_version(manager, version).await
+}
+
+async fn load_channel_ticker_inner(
+    manager: &ChannelManager,
+    version: u64,
+) -> Result<(), ServiceError> {
     let bindings =
         crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
     let Some(binding) = bindings
         .iter()
         .find(|binding| binding.role == crate::db::models::GraphicsRole::Ticker)
     else {
-        manager
-            .graphics_control
-            .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
-        return load_permanent_templates(manager).await;
+        let _ = manager.graphics_takes.publish_if_current(version, || {
+            manager
+                .graphics_control
+                .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
+        });
+        return Ok(());
     };
 
     if !binding.enabled {
-        manager
-            .graphics_control
-            .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
-        return load_permanent_templates(manager).await;
+        let _ = manager.graphics_takes.publish_if_current(version, || {
+            manager
+                .graphics_control
+                .clear_always_on(noar_engine::AlwaysOnSlot::Ticker);
+        });
+        return Ok(());
     }
 
     let template = crate::db::handles::select_graphics_template(
@@ -365,12 +380,28 @@ pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), Service
         manager.id,
         binding.template_id,
     )
-    .await?
-    .ok_or_else(|| ServiceError::Conflict("Missing channel ticker model".to_string()))?;
+    .await?;
+    let Some(template) = template else {
+        log::warn!(channel=manager.id; "Optional channel ticker model is missing");
+        return Ok(());
+    };
+
+    if let Err(error) = load_channel_ticker_art(manager, &template, version).await {
+        log::warn!(channel=manager.id; "Channel ticker kept its last frame or was skipped: {error}");
+    }
+
+    Ok(())
+}
+
+async fn load_channel_ticker_art(
+    manager: &ChannelManager,
+    template: &GraphicsTemplate,
+    version: u64,
+) -> Result<(), ServiceError> {
     let config = manager.config.read().await;
-    let has_content = graphic_has_content(&template, &config);
+    let has_content = graphic_has_content(template, &config);
     let spec = if has_content {
-        graphic_spec_for_channel(&template, &HashMap::new(), &config)?
+        graphic_spec_for_channel(template, &HashMap::new(), &config)?
     } else {
         // Preserve an explicit off state when text is cleared and later restored.
         noar_engine::GraphicSpec {
@@ -397,9 +428,12 @@ pub async fn load_channel_ticker(manager: &ChannelManager) -> Result<(), Service
             .graphics_control
             .always_on_visible(noar_engine::AlwaysOnSlot::Ticker)
             .unwrap_or(true);
-    manager
-        .graphics_control
-        .set_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic, visible)
-        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
-    load_permanent_templates(manager).await
+    if let Some(result) = manager.graphics_takes.publish_if_current(version, || {
+        manager
+            .graphics_control
+            .set_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic, visible)
+    }) {
+        result.map_err(|error| ServiceError::Conflict(error.to_string()))?;
+    }
+    Ok(())
 }

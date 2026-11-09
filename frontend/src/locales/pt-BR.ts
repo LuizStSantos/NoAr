@@ -1575,6 +1575,7 @@ export default {
             show: 'Mostrar {name}',
             deleteNamed: 'Apagar a camada {name}',
             selectNamed: 'Selecionar a camada {name}',
+            resizeKeys: 'Use as setas para redimensionar em 1%, ou 10% com Shift. Enter ou Espaço aumenta o tamanho.',
             safeArea: 'Margens de segurança',
             safeAreaHint: 'Branco: ação 5% · amarelo: texto 10%. Guias do editor; não aparecem no ar.',
             actionSafe: 'Margem de segurança para ação: 5% de cada borda',

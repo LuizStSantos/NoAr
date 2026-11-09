@@ -429,6 +429,15 @@ reads project these values and writes update layers, not layout `settings`.
 | `POST`   | `/api/graphics/{id}/out`                                | `GA, CA, U` | `{ "take_id" }` takes that graphic out, `{}` every graphic. Each plays its exit animation. Answers `{ "on_air": [...] }`; 404 for a graphic not on air.                                                                                                                                                                                                                                    |
 | `GET`    | `/api/graphics/{id}/on-air`                             | `GA, CA, U` | `[{ "take_id", "template_id", "name", "since", "leaving" }]`, `since` in seconds.                                                                                                                                                                                                                                                                                                          |
 
+Template `POST` and `PUT` optionally accept an `assignment` object in the same
+request: `{"role":"logo","control_layer_id":"image-id"}`. The role may be
+`logo`, `ticker`, `lshape`, or `null` (unassigned). Content, binding, and the
+replaced model's permanent state commit together; invalid content or an invalid
+role leaves them unchanged. Omitting `assignment` preserves the established
+request/response contract. Within this combined request, an omitted image
+target preserves a valid existing target; explicit `null` selects the first
+image. The separate assignment endpoint remains available for existing clients.
+
 A template is
 `{ "name", "group", "duration", "during_lshape": "follow" | "wait" | "skip", "layers": [...] }`.
 `duration` is in seconds (default 8; 0 stays until taken out).
@@ -457,7 +466,12 @@ picture before the L-shape, so with `follow` it shrinks with the picture into
 the L-shape's corner. Graphics on air are not drawn over filler frames between
 clips. At most 16 are on air at once; taking another takes the oldest out.
 `scale` animations are drawn as a fade for now. A waiting take gives up
-after an hour of L-shape.
+after an hour of L-shape. At most 16 takes may wait per channel; another returns
+409. Out-all (`{}`), authored edits/deletion, and output stop/restart cancel
+pending takes. Ordinary visibility controls preserve the queue, so leaving the
+L-shape releases waiting graphics. Manual fields are limited to 64 values of
+1000 characters each, 16 record selectors, and 256 KiB of expanded text across
+visible text layers before rasterization.
 
 ```bash
 curl -X POST http://127.0.0.1:8787/api/graphics/1/templates -H 'Content-Type: application/json' \

@@ -13,11 +13,13 @@ import {
     fieldList,
     useGraphicsApi,
 } from '@/composables/graphicsTemplates'
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
 const { t } = useI18n()
+const { templateName } = useGraphicsDisplayNames()
 const configStore = useConfig()
 const indexStore = useIndex()
 const graphicsApi = useGraphicsApi()
@@ -112,7 +114,7 @@ function sample(template: GraphicsTemplate): Record<string, string> {
 }
 
 function title(template: GraphicsTemplate, assigned?: ChannelGraphic): string {
-    return assigned?.kind === 'scene' ? assigned.scene_name! : template.name
+    return assigned?.kind === 'scene' ? assigned.scene_name! : templateName(template)
 }
 
 function editTarget(template: GraphicsTemplate, assigned?: ChannelGraphic) {
@@ -168,10 +170,11 @@ async function refreshState() {
     const version = stateVersion
 
     try {
-        const assigned = await graphicsApi.channel()
+        const [assigned, aired] = await Promise.all([graphicsApi.channel(), graphicsApi.onAir()])
 
         if (version === stateVersion) {
             replaceChannelModels(assigned)
+            onAir.value = aired
         }
     } catch {
         // Keep the last confirmed state during a temporary connection loss.
@@ -199,7 +202,10 @@ onMounted(() => {
     void loadLibrary()
     timer = setInterval(refreshState, 2000)
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+    ++stateVersion
+    clearInterval(timer)
+})
 watch(channelId, () => {
     templates.value = []
     channelModels.value = []
@@ -220,7 +226,13 @@ watch(channelId, () => {
         </RouterLink>
     </div>
     <div class="flex flex-wrap items-center gap-2" role="group" :aria-label="t('graphics.library.filter')">
-        <button type="button" class="btn-quiet rounded-full" :aria-pressed="group === null" @click="group = null">
+        <button
+            type="button"
+            class="btn-quiet rounded-full"
+            :class="group === null ? 'border-accent! bg-accent/15! text-accent!' : ''"
+            :aria-pressed="group === null"
+            @click="group = null"
+        >
             {{ t('graphics.library.all') }}
         </button>
         <button
@@ -228,6 +240,7 @@ watch(channelId, () => {
             :key="item.key"
             type="button"
             class="btn-quiet rounded-full"
+            :class="group === item.key ? 'border-accent! bg-accent/15! text-accent!' : ''"
             :aria-pressed="group === item.key"
             @click="group = item.key"
         >
@@ -242,7 +255,7 @@ watch(channelId, () => {
         :ok-disabled="busy !== null"
         :modal-action="confirmDeletion"
     >
-        <p>{{ t('graphics.library.deleteConfirm', { name: deleting?.name }) }}</p>
+        <p>{{ t('graphics.library.deleteConfirm', { name: deleting ? templateName(deleting) : '' }) }}</p>
         <p
             v-if="deleteUsage?.assignment || deleteUsage?.on || deleteUsage?.temporary_instances"
             class="text-sm text-muted"

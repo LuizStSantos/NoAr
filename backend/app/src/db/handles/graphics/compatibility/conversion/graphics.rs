@@ -10,8 +10,8 @@ use crate::utils::errors::ProcessError;
 
 use super::{insert_converted_model, native_model_layers};
 
-/// Convert all channels atomically. Complete bindings are the conversion marker:
-/// restarting must never import the frozen compatibility columns over edited models.
+/// Convert all channels atomically. A durable marker tracks the completed import,
+/// independently of later binding deletion or reassignment.
 pub async fn convert_channel_graphics(pool: &SqlitePool) -> Result<(), ProcessError> {
     let mut transaction = pool.begin().await?;
     let channels: Vec<i32> =
@@ -44,6 +44,29 @@ pub async fn convert_channel_graphics_on(
         return upgrade_channel_layers_on(connection, channel).await;
     }
 
+    let existing_bindings: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM graphics_channel_bindings WHERE channel_id=$1
+         UNION ALL SELECT 1 FROM graphics_scene_bindings WHERE channel_id=$1)",
+    )
+    .bind(channel)
+    .fetch_one(&mut *connection)
+    .await?;
+
+    if existing_bindings {
+        // Migration 31 could omit the marker after a pre-31 binding deletion.
+        // Any surviving role or scene proves prior import; deleted roles stay deleted.
+        upgrade_channel_layers_on(connection, channel).await?;
+        sqlx::query("INSERT INTO graphics_channel_state(channel_id) VALUES($1)")
+            .bind(channel)
+            .execute(&mut *connection)
+            .await?;
+
+        return Ok(());
+    }
+
+    // With neither a marker nor any binding, a virgin channel and a pre-31
+    // channel stripped of every binding are indistinguishable. Unrelated custom
+    // templates do not establish prior import, so retain the normal import path.
     // This is the only reader of the frozen columns, and only for an unconverted channel.
     let row = sqlx::query(
         "SELECT p.* FROM config_processing p JOIN config c ON c.id = p.config_id
@@ -451,6 +474,156 @@ mod tests {
             .unwrap();
         assert_eq!(projected.processing_logo_transition_seconds, None);
         assert_eq!(projected.processing_logo_transition_in, "cut");
+    }
+
+    #[tokio::test]
+    async fn partial_pre31_import_adopts_surviving_roles_and_scenes_without_frozen_reads() {
+        for version in [29, 30] {
+            for retained in 0..=2 {
+                let pool = fixture_29().await;
+
+                if version == 30 {
+                    let migrations = sqlx::migrate!("../../migrations");
+                    sqlx::migrate::Migrator::with_migrations(
+                        migrations
+                            .iter()
+                            .filter(|migration| migration.version <= 30)
+                            .cloned()
+                            .collect::<Vec<_>>(),
+                    )
+                    .run(&pool)
+                    .await
+                    .unwrap();
+                }
+
+                // Even with no role bindings, a surviving scene proves prior import.
+                let scene: i32 = sqlx::query_scalar(r#"INSERT INTO graphics_templates(channel_id,name,group_name,layers,settings) VALUES(1,'Kept scene','Scenes','[]','{"scene":{"name":"Kept scene"}}') RETURNING id"#)
+                    .fetch_one(&pool).await.unwrap();
+                sqlx::query("INSERT INTO graphics_scene_bindings(channel_id,template_id,position) VALUES(1,$1,0)")
+                    .bind(scene).execute(&pool).await.unwrap();
+                sqlx::query("DELETE FROM graphics_channel_bindings WHERE role IN (SELECT role FROM graphics_channel_bindings ORDER BY role DESC LIMIT $1)")
+                    .bind(3 - retained).execute(&pool).await.unwrap();
+                sqlx::query("DELETE FROM graphics_templates WHERE id NOT IN (SELECT template_id FROM graphics_channel_bindings UNION ALL SELECT template_id FROM graphics_scene_bindings)")
+                    .execute(&pool).await.unwrap();
+                sqlx::query("UPDATE graphics_templates SET layers=json_set(layers,'$[1].x',10.1,'$[1].height',50.3) WHERE name='lshape'; UPDATE config_processing SET logo='frozen-deleted.png',graphics_scenes='invalid frozen scenes'")
+                    .execute(&pool).await.unwrap();
+                let bindings: Vec<(String, i32)> = sqlx::query_as(
+                    "SELECT role,template_id FROM graphics_channel_bindings ORDER BY role",
+                )
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+                let ids: Vec<i32> =
+                    sqlx::query_scalar("SELECT id FROM graphics_templates ORDER BY id")
+                        .fetch_all(&pool)
+                        .await
+                        .unwrap();
+                crate::db::handles::db_migrate(&pool).await.unwrap();
+                assert_eq!(
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM graphics_channel_state WHERE channel_id=1"
+                    )
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap(),
+                    1
+                );
+                assert_eq!(
+                    sqlx::query_as::<_, (String, i32)>(
+                        "SELECT role,template_id FROM graphics_channel_bindings ORDER BY role"
+                    )
+                    .fetch_all(&pool)
+                    .await
+                    .unwrap(),
+                    bindings
+                );
+                assert_eq!(
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM graphics_channel_bindings WHERE layers_version=1"
+                    )
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap(),
+                    i64::from(retained)
+                );
+                let lshape: Option<String> =
+                    sqlx::query_scalar("SELECT layers FROM graphics_templates WHERE name='lshape'")
+                        .fetch_optional(&pool)
+                        .await
+                        .unwrap();
+
+                if let Some(layers) = lshape {
+                    let layers: serde_json::Value = serde_json::from_str(&layers).unwrap();
+                    assert_eq!(layers[1]["x"], 10.1);
+                    assert_eq!(layers[1]["height"], 50.3);
+                }
+
+                // After adoption, authored edits must survive repeated startup conversion.
+                sqlx::query("UPDATE graphics_templates SET layers=json_set(layers,'$[0].x',5.1) WHERE name='logo'")
+                    .execute(&pool).await.unwrap();
+                let saved = select_graphics_templates(&pool, 1).await.unwrap();
+                convert_channel_graphics(&pool).await.unwrap();
+                convert_channel_graphics(&pool).await.unwrap();
+                assert_eq!(select_graphics_templates(&pool, 1).await.unwrap(), saved);
+                assert_eq!(
+                    sqlx::query_scalar::<_, i32>("SELECT id FROM graphics_templates ORDER BY id")
+                        .fetch_all(&pool)
+                        .await
+                        .unwrap(),
+                    ids
+                );
+                assert_eq!(
+                    sqlx::query_scalar::<_, i32>(
+                        "SELECT template_id FROM graphics_scene_bindings WHERE channel_id=1"
+                    )
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap(),
+                    scene
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn partial_pre31_roles_alone_prove_import() {
+        let pool = fixture_29().await;
+        sqlx::query("DELETE FROM graphics_channel_bindings WHERE role!='logo'; UPDATE config_processing SET graphics_scenes='invalid frozen scenes'")
+            .execute(&pool).await.unwrap();
+        let id: i32 = sqlx::query_scalar("SELECT template_id FROM graphics_channel_bindings")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        crate::db::handles::db_migrate(&pool).await.unwrap();
+        convert_channel_graphics(&pool).await.unwrap();
+        assert_eq!(
+            sqlx::query_as::<_, (i32, i32)>(
+                "SELECT template_id,layers_version FROM graphics_channel_bindings"
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap(),
+            vec![(id, 1)]
+        );
+    }
+
+    #[tokio::test]
+    async fn unrelated_custom_template_does_not_suppress_virgin_import() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        install_fixture(&pool).await;
+        let id = template(&pool, "Custom model").await;
+        convert_channel_graphics(&pool).await.unwrap();
+        assert_eq!(select_graphics_bindings(&pool, 1).await.unwrap().len(), 3);
+        assert!(
+            select_graphics_template(&pool, 1, id)
+                .await
+                .unwrap()
+                .is_some()
+        );
     }
 
     #[tokio::test]

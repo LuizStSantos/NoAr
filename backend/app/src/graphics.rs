@@ -42,7 +42,8 @@ use templates::whole_placeholder;
 pub use templates::{
     Animation, DuringLShape, LayerKind, LayerStyle, MAX_LAYERS, ShapeKind, TemplateInput,
     TemplateLayer, TextAlign, clock_value, fill_fields, graphic_spec, graphic_spec_for_channel,
-    graphic_spec_for_records, prepare_template, template_fields,
+    graphic_spec_for_channel_controlled, graphic_spec_for_records, prepare_template,
+    template_fields, validate_take_fields,
 };
 
 /// Which template each graphic on air came from.
@@ -51,6 +52,35 @@ pub struct GraphicsTakes {
     records: Arc<StdMutex<Vec<TakeRecord>>>,
     version: Arc<AtomicU64>,
     editing: Arc<tokio::sync::Mutex<()>>,
+    pending: Arc<StdMutex<HashMap<u64, tokio_util::sync::CancellationToken>>>,
+    next_pending: Arc<AtomicU64>,
+    generation_gate: Arc<StdMutex<()>>,
+}
+
+pub struct GraphicsLifecycleGuard {
+    takes: GraphicsTakes,
+}
+
+impl Drop for GraphicsLifecycleGuard {
+    fn drop(&mut self) {
+        self.takes.cancel_pending();
+    }
+}
+
+struct PendingTake {
+    takes: GraphicsTakes,
+    id: u64,
+    cancel: tokio_util::sync::CancellationToken,
+}
+
+impl Drop for PendingTake {
+    fn drop(&mut self) {
+        self.takes
+            .pending
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&self.id);
+    }
 }
 
 pub struct GraphicsEditGuard {
@@ -78,6 +108,7 @@ pub struct TakeRecord {
 impl GraphicsTakes {
     pub async fn begin_edit(&self) -> GraphicsEditGuard {
         let guard = self.editing.clone().lock_owned().await;
+        self.cancel_pending();
         self.version.fetch_add(1, Ordering::SeqCst);
 
         GraphicsEditGuard {
@@ -87,7 +118,85 @@ impl GraphicsTakes {
     }
 
     pub fn invalidate(&self) {
+        self.cancel_pending();
+    }
+
+    /// Cancel queued commands whenever output or its authored models change.
+    pub fn cancel_pending(&self) {
+        let _publication = self
+            .generation_gate
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         self.version.fetch_add(2, Ordering::SeqCst);
+
+        for cancel in self
+            .pending
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .values()
+        {
+            cancel.cancel();
+        }
+    }
+
+    pub fn lifecycle_guard(&self) -> GraphicsLifecycleGuard {
+        self.cancel_pending();
+
+        GraphicsLifecycleGuard {
+            takes: self.clone(),
+        }
+    }
+
+    pub(crate) async fn lock_publication(&self) -> tokio::sync::OwnedMutexGuard<()> {
+        self.editing.clone().lock_owned().await
+    }
+
+    /// Lifecycle callbacks cannot await the edit lock. Keep this guard only
+    /// across final state publication, after pixel preparation has finished.
+    pub(crate) fn guard_if_current(&self, version: u64) -> Option<std::sync::MutexGuard<'_, ()>> {
+        let publication = self
+            .generation_gate
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+
+        (self.version.load(Ordering::SeqCst) == version).then_some(publication)
+    }
+
+    fn publish_if_current<T>(&self, version: u64, publish: impl FnOnce() -> T) -> Option<T> {
+        let _publication = self.guard_if_current(version)?;
+
+        Some(publish())
+    }
+
+    fn queue(&self, version: u64) -> Result<PendingTake, ServiceError> {
+        let _publication = self
+            .generation_gate
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+
+        if self.version.load(Ordering::SeqCst) != version {
+            return Err(ServiceError::Conflict(
+                "The graphics changed while preparing this take".to_string(),
+            ));
+        }
+
+        let mut pending = self.pending.lock().unwrap_or_else(PoisonError::into_inner);
+
+        if pending.len() >= MAX_PENDING_TAKES {
+            return Err(ServiceError::Conflict(
+                "Too many graphics are waiting for the L-shape".to_string(),
+            ));
+        }
+
+        let id = self.next_pending.fetch_add(1, Ordering::Relaxed);
+        let cancel = tokio_util::sync::CancellationToken::new();
+        pending.insert(id, cancel.clone());
+
+        Ok(PendingTake {
+            takes: self.clone(),
+            id,
+            cancel,
+        })
     }
 
     fn records(&self) -> std::sync::MutexGuard<'_, Vec<TakeRecord>> {
@@ -150,6 +259,7 @@ pub enum TakeOutcome {
     Waiting,
 }
 
+const MAX_PENDING_TAKES: usize = 16;
 /// How long a take may wait for an L-shape to end.
 const MAX_LSHAPE_WAIT: Duration = Duration::from_secs(3600);
 const LSHAPE_WAIT_STEP: Duration = Duration::from_millis(200);
@@ -161,10 +271,16 @@ async fn draw_and_take(
     duration: Option<Duration>,
     values: HashMap<String, String>,
     records: HashMap<i32, usize>,
+    version: u64,
 ) -> Result<u64, ServiceError> {
     let (width, height) = {
         let config = manager.config.read().await;
-        (config.output.width, config.output.height)
+        manager
+            .running_config()
+            .as_deref()
+            .map_or((config.output.width, config.output.height), |running| {
+                (running.output.width, running.output.height)
+            })
     };
     let graphic =
         tokio::task::spawn_blocking(move || noar_engine::render_graphic(&spec, width, height))
@@ -176,17 +292,23 @@ async fn draw_and_take(
                     error.root_cause()
                 ))
             })?;
-    let take_id = manager.graphics_control.take(graphic, duration);
+    manager
+        .graphics_takes
+        .publish_if_current(version, || {
+            let take_id = manager.graphics_control.take(graphic, duration);
+            manager.graphics_takes.add(TakeRecord {
+                take_id,
+                template_id: template.id,
+                name: template.name.clone(),
+                values,
+                records,
+            });
 
-    manager.graphics_takes.add(TakeRecord {
-        take_id,
-        template_id: template.id,
-        name: template.name.clone(),
-        values,
-        records,
-    });
-
-    Ok(take_id)
+            take_id
+        })
+        .ok_or_else(|| {
+            ServiceError::Conflict("The graphics changed while preparing this take".to_string())
+        })
 }
 
 /// Put `template` on air with `values` in its fields, following its rule
@@ -198,6 +320,51 @@ pub async fn take_template(
     records: HashMap<i32, usize>,
     duration: Option<f64>,
 ) -> Result<TakeOutcome, ServiceError> {
+    let _publication = manager.graphics_takes.lock_publication().await;
+    take_template_prepared(manager, template, values, records, duration, false).await
+}
+
+/// The caller must hold the channel's graphics publication or edit lock.
+pub(crate) async fn take_template_locked(
+    manager: &ChannelManager,
+    template: GraphicsTemplate,
+    values: HashMap<String, String>,
+    records: HashMap<i32, usize>,
+    duration: Option<f64>,
+) -> Result<TakeOutcome, ServiceError> {
+    take_template_prepared(manager, template, values, records, duration, true).await
+}
+
+async fn take_template_prepared(
+    manager: &ChannelManager,
+    template: GraphicsTemplate,
+    values: HashMap<String, String>,
+    records: HashMap<i32, usize>,
+    duration: Option<f64>,
+    scheduled: bool,
+) -> Result<TakeOutcome, ServiceError> {
+    validate_take_fields(&values, &records)?;
+    let version = manager.graphics_takes.version.load(Ordering::SeqCst);
+    let mut saved =
+        crate::db::handles::select_graphics_template(&manager.db_pool, manager.id, template.id)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::NotFound("Graphics template not found in this channel".to_string())
+            })?;
+    // Scheduled takes may replace Wait with Follow after checking their own end.
+    if scheduled
+        && saved.during_lshape == DuringLShape::Wait
+        && template.during_lshape == DuringLShape::Follow
+    {
+        saved.during_lshape = DuringLShape::Follow;
+    }
+
+    if saved != template {
+        return Err(ServiceError::Conflict(
+            "The graphics template changed; take it again".to_string(),
+        ));
+    }
+
     let seconds = duration.unwrap_or(template.duration);
 
     if !seconds.is_finite() || !(0.0..=86_400.0).contains(&seconds) {
@@ -226,26 +393,36 @@ pub async fn take_template(
                 )));
             }
             DuringLShape::Wait => {
+                let pending = manager.graphics_takes.queue(version)?;
                 let manager = manager.clone();
 
                 tokio::spawn(async move {
-                    let mut waited = Duration::ZERO;
+                    let _pending = pending;
+                    let deadline = tokio::time::Instant::now() + MAX_LSHAPE_WAIT;
 
-                    while lshape_on(&manager) && waited < MAX_LSHAPE_WAIT {
-                        tokio::time::sleep(LSHAPE_WAIT_STEP).await;
-                        waited += LSHAPE_WAIT_STEP;
+                    while lshape_on(&manager) {
+                        tokio::select! {
+                            _ = _pending.cancel.cancelled() => return,
+                            _ = tokio::time::sleep_until(deadline) => return,
+                            _ = tokio::time::sleep(LSHAPE_WAIT_STEP) => {}
+                        }
                     }
 
-                    if waited < MAX_LSHAPE_WAIT
-                        && let Err(error) = draw_and_take(
-                            &manager,
-                            &template,
-                            spec,
-                            duration,
-                            values.clone(),
-                            records.clone(),
-                        )
-                        .await
+                    let _publication = tokio::select! {
+                        _ = _pending.cancel.cancelled() => return,
+                        guard = manager.graphics_takes.lock_publication() => guard,
+                    };
+
+                    if _pending.cancel.is_cancelled()
+                        || manager.graphics_takes.version.load(Ordering::SeqCst) != version
+                    {
+                        return;
+                    }
+
+                    if let Err(error) = draw_and_take(
+                        &manager, &template, spec, duration, values, records, version,
+                    )
+                    .await
                     {
                         log::warn!(
                             "Graphic '{}' not taken after the L-shape: {error}",
@@ -259,13 +436,22 @@ pub async fn take_template(
         }
     }
 
-    let take_id = draw_and_take(manager, &template, spec, duration, values, records).await?;
+    let take_id =
+        draw_and_take(manager, &template, spec, duration, values, records, version).await?;
 
     Ok(TakeOutcome::OnAir { take_id })
 }
 
 /// Restore user-authored permanent compositions independently of compatibility roles.
 pub async fn load_permanent_templates(manager: &ChannelManager) -> Result<(), ServiceError> {
+    let version = manager.graphics_takes.version.load(Ordering::SeqCst);
+    load_permanent_templates_at_version(manager, version).await
+}
+
+async fn load_permanent_templates_at_version(
+    manager: &ChannelManager,
+    version: u64,
+) -> Result<(), ServiceError> {
     let bindings =
         crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
     let templates =
@@ -280,30 +466,41 @@ pub async fn load_permanent_templates(manager: &ChannelManager) -> Result<(), Se
                 .any(|binding| binding.template_id == template.id)
     }) {
         let id = template.id as u64;
-        let spec = graphic_spec_for_channel(&template, &HashMap::new(), &config)?;
-        let running = manager.running_config();
-        let (width, height) = running
-            .as_deref()
-            .map_or((config.output.width, config.output.height), |running| {
-                (running.output.width, running.output.height)
-            });
-        let graphic =
-            tokio::task::spawn_blocking(move || noar_engine::render_graphic(&spec, width, height))
-                .await
-                .map_err(|_| ServiceError::InternalServerError)?
-                .map_err(|error| {
-                    ServiceError::Conflict(format!(
-                        "Permanent template cannot be rendered: {error:#}"
-                    ))
-                })?;
-        manager
-            .graphics_control
-            .set_persistent(id, graphic)
-            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
         ids.push(id);
+        let prepared: Result<(), ServiceError> = async {
+            let spec = graphic_spec_for_channel(&template, &HashMap::new(), &config)?;
+            let running = manager.running_config();
+            let (width, height) = running
+                .as_deref()
+                .map_or((config.output.width, config.output.height), |running| {
+                    (running.output.width, running.output.height)
+                });
+            let graphic = tokio::task::spawn_blocking(move || {
+                noar_engine::render_graphic(&spec, width, height)
+            })
+            .await
+            .map_err(|_| ServiceError::InternalServerError)?
+            .map_err(|error| {
+                ServiceError::Conflict(format!("Permanent template cannot be rendered: {error:#}"))
+            })?;
+            if let Some(result) = manager.graphics_takes.publish_if_current(version, || {
+                manager.graphics_control.set_persistent(id, graphic)
+            }) {
+                result.map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            }
+
+            Ok(())
+        }
+        .await;
+
+        if let Err(error) = prepared {
+            log::warn!(channel=manager.id; "Permanent graphic '{}' kept its last frame or was skipped: {error}", template.name);
+        }
     }
 
-    manager.graphics_control.retain_persistent(&ids);
+    let _ = manager
+        .graphics_takes
+        .publish_if_current(version, || manager.graphics_control.retain_persistent(&ids));
 
     Ok(())
 }
@@ -438,6 +635,21 @@ async fn refresh_dynamic_graphics(
                     return Ok(false);
                 }
 
+                // Enabling a saved role changes its persisted visibility without
+                // cancelling waiting takes. Recheck that snapshot after locking.
+                if kind == DynamicScope::Role
+                    && crate::db::handles::select_graphics_template(
+                        &manager.db_pool,
+                        manager.id,
+                        template.id,
+                    )
+                    .await?
+                    .as_ref()
+                        != Some(template)
+                {
+                    return Ok(false);
+                }
+
                 match kind {
                     DynamicScope::Role => match binding.map(|binding| binding.role) {
                         Some(crate::db::models::GraphicsRole::Logo) => {
@@ -445,8 +657,12 @@ async fn refresh_dynamic_graphics(
                             updated.logo_model = Some(template.clone());
                             let manager = manager.clone();
                             tokio::task::spawn_blocking(move || {
-                                crate::player::output::refresh_logo(
-                                    &manager, &updated, width, height,
+                                crate::player::output::refresh_logo_guarded(
+                                    &manager,
+                                    &updated,
+                                    width,
+                                    height,
+                                    || manager.graphics_takes.guard_if_current(version),
                                 )
                             })
                             .await
@@ -454,17 +670,16 @@ async fn refresh_dynamic_graphics(
                         }
                         Some(crate::db::models::GraphicsRole::Lshape) => {
                             let control = manager.lshape_control.clone();
-                            let primary = template
-                                .layers
-                                .iter()
-                                .filter(|layer| layer.visible)
-                                .position(|layer| {
-                                    Some(layer.id.as_str()) == template.control_layer_id.as_deref()
-                                })
-                                .unwrap_or(usize::MAX);
-                            let draw = spec.clone();
+                            let takes = manager.graphics_takes.clone();
+                            let (draw, primary) =
+                                graphic_spec_for_channel_controlled(template, &values, &config)?;
                             tokio::task::spawn_blocking(move || {
-                                control.set_template_controlled(&draw, primary, width, height)
+                                control.set_template_controlled_guarded(
+                                    &draw,
+                                    primary,
+                                    (width, height),
+                                    || takes.guard_if_current(version),
+                                )
                             })
                             .await
                             .map_err(|_| ServiceError::InternalServerError)?
@@ -478,31 +693,50 @@ async fn refresh_dynamic_graphics(
                             .await
                             .map_err(|_| ServiceError::InternalServerError)?
                             .map_err(|error| ServiceError::Conflict(error.to_string()))?;
-                            manager
-                                .graphics_control
-                                .refresh_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic)
-                                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                            let Some(result) =
+                                manager.graphics_takes.publish_if_current(version, || {
+                                    manager.graphics_control.refresh_always_on(
+                                        noar_engine::AlwaysOnSlot::Ticker,
+                                        graphic,
+                                    )
+                                })
+                            else {
+                                return Ok(false);
+                            };
+                            result.map_err(|error| ServiceError::Conflict(error.to_string()))?;
                         }
                         None => {}
                     },
                     DynamicScope::Permanent => {
-                        manager
-                            .graphics_control
-                            .set_persistent(
-                                id,
-                                pixels.expect("pixels rendered for a persistent template"),
-                            )
-                            .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+                        let Some(result) =
+                            manager.graphics_takes.publish_if_current(version, || {
+                                manager.graphics_control.set_persistent(
+                                    id,
+                                    pixels.expect("pixels rendered for a persistent template"),
+                                )
+                            })
+                        else {
+                            return Ok(false);
+                        };
+                        result.map_err(|error| ServiceError::Conflict(error.to_string()))?;
                     }
                     DynamicScope::Take => {
-                        manager.graphics_control.update_graphic(
-                            id,
-                            pixels.expect("pixels rendered for an active take"),
-                        );
+                        if manager
+                            .graphics_takes
+                            .publish_if_current(version, || {
+                                manager.graphics_control.update_graphic(
+                                    id,
+                                    pixels.expect("pixels rendered for an active take"),
+                                )
+                            })
+                            .is_none()
+                        {
+                            return Ok(false);
+                        }
                     }
                 }
 
-                Ok(true)
+                Ok(manager.graphics_takes.version.load(Ordering::SeqCst) == version)
             }
             .await;
 
@@ -522,4 +756,202 @@ async fn refresh_dynamic_graphics(
     rendered.retain(|key, _| retained.contains(key));
 
     warning.map_or(Ok(()), Err)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pending_takes_are_bounded_and_output_lifecycle_cancels_them() {
+        let takes = GraphicsTakes::default();
+        let before_start = takes.queue(takes.version.load(Ordering::SeqCst)).unwrap();
+        let lifecycle = takes.lifecycle_guard();
+        assert!(before_start.cancel.is_cancelled());
+        drop(before_start);
+        let pending: Vec<_> = (0..MAX_PENDING_TAKES)
+            .map(|_| takes.queue(takes.version.load(Ordering::SeqCst)).unwrap())
+            .collect();
+        assert!(matches!(
+            takes.queue(takes.version.load(Ordering::SeqCst)),
+            Err(ServiceError::Conflict(_))
+        ));
+        drop(lifecycle);
+        assert!(pending.iter().all(|take| take.cancel.is_cancelled()));
+        // Cancelled work keeps its admission slot until its task actually ends.
+        assert!(takes.queue(takes.version.load(Ordering::SeqCst)).is_err());
+        drop(pending);
+        assert!(takes.queue(takes.version.load(Ordering::SeqCst)).is_ok());
+    }
+
+    #[tokio::test]
+    async fn editing_waits_for_publication_and_cancels_queued_takes() {
+        let takes = GraphicsTakes::default();
+        let pending = takes.queue(takes.version.load(Ordering::SeqCst)).unwrap();
+        let publication = takes.lock_publication().await;
+        let editing = takes.begin_edit();
+        tokio::pin!(editing);
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), &mut editing)
+                .await
+                .is_err()
+        );
+        assert!(!pending.cancel.is_cancelled());
+        drop(publication);
+        let edit = editing.await;
+        assert!(pending.cancel.is_cancelled());
+        assert!(!takes.version.load(Ordering::SeqCst).is_multiple_of(2));
+        drop(edit);
+        assert!(takes.version.load(Ordering::SeqCst).is_multiple_of(2));
+    }
+
+    #[test]
+    fn synchronous_cancellation_cannot_interleave_checked_publication() {
+        use std::sync::{Barrier, mpsc};
+
+        let takes = GraphicsTakes::default();
+        let version = takes.version.load(Ordering::SeqCst);
+        let control = noar_engine::GraphicsControl::default();
+        let graphic =
+            noar_engine::render_graphic(&noar_engine::GraphicSpec::default(), 16, 16).unwrap();
+        let checked = Arc::new(Barrier::new(2));
+        let release = Arc::new(Barrier::new(2));
+        let worker_takes = takes.clone();
+        let worker_control = control.clone();
+        let worker_checked = checked.clone();
+        let worker_release = release.clone();
+        let worker = std::thread::spawn(move || {
+            worker_takes.publish_if_current(version, || {
+                // Pause after checking the generation, exactly before engine publication.
+                worker_checked.wait();
+                worker_release.wait();
+                let take_id = worker_control.take(graphic, None);
+                worker_takes.add(TakeRecord {
+                    take_id,
+                    template_id: 1,
+                    name: "Serialized take".to_string(),
+                    values: HashMap::new(),
+                    records: HashMap::new(),
+                });
+
+                take_id
+            })
+        });
+        checked.wait();
+        let (started_tx, started_rx) = mpsc::channel();
+        let (cancelled_tx, cancelled_rx) = mpsc::channel();
+        let canceller_takes = takes.clone();
+        let canceller = std::thread::spawn(move || {
+            started_tx.send(()).unwrap();
+            canceller_takes.cancel_pending();
+            cancelled_tx.send(()).unwrap();
+        });
+        started_rx.recv().unwrap();
+        let cancellation_blocked = cancelled_rx
+            .recv_timeout(Duration::from_millis(20))
+            .is_err();
+        release.wait();
+        let take_id = worker.join().unwrap().unwrap();
+        if cancellation_blocked {
+            cancelled_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        }
+
+        canceller.join().unwrap();
+        assert!(
+            cancellation_blocked,
+            "cancellation must wait for the checked take and its record"
+        );
+        assert_eq!(control.on_air()[0].id, take_id);
+        assert_eq!(takes.records()[0].take_id, take_id);
+        assert!(
+            takes
+                .publish_if_current(version, || panic!("stale publication executed"))
+                .is_none()
+        );
+        assert!(
+            takes.queue(version).is_err(),
+            "a cancellation cannot miss stale queue admission"
+        );
+    }
+
+    #[test]
+    fn cancelled_preparations_cannot_publish_ticker_permanent_or_temporary_pixels() {
+        use std::sync::Barrier;
+
+        for scope in [
+            DynamicScope::Role,
+            DynamicScope::Permanent,
+            DynamicScope::Take,
+        ] {
+            let takes = GraphicsTakes::default();
+            let version = takes.version.load(Ordering::SeqCst);
+            let control = noar_engine::GraphicsControl::default();
+            let prepared = Arc::new(Barrier::new(2));
+            let release = Arc::new(Barrier::new(2));
+            let worker_takes = takes.clone();
+            let worker_control = control.clone();
+            let worker_prepared = prepared.clone();
+            let worker_release = release.clone();
+            let worker = std::thread::spawn(move || {
+                let graphic =
+                    noar_engine::render_graphic(&noar_engine::GraphicSpec::default(), 16, 16)
+                        .unwrap();
+                worker_prepared.wait();
+                worker_release.wait();
+                worker_takes.publish_if_current(version, || match scope {
+                    DynamicScope::Role => worker_control
+                        .set_always_on(noar_engine::AlwaysOnSlot::Ticker, graphic, true)
+                        .unwrap(),
+                    DynamicScope::Permanent => {
+                        worker_control.set_persistent(1, graphic).unwrap();
+                        worker_control.retain_persistent(&[1]);
+                    }
+                    DynamicScope::Take => {
+                        worker_control.take(graphic, None);
+                    }
+                })
+            });
+            prepared.wait();
+            takes.cancel_pending();
+            let next =
+                noar_engine::render_graphic(&noar_engine::GraphicSpec::default(), 16, 16).unwrap();
+            control.set_persistent(99, next).unwrap();
+            release.wait();
+            assert!(
+                worker.join().unwrap().is_none(),
+                "old pixels survived {scope:?} cancellation"
+            );
+            assert_eq!(
+                control.always_on_visible(noar_engine::AlwaysOnSlot::Ticker),
+                None
+            );
+            assert_eq!(control.persistent_visible(1), None);
+            assert_eq!(
+                control.persistent_visible(99),
+                Some(true),
+                "stale retain must not remove the new startup model"
+            );
+            assert!(control.on_air().is_empty());
+        }
+    }
+
+    #[test]
+    fn expanded_text_is_bounded_across_layers_before_rendering() {
+        let layer: TemplateLayer = serde_json::from_value(serde_json::json!({
+            "id": "text", "kind": "text", "x": 0, "y": 0, "width": 100,
+            "height": 10, "text": "{x}".repeat(200),
+        }))
+        .unwrap();
+        let mut template = GraphicsTemplate {
+            layers: vec![layer],
+            ..Default::default()
+        };
+        let values = HashMap::from([("x".to_string(), "a".repeat(1000))]);
+        assert!(graphic_spec(&template, &values, &std::env::temp_dir()).is_ok());
+        template.layers.push(template.layers[0].clone());
+        assert!(matches!(
+            graphic_spec(&template, &values, &std::env::temp_dir()),
+            Err(ServiceError::BadRequest(_))
+        ));
+    }
 }

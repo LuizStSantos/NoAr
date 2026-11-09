@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
+
 import type { TemplateLayer } from '@/composables/graphicsTemplates'
 
 /** Render authored timing; playback and document changes belong to the editor. */
@@ -13,6 +15,7 @@ defineProps<{
 const selectedId = defineModel<string>('selectedId', { required: true })
 const emit = defineEmits<{ seek: [seconds: number]; stop: [] }>()
 const { t } = useI18n()
+const { layerName } = useGraphicsDisplayNames()
 </script>
 <template>
     <section class="card-box p-3 flex flex-col gap-2" :aria-label="t('graphics.composer.timeline')">
@@ -33,12 +36,16 @@ const { t } = useI18n()
             class="flex gap-2 items-center text-xs"
             :class="{ 'opacity-40': !layer.visible }"
         >
-            <button class="w-24 truncate text-left cursor-pointer" @click="selectedId = layer.id">
-                {{ layer.name }}
+            <button
+                class="w-24 truncate text-left cursor-pointer"
+                :aria-pressed="selectedId === layer.id"
+                @click="selectedId = layer.id"
+            >
+                {{ layerName(layer) }}
             </button>
             <div
                 class="relative flex-1 h-6 bg-base-300 rounded overflow-hidden"
-                :aria-label="`${layer.name}: ${layer.delay_ms} ms + ${layer.animation_ms} ms`"
+                :aria-label="`${layerName(layer)}: ${layer.delay_ms} ms + ${layer.animation_ms} ms`"
             >
                 <div
                     class="absolute inset-y-1 bg-accent/25"

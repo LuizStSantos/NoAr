@@ -143,6 +143,22 @@ pub async fn update_configuration_on(
     id: i32,
     config: PlayoutConfig,
 ) -> Result<SqliteQueryResult, ProcessError> {
+    let dimensions =
+        sqlx::query_as("SELECT width,height FROM config_output WHERE config_id=$1 AND active=1")
+            .bind(id)
+            .fetch_one(&mut *connection)
+            .await?;
+
+    update_configuration_with_projection_on(connection, id, config, dimensions).await
+}
+
+/// Save a DTO projected before the caller updated its output in the same transaction.
+pub async fn update_configuration_with_projection_on(
+    connection: &mut SqliteConnection,
+    id: i32,
+    config: PlayoutConfig,
+    projection_dimensions: (u32, u32),
+) -> Result<SqliteQueryResult, ProcessError> {
     sqlx::query("UPDATE config_general SET stop_threshold = $2 WHERE config_id = $1")
         .bind(id)
         .bind(config.general.stop_threshold)
@@ -165,7 +181,13 @@ pub async fn update_configuration_on(
         .bind(id).bind(config.logging.media_level).bind(config.logging.ingest_level)
         .bind(config.logging.detect_silence).bind(config.logging.ignore_lines.join(";"))
         .execute(&mut *connection).await?;
-    super::save_channel_graphics_on(connection, id, &config.processing).await?;
+    super::save_channel_graphics_with_projection_on(
+        connection,
+        id,
+        &config.processing,
+        projection_dimensions,
+    )
+    .await?;
     sqlx::query("UPDATE config_processing SET mode = $2, vtt_enable = $3, vtt_dummy = $4, vtt_name = $5, vtt_language = $6, vtt_default = $7, guide_logo = $8, logo_key = $9 WHERE config_id = $1")
         .bind(id).bind(config.processing.mode.to_string())
         .bind(config.processing.vtt_enable).bind(config.processing.vtt_dummy)
@@ -712,6 +734,101 @@ mod tests {
             crate::utils::config::LogoTransition::Cut
         );
         assert_eq!(restored.processing.logo_transition_seconds, Some(2.5));
+    }
+
+    async fn fractional_logo_configuration() -> (SqlitePool, PlayoutConfig, i32) {
+        let pool = pool().await;
+        let storage =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests_assets/storage");
+        sqlx::query("UPDATE config_global SET logs='assets',playlists='assets',public='assets',storage='assets'")
+            .execute(&pool).await.unwrap();
+        sqlx::query("UPDATE channels SET public='assets',playlists='assets',storage=$1")
+            .bind(storage.to_string_lossy().as_ref())
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE config_output SET width=1280,height=720 WHERE active=1")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let id: i32 = sqlx::query_scalar(
+            "SELECT template_id FROM graphics_channel_bindings WHERE channel_id=1 AND role='logo'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        sqlx::query("UPDATE graphics_templates SET layers=json_set(layers,'$[0].image','logo.png','$[0].x',5.1,'$[0].y',7.3,'$[0].width',9.7,'$[0].height',11.9) WHERE id=$1")
+            .bind(id).execute(&pool).await.unwrap();
+        let config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        assert_eq!(config.processing.logo_position, "64:52");
+        assert_eq!(config.processing.logo_scale, "124:86");
+
+        (pool, config, id)
+    }
+
+    async fn saved_logo_geometry(pool: &SqlitePool, id: i32) -> (f64, f64, f64, f64) {
+        sqlx::query_as("SELECT json_extract(layers,'$[0].x'),json_extract(layers,'$[0].y'),json_extract(layers,'$[0].width'),json_extract(layers,'$[0].height') FROM graphics_templates WHERE id=$1")
+            .bind(id).fetch_one(pool).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn unchanged_and_unrelated_configuration_saves_preserve_fractional_logo_geometry() {
+        let (pool, config, id) = fractional_logo_configuration().await;
+        let geometry = saved_logo_geometry(&pool, id).await;
+        update_configuration(&pool, 1, config).await.unwrap();
+        assert_eq!(saved_logo_geometry(&pool, id).await, geometry);
+        let mut config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        config.audio.volume = 0.25;
+        config.processing.logo_opacity = 0.4;
+        update_configuration(&pool, 1, config).await.unwrap();
+        assert_eq!(saved_logo_geometry(&pool, id).await, geometry);
+        let restored = select_configuration(&pool, 1).await.unwrap();
+        assert_eq!(restored.processing_volume, 0.25);
+        assert_eq!(restored.processing_logo_opacity, 0.4);
+    }
+
+    #[tokio::test]
+    async fn compatibility_logo_geometry_edits_change_only_the_edited_pair() {
+        let (pool, mut config, id) = fractional_logo_configuration().await;
+        config.processing.logo_position = "24:36".to_string();
+        update_configuration(&pool, 1, config).await.unwrap();
+        assert_eq!(
+            saved_logo_geometry(&pool, id).await,
+            (1.875, 5.0, 9.7, 11.9)
+        );
+        let mut config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        config.processing.logo_scale = "96:48".to_string();
+        update_configuration(&pool, 1, config).await.unwrap();
+        assert_eq!(
+            saved_logo_geometry(&pool, id).await,
+            (1.875, 5.0, 7.5, 100.0 * 48.0 / 720.0)
+        );
+    }
+
+    #[tokio::test]
+    async fn output_resize_compares_against_previous_projection_and_preserves_normalized_logo() {
+        let (pool, mut config, id) = fractional_logo_configuration().await;
+        let geometry = saved_logo_geometry(&pool, id).await;
+        let previous_dimensions = (config.output.width, config.output.height);
+        config.output.width = 1920;
+        config.output.height = 1080;
+        let mut transaction = pool.begin().await.unwrap();
+        sqlx::query("UPDATE config_output SET width=1920,height=1080 WHERE id=$1")
+            .bind(config.output.id)
+            .execute(&mut *transaction)
+            .await
+            .unwrap();
+        update_configuration_with_projection_on(&mut transaction, 1, config, previous_dimensions)
+            .await
+            .unwrap();
+        transaction.commit().await.unwrap();
+        assert_eq!(saved_logo_geometry(&pool, id).await, geometry);
+        let restored = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        assert_eq!(restored.processing.logo_position, "98:78");
+        assert_eq!(restored.processing.logo_scale, "186:128");
+        update_configuration(&pool, 1, restored).await.unwrap();
+        db_migrate(&pool).await.unwrap();
+        assert_eq!(saved_logo_geometry(&pool, id).await, geometry);
     }
 
     #[tokio::test]

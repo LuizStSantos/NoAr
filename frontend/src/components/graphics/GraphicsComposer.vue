@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import { type DataField, sourceBindings, useGraphicsSources } from '@/composables/graphicsSources'
@@ -12,6 +12,8 @@ import ComposerTimeline from '@/components/graphics/composer/ComposerTimeline.vu
 import ComposerLayerInspector from '@/components/graphics/composer/ComposerLayerInspector.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import { sendFileInChunks } from '@/composables/chunkedUpload'
+import { registerEditorNavigationGuard } from '@/composables/editorNavigation'
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 import { useAuth } from '@/stores/auth'
 import { randomId } from '@/composables/browser'
 import { storageImageUrl } from '@/composables/graphicsImages'
@@ -36,6 +38,7 @@ import { useComposerPreview } from '@/composables/graphicsComposerPreview'
  * Child panels emit commands; only an explicit save changes the stored template.
  */
 const { t } = useI18n()
+const { templateName, layerName } = useGraphicsDisplayNames()
 const configStore = useConfig()
 const graphicsApi = useGraphicsApi()
 const { sources: dataSources } = useGraphicsSources()
@@ -50,6 +53,15 @@ const draft = ref<TemplateInput>({
     during_lshape: 'follow',
     layers: [],
     always_on: false,
+})
+// These editable labels project defaults; only a deliberate rename changes the raw draft.
+const displayedName = computed({
+    get: () => templateName(draft.value),
+    set: (value: string) => {
+        if (value !== templateName(draft.value)) {
+            draft.value.name = value
+        }
+    },
 })
 const selectedId = ref('')
 const selected = computed(() => draft.value.layers.find((layer) => layer.id === selectedId.value))
@@ -71,9 +83,17 @@ const fontUploading = ref(false)
 const groups = ref<string[]>([])
 const assignment = ref('')
 const originalAssignment = ref('')
+const controlImage = computed({
+    get: () => draft.value.control_layer_id ?? draft.value.layers.find((layer) => layer.kind === 'image')?.id ?? null,
+    set: (id: string | null) => {
+        draft.value.control_layer_id = id
+    },
+})
+const navigationPending = ref(false)
 const saving = ref(false)
 const busy = ref(false)
 const editorReady = ref(false)
+const editorLocked = computed(() => busy.value || navigationPending.value || fontUploading.value)
 const error = ref('')
 const note = ref('')
 const adding = ref(false)
@@ -94,22 +114,45 @@ const {
 } = useComposerGeometry(selected, frame, updateSelectedLayer)
 const { time, playing, timelineEnd, seekPreview, stopPreview, playPreview } = useComposerPreview(() => draft.value)
 let loadVersion = 0
+let saveNavigation: { version: number; channel: number | undefined; template: number } | undefined
 let interactionSnapshot: string | undefined
 const dirty = computed(
     () => JSON.stringify(draft.value) !== baseline.value || assignment.value !== originalAssignment.value,
 )
 
+/** Every authoring request belongs to one document, channel and layer object. */
+function captureAuthoringOperation(layer: TemplateLayer) {
+    const version = loadVersion
+    const document = draft.value
+    const channel = configStore.channels[configStore.i]
+    const storage = channel ? { id: channel.id, storage: channel.storage } : undefined
+    const dimensions = { ...frame.value }
+
+    return {
+        channel: storage,
+        frame: dimensions,
+        current: () =>
+            version === loadVersion &&
+            document === draft.value &&
+            storage?.id === channelId.value &&
+            !navigationPending.value &&
+            document.layers.includes(layer),
+    }
+}
+
+type AuthoringOperation = ReturnType<typeof captureAuthoringOperation>
+
 function mapField(field: string, binding?: DataField) {
+    if (editorLocked.value) {
+        return
+    }
+
     rememberDraft()
 
     for (const layer of draft.value.layers) {
-        if (!templateFields([layer]).includes(field)) {
-            continue
-        }
-
         layer.data_fields = { ...layer.data_fields }
 
-        if (binding) {
+        if (binding && templateFields([layer]).includes(field)) {
             layer.data_fields[field] = binding
         } else {
             delete layer.data_fields[field]
@@ -128,6 +171,10 @@ function rememberDraft() {
 }
 
 function undo() {
+    if (editorLocked.value) {
+        return
+    }
+
     const previous = history.value.pop()
 
     if (!previous) {
@@ -145,20 +192,39 @@ function undo() {
 }
 
 function updateSelectedLayer(patch: Partial<TemplateLayer>) {
-    if (!selected.value) {
+    if (!selected.value || busy.value || navigationPending.value) {
         return
     }
 
+    applyLayerPatch(selected.value, patch)
+}
+
+/** Internal operations can publish their checked result while the editor stays locked. */
+function applyLayerPatch(layer: TemplateLayer, patch: Partial<TemplateLayer>) {
     rememberDraft()
 
     if (patch.animation_ms !== undefined) {
         patch.clip_animation_ms = null
     }
 
-    Object.assign(selected.value, patch)
+    Object.assign(layer, patch)
+    pruneLayerMappings(layer)
+}
+
+function pruneLayerMappings(layer: TemplateLayer) {
+    if (layer.data_fields) {
+        const fields = templateFields([layer])
+        layer.data_fields = Object.fromEntries(
+            Object.entries(layer.data_fields).filter(([field]) => fields.includes(field)),
+        )
+    }
 }
 
 function setAlwaysOn(value: boolean) {
+    if (editorLocked.value) {
+        return
+    }
+
     rememberDraft()
     draft.value.always_on = value
     draft.value.duration = 0
@@ -166,6 +232,7 @@ function setAlwaysOn(value: boolean) {
 
 function addLayer(kind: TemplateLayer['kind']) {
     if (
+        editorLocked.value ||
         draft.value.layers.length >= 64 ||
         (kind === 'video' &&
             (draft.value.always_on === true || draft.value.layers.some((layer) => layer.kind === 'video')))
@@ -214,7 +281,7 @@ function addLayer(kind: TemplateLayer['kind']) {
 function removeLayer(id: string) {
     const layer = draft.value.layers.find((layer) => layer.id === id)
 
-    if (!layer) {
+    if (!layer || editorLocked.value) {
         return
     }
 
@@ -225,10 +292,14 @@ function removeLayer(id: string) {
         selectedId.value = draft.value.layers[0]?.id ?? ''
     }
 
-    note.value = t('graphics.composer.removed', { name: layer.name })
+    note.value = t('graphics.composer.removed', { name: layerName(layer) })
 }
 
 function toggleLayer(layer: TemplateLayer) {
+    if (editorLocked.value) {
+        return
+    }
+
     rememberDraft()
     layer.visible = !layer.visible
 }
@@ -264,6 +335,9 @@ async function loadEditor() {
     stopPreview()
 
     busy.value = true
+    fontUploading.value = false
+    interactionSnapshot = undefined
+    saving.value = adding.value = picking.value = false
     editorReady.value = false
     error.value = note.value = ''
     try {
@@ -324,22 +398,39 @@ async function loadEditor() {
     }
 }
 
-/** Save the model before updating its optional legacy-control assignment. */
+/** Bind each save to the submitted document, channel and editor generation. */
 async function saveTemplate() {
-    if (busy.value || !editorReady.value || !draft.value.name.trim()) {
+    if (editorLocked.value || !editorReady.value || !draft.value.name.trim()) {
         return
     }
+
+    const version = loadVersion
+    const channel = channelId.value
+    const templateId = savedId.value
+    const role = assignment.value
+    const previousRole = originalAssignment.value
+    const input: TemplateInput = JSON.parse(JSON.stringify(draft.value))
+    input.layers.forEach(pruneLayerMappings)
+    input.control_layer_id ??= input.layers.find((layer) => layer.kind === 'image')?.id ?? null
+    const api = useGraphicsApi(() => channel)
+    const current = () => version === loadVersion && channel === channelId.value && !navigationPending.value
 
     busy.value = true
     error.value = ''
     try {
-        let result = await graphicsApi.save(draft.value, savedId.value)
-        savedId.value = result.id
+        const changedAssignment = role !== previousRole
+        const result = await api.save(
+            input,
+            templateId,
+            changedAssignment ? { role: role || null, control_layer_id: input.control_layer_id } : undefined,
+        )
 
-        if (assignment.value !== originalAssignment.value) {
-            result = await graphicsApi.assign(result.id, assignment.value || null, draft.value.control_layer_id)
-            originalAssignment.value = assignment.value
+        if (!current()) {
+            return
         }
+
+        savedId.value = result.id
+        originalAssignment.value = role
         draft.value = {
             name: result.name,
             group: result.group,
@@ -349,38 +440,57 @@ async function saveTemplate() {
             always_on: result.always_on,
             control_layer_id: result.control_layer_id,
         }
-
         baseline.value = JSON.stringify(draft.value)
         saving.value = false
-        await router.replace({ name: 'graphics-composer', query: { channel: channelId.value, template: result.id } })
-        note.value = t('graphics.composer.saved', { name: result.name })
+        const navigation = { version, channel, template: result.id }
+        saveNavigation = navigation
+        try {
+            await router.replace({ name: 'graphics-composer', query: { channel, template: result.id } })
+        } finally {
+            if (saveNavigation === navigation) {
+                saveNavigation = undefined
+            }
+        }
+
+        if (current()) {
+            note.value = t('graphics.composer.saved', { name: templateName(result) })
+        }
     } catch (err) {
-        error.value =
-            err instanceof AuthFetchError &&
-            err.status === 409 &&
-            typeof err.data === 'string' &&
-            err.data.startsWith('At most 16')
-                ? t('graphics.composer.permanentLimit')
-                : err instanceof AuthFetchError && err.status === 409
-                  ? t('graphics.composer.nameTaken')
-                  : err instanceof Error
-                    ? err.message
-                    : String(err)
+        if (current()) {
+            error.value =
+                err instanceof AuthFetchError &&
+                err.status === 409 &&
+                typeof err.data === 'string' &&
+                err.data.startsWith('At most 16')
+                    ? t('graphics.composer.permanentLimit')
+                    : err instanceof AuthFetchError && err.status === 409
+                      ? t('graphics.composer.nameTaken')
+                      : err instanceof Error
+                        ? err.message
+                        : String(err)
+        }
     } finally {
-        busy.value = false
+        if (current()) {
+            busy.value = false
+        }
     }
 }
 
-/** Retry only name conflicts; the backend also rejects overwrite races atomically. */
+/** Publish uploaded fonts only into the document that initiated the request. */
 async function uploadFont(event: Event) {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
-    const id = channelId.value
-    const layerId = selectedId.value
-    const version = loadVersion
+    const layer = selected.value
     input.value = ''
 
-    if (!file || !id) {
+    if (!file || !layer || editorLocked.value) {
+        return
+    }
+
+    const operation = captureAuthoringOperation(layer)
+    const channel = operation.channel?.id
+
+    if (channel === undefined) {
         return
     }
 
@@ -388,23 +498,32 @@ async function uploadFont(event: Event) {
     error.value = ''
     try {
         const asset = await authFetch<GraphicsFont>(
-            `/api/graphics/${id}/font-assets?filename=${encodeURIComponent(file.name)}`,
+            `/api/graphics/${channel}/font-assets?filename=${encodeURIComponent(file.name)}`,
             {
                 method: 'POST',
                 body: file,
                 headers: { 'Content-Type': 'application/octet-stream' },
             },
         )
-        await loadGraphicsFont(id, asset)
-        uploadedFonts.value.push(asset)
 
-        if (version === loadVersion && selectedId.value === layerId) {
-            updateSelectedLayer({ font_family: asset.family })
+        if (!operation.current()) {
+            return
+        }
+
+        await loadGraphicsFont(channel, asset)
+
+        if (operation.current()) {
+            uploadedFonts.value.push(asset)
+            applyLayerPatch(layer, { font_family: asset.family })
         }
     } catch (failure) {
-        error.value = String(failure)
+        if (operation.current()) {
+            error.value = String(failure)
+        }
     } finally {
-        fontUploading.value = false
+        if (operation.current()) {
+            fontUploading.value = false
+        }
     }
 }
 
@@ -414,10 +533,11 @@ async function uploadImage(event: Event) {
     const layer = selected.value
     const channel = channelId.value
 
-    if (!original || !layer || busy.value || channel === undefined) {
+    if (!original || !layer || editorLocked.value || channel === undefined) {
         return
     }
 
+    const operation = captureAuthoringOperation(layer)
     const cleanedName = sanitizeGraphicsUploadFilename(original.name)
 
     if (!/\.(png|jpe?g|webp|gif)$/i.test(cleanedName)) {
@@ -439,7 +559,7 @@ async function uploadImage(event: Event) {
 
         let number = 1
 
-        while (true) {
+        while (operation.current()) {
             const name = graphicsUploadFilename(cleanedName, number)
             const file = new File([original], name, { type: original.type, lastModified: original.lastModified })
 
@@ -448,14 +568,18 @@ async function uploadImage(event: Event) {
                     file,
                     { url: `/api/file/${channel}/upload?path=Graphics`, headers: authStore.authHeader },
                     (bytes) => {
-                        note.value = t('graphics.composer.uploadProgress', {
-                            percent: Math.round((bytes / file.size) * 100),
-                        })
+                        if (operation.current()) {
+                            note.value = t('graphics.composer.uploadProgress', {
+                                percent: Math.round((bytes / file.size) * 100),
+                            })
+                        }
                     },
                 )
 
-                await setImage(layer, 'Graphics/' + name)
-                note.value = t('graphics.composer.uploaded')
+                await setImage(layer, 'Graphics/' + name, operation)
+                if (operation.current()) {
+                    note.value = t('graphics.composer.uploaded')
+                }
                 break
             } catch (uploadError) {
                 if (uploadError instanceof AuthFetchError && uploadError.status === 409 && number < 1000) {
@@ -467,9 +591,13 @@ async function uploadImage(event: Event) {
             }
         }
     } catch (uploadError) {
-        error.value = uploadError instanceof Error ? uploadError.message : String(uploadError)
+        if (operation.current()) {
+            error.value = uploadError instanceof Error ? uploadError.message : String(uploadError)
+        }
     } finally {
-        busy.value = false
+        if (operation.current()) {
+            busy.value = false
+        }
         input.value = ''
     }
 }
@@ -478,56 +606,66 @@ async function uploadImage(event: Event) {
 async function restoreLogoPlacement() {
     const layer = selected.value
 
-    if (!layer?.image || busy.value) {
+    if (!layer?.image || editorLocked.value) {
         return
     }
 
+    const operation = captureAuthoringOperation(layer)
+    const dimensions = operation.frame
     busy.value = true
     error.value = ''
 
     try {
-        const source = await storageImageUrl(configStore.channels[configStore.i], layer.image)
+        const source = await storageImageUrl(operation.channel, layer.image)
         const image = new Image()
         image.src = source
         await image.decode()
 
-        if (selected.value?.id !== layer.id) {
+        if (!operation.current() || selected.value !== layer) {
             return
         }
 
-        const availableWidth = Math.max(2, frame.value.width - 24)
-        const availableHeight = Math.max(2, frame.value.height - 24)
+        const availableWidth = Math.max(2, dimensions.width - 24)
+        const availableHeight = Math.max(2, dimensions.height - 24)
         const factor = Math.min(1, availableWidth / image.naturalWidth, availableHeight / image.naturalHeight)
         const width = Math.max(2, Math.floor(image.naturalWidth * factor) & ~1)
         const height = Math.max(2, Math.floor(image.naturalHeight * factor) & ~1)
-        updateSelectedLayer({
-            x: (Math.max(0, frame.value.width - width - 12) * 100) / frame.value.width,
-            y: (12 * 100) / frame.value.height,
-            width: (width * 100) / frame.value.width,
-            height: (height * 100) / frame.value.height,
+        applyLayerPatch(layer, {
+            x: (Math.max(0, dimensions.width - width - 12) * 100) / dimensions.width,
+            y: (12 * 100) / dimensions.height,
+            width: (width * 100) / dimensions.width,
+            height: (height * 100) / dimensions.height,
         })
         rememberScaleBase(layer)
     } catch (failure) {
-        error.value = failure instanceof Error ? failure.message : String(failure)
+        if (operation.current()) {
+            error.value = failure instanceof Error ? failure.message : String(failure)
+        }
     } finally {
-        busy.value = false
+        if (operation.current()) {
+            busy.value = false
+        }
     }
 }
 
 /** Size only the first image in an empty layer; replacements retain authored geometry. */
-async function setImage(layer: TemplateLayer, path: string) {
-    const version = loadVersion
+async function setImage(layer: TemplateLayer, path: string, operation: AuthoringOperation) {
+    if (!operation.current()) {
+        return
+    }
+
+    const dimensions = operation.frame
     let geometry: Partial<TemplateLayer> = {}
 
     if (!layer.image) {
-        const source = await storageImageUrl(configStore.channels[configStore.i], path)
+        const source = await storageImageUrl(operation.channel, path)
         const image = new Image()
         image.src = source
         await image.decode()
 
-        const factor = Math.min(1, frame.value.width / image.naturalWidth, frame.value.height / image.naturalHeight)
-        const width = (image.naturalWidth * factor * 100) / frame.value.width
-        const height = (image.naturalHeight * factor * 100) / frame.value.height
+        const factor = Math.min(1, dimensions.width / image.naturalWidth, dimensions.height / image.naturalHeight)
+        const width = (image.naturalWidth * factor * 100) / dimensions.width
+        const height = (image.naturalHeight * factor * 100) / dimensions.height
         geometry = {
             x: Math.max(0, Math.min(layer.x, 100 - width)),
             y: Math.max(0, Math.min(layer.y, 100 - height)),
@@ -536,12 +674,11 @@ async function setImage(layer: TemplateLayer, path: string) {
         }
     }
 
-    if (version !== loadVersion || !draft.value.layers.includes(layer)) {
+    if (!operation.current()) {
         return
     }
 
-    rememberDraft()
-    Object.assign(layer, geometry, { image: path })
+    applyLayerPatch(layer, { ...geometry, image: path })
     rememberScaleBase(layer)
 }
 
@@ -553,20 +690,28 @@ async function pickImage(item: { path: string }) {
 
     const layer = selected.value
 
-    if (!layer || busy.value) {
+    if (!layer || editorLocked.value) {
         return
     }
 
+    const operation = captureAuthoringOperation(layer)
     busy.value = true
     error.value = ''
 
     try {
-        await setImage(layer, item.path)
-        picking.value = false
+        await setImage(layer, item.path, operation)
+
+        if (operation.current()) {
+            picking.value = false
+        }
     } catch (failure) {
-        error.value = failure instanceof Error ? failure.message : String(failure)
+        if (operation.current()) {
+            error.value = failure instanceof Error ? failure.message : String(failure)
+        }
     } finally {
-        busy.value = false
+        if (operation.current()) {
+            busy.value = false
+        }
     }
 }
 
@@ -577,17 +722,42 @@ function confirmBeforeUnload(event: BeforeUnloadEvent) {
     }
 }
 
-onBeforeRouteLeave(() => !editorReady.value || !dirty.value || window.confirm(t('graphics.composer.discard')))
-onBeforeRouteUpdate((to) => {
+const unregisterNavigationGuard = registerEditorNavigationGuard((to) => {
+    // A successful first save only adds this document's new ID to its URL.
     if (
-        String(to.query.template ?? '') === String(route.query.template ?? '') &&
-        to.query.channel === route.query.channel
+        saveNavigation?.version === loadVersion &&
+        to.name === 'graphics-composer' &&
+        String(to.query.channel ?? '') === String(saveNavigation.channel ?? '') &&
+        String(to.query.template ?? '') === String(saveNavigation.template)
     ) {
+        return true
+    }
+
+    if (
+        to.name === route.name &&
+        String(to.query.template ?? '') === String(route.query.template ?? '') &&
+        String(to.query.channel ?? '') === String(route.query.channel ?? '')
+    ) {
+        return true
+    }
+
+    if (editorReady.value && dirty.value && !window.confirm(t('graphics.composer.discard'))) {
+        return false
+    }
+
+    ++loadVersion
+    navigationPending.value = true
+    return true
+})
+const unregisterAfterNavigation = router.afterEach((_to, _from, failure) => {
+    if (!navigationPending.value) {
         return
     }
 
-    if (dirty.value && !busy.value && !window.confirm(t('graphics.composer.discard'))) {
-        return false
+    navigationPending.value = false
+
+    if (failure) {
+        busy.value = false
     }
 })
 watch(
@@ -611,16 +781,24 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
     ++loadVersion
+    unregisterNavigationGuard()
+    unregisterAfterNavigation()
     window.removeEventListener('beforeunload', confirmBeforeUnload)
 })
 </script>
 <template>
-    <section class="flex flex-col gap-4" :aria-label="t('graphics.composer.title')">
+    <fieldset
+        class="flex flex-col gap-4 min-w-0 border-0 p-0 m-0"
+        :aria-label="t('graphics.composer.title')"
+        :disabled="editorLocked"
+        :inert="editorLocked"
+        :aria-busy="busy"
+    >
         <header class="flex flex-wrap items-end gap-3">
             <label class="field-label flex-auto min-w-48"
                 >{{ t('graphics.composer.title') }}
                 <input
-                    v-model="draft.name"
+                    v-model="displayedName"
                     :aria-label="t('graphics.composer.templateName')"
                     class="field-input font-semibold"
                     maxlength="100"
@@ -665,7 +843,7 @@ onBeforeUnmount(() => {
         >
             <label class="field-label flex-1 min-w-48"
                 >{{ t('graphics.composer.templateName')
-                }}<input v-model="draft.name" class="field-input" required maxlength="100"
+                }}<input v-model="displayedName" class="field-input" required maxlength="100"
             /></label>
             <label class="field-label flex-1 min-w-40"
                 >{{ t('graphics.composer.group')
@@ -692,18 +870,16 @@ onBeforeUnmount(() => {
             </label>
             <label v-if="['logo', 'lshape'].includes(assignment)" class="field-label flex-1 min-w-48"
                 >{{ t('graphics.composer.controlImage') }}
-                <select
-                    v-model="draft.control_layer_id"
-                    :aria-label="t('graphics.composer.controlImage')"
-                    class="field-input"
-                >
-                    <option :value="null">{{ t('graphics.composer.firstImage') }}</option>
+                <select v-model="controlImage" :aria-label="t('graphics.composer.controlImage')" class="field-input">
+                    <option :value="draft.layers.find((layer) => layer.kind === 'image')?.id ?? null">
+                        {{ t('graphics.composer.firstImage') }}
+                    </option>
                     <option
-                        v-for="layer in draft.layers.filter((layer) => layer.kind === 'image')"
+                        v-for="layer in draft.layers.filter((layer) => layer.kind === 'image').slice(1)"
                         :key="layer.id"
                         :value="layer.id"
                     >
-                        {{ layer.name || layer.id }}
+                        {{ layerName(layer) || layer.id }}
                     </option>
                 </select>
             </label>
@@ -956,7 +1132,7 @@ onBeforeUnmount(() => {
                 >
             </ComposerLayerInspector>
         </div>
-    </section>
+    </fieldset>
 </template>
 
 <style scoped>

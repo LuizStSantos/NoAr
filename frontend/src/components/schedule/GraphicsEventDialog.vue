@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 import { useGraphicsApi, type GraphicsTemplate } from '@/composables/graphicsTemplates'
 import { sourceBindings, sourceValues, useGraphicsSources } from '@/composables/graphicsSources'
 import { useConfig } from '@/stores/config'
@@ -25,6 +26,7 @@ const props = defineProps<{
 const emit = defineEmits<{ close: []; saved: [] }>()
 
 const { t } = useI18n()
+const { templateName } = useGraphicsDisplayNames()
 const { weekdayLetters } = useScheduleText()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
@@ -279,7 +281,7 @@ async function save(ok: boolean) {
                             {{ t('schedule.graphics.missingTemplate', { id: templateId }) }}
                         </option>
                         <option v-for="model in templates" :key="model.id" :value="model.id">
-                            {{ model.group ? model.group + ' / ' : '' }}{{ model.name }}
+                            {{ model.group ? model.group + ' / ' : '' }}{{ templateName(model) }}
                         </option>
                     </select>
                 </label>

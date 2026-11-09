@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
+
 import { type TemplateLayer, templateFields } from '@/composables/graphicsTemplates'
 
 /** The document owner performs all add/remove/visibility changes. */
@@ -13,6 +15,7 @@ const emit = defineEmits<{
     toggle: [layer: TemplateLayer]
 }>()
 const { t } = useI18n()
+const { layerName } = useGraphicsDisplayNames()
 </script>
 <template>
     <aside class="card-box p-3 flex flex-col gap-3 min-w-0" :aria-label="t('graphics.composer.layers')">
@@ -55,9 +58,13 @@ const { t } = useI18n()
                 { 'opacity-50': !layer.visible },
             ]"
         >
-            <button class="flex-auto min-w-0 min-h-12 text-left px-2 cursor-pointer" @click="selectedId = layer.id">
+            <button
+                class="flex-auto min-w-0 min-h-12 text-left px-2 cursor-pointer"
+                :aria-pressed="selectedId === layer.id"
+                @click="selectedId = layer.id"
+            >
                 <span class="text-[10px] text-muted block">{{ t('graphics.composer.kinds.' + layer.kind) }}</span
-                ><span class="block text-sm truncate">{{ layer.name }}</span
+                ><span class="block text-sm truncate">{{ layerName(layer) }}</span
                 ><span class="block font-mono text-xs text-accent truncate">{{
                     templateFields([layer])
                         .map((field) => '{' + field + '}')
@@ -67,7 +74,7 @@ const { t } = useI18n()
             <button
                 class="btn-icon min-h-9 min-w-9"
                 :aria-label="
-                    t(layer.visible ? 'graphics.composer.hide' : 'graphics.composer.show', { name: layer.name })
+                    t(layer.visible ? 'graphics.composer.hide' : 'graphics.composer.show', { name: layerName(layer) })
                 "
                 :aria-pressed="!layer.visible"
                 @click="emit('toggle', layer)"
@@ -76,7 +83,7 @@ const { t } = useI18n()
             </button>
             <button
                 class="btn-icon min-h-9 min-w-9"
-                :aria-label="t('graphics.composer.deleteNamed', { name: layer.name })"
+                :aria-label="t('graphics.composer.deleteNamed', { name: layerName(layer) })"
                 @click="emit('remove', layer.id)"
             >
                 <i class="bi bi-x-lg" />

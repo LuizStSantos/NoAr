@@ -6,6 +6,8 @@ read this file, [the roadmap](../graphics-roadmap.md), `CLAUDE.md` and
 
 ## Current pre-release verification
 
+See the [checkpoint matrix and resume steps](pre-release-checkpoint.md).
+
 Status: **IN PROGRESS — NOT READY FOR RELEASE**. The current review covers
 converted display names, graphics lifecycle/rendering, migrations, uploads,
 the code reorganization, comparison with main, a 90-minute graphics soak and

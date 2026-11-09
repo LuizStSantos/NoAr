@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 // import { i18n } from '../i18n'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
+import { confirmEditorNavigation } from '@/composables/editorNavigation'
 
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
@@ -270,6 +271,10 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+    if (!confirmEditorNavigation(to)) {
+        return false
+    }
+
     const auth = useAuth()
     const configStore = useConfig()
 

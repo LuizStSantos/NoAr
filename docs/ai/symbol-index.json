@@ -981,9 +981,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "26cc1138921cf700c09aef66be9c3d2a257b5501066555d12c7285b72be9eaf2",
+      "sha256": "1c4edf9a7d4e760cb924b09bd3356d235856267740a33a838c5f80ceae1a95b5",
       "language": "Markdown",
-      "bytes": 59507,
+      "bytes": 60391,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1721,9 +1721,9 @@
       ]
     },
     "backend/app/src/api/routes/graphics.rs": {
-      "sha256": "b513cef41e4d89990edf5c4463a9f7a31ed53f6452a894fd0c266e7e9adda566",
+      "sha256": "7c06636ab6a3445615cf3e1beadd6eadfa65b59f492443501d2b41585efd3ca7",
       "language": "Rust",
-      "bytes": 21566,
+      "bytes": 25260,
       "symbols": [
         {
           "name": "control",
@@ -1762,72 +1762,92 @@
           "line": 137
         },
         {
+          "name": "GraphicsTemplateRequest",
+          "line": 197
+        },
+        {
+          "name": "TemplateAssignmentUpdate",
+          "line": 206
+        },
+        {
+          "name": "assignment_target",
+          "line": 212
+        },
+        {
+          "name": "validate_assignment_target",
+          "line": 219
+        },
+        {
+          "name": "validate_channel_template",
+          "line": 238
+        },
+        {
           "name": "update_graphics_template",
-          "line": 163
+          "line": 280
         },
         {
           "name": "delete_graphics_template",
-          "line": 242
+          "line": 359
         },
         {
           "name": "TakeRequest",
-          "line": 278
+          "line": 395
         },
         {
           "name": "OutRequest",
-          "line": 291
+          "line": 408
         },
         {
           "name": "OutStatus",
-          "line": 298
+          "line": 415
         },
         {
           "name": "take_graphic",
-          "line": 313
+          "line": 430
         },
         {
           "name": "take_graphic_out",
-          "line": 350
+          "line": 467
         },
         {
           "name": "get_graphics_on_air",
-          "line": 376
+          "line": 498
         },
         {
           "name": "get_channel_graphics",
-          "line": 388
+          "line": 510
         },
         {
           "name": "ChannelGraphicRequest",
-          "line": 400
+          "line": 522
         },
         {
           "name": "control_channel_graphics",
-          "line": 404
+          "line": 526
         },
         {
           "name": "validate_permanent_template",
-          "line": 418
+          "line": 540
         },
         {
           "name": "reload_graphics",
-          "line": 469
+          "line": 594
         },
         {
           "name": "GraphicsAssignmentRequest",
-          "line": 484
+          "line": 609
         },
         {
           "name": "assign_graphics_template",
-          "line": 490
+          "line": 615
         },
         {
           "name": "graphics_template_usage",
-          "line": 554
+          "line": 679
         },
         {
           "name": "graphics_clock",
-          "line": 604
+          "line": 729
         }
       ]
     },
@@ -2839,9 +2859,9 @@
       ]
     },
     "backend/app/src/db/handles/configuration.rs": {
-      "sha256": "3a4ded26b1994ec91a54bf6284e03973a70bc4914ba1b156aa015bb5b5cc01e9",
+      "sha256": "243caa20cf25bc9c5aa9b5ae8aef8dd7aae7103433c0e0c6aba410a51ddccae0",
       "language": "Rust",
-      "bytes": 31900,
+      "bytes": 37271,
       "symbols": [
         {
           "name": "select_configuration",
@@ -2860,52 +2880,76 @@
           "line": 141
         },
         {
+          "name": "update_configuration_with_projection_on",
+          "line": 156
+        },
+        {
           "name": "activate_output",
-          "line": 227
+          "line": 249
         },
         {
           "name": "update_configuration_volume",
-          "line": 254
+          "line": 276
         },
         {
           "name": "tests",
-          "line": 269
+          "line": 291
         },
         {
           "name": "pool",
-          "line": 275
+          "line": 297
         },
         {
           "name": "loudness_migration_preserves_existing_scope_and_defaults_new_rows_to_all",
-          "line": 286
+          "line": 308
         },
         {
           "name": "migration_preserves_non_default_configuration_data",
-          "line": 339
+          "line": 361
         },
         {
           "name": "migration_preserves_one_active_output_and_enforces_uniqueness",
-          "line": 440
+          "line": 462
         },
         {
           "name": "future_pipeline_configuration_has_safe_defaults_and_audio_tracks_are_ordered",
-          "line": 458
+          "line": 480
         },
         {
           "name": "output_selection_is_switched_atomically",
-          "line": 634
+          "line": 656
         },
         {
           "name": "complete_configuration_update_rolls_back_all_topics_on_error",
-          "line": 652
+          "line": 674
         },
         {
           "name": "logo_transitions_are_saved_and_default_to_fades",
-          "line": 683
+          "line": 705
+        },
+        {
+          "name": "fractional_logo_configuration",
+          "line": 739
+        },
+        {
+          "name": "saved_logo_geometry",
+          "line": 769
+        },
+        {
+          "name": "unchanged_and_unrelated_configuration_saves_preserve_fractional_logo_geometry",
+          "line": 775
+        },
+        {
+          "name": "compatibility_logo_geometry_edits_change_only_the_edited_pair",
+          "line": 791
+        },
+        {
+          "name": "output_resize_compares_against_previous_projection_and_preserves_normalized_logo",
+          "line": 809
         },
         {
           "name": "saving_configuration_leaves_legacy_listener_rows_inert_and_unchanged",
-          "line": 718
+          "line": 835
         }
       ]
     },
@@ -2933,9 +2977,9 @@
       ]
     },
     "backend/app/src/db/handles/graphics.rs": {
-      "sha256": "07f8a71c8e37178e15ddaa21780951d9ec4292a002ef917b92c5a0e733cd53e5",
+      "sha256": "f696a3bfd1362c82a28070589043eecdf871988769376e1f40c8042a5ee38ab5",
       "language": "Rust",
-      "bytes": 17773,
+      "bytes": 28225,
       "symbols": [
         {
           "name": "compatibility",
@@ -2970,59 +3014,107 @@
           "line": 110
         },
         {
+          "name": "insert_graphics_template_on",
+          "line": 119
+        },
+        {
+          "name": "insert_graphics_template_with_assignment",
+          "line": 141
+        },
+        {
+          "name": "clear_displaced_permanent_on",
+          "line": 161
+        },
+        {
           "name": "update_graphics_template",
-          "line": 132
+          "line": 175
+        },
+        {
+          "name": "update_graphics_template_on",
+          "line": 186
+        },
+        {
+          "name": "update_graphics_template_with_assignment",
+          "line": 251
         },
         {
           "name": "delete_graphics_template",
-          "line": 198
+          "line": 288
         },
         {
           "name": "graphics_template_is_bound",
-          "line": 227
+          "line": 317
         },
         {
           "name": "select_graphics_bindings",
-          "line": 238
+          "line": 328
         },
         {
           "name": "save_graphics_binding",
-          "line": 253
+          "line": 343
         },
         {
           "name": "delete_graphics_binding",
-          "line": 287
+          "line": 377
         },
         {
           "name": "assign_graphics_template",
-          "line": 303
+          "line": 393
+        },
+        {
+          "name": "assign_graphics_template_on",
+          "line": 408
         },
         {
           "name": "tests",
-          "line": 337
+          "line": 438
         },
         {
           "name": "install_fixture",
-          "line": 342
+          "line": 443
         },
         {
           "name": "template",
-          "line": 346
+          "line": 447
         },
         {
           "name": "permanent_bindings_survive_reopen_without_changing_the_legacy_logo",
-          "line": 360
+          "line": 461
         },
         {
           "name": "a_binding_cannot_read_or_replace_another_channels_template",
-          "line": 428
+          "line": 529
+        },
+        {
+          "name": "atomic_content_and_assignment_roll_back_if_binding_write_fails",
+          "line": 566
+        },
+        {
+          "name": "permanent_draft",
+          "line": 616
+        },
+        {
+          "name": "full_permanent_fixture",
+          "line": 630
+        },
+        {
+          "name": "atomic_create_replaces_a_role_at_full_permanent_capacity",
+          "line": 654
+        },
+        {
+          "name": "atomic_create_rolls_back_new_content_displaced_slot_and_binding_on_late_failure",
+          "line": 701
+        },
+        {
+          "name": "atomic_create_cannot_exceed_capacity_without_a_displaced_permanent_role",
+          "line": 741
         }
       ]
     },
     "backend/app/src/db/handles/graphics/compatibility/conversion/graphics.rs": {
-      "sha256": "d88aff95bc5f63b3526e026aa87e1171d823df701d6603b371815676e19a62dc",
+      "sha256": "3acea59bdd3a9db58a5d934e78396312ad5f3dc23efd221d58ec1f22a2cf976b",
       "language": "Rust",
-      "bytes": 29445,
+      "bytes": 37283,
       "symbols": [
         {
           "name": "convert_channel_graphics",
@@ -3034,66 +3126,78 @@
         },
         {
           "name": "initialize_channel_graphics_on",
-          "line": 126
+          "line": 149
         },
         {
           "name": "upgrade_channel_layers_on",
-          "line": 155
+          "line": 178
         },
         {
           "name": "tests",
-          "line": 232
+          "line": 255
         },
         {
           "name": "install_fixture",
-          "line": 246
+          "line": 269
         },
         {
           "name": "first_run_places_the_packaged_logo_before_storage_assets_exist",
-          "line": 251
+          "line": 274
         },
         {
           "name": "fixture_29",
-          "line": 311
+          "line": 334
         },
         {
           "name": "layer_upgrade_converts_29_in_place_preserves_edits_and_never_reads_settings_again",
-          "line": 373
+          "line": 396
+        },
+        {
+          "name": "partial_pre31_import_adopts_surviving_roles_and_scenes_without_frozen_reads",
+          "line": 480
+        },
+        {
+          "name": "partial_pre31_roles_alone_prove_import",
+          "line": 589
+        },
+        {
+          "name": "unrelated_custom_template_does_not_suppress_virgin_import",
+          "line": 611
         },
         {
           "name": "layer_upgrade_rolls_back_every_definition_on_invalid_29_layers",
-          "line": 457
+          "line": 630
         },
         {
           "name": "template",
-          "line": 490
+          "line": 663
         },
         {
           "name": "conversion_keeps_native_even_pixel_rounding_for_fractional_lshape_scales",
-          "line": 504
+          "line": 677
         },
         {
           "name": "conversion_keeps_existing_names_and_never_reads_frozen_data_again",
-          "line": 535
+          "line": 708
         },
         {
           "name": "conversion_preserves_frozen_columns_and_edited_models_across_restart",
-          "line": 578
+          "line": 751
         },
         {
           "name": "conversion_rolls_back_all_channels_when_one_has_invalid_scenes",
-          "line": 686
+          "line": 859
         },
         {
           "name": "migration_installs_bindings_before_conversion",
-          "line": 711
+          "line": 884
         }
       ]
     },
     "backend/app/src/db/handles/graphics/compatibility/graphics.rs": {
-      "sha256": "7dfe9060595586b53c84a857523ef5b1838e0c91a3729cf8313dbf7cbfb94b66",
+      "sha256": "064a7d3d4347658ba1629672198f6431971b3a3d26d829a5bd8601e2c3216405",
       "language": "Rust",
-      "bytes": 21163,
+      "bytes": 22640,
       "symbols": [
         {
           "name": "conversion",
@@ -3130,6 +3234,10 @@
         {
           "name": "save_channel_graphics_on",
           "line": 264
+        },
+        {
+          "name": "save_channel_graphics_with_projection_on",
+          "line": 280
         }
       ]
     },
@@ -4403,9 +4511,9 @@
       ]
     },
     "backend/app/src/graphics.rs": {
-      "sha256": "3b8fa3098cb1be8348ed732c93e38a1d8bfa8899a39bcd50f36937b1ec9f4fef",
+      "sha256": "208e215f62a4bb0bf034a6f336e0ba463936c01a60783807861d49920c771fb5",
       "language": "Rust",
-      "bytes": 18925,
+      "bytes": 35213,
       "symbols": [
         {
           "name": "channel",
@@ -4429,90 +4537,174 @@
         },
         {
           "name": "GraphicsTakes",
-          "line": 50
+          "line": 51
         },
         {
-          "name": "GraphicsEditGuard",
-          "line": 56
+          "name": "GraphicsLifecycleGuard",
+          "line": 60
         },
         {
           "name": "Drop",
-          "line": 61
+          "line": 64
         },
         {
           "name": "drop",
-          "line": 62
+          "line": 65
+        },
+        {
+          "name": "PendingTake",
+          "line": 70
+        },
+        {
+          "name": "Drop",
+          "line": 76
+        },
+        {
+          "name": "drop",
+          "line": 77
+        },
+        {
+          "name": "GraphicsEditGuard",
+          "line": 86
+        },
+        {
+          "name": "Drop",
+          "line": 91
+        },
+        {
+          "name": "drop",
+          "line": 92
         },
         {
           "name": "TakeRecord",
-          "line": 68
+          "line": 98
         },
         {
           "name": "GraphicsTakes",
-          "line": 78
+          "line": 108
         },
         {
           "name": "begin_edit",
-          "line": 79
+          "line": 109
         },
         {
           "name": "invalidate",
-          "line": 89
+          "line": 120
+        },
+        {
+          "name": "cancel_pending",
+          "line": 125
+        },
+        {
+          "name": "lifecycle_guard",
+          "line": 142
+        },
+        {
+          "name": "lock_publication",
+          "line": 150
+        },
+        {
+          "name": "guard_if_current",
+          "line": 156
+        },
+        {
+          "name": "publish_if_current",
+          "line": 165
+        },
+        {
+          "name": "queue",
+          "line": 171
         },
         {
           "name": "records",
-          "line": 93
+          "line": 202
         },
         {
           "name": "add",
-          "line": 97
+          "line": 206
         },
         {
           "name": "keep_only",
-          "line": 102
+          "line": 211
         },
         {
           "name": "GraphicOnAirView",
-          "line": 112
+          "line": 221
         },
         {
           "name": "graphics_on_air",
-          "line": 121
+          "line": 230
         },
         {
           "name": "TakeOutcome",
-          "line": 145
+          "line": 254
         },
         {
           "name": "draw_and_take",
-          "line": 157
+          "line": 267
         },
         {
           "name": "take_template",
-          "line": 194
+          "line": 316
+        },
+        {
+          "name": "take_template_locked",
+          "line": 328
+        },
+        {
+          "name": "take_template_prepared",
+          "line": 338
         },
         {
           "name": "load_permanent_templates",
-          "line": 268
+          "line": 446
+        },
+        {
+          "name": "load_permanent_templates_at_version",
+          "line": 451
         },
         {
           "name": "DynamicScope",
-          "line": 312
+          "line": 509
         },
         {
           "name": "run_dynamic_graphics",
-          "line": 319
+          "line": 516
         },
         {
           "name": "refresh_dynamic_graphics",
-          "line": 338
+          "line": 535
+        },
+        {
+          "name": "tests",
+          "line": 762
+        },
+        {
+          "name": "pending_takes_are_bounded_and_output_lifecycle_cancels_them",
+          "line": 766
+        },
+        {
+          "name": "editing_waits_for_publication_and_cancels_queued_takes",
+          "line": 788
+        },
+        {
+          "name": "synchronous_cancellation_cannot_interleave_checked_publication",
+          "line": 809
+        },
+        {
+          "name": "cancelled_preparations_cannot_publish_ticker_permanent_or_temporary_pixels",
+          "line": 878
+        },
+        {
+          "name": "expanded_text_is_bounded_across_layers_before_rendering",
+          "line": 939
         }
       ]
     },
     "backend/app/src/graphics/channel/graphics.rs": {
-      "sha256": "a6ecb697b7da9dff4c0911685c701226152c5d66237497c70b6a56078c4439c3",
+      "sha256": "966d740876d72af155a522fbbe20493b4904df704cfed2e1806b9fa96e6392cb",
       "language": "Rust",
-      "bytes": 14731,
+      "bytes": 15896,
       "symbols": [
         {
           "name": "graphic_has_content",
@@ -4532,11 +4724,19 @@
         },
         {
           "name": "clear_removed_channel_graphic",
-          "line": 295
+          "line": 296
         },
         {
           "name": "load_channel_ticker",
-          "line": 343
+          "line": 344
+        },
+        {
+          "name": "load_channel_ticker_inner",
+          "line": 351
+        },
+        {
+          "name": "load_channel_ticker_art",
+          "line": 396
         }
       ]
     },
@@ -4778,9 +4978,9 @@
       ]
     },
     "backend/app/src/graphics/templates/graphics.rs": {
-      "sha256": "a3fb18bcd755d2d009cea18c767cf72447322d0dafc84f7a191f8e4bd788fc53",
+      "sha256": "d0a506b63fa9dbdaebcdf952a2ae39e5d2393c78ead15f95e4e687f0cf733bf6",
       "language": "Rust",
-      "bytes": 37355,
+      "bytes": 42524,
       "symbols": [
         {
           "name": "LayerKind",
@@ -4907,84 +5107,108 @@
           "line": 569
         },
         {
+          "name": "validate_take_fields",
+          "line": 589
+        },
+        {
+          "name": "field_parts",
+          "line": 606
+        },
+        {
+          "name": "validate_expanded_text",
+          "line": 636
+        },
+        {
           "name": "fill_fields",
-          "line": 590
+          "line": 664
         },
         {
           "name": "layer_image",
-          "line": 620
+          "line": 673
         },
         {
           "name": "engine_animation",
-          "line": 643
+          "line": 696
         },
         {
           "name": "graphic_spec",
-          "line": 660
+          "line": 713
         },
         {
           "name": "graphic_spec_for_channel",
-          "line": 668
+          "line": 721
+        },
+        {
+          "name": "graphic_spec_for_channel_controlled",
+          "line": 731
         },
         {
           "name": "graphic_spec_for_records",
-          "line": 676
+          "line": 747
         },
         {
           "name": "graphic_spec_at",
-          "line": 692
+          "line": 764
+        },
+        {
+          "name": "graphic_spec_at_controlled",
+          "line": 774
         },
         {
           "name": "tests",
-          "line": 797
+          "line": 887
         },
         {
           "name": "text_layer",
-          "line": 800
+          "line": 890
+        },
+        {
+          "name": "controlled_image_indices_follow_emitted_layers_and_omitted_targets",
+          "line": 898
         },
         {
           "name": "scrolling_is_optional_validated_and_resolves_fields_into_the_engine",
-          "line": 808
+          "line": 945
         },
         {
           "name": "clock_formats_follow_channel_timezone_midnight_and_daylight_saving_time",
-          "line": 869
+          "line": 1006
         },
         {
           "name": "shape_and_clock_specs_keep_geometry_and_only_clock_pixels_change_with_time",
-          "line": 908
+          "line": 1045
         },
         {
           "name": "fields_come_from_texts_and_whole_image_placeholders_in_order",
-          "line": 955
+          "line": 1092
         },
         {
           "name": "layers_take_defaults_and_are_checked",
-          "line": 979
+          "line": 1116
         },
         {
           "name": "during_lshape_reads_back_what_it_writes",
-          "line": 1012
+          "line": 1149
         },
         {
           "name": "prepare_template_trims_and_keeps_field_images",
-          "line": 1021
+          "line": 1158
         },
         {
           "name": "fields_are_filled_and_unknown_braces_stay",
-          "line": 1057
+          "line": 1194
         },
         {
           "name": "colors_are_read_in_every_hex_form",
-          "line": 1069
+          "line": 1206
         },
         {
           "name": "a_spec_fills_texts_and_drops_hidden_layers_and_empty_image_fields",
-          "line": 1080
+          "line": 1217
         },
         {
           "name": "a_video_layer_makes_the_template_an_lshape",
-          "line": 1117
+          "line": 1254
         }
       ]
     },
@@ -5251,9 +5475,9 @@
       ]
     },
     "backend/app/src/player/controller.rs": {
-      "sha256": "93fd98b5904099d1bf3c2c167bc8059889151412ff1748bae877a95690516bb1",
+      "sha256": "f62b56aeb8b229b83467b6be8da9b2ae9c928df1c7c35dcc5e60e01f2878d09d",
       "language": "Rust",
-      "bytes": 40068,
+      "bytes": 40115,
       "symbols": [
         {
           "name": "loudness_config",
@@ -5413,115 +5637,115 @@
         },
         {
           "name": "ChannelController",
-          "line": 724
+          "line": 726
         },
         {
           "name": "ChannelController",
-          "line": 728
+          "line": 730
         },
         {
           "name": "new",
-          "line": 729
+          "line": 731
         },
         {
           "name": "add",
-          "line": 733
+          "line": 735
         },
         {
           "name": "get",
-          "line": 737
+          "line": 739
         },
         {
           "name": "remove",
-          "line": 741
+          "line": 743
         },
         {
           "name": "ProcessingGuard",
-          "line": 760
-        },
-        {
-          "name": "Drop",
           "line": 762
         },
         {
+          "name": "Drop",
+          "line": 764
+        },
+        {
           "name": "drop",
-          "line": 763
+          "line": 765
         },
         {
           "name": "AbortOnDrop",
-          "line": 769
-        },
-        {
-          "name": "Drop",
           "line": 771
         },
         {
+          "name": "Drop",
+          "line": 773
+        },
+        {
           "name": "drop",
-          "line": 772
+          "line": 774
         },
         {
           "name": "run_supervised",
-          "line": 780
+          "line": 782
         },
         {
           "name": "supervisor_loop",
-          "line": 807
+          "line": 809
         },
         {
           "name": "metrics_snapshot_loop",
-          "line": 905
+          "line": 907
         },
         {
           "name": "run_channel",
-          "line": 948
+          "line": 950
         },
         {
           "name": "tests",
-          "line": 979
+          "line": 981
         },
         {
           "name": "failure_messages_keep_only_the_host_of_addresses",
-          "line": 985
+          "line": 987
         },
         {
           "name": "a_failure_is_kept_across_retries_until_the_playout_airs",
-          "line": 1003
+          "line": 1005
         },
         {
           "name": "failed_start_restores_not_running_state",
-          "line": 1026
+          "line": 1028
         },
         {
           "name": "only_one_channel_command_runs_at_a_time",
-          "line": 1039
+          "line": 1041
         },
         {
           "name": "a_failed_channel_command_releases_its_claim",
-          "line": 1054
+          "line": 1056
         },
         {
           "name": "a_panicking_playout_comes_back_as_an_error",
-          "line": 1071
+          "line": 1073
         },
         {
           "name": "a_finished_playout_keeps_its_result",
-          "line": 1081
+          "line": 1083
         },
         {
           "name": "dropping_the_supervisor_stops_the_playout_task",
-          "line": 1090
+          "line": 1092
         },
         {
           "name": "Flag",
-          "line": 1091
-        },
-        {
-          "name": "Drop",
           "line": 1093
         },
         {
+          "name": "Drop",
+          "line": 1095
+        },
+        {
           "name": "drop",
-          "line": 1094
+          "line": 1096
         }
       ]
     },
@@ -5549,9 +5773,9 @@
       ]
     },
     "backend/app/src/player/graphics_schedule/graphics.rs": {
-      "sha256": "ac1337cdef28c927703b060a8b54cacce4eedbaa99bad5dffc35cac13c83e83d",
+      "sha256": "dc19bbc29d0a6fd4289e75f42f5e0fce32907f5618751a7a1b17dae90065b9f5",
       "language": "Rust",
-      "bytes": 12181,
+      "bytes": 12205,
       "symbols": [
         {
           "name": "Occurrence",
@@ -5864,9 +6088,9 @@
       ]
     },
     "backend/app/src/player/output/mod.rs": {
-      "sha256": "022417c246bd46b700b683493c84aea2cf7c75ca7c6fc9636d2f773a209e496d",
+      "sha256": "09a23ba7db2badc0ab03ed47dc0154e665fd7bb207e1c2ad44d5c367b50c1cb3",
       "language": "Rust",
-      "bytes": 384,
+      "bytes": 396,
       "symbols": [
         {
           "name": "playout",
@@ -5874,14 +6098,14 @@
         },
         {
           "name": "player",
-          "line": 10
+          "line": 11
         }
       ]
     },
     "backend/app/src/player/output/playout.rs": {
-      "sha256": "a2a61ae314fb0bcae032506554c33bdfdb7707d03cbf7326a0b9ff14b96c2ab4",
+      "sha256": "ecb6019257fc72ffd2965687c35fa807fb48130da0b5d488d69b0c4472b7d622",
       "language": "Rust",
-      "bytes": 48669,
+      "bytes": 51545,
       "symbols": [
         {
           "name": "channel_logo",
@@ -5892,184 +6116,192 @@
           "line": 57
         },
         {
-          "name": "refresh_logo",
+          "name": "refresh_logo_guarded",
           "line": 63
         },
         {
           "name": "load_logo_inner",
-          "line": 72
+          "line": 73
         },
         {
           "name": "load_lshape",
-          "line": 137
+          "line": 143
         },
         {
           "name": "load",
-          "line": 138
+          "line": 144
         },
         {
           "name": "set_clip_lshape",
-          "line": 217
+          "line": 221
+        },
+        {
+          "name": "load_startup_graphics",
+          "line": 306
         },
         {
           "name": "player",
-          "line": 302
+          "line": 338
         },
         {
           "name": "play_hls",
-          "line": 399
+          "line": 414
         },
         {
           "name": "hls_watchdog",
-          "line": 431
+          "line": 446
         },
         {
           "name": "play_loop",
-          "line": 475
+          "line": 490
         },
         {
           "name": "playlist_breaks",
-          "line": 707
+          "line": 722
         },
         {
           "name": "next_source",
-          "line": 774
+          "line": 789
         },
         {
           "name": "preload_later",
-          "line": 785
+          "line": 800
         },
         {
           "name": "hls_playout_rate",
-          "line": 794
+          "line": 809
         },
         {
           "name": "hls_rate_correction",
-          "line": 822
+          "line": 837
         },
         {
           "name": "open_playout",
-          "line": 845
+          "line": 860
         },
         {
           "name": "open_desktop_playout",
-          "line": 903
+          "line": 918
         },
         {
           "name": "open_desktop_playout",
-          "line": 913
+          "line": 928
         },
         {
           "name": "engine_output_config",
-          "line": 923
+          "line": 938
         },
         {
           "name": "recording_config",
-          "line": 1005
+          "line": 1020
         },
         {
           "name": "disable_incompatible_recording",
-          "line": 1088
+          "line": 1103
         },
         {
           "name": "desktop_control_callback",
-          "line": 1099
+          "line": 1114
         },
         {
           "name": "validate_supported_config",
-          "line": 1125
+          "line": 1140
         },
         {
           "name": "subtitle_media_path",
-          "line": 1137
+          "line": 1152
         },
         {
           "name": "output_url",
-          "line": 1155
+          "line": 1170
         },
         {
           "name": "hls_playlist_path",
-          "line": 1166
+          "line": 1181
         },
         {
           "name": "play_plain",
-          "line": 1182
+          "line": 1197
         },
         {
           "name": "play_plain_from",
-          "line": 1193
+          "line": 1208
         },
         {
           "name": "playout_duration",
-          "line": 1225
+          "line": 1240
         },
         {
           "name": "engine_error",
-          "line": 1230
-        },
-        {
-          "name": "request_shutdown",
-          "line": 1234
-        },
-        {
-          "name": "tests",
-          "line": 1239
-        },
-        {
-          "name": "recording_test_config",
           "line": 1245
         },
         {
+          "name": "request_shutdown",
+          "line": 1249
+        },
+        {
+          "name": "tests",
+          "line": 1254
+        },
+        {
+          "name": "recording_test_config",
+          "line": 1260
+        },
+        {
+          "name": "startup_graphics_wait_for_authored_edits_and_do_not_resurrect_deleted_models",
+          "line": 1280
+        },
+        {
           "name": "full_placeholder_keeps_explicit_duration",
-          "line": 1264
-        },
-        {
-          "name": "shorter_placeholder_slot_is_trimmed",
-          "line": 1276
-        },
-        {
-          "name": "regular_clip_keeps_loop_duration",
-          "line": 1288
-        },
-        {
-          "name": "hls_rate_correction_slows_down_when_playout_is_early",
-          "line": 1299
-        },
-        {
-          "name": "hls_rate_correction_speeds_up_when_playout_is_late",
-          "line": 1304
-        },
-        {
-          "name": "hls_rate_correction_ignores_tiny_delta",
-          "line": 1309
-        },
-        {
-          "name": "hls_rate_correction_is_clamped",
-          "line": 1314
-        },
-        {
-          "name": "hls_rate_correction_ignores_delta_larger_than_clip",
-          "line": 1320
-        },
-        {
-          "name": "desktop_stop_requests_process_shutdown",
-          "line": 1326
-        },
-        {
-          "name": "desktop_override_disables_stream_copy_recording",
-          "line": 1335
-        },
-        {
-          "name": "desktop_override_disables_hls_variant_recording",
           "line": 1342
         },
         {
+          "name": "shorter_placeholder_slot_is_trimmed",
+          "line": 1354
+        },
+        {
+          "name": "regular_clip_keeps_loop_duration",
+          "line": 1366
+        },
+        {
+          "name": "hls_rate_correction_slows_down_when_playout_is_early",
+          "line": 1377
+        },
+        {
+          "name": "hls_rate_correction_speeds_up_when_playout_is_late",
+          "line": 1382
+        },
+        {
+          "name": "hls_rate_correction_ignores_tiny_delta",
+          "line": 1387
+        },
+        {
+          "name": "hls_rate_correction_is_clamped",
+          "line": 1392
+        },
+        {
+          "name": "hls_rate_correction_ignores_delta_larger_than_clip",
+          "line": 1398
+        },
+        {
+          "name": "desktop_stop_requests_process_shutdown",
+          "line": 1404
+        },
+        {
+          "name": "desktop_override_disables_stream_copy_recording",
+          "line": 1413
+        },
+        {
+          "name": "desktop_override_disables_hls_variant_recording",
+          "line": 1420
+        },
+        {
           "name": "desktop_override_keeps_dedicated_recording_encode",
-          "line": 1349
+          "line": 1427
         },
         {
           "name": "inactive_copy_source_disables_recording",
-          "line": 1357
+          "line": 1435
         }
       ]
     },
@@ -8218,9 +8450,9 @@
       ]
     },
     "backend/app/src/utils/config/update.rs": {
-      "sha256": "3069d8f43b5def87ede48111efcba8ec475cbc2eb96e17c3e926d7905320ec58",
+      "sha256": "946f050595907eb473eb80fe7b78ffb4155ba7dec4207ad6c1ef054abd3b4d70",
       "language": "Rust",
-      "bytes": 28350,
+      "bytes": 28455,
       "symbols": [
         {
           "name": "MailQueues",
@@ -8232,63 +8464,63 @@
         },
         {
           "name": "requires_playout_restart",
-          "line": 292
+          "line": 298
         },
         {
           "name": "validate_loudness",
-          "line": 348
+          "line": 354
         },
         {
           "name": "tests",
-          "line": 421
+          "line": 427
         },
         {
           "name": "changing_the_external_output_requires_playout_restart",
-          "line": 426
+          "line": 432
         },
         {
           "name": "later_volume_save_still_requires_restart_for_unapplied_output_change",
-          "line": 434
+          "line": 440
         },
         {
           "name": "notification_and_volume_changes_do_not_require_restart",
-          "line": 446
+          "line": 452
         },
         {
           "name": "guide_logo_and_logo_key_do_not_require_restart",
-          "line": 457
+          "line": 463
         },
         {
           "name": "channel_logo_changes_apply_without_restart",
-          "line": 467
+          "line": 473
         },
         {
           "name": "logo_transitions_apply_without_restart",
-          "line": 484
+          "line": 490
         },
         {
           "name": "logo_transition_length_must_be_a_sensible_number",
-          "line": 495
+          "line": 501
         },
         {
           "name": "the_lshape_is_off_without_a_graphic_and_checks_its_settings",
-          "line": 517
+          "line": 523
         },
         {
           "name": "loudness_parameter_changes_do_not_require_restart",
-          "line": 545
+          "line": 551
         },
         {
           "name": "scope_changes_require_restart_but_dynamics_parameters_do_not",
-          "line": 555
+          "line": 561
         },
         {
           "name": "dynamics_validation_rejects_invalid_scope_and_detector_parameters",
-          "line": 579
+          "line": 585
         },
         {
           "name": "output_change_requires_restart",
-          "line": 663
+          "line": 669
         }
       ]
     },
@@ -11740,77 +11972,109 @@
       ]
     },
     "backend/app/tests/api/graphics.rs": {
-      "sha256": "8df7dc2147a640f1b8c805e46a2f427bfbfb7a679dc4e252d6bd2344f8c6bc10",
+      "sha256": "3f94da800cdb5fc95445ab5f32954ffd4cf47403c6fe27a2529e6d9ff763c553",
       "language": "Rust",
-      "bytes": 43894,
+      "bytes": 68612,
       "symbols": [
         {
           "name": "send",
-          "line": 3
+          "line": 5
         },
         {
           "name": "lower_third",
-          "line": 24
+          "line": 26
         },
         {
           "name": "graphics_templates_are_read_by_the_channel_and_changed_by_admins",
-          "line": 40
+          "line": 42
         },
         {
           "name": "graphics_go_on_and_off_air_and_follow_their_lshape_rule",
-          "line": 271
+          "line": 273
         },
         {
           "name": "futures_free_manager",
-          "line": 426
+          "line": 428
         },
         {
           "name": "assigned_models_have_channel_controls_and_keep_hidden_tickers_hidden_on_save",
-          "line": 432
+          "line": 434
         },
         {
           "name": "an_admin_can_delete_an_assigned_model_without_restart_resurrection",
-          "line": 536
+          "line": 538
         },
         {
           "name": "permanent_capacity_and_bad_artwork_do_not_leave_partial_saved_models",
-          "line": 623
+          "line": 625
         },
         {
           "name": "compatibility_assignment_preserves_an_explicit_image_target_and_authored_group",
-          "line": 714
+          "line": 716
         },
         {
           "name": "clock_layers_and_shape_styles_validate_and_do_not_create_default_models",
-          "line": 778
+          "line": 780
         },
         {
           "name": "uploaded_fonts_are_immutable_channel_assets_and_validate_template_ownership",
-          "line": 868
+          "line": 870
         },
         {
           "name": "upload",
-          "line": 878
+          "line": 880
         },
         {
           "name": "data_sources_enforce_channel_access_keep_last_good_rows_and_protect_references",
-          "line": 978
+          "line": 980
         },
         {
           "name": "removing_a_lshape_assignment_clears_its_external_art_and_returns_full_screen",
-          "line": 1194
+          "line": 1196
         },
         {
           "name": "model_schedules_validate_channel_ownership_fields_and_keep_legacy_events",
-          "line": 1273
+          "line": 1275
         },
         {
           "name": "scheduled_model_end_only_removes_its_own_take",
-          "line": 1358
+          "line": 1360
         },
         {
           "name": "hiding_an_unloaded_ticker_survives_startup_reload_without_changing_its_saved_default",
-          "line": 1406
+          "line": 1408
+        },
+        {
+          "name": "manual_take_rejects_unbounded_fields_before_expanding_text",
+          "line": 1464
+        },
+        {
+          "name": "waiting_takes_are_cancelled_by_out_edit_delete_and_output_lifecycle",
+          "line": 1517
+        },
+        {
+          "name": "manual_wait_queue_has_a_capacity_and_out_releases_it",
+          "line": 1610
+        },
+        {
+          "name": "unavailable_permanent_artwork_does_not_block_healthy_models_or_hide_database_faults",
+          "line": 1672
+        },
+        {
+          "name": "new_channel_templates_validate_and_commit_their_assignment_atomically",
+          "line": 1731
+        },
+        {
+          "name": "template_content_and_assignment_can_change_together_without_an_unassigned_save",
+          "line": 1817
+        },
+        {
+          "name": "rejected_atomic_role_changes_preserve_content_assignment_and_runtime_graphics",
+          "line": 1912
+        },
+        {
+          "name": "waiting_takes_survive_runtime_controls_and_scheduler_wait_polling",
+          "line": 2054
         }
       ]
     },
@@ -13684,9 +13948,9 @@
       ]
     },
     "backend/engine/src/benchmark.rs": {
-      "sha256": "2f509392fb98a3ef656f1d8b49e4e5eccfc2e7f0385e7c4b0471013975b8d29f",
+      "sha256": "939542b4df39f17161bb44497f55f1c6c73ad0a0c0ea77d81d833bf9338b79c5",
       "language": "Rust",
-      "bytes": 11294,
+      "bytes": 14214,
       "symbols": [
         {
           "name": "Stage",
@@ -13694,139 +13958,155 @@
         },
         {
           "name": "Stage",
-          "line": 19
+          "line": 20
         },
         {
           "name": "index",
-          "line": 38
+          "line": 40
         },
         {
           "name": "name",
-          "line": 56
+          "line": 59
         },
         {
           "name": "enabled",
-          "line": 76
+          "line": 80
         },
         {
           "name": "report_interval",
-          "line": 95
+          "line": 99
         },
         {
           "name": "StageStats",
-          "line": 100
+          "line": 104
         },
         {
           "name": "StageStats",
-          "line": 108
+          "line": 112
         },
         {
           "name": "record",
-          "line": 109
+          "line": 113
         },
         {
           "name": "overlay_size",
-          "line": 125
+          "line": 129
         },
         {
           "name": "ProcessingBench",
-          "line": 134
+          "line": 138
         },
         {
           "name": "ProcessingBench",
-          "line": 141
+          "line": 145
         },
         {
           "name": "new",
-          "line": 142
+          "line": 146
         },
         {
           "name": "record",
-          "line": 152
-        },
-        {
-          "name": "due",
           "line": 156
         },
         {
-          "name": "report",
+          "name": "due",
           "line": 160
         },
         {
+          "name": "report",
+          "line": 164
+        },
+        {
           "name": "BenchHandle",
-          "line": 216
+          "line": 220
         },
         {
           "name": "start",
-          "line": 222
+          "line": 226
         },
         {
           "name": "activate",
-          "line": 229
-        },
-        {
-          "name": "set_report_interval",
           "line": 233
         },
         {
+          "name": "set_report_interval",
+          "line": 237
+        },
+        {
           "name": "finish",
-          "line": 240
+          "line": 244
         },
         {
           "name": "detach",
-          "line": 251
+          "line": 255
         },
         {
           "name": "record",
-          "line": 257
+          "line": 261
         },
         {
           "name": "measure",
-          "line": 273
+          "line": 277
         },
         {
           "name": "measure_success",
-          "line": 283
+          "line": 287
         },
         {
           "name": "measure_overlay",
-          "line": 298
+          "line": 302
+        },
+        {
+          "name": "tests",
+          "line": 318
+        },
+        {
+          "name": "model_blends_are_counted_once_and_preparation_is_excluded",
+          "line": 329
         },
         {
           "name": "BenchHandle",
-          "line": 327
+          "line": 396
         },
         {
           "name": "start",
-          "line": 331
+          "line": 400
         },
         {
           "name": "activate",
-          "line": 337
+          "line": 406
         },
         {
           "name": "detach",
-          "line": 341
+          "line": 410
         },
         {
           "name": "set_report_interval",
-          "line": 345
+          "line": 414
         },
         {
           "name": "finish",
-          "line": 349
+          "line": 418
         },
         {
           "name": "measure",
-          "line": 353
+          "line": 422
         },
         {
           "name": "measure_overlay",
-          "line": 359
+          "line": 428
         },
         {
           "name": "measure_success",
-          "line": 370
+          "line": 439
+        },
+        {
+          "name": "tests",
+          "line": 447
+        },
+        {
+          "name": "stage_indices_follow_the_complete_reporting_order",
+          "line": 451
         }
       ]
     },
@@ -13902,9 +14182,9 @@
       ]
     },
     "backend/engine/src/compositor/graphics.rs": {
-      "sha256": "aa9b53d6e219e68cde21dbee6141dea9f43e19475b29f25a1343c15d0e0ec432",
+      "sha256": "faf8bcaa90e9fb14396bcfeec6eebc05b44835c5dfc8446041d2c4de073c4d97",
       "language": "Rust",
-      "bytes": 52076,
+      "bytes": 55357,
       "symbols": [
         {
           "name": "geometry",
@@ -13932,327 +14212,339 @@
         },
         {
           "name": "logo_layer_geometry",
-          "line": 49
+          "line": 54
         },
         {
           "name": "crate",
-          "line": 65
+          "line": 70
         },
         {
           "name": "set_template",
-          "line": 68
+          "line": 73
         },
         {
           "name": "set_template_controlled",
-          "line": 78
+          "line": 83
+        },
+        {
+          "name": "set_template_controlled_guarded",
+          "line": 101
         },
         {
           "name": "GraphicAnimation",
-          "line": 96
+          "line": 131
         },
         {
           "name": "GraphicContent",
-          "line": 113
+          "line": 148
         },
         {
           "name": "GraphicShape",
-          "line": 143
+          "line": 178
         },
         {
           "name": "GraphicLayerSpec",
-          "line": 152
+          "line": 187
         },
         {
           "name": "PictureWindow",
-          "line": 170
+          "line": 205
         },
         {
           "name": "GraphicSpec",
-          "line": 179
+          "line": 214
         },
         {
           "name": "RenderedLayer",
-          "line": 186
+          "line": 221
         },
         {
           "name": "RenderedGraphic",
-          "line": 204
+          "line": 240
         },
         {
           "name": "RoleImageBlend",
-          "line": 212
+          "line": 248
         },
         {
           "name": "picture_switch",
-          "line": 220
+          "line": 257
+        },
+        {
+          "name": "same_prepared",
+          "line": 262
         },
         {
           "name": "RenderedGraphic",
-          "line": 224
+          "line": 270
         },
         {
           "name": "inherit_motion",
-          "line": 226
+          "line": 272
         },
         {
           "name": "is_animated",
-          "line": 236
+          "line": 289
         },
         {
           "name": "blend_steady",
-          "line": 243
-        },
-        {
-          "name": "picture_graphic",
-          "line": 255
-        },
-        {
-          "name": "role_levels",
-          "line": 258
-        },
-        {
-          "name": "blend_role",
           "line": 297
         },
         {
+          "name": "picture_graphic",
+          "line": 311
+        },
+        {
+          "name": "role_levels",
+          "line": 314
+        },
+        {
+          "name": "blend_role",
+          "line": 353
+        },
+        {
           "name": "exit_time",
-          "line": 338
+          "line": 397
         },
         {
           "name": "OnAir",
-          "line": 352
+          "line": 411
         },
         {
           "name": "OnAir",
-          "line": 361
+          "line": 420
         },
         {
           "name": "out_since",
-          "line": 362
+          "line": 421
         },
         {
           "name": "finished",
-          "line": 375
+          "line": 434
         },
         {
           "name": "AlwaysOnSlot",
-          "line": 384
+          "line": 443
         },
         {
           "name": "AlwaysOnSlot",
-          "line": 389
-        },
-        {
-          "name": "index",
-          "line": 390
-        },
-        {
-          "name": "AlwaysOn",
-          "line": 398
-        },
-        {
-          "name": "GraphicsState",
-          "line": 404
-        },
-        {
-          "name": "GraphicOnAir",
-          "line": 415
-        },
-        {
-          "name": "GraphicsControl",
-          "line": 425
-        },
-        {
-          "name": "std",
-          "line": 427
-        },
-        {
-          "name": "fmt",
-          "line": 428
-        },
-        {
-          "name": "GraphicsControl",
-          "line": 435
-        },
-        {
-          "name": "channel_logo",
-          "line": 438
-        },
-        {
-          "name": "set_channel_logo",
           "line": 448
         },
         {
+          "name": "index",
+          "line": 449
+        },
+        {
+          "name": "AlwaysOn",
+          "line": 457
+        },
+        {
+          "name": "GraphicsState",
+          "line": 463
+        },
+        {
+          "name": "GraphicOnAir",
+          "line": 474
+        },
+        {
+          "name": "GraphicsControl",
+          "line": 484
+        },
+        {
+          "name": "std",
+          "line": 486
+        },
+        {
+          "name": "fmt",
+          "line": 487
+        },
+        {
+          "name": "GraphicsControl",
+          "line": 494
+        },
+        {
+          "name": "channel_logo",
+          "line": 497
+        },
+        {
+          "name": "set_channel_logo",
+          "line": 507
+        },
+        {
           "name": "state",
-          "line": 459
+          "line": 518
         },
         {
           "name": "set_always_on",
-          "line": 465
+          "line": 524
         },
         {
           "name": "refresh_always_on",
-          "line": 491
+          "line": 550
         },
         {
           "name": "set_always_on_visible",
-          "line": 505
+          "line": 564
         },
         {
           "name": "always_on_visible",
-          "line": 526
+          "line": 585
         },
         {
           "name": "clear_always_on",
-          "line": 534
+          "line": 593
         },
         {
           "name": "blend_always_on",
-          "line": 540
+          "line": 599
         },
         {
           "name": "blend_always_on_at",
-          "line": 544
+          "line": 603
         },
         {
           "name": "set_persistent",
-          "line": 607
+          "line": 668
         },
         {
           "name": "retain_persistent",
-          "line": 641
+          "line": 702
         },
         {
           "name": "persistent_visible",
-          "line": 645
-        },
-        {
-          "name": "set_persistent_visible",
-          "line": 649
-        },
-        {
-          "name": "take",
-          "line": 672
-        },
-        {
-          "name": "update_graphic",
           "line": 706
         },
         {
+          "name": "set_persistent_visible",
+          "line": 710
+        },
+        {
+          "name": "take",
+          "line": 733
+        },
+        {
+          "name": "update_graphic",
+          "line": 767
+        },
+        {
           "name": "take_out",
-          "line": 717
+          "line": 779
         },
         {
           "name": "take_all_out",
-          "line": 735
+          "line": 797
         },
         {
           "name": "on_air",
-          "line": 745
+          "line": 807
         },
         {
           "name": "picture_on_air",
-          "line": 761
+          "line": 823
         },
         {
           "name": "picture",
-          "line": 772
+          "line": 834
         },
         {
           "name": "picture_at",
-          "line": 776
+          "line": 838
         },
         {
           "name": "blend",
-          "line": 810
-        },
-        {
-          "name": "blend_at",
-          "line": 814
-        },
-        {
-          "name": "tests",
-          "line": 860
-        },
-        {
-          "name": "black_frame",
           "line": 872
         },
         {
+          "name": "blend_at",
+          "line": 876
+        },
+        {
+          "name": "tests",
+          "line": 924
+        },
+        {
+          "name": "black_frame",
+          "line": 936
+        },
+        {
           "name": "luma",
-          "line": 880
+          "line": 944
         },
         {
           "name": "white_box",
-          "line": 884
+          "line": 948
+        },
+        {
+          "name": "role_image_target_keeps_spec_index_when_an_earlier_layer_is_too_small_to_draw",
+          "line": 965
         },
         {
           "name": "live_pixel_updates_preserve_take_duration_entry_and_exit_times",
-          "line": 901
+          "line": 990
         },
         {
           "name": "scrolling_refresh_preserves_motion_phase_for_temporary_and_permanent_takes",
-          "line": 922
+          "line": 1011
         },
         {
           "name": "user_permanent_models_preserve_time_visibility_and_deterministic_order",
-          "line": 970
+          "line": 1059
         },
         {
           "name": "permanent_roles_survive_expiry_queue_pressure_and_take_all_out",
-          "line": 997
+          "line": 1086
         },
         {
           "name": "permanent_visibility_is_explicit_and_does_not_reset_on_repeated_commands",
-          "line": 1042
+          "line": 1131
         },
         {
           "name": "suppressing_a_permanent_logo_never_suppresses_the_ticker_or_moves_a_slide",
-          "line": 1094
+          "line": 1183
         },
         {
           "name": "a_picture_window_cannot_replace_a_permanent_role",
-          "line": 1137
+          "line": 1226
         },
         {
           "name": "empty_permanent_state_and_wrong_output_sizes_leave_frames_unchanged",
-          "line": 1178
+          "line": 1267
         },
         {
           "name": "a_box_lands_where_its_percentages_say",
-          "line": 1199
+          "line": 1288
         },
         {
           "name": "a_fade_comes_in_and_goes_out_over_its_time",
-          "line": 1222
+          "line": 1311
         },
         {
           "name": "a_duration_takes_the_graphic_out_by_itself",
-          "line": 1254
+          "line": 1343
         },
         {
           "name": "a_slide_starts_off_its_place_and_ends_on_it",
-          "line": 1276
+          "line": 1365
         },
         {
           "name": "taking_out_and_listing",
-          "line": 1299
+          "line": 1388
         },
         {
           "name": "a_graphic_for_another_frame_size_is_not_drawn",
-          "line": 1323
+          "line": 1412
         },
         {
           "name": "a_text_layer_draws_letters_on_its_fill",
-          "line": 1338
+          "line": 1427
         },
         {
           "name": "a_picture_template_is_an_lshape_with_its_layers_as_art",
-          "line": 1383
+          "line": 1472
         },
         {
           "name": "graphics_preview",
-          "line": 1453
+          "line": 1542
         }
       ]
     },
@@ -14339,9 +14631,9 @@
       ]
     },
     "backend/engine/src/compositor/graphics/logo/graphics.rs": {
-      "sha256": "7d1d1eb437304c12ae9b59ceb2865dbb44c739d3b421f3486e4bf2d7340ad62a",
+      "sha256": "c519f90ba3a1eddd1a9de33c696155f3d0f2140b30b0f9aaebc4dc27994e620b",
       "language": "Rust",
-      "bytes": 55619,
+      "bytes": 72421,
       "symbols": [
         {
           "name": "LogoOverlay",
@@ -14349,294 +14641,350 @@
         },
         {
           "name": "LogoModel",
-          "line": 36
+          "line": 37
         },
         {
-          "name": "LogoOverlay",
-          "line": 43
-        },
-        {
-          "name": "load",
+          "name": "LogoModelUpdate",
           "line": 44
         },
         {
+          "name": "LogoOverlay",
+          "line": 53
+        },
+        {
+          "name": "load",
+          "line": 54
+        },
+        {
           "name": "from_model",
-          "line": 81
+          "line": 92
         },
         {
           "name": "from_model_config",
-          "line": 114
+          "line": 126
         },
         {
           "name": "replaced_image",
-          "line": 141
+          "line": 153
+        },
+        {
+          "name": "replaced_image_with",
+          "line": 157
+        },
+        {
+          "name": "inherit_motion",
+          "line": 178
         },
         {
           "name": "is_model",
-          "line": 156
+          "line": 186
         },
         {
           "name": "blend_model",
-          "line": 160
-        },
-        {
-          "name": "moved_to",
           "line": 190
         },
         {
+          "name": "moved_to",
+          "line": 221
+        },
+        {
           "name": "as_overlay",
-          "line": 213
+          "line": 240
         },
         {
           "name": "logo_dimensions",
-          "line": 235
+          "line": 262
         },
         {
           "name": "parse_logo_dimension",
-          "line": 268
+          "line": 295
         },
         {
           "name": "logo_position",
-          "line": 300
+          "line": 327
         },
         {
           "name": "eval_position_expr",
-          "line": 319
+          "line": 346
         },
         {
           "name": "blend_logo",
-          "line": 379
-        },
-        {
-          "name": "LogoTransition",
-          "line": 396
-        },
-        {
-          "name": "LogoTransitions",
           "line": 406
         },
         {
-          "name": "LogoTransitions",
-          "line": 415
-        },
-        {
-          "name": "length",
-          "line": 416
-        },
-        {
-          "name": "fade_seconds",
+          "name": "LogoTransition",
           "line": 423
         },
         {
+          "name": "LogoTransitions",
+          "line": 433
+        },
+        {
+          "name": "LogoTransitions",
+          "line": 442
+        },
+        {
+          "name": "length",
+          "line": 443
+        },
+        {
+          "name": "fade_seconds",
+          "line": 450
+        },
+        {
           "name": "switch",
-          "line": 428
+          "line": 455
         },
         {
           "name": "LogoControl",
-          "line": 438
+          "line": 465
         },
         {
           "name": "LogoOverride",
-          "line": 441
+          "line": 468
         },
         {
           "name": "Outgoing",
-          "line": 471
-        },
-        {
-          "name": "LogoFrame",
-          "line": 479
-        },
-        {
-          "name": "LogoOverride",
           "line": 499
         },
         {
+          "name": "LogoFrame",
+          "line": 507
+        },
+        {
+          "name": "LogoOverride",
+          "line": 527
+        },
+        {
           "name": "level",
-          "line": 501
+          "line": 529
         },
         {
           "name": "hand_over",
-          "line": 521
+          "line": 549
         },
         {
           "name": "set_hidden",
-          "line": 533
+          "line": 561
         },
         {
           "name": "LogoState",
-          "line": 556
+          "line": 584
         },
         {
           "name": "fmt",
-          "line": 564
+          "line": 592
         },
         {
           "name": "fmt",
-          "line": 565
+          "line": 593
         },
         {
           "name": "LogoControl",
-          "line": 570
+          "line": 598
         },
         {
           "name": "set_scheduled_visible",
-          "line": 573
+          "line": 601
         },
         {
           "name": "abandon_scheduled_visibility",
-          "line": 623
+          "line": 651
         },
         {
           "name": "lock",
-          "line": 643
-        },
-        {
-          "name": "is_visible",
-          "line": 649
-        },
-        {
-          "name": "hide",
-          "line": 659
-        },
-        {
-          "name": "show",
           "line": 671
         },
         {
-          "name": "set_transitions",
+          "name": "is_visible",
+          "line": 677
+        },
+        {
+          "name": "hide",
           "line": 687
         },
         {
+          "name": "show",
+          "line": 699
+        },
+        {
+          "name": "set_transitions",
+          "line": 715
+        },
+        {
           "name": "transitions",
-          "line": 691
+          "line": 719
         },
         {
           "name": "replace",
-          "line": 698
+          "line": 726
         },
         {
           "name": "move_to",
-          "line": 730
+          "line": 758
         },
         {
           "name": "set_clip_position",
-          "line": 752
+          "line": 780
         },
         {
           "name": "set_clip_image",
-          "line": 766
+          "line": 794
         },
         {
           "name": "set_configured",
-          "line": 808
+          "line": 836
         },
         {
           "name": "set_model",
-          "line": 842
+          "line": 880
         },
         {
           "name": "refresh_model",
-          "line": 862
+          "line": 900
+        },
+        {
+          "name": "refresh_model_guarded",
+          "line": 921
         },
         {
           "name": "set_model_inner",
-          "line": 881
+          "line": 944
+        },
+        {
+          "name": "set_model_with",
+          "line": 966
+        },
+        {
+          "name": "set_model_with_guarded",
+          "line": 974
         },
         {
           "name": "clip_transitions",
-          "line": 973
+          "line": 1142
         },
         {
           "name": "state",
-          "line": 1001
+          "line": 1170
         },
         {
           "name": "has_replacement",
-          "line": 1014
+          "line": 1183
         },
         {
           "name": "frame",
-          "line": 1024
+          "line": 1193
         },
         {
           "name": "frame_at",
-          "line": 1028
+          "line": 1197
         },
         {
           "name": "tests",
-          "line": 1091
+          "line": 1260
         },
         {
           "name": "logo_asset",
-          "line": 1099
+          "line": 1268
+        },
+        {
+          "name": "scrolling_model_spec",
+          "line": 1281
+        },
+        {
+          "name": "synthetic_model",
+          "line": 1325
+        },
+        {
+          "name": "moved_models_share_prepared_pixels_scroll_epoch_and_layer_animations",
+          "line": 1349
+        },
+        {
+          "name": "moving_a_gif_model_keeps_its_decoded_animation_without_reopening_the_source",
+          "line": 1372
+        },
+        {
+          "name": "logo_refresh_keeps_independent_motion_epochs_for_definition_and_overrides",
+          "line": 1395
+        },
+        {
+          "name": "override_refresh_releases_frame_mutex_and_discards_changed_inputs",
+          "line": 1451
+        },
+        {
+          "name": "cancelled_owner_cannot_publish_a_logo_after_preparation",
+          "line": 1510
+        },
+        {
+          "name": "older_logo_preparation_cannot_republish_after_a_newer_model_clear",
+          "line": 1572
         },
         {
           "name": "dynamic_role_refresh_preserves_the_active_fade_and_hidden_state",
-          "line": 1113
+          "line": 1598
         },
         {
           "name": "a_layer_logo_matches_native_pixels_and_keeps_other_layers_during_image_overrides",
-          "line": 1166
+          "line": 1651
         },
         {
           "name": "a_clip_logo_is_drawn_until_the_next_clip_has_none",
-          "line": 1243
+          "line": 1728
         },
         {
           "name": "hiding_the_logo_fades_it_out_and_showing_fades_it_back",
-          "line": 1273
+          "line": 1758
         },
         {
           "name": "a_cut_hides_and_shows_the_logo_at_once",
-          "line": 1294
+          "line": 1779
         },
         {
           "name": "the_channel_sets_how_long_a_switch_takes",
-          "line": 1311
+          "line": 1796
         },
         {
           "name": "a_new_image_cross_fades_with_the_one_on_air",
-          "line": 1327
+          "line": 1812
         },
         {
           "name": "a_saved_logo_goes_on_air_without_a_restart",
-          "line": 1365
+          "line": 1850
         },
         {
           "name": "a_replacement_shows_until_the_logo_is_shown_again",
-          "line": 1402
+          "line": 1887
         },
         {
           "name": "the_logo_can_be_moved_and_put_back",
-          "line": 1438
+          "line": 1923
         },
         {
           "name": "a_clip_places_the_logo_unless_it_was_moved_from_outside",
-          "line": 1460
+          "line": 1945
         },
         {
           "name": "logo_position_accepts_corners_and_centers",
-          "line": 1481
+          "line": 1966
         },
         {
           "name": "logo_scale_accepts_output_percentages",
-          "line": 1504
+          "line": 1989
         },
         {
           "name": "logo_scale_rejects_invalid_percentages",
-          "line": 1516
+          "line": 2001
         },
         {
           "name": "scheduled_logo_visibility_restores_disabled_and_hidden_states_across_refresh",
-          "line": 1521
+          "line": 2006
         }
       ]
     },
     "backend/engine/src/compositor/graphics/lshape/graphics.rs": {
-      "sha256": "977649ec49871f2ea8bfa64df23462c072058ffb1fa3bd6ac276035d94cb7e67",
+      "sha256": "0af986dec738a17f465973894a6d9f1078f850c038e65cf565c888c7f09aa7cd",
       "language": "Rust",
-      "bytes": 40799,
+      "bytes": 51184,
       "symbols": [
         {
           "name": "lshape_phases",
@@ -14724,194 +15072,226 @@
         },
         {
           "name": "LShapeState",
-          "line": 302
-        },
-        {
-          "name": "level",
           "line": 303
         },
         {
-          "name": "set_on",
-          "line": 317
+          "name": "level",
+          "line": 304
         },
         {
-          "name": "fmt",
-          "line": 328
+          "name": "set_on",
+          "line": 318
         },
         {
           "name": "fmt",
           "line": 329
         },
         {
+          "name": "fmt",
+          "line": 330
+        },
+        {
           "name": "LShapeControl",
-          "line": 337
+          "line": 338
+        },
+        {
+          "name": "begin_model_update",
+          "line": 339
         },
         {
           "name": "set_rendered_graphic",
-          "line": 340
+          "line": 348
+        },
+        {
+          "name": "set_rendered_graphic_with",
+          "line": 358
+        },
+        {
+          "name": "set_rendered_graphic_guarded",
+          "line": 369
         },
         {
           "name": "lock",
-          "line": 389
+          "line": 478
         },
         {
           "name": "set_graphic",
-          "line": 395
+          "line": 484
         },
         {
           "name": "replace",
-          "line": 416
+          "line": 510
         },
         {
           "name": "replace_model_art",
-          "line": 428
+          "line": 522
         },
         {
           "name": "replace_graphic",
-          "line": 438
+          "line": 532
         },
         {
           "name": "place",
-          "line": 468
+          "line": 562
         },
         {
           "name": "placement",
-          "line": 492
+          "line": 586
         },
         {
           "name": "reset",
-          "line": 497
+          "line": 591
         },
         {
           "name": "set_clip_graphic",
-          "line": 506
+          "line": 600
         },
         {
           "name": "set_clip_model_art",
-          "line": 516
+          "line": 610
         },
         {
           "name": "set_clip_model_art_placed",
-          "line": 525
+          "line": 619
         },
         {
           "name": "set_clip_graphic_with_window",
-          "line": 534
+          "line": 628
         },
         {
           "name": "replacement",
-          "line": 603
+          "line": 697
         },
         {
           "name": "on",
-          "line": 611
+          "line": 705
         },
         {
           "name": "off",
-          "line": 616
-        },
-        {
-          "name": "is_on",
-          "line": 621
-        },
-        {
-          "name": "is_ready",
-          "line": 626
-        },
-        {
-          "name": "frame",
-          "line": 636
-        },
-        {
-          "name": "level_after",
-          "line": 655
-        },
-        {
-          "name": "render_model_art",
-          "line": 663
-        },
-        {
-          "name": "LShapeScaler",
-          "line": 703
-        },
-        {
-          "name": "ScaleKey",
-          "line": 706
-        },
-        {
-          "name": "apply_lshape",
           "line": 710
         },
         {
+          "name": "is_on",
+          "line": 715
+        },
+        {
+          "name": "is_ready",
+          "line": 720
+        },
+        {
+          "name": "frame",
+          "line": 730
+        },
+        {
+          "name": "level_after",
+          "line": 749
+        },
+        {
+          "name": "render_model_art",
+          "line": 757
+        },
+        {
+          "name": "LShapeScaler",
+          "line": 797
+        },
+        {
+          "name": "ScaleKey",
+          "line": 800
+        },
+        {
+          "name": "apply_lshape",
+          "line": 804
+        },
+        {
           "name": "paste",
-          "line": 765
+          "line": 859
         },
         {
           "name": "marked_level",
-          "line": 789
+          "line": 883
         },
         {
           "name": "tests",
-          "line": 806
+          "line": 900
+        },
+        {
+          "name": "cancelled_owner_cannot_publish_an_lshape_after_preparation",
+          "line": 906
+        },
+        {
+          "name": "scrolling_spec",
+          "line": 967
         },
         {
           "name": "refreshing_scrolling_artwork_preserves_its_motion_epoch",
-          "line": 812
+          "line": 1005
+        },
+        {
+          "name": "temporary_picture_refresh_inherits_nested_scroll_epoch",
+          "line": 1034
+        },
+        {
+          "name": "model_override_refresh_prepares_without_frame_lock_and_keeps_newer_controls",
+          "line": 1066
+        },
+        {
+          "name": "older_lshape_override_preparation_cannot_publish_after_a_model_clear",
+          "line": 1130
         },
         {
           "name": "loading_a_model_preserves_free_picture_geometry_and_on_air_state",
-          "line": 874
+          "line": 1165
         },
         {
           "name": "model_art_replacement_and_clip_art_inherit_free_windows_without_changing_sdk_placement",
-          "line": 924
+          "line": 1215
         },
         {
           "name": "graphic",
-          "line": 994
+          "line": 1285
         },
         {
           "name": "the_window_sits_in_its_corner",
-          "line": 1018
+          "line": 1309
         },
         {
           "name": "a_corner_reads_back_as_its_name",
-          "line": 1051
+          "line": 1342
         },
         {
           "name": "a_move_from_outside_places_every_graphic_until_it_is_undone",
-          "line": 1064
+          "line": 1355
         },
         {
           "name": "the_picture_moves_from_the_full_screen_to_the_window",
-          "line": 1110
+          "line": 1401
         },
         {
           "name": "the_frame_is_drawn_into_the_window_over_the_graphic",
-          "line": 1129
+          "line": 1420
         },
         {
           "name": "switching_animates_both_ways",
-          "line": 1157
+          "line": 1448
         },
         {
           "name": "a_swapped_or_clip_graphic_takes_the_channels_place",
-          "line": 1178
+          "line": 1469
         },
         {
           "name": "the_logo_goes_off_before_the_picture_shrinks",
-          "line": 1226
+          "line": 1517
         },
         {
           "name": "marked_stretches_ease_in_and_out",
-          "line": 1239
+          "line": 1530
         }
       ]
     },
     "backend/engine/src/compositor/graphics/rendering/graphics.rs": {
-      "sha256": "03944e12822931ceee54f9af4a3afce1ba87271295cedeafa672bd2ed0494001",
+      "sha256": "ffb6929cedf35a80e49795e5d6babfbf071eb38f51cdc70166de1d08520a7a12",
       "language": "Rust",
-      "bytes": 16403,
+      "bytes": 16830,
       "symbols": [
         {
           "name": "render_shape",
@@ -14923,31 +15303,35 @@
         },
         {
           "name": "render_graphic",
-          "line": 260
+          "line": 261
         },
         {
           "name": "ease",
-          "line": 353
+          "line": 355
         },
         {
           "name": "layer_level",
-          "line": 361
+          "line": 363
         },
         {
           "name": "blend_layer",
-          "line": 402
+          "line": 404
         },
         {
           "name": "blend_layer_with_visibility",
-          "line": 412
+          "line": 414
+        },
+        {
+          "name": "blend_layer_at",
+          "line": 425
         },
         {
           "name": "tests",
-          "line": 480
+          "line": 494
         },
         {
           "name": "new_shape_rasters_have_transparent_corners_correct_strokes_and_line_width",
-          "line": 491
+          "line": 505
         }
       ]
     },
@@ -21908,9 +22292,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "e8ccbe971f6d22dd350fa5afce5c2da05348644097de44523f81755a5c4a8b87",
+      "sha256": "27011da849f87548fa8741f7d2f0562ca309b45b4527bad1848c0af0a1cbb7a7",
       "language": "Markdown",
-      "bytes": 81392,
+      "bytes": 82419,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -21926,9 +22310,9 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "2197b59326d2cfc9016700ccbaaa450201f815a08452d113c8138cd645e76e3d",
+      "sha256": "ee72ce52efeb1d8e85c18d760fb10f60a6ea48535d31947a35c20d40ca9af1bb",
       "language": "Markdown",
-      "bytes": 7413,
+      "bytes": 7786,
       "symbols": []
     },
     "docs/docker.md": {
@@ -21956,909 +22340,27 @@
       "symbols": []
     },
     "docs/graphics-handoff/README.md": {
-      "sha256": "5175fe46f695c661772837e5ce5515aabd2f34a05ff2a1474d052e763c85692a",
+      "sha256": "d64f414671b284b8e47110dea3490c41abbd4daaf1f50d23cb09ac600be58e5b",
       "language": "Markdown",
-      "bytes": 109076,
-      "symbols": []
-    },
-    "docs/graphics-handoff/always-on-a-evidence.json": {
-      "sha256": "8da115f8485bf7b41c000c4cfa9e8193a69cf28d6a78307b6f0d1176eca72c63",
-      "language": "JSON",
-      "bytes": 4141,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-gif-restart-evidence.json": {
-      "sha256": "40ad3a1e31b0c68dbed1fa3c23775445b64242ee254daebe5f1ccf11b20f05ef",
-      "language": "JSON",
-      "bytes": 594,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-parity-branch-channel-log.txt": {
-      "sha256": "6b9019414a3f8d7838c33dc061ef25d46d9e3eff08903336f13f84cad5b9077f",
-      "language": "Other",
-      "bytes": 2426,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-parity-branch-health.json": {
-      "sha256": "f3108ccd61fe0661a559c18f4d600b0b550b915b2ce28e44c83b5cedd82bdb60",
-      "language": "JSON",
-      "bytes": 12568,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-parity-main-channel-log.txt": {
-      "sha256": "4b331c882e6627eeae5a9a0190df7ad6c73e1ffd4669d9d5e53f17d3ee8a734a",
-      "language": "Other",
-      "bytes": 2425,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-parity-main-health.json": {
-      "sha256": "7621b720bd69055e7c448846d9599d5cb01e34bfa50d2172e50ea6b89fcfc59d",
-      "language": "JSON",
-      "bytes": 13307,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-browser-evidence.json": {
-      "sha256": "b69073599c5e93fc3b2480b3b165a15a12aae08e3ceb828a0ec5443583367374",
-      "language": "JSON",
-      "bytes": 1587,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-browser-regressions-log.txt": {
-      "sha256": "3f22062a2ec8b03b72d25488ae2d4d9376194391c36480f83c05840606a2b6da",
-      "language": "Other",
-      "bytes": 746,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-browser-test-log.txt": {
-      "sha256": "7fd4b3717c6b45a835097632c140af9e2c9cdf9012e50628d5e44e339349fcdc",
-      "language": "Other",
-      "bytes": 4129,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-channel-log.txt": {
-      "sha256": "09b521e18d2fbfdb07f643310f4b2c1f19f2680d0592f9b6214edacf888a2ac7",
-      "language": "Other",
-      "bytes": 3361,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-compatibility-evidence.json": {
-      "sha256": "5fc5b7a529dbd694fea3b6b9a89923346af1658bded2bb6f5edcae075326a73f",
-      "language": "JSON",
-      "bytes": 22243,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-hls-evidence.json": {
-      "sha256": "a5bf4b3eeda1e7a31e166e70b322ad8d7cd5a38dbc5285615dc65510588c2d26",
-      "language": "JSON",
-      "bytes": 11327,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-parity-evidence.json": {
-      "sha256": "a3b62481d6b91d9de4edb3cb2311321e79a15b5ac19090529803dc8aecb3e530",
-      "language": "JSON",
-      "bytes": 451130,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-prior-channel-log.txt": {
-      "sha256": "dd953562fff1fbfafd8997d8b0d00501440af79fba437c2bc9d0716809b2ed20",
-      "language": "Other",
-      "bytes": 34965,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-review-index.json": {
-      "sha256": "39d80c7bb84299da9adf901560588bcb63a53cb456850c5cc233e52df5080f20",
-      "language": "JSON",
-      "bytes": 1528,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-review.html": {
-      "sha256": "514e76152a38bec95902126cceabca28026aa08930be6a5f71e6336c97555410",
-      "language": "HTML",
-      "bytes": 13403,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-rust-test-log.txt": {
-      "sha256": "f552af55f2d842684cfffb54fac4cb8b3761b88c8a3d932c62c56fc84cdc24bc",
-      "language": "Other",
-      "bytes": 63937,
-      "symbols": []
-    },
-    "docs/graphics-handoff/animated-schedule-verification.json": {
-      "sha256": "319ce0e65702ab32377daacbfda2ab99e60232e480db7a59aabe9feea3e9e59d",
-      "language": "JSON",
-      "bytes": 1769,
-      "symbols": []
-    },
-    "docs/graphics-handoff/api-models-browser-evidence.json": {
-      "sha256": "19b90d15ed480849c39145985a46ee8f7699aab6d51fc71bbcdf81238d73b9f9",
-      "language": "JSON",
-      "bytes": 482,
-      "symbols": []
-    },
-    "docs/graphics-handoff/api-models-curl-evidence.json": {
-      "sha256": "46293e665662a9208640744ca40860b0794a681481353ed8dfb821b3587f2613",
-      "language": "JSON",
-      "bytes": 1630,
-      "symbols": []
-    },
-    "docs/graphics-handoff/compat-c-api-evidence.json": {
-      "sha256": "e806fa6d8a6fd2bb1562138a8d48e0f56a51dee8a46683470063661399dbbe89",
-      "language": "JSON",
-      "bytes": 22114,
-      "symbols": []
-    },
-    "docs/graphics-handoff/compat-c-desktop-evidence.json": {
-      "sha256": "16d1a15adb58dacf7cc2b6dbf908fc681285f5c447548dc8570075f7e329fcdd",
-      "language": "JSON",
-      "bytes": 2222,
+      "bytes": 5028,
       "symbols": []
     },
     "docs/graphics-handoff/compat-c-matrix.md": {
-      "sha256": "bc3a076044b7887f763c4e4d712e5410bcbaba6a590b12b884f1d1afa8169766",
+      "sha256": "befac11879e6e206320a6dc3f941b1b29e80fbb7cc6593351e59a0267e460c8e",
       "language": "Markdown",
-      "bytes": 4398,
+      "bytes": 4742,
       "symbols": []
     },
-    "docs/graphics-handoff/compat-c-output-evidence.json": {
-      "sha256": "a5953bd99f82038dde9f231a655011a8561c0c5637e92b60a4ce824ae7d1300c",
-      "language": "JSON",
-      "bytes": 11665,
-      "symbols": []
-    },
-    "docs/graphics-handoff/compat-c-restart-evidence.json": {
-      "sha256": "4634637d7fe6fa7f6f72a9902c37fb1c40337dea6b295c6aff2f89aa890469ae",
-      "language": "JSON",
-      "bytes": 2151,
-      "symbols": []
-    },
-    "docs/graphics-handoff/composer-design.html": {
-      "sha256": "8a073f8572c28c0d9b76f88e0a64543f6a6692b0cd709ecf7e5fb314f211f1a5",
-      "language": "HTML",
-      "bytes": 44699,
-      "symbols": []
-    },
-    "docs/graphics-handoff/composer-guides-browser-regressions-log.txt": {
-      "sha256": "bc4dbd38fd2538322d7c00e86a9a23e4678059bf0708ac13c84d1c6a1694ae8c",
-      "language": "Other",
-      "bytes": 589,
-      "symbols": []
-    },
-    "docs/graphics-handoff/composer-guides-evidence.json": {
-      "sha256": "484f72e3cded84004227eba6f8cb2aab1822a3cad8314c7e9380c6db8c118434",
-      "language": "JSON",
-      "bytes": 1786,
-      "symbols": []
-    },
-    "docs/graphics-handoff/control-api-design.html": {
-      "sha256": "9bc744f75c467b051d01aa72882ade0432ae7645de61097d4fc877dc3d8abffd",
-      "language": "HTML",
-      "bytes": 15182,
-      "symbols": []
-    },
-    "docs/graphics-handoff/data-sources-evidence.json": {
-      "sha256": "b6c702a1bc24d1f863a062db9c38f69767b8c565ba2f62236a3d45a62c452d90",
-      "language": "JSON",
-      "bytes": 13102,
-      "symbols": []
-    },
-    "docs/graphics-handoff/desktop-branch-d-pulse.txt": {
-      "sha256": "36b23d202f43a0099b2a3e49505ce6bb2f58e384e332d9f350410d004011868f",
-      "language": "Other",
-      "bytes": 2728,
-      "symbols": []
-    },
-    "docs/graphics-handoff/desktop-branch-d-server.txt": {
-      "sha256": "d592f48e7ee0cbdbe7d555b9b2ccd5cff7a3ef34fa37d59a467c48ac445f1b39",
-      "language": "Other",
-      "bytes": 16515,
-      "symbols": []
-    },
-    "docs/graphics-handoff/desktop-branch-d-xvfb.txt": {
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "language": "Other",
-      "bytes": 0,
-      "symbols": []
-    },
-    "docs/graphics-handoff/desktop-main-d-pulse.txt": {
-      "sha256": "36b23d202f43a0099b2a3e49505ce6bb2f58e384e332d9f350410d004011868f",
-      "language": "Other",
-      "bytes": 2728,
-      "symbols": []
-    },
-    "docs/graphics-handoff/desktop-main-d-server.txt": {
-      "sha256": "04bdad9c79c47b204a789fe3cf3d9f52b254e1cbfccd8e073373f84ec1106d97",
-      "language": "Other",
-      "bytes": 18704,
-      "symbols": []
-    },
-    "docs/graphics-handoff/desktop-main-d-xvfb.txt": {
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "language": "Other",
-      "bytes": 0,
-      "symbols": []
-    },
-    "docs/graphics-handoff/desktop-reference-d-evidence.json": {
-      "sha256": "32868ae987505a1af2ed7bf6cd70570dd66b314cf48610a54204479219c9b0ab",
-      "language": "JSON",
-      "bytes": 86510,
-      "symbols": []
-    },
-    "docs/graphics-handoff/editor-e-api-evidence.json": {
-      "sha256": "e806fa6d8a6fd2bb1562138a8d48e0f56a51dee8a46683470063661399dbbe89",
-      "language": "JSON",
-      "bytes": 22114,
-      "symbols": []
-    },
-    "docs/graphics-handoff/editor-e-browser-evidence.json": {
-      "sha256": "865e35a8b8f536900c9a42dd8545d3547de4ca0fd15a8cab91d3715d88d8a22c",
-      "language": "JSON",
-      "bytes": 666,
-      "symbols": []
-    },
-    "docs/graphics-handoff/editor-e-browser-tests.txt": {
-      "sha256": "729ef9fe9a5ce25798a005e022ff4b31909747c0561104b39ea5a8992a48ab51",
-      "language": "Other",
-      "bytes": 989,
-      "symbols": []
-    },
-    "docs/graphics-handoff/editor-e-checks.json": {
-      "sha256": "cf7d33061aa5a2270edb4bff8d709b0cc9e1e506ff5b5fe133875c6d8adca000",
-      "language": "JSON",
-      "bytes": 1539,
-      "symbols": []
-    },
-    "docs/graphics-handoff/editor-e-rust-checks.txt": {
-      "sha256": "8693ba41aeabeabd223cc00f26bbf6b722ade28ad834aa84a77bdab0ecb7585e",
-      "language": "Other",
-      "bytes": 60332,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/README.md": {
-      "sha256": "4049fc7672170db611da6f4c22e4cff417a56ae8a236d3b16bf6e53aa0e99e35",
+    "docs/graphics-handoff/pre-release-checkpoint.md": {
+      "sha256": "e163486b7fdd76b4ddf5c5b3b014fe94f4cee143d72e3aba3f067f3d758c686f",
       "language": "Markdown",
-      "bytes": 5410,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/analysis.json": {
-      "sha256": "b4d1e79e7d637e53f5738f33cf129ce3c6d0d38e4127881a60ffa81737630662",
-      "language": "JSON",
-      "bytes": 6970,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/before-runtime-alignment-report.json": {
-      "sha256": "c7b9988f76ccf8210fe17a623498b654c5098d7bfd1bddffa30cffbea45f5e45",
-      "language": "JSON",
-      "bytes": 7225,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/browser-actions.json": {
-      "sha256": "18cb8b91add09f21fb123700d76c65865fb8d66a12fc567e214f51c3582d788b",
-      "language": "JSON",
-      "bytes": 363,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/browser-monitor-proof.json": {
-      "sha256": "a4100c6d8f438affc2e4befd735521f350a701a5f003c25afddba2ba134e368d",
-      "language": "JSON",
-      "bytes": 1095,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/clip-mark-frames.json": {
-      "sha256": "e779abe7defac2998ad996a26cc8194083c9cf61914a19299dd7c73e88eb1d2c",
-      "language": "JSON",
-      "bytes": 645,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/native-runtime-provenance.txt": {
-      "sha256": "5d6dea932c205bb92a4273f52b9dd5abfe88b83d71000df8ddea31a3327473b4",
-      "language": "Other",
-      "bytes": 363,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/native-udp-track-probe.json": {
-      "sha256": "3bc2a8c01c5e9aef94f884ee477ed65cf3fc55574df373a547c67baca80b40cd",
-      "language": "JSON",
-      "bytes": 360,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/permanent-animation-check.json": {
-      "sha256": "0c52cb62ffd8c2a7b024c02d214da917d56247affc909db76e5f7a862ce50963",
-      "language": "JSON",
-      "bytes": 384,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/raw-report.json": {
-      "sha256": "60e9cc7defc945c5f242d2f3b8f7a9242eafe3a88dc18471ab31fd133fe84c7f",
-      "language": "JSON",
-      "bytes": 8836,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/scenario.json": {
-      "sha256": "b75d7106e2b24dc657706ec9d5c045979e0bc91a26259c016eb5a2916f73db72",
-      "language": "JSON",
-      "bytes": 345,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/sha256-manifest.json": {
-      "sha256": "b6036e550a3c12fad3a3e389cea5f80bd52295de61f987364a3e438e0fe87516",
-      "language": "JSON",
-      "bytes": 5706,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/summary.json": {
-      "sha256": "776a50cf7b6ec5661fd6bee5991f551bb3806dbadb3793b36538b939e2648bf9",
-      "language": "JSON",
-      "bytes": 5692,
-      "symbols": []
-    },
-    "docs/graphics-handoff/fire-test-2026-11-08/toolkit-verification.json": {
-      "sha256": "665ef8e6734a1208a6fb1735cb81696122261cdb715ece3a0f8ef8511e7a293d",
-      "language": "JSON",
-      "bytes": 792,
-      "symbols": []
-    },
-    "docs/graphics-handoff/graphics-test-compose-evidence.json": {
-      "sha256": "4b303a0c9631629835210b361d8fed45ac0cc3aad7f5e45c35bda21bfd6dbf00",
-      "language": "JSON",
-      "bytes": 539,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-api-evidence.json": {
-      "sha256": "e806fa6d8a6fd2bb1562138a8d48e0f56a51dee8a46683470063661399dbbe89",
-      "language": "JSON",
-      "bytes": 22114,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-browser-evidence.json": {
-      "sha256": "71cc61166c20eb12a42a8eb63dda2e1230a43c1c2ba032a315ca9083d7689880",
-      "language": "JSON",
-      "bytes": 991,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-checks-evidence.json": {
-      "sha256": "2f3f4d06a2546aaf03226943fdcf08bf764a32d1fb63f14960d5212cc6b0ab47",
-      "language": "JSON",
-      "bytes": 1919,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-composer-output-evidence.json": {
-      "sha256": "91031cc07e4737250653bbbe3515d55b30a3e9a421fcc53511351f43c1c9673c",
-      "language": "JSON",
-      "bytes": 3152,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-controls-channel.txt": {
-      "sha256": "51baf13c8fa07f376a97106d98d68325310ad6c56c9e50f4abbcb6ccdfc3c45e",
-      "language": "Other",
-      "bytes": 80478,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-desktop-branch-server.txt": {
-      "sha256": "cbae1e9b9cd17e9e8c69d850e25e651c6b5f568c5f020ae11c1a87256762c8ef",
-      "language": "Other",
-      "bytes": 15044,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-desktop-evidence.json": {
-      "sha256": "484d36d4295434e37556aa2e193e7b164265fdee8ddcc47091a3b8a0e05bb8c4",
-      "language": "JSON",
-      "bytes": 80305,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-desktop-main-server.txt": {
-      "sha256": "5a9056bd17c8385429ab66f0e6b4dd12a31b44afd5c1b51094ffe035f3871351",
-      "language": "Other",
-      "bytes": 15273,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-e2e-evidence.json": {
-      "sha256": "28c92bd389ba9ccd0a27410d9f6ef0b8b891022bae8b2b56cecca382a1e0c99f",
-      "language": "JSON",
-      "bytes": 224,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-frozen-columns-evidence.json": {
-      "sha256": "1fcf87a61852b32f76ff0126a85a0a0b192519008e716720e8e811aedf600049",
-      "language": "JSON",
-      "bytes": 407,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-output-evidence.json": {
-      "sha256": "7118b487e21716513c46098d4764841959c63d74d418616602de80c7e407cb6a",
-      "language": "JSON",
-      "bytes": 16400,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-parity-branch-channel.txt": {
-      "sha256": "d5fcf2c9c3972fb5606c872adc3422a225ee0e82cd13fc5bf20cfb4413585eba",
-      "language": "Other",
-      "bytes": 2569,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-parity-branch-health.json": {
-      "sha256": "f4ac62f51fcdb5ba871c4e906503513dfc1483a47f0ca601a02c4356b2a1ee29",
-      "language": "JSON",
-      "bytes": 13123,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-parity-evidence.json": {
-      "sha256": "3b0800a5bdc71cad73cb3e8e4ab65bfdb0305a541fd537f03a24b9a1f357f696",
-      "language": "JSON",
-      "bytes": 450958,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-parity-main-channel.txt": {
-      "sha256": "a07eb1ff881740446c38bebda42716bb00ed281c404d4f1bac15761a5821730a",
-      "language": "Other",
-      "bytes": 2569,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-parity-main-health.json": {
-      "sha256": "60932b5b481b910b1fe3801ab1222de58187815dcfc44729eb15c3d9fb25eda8",
-      "language": "JSON",
-      "bytes": 13307,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-restart-evidence.json": {
-      "sha256": "31696f9dc80541bc8b0ee5294d66f69b29be260fe3b20fcd3b746ed802cbd5e5",
-      "language": "JSON",
-      "bytes": 390,
-      "symbols": []
-    },
-    "docs/graphics-handoff/layers-rollback-evidence.json": {
-      "sha256": "b6e3d4a38b2a1f55f0798e6cbdc7b8ca5e15acced4859227b468a0adb00b4b0c",
-      "language": "JSON",
-      "bytes": 529,
-      "symbols": []
-    },
-    "docs/graphics-handoff/library-channel-evidence.json": {
-      "sha256": "bda2039169ee958bbc209bf14bf91a7d0e2a32bec356fa6712006a3495a6d908",
-      "language": "JSON",
-      "bytes": 1743,
-      "symbols": []
-    },
-    "docs/graphics-handoff/library-design.html": {
-      "sha256": "6ab4da89efe6912148823d518429fe3a77ed9780b0f1046e6a4d8f700c3f8e49",
-      "language": "HTML",
-      "bytes": 12015,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-architecture-evidence.json": {
-      "sha256": "5b9aaafbbfb0835d9945d8ae494d36b59e842bd8c2a9211df6d13c22a62b5fde",
-      "language": "JSON",
-      "bytes": 70,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-architecture-tests-log.txt": {
-      "sha256": "26ea08eb5b77840cb2d1e4e89c37c4ec13c3e9cf23fa524b7e7db0fd2931973d",
-      "language": "Other",
-      "bytes": 1054,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-browser-test-log.txt": {
-      "sha256": "6fd96aa2d3783f48df0cff384775ec4615e3bdcd75658900cc818cd9d3403882",
-      "language": "Other",
-      "bytes": 4129,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-channel-log.txt": {
-      "sha256": "8ccdace7157af913a1ae4e5f81083ba1c160569e12fe4722ef84d27d65093fae",
-      "language": "Other",
-      "bytes": 3376,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-compatibility-evidence.json": {
-      "sha256": "2a4ffa5a8a2c3a1d31aa2de3fff57214adc8a7fcea820554d141b73e59fa8f37",
-      "language": "JSON",
-      "bytes": 22248,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-composer-evidence.json": {
-      "sha256": "8c1e3c7f40bd0085a2c58a7bb4d597af5ce77e241318fa5170956e81858de0fc",
-      "language": "JSON",
-      "bytes": 1739,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-final-api-regression-log.txt": {
-      "sha256": "af17186f0fc67ef03981bbe541b4229e8c2f31c0dfd94665d9b295a7c8f7a30a",
-      "language": "Other",
-      "bytes": 352,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-hls-evidence.json": {
-      "sha256": "7830e4ee08674fb251203e5ccc48500c2de8c38367afb07b49e358bacf8a7b01",
-      "language": "JSON",
-      "bytes": 11322,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-parity-branch-channel-log.txt": {
-      "sha256": "c423981e740f7e548d1e41af266fa29d804cb9ad4545fba24af86958b9c6be6a",
-      "language": "Other",
-      "bytes": 2425,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-parity-branch-health.json": {
-      "sha256": "e14c257212faea1a9be4dbe1118d9bafa0e25f66321d9940d592ec72dbf3e23d",
-      "language": "JSON",
-      "bytes": 13307,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-parity-evidence.json": {
-      "sha256": "548e8bb22bc20b7b724a9a1081e20e250be4dfed879fca2766fb2cab546dec0f",
-      "language": "JSON",
-      "bytes": 451489,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-parity-main-channel-log.txt": {
-      "sha256": "4b331c882e6627eeae5a9a0190df7ad6c73e1ffd4669d9d5e53f17d3ee8a734a",
-      "language": "Other",
-      "bytes": 2425,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-parity-main-health.json": {
-      "sha256": "7621b720bd69055e7c448846d9599d5cb01e34bfa50d2172e50ea6b89fcfc59d",
-      "language": "JSON",
-      "bytes": 13307,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-parity-setup-log.txt": {
-      "sha256": "a599d079ba0ec13305f6a10dd392e60f0b6a02223a8c1e9c9828ffb9ed8f75ea",
-      "language": "Other",
-      "bytes": 4275,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-prior-channel-log.txt": {
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "language": "Other",
-      "bytes": 0,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-program-evidence.json": {
-      "sha256": "34540f234f90bdf6dea11327853e4daa0757430f6322ea6c2a6911c785c02cc6",
-      "language": "JSON",
-      "bytes": 406,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-research.json": {
-      "sha256": "bffcf877c905e123c3384f63e6b5fab2409e62fcfa3d20714e019e58507ff43b",
-      "language": "JSON",
-      "bytes": 999,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-review-index.json": {
-      "sha256": "793dad3dd9075c0e15aec89e954087c8942dd371a4def015d41808ea7f149a3f",
-      "language": "JSON",
-      "bytes": 1458,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-review-inventory.json": {
-      "sha256": "0b4751b00b2b70c501fc5901d42d6f8999600f5311185e62cb487addfb73f34a",
-      "language": "JSON",
-      "bytes": 3126,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-review.html": {
-      "sha256": "1b0bffef6fa77ce785f36fe29a436e9ff307e380c1ab00c1e911a06e082f59cb",
-      "language": "HTML",
-      "bytes": 10304,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-rust-verification-log.txt": {
-      "sha256": "8af1eddc48902515944f57a44e72b198786c3af9a17366b9188f338bad147663",
-      "language": "Other",
-      "bytes": 64557,
-      "symbols": []
-    },
-    "docs/graphics-handoff/maintenance-verification.json": {
-      "sha256": "e154d474c108fd78a427d381770655465ee1eae9524cf1d825d2bf62130a26ec",
-      "language": "JSON",
-      "bytes": 2288,
-      "symbols": []
-    },
-    "docs/graphics-handoff/migration-b-evidence.json": {
-      "sha256": "0d9714743f203e5ed935c84ef89a64aedd64f77a6878d18f0dd24b7fbbab1b84",
-      "language": "JSON",
-      "bytes": 9779,
-      "symbols": []
-    },
-    "docs/graphics-handoff/natural-full-output-evidence.json": {
-      "sha256": "d58939ecf85ca2ee4e7654102aed64d20c87c4901de4aa37849f4fb951051476",
-      "language": "JSON",
-      "bytes": 2086,
-      "symbols": []
-    },
-    "docs/graphics-handoff/on-air-design.html": {
-      "sha256": "aa5f97edc9c0051c4ed7c018336746f84441760429984b4b9137f6ab32c42225",
-      "language": "HTML",
-      "bytes": 25895,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-browser-test-log.txt": {
-      "sha256": "3f7dfa805228674814393947d35ddd005a87389f1473fb00b537c75a0a64e258",
-      "language": "Other",
-      "bytes": 3853,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-compatibility-evidence.json": {
-      "sha256": "c29a439ba5f1af5281913d1b67786f4be236562895e4bff9f401218fa63323e0",
-      "language": "JSON",
-      "bytes": 22186,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-parity-branch-channel-log.txt": {
-      "sha256": "22c35f4127d3bacbfae4518127c84aab289e5839126858a40df1c53438c9cf84",
-      "language": "Other",
-      "bytes": 2422,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-parity-branch-health.json": {
-      "sha256": "022c79baffcd9ac2a8d312247c4c61b79f20ab85916d132a458b0d1541c786aa",
-      "language": "JSON",
-      "bytes": 13122,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-parity-evidence.json": {
-      "sha256": "2cbc8864c9b02f82931f4515f90bcb4892e2fd4e011302bf2f5ac4c18755d0bd",
-      "language": "JSON",
-      "bytes": 451132,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-parity-main-channel-log.txt": {
-      "sha256": "4b331c882e6627eeae5a9a0190df7ad6c73e1ffd4669d9d5e53f17d3ee8a734a",
-      "language": "Other",
-      "bytes": 2425,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-parity-main-health.json": {
-      "sha256": "7621b720bd69055e7c448846d9599d5cb01e34bfa50d2172e50ea6b89fcfc59d",
-      "language": "JSON",
-      "bytes": 13307,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-rust-test-log.txt": {
-      "sha256": "decedec3d692562815f1fe69ad9fbf6f229db7a500f3f79dc89c1b595c29e650",
-      "language": "Other",
-      "bytes": 63300,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-final-verification.json": {
-      "sha256": "6c7993e832671c49f1a32ed2689962f99b2bd393e5c7c3c1ef98ac47964ac734",
-      "language": "JSON",
-      "bytes": 1479,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-templates-evidence.json": {
-      "sha256": "a7bc3a60c43a5e408353b38176365c4f538dffa9e24389e380f0f8482ba92322",
-      "language": "JSON",
-      "bytes": 4029,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-templates-plan.md": {
-      "sha256": "5b663f3b3fa08577c64cff030694b05dc37497823f5ae0360607d21b4206aff4",
-      "language": "Markdown",
-      "bytes": 7882,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-templates-review-index.json": {
-      "sha256": "fd4de3adff9d43a7739d6bd3698ac0d9f9a025ad6e61fefb6fdfc99cdc94e085",
-      "language": "JSON",
-      "bytes": 2483,
-      "symbols": []
-    },
-    "docs/graphics-handoff/open-templates-review.html": {
-      "sha256": "0c1ffdb5f55dc3fc71bb4cc8fefa01348928bd312f1153959a595b53f3bc0dd4",
-      "language": "HTML",
-      "bytes": 20150,
-      "symbols": []
-    },
-    "docs/graphics-handoff/output-template-lshape-evidence.json": {
-      "sha256": "af6cfec0626d32149ec7b83fb31e7b1a97a8daa4cea3f7e4f15acf306f9812a6",
-      "language": "JSON",
-      "bytes": 6042,
-      "symbols": []
-    },
-    "docs/graphics-handoff/output-webvtt-cue.vtt": {
-      "sha256": "ca9491d99d32d1af273007f314a90b91781ba6b14ae4115e765e00679c09eceb",
-      "language": "Other",
-      "bytes": 123,
-      "symbols": []
-    },
-    "docs/graphics-handoff/output-webvtt-empty.vtt": {
-      "sha256": "6737e495afc1061507cdddf14c4211925911ebbdc17ffa914f37b03f95c023e7",
-      "language": "Other",
-      "bytes": 60,
-      "symbols": []
-    },
-    "docs/graphics-handoff/output-webvtt-master.m3u8": {
-      "sha256": "0374e3d63bc3d7fb730d0220aa02d026bd7700cd472924ea4da7f437ce6d989e",
-      "language": "Other",
-      "bytes": 251,
-      "symbols": []
-    },
-    "docs/graphics-handoff/output-webvtt-playlist.m3u8": {
-      "sha256": "6a72b02f68fae85ae0cccc83a8008f10c5e98e6fbfb493f6f815f60269652bee",
-      "language": "Other",
-      "bytes": 2729,
-      "symbols": []
-    },
-    "docs/graphics-handoff/parity-d-branch-channel.txt": {
-      "sha256": "c45424f249a5dd7f55c4fe757b928fdf0d407a648cf9ca4fa54264281de3c6a1",
-      "language": "Other",
-      "bytes": 2415,
-      "symbols": []
-    },
-    "docs/graphics-handoff/parity-d-branch-server.txt": {
-      "sha256": "b615ec732abeb8089ccc9151cde3c7784088421e4a05e79ba2b5f2405ab61219",
-      "language": "Other",
-      "bytes": 8536,
-      "symbols": []
-    },
-    "docs/graphics-handoff/parity-d-evidence.json": {
-      "sha256": "9a6cca6bedd8b1cd7880a244b932f1182843a88eec5052cff7355f6270252ac9",
-      "language": "JSON",
-      "bytes": 650984,
-      "symbols": []
-    },
-    "docs/graphics-handoff/parity-d-main-channel.txt": {
-      "sha256": "4c0d164f3ad1d54bf8d86d2fb99f062297a389667cb0fb010099c88fa71bf7bf",
-      "language": "Other",
-      "bytes": 2416,
-      "symbols": []
-    },
-    "docs/graphics-handoff/parity-d-main-server.txt": {
-      "sha256": "66805ff2e8ccca945b47531213825dec72d880149f4e71005c276ea67026a6b1",
-      "language": "Other",
-      "bytes": 8536,
-      "symbols": []
-    },
-    "docs/graphics-handoff/preview-checkerboard-browser-test-log.txt": {
-      "sha256": "3277119bdedea559837b5a434be23faaafd2cecd1054251af4cb2a87a9f34eb3",
-      "language": "Other",
-      "bytes": 5437,
-      "symbols": []
-    },
-    "docs/graphics-handoff/preview-checkerboard-verification.json": {
-      "sha256": "a49fd5c96ebe6553dcc34af511fea08a649d4d5d5f370eb74b2db37a4e767966",
-      "language": "JSON",
-      "bytes": 2649,
-      "symbols": []
-    },
-    "docs/graphics-handoff/review-channel.log": {
-      "sha256": "137a7446b4059517c83f79976f966b14934e528eb6ad07f37ecc13114f46c066",
-      "language": "Other",
-      "bytes": 1196,
-      "symbols": []
-    },
-    "docs/graphics-handoff/review-evidence.json": {
-      "sha256": "4f977f68c7dd863d25bd5ba733f968d66a04613c2bbf2dc8b1395d1220a3f487",
-      "language": "JSON",
-      "bytes": 12499,
-      "symbols": []
-    },
-    "docs/graphics-handoff/review-gallery.md": {
-      "sha256": "7d4ab0e1eccbbc3712145cb74aac4744b44a66f87ecbc1a8f6213883c18ff1d8",
-      "language": "Markdown",
-      "bytes": 7390,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scheduled-template-deletion-evidence.json": {
-      "sha256": "75427f07f971a23398b88d5664250f007a76580d04face7afeeb143ab9784bf9",
-      "language": "JSON",
-      "bytes": 390,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-browser-test-log.txt": {
-      "sha256": "851f4fb71126ddc17d372600a47624ac95db10a1a9b17a862f0d96ae4a85e2ce",
-      "language": "Other",
-      "bytes": 5288,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-channel-log.txt": {
-      "sha256": "fd3c0880500967fa787b3514af5b62b52e6397bb2212dffd8f8ca2a758fb10e5",
-      "language": "Other",
-      "bytes": 6701,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-health.json": {
-      "sha256": "ba7ea2aca306a0a46a9e20945ac9edef08f0eb0144d5163c20c514daadf065df",
-      "language": "JSON",
-      "bytes": 1562,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-hls-evidence.json": {
-      "sha256": "8858dea72bf137948df8fe1f2a60d7063c7862e2290ae009271172ec28582175",
-      "language": "JSON",
-      "bytes": 4768,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-onair-browser-evidence.json": {
-      "sha256": "444989e315b0ac29cf3eb228dc6e22c5432e59b93189a207a15b1d004e3a1f5a",
-      "language": "JSON",
-      "bytes": 336,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-restart-evidence.json": {
-      "sha256": "e8ed2f7bcc16ac2678e6e34ed526736aa412fcc4e29c286d2e55173797854097",
-      "language": "JSON",
-      "bytes": 390,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-rust-verification-log.txt": {
-      "sha256": "19a46005ac55af4e086474f390887de271be95305737243ff6aa1e7f7b43d01b",
-      "language": "Other",
-      "bytes": 65726,
-      "symbols": []
-    },
-    "docs/graphics-handoff/scroll-verification.json": {
-      "sha256": "8eac02d5235f811b61defd4ec94fc02d5ebbbeff577a74bffb4e65beb3a51fe9",
-      "language": "JSON",
-      "bytes": 6298,
-      "symbols": []
-    },
-    "docs/graphics-handoff/shapes-clock-evidence.json": {
-      "sha256": "101a2aeb22d6987bf6c15cbb043429c5f59e55920132efccb048fa8216b3f146",
-      "language": "JSON",
-      "bytes": 4009,
-      "symbols": []
-    },
-    "docs/graphics-handoff/storage-subtitles-browser-evidence.json": {
-      "sha256": "3e36dca49afb14f4eaa02f8bee93e6abe74a90075ef7e1884e17cce84e2c0921",
-      "language": "JSON",
-      "bytes": 3171,
-      "symbols": []
-    },
-    "docs/graphics-handoff/storage-subtitles-browser-test-log.txt": {
-      "sha256": "47047780cda3309e6f9ef142270c0def5ec8c26fbe56d9bd3d080d8850704e8b",
-      "language": "Other",
-      "bytes": 4275,
-      "symbols": []
-    },
-    "docs/graphics-handoff/storage-subtitles-channel-log.txt": {
-      "sha256": "0aacefc6c2019049f90fd06b706f76d5a3cfb95f321bd1140029f41ead1ead8e",
-      "language": "Other",
-      "bytes": 3216,
-      "symbols": []
-    },
-    "docs/graphics-handoff/storage-subtitles-health.json": {
-      "sha256": "193c5386764e98b43ea732d4ad6f5afe8cc2c9a6483ca2a4b93e3d4ffa616f39",
-      "language": "JSON",
-      "bytes": 160,
-      "symbols": []
-    },
-    "docs/graphics-handoff/storage-subtitles-rust-verification-log.txt": {
-      "sha256": "21950216a7514c0fa60a514f46324e03753baafbd00ededdcabe28257e713ccc",
-      "language": "Other",
-      "bytes": 64429,
-      "symbols": []
-    },
-    "docs/graphics-handoff/template-removal-channel-log.txt": {
-      "sha256": "605b1d1197bc9d61b5b414a38be108f27abc63c1258bc97bec2f1acfc61f9823",
-      "language": "Other",
-      "bytes": 11885,
-      "symbols": []
-    },
-    "docs/graphics-handoff/template-removal-evidence.json": {
-      "sha256": "e09c6790cec64c3e594c31966e84dc6eca1a963aa8a481b45bbe76286b6da564",
-      "language": "JSON",
-      "bytes": 1875,
-      "symbols": []
-    },
-    "docs/graphics-handoff/uploaded-font-evidence.json": {
-      "sha256": "79bd0e5d9e2cfe9c40d98dd963e2ceec049c1de69b2278ef1e1f99a8b73ce491",
-      "language": "JSON",
-      "bytes": 3710,
-      "symbols": []
-    },
-    "docs/graphics-handoff/video-graphics-design.html": {
-      "sha256": "c2c36fd7616135198cc894765ef31e21713701688ad8aa36648e232e6c5e2d4e",
-      "language": "HTML",
-      "bytes": 38135,
+      "bytes": 5163,
       "symbols": []
     },
     "docs/graphics-maintenance.md": {
-      "sha256": "5b251c050f81ad7cf7978faf2aeb2e08fefbe1e12f668474fb86e0ad7ab9c66f",
+      "sha256": "ef0aacc8b7e6c59d981a4cd175f2b8b43420ed3d1a863119f785ad85e5558fa9",
       "language": "Markdown",
-      "bytes": 14266,
+      "bytes": 15422,
       "symbols": []
     },
     "docs/graphics-roadmap.md": {
@@ -23102,9 +22604,9 @@
       "symbols": []
     },
     "docs/releasing.md": {
-      "sha256": "78bc5a5fdce1f98761ca22992a692bf213b94f64758cd4a248ff7988b3649eb6",
+      "sha256": "5fff44b3f369fc2d1fb73f1f19074301a41709ec31e55d74889ab9e1a9126274",
       "language": "Markdown",
-      "bytes": 4035,
+      "bytes": 4460,
       "symbols": []
     },
     "docs/remote_source.md": {
@@ -23249,9 +22751,9 @@
       "symbols": []
     },
     "frontend/src/components/HeaderMenu.vue": {
-      "sha256": "a1784545ac3afa9ae8ede4d3d9227389d5c728191ce73f5fdd91be7a68108eae",
+      "sha256": "789d1d42076209a686e6e25df1304298073787479c0c1a6de3aaa147cc417623",
       "language": "Vue",
-      "bytes": 12741,
+      "bytes": 12814,
       "symbols": [
         {
           "name": "router",
@@ -23330,20 +22832,24 @@
           "line": 91
         },
         {
-          "name": "id",
+          "name": "selector",
           "line": 92
         },
         {
+          "name": "id",
+          "line": 93
+        },
+        {
           "name": "changeLang",
-          "line": 97
+          "line": 99
         },
         {
           "name": "toggleTheme",
-          "line": 102
+          "line": 104
         },
         {
           "name": "logout",
-          "line": 107
+          "line": 109
         }
       ]
     },
@@ -23449,164 +22955,164 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsApi.vue": {
-      "sha256": "ebcfc89f024f016d31116c9b8229735dfd66d2f9ef66ac4ff0ae069ab46e12a2",
+      "sha256": "1d6595682d06208bacff718ae333cffe54a96135498a9073b950f86fe0828837",
       "language": "Vue",
-      "bytes": 13545,
+      "bytes": 13691,
       "symbols": [
         {
           "name": "configStore",
-          "line": 14
+          "line": 16
         },
         {
           "name": "indexStore",
-          "line": 15
-        },
-        {
-          "name": "channelId",
           "line": 17
         },
         {
+          "name": "channelId",
+          "line": 19
+        },
+        {
           "name": "key",
-          "line": 18
+          "line": 20
         },
         {
           "name": "scenes",
-          "line": 21
-        },
-        {
-          "name": "api",
-          "line": 22
-        },
-        {
-          "name": "channelModels",
           "line": 23
         },
         {
-          "name": "templates",
+          "name": "api",
           "line": 24
         },
         {
-          "name": "selectedChannel",
+          "name": "channelModels",
           "line": 25
         },
         {
-          "name": "selectedTemporary",
+          "name": "templates",
           "line": 26
         },
         {
-          "name": "loading",
+          "name": "selectedChannel",
           "line": 27
         },
         {
-          "name": "loadError",
+          "name": "selectedTemporary",
           "line": 28
         },
         {
-          "name": "loadVersion",
+          "name": "loading",
           "line": 29
         },
         {
-          "name": "roles",
+          "name": "loadError",
+          "line": 30
+        },
+        {
+          "name": "loadVersion",
           "line": 31
         },
         {
-          "name": "temporary",
-          "line": 32
-        },
-        {
-          "name": "assigned",
+          "name": "roles",
           "line": 33
         },
         {
+          "name": "temporary",
+          "line": 34
+        },
+        {
+          "name": "assigned",
+          "line": 35
+        },
+        {
           "name": "selectedRole",
-          "line": 37
-        },
-        {
-          "name": "selectedTemplate",
-          "line": 38
-        },
-        {
-          "name": "base",
           "line": 39
         },
         {
+          "name": "selectedTemplate",
+          "line": 40
+        },
+        {
+          "name": "base",
+          "line": 41
+        },
+        {
           "name": "shellQuote",
-          "line": 42
+          "line": 44
         },
         {
           "name": "curl",
-          "line": 47
-        },
-        {
-          "name": "headers",
-          "line": 48
-        },
-        {
-          "name": "data",
           "line": 49
         },
         {
+          "name": "headers",
+          "line": 50
+        },
+        {
+          "name": "data",
+          "line": 51
+        },
+        {
           "name": "readExamples",
-          "line": 55
+          "line": 57
         },
         {
           "name": "channelExamples",
-          "line": 62
+          "line": 64
         },
         {
           "name": "model",
-          "line": 63
+          "line": 65
         },
         {
           "name": "permanentExample",
-          "line": 75
+          "line": 77
         },
         {
           "name": "model",
-          "line": 76
+          "line": 78
         },
         {
           "name": "url",
-          "line": 82
+          "line": 84
         },
         {
           "name": "temporaryExamples",
-          "line": 90
+          "line": 92
         },
         {
           "name": "template",
-          "line": 91
+          "line": 93
         },
         {
           "name": "fields",
-          "line": 97
+          "line": 99
         },
         {
           "name": "loadModels",
-          "line": 106
+          "line": 108
         },
         {
           "name": "version",
-          "line": 107
+          "line": 109
         },
         {
           "name": "slug",
-          "line": 145
+          "line": 147
         },
         {
           "name": "sceneUrl",
-          "line": 153
+          "line": 155
         },
         {
           "name": "copy",
-          "line": 157
+          "line": 159
         }
       ]
     },
     "frontend/src/components/graphics/GraphicsChannelEditor.vue": {
-      "sha256": "fbb5bfc7e2c1c0c870ce7b5e2044f59332ad429b3b7ef8efc758bf347b7760f5",
+      "sha256": "ac2a0edcc94e581bfe00bac8d39509d32529daae26d757849434da19854985ea",
       "language": "Vue",
-      "bytes": 2568,
+      "bytes": 2899,
       "symbols": [
         {
           "name": "route",
@@ -23649,262 +23155,314 @@
           "line": 21
         },
         {
+          "name": "requestedChannel",
+          "line": 22
+        },
+        {
+          "name": "requestedKind",
+          "line": 23
+        },
+        {
+          "name": "requestedRoute",
+          "line": 24
+        },
+        {
           "name": "models",
-          "line": 29
+          "line": 32
         },
         {
           "name": "model",
-          "line": 35
+          "line": 38
         }
       ]
     },
     "frontend/src/components/graphics/GraphicsComposer.vue": {
-      "sha256": "79b60d873ae2b48c7df3f117e6ad6c8ed6f4846255c5131a833c18495c8b86ff",
+      "sha256": "c137b8a2435c1ee598f9acc784ec10ef607fa5d26808a4fed2a00d86af50a28b",
       "language": "Vue",
-      "bytes": 37899,
+      "bytes": 43493,
       "symbols": [
         {
           "name": "configStore",
-          "line": 39
-        },
-        {
-          "name": "graphicsApi",
-          "line": 40
-        },
-        {
-          "name": "channelId",
           "line": 42
         },
         {
-          "name": "route",
+          "name": "graphicsApi",
           "line": 43
         },
         {
-          "name": "router",
-          "line": 44
-        },
-        {
-          "name": "authStore",
+          "name": "channelId",
           "line": 45
         },
         {
-          "name": "draft",
+          "name": "route",
           "line": 46
         },
         {
-          "name": "selectedId",
-          "line": 54
+          "name": "router",
+          "line": 47
         },
         {
-          "name": "selected",
-          "line": 55
+          "name": "authStore",
+          "line": 48
         },
         {
-          "name": "fields",
-          "line": 56
+          "name": "draft",
+          "line": 49
         },
         {
-          "name": "preview",
-          "line": 57
-        },
-        {
-          "name": "sampleValues",
+          "name": "displayedName",
           "line": 58
         },
         {
-          "name": "savedId",
-          "line": 65
-        },
-        {
-          "name": "baseline",
+          "name": "selectedId",
           "line": 66
         },
         {
-          "name": "history",
+          "name": "selected",
           "line": 67
         },
         {
-          "name": "fonts",
+          "name": "fields",
           "line": 68
         },
         {
-          "name": "uploadedFonts",
+          "name": "preview",
           "line": 69
         },
         {
-          "name": "fontUploading",
+          "name": "sampleValues",
           "line": 70
         },
         {
-          "name": "groups",
-          "line": 71
-        },
-        {
-          "name": "assignment",
-          "line": 72
-        },
-        {
-          "name": "originalAssignment",
-          "line": 73
-        },
-        {
-          "name": "saving",
-          "line": 74
-        },
-        {
-          "name": "busy",
-          "line": 75
-        },
-        {
-          "name": "editorReady",
-          "line": 76
-        },
-        {
-          "name": "error",
+          "name": "savedId",
           "line": 77
         },
         {
-          "name": "note",
+          "name": "baseline",
           "line": 78
         },
         {
-          "name": "adding",
+          "name": "history",
           "line": 79
         },
         {
-          "name": "picking",
+          "name": "fonts",
           "line": 80
         },
         {
-          "name": "output",
+          "name": "uploadedFonts",
           "line": 81
         },
         {
-          "name": "frame",
+          "name": "fontUploading",
           "line": 82
         },
         {
-          "name": "loadVersion",
+          "name": "groups",
+          "line": 83
+        },
+        {
+          "name": "assignment",
+          "line": 84
+        },
+        {
+          "name": "originalAssignment",
+          "line": 85
+        },
+        {
+          "name": "controlImage",
+          "line": 86
+        },
+        {
+          "name": "navigationPending",
+          "line": 92
+        },
+        {
+          "name": "saving",
+          "line": 93
+        },
+        {
+          "name": "busy",
+          "line": 94
+        },
+        {
+          "name": "editorReady",
+          "line": 95
+        },
+        {
+          "name": "editorLocked",
           "line": 96
         },
         {
-          "name": "interactionSnapshot",
+          "name": "error",
           "line": 97
         },
         {
-          "name": "dirty",
+          "name": "note",
           "line": 98
         },
         {
-          "name": "mapField",
+          "name": "adding",
+          "line": 99
+        },
+        {
+          "name": "picking",
+          "line": 100
+        },
+        {
+          "name": "output",
+          "line": 101
+        },
+        {
+          "name": "frame",
           "line": 102
         },
         {
+          "name": "loadVersion",
+          "line": 116
+        },
+        {
+          "name": "saveNavigation",
+          "line": 117
+        },
+        {
+          "name": "interactionSnapshot",
+          "line": 118
+        },
+        {
+          "name": "dirty",
+          "line": 119
+        },
+        {
+          "name": "captureAuthoringOperation",
+          "line": 124
+        },
+        {
+          "name": "version",
+          "line": 125
+        },
+        {
+          "name": "document",
+          "line": 126
+        },
+        {
+          "name": "channel",
+          "line": 127
+        },
+        {
+          "name": "storage",
+          "line": 128
+        },
+        {
+          "name": "dimensions",
+          "line": 129
+        },
+        {
+          "name": "mapField",
+          "line": 145
+        },
+        {
           "name": "rememberDraft",
-          "line": 120
+          "line": 163
         },
         {
           "name": "undo",
-          "line": 130
+          "line": 173
         },
         {
           "name": "previous",
-          "line": 131
+          "line": 178
         },
         {
           "name": "updateSelectedLayer",
-          "line": 147
+          "line": 194
         },
         {
-          "name": "setAlwaysOn",
-          "line": 161
+          "name": "applyLayerPatch",
+          "line": 203
         },
         {
-          "name": "addLayer",
-          "line": 167
-        },
-        {
-          "name": "layer",
-          "line": 177
-        },
-        {
-          "name": "removeLayer",
+          "name": "pruneLayerMappings",
           "line": 214
         },
         {
+          "name": "fields",
+          "line": 216
+        },
+        {
+          "name": "setAlwaysOn",
+          "line": 223
+        },
+        {
+          "name": "addLayer",
+          "line": 233
+        },
+        {
           "name": "layer",
-          "line": 215
+          "line": 244
+        },
+        {
+          "name": "removeLayer",
+          "line": 281
+        },
+        {
+          "name": "layer",
+          "line": 282
         },
         {
           "name": "toggleLayer",
-          "line": 231
+          "line": 298
         },
         {
           "name": "startLayerInteraction",
-          "line": 236
+          "line": 307
         },
         {
           "name": "updateLayerInteraction",
-          "line": 242
+          "line": 313
         },
         {
           "name": "layer",
-          "line": 243
+          "line": 314
         },
         {
           "name": "finishLayerInteraction",
-          "line": 251
+          "line": 322
         },
         {
           "name": "loadEditor",
-          "line": 261
+          "line": 332
         },
         {
           "name": "version",
-          "line": 262
+          "line": 333
         },
         {
           "name": "id",
-          "line": 270
+          "line": 344
         },
         {
           "name": "saveTemplate",
-          "line": 328
-        },
-        {
-          "name": "result",
-          "line": 336
-        },
-        {
-          "name": "uploadFont",
-          "line": 375
-        },
-        {
-          "name": "input",
-          "line": 376
-        },
-        {
-          "name": "file",
-          "line": 377
-        },
-        {
-          "name": "id",
-          "line": 378
-        },
-        {
-          "name": "layerId",
-          "line": 379
+          "line": 402
         },
         {
           "name": "version",
-          "line": 380
+          "line": 407
         },
         {
-          "name": "asset",
-          "line": 390
+          "name": "channel",
+          "line": 408
         },
         {
-          "name": "uploadImage",
+          "name": "templateId",
+          "line": 409
+        },
+        {
+          "name": "role",
+          "line": 410
+        },
+        {
+          "name": "previousRole",
           "line": 411
         },
         {
@@ -23912,112 +23470,192 @@
           "line": 412
         },
         {
-          "name": "original",
-          "line": 413
-        },
-        {
-          "name": "layer",
-          "line": 414
-        },
-        {
-          "name": "channel",
+          "name": "api",
           "line": 415
         },
         {
-          "name": "cleanedName",
+          "name": "current",
+          "line": 416
+        },
+        {
+          "name": "changedAssignment",
           "line": 421
         },
         {
-          "name": "number",
-          "line": 440
+          "name": "result",
+          "line": 422
         },
         {
-          "name": "name",
-          "line": 443
+          "name": "navigation",
+          "line": 445
+        },
+        {
+          "name": "uploadFont",
+          "line": 480
+        },
+        {
+          "name": "input",
+          "line": 481
         },
         {
           "name": "file",
-          "line": 444
-        },
-        {
-          "name": "restoreLogoPlacement",
-          "line": 478
+          "line": 482
         },
         {
           "name": "layer",
-          "line": 479
+          "line": 483
         },
         {
-          "name": "source",
-          "line": 489
-        },
-        {
-          "name": "image",
+          "name": "operation",
           "line": 490
         },
         {
-          "name": "availableWidth",
-          "line": 498
+          "name": "channel",
+          "line": 491
         },
         {
-          "name": "availableHeight",
-          "line": 499
-        },
-        {
-          "name": "factor",
+          "name": "asset",
           "line": 500
         },
         {
-          "name": "width",
-          "line": 501
-        },
-        {
-          "name": "height",
-          "line": 502
-        },
-        {
-          "name": "setImage",
-          "line": 518
-        },
-        {
-          "name": "version",
-          "line": 519
-        },
-        {
-          "name": "geometry",
-          "line": 520
-        },
-        {
-          "name": "source",
-          "line": 523
-        },
-        {
-          "name": "image",
-          "line": 524
-        },
-        {
-          "name": "factor",
-          "line": 528
-        },
-        {
-          "name": "width",
-          "line": 529
-        },
-        {
-          "name": "height",
+          "name": "uploadImage",
           "line": 530
         },
         {
-          "name": "pickImage",
-          "line": 548
+          "name": "input",
+          "line": 531
+        },
+        {
+          "name": "original",
+          "line": 532
         },
         {
           "name": "layer",
-          "line": 554
+          "line": 533
+        },
+        {
+          "name": "channel",
+          "line": 534
+        },
+        {
+          "name": "operation",
+          "line": 540
+        },
+        {
+          "name": "cleanedName",
+          "line": 541
+        },
+        {
+          "name": "number",
+          "line": 560
+        },
+        {
+          "name": "name",
+          "line": 563
+        },
+        {
+          "name": "file",
+          "line": 564
+        },
+        {
+          "name": "restoreLogoPlacement",
+          "line": 606
+        },
+        {
+          "name": "layer",
+          "line": 607
+        },
+        {
+          "name": "operation",
+          "line": 613
+        },
+        {
+          "name": "dimensions",
+          "line": 614
+        },
+        {
+          "name": "source",
+          "line": 619
+        },
+        {
+          "name": "image",
+          "line": 620
+        },
+        {
+          "name": "availableWidth",
+          "line": 628
+        },
+        {
+          "name": "availableHeight",
+          "line": 629
+        },
+        {
+          "name": "factor",
+          "line": 630
+        },
+        {
+          "name": "width",
+          "line": 631
+        },
+        {
+          "name": "height",
+          "line": 632
+        },
+        {
+          "name": "setImage",
+          "line": 652
+        },
+        {
+          "name": "dimensions",
+          "line": 657
+        },
+        {
+          "name": "geometry",
+          "line": 658
+        },
+        {
+          "name": "source",
+          "line": 661
+        },
+        {
+          "name": "image",
+          "line": 662
+        },
+        {
+          "name": "factor",
+          "line": 666
+        },
+        {
+          "name": "width",
+          "line": 667
+        },
+        {
+          "name": "height",
+          "line": 668
+        },
+        {
+          "name": "pickImage",
+          "line": 685
+        },
+        {
+          "name": "layer",
+          "line": 691
+        },
+        {
+          "name": "operation",
+          "line": 697
         },
         {
           "name": "confirmBeforeUnload",
-          "line": 573
+          "line": 718
+        },
+        {
+          "name": "unregisterNavigationGuard",
+          "line": 725
+        },
+        {
+          "name": "unregisterAfterNavigation",
+          "line": 752
         }
       ]
     },
@@ -24228,348 +23866,352 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsLibrary.vue": {
-      "sha256": "eafd19c7952f4a320c05f6e518eda67420402fec6bc341f090272d5e68b62b40",
+      "sha256": "3824e96f20aaecc02981a09ca84cd5246a92f1c09768cac6465860e4865826dd",
       "language": "Vue",
-      "bytes": 15048,
+      "bytes": 15548,
       "symbols": [
         {
           "name": "configStore",
-          "line": 21
-        },
-        {
-          "name": "indexStore",
-          "line": 22
-        },
-        {
-          "name": "graphicsApi",
           "line": 23
         },
         {
-          "name": "authStore",
+          "name": "indexStore",
           "line": 24
         },
         {
-          "name": "isAdmin",
+          "name": "graphicsApi",
           "line": 25
         },
         {
-          "name": "channelId",
+          "name": "authStore",
           "line": 26
         },
         {
-          "name": "templates",
+          "name": "isAdmin",
           "line": 27
         },
         {
-          "name": "onAir",
+          "name": "channelId",
           "line": 28
         },
         {
-          "name": "channelModels",
+          "name": "templates",
           "line": 29
         },
         {
-          "name": "loaded",
+          "name": "onAir",
           "line": 30
         },
         {
-          "name": "group",
+          "name": "channelModels",
           "line": 31
         },
         {
-          "name": "busy",
+          "name": "loaded",
           "line": 32
         },
         {
-          "name": "timer",
+          "name": "group",
           "line": 33
         },
         {
-          "name": "stateVersion",
+          "name": "busy",
           "line": 34
         },
         {
-          "name": "groups",
+          "name": "timer",
+          "line": 35
+        },
+        {
+          "name": "stateVersion",
           "line": 36
         },
         {
+          "name": "groups",
+          "line": 38
+        },
+        {
           "name": "sections",
-          "line": 42
+          "line": 44
         },
         {
           "name": "deleting",
-          "line": 55
+          "line": 57
         },
         {
           "name": "deleteUsage",
-          "line": 56
-        },
-        {
-          "name": "openDeletion",
           "line": 58
         },
         {
+          "name": "openDeletion",
+          "line": 60
+        },
+        {
           "name": "requestedChannel",
-          "line": 63
+          "line": 65
         },
         {
           "name": "usage",
-          "line": 67
+          "line": 69
         },
         {
           "name": "confirmDeletion",
-          "line": 80
+          "line": 82
         },
         {
           "name": "deleteTemplate",
-          "line": 92
+          "line": 94
         },
         {
           "name": "sample",
-          "line": 110
+          "line": 112
         },
         {
           "name": "title",
-          "line": 114
+          "line": 116
         },
         {
           "name": "editTarget",
-          "line": 118
+          "line": 120
         },
         {
           "name": "reportError",
-          "line": 126
+          "line": 128
         },
         {
           "name": "loadLibrary",
-          "line": 136
-        },
-        {
-          "name": "requestedChannel",
-          "line": 137
-        },
-        {
-          "name": "version",
           "line": 138
         },
         {
-          "name": "replaceChannelModels",
-          "line": 159
-        },
-        {
-          "name": "refreshState",
-          "line": 163
+          "name": "requestedChannel",
+          "line": 139
         },
         {
           "name": "version",
-          "line": 168
+          "line": 140
         },
         {
-          "name": "assigned",
-          "line": 171
+          "name": "replaceChannelModels",
+          "line": 161
+        },
+        {
+          "name": "refreshState",
+          "line": 165
+        },
+        {
+          "name": "version",
+          "line": 170
         },
         {
           "name": "control",
-          "line": 181
+          "line": 184
         }
       ]
     },
     "frontend/src/components/graphics/GraphicsOnAir.vue": {
-      "sha256": "bfaaa1a37c260e42fa1191e469009c4c623bd8e19ea22a030a6220a86e743ca4",
+      "sha256": "8c07227d4cacabaf73f38793fc1e9529787e8e6dcd8827596e70302bca1aa476",
       "language": "Vue",
-      "bytes": 22881,
+      "bytes": 23545,
       "symbols": [
         {
           "name": "route",
-          "line": 23
+          "line": 31
         },
         {
           "name": "authStore",
-          "line": 24
-        },
-        {
-          "name": "configStore",
-          "line": 25
-        },
-        {
-          "name": "indexStore",
-          "line": 26
-        },
-        {
-          "name": "graphicsApi",
-          "line": 27
-        },
-        {
-          "name": "recordSelection",
-          "line": 29
-        },
-        {
-          "name": "isAdmin",
-          "line": 30
-        },
-        {
-          "name": "templates",
           "line": 32
         },
         {
+          "name": "configStore",
+          "line": 33
+        },
+        {
+          "name": "indexStore",
+          "line": 34
+        },
+        {
+          "name": "graphicsApi",
+          "line": 35
+        },
+        {
+          "name": "recordSelection",
+          "line": 37
+        },
+        {
+          "name": "isAdmin",
+          "line": 38
+        },
+        {
+          "name": "templates",
+          "line": 40
+        },
+        {
           "name": "loaded",
-          "line": 41
-        },
-        {
-          "name": "selectedId",
-          "line": 42
-        },
-        {
-          "name": "values",
-          "line": 43
-        },
-        {
-          "name": "duration",
-          "line": 44
-        },
-        {
-          "name": "busy",
-          "line": 45
-        },
-        {
-          "name": "channel",
-          "line": 47
-        },
-        {
-          "name": "selected",
-          "line": 48
-        },
-        {
-          "name": "selectedValues",
           "line": 49
         },
         {
-          "name": "selectedRecords",
+          "name": "selectedId",
           "line": 50
         },
         {
-          "name": "mapped",
+          "name": "values",
           "line": 51
         },
         {
-          "name": "mappedSources",
+          "name": "duration",
           "line": 52
         },
         {
-          "name": "mappedValues",
+          "name": "busy",
+          "line": 53
+        },
+        {
+          "name": "waiting",
+          "line": 54
+        },
+        {
+          "name": "channel",
+          "line": 56
+        },
+        {
+          "name": "selected",
           "line": 57
         },
         {
-          "name": "latest",
+          "name": "selectedValues",
           "line": 58
         },
         {
-          "name": "selectedModel",
+          "name": "selectedRecords",
           "line": 59
         },
         {
-          "name": "permanent",
+          "name": "mapped",
           "line": 60
         },
         {
-          "name": "ordinary",
-          "line": 63
+          "name": "mappedSources",
+          "line": 61
         },
         {
-          "name": "programName",
+          "name": "mappedValues",
           "line": 66
         },
         {
-          "name": "templateName",
-          "line": 76
+          "name": "latest",
+          "line": 67
         },
         {
-          "name": "templateHint",
-          "line": 80
+          "name": "selectedModel",
+          "line": 68
         },
         {
-          "name": "assigned",
-          "line": 81
+          "name": "permanent",
+          "line": 69
         },
         {
-          "name": "groups",
-          "line": 88
+          "name": "ordinary",
+          "line": 72
         },
         {
-          "name": "byGroup",
-          "line": 89
+          "name": "programName",
+          "line": 75
         },
         {
-          "name": "group",
-          "line": 92
-        },
-        {
-          "name": "message",
-          "line": 99
-        },
-        {
-          "name": "loadOnAir",
-          "line": 103
-        },
-        {
-          "name": "select",
-          "line": 107
-        },
-        {
-          "name": "load",
-          "line": 114
-        },
-        {
-          "name": "scenes",
-          "line": 121
-        },
-        {
-          "name": "wanted",
-          "line": 131
-        },
-        {
-          "name": "first",
-          "line": 132
-        },
-        {
-          "name": "take",
-          "line": 147
+          "name": "onAirName",
+          "line": 85
         },
         {
           "name": "template",
-          "line": 148
+          "line": 86
         },
         {
-          "name": "seconds",
+          "name": "templateHint",
+          "line": 91
+        },
+        {
+          "name": "assigned",
+          "line": 92
+        },
+        {
+          "name": "groups",
+          "line": 99
+        },
+        {
+          "name": "byGroup",
+          "line": 100
+        },
+        {
+          "name": "group",
+          "line": 103
+        },
+        {
+          "name": "message",
+          "line": 110
+        },
+        {
+          "name": "loadOnAir",
+          "line": 114
+        },
+        {
+          "name": "select",
+          "line": 118
+        },
+        {
+          "name": "load",
+          "line": 125
+        },
+        {
+          "name": "scenes",
+          "line": 132
+        },
+        {
+          "name": "wanted",
+          "line": 142
+        },
+        {
+          "name": "first",
+          "line": 143
+        },
+        {
+          "name": "take",
+          "line": 158
+        },
+        {
+          "name": "template",
           "line": 159
         },
         {
+          "name": "seconds",
+          "line": 170
+        },
+        {
           "name": "fields",
-          "line": 160
+          "line": 171
         },
         {
           "name": "result",
-          "line": 164
+          "line": 175
         },
         {
           "name": "takeOut",
-          "line": 183
+          "line": 196
         },
         {
           "name": "takeAllOut",
-          "line": 197
+          "line": 213
         },
         {
           "name": "next",
-          "line": 207
+          "line": 231
         },
         {
           "name": "index",
-          "line": 208
+          "line": 232
         },
         {
           "name": "following",
-          "line": 209
+          "line": 233
         }
       ]
     },
@@ -25054,85 +24696,117 @@
       ]
     },
     "frontend/src/components/graphics/composer/ComposerCanvas.vue": {
-      "sha256": "1515c13151c0da4f119630c0a1919b4009ccb0cdd7130167c1c185b7b1ed7992",
+      "sha256": "768658bf8e5ff8f3b95851bac2173ce2f34e4c407de02ca65eb7a92a4470af3f",
       "language": "Vue",
-      "bytes": 8010,
+      "bytes": 11319,
       "symbols": [
         {
           "name": "props",
-          "line": 9
+          "line": 12
         },
         {
           "name": "selectedId",
-          "line": 15
+          "line": 18
         },
         {
           "name": "emit",
-          "line": 16
+          "line": 19
         },
         {
           "name": "canvas",
-          "line": 22
-        },
-        {
-          "name": "showSafeAreas",
-          "line": 24
-        },
-        {
-          "name": "guideV",
-          "line": 25
-        },
-        {
-          "name": "guideH",
           "line": 26
         },
         {
-          "name": "interaction",
-          "line": 28
+          "name": "canvasSize",
+          "line": 27
         },
         {
-          "name": "startInteraction",
+          "name": "showSafeAreas",
+          "line": 29
+        },
+        {
+          "name": "guideV",
+          "line": 30
+        },
+        {
+          "name": "guideH",
           "line": 31
         },
         {
-          "name": "snapPosition",
-          "line": 51
+          "name": "interaction",
+          "line": 33
         },
         {
-          "name": "targets",
-          "line": 52
+          "name": "startInteraction",
+          "line": 36
         },
         {
-          "name": "moveInteraction",
-          "line": 57
+          "name": "handleStyle",
+          "line": 56
         },
         {
-          "name": "original",
-          "line": 62
-        },
-        {
-          "name": "dx",
-          "line": 63
-        },
-        {
-          "name": "dy",
-          "line": 64
+          "name": "index",
+          "line": 58
         },
         {
           "name": "x",
-          "line": 67
+          "line": 66
         },
         {
           "name": "y",
-          "line": 68
+          "line": 67
+        },
+        {
+          "name": "resizeFromKeyboard",
+          "line": 75
+        },
+        {
+          "name": "step",
+          "line": 76
         },
         {
           "name": "patch",
-          "line": 73
+          "line": 77
+        },
+        {
+          "name": "snapPosition",
+          "line": 97
+        },
+        {
+          "name": "targets",
+          "line": 98
+        },
+        {
+          "name": "moveInteraction",
+          "line": 103
+        },
+        {
+          "name": "original",
+          "line": 108
+        },
+        {
+          "name": "dx",
+          "line": 109
+        },
+        {
+          "name": "dy",
+          "line": 110
+        },
+        {
+          "name": "x",
+          "line": 113
+        },
+        {
+          "name": "y",
+          "line": 114
+        },
+        {
+          "name": "patch",
+          "line": 119
         },
         {
           "name": "endInteraction",
-          "line": 83
+          "line": 129
         }
       ]
     },
@@ -25172,59 +24846,63 @@
       ]
     },
     "frontend/src/components/graphics/composer/ComposerLayerInspector.vue": {
-      "sha256": "2880de9e1e62ba69da71973a8bf7ada2d58dc17a2c7fd3f5241c497e9d674aeb",
+      "sha256": "a00dcf767fbfa10cdd20d8e305df22858f1d38afb626e70f4cb67844340e6d14",
       "language": "Vue",
-      "bytes": 16662,
+      "bytes": 17042,
       "symbols": [
         {
           "name": "props",
-          "line": 9
+          "line": 11
         },
         {
           "name": "emit",
-          "line": 15
+          "line": 17
+        },
+        {
+          "name": "renameLayer",
+          "line": 25
         },
         {
           "name": "setShape",
-          "line": 22
+          "line": 31
         },
         {
           "name": "setScroll",
-          "line": 30
+          "line": 39
         }
       ]
     },
     "frontend/src/components/graphics/composer/ComposerLayerList.vue": {
-      "sha256": "1025bfef942b135b0f6f7a0422cc49cf5973148bd2ec900d4f0694d012d978a5",
+      "sha256": "0cc3adcf2552fbd84a28a2ee38035006bfd17c23a8697eea02cafd61666040fc",
       "language": "Vue",
-      "bytes": 3766,
+      "bytes": 4011,
       "symbols": [
         {
           "name": "selectedId",
-          "line": 8
+          "line": 10
         },
         {
           "name": "adding",
-          "line": 9
+          "line": 11
         },
         {
           "name": "emit",
-          "line": 10
+          "line": 12
         }
       ]
     },
     "frontend/src/components/graphics/composer/ComposerTimeline.vue": {
-      "sha256": "f79a81171dde05e6ccc974ec307df4b6e42258b590ef8e9e5925d3d78543bf79",
+      "sha256": "e279fb2ce29b6566e0b1782e27bb79f020fb7cc14b3e9ab1311267510f7426f8",
       "language": "Vue",
-      "bytes": 3234,
+      "bytes": 3473,
       "symbols": [
         {
           "name": "selectedId",
-          "line": 13
+          "line": 15
         },
         {
           "name": "emit",
-          "line": 14
+          "line": 16
         }
       ]
     },
@@ -25893,21 +25571,21 @@
       ]
     },
     "frontend/src/components/player/GraphicsQuickBar.vue": {
-      "sha256": "4e10a8659e2ce82979c33e7d121b0e9310b051400c34a2bcce64a3a33dda00dd",
+      "sha256": "b5edaacc7b221b8f98d59d13296be8c34592dc73b985e79af4898d64bd5c73c9",
       "language": "Vue",
-      "bytes": 1792,
+      "bytes": 1929,
       "symbols": [
         {
           "name": "config",
-          "line": 10
-        },
-        {
-          "name": "channelId",
           "line": 12
         },
         {
+          "name": "channelId",
+          "line": 14
+        },
+        {
           "name": "active",
-          "line": 13
+          "line": 15
         }
       ]
     },
@@ -27587,161 +27265,161 @@
       ]
     },
     "frontend/src/components/schedule/GraphicsEventDialog.vue": {
-      "sha256": "b38bb1b8b0767d8a62158b05b2d78894b5b9b1427d52b2ba98c3db33c6a05c2f",
+      "sha256": "79ec836d39a1bc7f90747b39fe549fa873f56633c85981234dc036e98a3a59a1",
       "language": "Vue",
-      "bytes": 14494,
+      "bytes": 14631,
       "symbols": [
         {
           "name": "props",
-          "line": 21
+          "line": 22
         },
         {
           "name": "emit",
-          "line": 25
+          "line": 26
         },
         {
           "name": "indexStore",
-          "line": 29
+          "line": 31
         },
         {
           "name": "scheduleStore",
-          "line": 30
-        },
-        {
-          "name": "emptyActions",
           "line": 32
         },
         {
+          "name": "emptyActions",
+          "line": 34
+        },
+        {
           "name": "title",
-          "line": 45
-        },
-        {
-          "name": "date",
-          "line": 46
-        },
-        {
-          "name": "start",
           "line": 47
         },
         {
-          "name": "end",
+          "name": "date",
           "line": 48
         },
         {
-          "name": "repeatMode",
+          "name": "start",
           "line": 49
         },
         {
-          "name": "repeatDays",
+          "name": "end",
           "line": 50
         },
         {
-          "name": "actions",
+          "name": "repeatMode",
           "line": 51
         },
         {
-          "name": "picking",
+          "name": "repeatDays",
           "line": 52
         },
         {
-          "name": "graphicsApi",
+          "name": "actions",
           "line": 53
         },
         {
-          "name": "configStore",
+          "name": "picking",
           "line": 54
         },
         {
-          "name": "templates",
+          "name": "graphicsApi",
+          "line": 55
+        },
+        {
+          "name": "configStore",
           "line": 56
         },
         {
-          "name": "permanentIds",
-          "line": 57
-        },
-        {
-          "name": "templateId",
+          "name": "templates",
           "line": 58
         },
         {
-          "name": "fieldValues",
+          "name": "permanentIds",
           "line": 59
         },
         {
-          "name": "records",
+          "name": "templateId",
           "line": 60
         },
         {
-          "name": "legacy",
+          "name": "fieldValues",
           "line": 61
         },
         {
-          "name": "loaded",
+          "name": "records",
           "line": 62
         },
         {
-          "name": "loadVersion",
+          "name": "legacy",
           "line": 63
         },
         {
-          "name": "selected",
+          "name": "loaded",
           "line": 64
         },
         {
-          "name": "isPermanent",
+          "name": "loadVersion",
           "line": 65
         },
         {
-          "name": "mappings",
+          "name": "selected",
           "line": 66
         },
         {
-          "name": "mappedSources",
+          "name": "isPermanent",
           "line": 67
         },
         {
+          "name": "mappings",
+          "line": 68
+        },
+        {
+          "name": "mappedSources",
+          "line": 69
+        },
+        {
           "name": "automaticValues",
-          "line": 70
+          "line": 72
         },
         {
           "name": "previewValues",
-          "line": 71
+          "line": 73
         },
         {
           "name": "saving",
-          "line": 75
+          "line": 77
         },
         {
           "name": "error",
-          "line": 76
+          "line": 78
         },
         {
           "name": "version",
-          "line": 81
+          "line": 83
         },
         {
           "name": "event",
-          "line": 87
+          "line": 89
         },
         {
           "name": "scenes",
-          "line": 109
+          "line": 111
         },
         {
           "name": "chooseTemplate",
-          "line": 124
+          "line": 126
         },
         {
           "name": "toggleDay",
-          "line": 129
+          "line": 131
         },
         {
           "name": "pick",
-          "line": 133
+          "line": 135
         },
         {
           "name": "save",
-          "line": 141
+          "line": 143
         }
       ]
     },
@@ -32546,6 +32224,25 @@
         }
       ]
     },
+    "frontend/src/composables/editorNavigation.ts": {
+      "sha256": "6eb74c5470cff6f0283096c2c6533031d90aa655d692affc1bd862d4264d072b",
+      "language": "TypeScript",
+      "bytes": 572,
+      "symbols": [
+        {
+          "name": "EditorGuard",
+          "line": 3
+        },
+        {
+          "name": "registerEditorNavigationGuard",
+          "line": 7
+        },
+        {
+          "name": "confirmEditorNavigation",
+          "line": 17
+        }
+      ]
+    },
     "frontend/src/composables/fileAccess.ts": {
       "sha256": "4cf790a3b413866122e53053f66b79ad1fde58b42dd2156738861025a7f474aa",
       "language": "TypeScript",
@@ -32725,6 +32422,25 @@
         }
       ]
     },
+    "frontend/src/composables/graphicsDisplayNames.ts": {
+      "sha256": "8b04978d1d2c158e095568ea67be523ef65ab288cd4c4b52906a78eb66eca0ed",
+      "language": "TypeScript",
+      "bytes": 1124,
+      "symbols": [
+        {
+          "name": "useGraphicsDisplayNames",
+          "line": 6
+        },
+        {
+          "name": "templateName",
+          "line": 9
+        },
+        {
+          "name": "layerName",
+          "line": 19
+        }
+      ]
+    },
     "frontend/src/composables/graphicsFonts.ts": {
       "sha256": "53ffe702b8d37f44d3bb10c01588fec4e58c576427b9f7f7400ceb6805038253",
       "language": "TypeScript",
@@ -32854,9 +32570,9 @@
       ]
     },
     "frontend/src/composables/graphicsTemplates.ts": {
-      "sha256": "f3ccaf8a5682dda38c38d85da5c9b003930caf82934a3429af67b1864f4d460c",
+      "sha256": "5c33d77d843b62f4b361813a5a1cc9390135d3ac548404dc720563542323cb8f",
       "language": "TypeScript",
-      "bytes": 9237,
+      "bytes": 9472,
       "symbols": [
         {
           "name": "TemplateLayer",
@@ -34182,15 +33898,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "94936418b63c0715d7838e6401ec34f0ef3a0b158379f20e111a4629d9f53a3e",
+      "sha256": "4606f3ad3fafa65670850c541bdaa1f2b2dd1ffb55c600bc611d286f2e23150f",
       "language": "TypeScript",
-      "bytes": 146538,
+      "bytes": 146651,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "3c3f34991474fbaddd83d90e975d7cf18828f3b27eb926b0eaadb1a90582eb25",
+      "sha256": "d4d7911154fd72b45f30c28aeb07f7574b5673065dca1c7411806efb7929fec9",
       "language": "TypeScript",
-      "bytes": 152733,
+      "bytes": 152853,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -34205,13 +33921,13 @@
       ]
     },
     "frontend/src/router/index.ts": {
-      "sha256": "4c28d6963fce39df6bfe59240babe59d0adfb8618fe2fb5ec1889b3f2d612e12",
+      "sha256": "4e86ae99910700367c759de05347769cf14a7539fbac3462e1c28bf9b7b741ef",
       "language": "TypeScript",
-      "bytes": 12157,
+      "bytes": 12298,
       "symbols": [
         {
           "name": "router",
-          "line": 12
+          "line": 13
         }
       ]
     },
@@ -37342,6 +37058,32 @@
         }
       ]
     },
+    "qa/e2e/tests/graphics-editor-safety.spec.ts": {
+      "sha256": "61216fe4d23d9dade59a5d5cf27241e5d2ce160e6c62a7242250f776d71549fe",
+      "language": "TypeScript",
+      "bytes": 23403,
+      "symbols": [
+        {
+          "name": "fixture",
+          "line": 7
+        },
+        {
+          "name": "openDocument",
+          "line": 41
+        }
+      ]
+    },
+    "qa/e2e/tests/graphics-localization.spec.ts": {
+      "sha256": "e99e315970645410878468796c1bfe3f16095be933019de889fe46d1a53b6573",
+      "language": "TypeScript",
+      "bytes": 6926,
+      "symbols": [
+        {
+          "name": "create",
+          "line": 36
+        }
+      ]
+    },
     "qa/e2e/tests/graphics-preview.spec.ts": {
       "sha256": "933a0ff82c04f6acf1ec9e3417453517382205c8445626b456c09bc95779569a",
       "language": "TypeScript",
@@ -38472,9 +38214,9 @@
       "symbols": []
     },
     "qa/soak/README.md": {
-      "sha256": "2685492d3b4d9a0a5c3a002ee34634bff085886f55ec9ec8bc202b2e56bb82dc",
+      "sha256": "dd230a24058689cb56c74b23783658540a41311a5befafa61b58d578cd85aa68",
       "language": "Markdown",
-      "bytes": 5787,
+      "bytes": 10328,
       "symbols": []
     },
     "qa/soak/VALIDATION.md": {
@@ -38494,6 +38236,57 @@
       "language": "Other",
       "bytes": 111,
       "symbols": []
+    },
+    "qa/soak/graphics_cycle.py": {
+      "sha256": "09dffecaa076c2baff01e15e433332eae97822f641a999bbdee4667dabbbe5af",
+      "language": "Python",
+      "bytes": 6516,
+      "symbols": [
+        {
+          "name": "write_png",
+          "line": 14
+        },
+        {
+          "name": "chunk",
+          "line": 15
+        },
+        {
+          "name": "GraphicsCycler",
+          "line": 24
+        },
+        {
+          "name": "__init__",
+          "line": 25
+        },
+        {
+          "name": "call",
+          "line": 32
+        },
+        {
+          "name": "model",
+          "line": 45
+        },
+        {
+          "name": "setup",
+          "line": 54
+        },
+        {
+          "name": "control",
+          "line": 76
+        },
+        {
+          "name": "update",
+          "line": 83
+        },
+        {
+          "name": "tick",
+          "line": 92
+        },
+        {
+          "name": "snapshot",
+          "line": 128
+        }
+      ]
     },
     "qa/soak/mediamtx.yml": {
       "sha256": "fa29d9d3e6b620094c14d92a618be88c66daecea2fdfe1349987356a1cc437b5",
@@ -38557,77 +38350,129 @@
       ]
     },
     "qa/soak/soak.py": {
-      "sha256": "0a3f57ba7ead0ce552736fc84d6f6340ec88958ae1a9f8a53dd13b7a3f5f0e4e",
+      "sha256": "0e96eb045d5d2dbbd6b25acd035abe586704cec2e7373e6ba5ce7286af683c6c",
       "language": "Python",
-      "bytes": 22363,
+      "bytes": 32748,
       "symbols": [
         {
-          "name": "log",
-          "line": 101
+          "name": "NativeProcesses",
+          "line": 121
         },
         {
-          "name": "docker",
-          "line": 108
+          "name": "__init__",
+          "line": 124
         },
         {
-          "name": "container",
-          "line": 112
+          "name": "start",
+          "line": 129
         },
         {
-          "name": "request",
-          "line": 120
-        },
-        {
-          "name": "parse",
-          "line": 137
-        },
-        {
-          "name": "api",
-          "line": 144
-        },
-        {
-          "name": "login",
-          "line": 151
-        },
-        {
-          "name": "make_clips",
-          "line": 157
-        },
-        {
-          "name": "playlist",
-          "line": 172
-        },
-        {
-          "name": "set_up",
-          "line": 181
-        },
-        {
-          "name": "schedule_cycle",
-          "line": 244
-        },
-        {
-          "name": "act",
-          "line": 258
-        },
-        {
-          "name": "output_bytes",
-          "line": 268
-        },
-        {
-          "name": "picture_url",
-          "line": 282
-        },
-        {
-          "name": "picture_grace",
-          "line": 288
+          "name": "stop",
+          "line": 140
         },
         {
           "name": "running",
+          "line": 163
+        },
+        {
+          "name": "close",
+          "line": 167
+        },
+        {
+          "name": "executable",
+          "line": 179
+        },
+        {
+          "name": "native_preflight",
+          "line": 186
+        },
+        {
+          "name": "data_path",
+          "line": 201
+        },
+        {
+          "name": "native_environment",
+          "line": 205
+        },
+        {
+          "name": "log",
+          "line": 212
+        },
+        {
+          "name": "docker",
+          "line": 219
+        },
+        {
+          "name": "container",
+          "line": 223
+        },
+        {
+          "name": "request",
+          "line": 231
+        },
+        {
+          "name": "parse",
+          "line": 248
+        },
+        {
+          "name": "api",
+          "line": 255
+        },
+        {
+          "name": "login",
+          "line": 262
+        },
+        {
+          "name": "make_clips",
+          "line": 268
+        },
+        {
+          "name": "playlist",
+          "line": 286
+        },
+        {
+          "name": "set_up",
           "line": 295
         },
         {
+          "name": "schedule_cycle",
+          "line": 370
+        },
+        {
+          "name": "act",
+          "line": 384
+        },
+        {
+          "name": "output_bytes",
+          "line": 401
+        },
+        {
+          "name": "picture_url",
+          "line": 415
+        },
+        {
+          "name": "picture_grace",
+          "line": 421
+        },
+        {
+          "name": "running",
+          "line": 428
+        },
+        {
+          "name": "prepare_work",
+          "line": 435
+        },
+        {
+          "name": "interrupted",
+          "line": 447
+        },
+        {
+          "name": "close_observer",
+          "line": 451
+        },
+        {
           "name": "main",
-          "line": 300
+          "line": 458
         }
       ]
     },
@@ -38691,29 +38536,105 @@
       ]
     },
     "qa/soak/test_soak.py": {
-      "sha256": "41b488daa043d3d83f9040256574e4d1380c3bf8d36933992ade78d66b975b61",
+      "sha256": "cde0f3ffe8d31ab312410ec2bec70bb38ad327a0abba1fb26ce7620df02bccc0",
       "language": "Python",
-      "bytes": 1742,
+      "bytes": 14213,
       "symbols": [
         {
+          "name": "load_soak",
+          "line": 16
+        },
+        {
           "name": "HlsProgressTests",
-          "line": 9
-        },
-        {
-          "name": "setUp",
-          "line": 10
-        },
-        {
-          "name": "test_rotating_media_sequence_counts_as_progress_with_constant_playlist_size",
-          "line": 17
-        },
-        {
-          "name": "test_master_playlist_without_media_does_not_count_as_output_progress",
           "line": 26
         },
         {
-          "name": "test_error_page_does_not_count_as_hls_progress",
+          "name": "setUp",
+          "line": 27
+        },
+        {
+          "name": "test_rotating_media_sequence_counts_as_progress_with_constant_playlist_size",
           "line": 30
+        },
+        {
+          "name": "test_master_playlist_without_media_does_not_count_as_output_progress",
+          "line": 39
+        },
+        {
+          "name": "test_error_page_does_not_count_as_hls_progress",
+          "line": 43
+        },
+        {
+          "name": "NativeAdapterTests",
+          "line": 48
+        },
+        {
+          "name": "setUp",
+          "line": 49
+        },
+        {
+          "name": "test_guard_and_duration_validation_remain_mandatory",
+          "line": 52
+        },
+        {
+          "name": "test_native_database_and_setup_paths_override_inherited_installation",
+          "line": 58
+        },
+        {
+          "name": "test_work_directory_is_fresh_and_cannot_be_reused",
+          "line": 70
+        },
+        {
+          "name": "test_native_preflight_refuses_repository_artifacts_and_missing_explicit_directory",
+          "line": 79
+        },
+        {
+          "name": "test_native_fixtures_and_publishers_never_invoke_docker",
+          "line": 88
+        },
+        {
+          "name": "test_cleanup_targets_only_owned_process_groups_and_reaps_children",
+          "line": 107
+        },
+        {
+          "name": "test_docker_playlist_and_fixture_commands_keep_container_paths",
+          "line": 123
+        },
+        {
+          "name": "test_early_setup_or_observer_failure_still_cleans_owned_processes_and_fails_duration",
+          "line": 134
+        },
+        {
+          "name": "FakeGraphicsApi",
+          "line": 156
+        },
+        {
+          "name": "__init__",
+          "line": 157
+        },
+        {
+          "name": "__call__",
+          "line": 161
+        },
+        {
+          "name": "GraphicsCycleTests",
+          "line": 191
+        },
+        {
+          "name": "test_real_model_contract_cycles_all_roles_and_records_every_api_response",
+          "line": 192
+        },
+        {
+          "name": "test_http_failure_is_receipted_and_cannot_count_as_completed_work",
+          "line": 215
+        },
+        {
+          "name": "test_control_state_mismatch_fails_even_when_http_succeeds",
+          "line": 224
+        },
+        {
+          "name": "test_authored_overlay_regions_cannot_cover_the_moving_video_roi",
+          "line": 232
         }
       ]
     },

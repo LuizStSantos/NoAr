@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useElementSize } from '@vueuse/core'
+
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
 import { type GraphicsTemplate, type TemplateLayer, fitLayer } from '@/composables/graphicsTemplates'
@@ -19,7 +22,9 @@ const emit = defineEmits<{
     interactionEnd: []
 }>()
 const { t } = useI18n()
+const { layerName } = useGraphicsDisplayNames()
 const canvas = ref<HTMLElement>()
+const canvasSize = useElementSize(canvas)
 // Authoring aids are never part of the saved model or the on-air preview.
 const showSafeAreas = ref(false)
 const guideV = ref(false)
@@ -45,6 +50,47 @@ function startInteraction(event: PointerEvent, layer: TemplateLayer, mode: Inter
         rect: canvas.value.getBoundingClientRect(),
         layer: { ...layer },
     }
+}
+
+/** Clamp authoring targets to the canvas without changing the saved artwork. */
+function handleStyle(layer: TemplateLayer, handle: Exclude<InteractionMode, 'move'>) {
+    if ((layer.width * canvasSize.width.value) / 100 < 80 || (layer.height * canvasSize.height.value) / 100 < 80) {
+        const index = ['width', 'height', 'both'].indexOf(handle)
+
+        return {
+            left: `calc(clamp(0px, calc(${layer.x + layer.width}% - 80px), calc(100% - 80px)) + ${index * 28}px)`,
+            top: `clamp(0px, calc(${layer.y + layer.height}% + 4px), calc(100% - 24px))`,
+        }
+    }
+
+    const x = handle === 'height' ? layer.x + layer.width / 2 : layer.x + layer.width
+    const y = handle === 'width' ? layer.y + layer.height / 2 : layer.y + layer.height
+
+    return {
+        left: `clamp(0px, calc(${x}% - ${handle === 'height' ? 12 : 24}px), calc(100% - 24px))`,
+        top: `clamp(0px, calc(${y}% - ${handle === 'width' ? 12 : 24}px), calc(100% - 24px))`,
+    }
+}
+
+function resizeFromKeyboard(event: KeyboardEvent, layer: TemplateLayer, handle: Exclude<InteractionMode, 'move'>) {
+    const step = event.shiftKey ? 10 : 1
+    const patch: Partial<TemplateLayer> = {}
+
+    if (handle !== 'height' && ['ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        patch.width = layer.width + (event.key === 'ArrowLeft' ? -step : step)
+    }
+    if (handle !== 'width' && ['ArrowUp', 'ArrowDown', 'Enter', ' '].includes(event.key)) {
+        patch.height = layer.height + (event.key === 'ArrowUp' ? -step : step)
+    }
+    if (patch.width === undefined && patch.height === undefined) {
+        return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    emit('interactionStart', layer.id)
+    emit('interactionChange', layer.id, fitLayer(layer, patch, props.proportional))
+    emit('interactionEnd')
 }
 
 /** Match the existing centre/safe-edge snap without changing typed geometry. */
@@ -92,6 +138,7 @@ function endInteraction() {
 }
 </script>
 <template>
+    <p id="composer-resize-help" class="sr-only">{{ t('graphics.composer.resizeKeys') }}</p>
     <div class="flex flex-wrap gap-3 items-center text-xs text-muted">
         <span>{{ t('graphics.onAir.preview') }}</span>
         <label class="flex items-center gap-2 cursor-pointer min-h-9">
@@ -134,40 +181,60 @@ function endInteraction() {
                 <div v-if="guideV" class="absolute left-1/2 inset-y-0 border-l border-cyan-300 pointer-events-none" />
                 <div v-if="guideH" class="absolute top-1/2 inset-x-0 border-t border-cyan-300 pointer-events-none" />
                 <template v-if="time === undefined">
-                    <div
-                        v-for="layer in template.layers.filter((layer) => layer.visible)"
-                        :key="layer.id"
-                        role="button"
-                        tabindex="0"
-                        :aria-label="t('graphics.composer.selectNamed', { name: layer.name })"
-                        class="absolute cursor-move outline-offset-1 focus-visible:outline-2 focus-visible:outline-accent"
-                        :class="selectedId === layer.id ? 'outline-2 outline-cyan-300 z-10' : ''"
-                        :style="{
-                            left: layer.x + '%',
-                            top: layer.y + '%',
-                            width: layer.width + '%',
-                            height: layer.height + '%',
-                        }"
-                        @keydown.enter="selectedId = layer.id"
-                        @pointerdown.stop="startInteraction($event, layer, 'move')"
-                    >
+                    <template v-for="layer in template.layers.filter((layer) => layer.visible)" :key="layer.id">
+                        <div
+                            class="absolute"
+                            :class="selectedId === layer.id ? 'outline-2 outline-cyan-300 z-10' : ''"
+                            :style="{
+                                left: layer.x + '%',
+                                top: layer.y + '%',
+                                width: layer.width + '%',
+                                height: layer.height + '%',
+                            }"
+                        >
+                            <button
+                                type="button"
+                                :aria-label="t('graphics.composer.selectNamed', { name: layerName(layer) })"
+                                :aria-pressed="selectedId === layer.id"
+                                class="absolute inset-0 w-full h-full cursor-move outline-offset-1 focus-visible:outline-2 focus-visible:outline-accent"
+                                @click="selectedId = layer.id"
+                                @pointerdown.stop="startInteraction($event, layer, 'move')"
+                            />
+                        </div>
                         <template v-if="selectedId === layer.id">
                             <button
                                 v-for="handle in ['width', 'height', 'both'] as const"
                                 :key="handle"
-                                class="absolute w-4 h-4 border-2 border-cyan-300 bg-base-100 rounded-xs z-10"
+                                type="button"
+                                class="absolute w-[24px] h-[24px] border-2 border-cyan-300 bg-base-100 rounded-xs z-20"
                                 :class="
                                     handle === 'width'
-                                        ? '-right-2 top-1/2 -translate-y-1/2 cursor-ew-resize'
+                                        ? 'cursor-ew-resize'
                                         : handle === 'height'
-                                          ? 'left-1/2 -bottom-2 -translate-x-1/2 cursor-ns-resize'
-                                          : '-right-2 -bottom-2 cursor-nwse-resize'
+                                          ? 'cursor-ns-resize'
+                                          : 'cursor-nwse-resize'
                                 "
+                                :style="handleStyle(layer, handle)"
                                 :aria-label="t('graphics.composer.handles.' + handle)"
+                                :title="t('graphics.composer.resizeKeys')"
+                                aria-describedby="composer-resize-help"
+                                @keydown="resizeFromKeyboard($event, layer, handle)"
                                 @pointerdown.stop="startInteraction($event, layer, handle)"
-                            />
+                            >
+                                <i
+                                    class="bi text-[10px]"
+                                    :class="
+                                        handle === 'width'
+                                            ? 'bi-arrow-left-right'
+                                            : handle === 'height'
+                                              ? 'bi-arrow-down-up'
+                                              : 'bi-arrows-angle-expand'
+                                    "
+                                    aria-hidden="true"
+                                />
+                            </button>
                         </template>
-                    </div>
+                    </template>
                 </template>
             </template>
         </TemplatePreview>

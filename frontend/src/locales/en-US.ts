@@ -1565,6 +1565,7 @@ export default {
             show: 'Show {name}',
             deleteNamed: 'Delete layer {name}',
             selectNamed: 'Select layer {name}',
+            resizeKeys: 'Use arrow keys to resize by 1%, or 10% with Shift. Enter or Space increases the size.',
             safeArea: 'Safety margins',
             safeAreaHint: 'White: action 5% · yellow: text 10%. Editor guides only; not shown on air.',
             actionSafe: 'Action safety margin: 5% from each edge',

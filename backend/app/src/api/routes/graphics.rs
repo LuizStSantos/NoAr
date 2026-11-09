@@ -28,7 +28,7 @@ use crate::{
     },
     db::{
         handles,
-        models::{GraphicsTemplate, Role},
+        models::{GraphicsRole, GraphicsTemplate, Role},
     },
     graphics::{
         GraphicOnAirView, TakeOutcome, TemplateInput, graphics_on_air, prepare_template,
@@ -139,68 +139,127 @@ pub async fn add_graphics_template(
     Path(id): Path<i32>,
     user: AuthUser,
     details: AuthDetails<Role>,
-    Json(input): Json<TemplateInput>,
+    Json(request): Json<GraphicsTemplateRequest>,
 ) -> Result<Json<GraphicsTemplate>, ServiceError> {
     let manager = authorize_channel_access(&state, id, &user, &details, true).await?;
     let _edit = manager.graphics_takes.begin_edit().await;
     let storage = manager.config.read().await.channel.storage.clone();
-    let mut template = prepare_template(&storage, id, 0, input)?;
+    let mut template = prepare_template(&storage, id, 0, request.template)?;
+    let role = request
+        .assignment
+        .as_ref()
+        .and_then(|assignment| assignment.role);
+
+    if role == Some(GraphicsRole::Lshape) {
+        template.always_on = Some(false);
+    }
+
+    validate_assignment_target(&template, request.assignment.as_ref())?;
     crate::graphics::fonts::validate(&state.pool, &template).await?;
     crate::graphics::sources::validate_template(&state.pool, &template).await?;
 
-    validate_permanent_template(&manager, &template).await?;
-
+    validate_channel_template(&manager, &template, role).await?;
+    let bindings = handles::select_graphics_bindings(&state.pool, id).await?;
+    let replaced = role.and_then(|role| {
+        bindings
+            .iter()
+            .find(|binding| binding.role == role)
+            .map(|binding| binding.template_id)
+    });
+    validate_permanent_template(&manager, &template, replaced).await?;
     ensure_unique_name(&state, &template).await?;
-    template.id = handles::insert_graphics_template(&state.pool, &template).await?;
-    crate::graphics::load_permanent_templates(&manager).await?;
 
-    Ok(Json(template))
+    template.id = if let Some(assignment) = &request.assignment {
+        handles::insert_graphics_template_with_assignment(
+            &state.pool,
+            &template,
+            assignment.role,
+            assignment
+                .control_layer_id
+                .as_ref()
+                .map(|target| target.as_deref()),
+        )
+        .await?
+    } else {
+        handles::insert_graphics_template(&state.pool, &template).await?
+    };
+
+    reload_graphics(&manager).await?;
+
+    Ok(Json(
+        handles::select_graphics_template(&state.pool, id, template.id)
+            .await?
+            .ok_or_else(|| template_not_found(template.id))?,
+    ))
 }
 
-/// **Change a graphics template**
-///
-/// The whole template is sent again, as for adding one.
-pub async fn update_graphics_template(
-    State(state): State<AppState>,
-    Path((id, template_id)): Path<(i32, i32)>,
-    user: AuthUser,
-    details: AuthDetails<Role>,
-    Json(input): Json<TemplateInput>,
-) -> Result<Json<GraphicsTemplate>, ServiceError> {
-    let manager = authorize_channel_access(&state, id, &user, &details, true).await?;
-    let _edit = manager.graphics_takes.begin_edit().await;
-    let storage = manager.config.read().await.channel.storage.clone();
-    let template = prepare_template(&storage, id, template_id, input)?;
-    crate::graphics::fonts::validate(&state.pool, &template).await?;
-    crate::graphics::sources::validate_template(&state.pool, &template).await?;
+#[derive(Deserialize)]
+pub struct GraphicsTemplateRequest {
+    #[serde(flatten)]
+    pub template: TemplateInput,
+    /// Omitted keeps the existing role on update; role null saves an unassigned model.
+    #[serde(default)]
+    pub assignment: Option<TemplateAssignmentUpdate>,
+}
 
-    if let Some(binding) = handles::select_graphics_bindings(&state.pool, id)
-        .await?
-        .into_iter()
-        .find(|binding| binding.template_id == template_id)
+#[derive(Deserialize)]
+pub struct TemplateAssignmentUpdate {
+    pub role: Option<GraphicsRole>,
+    #[serde(default, deserialize_with = "assignment_target")]
+    pub control_layer_id: Option<Option<String>>,
+}
+
+fn assignment_target<'de, D>(deserializer: D) -> Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<String>::deserialize(deserializer).map(Some)
+}
+
+fn validate_assignment_target(
+    template: &GraphicsTemplate,
+    assignment: Option<&TemplateAssignmentUpdate>,
+) -> Result<(), ServiceError> {
+    if let Some(target) = assignment
+        .and_then(|assignment| assignment.control_layer_id.as_ref())
+        .and_then(|target| target.as_ref())
+        && !template
+            .layers
+            .iter()
+            .any(|layer| layer.id == *target && layer.kind == crate::graphics::LayerKind::Image)
     {
-        use crate::{
-            db::models::GraphicsRole,
-            graphics::{LayerKind, graphic_spec_for_channel},
-        };
+        return Err(ServiceError::BadRequest(
+            "The control target must be an image layer in this template".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+async fn validate_channel_template(
+    manager: &ChannelManager,
+    template: &GraphicsTemplate,
+    role: Option<GraphicsRole>,
+) -> Result<(), ServiceError> {
+    if let Some(role) = role {
+        use crate::graphics::{LayerKind, graphic_spec_for_channel};
 
         let video = template
             .layers
             .iter()
             .any(|layer| layer.visible && layer.kind == LayerKind::Video);
 
-        if (binding.role == GraphicsRole::Lshape) != video {
+        if (role == GraphicsRole::Lshape) != video {
             return Err(ServiceError::BadRequest(
                 "Only the channel L-shape model must contain a visible video window".to_string(),
             ));
         }
 
-        if crate::graphics::sources::has_unmapped_fields(&template) {
+        if crate::graphics::sources::has_unmapped_fields(template) {
             return Err(ServiceError::BadRequest("Channel models need literal content or fully mapped data fields; unmapped fields belong to temporary templates".to_string()));
         }
 
         let config = manager.config.read().await.clone();
-        let spec = graphic_spec_for_channel(&template, &HashMap::new(), &config)?;
+        let spec = graphic_spec_for_channel(template, &HashMap::new(), &config)?;
         let output = manager.config.read().await.output.clone();
         tokio::task::spawn_blocking(move || {
             noar_engine::render_graphic(&spec, output.width, output.height)
@@ -212,24 +271,82 @@ pub async fn update_graphics_template(
         })?;
     }
 
-    validate_permanent_template(&manager, &template).await?;
+    Ok(())
+}
+
+/// **Change a graphics template**
+///
+/// The whole template is sent again, as for adding one.
+pub async fn update_graphics_template(
+    State(state): State<AppState>,
+    Path((id, template_id)): Path<(i32, i32)>,
+    user: AuthUser,
+    details: AuthDetails<Role>,
+    Json(request): Json<GraphicsTemplateRequest>,
+) -> Result<Json<GraphicsTemplate>, ServiceError> {
+    let manager = authorize_channel_access(&state, id, &user, &details, true).await?;
+    let _edit = manager.graphics_takes.begin_edit().await;
+    let storage = manager.config.read().await.channel.storage.clone();
+    let mut template = prepare_template(&storage, id, template_id, request.template)?;
+    let bindings = handles::select_graphics_bindings(&state.pool, id).await?;
+    let previous_role = bindings
+        .iter()
+        .find(|binding| binding.template_id == template_id)
+        .map(|binding| binding.role);
+    let role = request
+        .assignment
+        .as_ref()
+        .map_or(previous_role, |assignment| assignment.role);
+
+    if request.assignment.is_some() && role == Some(GraphicsRole::Lshape) {
+        template.always_on = Some(false);
+    }
+
+    validate_assignment_target(&template, request.assignment.as_ref())?;
+    crate::graphics::fonts::validate(&state.pool, &template).await?;
+    crate::graphics::sources::validate_template(&state.pool, &template).await?;
+
+    validate_channel_template(&manager, &template, role).await?;
+
+    let replaced = request
+        .assignment
+        .as_ref()
+        .and_then(|assignment| assignment.role)
+        .and_then(|role| {
+            bindings
+                .iter()
+                .find(|binding| binding.role == role && binding.template_id != template_id)
+        })
+        .map(|binding| binding.template_id);
+    validate_permanent_template(&manager, &template, replaced).await?;
     ensure_unique_name(&state, &template).await?;
 
-    if !handles::update_graphics_template(&state.pool, &template).await? {
+    let updated = if let Some(assignment) = &request.assignment {
+        handles::update_graphics_template_with_assignment(
+            &state.pool,
+            &template,
+            assignment.role,
+            assignment
+                .control_layer_id
+                .as_ref()
+                .map(|target| target.as_deref()),
+        )
+        .await?
+    } else {
+        handles::update_graphics_template(&state.pool, &template).await?
+    };
+
+    if !updated {
         return Err(template_not_found(template_id));
     }
 
-    let config = crate::utils::config::get_config(&state.pool, id).await?;
-    let running = manager.running_config();
-    let (width, height) = running
-        .as_deref()
-        .map_or((config.output.width, config.output.height), |running| {
-            (running.output.width, running.output.height)
-        });
-    crate::player::output::load_logo(&manager, &config, width, height);
-    crate::player::output::load_lshape(&manager, &config).await;
-    manager.update_config(config).await;
-    crate::graphics::load_channel_ticker(&manager).await?;
+    reload_graphics(&manager).await?;
+
+    if let Some(previous) = previous_role
+        && Some(previous) != role
+    {
+        crate::graphics::clear_removed_channel_graphic(&manager, previous).await?;
+    }
 
     Ok(Json(
         handles::select_graphics_template(&state.pool, id, template_id)
@@ -356,6 +473,8 @@ pub async fn take_graphic_out(
 ) -> Result<Json<OutStatus>, ServiceError> {
     let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
 
+    let _publication = manager.graphics_takes.lock_publication().await;
+
     match request.take_id {
         Some(take_id) => {
             if !manager.graphics_control.take_out(take_id) {
@@ -364,7 +483,10 @@ pub async fn take_graphic_out(
                 )));
             }
         }
-        None => manager.graphics_control.take_all_out(),
+        None => {
+            manager.graphics_takes.cancel_pending();
+            manager.graphics_control.take_all_out();
+        }
     }
 
     Ok(Json(OutStatus {
@@ -409,7 +531,7 @@ pub async fn control_channel_graphics(
     Json(request): Json<ChannelGraphicRequest>,
 ) -> Result<Json<Vec<crate::graphics::ChannelGraphicView>>, ServiceError> {
     let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
-    let _edit = manager.graphics_takes.begin_edit().await;
+    let _publication = manager.graphics_takes.lock_publication().await;
     crate::graphics::control_channel_graphic(&manager, template_id, request.on).await?;
 
     Ok(Json(crate::graphics::channel_graphics(&manager).await?))
@@ -418,6 +540,7 @@ pub async fn control_channel_graphics(
 async fn validate_permanent_template(
     manager: &ChannelManager,
     template: &GraphicsTemplate,
+    replaced: Option<i32>,
 ) -> Result<(), ServiceError> {
     if template.always_on != Some(true) {
         return Ok(());
@@ -443,7 +566,9 @@ async fn validate_permanent_template(
 
     if existing
         .iter()
-        .filter(|other| other.id != template.id && other.always_on == Some(true))
+        .filter(|other| {
+            other.id != template.id && Some(other.id) != replaced && other.always_on == Some(true)
+        })
         .count()
         >= noar_engine::MAX_GRAPHICS_ON_AIR
     {

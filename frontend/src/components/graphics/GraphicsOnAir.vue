@@ -9,7 +9,14 @@ import SectionCard from '@/components/settings/SectionCard.vue'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
 import { useChannelGraphics } from '@/composables/channelGraphics'
 import { AuthFetchError } from '@/composables/authFetch'
-import { type GraphicsTemplate, fieldList, onAirSince, useGraphicsApi } from '@/composables/graphicsTemplates'
+import {
+    type GraphicOnAir,
+    type GraphicsTemplate,
+    fieldList,
+    onAirSince,
+    useGraphicsApi,
+} from '@/composables/graphicsTemplates'
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -20,6 +27,7 @@ import { useIndex } from '@/stores/index'
  * output, and what is on air is listed to take out.
  */
 const { t } = useI18n()
+const { templateName } = useGraphicsDisplayNames()
 const route = useRoute()
 const authStore = useAuth()
 const configStore = useConfig()
@@ -43,6 +51,7 @@ const selectedId = ref<number | null>(null)
 const values = reactive<Record<string, Record<string, string>>>({})
 const duration = ref('')
 const busy = ref(false)
+const waiting = ref(false)
 
 const channel = computed(() => configStore.channels[configStore.i])
 const selected = computed(() => templates.value.find((template) => template.id === selectedId.value))
@@ -65,16 +74,18 @@ const ordinary = computed(() =>
 )
 const programName = computed(
     () =>
-        latest.value?.name ||
+        (latest.value ? onAirName(latest.value) : '') ||
         channelModels.value
             .filter((model) => model.kind !== 'scene' && model.on && model.ready)
-            .map((model) => model.template.name)
+            .map((model) => templateName(model.template))
             .join(' · ') ||
         t('graphics.onAir.noGraphic'),
 )
 
-function templateName(template: GraphicsTemplate) {
-    return template.name
+function onAirName(graphic: GraphicOnAir) {
+    const template = templates.value.find((template) => template.id === graphic.template_id)
+
+    return template?.name === graphic.name ? templateName(template) : graphic.name
 }
 
 function templateHint(template: GraphicsTemplate) {
@@ -168,8 +179,10 @@ async function take() {
             selectedRecords.value,
         )
 
+        waiting.value = result.state === 'waiting'
+
         if (result.state === 'waiting') {
-            indexStore.msgAlert('success', t('graphics.templates.waiting', { name: template.name }), 3)
+            indexStore.msgAlert('success', t('graphics.templates.waiting', { name: templateName(template) }), 3)
         }
 
         await loadOnAir()
@@ -188,6 +201,9 @@ async function takeOut(takeId?: number) {
 
     try {
         await graphicsApi.out(takeId ?? latest.value?.take_id)
+        if (takeId === undefined && !latest.value) {
+            waiting.value = false
+        }
         await loadOnAir()
     } catch (error) {
         indexStore.msgAlert('error', message(error, t('graphics.templates.outFailed')), 4)
@@ -195,11 +211,19 @@ async function takeOut(takeId?: number) {
 }
 
 async function takeAllOut() {
+    if (busy.value) {
+        return
+    }
+
+    busy.value = true
     try {
         await graphicsApi.out()
+        waiting.value = false
         await loadOnAir()
     } catch (error) {
         indexStore.msgAlert('error', message(error, t('graphics.templates.outFailed')), 4)
+    } finally {
+        busy.value = false
     }
 }
 
@@ -308,11 +332,11 @@ onMounted(() => {
             <section
                 v-if="selected && !selectedModel"
                 class="card-box px-5 py-4 flex flex-col gap-3"
-                :aria-label="t('graphics.templates.fillLabel', { name: selected.name })"
+                :aria-label="t('graphics.templates.fillLabel', { name: templateName(selected) })"
             >
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
                     <h2 class="m-0 text-base font-semibold">
-                        {{ t('graphics.onAir.fieldsOf', { name: selected.name }) }}
+                        {{ t('graphics.onAir.fieldsOf', { name: templateName(selected) }) }}
                     </h2>
                     <span class="text-xs text-muted">{{ t('graphics.onAir.fieldsHint') }}</span>
                 </div>
@@ -382,7 +406,11 @@ onMounted(() => {
                 <button
                     type="button"
                     class="min-h-14 rounded-field font-bold tracking-[0.04em] border border-line-strong bg-base-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="channelBusy !== null || (selectedModel ? unavailable || !selectedModel.on : !latest)"
+                    :disabled="
+                        busy ||
+                        channelBusy !== null ||
+                        (selectedModel ? unavailable || !selectedModel.on : !latest && !waiting)
+                    "
                     @click="takeOut()"
                 >
                     {{ selectedModel?.kind === 'lshape' ? t('graphics.assigned.fullscreen') : t('graphics.onAir.out') }}
@@ -400,12 +428,7 @@ onMounted(() => {
             <section class="card-box px-5 py-4 flex flex-col gap-3" role="status" aria-live="polite">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="m-0 text-base font-semibold">{{ t('graphics.onAir.temporaryOnAir') }}</h2>
-                    <button
-                        type="button"
-                        class="btn-quiet min-h-9"
-                        :disabled="!onAir.some((graphic) => !graphic.leaving)"
-                        @click="takeAllOut"
-                    >
+                    <button type="button" class="btn-quiet min-h-9" :disabled="busy" @click="takeAllOut">
                         {{ t('graphics.templates.allOut') }}
                     </button>
                 </div>
@@ -417,7 +440,7 @@ onMounted(() => {
                         class="flex flex-wrap items-center gap-3 px-3 py-2 rounded-field border border-line-strong bg-base-100"
                     >
                         <span class="dot" :class="graphic.leaving ? 'bg-muted' : 'bg-error'" aria-hidden="true" />
-                        <strong class="font-semibold text-sm flex-auto">{{ graphic.name }}</strong>
+                        <strong class="font-semibold text-sm flex-auto">{{ onAirName(graphic) }}</strong>
                         <span class="text-xs text-muted font-mono">
                             {{ graphic.leaving ? t('graphics.templates.leaving') : onAirSince(graphic.since) }}
                         </span>
@@ -450,7 +473,7 @@ onMounted(() => {
                             :class="model.on ? 'dot bg-success' : 'inline-block w-2 h-2 rounded-full bg-muted'"
                             aria-hidden="true"
                         />
-                        {{ model.template.name }}
+                        {{ templateName(model.template) }}
                         <span class="text-xs">{{
                             t(model.on ? 'graphics.assigned.on' : 'graphics.assigned.off')
                         }}</span>

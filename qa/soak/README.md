@@ -10,8 +10,10 @@ changes the soak test runs a 15-minute one.
 
 ## What it does
 
-Everything runs in disposable containers on the loopback interface, with an
-empty `/data`:
+By default everything runs in disposable containers on the loopback interface,
+with an empty `/data`. An optional native adapter uses the same workload and
+deadlines inside an existing development container, without creating more
+Docker writable layers (see below):
 
 - MediaMTX (`mediamtx.yml`) receives NoAr's SRT output and relays the
   synthetic live. In the HLS job NoAr writes its own HLS output; MediaMTX
@@ -90,6 +92,83 @@ NOAR_SOAK=1 NOAR_SOAK_OUTPUT=hls NOAR_SOAK_MINUTES=30 python3 qa/soak/soak.py
 image's, with an image that has GStreamer (a development build).
 `NOAR_SOAK_DIR` sets where the data and logs go (default
 `qa/soak/artifacts/run`, ignored by git).
+
+### Native execution inside an existing development container
+
+The native adapter requires explicit NoAr and MediaMTX executables, the matching
+GStreamer libraries/plugins, `gst-launch-1.0`, FFmpeg, and the same free loopback
+ports as Docker mode, plus UDP 5004. Run the following **inside** the already
+prepared container (for example `noar-dev`), using paths visible there:
+
+```sh
+NOAR_SOAK=1 NOAR_SOAK_MODE=native \
+NOAR_SOAK_BINARY=/path/to/current/noar \
+NOAR_SOAK_MEDIAMTX_BINARY=/path/to/mediamtx \
+NOAR_SOAK_DIR=/tmp/noar-soak-hls-unique-run \
+NOAR_SOAK_OUTPUT=hls NOAR_SOAK_GRAPHICS=1 NOAR_SOAK_MINUTES=90 \
+python3 qa/soak/soak.py
+```
+
+`NOAR_SOAK_DIR` must name a **nonexistent** directory outside the repository.
+The harness refuses to reuse a run or configure an initialized installation.
+It overrides inherited `DB` and setup paths with its own `data/` subdirectories,
+checks loopback ports before starting, and never targets an existing server.
+The child processes inherit the container's library/plugin environment; this
+does not install or upgrade GStreamer. `NOAR_SOAK_GST=/path/to/gst-launch-1.0`
+can select an explicit publisher/fixture executable. MediaMTX uses the checked-in
+loopback-only configuration and should match the Docker fixture version 1.15.3.
+
+GStreamer creates clips and publishes directly; NoAr and MediaMTX are direct
+children with their own process groups. Cleanup on success, errors, Ctrl-C or
+SIGTERM stops only groups created by this run. `processes.jsonl` records owned
+PIDs/commands, and `owned-run.json` identifies the run. Data and evidence remain
+in the owned directory for review; the harness does not remove them. Native mode
+makes no Docker calls. Docker remains the default, including the existing meaning
+of `NOAR_SOAK_BINARY` as a bind-mounted replacement binary.
+
+The observation deadline starts after setup and uses monotonic time. A 90-minute
+request observes at least 5,400 real seconds; setup is additional time. Interrupting
+or exiting early fails duration coverage. `report.json` records the UTC start/end
+and actual `measurement_seconds`; changing the requested minutes creates a shorter
+test and cannot establish a 90-minute result.
+
+### Optional graphics workload and video-only motion checks
+
+Set `NOAR_SOAK_GRAPHICS=1` in either mode to create synthetic logo artwork and four
+new Composer models through the real API: assigned logo, assigned L-shape,
+assigned scrolling ticker, and a temporary lower third (GC). Every 30 seconds
+the harness advances this eight-step sequence throughout the observation:
+
+1. Show logo and ticker.
+2. Take the GC with a changing field value.
+3. Enter the L-shape.
+4. Take the GC out (a deliberate restart may already have cleared it).
+5. Save alternate logo artwork through the model API.
+6. Exit the L-shape.
+7. Hide ticker and logo.
+8. Save updated scrolling ticker text and show ticker and logo.
+
+Each API request and response, including creation, assignments, controls and
+on-air/channel snapshots, is appended to `graphics-receipts.jsonl` with elapsed
+and UTC timestamps. Failed HTTP operations, mismatched acknowledged visibility,
+missing GC takes, or edits that do not persist fail the run. The report includes
+model IDs, completed steps and receipt count. Receipts contain only synthetic
+model data, never the login token/password.
+
+Graphics mode also starts a second independent decoder for a video-only ROI:
+output x=10–45%, y=15–50%. The full-frame video and the authored top-left 75%
+L-shape video both occupy that region. Logo, ticker and GC layers (including the
+GC's follow-picture transform) stay outside it. The same missing/frozen-frame
+deadlines and bounded fault/restart grace apply to this observer. Animated or
+scrolling overlays therefore cannot supply the movement needed to pass a frozen
+underlying picture. Its decoder log and samples are `picture-video-roi.decoder.log`
+and `picture-video-roi.jsonl`; `report.json` includes `video_roi` and
+`video_roi_checks`. Insufficient ROI frames, motion, or checks outside grace fail.
+
+This workload checks API state, sustained transport and independent moving video.
+It does not assert artwork pixels, text legibility, scroll speed, A/V sync,
+frame-accurate transitions, physical outputs, or long-term resource bounds.
+HLS output retains its normal rotating window; it is not a full segment archive.
 
 ## Verify the observer itself
 

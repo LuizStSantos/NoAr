@@ -1,7 +1,8 @@
 mod playout;
 
 pub(crate) use playout::{
-    channel_logo, load_logo, load_lshape, play_plain, play_plain_from, preload_later, refresh_logo,
+    channel_logo, load_logo, load_lshape, play_plain, play_plain_from, preload_later,
+    refresh_logo_guarded,
 };
 
 use crate::{player::controller::ChannelManager, utils::errors::ServiceError};

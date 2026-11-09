@@ -29,6 +29,19 @@ one is tagged.
 
 ### Fixed
 
+- Localize converted channel-template and generated-layer names for display
+  without rewriting saved identities or custom names.
+- Preserve authored fractional logo geometry on compatibility saves and output
+  changes; adopt surviving intermediate-conversion bindings without reimporting
+  frozen settings. Keep installed migration checksums unchanged.
+- Bound manual graphics expansion and pending takes, cancel stale work on edits
+  and output lifecycle changes, and isolate unavailable optional permanent art.
+- Cache model-logo movement, prepare artwork outside frame-critical locks, and
+  preserve animation epochs and controlled-image indices on refresh.
+- Save Composer content and channel assignment atomically; protect dirty
+  navigation and asynchronous authoring operations, restore natural image size,
+  and expose visible, keyboard-operable resize and upload controls.
+
 - Share Composer's neutral transparency checkerboard with On air and template
   thumbnails; keep alignment grids and safety margins specific to the editor.
 - Capture every README gallery image at exactly 1440×1000 in dark mode, including

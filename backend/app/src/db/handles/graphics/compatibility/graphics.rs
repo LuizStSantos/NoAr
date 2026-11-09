@@ -266,6 +266,23 @@ pub async fn save_channel_graphics_on(
     config_id: i32,
     processing: &crate::utils::config::Processing,
 ) -> Result<(), ProcessError> {
+    let dimensions = sqlx::query_as(
+        "SELECT o.width,o.height FROM config_output o WHERE o.config_id=$1 AND o.active=1",
+    )
+    .bind(config_id)
+    .fetch_one(&mut *connection)
+    .await?;
+
+    save_channel_graphics_with_projection_on(connection, config_id, processing, dimensions).await
+}
+
+/// Compare against the output used to project the incoming DTO before an output update.
+pub async fn save_channel_graphics_with_projection_on(
+    connection: &mut sqlx::SqliteConnection,
+    config_id: i32,
+    processing: &crate::utils::config::Processing,
+    projection_dimensions: (u32, u32),
+) -> Result<(), ProcessError> {
     let channel: i32 = sqlx::query_scalar("SELECT channel_id FROM config WHERE id = $1")
         .bind(config_id)
         .fetch_one(&mut *connection)
@@ -343,10 +360,28 @@ pub async fn save_channel_graphics_on(
 
             if role == "logo" {
                 target.opacity = opacity;
-                target.x = geometry.x;
-                target.y = geometry.y;
-                target.width = geometry.width;
-                target.height = geometry.height;
+                let projected_position = format!(
+                    "{}:{}",
+                    layer_pixels(target.x, projection_dimensions.0),
+                    layer_pixels(target.y, projection_dimensions.1)
+                );
+                let projected_scale = format!(
+                    "{}:{}",
+                    layer_pixels(target.width, projection_dimensions.0).max(2),
+                    layer_pixels(target.height, projection_dimensions.1).max(2)
+                );
+
+                // The compatibility DTO rounds authored percentages to even pixels.
+                // Preserve each unchanged pair, including on an output-size save.
+                if processing.logo_position != projected_position {
+                    target.x = geometry.x;
+                    target.y = geometry.y;
+                }
+
+                if processing.logo_scale != projected_scale {
+                    target.width = geometry.width;
+                    target.height = geometry.height;
+                }
             }
         } else if !path.is_empty() {
             let mut image = native[0].clone();

@@ -89,9 +89,11 @@ function channelLink(path: string) {
 }
 
 async function selectChannel(event: Event) {
-    const id = Number((event.target as HTMLSelectElement).value)
+    const selector = event.target as HTMLSelectElement
+    const id = Number(selector.value)
 
     await router.push({ path: route.path, query: { ...route.query, channel: id } })
+    selector.value = String(channelId.value)
 }
 
 function changeLang(code: string) {

@@ -5,12 +5,14 @@ import { useI18n } from 'vue-i18n'
 import GraphicsControlApi from '@/components/graphics/GraphicsControlApi.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import { type ChannelGraphic, type GraphicsTemplate, useGraphicsApi } from '@/composables/graphicsTemplates'
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 import { copyText } from '@/composables/browser'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
 /** External control: layer-model semantics, authenticated examples and legacy keyed links. */
 const { t } = useI18n()
+const { templateName } = useGraphicsDisplayNames()
 const configStore = useConfig()
 const indexStore = useIndex()
 
@@ -212,7 +214,7 @@ async function copy(text: string) {
                     {{ t('graphics.api.channelModel') }}
                     <select v-model="selectedChannel" class="field-input">
                         <option v-for="model in roles" :key="model.template.id" :value="model.template.id">
-                            {{ model.template.name }} · #{{ model.template.id }}
+                            {{ templateName(model.template) }} · #{{ model.template.id }}
                         </option>
                     </select>
                 </label>
@@ -248,7 +250,7 @@ async function copy(text: string) {
                 {{ t('graphics.api.temporaryModel') }}
                 <select v-model="selectedTemporary" class="field-input">
                     <option v-for="template in temporary" :key="template.id" :value="template.id">
-                        {{ template.name }} · #{{ template.id }}
+                        {{ templateName(template) }} · #{{ template.id }}
                     </option>
                 </select>
             </label>

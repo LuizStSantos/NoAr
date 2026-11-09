@@ -30,14 +30,19 @@ mod rendering;
 #[path = "graphics/scroll/graphics.rs"]
 mod scroll;
 
-use crate::{compositor::text::BlockAlign, frame::VideoFrame, utils::config::RgbaColor};
+use crate::{
+    benchmark::{self, Stage},
+    compositor::text::BlockAlign,
+    frame::VideoFrame,
+    utils::config::RgbaColor,
+};
 
 pub use rendering::render_graphic;
 pub use scroll::{ScrollDirection, TextScroll};
 
 use self::{
     lshape::{LSHAPE_SWITCH_SECONDS, LShapeGraphic},
-    rendering::{blend_layer, blend_layer_with_visibility, layer_level},
+    rendering::{blend_layer, blend_layer_at, blend_layer_with_visibility, layer_level},
 };
 
 /// At most this many graphics on air at once; taking one more first takes
@@ -82,13 +87,43 @@ impl crate::LShapeControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
+        let generation = self.begin_model_update();
         let rendered = render_graphic(spec, width, height)?;
         anyhow::ensure!(
             rendered.picture.is_some(),
             "channel L-shape needs a video layer"
         );
-        self.set_rendered_graphic(rendered.picture, spec, primary)?;
+        self.set_rendered_graphic(rendered.picture, spec, primary, generation)?;
         Ok(())
+    }
+
+    /// Prepare artwork without holding the owner's short publication guard.
+    pub fn set_template_controlled_guarded<G>(
+        &self,
+        spec: &GraphicSpec,
+        primary: usize,
+        size: (u32, u32),
+        mut before_commit: impl FnMut() -> Option<G>,
+    ) -> Result<()> {
+        let generation = {
+            let Some(_publication) = before_commit() else {
+                return Ok(());
+            };
+
+            self.begin_model_update()
+        };
+        let rendered = render_graphic(spec, size.0, size.1)?;
+        anyhow::ensure!(
+            rendered.picture.is_some(),
+            "channel L-shape needs a video layer"
+        );
+        self.set_rendered_graphic_guarded(
+            rendered.picture,
+            (spec, primary),
+            generation,
+            lshape::render_model_art,
+            before_commit,
+        )
     }
 }
 
@@ -184,6 +219,7 @@ pub struct GraphicSpec {
 }
 
 struct RenderedLayer {
+    source_index: usize,
     frame: VideoFrame,
     chroma_alpha: Vec<u8>,
     image_animation: Option<Arc<images::ImageAnimation>>,
@@ -213,6 +249,7 @@ pub(crate) struct RoleImageBlend {
     pub index: usize,
     pub opacity: f64,
     pub only: bool,
+    pub offset: (i32, i32),
 }
 
 /// How long an L-shape template takes to go in or out: as long as the
@@ -221,9 +258,25 @@ fn picture_switch() -> Duration {
     Duration::from_secs_f64(LSHAPE_SWITCH_SECONDS)
 }
 
+/// Prepared snapshot identities let a worker validate its inputs before publishing.
+fn same_prepared<T>(left: Option<&Arc<T>>, right: Option<&Arc<T>>) -> bool {
+    match (left, right) {
+        (Some(left), Some(right)) => Arc::ptr_eq(left, right),
+        (None, None) => true,
+        _ => false,
+    }
+}
+
 impl RenderedGraphic {
     /// Retain steady artwork's clock when a channel model's data is rerasterized.
     fn inherit_motion(&mut self, previous: &Self) {
+        if let (Some(next), Some(previous)) = (
+            self.picture.as_mut().and_then(Arc::get_mut),
+            &previous.picture,
+        ) {
+            next.inherit_motion(previous);
+        }
+
         let Some(epoch) = previous.layers.iter().map(|layer| layer.prepared_at).min() else {
             return;
         };
@@ -240,16 +293,19 @@ impl RenderedGraphic {
     }
 
     /// Fully entered artwork, including GIF frame selection, without I/O.
+    /// Model blend timers cover disjoint frame-time paths; rasterization is excluded.
     pub(crate) fn blend_steady(&self, frame: &mut VideoFrame) {
-        for layer in &self.layers {
-            blend_layer(
-                frame,
-                layer,
-                1.0,
-                GraphicAnimation::None,
-                layer.prepared_at.elapsed(),
-            );
-        }
+        benchmark::measure_overlay(Stage::GraphicsBlend, frame.width(), frame.height(), || {
+            for layer in &self.layers {
+                blend_layer(
+                    frame,
+                    layer,
+                    1.0,
+                    GraphicAnimation::None,
+                    layer.prepared_at.elapsed(),
+                );
+            }
+        });
     }
 
     pub(crate) fn picture_graphic(&self) -> Option<&LShapeGraphic> {
@@ -302,36 +358,39 @@ impl RenderedGraphic {
         visibility: f64,
         image: RoleImageBlend,
     ) {
-        for (index, layer) in self.layers.iter().enumerate() {
-            if image.only && index != image.index {
-                continue;
+        benchmark::measure_overlay(Stage::GraphicsBlend, frame.width(), frame.height(), || {
+            for (index, layer) in self.layers.iter().enumerate() {
+                if image.only && layer.source_index != image.index {
+                    continue;
+                }
+
+                let level = levels.get(index).copied().unwrap_or(1.0);
+
+                if level <= 0.0 {
+                    continue;
+                }
+
+                let animation = if hidden {
+                    layer.animation_out
+                } else {
+                    layer.animation_in
+                };
+                let factor = if layer.source_index == image.index {
+                    image.opacity
+                } else {
+                    1.0
+                };
+                blend_layer_at(
+                    frame,
+                    layer,
+                    level,
+                    animation,
+                    visibility * factor,
+                    layer.prepared_at.elapsed(),
+                    image.offset,
+                );
             }
-
-            let level = levels.get(index).copied().unwrap_or(1.0);
-
-            if level <= 0.0 {
-                continue;
-            }
-
-            let animation = if hidden {
-                layer.animation_out
-            } else {
-                layer.animation_in
-            };
-            let factor = if index == image.index {
-                image.opacity
-            } else {
-                1.0
-            };
-            blend_layer_with_visibility(
-                frame,
-                layer,
-                level,
-                animation,
-                visibility * factor,
-                layer.prepared_at.elapsed(),
-            );
-        }
+        });
     }
 
     /// How long its exit takes, from the moment it is taken out.
@@ -576,31 +635,33 @@ impl GraphicsControl {
                 .collect()
         };
 
-        for (slot, graphic, since_take, since_out) in graphics {
-            if graphic.frame_width != frame.width() || graphic.frame_height != frame.height() {
-                continue;
+        benchmark::measure_overlay(Stage::GraphicsBlend, frame.width(), frame.height(), || {
+            for (slot, graphic, since_take, since_out) in graphics {
+                if graphic.frame_width != frame.width() || graphic.frame_height != frame.height() {
+                    continue;
+                }
+
+                let visibility = match slot {
+                    AlwaysOnSlot::Logo => logo_visibility.clamp(0.0, 1.0),
+                    AlwaysOnSlot::Ticker => 1.0,
+                };
+
+                for layer in &graphic.layers {
+                    let (level, animation) = layer_level(layer, since_take, since_out);
+
+                    // Apply visibility to final opacity, not animation progress:
+                    // hiding the logo must not move a completed slide backwards.
+                    blend_layer_with_visibility(
+                        frame,
+                        layer,
+                        level,
+                        animation,
+                        visibility,
+                        since_take.saturating_sub(layer.delay),
+                    );
+                }
             }
-
-            let visibility = match slot {
-                AlwaysOnSlot::Logo => logo_visibility.clamp(0.0, 1.0),
-                AlwaysOnSlot::Ticker => 1.0,
-            };
-
-            for layer in &graphic.layers {
-                let (level, animation) = layer_level(layer, since_take, since_out);
-
-                // Apply visibility to final opacity, not animation progress:
-                // hiding the logo must not move a completed slide backwards.
-                blend_layer_with_visibility(
-                    frame,
-                    layer,
-                    level,
-                    animation,
-                    visibility,
-                    since_take.saturating_sub(layer.delay),
-                );
-            }
-        }
+        });
     }
 
     /// Replace a permanent model without resetting its visibility or entry time.
@@ -703,11 +764,12 @@ impl GraphicsControl {
     }
 
     /// Refresh pixels for a live clock/data value without restarting take/exit time.
-    pub fn update_graphic(&self, id: u64, graphic: RenderedGraphic) -> bool {
+    pub fn update_graphic(&self, id: u64, mut graphic: RenderedGraphic) -> bool {
         let mut state = self.state();
         let Some(current) = state.on_air.iter_mut().find(|entry| entry.id == id) else {
             return false;
         };
+        graphic.inherit_motion(&current.graphic);
         current.graphic = Arc::new(graphic);
 
         true
@@ -833,26 +895,28 @@ impl GraphicsControl {
                 .collect()
         };
 
-        for (graphic, since_take, since_out) in graphics {
-            if graphic.picture.is_some() {
-                continue;
-            }
+        benchmark::measure_overlay(Stage::GraphicsBlend, frame.width(), frame.height(), || {
+            for (graphic, since_take, since_out) in graphics {
+                if graphic.picture.is_some() {
+                    continue;
+                }
 
-            if graphic.frame_width != frame.width() || graphic.frame_height != frame.height() {
-                continue;
-            }
+                if graphic.frame_width != frame.width() || graphic.frame_height != frame.height() {
+                    continue;
+                }
 
-            for layer in &graphic.layers {
-                let (level, animation) = layer_level(layer, since_take, since_out);
-                blend_layer(
-                    frame,
-                    layer,
-                    level,
-                    animation,
-                    since_take.saturating_sub(layer.delay),
-                );
+                for layer in &graphic.layers {
+                    let (level, animation) = layer_level(layer, since_take, since_out);
+                    blend_layer(
+                        frame,
+                        layer,
+                        level,
+                        animation,
+                        since_take.saturating_sub(layer.delay),
+                    );
+                }
             }
-        }
+        });
     }
 }
 
@@ -895,6 +959,31 @@ mod tests {
             animation_ms: 400,
             delay_ms: 0,
         }
+    }
+
+    #[test]
+    fn role_image_target_keeps_spec_index_when_an_earlier_layer_is_too_small_to_draw() {
+        let mut tiny = white_box(0.0, 0.0, GraphicAnimation::None);
+        tiny.width = 0.1;
+        let spec = GraphicSpec {
+            picture: None,
+            layers: vec![tiny, white_box(20.0, 20.0, GraphicAnimation::None)],
+        };
+        let graphic = render_graphic(&spec, 320, 180).unwrap();
+        let mut frame = black_frame(320, 180);
+        graphic.blend_role(
+            &mut frame,
+            &[1.0],
+            false,
+            1.0,
+            RoleImageBlend {
+                index: 1,
+                opacity: 0.0,
+                only: false,
+                offset: (0, 0),
+            },
+        );
+        assert!(frame.data(0).iter().all(|&luma| luma == 16));
     }
 
     #[test]

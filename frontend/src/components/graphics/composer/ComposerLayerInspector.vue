@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
+
 import type { GraphicsFont } from '@/composables/graphicsFonts'
 import { CLOCK_FORMATS } from '@/composables/graphicsClock'
 import { type TemplateLayer, LAYER_ANIMATIONS } from '@/composables/graphicsTemplates'
@@ -18,6 +20,13 @@ const emit = defineEmits<{
     uploadFont: [event: Event]
 }>()
 const { t } = useI18n()
+const { layerName } = useGraphicsDisplayNames()
+
+function renameLayer(name: string) {
+    if (props.selected && name !== layerName(props.selected)) {
+        emit('updateLayer', { name })
+    }
+}
 
 function setShape(shape: NonNullable<TemplateLayer['shape']>) {
     emit('updateLayer', {
@@ -42,10 +51,10 @@ function setScroll(direction: string) {
             <label class="field-label"
                 >{{ t('graphics.composer.layerName')
                 }}<input
-                    :value="selected.name"
+                    :value="layerName(selected)"
                     class="field-input"
                     maxlength="100"
-                    @change="emit('updateLayer', { name: ($event.target as HTMLInputElement).value })"
+                    @change="renameLayer(($event.target as HTMLInputElement).value)"
             /></label>
             <button class="btn-quiet text-error" @click="emit('remove', selected.id)">
                 {{ t('graphics.composer.delete') }}
@@ -179,7 +188,9 @@ function setScroll(direction: string) {
                         <option v-for="font in fonts" :key="font" :value="font">{{ font }}</option>
                     </select></label
                 >
-                <label class="btn-quiet cursor-pointer inline-flex items-center justify-center">
+                <label
+                    class="btn-quiet cursor-pointer inline-flex items-center justify-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent"
+                >
                     {{ fontUploading ? t('graphics.composer.fontUploading') : t('graphics.composer.uploadFont') }}
                     <input
                         type="file"

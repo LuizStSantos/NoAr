@@ -17,7 +17,7 @@ use crate::{
     file::norm_abs_path,
     player::{
         as_run::{self, AiredEnd},
-        controller::{ChannelManager, loudness_config},
+        controller::{ChannelManager, RunningConfigGuard, loudness_config},
         input::source_generator,
         schedule::{self, InterruptedClip},
         utils::{Media, get_delta, sec_to_time},
@@ -55,46 +55,46 @@ pub fn channel_logo(config: &PlayoutConfig) -> Option<LogoConfig> {
 /// without restarting, sized for the output the playout runs with. An image
 /// that cannot be read leaves the logo on air as it was.
 pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
-    if let Err(error) = load_logo_inner(manager, config, width, height, false) {
+    if let Err(error) = load_logo_inner(manager, config, width, height, false, || Some(())) {
         warn!(channel = config.general.channel_id; "Logo model not changed on air: {error}");
     }
 }
 
-pub fn refresh_logo(
+pub(crate) fn refresh_logo_guarded<G>(
     manager: &ChannelManager,
     config: &PlayoutConfig,
     width: u32,
     height: u32,
+    before_commit: impl FnMut() -> Option<G>,
 ) -> Result<(), ServiceError> {
-    load_logo_inner(manager, config, width, height, true)
+    load_logo_inner(manager, config, width, height, true, before_commit)
 }
 
-fn load_logo_inner(
+fn load_logo_inner<G>(
     manager: &ChannelManager,
     config: &PlayoutConfig,
     width: u32,
     height: u32,
     refresh: bool,
+    mut before_commit: impl FnMut() -> Option<G>,
 ) -> Result<(), ServiceError> {
-    use crate::graphics::{Animation, graphic_spec_for_channel};
+    use crate::graphics::{Animation, graphic_spec_for_channel_controlled};
 
     let model = config.logo_model.as_ref();
-    let spec = model
-        .map(|model| graphic_spec_for_channel(model, &std::collections::HashMap::new(), config))
+    let prepared = model
+        .map(|model| {
+            graphic_spec_for_channel_controlled(model, &std::collections::HashMap::new(), config)
+        })
         .transpose()?;
+    let primary = prepared
+        .as_ref()
+        .map_or(usize::MAX, |(_, primary)| *primary);
+    let spec = prepared.map(|(spec, _)| spec);
     let image = model.and_then(|model| {
         model
             .layers
             .iter()
             .find(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
-    });
-    let primary = model.map_or(0, |model| {
-        model
-            .layers
-            .iter()
-            .filter(|layer| layer.visible)
-            .position(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
-            .unwrap_or(usize::MAX)
     });
     let transition = |animation| {
         if animation == Animation::None {
@@ -105,6 +105,9 @@ fn load_logo_inner(
     };
 
     if let Some(image) = image {
+        let Some(_publication) = before_commit() else {
+            return Ok(());
+        };
         manager
             .logo_control
             .set_transitions(noar_engine::LogoTransitions {
@@ -115,20 +118,23 @@ fn load_logo_inner(
     }
 
     let spec = spec.as_ref().filter(|spec| !spec.layers.is_empty());
-    let set = if refresh {
-        noar_engine::LogoControl::refresh_model
+    let clip_animation = image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms));
+    let enabled = model.is_some_and(|model| model.always_on == Some(true));
+
+    if refresh {
+        manager.logo_control.refresh_model_guarded(
+            spec,
+            primary,
+            clip_animation,
+            enabled,
+            (width, height),
+            before_commit,
+        )
     } else {
-        noar_engine::LogoControl::set_model
-    };
-    set(
-        &manager.logo_control,
-        spec,
-        primary,
-        image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms)),
-        model.is_some_and(|model| model.always_on == Some(true)),
-        width,
-        height,
-    )
+        manager
+            .logo_control
+            .set_model(spec, primary, clip_animation, enabled, width, height)
+    }
     .map_err(|error| ServiceError::Conflict(error.to_string()))?;
 
     Ok(())
@@ -138,7 +144,7 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     async fn load(manager: &ChannelManager, config: &PlayoutConfig) -> Result<(), ServiceError> {
         use crate::{
             db::{handles, models::GraphicsRole},
-            graphics::{LayerKind, graphic_spec_for_channel},
+            graphics::{LayerKind, graphic_spec_for_channel_controlled},
         };
 
         let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
@@ -180,13 +186,11 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
             return Ok(());
         }
 
-        let spec = graphic_spec_for_channel(&template, &std::collections::HashMap::new(), config)?;
-        let primary = template
-            .layers
-            .iter()
-            .filter(|layer| layer.visible)
-            .position(|layer| Some(layer.id.as_str()) == template.control_layer_id.as_deref())
-            .unwrap_or(usize::MAX);
+        let (spec, primary) = graphic_spec_for_channel_controlled(
+            &template,
+            &std::collections::HashMap::new(),
+            config,
+        )?;
         let control = manager.lshape_control.clone();
         let running = manager.running_config();
         let (width, height) = running
@@ -299,9 +303,12 @@ async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: 
     }
 }
 
-pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
+async fn load_startup_graphics(
+    manager: &ChannelManager,
+) -> Result<(PlayoutConfig, RunningConfigGuard), ServiceError> {
+    let graphics_loading = manager.graphics_takes.lock_publication().await;
     let config = manager.config.read().await.clone();
-    let _running_config = manager.track_running_config(config.clone());
+    let running_config = manager.track_running_config(config.clone());
     validate_supported_config(&config)?;
 
     manager
@@ -320,9 +327,17 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
             .logo_transitions()
             .map_err(ServiceError::Conflict)?,
     );
-    load_logo(&manager, &config, config.output.width, config.output.height);
-    load_lshape(&manager, &config).await;
-    crate::graphics::load_channel_ticker(&manager).await?;
+    load_logo(manager, &config, config.output.width, config.output.height);
+    load_lshape(manager, &config).await;
+    crate::graphics::load_channel_ticker(manager).await?;
+    drop(graphics_loading);
+
+    Ok((config, running_config))
+}
+
+pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
+    let _graphics_lifecycle = manager.graphics_takes.lifecycle_guard();
+    let (config, _running_config) = load_startup_graphics(&manager).await?;
     let output_config = engine_output_config(
         &config,
         manager.audio_effects.clone(),
@@ -1258,6 +1273,69 @@ mod tests {
         config.recording.audio_codec = "aac".to_string();
         config.recording.audio_bitrate = 128;
         config
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn startup_graphics_wait_for_authored_edits_and_do_not_resurrect_deleted_models() {
+        use crate::{
+            db::{handles, models::GraphicsTemplate},
+            player::controller::ChannelManager,
+            utils::system::SystemStat,
+        };
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        handles::db_migrate(&pool).await.unwrap();
+        let root =
+            std::env::temp_dir().join(format!("noar-startup-graphics-{}", uuid::Uuid::new_v4()));
+        tokio::fs::create_dir_all(&root).await.unwrap();
+        let mut config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        config.channel.storage = root.clone();
+        config.storage.path = root.clone();
+        let shutdown = CancellationToken::new();
+        let manager = ChannelManager::new(
+            pool.clone(),
+            handles::select_channel(&pool, &1).await.unwrap(),
+            config,
+            shutdown.clone(),
+            SystemStat::new(),
+        )
+        .await
+        .unwrap();
+        let id = handles::insert_graphics_template(
+            &pool,
+            &GraphicsTemplate {
+                channel_id: 1,
+                name: "Deleted before startup snapshot".to_string(),
+                always_on: Some(true),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        let edit = manager.graphics_takes.begin_edit().await;
+        let startup = super::load_startup_graphics(&manager);
+        tokio::pin!(startup);
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(10), &mut startup)
+                .await
+                .is_err(),
+            "startup must acquire the same publication lock as authoring"
+        );
+        handles::delete_graphics_template(&pool, 1, id)
+            .await
+            .unwrap();
+        drop(edit);
+        let (_, running) = startup.await.unwrap();
+        assert_eq!(manager.graphics_control.persistent_visible(id as u64), None);
+        drop(running);
+        shutdown.cancel();
+        tokio::fs::remove_dir_all(root).await.unwrap();
     }
 
     #[test]

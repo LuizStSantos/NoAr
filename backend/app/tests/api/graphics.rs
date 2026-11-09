@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::*;
 
 async fn send(
@@ -1454,5 +1456,722 @@ async fn hiding_an_unloaded_ticker_survives_startup_reload_without_changing_its_
             .find(|binding| binding.template_id == id as i32)
             .unwrap()
             .enabled
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn manual_take_rejects_unbounded_fields_before_expanding_text() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let user = access_token(&fixture.state, 1).await;
+    let created = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        json!({
+            "name": "Bounded fields", "layers": [{"id": "text", "kind": "text", "x": 0, "y": 0,
+            "width": 100, "height": 10, "text": "{x}".repeat(333)}]
+        }),
+    )
+    .await;
+    assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+    let id = created.1["id"].clone();
+    let too_many: HashMap<_, _> = (0..65)
+        .map(|index| (format!("field{index}"), "value"))
+        .collect();
+    let too_many_records: HashMap<_, _> = (0..17).map(|index| (index.to_string(), 0)).collect();
+
+    for fields in [
+        json!({"x": "a".repeat(1001)}),
+        json!(too_many),
+        json!({"x": "a".repeat(1000)}),
+    ] {
+        let result = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/take",
+            Some(&user),
+            json!({"template_id": id, "fields": fields}),
+        )
+        .await;
+        assert_eq!(result.0, StatusCode::BAD_REQUEST, "{}", result.1);
+    }
+
+    let result = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template_id": id, "records": too_many_records}),
+    )
+    .await;
+    assert_eq!(result.0, StatusCode::BAD_REQUEST, "{}", result.1);
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    assert!(noar::graphics::graphics_on_air(&manager).is_empty());
+}
+
+#[tokio::test]
+#[serial]
+async fn waiting_takes_are_cancelled_by_out_edit_delete_and_output_lifecycle() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let user = access_token(&fixture.state, 1).await;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+
+    for action in ["out", "edit", "delete", "restart", "stop"] {
+        let model = json!({"name": format!("Waiting {action}"), "duration": 0, "during_lshape": "wait", "layers": [
+            {"id": "box", "kind": "box", "x": 0, "y": 0, "width": 10, "height": 10, "fill": "#ffffff", "animation_in": "none"}
+        ]});
+        let created = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            model.clone(),
+        )
+        .await;
+        assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+        let id = created.1["id"].as_i64().unwrap();
+        let lifecycle = manager.graphics_takes.lifecycle_guard();
+        manager.lshape_control.on();
+        let taken = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/take",
+            Some(&user),
+            json!({"template_id": id}),
+        )
+        .await;
+        assert_eq!(taken.0, StatusCode::OK, "{}", taken.1);
+        assert_eq!(taken.1["state"], "waiting");
+
+        let result = match action {
+            "out" => {
+                send(
+                    &fixture,
+                    "POST",
+                    "/api/graphics/1/out",
+                    Some(&user),
+                    json!({}),
+                )
+                .await
+            }
+            "edit" => {
+                send(
+                    &fixture,
+                    "PUT",
+                    &format!("/api/graphics/1/templates/{id}"),
+                    Some(&admin),
+                    model,
+                )
+                .await
+            }
+            "delete" => {
+                send(
+                    &fixture,
+                    "DELETE",
+                    &format!("/api/graphics/1/templates/{id}"),
+                    Some(&admin),
+                    json!(null),
+                )
+                .await
+            }
+            "restart" => {
+                let _restarted = manager.graphics_takes.lifecycle_guard();
+                (StatusCode::OK, json!(null))
+            }
+            "stop" => {
+                drop(lifecycle);
+                manager.lshape_control.off();
+                tokio::time::sleep(std::time::Duration::from_millis(350)).await;
+                assert!(
+                    noar::graphics::graphics_on_air(&manager).is_empty(),
+                    "queued take survived {action}"
+                );
+                continue;
+            }
+            _ => unreachable!(),
+        };
+        assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+        manager.lshape_control.off();
+        tokio::time::sleep(std::time::Duration::from_millis(350)).await;
+        assert!(
+            noar::graphics::graphics_on_air(&manager).is_empty(),
+            "queued take survived {action}"
+        );
+        drop(lifecycle);
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn manual_wait_queue_has_a_capacity_and_out_releases_it() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let user = access_token(&fixture.state, 1).await;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    let created = send(&fixture, "POST", "/api/graphics/1/templates", Some(&admin), json!({
+        "name": "Bounded wait queue", "duration": 0, "during_lshape": "wait", "layers": [
+            {"id": "box", "kind": "box", "x": 0, "y": 0, "width": 10, "height": 10, "fill": "#ffffff"}
+        ]
+    })).await;
+    assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+    manager.lshape_control.on();
+
+    for _ in 0..16 {
+        let taken = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/take",
+            Some(&user),
+            json!({"template_id": created.1["id"]}),
+        )
+        .await;
+        assert_eq!(taken.0, StatusCode::OK, "{}", taken.1);
+        assert_eq!(taken.1["state"], "waiting");
+    }
+
+    let overflow = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template_id": created.1["id"]}),
+    )
+    .await;
+    assert_eq!(overflow.0, StatusCode::CONFLICT, "{}", overflow.1);
+    assert_eq!(
+        send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/out",
+            Some(&user),
+            json!({})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    let taken = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template_id": created.1["id"]}),
+    )
+    .await;
+    assert_eq!(taken.0, StatusCode::OK, "{}", taken.1);
+    manager.graphics_takes.cancel_pending();
+}
+
+#[tokio::test]
+#[serial]
+async fn unavailable_permanent_artwork_does_not_block_healthy_models_or_hide_database_faults() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    let storage = manager.config.read().await.channel.storage.clone();
+    tokio::fs::create_dir_all(&storage).await.unwrap();
+    tokio::fs::copy(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests_assets/storage/logo.png"),
+        storage.join("permanent.png"),
+    )
+    .await
+    .unwrap();
+    let artwork = send(&fixture, "POST", "/api/graphics/1/templates", Some(&admin), json!({
+        "name": "Lost artwork", "always_on": true, "layers": [
+            {"id": "image", "kind": "image", "image": "permanent.png", "x": 0, "y": 0, "width": 10, "height": 10}
+        ]
+    })).await;
+    assert_eq!(artwork.0, StatusCode::OK, "{}", artwork.1);
+    let artwork_id = artwork.1["id"].as_u64().unwrap();
+    tokio::fs::remove_file(storage.join("permanent.png"))
+        .await
+        .unwrap();
+    let healthy = send(&fixture, "POST", "/api/graphics/1/templates", Some(&admin), json!({
+        "name": "Healthy permanent", "always_on": true, "layers": [
+            {"id": "box", "kind": "box", "x": 0, "y": 0, "width": 10, "height": 10, "fill": "#ffffff"}
+        ]
+    })).await;
+    assert_eq!(healthy.0, StatusCode::OK, "{}", healthy.1);
+    let healthy_id = healthy.1["id"].as_u64().unwrap();
+    assert_eq!(
+        manager.graphics_control.persistent_visible(artwork_id),
+        Some(true),
+        "keep previously prepared artwork"
+    );
+    manager.graphics_control.retain_persistent(&[]);
+    noar::graphics::load_permanent_templates(&manager)
+        .await
+        .unwrap();
+    assert_eq!(
+        manager.graphics_control.persistent_visible(artwork_id),
+        None,
+        "skip unavailable artwork on fresh output"
+    );
+    assert_eq!(
+        manager.graphics_control.persistent_visible(healthy_id),
+        Some(true)
+    );
+    fixture.state.pool.close().await;
+    assert!(
+        noar::graphics::load_permanent_templates(&manager)
+            .await
+            .is_err(),
+        "database failures must reach the caller"
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn new_channel_templates_validate_and_commit_their_assignment_atomically() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let before = handles::select_graphics_templates(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    let bindings = handles::select_graphics_bindings(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    let mut draft = json!({
+        "name": "New atomic channel model", "always_on": true,
+        "assignment": {"role": "lshape"},
+        "layers": [{"id": "art", "kind": "box", "x": 0, "y": 0, "width": 100, "height": 100, "fill": "#203040"}]
+    });
+    let rejected = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        draft.clone(),
+    )
+    .await;
+    assert_eq!(rejected.0, StatusCode::BAD_REQUEST, "{}", rejected.1);
+    assert_eq!(
+        handles::select_graphics_templates(&fixture.state.pool, 1)
+            .await
+            .unwrap(),
+        before
+    );
+    assert_eq!(
+        handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap(),
+        bindings
+    );
+
+    draft["layers"].as_array_mut().unwrap().push(json!({
+        "id": "picture", "kind": "video", "x": 0, "y": 0, "width": 75, "height": 75
+    }));
+    let created = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        draft,
+    )
+    .await;
+    assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+    assert_eq!(created.1["always_on"], false);
+    let id = created.1["id"].as_i64().unwrap() as i32;
+    assert!(
+        handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .iter()
+            .any(
+                |binding| binding.role == noar::db::models::GraphicsRole::Lshape
+                    && binding.template_id == id
+            )
+    );
+
+    let unmapped = json!({"name": "Must not persist", "always_on": true,
+        "assignment": {"role": "logo"},
+        "layers": [{"id": "text", "kind": "text", "x": 0, "y": 0, "width": 20, "height": 10, "text": "{price}"}]});
+    let before = handles::select_graphics_templates(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    let rejected = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        unmapped,
+    )
+    .await;
+    assert_eq!(rejected.0, StatusCode::BAD_REQUEST, "{}", rejected.1);
+    assert_eq!(
+        handles::select_graphics_templates(&fixture.state.pool, 1)
+            .await
+            .unwrap(),
+        before
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn template_content_and_assignment_can_change_together_without_an_unassigned_save() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let mut model = json!({"name": "Atomic role change", "always_on": true, "layers": [
+        {"id": "box", "kind": "box", "x": 0, "y": 0, "width": 10, "height": 10, "fill": "#ffffff"}
+    ]});
+    let created = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        model.clone(),
+    )
+    .await;
+    assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+    let id = created.1["id"].as_i64().unwrap();
+    let route = format!("/api/graphics/1/templates/{id}");
+    let assigned = send(
+        &fixture,
+        "PUT",
+        &format!("{route}/assignment"),
+        Some(&admin),
+        json!({"role": "logo"}),
+    )
+    .await;
+    assert_eq!(assigned.0, StatusCode::OK, "{}", assigned.1);
+
+    model["layers"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id": "video", "kind": "video", "x": 20, "y": 20, "width": 80, "height": 80}));
+    model["assignment"] = json!({"role": "lshape"});
+    let updated = send(&fixture, "PUT", &route, Some(&admin), model.clone()).await;
+    assert_eq!(updated.0, StatusCode::OK, "{}", updated.1);
+    assert_eq!(updated.1["id"], id);
+    assert_eq!(updated.1["layers"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        updated.1["always_on"], false,
+        "a video-window model cannot be permanent"
+    );
+    let bindings = handles::select_graphics_bindings(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    assert!(
+        bindings
+            .iter()
+            .any(|binding| binding.template_id == id as i32
+                && binding.role == noar::db::models::GraphicsRole::Lshape)
+    );
+    assert!(
+        !bindings
+            .iter()
+            .any(|binding| binding.template_id == id as i32
+                && binding.role == noar::db::models::GraphicsRole::Logo)
+    );
+
+    model["layers"].as_array_mut().unwrap().pop();
+    model["always_on"] = json!(false);
+    model["assignment"] = json!({"role": null});
+    let updated = send(&fixture, "PUT", &route, Some(&admin), model.clone()).await;
+    assert_eq!(updated.0, StatusCode::OK, "{}", updated.1);
+    assert!(
+        !handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .iter()
+            .any(|binding| binding.template_id == id as i32)
+    );
+
+    // Requests without the additive assignment property keep the established role.
+    model["assignment"] = json!({"role": "logo"});
+    assert_eq!(
+        send(&fixture, "PUT", &route, Some(&admin), model.clone())
+            .await
+            .0,
+        StatusCode::OK
+    );
+    model.as_object_mut().unwrap().remove("assignment");
+    model["name"] = json!("Ordinary edit");
+    assert_eq!(
+        send(&fixture, "PUT", &route, Some(&admin), model).await.0,
+        StatusCode::OK
+    );
+    assert!(
+        handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .iter()
+            .any(|binding| binding.template_id == id as i32
+                && binding.role == noar::db::models::GraphicsRole::Logo)
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn rejected_atomic_role_changes_preserve_content_assignment_and_runtime_graphics() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    let model = json!({"name": "Retained role", "always_on": false, "layers": [
+        {"id": "box", "kind": "box", "x": 0, "y": 0, "width": 10, "height": 10, "fill": "#ffffff"}
+    ]});
+    let created = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        model.clone(),
+    )
+    .await;
+    assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+    let id = created.1["id"].as_i64().unwrap();
+    let route = format!("/api/graphics/1/templates/{id}");
+    assert_eq!(
+        send(
+            &fixture,
+            "PUT",
+            &format!("{route}/assignment"),
+            Some(&admin),
+            json!({"role": "logo"})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let before = handles::select_graphics_template(&fixture.state.pool, 1, id as i32)
+        .await
+        .unwrap()
+        .unwrap();
+    let bindings = handles::select_graphics_bindings(&fixture.state.pool, 1)
+        .await
+        .unwrap();
+    manager.logo_control.show();
+    let visible = manager.logo_control.is_visible();
+    let mut invalid_role = model.clone();
+    invalid_role["name"] = json!("Must roll back role");
+    invalid_role["assignment"] = json!({"role": "lshape"});
+    let mut invalid_asset = model.clone();
+    invalid_asset["name"] = json!("Must roll back asset");
+    invalid_asset["assignment"] = json!({"role": "ticker"});
+    invalid_asset["layers"].as_array_mut().unwrap().push(json!({"id": "image", "kind": "image", "image": "missing-atomic-artwork.png", "x": 0, "y": 0, "width": 10, "height": 10}));
+
+    for draft in [invalid_role, invalid_asset] {
+        let result = send(&fixture, "PUT", &route, Some(&admin), draft).await;
+        assert_eq!(result.0, StatusCode::BAD_REQUEST, "{}", result.1);
+        assert_eq!(
+            handles::select_graphics_template(&fixture.state.pool, 1, id as i32)
+                .await
+                .unwrap(),
+            Some(before.clone())
+        );
+        assert_eq!(
+            handles::select_graphics_bindings(&fixture.state.pool, 1)
+                .await
+                .unwrap(),
+            bindings
+        );
+        assert_eq!(manager.logo_control.is_visible(), visible);
+    }
+
+    let count = handles::select_graphics_templates(&fixture.state.pool, 1)
+        .await
+        .unwrap()
+        .iter()
+        .filter(|template| template.always_on == Some(true))
+        .count();
+
+    for number in count..16 {
+        let result = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            json!({"name": format!("Capacity {number}"), "always_on": true, "layers": []}),
+        )
+        .await;
+        assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+    }
+
+    let mut over_capacity = model;
+    over_capacity["name"] = json!("Must roll back capacity");
+    over_capacity["always_on"] = json!(true);
+    over_capacity["assignment"] = json!({"role": "ticker"});
+    let result = send(&fixture, "PUT", &route, Some(&admin), over_capacity.clone()).await;
+    assert_eq!(result.0, StatusCode::CONFLICT, "{}", result.1);
+    assert_eq!(
+        handles::select_graphics_template(&fixture.state.pool, 1, id as i32)
+            .await
+            .unwrap(),
+        Some(before)
+    );
+    assert_eq!(
+        handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap(),
+        bindings
+    );
+    assert_eq!(manager.logo_control.is_visible(), visible);
+
+    // Replacing a permanent role frees exactly its old slot in the same commit.
+    let displaced = handles::select_graphics_templates(&fixture.state.pool, 1)
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|template| template.name.starts_with("Capacity "))
+        .unwrap();
+    let result = send(
+        &fixture,
+        "PUT",
+        &format!("/api/graphics/1/templates/{}/assignment", displaced.id),
+        Some(&admin),
+        json!({"role": "ticker"}),
+    )
+    .await;
+    assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+    let result = send(&fixture, "PUT", &route, Some(&admin), over_capacity).await;
+    assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+    assert_eq!(
+        handles::select_graphics_template(&fixture.state.pool, 1, displaced.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .always_on,
+        Some(false)
+    );
+    assert!(
+        handles::select_graphics_bindings(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .iter()
+            .any(|binding| binding.template_id == id as i32
+                && binding.role == noar::db::models::GraphicsRole::Ticker)
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn waiting_takes_survive_runtime_controls_and_scheduler_wait_polling() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let user = access_token(&fixture.state, 1).await;
+    let manager = fixture.state.controller.read().await.get(1).unwrap();
+    manager.config.write().await.channel.timezone = Some("UTC".parse().unwrap());
+    let mut role_ids = Vec::new();
+
+    for role in ["logo", "ticker", "lshape"] {
+        let mut layers = vec![
+            json!({"id":"box", "kind":"box", "x":0,"y":0,"width":100,"height":100,"fill":"#ffffff"}),
+        ];
+
+        if role == "lshape" {
+            layers
+                .push(json!({"id":"video", "kind":"video", "x":25,"y":25,"width":75,"height":75}));
+        }
+
+        let created = send(
+            &fixture,
+            "POST",
+            "/api/graphics/1/templates",
+            Some(&admin),
+            json!({"name":format!("Runtime {role}"),"always_on":false,"layers":layers}),
+        )
+        .await;
+        assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+        let id = created.1["id"].as_i64().unwrap();
+        let assigned = send(
+            &fixture,
+            "PUT",
+            &format!("/api/graphics/1/templates/{id}/assignment"),
+            Some(&admin),
+            json!({"role":role}),
+        )
+        .await;
+        assert_eq!(assigned.0, StatusCode::OK, "{}", assigned.1);
+        role_ids.push((role, id));
+    }
+
+    let created = send(&fixture,"POST","/api/graphics/1/templates",Some(&admin),json!({"name":"Manual wait preserved","duration":0,"during_lshape":"wait","layers":[{"id":"box","kind":"box","x":5,"y":5,"width":10,"height":10,"fill":"#ff0000","animation_in":"none"}]})).await;
+    assert_eq!(created.0, StatusCode::OK, "{}", created.1);
+    let now = chrono::Utc::now();
+    let end = now + chrono::TimeDelta::seconds(30);
+    let event = send(&fixture,"POST","/api/schedule/1/graphics",Some(&admin),json!({"title":"Scheduled Wait polling","start_date":now.format("%Y-%m-%d").to_string(),"start_time":now.format("%H:%M:%S").to_string(),"end_time":end.format("%H:%M:%S").to_string(),"template":{"template_id":created.1["id"],"values":{},"records":{}}})).await;
+    assert_eq!(event.0, StatusCode::OK, "{}", event.1);
+    let lshape_id = role_ids
+        .iter()
+        .find(|(role, _)| *role == "lshape")
+        .unwrap()
+        .1;
+    let lshape_control = format!("/api/graphics/1/channel/{lshape_id}");
+    let result = send(
+        &fixture,
+        "POST",
+        &lshape_control,
+        Some(&user),
+        json!({"on":true}),
+    )
+    .await;
+    assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+    assert!(manager.lshape_control.is_on());
+    let waiting = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template_id":created.1["id"],"duration":0}),
+    )
+    .await;
+    assert_eq!(waiting.0, StatusCode::OK, "{}", waiting.1);
+    assert_eq!(waiting.1["state"], "waiting");
+
+    for (_, id) in role_ids.iter().filter(|(role, _)| *role != "lshape") {
+        for on in [true, false] {
+            let toggled = send(
+                &fixture,
+                "POST",
+                &format!("/api/graphics/1/channel/{id}"),
+                Some(&user),
+                json!({"on":on}),
+            )
+            .await;
+            assert_eq!(toggled.0, StatusCode::OK, "{}", toggled.1);
+        }
+    }
+
+    let cancel = CancellationToken::new();
+    let task = tokio::spawn(noar::player::graphics_schedule::run_graphics_ticker(
+        manager.clone(),
+        cancel.clone(),
+    ));
+    tokio::time::sleep(std::time::Duration::from_millis(2300)).await;
+    cancel.cancel();
+    task.await.unwrap();
+    assert!(
+        noar::graphics::graphics_on_air(&manager).is_empty(),
+        "Wait polls should not start a scheduled or manual instance during the L-shape"
+    );
+    let result = send(
+        &fixture,
+        "POST",
+        &lshape_control,
+        Some(&user),
+        json!({"on":false}),
+    )
+    .await;
+    assert_eq!(result.0, StatusCode::OK, "{}", result.1);
+
+    for _ in 0..20 {
+        if noar::graphics::graphics_on_air(&manager)
+            .iter()
+            .any(|take| take.name == "Manual wait preserved")
+        {
+            return;
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+
+    panic!(
+        "The manual waiting take was cancelled by a runtime toggle, scheduler Wait poll or bound L-shape OFF"
     );
 }

@@ -198,11 +198,11 @@ export function onAirSince(seconds: number): string {
 }
 
 /** The graphics API of the selected channel. */
-export function useGraphicsApi() {
+export function useGraphicsApi(channel?: () => number | undefined) {
     const authStore = useAuth()
     const configStore = useConfig()
 
-    const base = () => `/api/graphics/${configStore.channels[configStore.i]?.id}`
+    const base = () => `/api/graphics/${channel ? channel() : configStore.channels[configStore.i]?.id}`
     const headers = () => ({ ...configStore.contentType, ...authStore.authHeader })
 
     return {
@@ -212,11 +212,15 @@ export function useGraphicsApi() {
                 headers: headers(),
             }),
         fonts: () => authFetch<string[]>(`${base()}/fonts`, { headers: headers() }),
-        save: (input: TemplateInput, id?: number) =>
+        save: (
+            input: TemplateInput,
+            id?: number,
+            assignment?: { role: string | null; control_layer_id?: string | null },
+        ) =>
             authFetch<GraphicsTemplate>(`${base()}/templates${id === undefined ? '' : `/${id}`}`, {
                 method: id === undefined ? 'POST' : 'PUT',
                 headers: headers(),
-                body: JSON.stringify(input),
+                body: JSON.stringify({ ...input, ...(assignment === undefined ? {} : { assignment }) }),
             }),
         usage: (id: number) => authFetch<TemplateUsage>(`${base()}/templates/${id}/usage`, { headers: headers() }),
         remove: (id: number) => authFetch(`${base()}/templates/${id}`, { method: 'DELETE', headers: headers() }),

@@ -5,7 +5,7 @@
 //! handle names stay stable so API, config loading and scheduling share one
 //! repository boundary without leaking SQL into those callers.
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::{SqliteConnection, sqlite::SqlitePool};
 
 #[path = "graphics/compatibility/graphics.rs"]
 mod compatibility;
@@ -19,7 +19,7 @@ use crate::{
 
 pub use compatibility::{
     convert_channel_graphics, convert_channel_graphics_on, initialize_channel_graphics_on,
-    project_channel_graphics, save_channel_graphics_on,
+    project_channel_graphics, save_channel_graphics_on, save_channel_graphics_with_projection_on,
 };
 pub use resources::{
     begin_graphics_source_refresh, delete_graphics_source, finish_graphics_source_refresh,
@@ -111,6 +111,15 @@ pub async fn insert_graphics_template(
     pool: &SqlitePool,
     template: &GraphicsTemplate,
 ) -> Result<i32, ProcessError> {
+    let mut connection = pool.acquire().await?;
+
+    insert_graphics_template_on(&mut connection, template).await
+}
+
+async fn insert_graphics_template_on(
+    connection: &mut SqliteConnection,
+    template: &GraphicsTemplate,
+) -> Result<i32, ProcessError> {
     Ok(sqlx::query_scalar(
         "INSERT INTO graphics_templates (channel_id, name, group_name, duration, during_lshape,
             layers, permanent)
@@ -124,8 +133,42 @@ pub async fn insert_graphics_template(
     .bind(template.during_lshape.as_str())
     .bind(layers_json(template)?)
     .bind(template.always_on)
-    .fetch_one(pool)
+    .fetch_one(connection)
     .await?)
+}
+
+/// Create content and its optional channel assignment atomically, returning the new ID.
+pub async fn insert_graphics_template_with_assignment(
+    pool: &SqlitePool,
+    template: &GraphicsTemplate,
+    role: Option<GraphicsRole>,
+    target: Option<Option<&str>>,
+) -> Result<i32, ProcessError> {
+    let mut transaction = pool.begin().await?;
+
+    if let Some(role) = role {
+        // The replacement may use the final permanent slot in a full channel.
+        clear_displaced_permanent_on(&mut transaction, template.channel_id, role, None).await?;
+    }
+
+    let id = insert_graphics_template_on(&mut transaction, template).await?;
+    assign_graphics_template_on(&mut transaction, template.channel_id, id, role, target).await?;
+    transaction.commit().await?;
+
+    Ok(id)
+}
+
+async fn clear_displaced_permanent_on(
+    connection: &mut SqliteConnection,
+    channel: i32,
+    role: GraphicsRole,
+    retained_id: Option<i32>,
+) -> Result<(), ProcessError> {
+    sqlx::query("UPDATE graphics_templates SET permanent=0 WHERE channel_id=$1 AND id IN (SELECT template_id FROM graphics_channel_bindings WHERE channel_id=$1 AND role=$2 AND ($3 IS NULL OR template_id!=$3))")
+        .bind(channel).bind(role.as_str()).bind(retained_id)
+        .execute(connection).await?;
+
+    Ok(())
 }
 
 /// `false` when the channel has no such template.
@@ -134,24 +177,34 @@ pub async fn update_graphics_template(
     template: &GraphicsTemplate,
 ) -> Result<bool, ProcessError> {
     let mut transaction = pool.begin().await?;
+    let updated = update_graphics_template_on(&mut transaction, template).await?;
+    transaction.commit().await?;
+
+    Ok(updated)
+}
+
+async fn update_graphics_template_on(
+    connection: &mut SqliteConnection,
+    template: &GraphicsTemplate,
+) -> Result<bool, ProcessError> {
     let role: Option<String> = sqlx::query_scalar(
         "SELECT role FROM graphics_channel_bindings WHERE channel_id = $1 AND template_id = $2",
     )
     .bind(template.channel_id)
     .bind(template.id)
-    .fetch_optional(&mut *transaction)
+    .fetch_optional(&mut *connection)
     .await?;
 
     if let Some(always_on) = template.always_on {
         sqlx::query("UPDATE graphics_channel_bindings SET enabled = $3 WHERE channel_id = $1 AND template_id = $2")
             .bind(template.channel_id).bind(template.id).bind(always_on)
-            .execute(&mut *transaction).await?;
+            .execute(&mut *connection).await?;
     }
 
     if matches!(role.as_deref(), Some("logo" | "lshape")) {
         let saved_target: Option<String> = sqlx::query_scalar(
             "SELECT control_layer_id FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2",
-        ).bind(template.channel_id).bind(template.id).fetch_one(&mut *transaction).await?;
+        ).bind(template.channel_id).bind(template.id).fetch_one(&mut *connection).await?;
         let target = template
             .control_layer_id
             .as_deref()
@@ -171,7 +224,7 @@ pub async fn update_graphics_template(
             .map(|layer| layer.id.as_str());
         sqlx::query("UPDATE graphics_channel_bindings SET control_layer_id = $3 WHERE channel_id = $1 AND template_id = $2")
             .bind(template.channel_id).bind(template.id).bind(target)
-            .execute(&mut *transaction).await?;
+            .execute(&mut *connection).await?;
     }
 
     let result = sqlx::query(
@@ -187,11 +240,48 @@ pub async fn update_graphics_template(
     .bind(template.during_lshape.as_str())
     .bind(layers_json(template)?)
     .bind(template.always_on)
-    .execute(&mut *transaction)
+    .execute(&mut *connection)
     .await?;
 
-    transaction.commit().await?;
     Ok(result.rows_affected() > 0)
+}
+
+/// Save authored content and its optional channel role as one transaction.
+/// An omitted target retains a valid previous target; an explicit null resets it.
+pub async fn update_graphics_template_with_assignment(
+    pool: &SqlitePool,
+    template: &GraphicsTemplate,
+    role: Option<GraphicsRole>,
+    target: Option<Option<&str>>,
+) -> Result<bool, ProcessError> {
+    let mut transaction = pool.begin().await?;
+
+    if let Some(role) = role {
+        // Free the replaced role's permanent slot before enabling the new model.
+        clear_displaced_permanent_on(
+            &mut transaction,
+            template.channel_id,
+            role,
+            Some(template.id),
+        )
+        .await?;
+    }
+
+    if !update_graphics_template_on(&mut transaction, template).await? {
+        return Ok(false);
+    }
+
+    assign_graphics_template_on(
+        &mut transaction,
+        template.channel_id,
+        template.id,
+        role,
+        target,
+    )
+    .await?;
+    transaction.commit().await?;
+
+    Ok(true)
 }
 
 /// `false` when the channel has no such template.
@@ -308,27 +398,38 @@ pub async fn assign_graphics_template(
     target: Option<&str>,
 ) -> Result<(), ProcessError> {
     let mut transaction = pool.begin().await?;
+    assign_graphics_template_on(&mut transaction, channel, template, role, target.map(Some))
+        .await?;
+    transaction.commit().await?;
+
+    Ok(())
+}
+
+async fn assign_graphics_template_on(
+    connection: &mut SqliteConnection,
+    channel: i32,
+    template: i32,
+    role: Option<GraphicsRole>,
+    target: Option<Option<&str>>,
+) -> Result<(), ProcessError> {
     let enabled: bool = sqlx::query_scalar("SELECT COALESCE((SELECT enabled FROM graphics_channel_bindings b WHERE b.channel_id=$1 AND b.template_id=$2 AND b.role IN ('logo','ticker')),permanent,0) FROM graphics_templates WHERE channel_id=$1 AND id=$2")
-        .bind(channel).bind(template).fetch_one(&mut *transaction).await?;
+        .bind(channel).bind(template).fetch_one(&mut *connection).await?;
     let previous_target: Option<String> = sqlx::query_scalar("SELECT control_layer_id FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2")
-        .bind(channel).bind(template).fetch_optional(&mut *transaction).await?.flatten();
+        .bind(channel).bind(template).fetch_optional(&mut *connection).await?.flatten();
     sqlx::query("DELETE FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2")
         .bind(channel)
         .bind(template)
-        .execute(&mut *transaction)
+        .execute(&mut *connection)
         .await?;
 
     if let Some(role) = role {
         // Replacing a role retains its old composition as an ordinary template,
         // rather than drawing it again as a second permanent logo/ticker.
-        sqlx::query("UPDATE graphics_templates SET permanent=0 WHERE channel_id=$1 AND id IN (SELECT template_id FROM graphics_channel_bindings WHERE channel_id=$1 AND role=$2 AND template_id!=$3)")
-            .bind(channel).bind(role.as_str()).bind(template).execute(&mut *transaction).await?;
+        clear_displaced_permanent_on(connection, channel, role, Some(template)).await?;
         sqlx::query("INSERT INTO graphics_channel_bindings(channel_id,role,template_id,enabled,layers_version,control_layer_id) VALUES($1,$2,$3,$4,1,COALESCE($5,(SELECT json_extract(value,'$.id') FROM graphics_templates t,json_each(t.layers) WHERE t.id=$3 AND json_extract(value,'$.kind')='image' LIMIT 1))) ON CONFLICT(channel_id,role) DO UPDATE SET template_id=excluded.template_id,enabled=excluded.enabled,layers_version=1,control_layer_id=excluded.control_layer_id")
             .bind(channel).bind(role.as_str()).bind(template).bind(enabled)
-            .bind(target.or(previous_target.as_deref())).execute(&mut *transaction).await?;
+            .bind(target.unwrap_or(previous_target.as_deref())).execute(&mut *connection).await?;
     }
-
-    transaction.commit().await?;
 
     Ok(())
 }
@@ -459,5 +560,198 @@ mod tests {
         assert!(!delete_graphics_template(&pool, 2, id).await.unwrap());
         assert!(delete_graphics_template(&pool, 1, id).await.unwrap());
         assert!(select_graphics_bindings(&pool, 1).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn atomic_content_and_assignment_roll_back_if_binding_write_fails() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        install_fixture(&pool).await;
+        let old = template(&pool, "Existing logo").await;
+        let edited = template(&pool, "Original content").await;
+        save_graphics_binding(
+            &pool,
+            &GraphicsChannelBinding {
+                channel_id: 1,
+                role: GraphicsRole::Logo,
+                template_id: old,
+                enabled: true,
+            },
+        )
+        .await
+        .unwrap();
+        let before = select_graphics_template(&pool, 1, edited)
+            .await
+            .unwrap()
+            .unwrap();
+        let old_before = select_graphics_template(&pool, 1, old)
+            .await
+            .unwrap()
+            .unwrap();
+        let bindings = select_graphics_bindings(&pool, 1).await.unwrap();
+        let mut draft = before.clone();
+        draft.name = "Uncommitted content".to_string();
+        draft.always_on = Some(true);
+        sqlx::query("CREATE TRIGGER reject_atomic_assignment BEFORE INSERT ON graphics_channel_bindings BEGIN SELECT RAISE(ABORT, 'synthetic binding failure'); END")
+            .execute(&pool).await.unwrap();
+        assert!(
+            update_graphics_template_with_assignment(&pool, &draft, Some(GraphicsRole::Logo), None)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            select_graphics_template(&pool, 1, edited).await.unwrap(),
+            Some(before)
+        );
+        assert_eq!(
+            select_graphics_template(&pool, 1, old).await.unwrap(),
+            Some(old_before)
+        );
+        assert_eq!(select_graphics_bindings(&pool, 1).await.unwrap(), bindings);
+    }
+
+    fn permanent_draft(name: &str) -> GraphicsTemplate {
+        GraphicsTemplate {
+            channel_id: 1,
+            name: name.to_string(),
+            always_on: Some(true),
+            layers: serde_json::from_value(serde_json::json!([
+                {"id": "art", "kind": "image", "image": "first.png", "x": 0, "y": 0, "width": 10, "height": 10},
+                {"id": "alternate", "kind": "image", "image": "second.png", "x": 10, "y": 0, "width": 10, "height": 10}
+            ]))
+            .unwrap(),
+            ..GraphicsTemplate::default()
+        }
+    }
+
+    async fn full_permanent_fixture() -> (SqlitePool, i32) {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        install_fixture(&pool).await;
+        let old = insert_graphics_template(&pool, &permanent_draft("Existing logo"))
+            .await
+            .unwrap();
+        assign_graphics_template(&pool, 1, old, Some(GraphicsRole::Logo), Some("art"))
+            .await
+            .unwrap();
+
+        for index in 0..15 {
+            insert_graphics_template(&pool, &permanent_draft(&format!("Permanent {index}")))
+                .await
+                .unwrap();
+        }
+
+        (pool, old)
+    }
+
+    #[tokio::test]
+    async fn atomic_create_replaces_a_role_at_full_permanent_capacity() {
+        let (pool, old) = full_permanent_fixture().await;
+        let mut old_before = select_graphics_template(&pool, 1, old)
+            .await
+            .unwrap()
+            .unwrap();
+        let draft = permanent_draft("New authored logo");
+        let id = insert_graphics_template_with_assignment(
+            &pool,
+            &draft,
+            Some(GraphicsRole::Logo),
+            Some(Some("alternate")),
+        )
+        .await
+        .unwrap();
+        assert_ne!(id, old);
+        let saved = select_graphics_template(&pool, 1, id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(saved.name, draft.name);
+        assert_eq!(saved.layers, draft.layers);
+        assert_eq!(saved.always_on, Some(true));
+        assert_eq!(saved.control_layer_id.as_deref(), Some("alternate"));
+        old_before.always_on = Some(false);
+        old_before.control_layer_id = None;
+        assert_eq!(
+            select_graphics_template(&pool, 1, old).await.unwrap(),
+            Some(old_before)
+        );
+        let binding: (i32, bool, i32) = sqlx::query_as(
+            "SELECT template_id,enabled,layers_version FROM graphics_channel_bindings WHERE channel_id=1 AND role='logo'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(binding, (id, true, 1));
+        let counts: (i64, i64) = sqlx::query_as(
+            "SELECT count(*),sum(permanent=1) FROM graphics_templates WHERE channel_id=1",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(counts, (17, 16));
+    }
+
+    #[tokio::test]
+    async fn atomic_create_rolls_back_new_content_displaced_slot_and_binding_on_late_failure() {
+        let (pool, _) = full_permanent_fixture().await;
+        let before = select_graphics_templates(&pool, 1).await.unwrap();
+        let bindings = select_graphics_bindings(&pool, 1).await.unwrap();
+        let permanent: Vec<(i32, Option<bool>)> =
+            sqlx::query_as("SELECT id,permanent FROM graphics_templates ORDER BY id")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        sqlx::query("CREATE TRIGGER reject_atomic_creation BEFORE INSERT ON graphics_channel_bindings BEGIN SELECT RAISE(ABORT, 'synthetic late creation failure'); END")
+            .execute(&pool).await.unwrap();
+        let error = insert_graphics_template_with_assignment(
+            &pool,
+            &permanent_draft("Must not survive"),
+            Some(GraphicsRole::Logo),
+            Some(Some("alternate")),
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("synthetic late creation failure")
+        );
+        assert_eq!(select_graphics_templates(&pool, 1).await.unwrap(), before);
+        assert_eq!(select_graphics_bindings(&pool, 1).await.unwrap(), bindings);
+        // The compatibility projection masks permanent with the binding's enabled
+        // flag, so inspect raw state too when proving the displaced slot rolled back.
+        assert_eq!(
+            sqlx::query_as::<_, (i32, Option<bool>)>(
+                "SELECT id,permanent FROM graphics_templates ORDER BY id"
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap(),
+            permanent
+        );
+    }
+
+    #[tokio::test]
+    async fn atomic_create_cannot_exceed_capacity_without_a_displaced_permanent_role() {
+        let (pool, _) = full_permanent_fixture().await;
+        let before = select_graphics_templates(&pool, 1).await.unwrap();
+        let bindings = select_graphics_bindings(&pool, 1).await.unwrap();
+        let error = insert_graphics_template_with_assignment(
+            &pool,
+            &permanent_draft("Seventeenth permanent"),
+            Some(GraphicsRole::Ticker),
+            None,
+        )
+        .await
+        .unwrap_err();
+        assert!(error.to_string().contains("At most 16 permanent templates"));
+        assert_eq!(select_graphics_templates(&pool, 1).await.unwrap(), before);
+        assert_eq!(select_graphics_bindings(&pool, 1).await.unwrap(), bindings);
     }
 }

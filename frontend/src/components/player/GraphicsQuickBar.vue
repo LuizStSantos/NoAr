@@ -2,11 +2,13 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 import { useChannelGraphics } from '@/composables/channelGraphics'
 import { useConfig } from '@/stores/config'
 
 /** The Player reports model state; all graphics operations live in Graphics. */
 const { t } = useI18n()
+const { templateName } = useGraphicsDisplayNames()
 const config = useConfig()
 const { models, onAir, unavailable } = useChannelGraphics()
 const channelId = computed(() => config.channels[config.i]?.id)
@@ -23,7 +25,7 @@ const active = computed(() => models.value.filter((model) => model.kind !== 'sce
         <span v-if="unavailable" class="text-muted">{{ t('graphics.onAir.statusUnavailable') }}</span>
         <template v-else>
             <span v-for="model in active" :key="model.template.id" class="inline-flex items-center gap-1.5 text-muted">
-                <span class="dot bg-success" aria-hidden="true" />{{ model.template.name }}
+                <span class="dot bg-success" aria-hidden="true" />{{ templateName(model.template) }}
             </span>
             <span v-for="graphic in onAir" :key="graphic.take_id" class="text-muted">{{ graphic.name }}</span>
             <span v-if="!active.length && !onAir.length" class="text-muted">{{ t('graphics.onAir.noGraphic') }}</span>

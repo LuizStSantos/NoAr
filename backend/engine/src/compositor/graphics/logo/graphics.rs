@@ -23,6 +23,7 @@ use crate::{
 #[derive(Clone)]
 pub struct LogoOverlay {
     model: Option<Arc<LogoModel>>,
+    model_offset: (i32, i32),
     image_animation: Option<Arc<crate::compositor::graphics::images::ImageAnimation>>,
     pub frame: VideoFrame, // YUVA420P
     chroma_alpha: Vec<u8>,
@@ -38,6 +39,15 @@ struct LogoModel {
     graphic: RenderedGraphic,
     primary: usize,
     frame_size: (u32, u32),
+}
+
+struct LogoModelUpdate<'a> {
+    spec: Option<&'a GraphicSpec>,
+    primary: usize,
+    clip_animation_ms: Option<u32>,
+    enabled: bool,
+    size: (u32, u32),
+    animate: bool,
 }
 
 impl LogoOverlay {
@@ -62,6 +72,7 @@ impl LogoOverlay {
 
         Ok(Self {
             model: None,
+            model_offset: (0, 0),
             image_animation: crate::compositor::graphics::images::load_animation(
                 std::path::Path::new(&config.path),
                 width,
@@ -100,6 +111,7 @@ impl LogoOverlay {
                 primary,
                 frame_size: (width, height),
             })),
+            model_offset: (0, 0),
             image_animation: None,
             frame: VideoFrame::new(PixelFormat::Yuva420p, 2, 2),
             chroma_alpha: vec![0],
@@ -139,6 +151,16 @@ impl LogoOverlay {
     }
 
     fn replaced_image(&self, path: &str, width: u32, height: u32) -> Result<Self> {
+        self.replaced_image_with(path, width, height, &mut Self::from_model)
+    }
+
+    fn replaced_image_with(
+        &self,
+        path: &str,
+        width: u32,
+        height: u32,
+        render: &mut impl FnMut(&GraphicSpec, usize, u32, u32) -> Result<Self>,
+    ) -> Result<Self> {
         let model = self
             .model
             .as_ref()
@@ -150,7 +172,15 @@ impl LogoOverlay {
             .ok_or_else(|| anyhow!("missing controlled image layer"))?;
         layer.content = GraphicContent::Image { path: path.into() };
 
-        Self::from_model(&spec, model.primary, width, height)
+        render(&spec, model.primary, width, height)
+    }
+
+    fn inherit_motion(&mut self, previous: &Self) {
+        if let (Some(next), Some(previous)) =
+            (self.model.as_mut().and_then(Arc::get_mut), &previous.model)
+        {
+            next.graphic.inherit_motion(&previous.graphic);
+        }
     }
 
     pub(crate) fn is_model(&self) -> bool {
@@ -180,6 +210,7 @@ impl LogoOverlay {
                     index: model.primary,
                     opacity: image_factor,
                     only: primary_only,
+                    offset: self.model_offset,
                 },
             );
         }
@@ -190,19 +221,15 @@ impl LogoOverlay {
     pub(crate) fn moved_to(&self, position: &str, width: u32, height: u32) -> Result<Self> {
         let (x, y) = logo_position(position, width, height, self.width, self.height)?;
 
-        if let Some(model) = &self.model {
-            let mut spec = model.spec.clone();
-            let dx = (f64::from(even(x)) - f64::from(self.x)) * 100.0 / f64::from(width);
-            let dy = (f64::from(even(y)) - f64::from(self.y)) * 100.0 / f64::from(height);
-
-            for layer in &mut spec.layers {
-                layer.x += dx;
-                layer.y += dy;
-            }
-
-            return Self::from_model(&spec, model.primary, width, height);
-        }
         let mut moved = self.clone();
+
+        // Keep the prepared model (including GIF caches, text strips and clocks)
+        // shared. This path also runs on the output thread, so only translate
+        // its blend coordinates; never rasterize or open an image here.
+        if self.model.is_some() {
+            moved.model_offset.0 += even(x) as i32 - self.x as i32;
+            moved.model_offset.1 += even(y) as i32 - self.y as i32;
+        }
 
         moved.x = even(x);
         moved.y = even(y);
@@ -439,6 +466,7 @@ pub struct LogoControl(Arc<Mutex<LogoOverride>>);
 
 #[derive(Default)]
 struct LogoOverride {
+    model_generation: u64,
     scheduled_hidden: Option<bool>,
     scheduled_restore_hidden: Option<bool>,
     configured_enabled: bool,
@@ -811,12 +839,22 @@ impl LogoControl {
         width: u32,
         height: u32,
     ) -> Result<()> {
+        let generation = {
+            let mut state = self.lock();
+            state.model_generation = state.model_generation.wrapping_add(1);
+            state.model_generation
+        };
         // Read outside the lock: frames keep being drawn meanwhile.
         let overlay = config
             .map(|config| LogoOverlay::load(config, width, height))
             .transpose()?
             .map(Arc::new);
         let mut state = self.lock();
+
+        if state.model_generation != generation {
+            return Ok(());
+        }
+
         let now = Instant::now();
 
         if state.replacement.is_none()
@@ -878,6 +916,31 @@ impl LogoControl {
         )
     }
 
+    /// Refresh a model only while the owner grants a short publication guard.
+    /// Pixel preparation runs before the final guard is acquired.
+    pub fn refresh_model_guarded<G>(
+        &self,
+        spec: Option<&GraphicSpec>,
+        primary: usize,
+        clip_animation_ms: Option<u32>,
+        enabled: bool,
+        size: (u32, u32),
+        before_commit: impl FnMut() -> Option<G>,
+    ) -> Result<()> {
+        self.set_model_with_guarded(
+            LogoModelUpdate {
+                spec,
+                primary,
+                clip_animation_ms,
+                enabled,
+                size,
+                animate: false,
+            },
+            LogoOverlay::from_model,
+            before_commit,
+        )
+    }
+
     fn set_model_inner(
         &self,
         spec: Option<&GraphicSpec>,
@@ -887,20 +950,57 @@ impl LogoControl {
         size: (u32, u32),
         animate: bool,
     ) -> Result<()> {
+        self.set_model_with(
+            LogoModelUpdate {
+                spec,
+                primary,
+                clip_animation_ms,
+                enabled,
+                size,
+                animate,
+            },
+            LogoOverlay::from_model,
+        )
+    }
+
+    fn set_model_with(
+        &self,
+        update: LogoModelUpdate<'_>,
+        render: impl FnMut(&GraphicSpec, usize, u32, u32) -> Result<LogoOverlay>,
+    ) -> Result<()> {
+        self.set_model_with_guarded(update, render, || Some(()))
+    }
+
+    fn set_model_with_guarded<G>(
+        &self,
+        update: LogoModelUpdate<'_>,
+        mut render: impl FnMut(&GraphicSpec, usize, u32, u32) -> Result<LogoOverlay>,
+        mut before_commit: impl FnMut() -> Option<G>,
+    ) -> Result<()> {
+        let LogoModelUpdate {
+            spec,
+            primary,
+            clip_animation_ms,
+            enabled,
+            size,
+            animate,
+        } = update;
         let (width, height) = size;
-        let enabled = {
+        let generation = {
+            let Some(_publication) = before_commit() else {
+                return Ok(());
+            };
             let mut state = self.lock();
+            state.model_generation = state.model_generation.wrapping_add(1);
             state.configured_enabled = enabled;
 
             if enabled {
                 state.scheduled_restore_hidden = None;
             }
 
-            enabled || state.scheduled_hidden.is_some() || state.scheduled_restore_hidden.is_some()
-        };
-
-        {
-            let state = self.lock();
+            let active = enabled
+                || state.scheduled_hidden.is_some()
+                || state.scheduled_restore_hidden.is_some();
             let current = state.model_definition.as_ref();
             let unchanged = match (spec, current) {
                 (None, None) => true,
@@ -916,58 +1016,127 @@ impl LogoControl {
                 && unchanged
                 && state.clip_animation_ms == clip_animation_ms
                 && state.configured.as_ref().and_then(Option::as_ref).is_some()
-                    == (enabled && spec.is_some())
+                    == (active && spec.is_some())
             {
                 return Ok(());
             }
-        }
 
-        let overlay = spec
-            .map(|spec| LogoOverlay::from_model(spec, primary, width, height))
-            .transpose()?
-            .map(Arc::new);
-        let mut state = self.lock();
+            state.model_generation
+        };
 
-        if animate
-            && !state.hidden
-            && let Some(Some(previous)) = &state.configured
-        {
-            state.outgoing = Some(Outgoing {
-                image: Some(previous.clone()),
-                since: Instant::now(),
-            });
-        }
+        loop {
+            let (previous, clip, replacement, position) = {
+                let state = self.lock();
 
-        state.layer_managed = true;
-        if let Some(model) = &overlay {
-            if let Some((path, _)) = &state.clip_image {
-                state.clip_image = Some((
-                    path.clone(),
-                    Arc::new(model.replaced_image(path, width, height)?),
-                ));
-            }
-
-            if let Some((label, previous)) = &state.replacement
-                && let Some(previous_model) = &previous.model
-                && let Some(layer) = previous_model.spec.layers.get(previous_model.primary)
-                && let GraphicContent::Image { path } = &layer.content
-            {
-                let mut replacement =
-                    model.replaced_image(&path.to_string_lossy(), width, height)?;
-
-                if let Some(position) = &state.position {
-                    replacement = replacement.moved_to(position, width, height)?;
+                if state.model_generation != generation {
+                    return Ok(());
                 }
 
-                state.replacement = Some((label.clone(), Arc::new(replacement)));
+                (
+                    state.model_definition.clone(),
+                    state.clip_image.clone(),
+                    state.replacement.clone(),
+                    state.position.clone(),
+                )
+            };
+            // Rasterization and image decoding must never hold the frame mutex.
+            let mut overlay = spec
+                .map(|spec| render(spec, primary, width, height))
+                .transpose()?;
+
+            if !animate && let (Some(next), Some(previous)) = (&mut overlay, &previous) {
+                next.inherit_motion(previous);
             }
+
+            let mut next_clip = None;
+            let mut next_replacement = None;
+
+            if let Some(model) = &overlay {
+                if let Some((path, old)) = &clip {
+                    let mut next = model.replaced_image_with(path, width, height, &mut render)?;
+
+                    if !animate {
+                        next.inherit_motion(old);
+                    }
+
+                    next_clip = Some((path.clone(), Arc::new(next)));
+                }
+
+                if let Some((label, old)) = &replacement
+                    && let Some(previous_model) = &old.model
+                    && let Some(layer) = previous_model.spec.layers.get(previous_model.primary)
+                    && let GraphicContent::Image { path } = &layer.content
+                {
+                    let mut next = model.replaced_image_with(
+                        &path.to_string_lossy(),
+                        width,
+                        height,
+                        &mut render,
+                    )?;
+
+                    if !animate {
+                        next.inherit_motion(old);
+                    }
+
+                    if let Some(position) = &position {
+                        next = next.moved_to(position, width, height)?;
+                    }
+
+                    next_replacement = Some((label.clone(), Arc::new(next)));
+                }
+            }
+
+            let Some(_publication) = before_commit() else {
+                return Ok(());
+            };
+            let mut state = self.lock();
+
+            if state.model_generation != generation {
+                return Ok(());
+            }
+
+            // An override may have changed while its pixels were being prepared.
+            // Retry against that new snapshot rather than resurrecting old artwork.
+            if !super::same_prepared(
+                state.clip_image.as_ref().map(|(_, image)| image),
+                clip.as_ref().map(|(_, image)| image),
+            ) || !super::same_prepared(
+                state.replacement.as_ref().map(|(_, image)| image),
+                replacement.as_ref().map(|(_, image)| image),
+            ) || state.position != position
+            {
+                continue;
+            }
+
+            if animate
+                && !state.hidden
+                && let Some(Some(previous)) = &state.configured
+            {
+                state.outgoing = Some(Outgoing {
+                    image: Some(previous.clone()),
+                    since: Instant::now(),
+                });
+            }
+
+            if next_clip.is_some() {
+                state.clip_image = next_clip;
+            }
+
+            if next_replacement.is_some() {
+                state.replacement = next_replacement;
+            }
+
+            let active = state.configured_enabled
+                || state.scheduled_hidden.is_some()
+                || state.scheduled_restore_hidden.is_some();
+            let overlay = overlay.map(Arc::new);
+            state.layer_managed = true;
+            state.model_definition = overlay.clone();
+            state.configured = Some(overlay.filter(|_| active));
+            state.clip_animation_ms = clip_animation_ms;
+
+            return Ok(());
         }
-
-        state.model_definition = overlay.clone();
-        state.configured = Some(overlay.filter(|_| enabled));
-        state.clip_animation_ms = clip_animation_ms;
-
-        Ok(())
     }
 
     pub(crate) fn clip_transitions(&self) -> LogoTransitions {
@@ -1107,6 +1276,322 @@ mod tests {
             opacity: 1.0,
             position: "W-w-12:12".to_string(),
         }
+    }
+
+    fn scrolling_model_spec() -> crate::GraphicSpec {
+        use crate::{GraphicAnimation, GraphicContent, GraphicLayerSpec, GraphicSpec, RgbaColor};
+        let image = GraphicLayerSpec {
+            content: GraphicContent::Image {
+                path: "unavailable.png".into(),
+            },
+            x: 10.0,
+            y: 10.0,
+            width: 20.0,
+            height: 20.0,
+            opacity: 1.0,
+            radius: 0.0,
+            animation_in: GraphicAnimation::SlideLeft,
+            animation_out: GraphicAnimation::Wipe,
+            animation_ms: 1000,
+            delay_ms: 200,
+        };
+        GraphicSpec {
+            picture: None,
+            layers: vec![
+                image.clone(),
+                GraphicLayerSpec {
+                    content: GraphicContent::Text {
+                        text: "Scrolling model".to_string(),
+                        scroll: Some(crate::GraphicTextScroll {
+                            direction: crate::ScrollDirection::Left,
+                            speed: 80.0,
+                            gap: 40,
+                        }),
+                        font_family: None,
+                        font_size: 6.0,
+                        bold: false,
+                        color: RgbaColor::opaque(255, 255, 255),
+                        align: crate::BlockAlign::Left,
+                        fill: None,
+                    },
+                    y: 70.0,
+                    width: 80.0,
+                    ..image
+                },
+            ],
+        }
+    }
+
+    fn synthetic_model(
+        spec: &crate::GraphicSpec,
+        primary: usize,
+        width: u32,
+        height: u32,
+    ) -> anyhow::Result<super::LogoOverlay> {
+        // Prepared test images have no dependency on native image I/O.
+        let mut drawable = spec.clone();
+        for layer in &mut drawable.layers {
+            if matches!(layer.content, crate::GraphicContent::Image { .. }) {
+                layer.content = crate::GraphicContent::Box {
+                    fill: crate::RgbaColor::opaque(255, 255, 255),
+                };
+            }
+        }
+        let mut overlay = super::LogoOverlay::from_model(&drawable, primary, width, height)?;
+        std::sync::Arc::get_mut(overlay.model.as_mut().unwrap())
+            .unwrap()
+            .spec = spec.clone();
+
+        Ok(overlay)
+    }
+
+    #[test]
+    fn moved_models_share_prepared_pixels_scroll_epoch_and_layer_animations() {
+        let spec = scrolling_model_spec();
+        let base = synthetic_model(&spec, 0, 320, 180).unwrap();
+        let moved = base.moved_to("80:40", 320, 180).unwrap();
+        assert!(std::sync::Arc::ptr_eq(
+            base.model.as_ref().unwrap(),
+            moved.model.as_ref().unwrap()
+        ));
+        assert_eq!(moved.model_offset, (48, 22));
+        assert_eq!(moved.x, 80);
+        assert_eq!(moved.y, 40);
+        let returned = moved.moved_to("32:18", 320, 180).unwrap();
+        assert_eq!(returned.model_offset, (0, 0));
+        let model = returned.model.as_ref().unwrap();
+        assert!(model.graphic.layers[1].scroll.is_some());
+        assert_eq!(
+            model.graphic.layers[0].animation_in,
+            crate::GraphicAnimation::SlideLeft
+        );
+        assert_eq!(model.graphic.layers[0].delay, Duration::from_millis(200));
+    }
+
+    #[test]
+    fn moving_a_gif_model_keeps_its_decoded_animation_without_reopening_the_source() {
+        let mut spec = scrolling_model_spec();
+        spec.layers[0].content = crate::GraphicContent::Image {
+            path: concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../tests_assets/graphics.gif"
+            )
+            .into(),
+        };
+        let mut base = super::LogoOverlay::from_model(&spec, 0, 320, 180).unwrap();
+        let model = std::sync::Arc::get_mut(base.model.as_mut().unwrap()).unwrap();
+        assert!(model.graphic.layers[0].image_animation.is_some());
+        model.spec.layers[0].content = crate::GraphicContent::Image {
+            path: "missing-after-preparation.gif".into(),
+        };
+        let moved = base.moved_to("80:40", 320, 180).unwrap();
+        assert!(std::sync::Arc::ptr_eq(
+            base.model.as_ref().unwrap(),
+            moved.model.as_ref().unwrap()
+        ));
+    }
+
+    #[test]
+    fn logo_refresh_keeps_independent_motion_epochs_for_definition_and_overrides() {
+        use std::sync::Arc;
+        let control = LogoControl::default();
+        let spec = scrolling_model_spec();
+        let epochs = [5, 7, 9].map(|seconds| Instant::now() - Duration::from_secs(seconds));
+        let overlays: Vec<_> = epochs
+            .iter()
+            .map(|epoch| {
+                let mut overlay = synthetic_model(&spec, 0, 320, 180).unwrap();
+                for layer in &mut Arc::get_mut(overlay.model.as_mut().unwrap())
+                    .unwrap()
+                    .graphic
+                    .layers
+                {
+                    layer.prepared_at = *epoch;
+                }
+                Arc::new(overlay)
+            })
+            .collect();
+        {
+            let mut state = control.lock();
+            state.model_definition = Some(overlays[0].clone());
+            state.configured = Some(Some(overlays[0].clone()));
+            state.clip_image = Some(("clip.png".to_string(), overlays[1].clone()));
+            state.replacement = Some(("external".to_string(), overlays[2].clone()));
+        }
+        let mut next = spec.clone();
+        next.layers[1].opacity = 0.7;
+        control
+            .set_model_with(
+                super::LogoModelUpdate {
+                    spec: Some(&next),
+                    primary: 0,
+                    clip_animation_ms: None,
+                    enabled: true,
+                    size: (320, 180),
+                    animate: false,
+                },
+                synthetic_model,
+            )
+            .unwrap();
+        let state = control.lock();
+        let images = [
+            state.model_definition.as_ref().unwrap(),
+            &state.clip_image.as_ref().unwrap().1,
+            &state.replacement.as_ref().unwrap().1,
+        ];
+        for (image, epoch) in images.into_iter().zip(epochs) {
+            assert_eq!(
+                image.model.as_ref().unwrap().graphic.layers[1].prepared_at,
+                epoch
+            );
+        }
+    }
+
+    #[test]
+    fn override_refresh_releases_frame_mutex_and_discards_changed_inputs() {
+        use std::sync::Arc;
+        let control = LogoControl::default();
+        let spec = scrolling_model_spec();
+        let old = Arc::new(synthetic_model(&spec, 0, 320, 180).unwrap());
+        {
+            let mut state = control.lock();
+            state.model_definition = Some(old.clone());
+            state.configured = Some(Some(old.clone()));
+            state.clip_image = Some(("clip.png".to_string(), old.clone()));
+            state.replacement = Some(("external".to_string(), old));
+        }
+        let mut next = spec.clone();
+        next.layers[1].opacity = 0.7;
+        let mut preparations = 0;
+        control
+            .set_model_with(
+                super::LogoModelUpdate {
+                    spec: Some(&next),
+                    primary: 0,
+                    clip_animation_ms: None,
+                    enabled: true,
+                    size: (320, 180),
+                    animate: false,
+                },
+                |spec, primary, width, height| {
+                    preparations += 1;
+                    assert!(
+                        control.0.try_lock().is_ok(),
+                        "preparation holds the frame mutex"
+                    );
+                    let _ = control.frame();
+                    if preparations == 2 {
+                        control.set_clip_image(None, width, height).unwrap();
+                        control.show();
+                    }
+
+                    synthetic_model(spec, primary, width, height)
+                },
+            )
+            .unwrap();
+        assert!(preparations >= 3);
+        let state = control.lock();
+        assert!(state.clip_image.is_none());
+        assert!(state.replacement.is_none());
+        assert_eq!(
+            state
+                .model_definition
+                .as_ref()
+                .unwrap()
+                .model
+                .as_ref()
+                .unwrap()
+                .spec,
+            next
+        );
+    }
+
+    #[test]
+    fn cancelled_owner_cannot_publish_a_logo_after_preparation() {
+        use crate::{GraphicContent, GraphicSpec};
+        use std::sync::{
+            Arc, Barrier,
+            atomic::{AtomicBool, Ordering},
+        };
+
+        let control = LogoControl::default();
+        let original = GraphicSpec {
+            layers: Vec::new(),
+            picture: None,
+        };
+        let mut next = scrolling_model_spec();
+        next.layers[0].content = GraphicContent::Box {
+            fill: crate::RgbaColor::opaque(255, 0, 0),
+        };
+        control
+            .set_model(Some(&original), 0, None, true, 320, 180)
+            .unwrap();
+        let allowed = Arc::new(AtomicBool::new(true));
+        let prepared = Arc::new(Barrier::new(2));
+        let release = Arc::new(Barrier::new(2));
+        let worker_control = control.clone();
+        let worker_allowed = allowed.clone();
+        let worker_prepared = prepared.clone();
+        let worker_release = release.clone();
+        let worker = std::thread::spawn(move || {
+            let mut calls = 0;
+            worker_control
+                .refresh_model_guarded(Some(&next), 0, None, true, (320, 180), || {
+                    calls += 1;
+
+                    if calls == 2 {
+                        worker_prepared.wait();
+                        worker_release.wait();
+                    }
+
+                    worker_allowed.load(Ordering::SeqCst).then_some(())
+                })
+                .unwrap();
+        });
+        prepared.wait();
+        let frames_unlocked = control.0.try_lock().is_ok();
+        allowed.store(false, Ordering::SeqCst);
+        release.wait();
+        worker.join().unwrap();
+        assert!(frames_unlocked, "preparation must leave frames unlocked");
+        let state = control.lock();
+        assert_eq!(
+            state
+                .model_definition
+                .as_ref()
+                .unwrap()
+                .model
+                .as_ref()
+                .unwrap()
+                .spec,
+            original
+        );
+    }
+
+    #[test]
+    fn older_logo_preparation_cannot_republish_after_a_newer_model_clear() {
+        let control = LogoControl::default();
+        let spec = scrolling_model_spec();
+        control
+            .set_model_with(
+                super::LogoModelUpdate {
+                    spec: Some(&spec),
+                    primary: 0,
+                    clip_animation_ms: None,
+                    enabled: true,
+                    size: (320, 180),
+                    animate: false,
+                },
+                |spec, primary, width, height| {
+                    control
+                        .set_model(None, 0, None, false, width, height)
+                        .unwrap();
+
+                    synthetic_model(spec, primary, width, height)
+                },
+            )
+            .unwrap();
+        assert!(control.lock().model_definition.is_none());
     }
 
     #[test]

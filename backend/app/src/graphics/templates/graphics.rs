@@ -585,10 +585,29 @@ fn parse_color(value: &str) -> Option<noar_engine::RgbaColor> {
     }
 }
 
-/// `text` with every `{field}` replaced by its value; a field without a
-/// value is left empty.
-pub fn fill_fields(text: &str, values: &HashMap<String, String>) -> String {
-    let mut filled = String::with_capacity(text.len());
+/// Validate operator input before cloning values or substituting placeholders.
+pub fn validate_take_fields(
+    values: &HashMap<String, String>,
+    records: &HashMap<i32, usize>,
+) -> Result<(), ServiceError> {
+    if values.len() > 64
+        || values
+            .values()
+            .any(|value| value.chars().count() > MAX_TEXT_CHARS)
+        || records.len() > 16
+    {
+        return Err(ServiceError::BadRequest("Graphics fields exceed their limits (64 fields, 1000 characters per value and 16 record selectors)".to_string()));
+    }
+
+    Ok(())
+}
+
+/// Visit the exact literal and replacement slices without allocating expanded text.
+fn field_parts<'a>(
+    text: &'a str,
+    values: &'a HashMap<String, String>,
+    mut visit: impl FnMut(&'a str),
+) {
     let mut rest = text;
 
     while let Some(open) = rest.find('{') {
@@ -599,18 +618,52 @@ pub fn fill_fields(text: &str, values: &HashMap<String, String>) -> String {
         };
 
         let name = &after[..close];
-        filled.push_str(&rest[..open]);
+        visit(&rest[..open]);
 
         if !name.is_empty() && name.chars().all(is_field_char) {
-            filled.push_str(values.get(name).map(String::as_str).unwrap_or_default());
+            visit(values.get(name).map(String::as_str).unwrap_or_default());
             rest = &after[close + 1..];
         } else {
-            filled.push('{');
+            visit("{");
             rest = after;
         }
     }
 
-    filled.push_str(rest);
+    visit(rest);
+}
+
+/// Bound aggregate expanded text before any layer builds its rendered string.
+fn validate_expanded_text(
+    template: &GraphicsTemplate,
+    values: &HashMap<String, String>,
+) -> Result<(), ServiceError> {
+    const MAX_EXPANDED_TEXT_BYTES: usize = 256 * 1024;
+    let mut bytes = 0usize;
+
+    for layer in template
+        .layers
+        .iter()
+        .filter(|layer| layer.visible && layer.kind == LayerKind::Text)
+    {
+        field_parts(&layer.text, values, |part| {
+            bytes = bytes.saturating_add(part.len());
+        });
+
+        if bytes > MAX_EXPANDED_TEXT_BYTES {
+            return Err(ServiceError::BadRequest(
+                "Expanded graphics text exceeds 256 KiB".to_string(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+/// `text` with every `{field}` replaced by its value; a field without a
+/// value is left empty.
+pub fn fill_fields(text: &str, values: &HashMap<String, String>) -> String {
+    let mut filled = String::with_capacity(text.len());
+    field_parts(text, values, |part| filled.push_str(part));
 
     filled
 }
@@ -673,12 +726,31 @@ pub fn graphic_spec_for_channel(
     graphic_spec_for_records(template, values, &HashMap::new(), config)
 }
 
+/// Convert the assigned image target using the exact set of emitted layers.
+/// Video, empty image fields and unpainted boxes do not consume engine indices.
+pub fn graphic_spec_for_channel_controlled(
+    template: &GraphicsTemplate,
+    values: &HashMap<String, String>,
+    config: &crate::utils::config::PlayoutConfig,
+) -> Result<(noar_engine::GraphicSpec, usize), ServiceError> {
+    validate_take_fields(values, &HashMap::new())?;
+    let values = sources::resolved_values(template, values, &HashMap::new(), config)?;
+    graphic_spec_at_controlled(
+        template,
+        &values,
+        &config.channel.storage,
+        chrono::Utc::now(),
+        config.channel.timezone,
+    )
+}
+
 pub fn graphic_spec_for_records(
     template: &GraphicsTemplate,
     values: &HashMap<String, String>,
     records: &HashMap<i32, usize>,
     config: &crate::utils::config::PlayoutConfig,
 ) -> Result<noar_engine::GraphicSpec, ServiceError> {
+    validate_take_fields(values, records)?;
     let values = sources::resolved_values(template, values, records, config)?;
     graphic_spec_at(
         template,
@@ -696,6 +768,18 @@ fn graphic_spec_at(
     now: chrono::DateTime<chrono::Utc>,
     timezone: Option<chrono_tz::Tz>,
 ) -> Result<noar_engine::GraphicSpec, ServiceError> {
+    graphic_spec_at_controlled(template, values, storage, now, timezone).map(|(spec, _)| spec)
+}
+
+fn graphic_spec_at_controlled(
+    template: &GraphicsTemplate,
+    values: &HashMap<String, String>,
+    storage: &std::path::Path,
+    now: chrono::DateTime<chrono::Utc>,
+    timezone: Option<chrono_tz::Tz>,
+) -> Result<(noar_engine::GraphicSpec, usize), ServiceError> {
+    validate_expanded_text(template, values)?;
+    let mut primary = usize::MAX;
     let mut layers = Vec::with_capacity(template.layers.len());
     let mut picture = None;
 
@@ -775,6 +859,12 @@ fn graphic_spec_at(
             }
         };
 
+        if Some(layer.id.as_str()) == template.control_layer_id.as_deref()
+            && matches!(content, noar_engine::GraphicContent::Image { .. })
+        {
+            primary = layers.len();
+        }
+
         layers.push(noar_engine::GraphicLayerSpec {
             content,
             x: layer.x,
@@ -790,7 +880,7 @@ fn graphic_spec_at(
         });
     }
 
-    Ok(noar_engine::GraphicSpec { layers, picture })
+    Ok((noar_engine::GraphicSpec { layers, picture }, primary))
 }
 
 #[cfg(test)]
@@ -802,6 +892,53 @@ mod tests {
             "id": id, "x": 5, "y": 80, "width": 40, "height": 8, "text": text
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn controlled_image_indices_follow_emitted_layers_and_omitted_targets() {
+        let storage = std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests_assets/storage"
+        ));
+        let mut template = GraphicsTemplate {
+            name: "Controlled artwork".to_string(),
+            control_layer_id: Some("art".to_string()),
+            layers: serde_json::from_value(serde_json::json!([
+                {"id": "video", "kind": "video", "x": 20, "y": 0, "width": 80, "height": 70},
+                {"id": "empty-box", "kind": "box", "x": 0, "y": 0, "width": 20, "height": 20},
+                {"id": "empty-image", "kind": "image", "image": "{missing}", "x": 0, "y": 0, "width": 20, "height": 20},
+                {"id": "art", "kind": "image", "image": "logo.png", "x": 0, "y": 0, "width": 20, "height": 20},
+                {"id": "label", "kind": "text", "text": "Keep me", "x": 0, "y": 75, "width": 20, "height": 20}
+            ]))
+            .unwrap(),
+            ..Default::default()
+        };
+        let values = HashMap::new();
+        let (spec, primary) =
+            graphic_spec_at_controlled(&template, &values, storage, chrono::Utc::now(), None)
+                .unwrap();
+        assert!(spec.picture.is_some());
+        assert_eq!(spec.layers.len(), 2);
+        assert_eq!(primary, 0);
+        assert!(matches!(
+            spec.layers[primary].content,
+            noar_engine::GraphicContent::Image { .. }
+        ));
+        assert!(
+            matches!(&spec.layers[1].content, noar_engine::GraphicContent::Text { text, .. } if text == "Keep me")
+        );
+
+        template.control_layer_id = Some("empty-image".to_string());
+        let (_, primary) =
+            graphic_spec_at_controlled(&template, &values, storage, chrono::Utc::now(), None)
+                .unwrap();
+        assert_eq!(primary, usize::MAX);
+        template.control_layer_id = Some("art".to_string());
+        template.layers[3].visible = false;
+        let (_, primary) =
+            graphic_spec_at_controlled(&template, &values, storage, chrono::Utc::now(), None)
+                .unwrap();
+        assert_eq!(primary, usize::MAX);
     }
 
     #[test]
