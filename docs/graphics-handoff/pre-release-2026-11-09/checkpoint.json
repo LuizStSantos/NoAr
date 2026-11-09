@@ -21,5 +21,71 @@
   "branch_loss_comparison": "NOT_RUN",
   "processing_matrix": "NOT_RUN",
   "90_minute_soak": "NOT_RUN",
-  "councils": "Round A and B reports available; Round C ballots NOT_RUN; no advisory approval"
+  "councils": "Round A and B reports available; Round C ballots NOT_RUN; no advisory approval",
+  "code_commit": "6cf6721c2bc94b43c76bae2d7d6983387a08e831",
+  "final_rust": {
+    "fmt": "PASS",
+    "clippy_no_default_all_targets_deny_warnings": "PASS",
+    "test_no_default": {
+      "passed": 757,
+      "ignored": 14,
+      "failed": 0
+    },
+    "engine_processing_bench_tests": {
+      "passed": 286,
+      "raw_result_rows": [
+        [
+          "415",
+          "1"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          "52",
+          "0"
+        ],
+        [
+          "5",
+          "0"
+        ],
+        [
+          "0",
+          "3"
+        ],
+        [
+          "0",
+          "8"
+        ],
+        [
+          "285",
+          "2"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          "286",
+          "2"
+        ],
+        [
+          "0",
+          "0"
+        ]
+      ]
+    },
+    "processing_bench_build": "PASS"
+  },
+  "soak_unit_tests": {
+    "passed": 25,
+    "failed": 0
+  },
+  "final_browser_48": "NOT_RUN",
+  "candidate_binary_sha256": "7df4adfef5f2b577ecf2b3b0e0b40e2e5db8ec99241a03da61445981ea4c97e0"
 }

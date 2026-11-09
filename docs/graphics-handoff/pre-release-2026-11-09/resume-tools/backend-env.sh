@@ -1,0 +1,6 @@
+export DB='/workspace/noar-cloud/review-20261109/browser/data/db/noar.db'
+export TZ='America/Sao_Paulo'
+export NOAR_SETUP_STORAGE='/workspace/noar-cloud/review-20261109/browser/data/media'
+export NOAR_SETUP_PLAYLISTS='/workspace/noar-cloud/review-20261109/browser/data/playlists'
+export NOAR_SETUP_PUBLIC='/workspace/noar-cloud/review-20261109/browser/data/public'
+export NOAR_SETUP_LOGS='/workspace/noar-cloud/review-20261109/browser/data/logs'

@@ -1,0 +1,7 @@
+export NOAR_E2E_STAGING='1'
+export NOAR_E2E_WRITES='1'
+export NOAR_E2E_DISPOSABLE='1'
+export NOAR_E2E_BASE_URL='http://127.0.0.1:5757'
+export NOAR_E2E_STORAGE='/workspace/noar-cloud/review-20261109/browser/data/media'
+export NOAR_E2E_STATE_PATH='/workspace/noar-cloud/review-20261109/browser/session.json'
+export NOAR_E2E_CHROMIUM='/usr/bin/chromium'
