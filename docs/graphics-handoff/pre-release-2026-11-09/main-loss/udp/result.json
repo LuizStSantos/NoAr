@@ -1,0 +1,622 @@
+{
+  "label": "main",
+  "protocol": "udp",
+  "binary_sha256": "75aec35117c6b51a1f19c59960ef237650f6f2725416c6a6a4af6eb091f7875c",
+  "settings": {
+    "retry_seconds": 120,
+    "output": "640x360p25 HLS2s600segments",
+    "publisher": "ffmpeg testsrc2/sine h264ultrafastAAC",
+    "fault": "UDP video+audio to audio-only to video+audio",
+    "schedule_seconds": [
+      5,
+      105
+    ],
+    "fault_seconds": [
+      30,
+      60
+    ],
+    "sample_seconds": 125
+  },
+  "status": "COMPLETED",
+  "actions": [
+    {
+      "planned": 30,
+      "elapsed": 30.127671718597412,
+      "mode": "audio"
+    },
+    {
+      "planned": 60,
+      "elapsed": 60.23342514038086,
+      "mode": "av"
+    }
+  ],
+  "event": 1,
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "on_air",
+        "uptime": 125,
+        "output_age": 0.4
+      }
+    ]
+  },
+  "picture": {
+    "frames": 240,
+    "changes": 127,
+    "frame_age": 1.578,
+    "change_age": 1.588,
+    "mean_pixel_delta": 0.0,
+    "attempts": 5,
+    "problem": null
+  },
+  "decoded": {
+    "frames": 3062,
+    "longest_exact_hold_seconds": 23.8,
+    "holds": [
+      {
+        "first_output_frame": 25,
+        "first_seconds": 1.0,
+        "frames": 25,
+        "seconds": 1.0,
+        "md5": "8ce2adab22ea552055503e055987eef9"
+      },
+      {
+        "first_output_frame": 69,
+        "first_seconds": 2.76,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 85,
+        "first_seconds": 3.4,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 115,
+        "first_seconds": 4.6,
+        "frames": 23,
+        "seconds": 0.92,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 154,
+        "first_seconds": 6.16,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 170,
+        "first_seconds": 6.8,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 200,
+        "first_seconds": 8.0,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 254,
+        "first_seconds": 10.16,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 270,
+        "first_seconds": 10.8,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 304,
+        "first_seconds": 12.16,
+        "frames": 34,
+        "seconds": 1.36,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 355,
+        "first_seconds": 14.2,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 371,
+        "first_seconds": 14.84,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 401,
+        "first_seconds": 16.04,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 455,
+        "first_seconds": 18.2,
+        "frames": 7,
+        "seconds": 0.28,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 474,
+        "first_seconds": 18.96,
+        "frames": 12,
+        "seconds": 0.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 501,
+        "first_seconds": 20.04,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 555,
+        "first_seconds": 22.2,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 571,
+        "first_seconds": 22.84,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 602,
+        "first_seconds": 24.08,
+        "frames": 37,
+        "seconds": 1.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 656,
+        "first_seconds": 26.24,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 675,
+        "first_seconds": 27.0,
+        "frames": 12,
+        "seconds": 0.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 703,
+        "first_seconds": 28.12,
+        "frames": 37,
+        "seconds": 1.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 755,
+        "first_seconds": 30.2,
+        "frames": 5,
+        "seconds": 0.2,
+        "md5": "802f1d4fa3c4a9afd9a283997e043594"
+      },
+      {
+        "first_output_frame": 760,
+        "first_seconds": 30.4,
+        "frames": 43,
+        "seconds": 1.72,
+        "md5": "ed0f92f1b9ae9e143069bc319a062496"
+      },
+      {
+        "first_output_frame": 803,
+        "first_seconds": 32.12,
+        "frames": 50,
+        "seconds": 2.0,
+        "md5": "64e595984a73c6ce38de88fb51005e20"
+      },
+      {
+        "first_output_frame": 853,
+        "first_seconds": 34.12,
+        "frames": 54,
+        "seconds": 2.16,
+        "md5": "22c0a748ff6a4c4023140bf54194dafe"
+      },
+      {
+        "first_output_frame": 915,
+        "first_seconds": 36.6,
+        "frames": 595,
+        "seconds": 23.8,
+        "md5": "9f0adfdbe740cb9cd8188a35761e2476"
+      },
+      {
+        "first_output_frame": 1528,
+        "first_seconds": 61.12,
+        "frames": 8,
+        "seconds": 0.32,
+        "md5": "9f0adfdbe740cb9cd8188a35761e2476"
+      },
+      {
+        "first_output_frame": 1536,
+        "first_seconds": 61.44,
+        "frames": 32,
+        "seconds": 1.28,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1584,
+        "first_seconds": 63.36,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1600,
+        "first_seconds": 64.0,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1630,
+        "first_seconds": 65.2,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1685,
+        "first_seconds": 67.4,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1701,
+        "first_seconds": 68.04,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1733,
+        "first_seconds": 69.32,
+        "frames": 12,
+        "seconds": 0.48,
+        "md5": "697758a74adaf2ede497ffb76e451e78"
+      },
+      {
+        "first_output_frame": 1746,
+        "first_seconds": 69.84,
+        "frames": 11,
+        "seconds": 0.44,
+        "md5": "30f37c49ab8d2b63f152a667a6a9ea79"
+      },
+      {
+        "first_output_frame": 1757,
+        "first_seconds": 70.28,
+        "frames": 12,
+        "seconds": 0.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1785,
+        "first_seconds": 71.4,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1801,
+        "first_seconds": 72.04,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1831,
+        "first_seconds": 73.24,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1885,
+        "first_seconds": 75.4,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1901,
+        "first_seconds": 76.04,
+        "frames": 16,
+        "seconds": 0.64,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1932,
+        "first_seconds": 77.28,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 1986,
+        "first_seconds": 79.44,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2002,
+        "first_seconds": 80.08,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2033,
+        "first_seconds": 81.32,
+        "frames": 25,
+        "seconds": 1.0,
+        "md5": "7998d2c9d9123a9da5b441eaab39a580"
+      },
+      {
+        "first_output_frame": 2058,
+        "first_seconds": 82.32,
+        "frames": 12,
+        "seconds": 0.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2086,
+        "first_seconds": 83.44,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2102,
+        "first_seconds": 84.08,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2132,
+        "first_seconds": 85.28,
+        "frames": 39,
+        "seconds": 1.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2187,
+        "first_seconds": 87.48,
+        "frames": 7,
+        "seconds": 0.28,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2209,
+        "first_seconds": 88.36,
+        "frames": 9,
+        "seconds": 0.36,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2233,
+        "first_seconds": 89.32,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2287,
+        "first_seconds": 91.48,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2303,
+        "first_seconds": 92.12,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2335,
+        "first_seconds": 93.4,
+        "frames": 25,
+        "seconds": 1.0,
+        "md5": "1cb91bdfa11f942e6d31bfe2c548a22c"
+      },
+      {
+        "first_output_frame": 2360,
+        "first_seconds": 94.4,
+        "frames": 12,
+        "seconds": 0.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2389,
+        "first_seconds": 95.56,
+        "frames": 13,
+        "seconds": 0.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2407,
+        "first_seconds": 96.28,
+        "frames": 12,
+        "seconds": 0.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2434,
+        "first_seconds": 97.36,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2489,
+        "first_seconds": 99.56,
+        "frames": 13,
+        "seconds": 0.52,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2504,
+        "first_seconds": 100.16,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2536,
+        "first_seconds": 101.44,
+        "frames": 36,
+        "seconds": 1.44,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2588,
+        "first_seconds": 103.52,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2604,
+        "first_seconds": 104.16,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2629,
+        "first_seconds": 105.16,
+        "frames": 30,
+        "seconds": 1.2,
+        "md5": "25ca95c46d0685f16ae1d69096b72617"
+      },
+      {
+        "first_output_frame": 2676,
+        "first_seconds": 107.04,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2692,
+        "first_seconds": 107.68,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2722,
+        "first_seconds": 108.88,
+        "frames": 6,
+        "seconds": 0.24,
+        "md5": "0d549dbaab4110e9a676be919da86da2"
+      },
+      {
+        "first_output_frame": 2728,
+        "first_seconds": 109.12,
+        "frames": 32,
+        "seconds": 1.28,
+        "md5": "29c88532af0a26d9e48481424fa8c841"
+      },
+      {
+        "first_output_frame": 2776,
+        "first_seconds": 111.04,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2792,
+        "first_seconds": 111.68,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2823,
+        "first_seconds": 112.92,
+        "frames": 37,
+        "seconds": 1.48,
+        "md5": "f17908bb8a64e9616ad4cc08fbe3596d"
+      },
+      {
+        "first_output_frame": 2876,
+        "first_seconds": 115.04,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2892,
+        "first_seconds": 115.68,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2924,
+        "first_seconds": 116.96,
+        "frames": 37,
+        "seconds": 1.48,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2977,
+        "first_seconds": 119.08,
+        "frames": 14,
+        "seconds": 0.56,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 2993,
+        "first_seconds": 119.72,
+        "frames": 15,
+        "seconds": 0.6,
+        "md5": "f46a1eaa36fe4e02b9e49d6181dd0e56"
+      },
+      {
+        "first_output_frame": 3023,
+        "first_seconds": 120.92,
+        "frames": 38,
+        "seconds": 1.52,
+        "md5": "8e6d69bb54fd3a94fa904210867217ee"
+      }
+    ]
+  },
+  "warnings": [
+    "\u001b[33m[ WARN]\u001b[0m No Two-factor authentication!",
+    "\u001b[94m[DEBUG]\u001b[0m GStreamer first video sample: PTS Some(0:00:00.157084491), segment Some(Segment { format: Time, start: 0:00:00.157084491, offset: 0:00:00.000000000, stop: 0:01:00.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(RESET), time: 0:00:00.157084491, base: 0:00:00.000000000, position: 0:00:00.157084491, duration: --:--:--.--------- })",
+    "\u001b[94m[DEBUG]\u001b[0m GStreamer first audio sample: PTS Some(0:00:00.178417824), segment Some(Segment { format: Time, start: 0:00:00.178417824, offset: 0:00:00.000000000, stop: 0:01:00.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(RESET), time: 0:00:00.157084491, base: 0:00:00.000000000, position: 0:00:00.178417824, duration: --:--:--.--------- })",
+    "\u001b[33m[ WARN]\u001b[0m Update check failed: GitHub did not answer: error sending request for url (https://api.github.com/repos/LuizStSantos/NoAr/releases/latest): operation timed out",
+    "\u001b[94m[DEBUG]\u001b[0m GStreamer first video sample: PTS Some(0:00:45.084442620), segment Some(Segment { format: Time, start: 0:00:45.084442620, offset: 0:00:00.000000000, stop: 0:01:00.000000000, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(RESET), time: 0:00:45.084442620, base: 0:00:00.000000000, position: 0:00:45.084442620, duration: --:--:--.--------- })",
+    "\u001b[94m[DEBUG]\u001b[0m GStreamer first audio sample: PTS Some(0:00:45.105775953), segment Some(Segment { format: Time, start: 0:00:45.105775953, offset: 0:00:00.000000000, stop: 0:01:00.021333333, rate: 1.0, applied_rate: 1.0, flags: SegmentFlags(RESET), time: 0:00:45.084442620, base: 0:00:00.000000000, position: 0:00:45.105775953, duration: --:--:--.--------- })"
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "repository": "LuizStSantos/NoAr",
+  "ref": "f925f608 plus reviewed worktree fixes",
+  "council": "backend",
+  "scope": "changed against dd4529e2 (2.2.1 product source)",
+  "finding_semantics": "Confirm/dismiss refers to original evidenced defect; resolution separately tracked. Blockerfalse only means source fix implemented, NOT verified release readiness. Independently assess fixes and deny readiness if insufficient evidence/new blockers.",
+  "findings": [
+    {
+      "id": "B-001",
+      "title": "Manual field expansion allocation",
+      "severity": "HIGH",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/graphics/templates/graphics.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Fields64/value1000/records16 and expanded256KiB bounds before string construction."
+    },
+    {
+      "id": "B-002",
+      "title": "Unbounded stale pending takes survive out/edit/delete/restart",
+      "severity": "HIGH",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/graphics.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Bounded16 pending queue; RAII, lifecycle/edit generations and serialized publication."
+    },
+    {
+      "id": "B-003",
+      "title": "Optional bad permanent artwork blocks whole output startup",
+      "severity": "HIGH",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/player/output/playout.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Isolate per-model asset failures, retainhealthy; DB errors propagate."
+    },
+    {
+      "id": "B-004",
+      "title": "Filtered image target uses unfiltered layer index",
+      "severity": "MEDIUM",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/graphics/templates/graphics.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Mapper returns emitted spec and emitted primary index; renderer preserves index on omitted rasters."
+    },
+    {
+      "id": "B-005",
+      "title": "Temporary takes rasterize using unapplied output dimensions",
+      "severity": "MEDIUM",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/graphics.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Uses actual running output size."
+    },
+    {
+      "id": "B-006",
+      "title": "Moving bound model logo rerasterizes on output thread",
+      "severity": "HIGH",
+      "category": "backend",
+      "evidence": [
+        "backend/engine/src/compositor/logo.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Cached model translation with shared prepared layers; no native raster/I/O in move frame path."
+    },
+    {
+      "id": "B-007",
+      "title": "Native artwork preparation holds frame-critical control locks",
+      "severity": "HIGH",
+      "category": "backend",
+      "evidence": [
+        "backend/engine/src/compositor/lshape.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Snapshot prepare outside lock then identity/generation validation; logo same pattern."
+    },
+    {
+      "id": "B-008",
+      "title": "Nested Lshape refresh resets motion epoch",
+      "severity": "MEDIUM",
+      "category": "backend",
+      "evidence": [
+        "backend/engine/src/compositor/lshape.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Retains nested and role motion epochs."
+    },
+    {
+      "id": "B-009",
+      "title": "Bound logo refresh resets scroll epoch",
+      "severity": "MEDIUM",
+      "category": "backend",
+      "evidence": [
+        "backend/engine/src/compositor/logo.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Retains own animated model epochs across replacement/refresh."
+    },
+    {
+      "id": "B-010",
+      "title": "Partial schema29/30 bindings without marker fail startup conversion",
+      "severity": "MEDIUM",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/db/handles/graphics/compatibility/conversion/graphics.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Adopts surviving bindings/scenes, avoids frozen import. Zero bindings+zero scenes ambiguous. Historical public deletion unreachable basedoncheckedcallers; downgradefrominitialseverityconditional."
+    },
+    {
+      "id": "B-011",
+      "title": "Unchanged compatibility saves round authored fractional geometry",
+      "severity": "MEDIUM",
+      "category": "backend",
+      "evidence": [
+        "backend/app/src/db/handles/graphics/compatibility/graphics.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Independent projected position/scale change checks; previous dimensions passed on output resize."
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "label": "main",
+  "protocol": "udp",
+  "binary_sha256": "75aec35117c6b51a1f19c59960ef237650f6f2725416c6a6a4af6eb091f7875c",
+  "settings": {
+    "retry_seconds": 120,
+    "output": "640x360p25 HLS2s600segments",
+    "publisher": "ffmpeg testsrc2/sine h264ultrafastAAC",
+    "fault": "UDP video+audio to audio-only to video+audio",
+    "schedule_seconds": [
+      5,
+      105
+    ],
+    "fault_seconds": [
+      30,
+      60
+    ],
+    "sample_seconds": 125
+  },
+  "status": "COMPLETED",
+  "actions": [
+    {
+      "planned": 30,
+      "elapsed": 30.127671718597412,
+      "mode": "audio"
+    },
+    {
+      "planned": 60,
+      "elapsed": 60.23342514038086,
+      "mode": "av"
+    }
+  ],
+  "event": 1,
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "on_air",
+        "uptime": 125,
+        "output_age": 0.4
+      }
+    ]
+  },
+  "picture": {
+    "frames": 240,
+    "changes": 127,
+    "frame_age": 1.578,
+    "change_age": 1.588,
+    "mean_pixel_delta": 0.0,
+    "attempts": 5,
+    "problem": null
+  }
+}

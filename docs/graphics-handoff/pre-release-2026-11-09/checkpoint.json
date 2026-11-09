@@ -1,0 +1,25 @@
+{
+  "status": "NOT_READY",
+  "reason": "User requested checkpoint push before remaining weekly budget is consumed",
+  "main_reference": "dd4529e2935b07d7a5bf8deb764421e4d201fc41; backend/Cargo source identical to v2.2.1",
+  "main_loss_runs": [
+    {
+      "protocol": "udp",
+      "status": "COMPLETED",
+      "decoded_exact_hold_seconds": 23.8,
+      "binary_sha256": "75aec35117c6b51a1f19c59960ef237650f6f2725416c6a6a4af6eb091f7875c",
+      "pacing_reset_warning_reproduced": false
+    },
+    {
+      "protocol": "srt",
+      "status": "COMPLETED",
+      "decoded_exact_hold_seconds": 1.92,
+      "binary_sha256": "75aec35117c6b51a1f19c59960ef237650f6f2725416c6a6a4af6eb091f7875c",
+      "pacing_reset_warning_reproduced": false
+    }
+  ],
+  "branch_loss_comparison": "NOT_RUN",
+  "processing_matrix": "NOT_RUN",
+  "90_minute_soak": "NOT_RUN",
+  "councils": "Round A and B reports available; Round C ballots NOT_RUN; no advisory approval"
+}

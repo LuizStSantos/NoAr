@@ -1,0 +1,165 @@
+{
+  "repository": "LuizStSantos/NoAr",
+  "ref": "f925f608 plus reviewed worktree fixes",
+  "council": "frontend",
+  "scope": "changed against dd4529e2 (2.2.1 product source)",
+  "finding_semantics": "Confirm/dismiss refers to original evidenced defect; resolution separately tracked. Blockerfalse only means source fix implemented, NOT verified release readiness. Independently assess fixes and deny readiness if insufficient evidence/new blockers.",
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "Dirty channel navigation guard occurs after global config mutation",
+      "severity": "HIGH",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/composables/editorNavigation.ts"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Global router beforeEach guard precedes configInit; cancelled header restores selection."
+    },
+    {
+      "id": "F-002",
+      "title": "Stale save continuation crosses document/channel generations",
+      "severity": "HIGH",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/GraphicsComposer.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Snapshotchannel/document/generation; obsolete responses cannot publish/reassign/navigate."
+    },
+    {
+      "id": "F-003",
+      "title": "Keyboard edits remain possible during save",
+      "severity": "MEDIUM",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/GraphicsComposer.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Native disabled+inert fieldset and disabled dialog metadata."
+    },
+    {
+      "id": "F-004",
+      "title": "Abandoned legacy editor lookup redirects new route",
+      "severity": "MEDIUM",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/GraphicsChannelEditor.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Disposed/generation guard."
+    },
+    {
+      "id": "F-005",
+      "title": "Template temporary on-air badges never refresh",
+      "severity": "MEDIUM",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/GraphicsLibrary.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Poll temporary list with channel bindings."
+    },
+    {
+      "id": "F-006",
+      "title": "Fullframe resize handles clipped by canvas overflow",
+      "severity": "MEDIUM",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/composer/ComposerCanvas.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Move handles inside bounds; focused desktop/mobile regression."
+    },
+    {
+      "id": "F-007",
+      "title": "Active library filter has no visual feedback",
+      "severity": "LOW",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/GraphicsLibrary.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Pressed visible style."
+    },
+    {
+      "id": "F-008",
+      "title": "Font upload input focus invisible",
+      "severity": "MEDIUM",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/GraphicsComposer.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "focus-within style and keyboard check."
+    },
+    {
+      "id": "F-009",
+      "title": "Resize handles lack keyboard action and layer selection semantic state",
+      "severity": "MEDIUM",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/composer/ComposerCanvas.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Arrow resizing on handle; aria-pressed selection."
+    },
+    {
+      "id": "F-010",
+      "title": "First image cannot reset old target and stale data mapping remains on former layer",
+      "severity": "MEDIUM",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/composer/ComposerLayerInspector.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "ActualfirstimageID; prune former-layer data mapping evenifsharedplaceholder remains elsewhere."
+    },
+    {
+      "id": "F-011",
+      "title": "Combined role+content save validates old role and partially persists changes",
+      "severity": "HIGH",
+      "category": "frontend",
+      "evidence": [
+        "backend/app/src/api/routes/graphics.rs"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Optional atomicassignment payload validated against effective new role, single DBtransaction content+bindings+displaced permanent; old omittedpayload unchanged."
+    },
+    {
+      "id": "F-012",
+      "title": "Waiting takes cannot be cancelled when active list empty",
+      "severity": "HIGH",
+      "category": "frontend",
+      "evidence": [
+        "frontend/src/components/graphics/GraphicsOnAir.vue"
+      ],
+      "verification": "VERIFIED_STATIC",
+      "is_blocker": false,
+      "resolution": "IMPLEMENTED_PENDING_RUNTIME",
+      "fix_summary": "Alwaysavailableall-out clears active and pending takes; noactive requirement."
+    }
+  ]
+}

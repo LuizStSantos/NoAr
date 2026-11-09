@@ -1,0 +1,55 @@
+{
+  "label": "main",
+  "protocol": "srt",
+  "binary_sha256": "75aec35117c6b51a1f19c59960ef237650f6f2725416c6a6a4af6eb091f7875c",
+  "settings": {
+    "retry_seconds": 120,
+    "output": "640x360p25 HLS2s600segments",
+    "publisher": "ffmpeg testsrc2/sine h264ultrafastAAC",
+    "fault": "SRT publisher termination/restart",
+    "schedule_seconds": [
+      5,
+      105
+    ],
+    "fault_seconds": [
+      30,
+      50
+    ],
+    "sample_seconds": 125
+  },
+  "status": "COMPLETED",
+  "actions": [
+    {
+      "planned": 30,
+      "elapsed": 30.462785720825195,
+      "mode": "off"
+    },
+    {
+      "planned": 50,
+      "elapsed": 50.13588070869446,
+      "mode": "av"
+    }
+  ],
+  "event": 1,
+  "health": {
+    "status": "ok",
+    "version": "2.2.1",
+    "channels": [
+      {
+        "id": 1,
+        "state": "on_air",
+        "uptime": 125,
+        "output_age": 0.4
+      }
+    ]
+  },
+  "picture": {
+    "frames": 240,
+    "changes": 152,
+    "frame_age": 1.257,
+    "change_age": 1.269,
+    "mean_pixel_delta": 0.0,
+    "attempts": 5,
+    "problem": null
+  }
+}

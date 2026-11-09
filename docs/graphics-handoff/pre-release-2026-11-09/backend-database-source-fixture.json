@@ -1,0 +1,43 @@
+{
+  "fresh_34_integrity": "ok",
+  "permanent_limit": "PASS",
+  "font_backup_bytes": true,
+  "channel_cascade": true,
+  "migration34_action_bytes_and_null_template": true,
+  "partial_pre31_bindings": [
+    {
+      "retained_roles": 0,
+      "marked": false,
+      "conversion_insert_result": null
+    },
+    {
+      "retained_roles": 1,
+      "marked": false,
+      "conversion_insert_result": "UNIQUE constraint failed: graphics_channel_bindings.channel_id, graphics_channel_bindings.role"
+    },
+    {
+      "retained_roles": 2,
+      "marked": false,
+      "conversion_insert_result": "UNIQUE constraint failed: graphics_channel_bindings.channel_id, graphics_channel_bindings.role"
+    },
+    {
+      "retained_roles": 3,
+      "marked": true,
+      "conversion_insert_result": null
+    }
+  ],
+  "logo_noop_quantization_formula": {
+    "authored_x_percent": 5.1,
+    "projected_x_pixels": 64,
+    "saved_x_percent": 5.0
+  },
+  "released_1_to_27_identical": true,
+  "frozen_sha256": {
+    "00029_graphics_channel_bindings.sql": "29042bb749a9e8dfdae103b250f5566d9ad5808923a7c080e8955748e26df3d7",
+    "00030_graphics_layer_layout.sql": "ab5ba065652d611e19d4ee6a3418ad960993a8010991c97a425ba514dca15ba2",
+    "00031_graphics_open_templates.sql": "6b0f4a52c4e7a762ca373de5bbccf199e080dbc333ee1ab72fdafa073338ad14",
+    "00032_graphics_fonts.sql": "d9a80abb29390ab20fb16a6674af2e12f944694ce244f56eb52be7e2693c709f",
+    "00033_graphics_data_sources.sql": "c7f5815cc091f9466ae57fbb01afd074f8b54f609335d5519b9f5ecf76c670b6",
+    "00034_graphics_template_schedule.sql": "8748e893a0ae70bcfebbb58c3ee40516172d8961d32675798e1efcb2ca1162c1"
+  }
+}
