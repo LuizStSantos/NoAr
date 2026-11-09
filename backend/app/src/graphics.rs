@@ -22,8 +22,6 @@ use serde::Serialize;
 mod channel;
 #[path = "graphics/commands/graphics.rs"]
 pub mod commands;
-#[path = "graphics/control/graphics.rs"]
-pub mod control;
 #[path = "graphics/fonts/graphics.rs"]
 pub mod fonts;
 #[path = "graphics/sources/graphics.rs"]

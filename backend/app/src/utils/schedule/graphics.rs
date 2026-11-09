@@ -8,7 +8,6 @@ use serde::Deserialize;
 use super::{parse_date, parse_time};
 use crate::{
     db::models::GraphicsEvent,
-    file::norm_abs_path,
     utils::{config::GraphicsScene, errors::ServiceError},
 };
 
@@ -38,7 +37,7 @@ fn default_enabled() -> bool {
 /// Check an event from the web interface and turn it into a row: its
 /// images become storage-relative.
 pub fn prepare_graphics_event(
-    storage: &std::path::Path,
+    _storage: &std::path::Path,
     channel_id: i32,
     id: i32,
     input: GraphicsEventInput,
@@ -59,23 +58,19 @@ pub fn prepare_graphics_event(
     }
 
     let title = input.title.trim().to_string();
-    let mut actions = GraphicsScene {
-        name: title.clone(),
-        ..input.actions
-    };
 
-    actions.check().map_err(bad_request)?;
-
-    for image in [&mut actions.logo_image, &mut actions.lshape_graphic] {
-        *image = match image
-            .as_deref()
-            .map(str::trim)
-            .filter(|path| !path.is_empty())
-        {
-            Some(path) => Some(norm_abs_path(storage, path)?.2),
-            None => None,
-        };
+    // Scheduled graphics put a template on and off air. Logo and L-shape
+    // actions of older versions are no longer accepted.
+    if input.template.is_none() {
+        return Err(bad_request(
+            "Choose the template this scheduled graphic puts on air".to_string(),
+        ));
     }
+
+    let actions = GraphicsScene {
+        name: title.clone(),
+        ..GraphicsScene::default()
+    };
 
     Ok(GraphicsEvent {
         id,
@@ -213,19 +208,17 @@ mod tests {
     use std::path::Path;
 
     use super::*;
-    use crate::utils::config::{SceneLShape, SceneLogo};
 
     fn input(start: &str, end: Option<&str>, repeat_days: u8) -> GraphicsEventInput {
         GraphicsEventInput {
             title: " Patrocínio ".to_string(),
-            template: None,
-            actions: GraphicsScene {
-                logo: SceneLogo::Hide,
-                lshape: SceneLShape::On,
-                lshape_corner: Some("bottom-left".to_string()),
-                lshape_scale: Some(70.0),
-                ..GraphicsScene::default()
-            },
+            template: Some(crate::db::models::ScheduledGraphic {
+                template_id: 3,
+                name: "Patrocínio".to_string(),
+                values: Default::default(),
+                records: Default::default(),
+            }),
+            actions: GraphicsScene::default(),
             start_date: "2026-10-27".to_string(),
             start_time: start.to_string(),
             end_time: end.map(str::to_string),
@@ -257,9 +250,12 @@ mod tests {
             Some(next.succ_opt().unwrap().and_hms_opt(0, 2, 0).unwrap())
         );
 
-        let mut wrong = input("12:00", None, 0);
-        wrong.actions.lshape_corner = Some("middle".to_string());
-        assert!(prepare_graphics_event(storage, 1, 0, wrong).is_err());
+        let mut legacy = input("12:00", None, 0);
+        legacy.template = None;
+        assert!(
+            prepare_graphics_event(storage, 1, 0, legacy).is_err(),
+            "logo and L-shape events without a template are no longer accepted"
+        );
         assert!(prepare_graphics_event(storage, 1, 0, input("25:00", None, 0)).is_err());
     }
 }

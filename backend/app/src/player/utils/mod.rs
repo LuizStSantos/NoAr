@@ -918,13 +918,13 @@ mod tests {
     fn an_entry_keeps_marks_of_its_own() {
         let entry: Media = serde_json::from_str(
             r#"{"in": 0, "out": 60, "duration": 60, "source": "/media/a.mp4",
-                "marks": {"hide": [{"from": 10.0, "to": 20.0}], "logo_position": "50%:1%"}}"#,
+                "marks": {"graphics": [{"at": 10.0, "action": "take", "template_id": 4}]}}"#,
         )
         .unwrap();
         let marks = entry.marks.as_ref().unwrap();
 
-        assert_eq!(marks.hide.len(), 1);
-        assert_eq!(marks.logo_position.as_deref(), Some("50%:1%"));
+        assert_eq!(marks.graphics.len(), 1);
+        assert_eq!(marks.graphics[0].template_id, 4);
         // A copy without them is another entry.
         let mut plain = entry.clone();
         plain.marks = None;

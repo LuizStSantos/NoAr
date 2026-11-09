@@ -57,11 +57,9 @@ pub async fn channel_graphics(
     manager: &ChannelManager,
 ) -> Result<Vec<ChannelGraphicView>, ServiceError> {
     use crate::db::{handles, models::GraphicsRole};
-    use crate::utils::config::{SceneLShape, SceneLogo};
 
     let templates = handles::select_graphics_templates(&manager.db_pool, manager.id).await?;
     let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
-    let scenes = handles::select_graphics_scene_templates(&manager.db_pool, manager.id).await?;
     let config = manager.config.read().await.clone();
     let mut result = Vec::new();
 
@@ -106,56 +104,6 @@ pub async fn channel_graphics(
                 .unwrap_or(false),
             template: template.clone(),
             scene_name: None,
-        });
-    }
-
-    for (id, scene) in scenes {
-        let mut template = templates
-            .iter()
-            .find(|template| template.id == id)
-            .ok_or_else(|| ServiceError::Conflict("Missing scene model".to_string()))?
-            .clone();
-        let picture = scene.lshape == SceneLShape::On
-            || (scene.lshape == SceneLShape::Keep && manager.lshape_control.is_on());
-        template.layers = Vec::new();
-
-        if picture && let Some(base) = result.iter().find(|view| view.kind == "lshape") {
-            template.layers = base.template.layers.clone();
-
-            if let Some(image) = scene.lshape_graphic.as_ref()
-                && let Some(layer) = template
-                    .layers
-                    .iter_mut()
-                    .find(|layer| layer.kind == LayerKind::Image)
-            {
-                layer.image = Some(image.clone());
-            }
-        }
-
-        if !picture
-            && scene.logo != SceneLogo::Hide
-            && let Some(base) = result.iter().find(|view| view.kind == "logo")
-            && (base.on || matches!(scene.logo, SceneLogo::Show | SceneLogo::Replace))
-        {
-            let mut layers = base.template.layers.clone();
-
-            if scene.logo == SceneLogo::Replace
-                && let Some(layer) = layers
-                    .iter_mut()
-                    .find(|layer| layer.kind == LayerKind::Image)
-            {
-                layer.image = scene.logo_image.clone();
-            }
-
-            template.layers.extend(layers);
-        }
-
-        result.push(ChannelGraphicView {
-            kind: "scene".to_string(),
-            template,
-            on: false,
-            ready: true,
-            scene_name: Some(scene.name),
         });
     }
 
@@ -274,21 +222,9 @@ pub async fn control_channel_graphic(
         return Ok(());
     }
 
-    let scenes = handles::select_graphics_scene_templates(&manager.db_pool, manager.id).await?;
-    let (_, scene) = scenes
-        .iter()
-        .find(|(id, _)| *id == template_id)
-        .ok_or_else(|| ServiceError::NotFound("Channel model not found".to_string()))?;
-    if !on {
-        return Err(ServiceError::BadRequest(
-            "A scene is applied with on:true; use channel controls to change its result"
-                .to_string(),
-        ));
-    }
-
-    super::control::apply_scene_actions(manager, scene).await?;
-
-    Ok(())
+    Err(ServiceError::NotFound(
+        "Channel model not found".to_string(),
+    ))
 }
 
 /// Removing a channel binding also removes its transient external/clip artwork.

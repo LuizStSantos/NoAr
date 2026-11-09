@@ -1,5 +1,6 @@
-//! Airs the graphics events of a channel while it plays: each one's logo and
-//! L-shape changes when it starts, undone when it ends.
+//! Airs the scheduled graphics of a channel while it plays: each puts its
+//! template on air when it starts and takes it off when it ends. Logo and
+//! L-shape events of older versions are left alone.
 
 use std::{collections::HashSet, time::Duration};
 
@@ -11,12 +12,7 @@ use tokio_util::sync::CancellationToken;
 #[path = "graphics_schedule/graphics.rs"]
 mod templates;
 
-use crate::{
-    db::handles,
-    graphics::control::{apply_scene_actions, revert_scene_actions},
-    player::controller::ChannelManager,
-    utils::time_machine::time_now,
-};
+use crate::{db::handles, player::controller::ChannelManager, utils::time_machine::time_now};
 
 const TICK: Duration = Duration::from_secs(1);
 
@@ -54,51 +50,9 @@ async fn tick(
     let events = handles::select_graphics_events(&manager.db_pool, manager.id).await?;
     let timezone = manager.config.read().await.channel.timezone;
     let now = time_now(&timezone).naive_local();
-    let grace = TimeDelta::try_seconds(GRACE_SECONDS).unwrap_or_default();
     let day = TimeDelta::try_days(1).unwrap_or_default();
 
     templates.tick(manager, &events, now, done).await?;
-
-    for event in events.iter().filter(|event| event.template.is_none()) {
-        for date in [(now - day).date(), now.date()] {
-            let Some((start, end)) = event.window_on(date) else {
-                continue;
-            };
-            // On from its start until its end; without an end, only around
-            // the start, so a restart does not bring back an old change.
-            let on_now = now >= start && end.map_or(now - start <= grace, |end| now < end);
-
-            if on_now && done.insert((event.id, start, false)) {
-                match apply_scene_actions(manager, &event.actions).await {
-                    Ok(()) => info!(channel = manager.id;
-                        "Scheduled graphics <span class=\"log-addr\">{}</span> on air",
-                        event.title
-                    ),
-                    Err(error) => warn!(channel = manager.id;
-                        "Scheduled graphics <span class=\"log-addr\">{}</span>: {error}",
-                        event.title
-                    ),
-                }
-            }
-
-            if let Some(end) = end
-                && now >= end
-                && now - end <= grace
-                && done.insert((event.id, start, true))
-            {
-                match revert_scene_actions(manager, &event.actions).await {
-                    Ok(()) => info!(channel = manager.id;
-                        "Scheduled graphics <span class=\"log-addr\">{}</span> ended",
-                        event.title
-                    ),
-                    Err(error) => warn!(channel = manager.id;
-                        "Scheduled graphics <span class=\"log-addr\">{}</span> did not end: {error}",
-                        event.title
-                    ),
-                }
-            }
-        }
-    }
 
     done.retain(|(_, start, _)| *start > now - day - day);
 

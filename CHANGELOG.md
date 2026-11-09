@@ -73,6 +73,9 @@ one is tagged.
   or ticker alike, by id or by name, with an optional time on air
   (`duration`, 0 keeps it on until taken off), with a login token or the
   graphics key. The External control page shows them ready to copy.
+- Graphics cues in a video's marks (Storage › Marks › Graphics): at a time of
+  the video, put a template on air for a time or until taken off, or take one
+  off. They run while the video plays, from wherever it starts.
 
 - Author continuous left/right scrolling on Composer text layers, with output-pixel
   speed, repeat spacing, clipped previews, manual fields and live data mappings.

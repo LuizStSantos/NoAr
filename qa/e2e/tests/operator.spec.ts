@@ -446,42 +446,27 @@ test('channel graphics editors replace legacy navigation and retain bookmarked l
         navigation.locator('a[href*="/graphics/logo"], a[href*="/graphics/lshape"], a[href*="/graphics/scenes"]'),
     ).toHaveCount(0)
 
-    for (const kind of ['logo', 'lshape', 'ticker', 'scene']) {
+    for (const kind of ['logo', 'lshape', 'ticker']) {
         const edit = page
             .locator(`article[data-kind="${kind}"]`)
             .first()
             .getByRole('link', { name: 'Edit', exact: true })
-        await expect(edit).toHaveAttribute(
-            'href',
-            kind === 'scene' ? /graphics\/channel\/scene/ : /graphics\/composer.*template=/,
-        )
+        await expect(edit).toHaveAttribute('href', /graphics\/composer.*template=/)
         await edit.click()
-        if (kind === 'scene') {
-            await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
-        } else {
-            await expect(page.getByLabel('Template name', { exact: true })).toBeVisible()
-        }
-        await page
-            .getByRole('link', { name: kind === 'scene' ? 'Back to templates' : 'See templates', exact: true })
-            .click()
+        await expect(page.getByLabel('Template name', { exact: true })).toBeVisible()
+        await page.getByRole('link', { name: 'See templates', exact: true }).click()
         await expect(page).toHaveURL(/graphics\/templates\?channel=1/)
     }
 
-    for (const [legacy, kind] of [
-        ['logo', 'logo'],
-        ['logo#ticker', 'ticker'],
-        ['lshape', 'lshape'],
-        ['scenes', 'scene'],
-    ]) {
-        const [path, hash] = legacy!.split('#')
+    for (const [legacy, target] of [
+        ['logo', /graphics\/composer.*template=/],
+        ['logo#ticker', /graphics\/composer.*template=/],
+        ['lshape', /graphics\/composer.*template=/],
+        ['scenes', /graphics\/templates\?channel=1/],
+    ] as const) {
+        const [path, hash] = legacy.split('#')
         await page.goto(`/graphics/${path}?channel=1${hash ? `#${hash}` : ''}`)
-        if (kind === 'scene') {
-            await expect(page).toHaveURL(/graphics\/channel\/scene/)
-            await expect(page.getByTestId('channel-graphics-editor')).toBeVisible()
-        } else {
-            await expect(page).toHaveURL(/graphics\/composer.*template=/)
-            await expect(page.getByLabel('Template name', { exact: true })).toBeVisible()
-        }
+        await expect(page).toHaveURL(target)
     }
 
     await page.setViewportSize({ width: 390, height: 844 })

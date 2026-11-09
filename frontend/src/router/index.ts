@@ -96,7 +96,7 @@ const router = createRouter({
                     redirect: (to) => ({ name: 'graphics-onair', query: to.query }),
                 },
                 {
-                    path: 'channel/:kind(logo|ticker|lshape|scene)',
+                    path: 'channel/:kind(logo|ticker|lshape)',
                     name: 'graphics-channel-editor',
                     component: () => import('@/components/graphics/GraphicsChannelEditor.vue'),
                     meta: { showHeader: true, roles: ADMINS },
@@ -140,7 +140,7 @@ const router = createRouter({
                 {
                     path: 'scenes',
                     name: 'graphics-scenes',
-                    redirect: (to) => ({ name: 'graphics-channel-editor', params: { kind: 'scene' }, query: to.query }),
+                    redirect: (to) => ({ name: 'graphics-templates', query: to.query }),
                 },
                 {
                     path: 'api',

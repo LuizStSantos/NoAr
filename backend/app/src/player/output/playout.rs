@@ -26,7 +26,7 @@ use crate::{
         config::{ENGINE_AUDIO_SAMPLE_RATE, OutputMode, PlayoutConfig, RecordingSource},
         control::{PlayerCtl, control_state},
         errors::ServiceError,
-        logo_marks::{LogoMarks, clip_marks},
+        logo_marks::clip_marks,
     },
 };
 
@@ -213,94 +213,20 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
     }
 }
 
-/// Before a clip plays: where it puts the logo, which logo it shows (while
-/// the channel has one), and the L-shape of its own for its marked stretches
-/// (its graphic, corner or size, each falling back to the channel's), or the
-/// channel's. A setting that cannot be used is
-/// logged, and the channel's is used.
-async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: &LogoMarks) {
+/// Before a clip plays: clear any logo or L-shape of the clip before it.
+/// Graphics inside a video are now cues that put templates on and off air.
+async fn reset_clip_graphics(playout: &AsyncPlayout, config: &PlayoutConfig) {
     let (width, height) = (config.output.width, config.output.height);
-
-    if let Err(error) =
-        playout
-            .logo_control()
-            .set_clip_position(marks.logo_position.as_deref(), width, height)
-    {
-        warn!(channel = config.general.channel_id; "Logo position of the clip: {error:#}");
-        let _ = playout
-            .logo_control()
-            .set_clip_position(None, width, height);
-    }
-
-    let image = marks
-        .logo_image
-        .as_deref()
-        .filter(|_| config.processing.add_logo)
-        .and_then(
-            |image| match norm_abs_path(&config.channel.storage, image) {
-                Ok((path, _, _)) => Some(LogoConfig {
-                    path: path.to_string_lossy().to_string(),
-                    scale: (!config.processing.logo_scale.trim().is_empty())
-                        .then(|| config.processing.logo_scale.clone()),
-                    opacity: config.processing.logo_opacity,
-                    position: config.processing.logo_position.clone(),
-                }),
-                Err(error) => {
-                    warn!(channel = config.general.channel_id; "Logo of the clip: {error}");
-                    None
-                }
-            },
-        );
+    let _ = playout
+        .logo_control()
+        .set_clip_position(None, width, height);
     let logo = playout.logo_control();
-    let loaded =
-        tokio::task::spawn_blocking(move || logo.set_clip_image(image.as_ref(), width, height))
-            .await;
-
-    if let Ok(Err(error)) = loaded {
-        warn!(channel = config.general.channel_id; "Logo of the clip, the channel's is shown: {error:#}");
-    }
-
-    let own = marks.lshape_graphic.is_some()
-        || marks.lshape_corner.is_some()
-        || marks.lshape_scale.is_some();
-    let graphic = (own && !marks.lshape.is_empty())
-        .then(|| {
-            let mut processing = config.processing.clone();
-
-            if let Some(graphic) = &marks.lshape_graphic {
-                processing.lshape = graphic.clone();
-            }
-            if let Some(corner) = &marks.lshape_corner {
-                processing.lshape_corner = corner.clone();
-            }
-            if let Some(scale) = marks.lshape_scale {
-                processing.lshape_scale = scale;
-            }
-
-            match processing.lshape_config(&config.channel.storage) {
-                Ok(lshape) => lshape,
-                Err(error) => {
-                    warn!(channel = config.general.channel_id; "L-shape of the clip: {error}");
-                    None
-                }
-            }
-        })
-        .flatten();
     let control = playout.lshape_control();
-
-    let inherit_window = marks.lshape_corner.is_none() && marks.lshape_scale.is_none();
-    let loaded = tokio::task::spawn_blocking(move || {
-        if inherit_window {
-            control.set_clip_model_art(graphic.as_ref(), width, height)
-        } else {
-            control.set_clip_model_art_placed(graphic.as_ref(), width, height)
-        }
+    let _ = tokio::task::spawn_blocking(move || {
+        let _ = logo.set_clip_image(None, width, height);
+        let _ = control.set_clip_model_art(None, width, height);
     })
     .await;
-
-    if let Ok(Err(error)) = loaded {
-        warn!(channel = config.general.channel_id; "L-shape graphic of the clip: {error:#}");
-    }
 }
 
 async fn load_startup_graphics(
@@ -599,14 +525,7 @@ async fn play_loop(
             Some(marks) => marks.clone(),
             None => clip_marks(&config.channel.storage, &node.source).await,
         };
-        let logo_gaps = marks.gaps();
-        let lshape = marks.lshape_spans();
-        // Graphics settings can change without restarting the output. Resolve
-        // clip defaults from the current models, at the dimensions already on air.
-        let mut graphics_config = manager.config.read().await.clone();
-        graphics_config.output.width = config.output.width;
-        graphics_config.output.height = config.output.height;
-        set_clip_lshape(playout, &graphics_config, &marks).await;
+        reset_clip_graphics(playout, config).await;
         let mut breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
         // Breaks marked inside the video itself, when it is not a commercial.
         if !node.ad {
@@ -615,6 +534,8 @@ async fn play_loop(
         manager.splice_control.plan_next_clip(breaks.clone());
         let aired = as_run::record_start(&manager, as_run::programme_entry(config, &node)).await;
         let clip_started = std::time::Instant::now();
+        let _cues =
+            crate::player::clip_cues::run_clip_cues(&manager, marks.cues_in_clip(node.seek));
         let result = playout
             .play_with_timing_logo_fade_rate_and_audio(
                 node.source.clone(),
@@ -628,8 +549,7 @@ async fn play_loop(
                     // Commercials keep the logo off even without a programme
                     // fading it out before them (a playlist that opens on one).
                     hidden: is_ad,
-                    gaps: logo_gaps,
-                    lshape,
+                    ..LogoFade::default()
                 },
                 playout_rate,
             )
@@ -1221,13 +1141,10 @@ pub(crate) async fn play_plain_from(
             None,
             subtitle_media_path(config, source),
             {
-                let marks = clip_marks(&config.channel.storage, source).await;
-                set_clip_lshape(playout, config, &marks).await;
+                reset_clip_graphics(playout, config).await;
 
                 LogoFade {
                     hidden: commercial,
-                    gaps: marks.gaps(),
-                    lshape: marks.lshape_spans(),
                     ..LogoFade::default()
                 }
             },

@@ -60,7 +60,7 @@ const examples = computed(() => {
     const fields = Object.fromEntries(template.fields.map((field) => [field, t('graphics.api.sampleValue')]))
     const keyed = `${window.location.origin}/graphics/${channelId.value}`
     const authed = `${window.location.origin}/api/graphics/${channelId.value}`
-    const query = new URLSearchParams({ key: key.value, duration: String(duration.value), ...fields })
+    const query = `key=${key.value}&${new URLSearchParams({ duration: String(duration.value), ...fields })}`
     const takeBody = { template: name, duration: duration.value, ...(template.fields.length ? { fields } : {}) }
     const bearer = `-H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json'`
 
@@ -71,7 +71,7 @@ const examples = computed(() => {
         },
         {
             label: t('graphics.api.outWithKey'),
-            command: `curl -X POST ${shellQuote(`${keyed}/out/${name}?key=${encodeURIComponent(key.value)}`)}`,
+            command: `curl -X POST ${shellQuote(`${keyed}/out/${name}?key=${key.value}`)}`,
         },
         {
             label: t('graphics.api.takeWithToken'),

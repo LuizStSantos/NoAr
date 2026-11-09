@@ -81,7 +81,7 @@ const editorPath = ref<string | null>(null)
 const logoMarksPath = ref<string | null>(null)
 const logoMarksLength = ref(0)
 /** The tab the marks editor opens on. */
-const logoMarksKind = ref<'trim' | 'hide'>('hide')
+const logoMarksKind = ref<'trim' | 'graphics'>('graphics')
 const treeVersion = ref(0)
 const disk = ref<{ total: number; free: number } | null>(null)
 const dropActive = ref(false)
@@ -739,7 +739,7 @@ async function onSheetSaved(next: MediaSheet) {
     treeVersion.value++
 }
 
-function openLogoMarks(row: Row, kind: 'trim' | 'hide' = 'hide') {
+function openLogoMarks(row: Row, kind: 'trim' | 'graphics' = 'graphics') {
     logoMarksKind.value = kind
     logoMarksLength.value = row.file?.duration ?? 0
     logoMarksPath.value = storageJoin(current.value, row.name)

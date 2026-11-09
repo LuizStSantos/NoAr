@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
-import LShapeCornerPad from '@/components/graphics/LShapeCornerPad.vue'
-import StoragePicker from '@/components/schedule/StoragePicker.vue'
-import PositionPad, { type Shares } from '@/components/settings/PositionPad.vue'
+import GraphicsCuesPanel from '@/components/storage/GraphicsCuesPanel.vue'
 import SpanBar from '@/components/storage/SpanBar.vue'
-import GenericModal from '@/components/utils/GenericModal.vue'
 import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { createFilePreviewUrl } from '@/composables/fileAccess'
-import { padBox, sharesOf } from '@/composables/graphics'
-import { storageImageUrl } from '@/composables/graphicsImages'
-import { type Size, legacyImageBox, imageBoxStyle } from '@/composables/graphicsLegacyGeometry'
+import { type Size } from '@/composables/graphicsLegacyGeometry'
 import { type LogoSpan, type VideoMarks, baseName, readLogoMarks, saveLogoMarks } from '@/composables/storage'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -32,7 +27,8 @@ const props = defineProps<{
     /** Its length, known before the browser loads it (or when it cannot). */
     length?: number
     /** The tab it opens on. */
-    initialKind?: Tab
+    /** The tab to open on; older names (logo, L-shape) open Graphics. */
+    initialKind?: string
     /**
      * One entry of a playlist: its own marks (none yet: a copy of the
      * video's to start from) and the part it plays. Saving hands them back
@@ -49,16 +45,16 @@ const indexStore = useIndex()
 
 const MAX_SPANS = 16
 
-type MarkKind = 'hide' | 'breaks' | 'lshape'
-type Tab = MarkKind | 'trim'
+type MarkKind = 'breaks'
+type Tab = MarkKind | 'trim' | 'graphics'
 
-const MARK_KINDS: MarkKind[] = ['hide', 'breaks', 'lshape']
+const MARK_KINDS: MarkKind[] = ['breaks']
 
 /** How each kind of mark looks: bar colour, labels, chip and icons in and out of a stretch. */
 const LOOK: Record<
     MarkKind,
     {
-        tone: 'logo' | 'break' | 'lshape'
+        tone: 'break'
         scope: string
         chip: string
         bar: string
@@ -68,16 +64,6 @@ const LOOK: Record<
         on: string
     }
 > = {
-    hide: {
-        tone: 'logo',
-        scope: 'storage.logoMarks',
-        chip: 'bg-after-clip/15 text-after-clip',
-        bar: 'bg-after-clip/60',
-        inside: 'bi-eye-slash',
-        outside: 'bi-eye',
-        off: 'bi-eye-slash',
-        on: 'bi-eye',
-    },
     breaks: {
         tone: 'break',
         scope: 'storage.breakMarks',
@@ -88,29 +74,13 @@ const LOOK: Record<
         off: 'bi-box-arrow-right',
         on: 'bi-box-arrow-in-left',
     },
-    lshape: {
-        tone: 'lshape',
-        scope: 'storage.lshapeMarks',
-        chip: 'bg-info/15 text-info',
-        bar: 'bg-info/60',
-        inside: 'bi-aspect-ratio',
-        outside: 'bi-fullscreen',
-        off: 'bi-aspect-ratio',
-        on: 'bi-fullscreen',
-    },
 }
 
 function emptyMarks(): VideoMarks {
     return {
-        hide: [],
         breaks: [],
         trim: null,
-        lshape: [],
-        lshape_graphic: null,
-        lshape_corner: null,
-        lshape_scale: null,
-        logo_position: null,
-        logo_image: null,
+        graphics: [],
         insert: false,
     }
 }
@@ -118,18 +88,16 @@ function emptyMarks(): VideoMarks {
 const marks = ref<VideoMarks>(emptyMarks())
 const baseline = ref<VideoMarks>(emptyMarks())
 /** Which marks the buttons and the list edit. */
-const kind = ref<Tab>(props.initialKind ?? 'hide')
-/** The kind of stretch being edited (the logo's while on the trim tab). */
-const markKind = computed<MarkKind>(() => (kind.value === 'trim' ? 'hide' : kind.value))
+const kind = ref<Tab>(props.initialKind === 'breaks' || props.initialKind === 'trim' ? props.initialKind : 'graphics')
+/** The kind of stretch being edited. */
+const markKind = computed<MarkKind>(() => 'breaks')
 const look = computed(() => LOOK[markKind.value])
 /** The list being edited; changes go straight into `marks`. */
 const spans = computed(() => marks.value[markKind.value])
 const loading = ref(true)
 const saving = ref(false)
 const videoUrl = ref('')
-const logoUrl = ref('')
 /** The logo image's own size, once it loaded. */
-const logoImage = ref<Size | null>(null)
 const videoFailed = ref(false)
 const video = ref<HTMLVideoElement>()
 const position = ref(0)
@@ -172,15 +140,9 @@ function normalized(value: VideoMarks): VideoMarks {
     const whole = trim && trim.from <= 0 && duration.value > 0 && trim.to >= duration.value - 0.05
 
     return {
-        hide: sortedOf(value.hide),
         breaks: sortedOf(value.breaks),
         trim: whole ? null : (trim ?? null),
-        lshape: sortedOf(value.lshape),
-        lshape_graphic: value.lshape_graphic?.trim() || null,
-        lshape_corner: value.lshape_corner || null,
-        lshape_scale: value.lshape_scale ?? null,
-        logo_position: value.logo_position || null,
-        logo_image: value.logo_image?.trim() || null,
+        graphics: [...(value.graphics ?? [])].sort((a, b) => a.at - b.at),
         insert: Boolean(value.insert),
     }
 }
@@ -273,28 +235,25 @@ function changeSpan(index: number, span: LogoSpan) {
 }
 
 /** One lane per kind of mark on the timeline: the one being edited is the big bar. */
-const LANES: Tab[] = ['trim', 'hide', 'breaks', 'lshape']
+const LANES: Tab[] = ['trim', 'breaks', 'graphics']
 const LANE_BAR: Record<Tab, string> = {
     trim: 'bg-ok/50',
-    hide: LOOK.hide.bar,
     breaks: LOOK.breaks.bar,
-    lshape: LOOK.lshape.bar,
+    graphics: 'bg-accent/70',
 }
 
 function tabLabel(option: Tab): string {
     return {
         trim: t('storage.trim.kind'),
-        hide: t('storage.logoMarks.kindLogo'),
         breaks: t('storage.logoMarks.kindBreaks'),
-        lshape: t('storage.logoMarks.kindLShape'),
+        graphics: t('storage.graphicsCues.kind'),
     }[option]
 }
 
 const TAB_ICON: Record<Tab, string> = {
     trim: 'bi-scissors',
-    hide: 'bi-eye-slash',
     breaks: 'bi-badge-ad',
-    lshape: 'bi-aspect-ratio',
+    graphics: 'bi-layers',
 }
 
 /** The stretches a lane shows: the trim's is the part that airs. */
@@ -303,6 +262,10 @@ function laneSpans(option: Tab): LogoSpan[] {
         const trim = normalized(marks.value).trim
 
         return duration.value > 0 ? [trim ?? { from: 0, to: duration.value }] : []
+    }
+
+    if (option === 'graphics') {
+        return marks.value.graphics.map((cue) => ({ from: cue.at, to: cue.at + 0.5 }))
     }
 
     return marks.value[option]
@@ -344,10 +307,6 @@ function inside(list: LogoSpan[]): boolean {
     return list.some((span) => position.value >= span.from && position.value <= span.to)
 }
 
-/** The logo is off at the play position. */
-const hiddenNow = computed(() => inside(marks.value.hide))
-/** The play position is inside an L-shape stretch. */
-const lshapeNow = computed(() => inside(marks.value.lshape))
 /** Inside a mark of the kind being edited. */
 const insideNow = computed(() => inside(marks.value[markKind.value]))
 
@@ -358,65 +317,9 @@ function label(key: string, values?: Record<string, unknown>): string {
     return values ? t(`${scope}.${key}`, values) : t(`${scope}.${key}`)
 }
 
-/** The L-shape graphic and where the picture goes, as the channel puts it on air. */
-const lshapeUrl = ref('')
-/** In the L-shape at the play position, with a graphic to show it: the logo is off then. */
-const inLShape = computed(() => lshapeNow.value && !!lshapeUrl.value)
-/** Just out of the L-shape: the logo waits for the picture to grow back. */
-const leftLShape = ref(false)
-let leftTimer: ReturnType<typeof setTimeout> | undefined
-
-watch(inLShape, (inside, before) => {
-    clearTimeout(leftTimer)
-    leftLShape.value = before && !inside
-    leftTimer = leftLShape.value ? setTimeout(() => (leftLShape.value = false), 1300) : undefined
-})
-
-/** As on air: the logo goes off first (0.4 s), then the picture shrinks (0.8 s); out, the other way. */
-const lshapeWindow = computed(() => {
-    const share = lshapeScale.value / 100
-    const corner = lshapeCorner.value
-
-    return {
-        transform: inLShape.value ? `scale(${share})` : 'none',
-        transformOrigin: `${corner.startsWith('top') ? 'top' : 'bottom'} ${corner.endsWith('left') ? 'left' : 'right'}`,
-        transition: `transform 0.8s ease-in-out ${inLShape.value ? '0.4s' : '0s'}`,
-    }
-})
-
-/** The L-shape of this video: its own corner and size, else the channel's. */
-const channelCorner = computed(() => configStore.playout?.processing?.lshape_corner || 'top-right')
-const channelScale = computed(() => configStore.playout?.processing?.lshape_scale ?? 75)
-const lshapeCorner = computed(() => marks.value.lshape_corner || channelCorner.value)
-const lshapeScale = computed(() => marks.value.lshape_scale ?? channelScale.value)
-const LSHAPE_SIZES = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
-
-/** Where the logo goes in this video: its own place, else the channel's. */
-const channelLogoPosition = computed(() => configStore.playout?.processing?.logo_position || 'W-w-12:12')
-const logoPosition = computed(() => marks.value.logo_position || channelLogoPosition.value)
-const logoShares = computed(() => sharesOf(logoPosition.value))
-
-/** The logo's box on the pad, from its real size when known. */
-const logoPadBox = computed(() => {
-    const processing = configStore.playout?.processing
-    const box =
-        logoImage.value && processing && legacyImageBox(processing.logo_scale, '0:0', logoImage.value, frameSize.value)
-
-    return padBox(box || null)
-})
-
-function placeLogo(shares: Shares) {
-    marks.value.logo_position = `${shares.x}%:${shares.y}%`
-}
-
 /** How far ahead a break is announced, from the ad break settings. */
 const prerollLabel = computed(() => `${configStore.playout?.scte35?.preroll ?? 6} s`)
 
-/** Breaks often sit exactly where the logo goes off: start from those. */
-function copyFromLogo() {
-    marks.value.breaks = cloneDeep(marks.value.hide)
-    drafts.value = {}
-}
 const overlaps = computed(() =>
     sorted.value.some((span, index) => index > 0 && span.from < sorted.value[index - 1]!.to),
 )
@@ -529,39 +432,6 @@ async function load() {
     } finally {
         loading.value = false
     }
-
-    await loadLogo()
-    await loadLShape()
-}
-
-/** The video's own logo, else the channel's. */
-async function loadLogo() {
-    const channel = configStore.channels.find((entry) => entry.id === props.channelId)
-    const image = marks.value.logo_image?.trim() || configStore.playout?.processing?.logo
-
-    logoUrl.value = await storageImageUrl(channel, image).catch(() => '')
-}
-
-watch(() => marks.value.logo_image, loadLogo)
-
-/** The video's own L-shape graphic, else the channel's. */
-async function loadLShape() {
-    const channel = configStore.channels.find((entry) => entry.id === props.channelId)
-    const graphic = marks.value.lshape_graphic?.trim() || configStore.playout?.processing?.lshape
-
-    lshapeUrl.value = await storageImageUrl(channel, graphic).catch(() => '')
-}
-
-watch(() => marks.value.lshape_graphic, loadLShape)
-
-/** The image the storage picker is choosing: the L-shape graphic or the logo. */
-const picking = ref<'lshape_graphic' | 'logo_image' | null>(null)
-
-function pickImage(file: { path: string }) {
-    if (picking.value) {
-        marks.value[picking.value] = file.path
-    }
-    picking.value = null
 }
 
 /** The output picture, which the preview takes the shape of. */
@@ -569,45 +439,6 @@ const frameSize = computed<Size>(() => ({
     width: Math.max(1, configStore.playout?.output?.width || 1920),
     height: Math.max(1, configStore.playout?.output?.height || 1080),
 }))
-
-/** The logo where and as large as the channel puts it on air. */
-const logoStyle = computed(() => {
-    const processing = configStore.playout?.processing
-    const box =
-        logoImage.value &&
-        processing &&
-        legacyImageBox(processing.logo_scale, logoPosition.value, logoImage.value, frameSize.value)
-
-    return box ? imageBoxStyle(box) : { top: '3%', right: '2%', height: '6%' }
-})
-
-const logoOpacity = computed(() =>
-    hiddenNow.value || inLShape.value ? 0 : (configStore.playout?.processing?.logo_opacity ?? 1),
-)
-
-/** The channel's animation as the logo goes off or comes back (a fade lasts 1 s unless set). */
-const logoTransition = computed(() => {
-    const processing = configStore.playout?.processing
-
-    // The L-shape's own order: off before the picture shrinks, back after it grew back.
-    if (inLShape.value) {
-        return 'opacity 0.4s linear'
-    }
-
-    if (leftLShape.value) {
-        return 'opacity 0.4s linear 0.8s'
-    }
-
-    const kind = hiddenNow.value ? processing?.logo_transition_out : processing?.logo_transition_in
-
-    return kind === 'cut' ? 'none' : `opacity ${processing?.logo_transition_seconds ?? 1}s linear`
-})
-
-function logoLoaded(event: Event) {
-    const image = event.target as HTMLImageElement
-
-    logoImage.value = image.naturalWidth ? { width: image.naturalWidth, height: image.naturalHeight } : null
-}
 
 async function save() {
     saving.value = true
@@ -721,7 +552,13 @@ onBeforeUnmount(() => {
                         <span
                             v-if="option !== 'trim'"
                             class="text-xs font-mono rounded-full px-1.5 min-w-5 text-center"
-                            :class="marks[option].length ? LOOK[option].chip : 'bg-base-300 text-muted'"
+                            :class="
+                                marks[option].length
+                                    ? option === 'graphics'
+                                        ? 'bg-accent/15 text-accent-text'
+                                        : LOOK[option].chip
+                                    : 'bg-base-300 text-muted'
+                            "
                             >{{ marks[option].length }}</span
                         >
                         <i
@@ -747,15 +584,6 @@ onBeforeUnmount(() => {
                         class="relative w-full bg-black rounded-field overflow-hidden"
                         :style="{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }"
                     >
-                        <!-- The L-shape graphic, under the picture while it is in the L-shape. -->
-                        <img
-                            v-if="lshapeUrl && marks.lshape.length"
-                            :src="lshapeUrl"
-                            alt=""
-                            class="absolute inset-0 w-full h-full object-fill pointer-events-none"
-                            aria-hidden="true"
-                            @error="lshapeUrl = ''"
-                        />
                         <video
                             v-if="videoUrl && !videoFailed"
                             ref="video"
@@ -764,7 +592,6 @@ onBeforeUnmount(() => {
                             preload="auto"
                             playsinline
                             class="relative w-full h-full object-contain bg-black"
-                            :style="lshapeWindow"
                             @timeupdate="timeUpdate"
                             @seeked="position = ($event.target as HTMLVideoElement).currentTime"
                             @pause="stopAt = null"
@@ -777,23 +604,6 @@ onBeforeUnmount(() => {
                         >
                             {{ t('storage.logoMarks.noVideo') }}
                         </p>
-                        <img
-                            v-if="logoUrl"
-                            :src="logoUrl"
-                            alt=""
-                            class="absolute max-w-none pointer-events-none"
-                            :style="{ ...logoStyle, opacity: logoOpacity, transition: logoTransition }"
-                            aria-hidden="true"
-                            @load="logoLoaded"
-                            @error="logoUrl = ''"
-                        />
-                        <span
-                            v-else
-                            class="absolute flex items-center text-[11px] font-semibold text-white border border-white/70 rounded px-1.5 pointer-events-none"
-                            :style="{ ...logoStyle, opacity: logoOpacity, transition: logoTransition }"
-                            aria-hidden="true"
-                            >LOGO</span
-                        >
                     </div>
 
                     <!-- Where the play position is, and what airs there. -->
@@ -905,9 +715,18 @@ onBeforeUnmount(() => {
 
                 <!-- Right: what the tab edits. -->
                 <div class="flex flex-col gap-4 min-w-0">
-                    <p class="m-0 text-[13px] text-muted leading-relaxed">
+                    <p v-if="kind !== 'graphics'" class="m-0 text-[13px] text-muted leading-relaxed">
                         {{ kind === 'trim' ? t('storage.trim.intro') : label('intro') }}
                     </p>
+
+                    <!-- Graphics: templates on and off air at times of the video. -->
+                    <GraphicsCuesPanel
+                        v-if="kind === 'graphics'"
+                        v-model:cues="marks.graphics"
+                        :position="position"
+                        :duration="duration"
+                        @seek="seek"
+                    />
 
                     <!-- Trim. -->
                     <template v-if="kind === 'trim'">
@@ -1027,7 +846,7 @@ onBeforeUnmount(() => {
                     </template>
 
                     <!-- Logo, breaks and L-shape stretches. -->
-                    <template v-else>
+                    <template v-else-if="kind === 'breaks'">
                         <div class="flex flex-wrap items-center gap-2">
                             <button
                                 type="button"
@@ -1103,14 +922,6 @@ onBeforeUnmount(() => {
                             <h3 class="m-0 text-sm font-semibold">{{ label('list') }}</h3>
                             <p v-if="!spans.length" class="m-0 text-[13px] text-muted">
                                 {{ label('none') }}
-                                <button
-                                    v-if="kind === 'breaks' && marks.hide.length"
-                                    type="button"
-                                    class="ms-1 bg-transparent border-0 p-0 text-accent cursor-pointer hover:underline"
-                                    @click="copyFromLogo"
-                                >
-                                    {{ t('storage.breakMarks.fromLogo', marks.hide.length) }}
-                                </button>
                             </p>
                             <ul v-else class="m-0 p-0 list-none flex flex-col gap-1.5">
                                 <li
@@ -1209,143 +1020,6 @@ onBeforeUnmount(() => {
                             </p>
                         </section>
 
-                        <!-- Logo: which image this video shows. -->
-                        <section
-                            v-if="kind === 'hide'"
-                            class="flex flex-col gap-3 rounded-field border border-line p-3"
-                            :aria-label="t('storage.marks.logoImage.title')"
-                        >
-                            <h3 class="m-0 text-sm font-semibold">{{ t('storage.marks.logoImage.title') }}</h3>
-                            <div class="flex flex-wrap gap-2">
-                                <input
-                                    :value="marks.logo_image ?? ''"
-                                    class="field-input font-mono text-[13px] flex-[1_1_200px] min-w-0"
-                                    :placeholder="t('storage.marks.logoImage.channel')"
-                                    :aria-label="t('storage.marks.logoImage.title')"
-                                    spellcheck="false"
-                                    @input="marks.logo_image = ($event.target as HTMLInputElement).value || null"
-                                />
-                                <button type="button" class="btn-quiet" @click="picking = 'logo_image'">
-                                    {{ t('settings.choose') }}
-                                </button>
-                                <button
-                                    v-if="marks.logo_image"
-                                    type="button"
-                                    class="btn-quiet"
-                                    @click="marks.logo_image = null"
-                                >
-                                    {{ t('storage.marks.logoImage.reset') }}
-                                </button>
-                            </div>
-                            <p class="m-0 field-hint">{{ t('storage.marks.logoImage.hint') }}</p>
-                        </section>
-
-                        <!-- Logo: where it goes in this video. -->
-                        <section
-                            v-if="kind === 'hide'"
-                            class="flex flex-col gap-3 rounded-field border border-line p-3"
-                            :aria-label="t('storage.marks.logoPlace.title')"
-                        >
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <h3 class="m-0 text-sm font-semibold">{{ t('storage.marks.logoPlace.title') }}</h3>
-                                <div role="radiogroup" class="inline-flex bg-base-200 rounded-md p-0.5 text-xs">
-                                    <button
-                                        v-for="own in [false, true]"
-                                        :key="String(own)"
-                                        type="button"
-                                        role="radio"
-                                        :aria-checked="!!marks.logo_position === own"
-                                        class="px-2.5 min-h-8 rounded cursor-pointer"
-                                        :class="
-                                            !!marks.logo_position === own
-                                                ? 'bg-base-100 font-semibold shadow-sm'
-                                                : 'text-muted'
-                                        "
-                                        @click="own ? placeLogo(logoShares) : (marks.logo_position = null)"
-                                    >
-                                        {{
-                                            own
-                                                ? t('storage.marks.logoPlace.own')
-                                                : t('storage.marks.logoPlace.channel')
-                                        }}
-                                    </button>
-                                </div>
-                            </div>
-                            <PositionPad
-                                class="max-w-72"
-                                :shares="logoShares"
-                                :width="logoPadBox.width"
-                                :height="logoPadBox.height"
-                                :label="t('settings.logo.remote.logoPad')"
-                                @place="placeLogo"
-                            />
-                            <p class="m-0 field-hint">{{ t('storage.marks.logoPlace.hint') }}</p>
-                        </section>
-
-                        <!-- L-shape: graphic, corner and size in this video. -->
-                        <section
-                            v-if="kind === 'lshape'"
-                            class="flex flex-col gap-3 rounded-field border border-line p-3"
-                            :aria-label="t('storage.marks.lshapeLook.title')"
-                        >
-                            <h3 class="m-0 text-sm font-semibold">{{ t('storage.marks.lshapeLook.title') }}</h3>
-                            <div class="field-label">
-                                {{ t('storage.lshapeMarks.graphic') }}
-                                <div class="flex flex-wrap gap-2">
-                                    <input
-                                        :value="marks.lshape_graphic ?? ''"
-                                        class="field-input font-mono text-[13px] flex-[1_1_200px] min-w-0"
-                                        :placeholder="t('storage.lshapeMarks.graphicChannel')"
-                                        :aria-label="t('storage.lshapeMarks.graphic')"
-                                        spellcheck="false"
-                                        @input="
-                                            marks.lshape_graphic = ($event.target as HTMLInputElement).value || null
-                                        "
-                                    />
-                                    <button type="button" class="btn-quiet" @click="picking = 'lshape_graphic'">
-                                        {{ t('settings.choose') }}
-                                    </button>
-                                    <button
-                                        v-if="marks.lshape_graphic"
-                                        type="button"
-                                        class="btn-quiet"
-                                        @click="marks.lshape_graphic = null"
-                                    >
-                                        {{ t('storage.lshapeMarks.graphicReset') }}
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap items-start gap-4">
-                                <LShapeCornerPad
-                                    :corner="marks.lshape_corner"
-                                    :fallback="channelCorner"
-                                    :fallback-label="t('storage.marks.lshapeLook.channel')"
-                                    :label="t('storage.marks.lshapeLook.corner')"
-                                    @choose="marks.lshape_corner = $event === channelCorner ? null : $event"
-                                />
-                                <label class="field-label flex-[1_1_160px]">
-                                    {{ t('storage.marks.lshapeLook.size') }}
-                                    <select
-                                        class="field-input"
-                                        :value="marks.lshape_scale ?? ''"
-                                        @change="
-                                            marks.lshape_scale = ($event.target as HTMLSelectElement).value
-                                                ? Number(($event.target as HTMLSelectElement).value)
-                                                : null
-                                        "
-                                    >
-                                        <option value="">
-                                            {{ t('storage.marks.lshapeLook.channel') }} ({{ channelScale }}%)
-                                        </option>
-                                        <option v-for="size in LSHAPE_SIZES" :key="size" :value="size">
-                                            {{ t('storage.marks.lshapeLook.sizeValue', { n: size }) }}
-                                        </option>
-                                    </select>
-                                </label>
-                            </div>
-                            <p class="m-0 field-hint">{{ t('storage.marks.lshapeLook.hint') }}</p>
-                        </section>
-
                         <p class="m-0 field-hint">{{ label('hint', { preroll: prerollLabel }) }}</p>
                     </template>
                 </div>
@@ -1377,16 +1051,5 @@ onBeforeUnmount(() => {
                 </template>
             </footer>
         </section>
-
-        <GenericModal
-            :show="picking !== null"
-            :title="picking === 'logo_image' ? t('storage.marks.logoImage.title') : t('storage.lshapeMarks.graphic')"
-            hide-buttons
-            :modal-action="() => (picking = null)"
-        >
-            <div class="w-[min(520px,90vw)] max-h-[60vh] flex flex-col">
-                <StoragePicker @pick="pickImage" />
-            </div>
-        </GenericModal>
     </div>
 </template>

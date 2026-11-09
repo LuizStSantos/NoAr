@@ -281,9 +281,6 @@ watch(channelId, () => {
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="m-0 text-base font-semibold">{{ section.name }}</h2>
         </div>
-        <p v-if="section.key === '@scenes' && !section.cards.length" class="m-0 text-sm text-muted">
-            {{ t('graphics.scenes.empty') }}
-        </p>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(min(260px,100%),1fr))] gap-3">
             <article
                 v-for="card in section.cards"

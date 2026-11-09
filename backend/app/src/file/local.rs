@@ -199,12 +199,12 @@ impl LocalStorage {
             };
 
             // Read the marks file only when there is one: whether it keeps the
-            // logo off or marks breaks, and its trim, are told apart.
+            // has graphics cues or marks breaks, and its trim, are told apart.
             let (logo_marks, trim) = if media && logo_stems.contains(&stem) {
                 let marks = read_marks(&file).await;
 
                 (
-                    !marks.hide.is_empty() || !marks.breaks.is_empty() || !marks.lshape.is_empty(),
+                    !marks.graphics.is_empty() || !marks.breaks.is_empty(),
                     marks.trim,
                 )
             } else {

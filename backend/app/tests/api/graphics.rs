@@ -1357,7 +1357,7 @@ async fn any_template_goes_on_and_off_air_by_name_with_a_duration_or_a_key() {
 
 #[tokio::test]
 #[serial]
-async fn model_schedules_validate_channel_ownership_fields_and_keep_legacy_events() {
+async fn model_schedules_validate_channel_ownership_and_fields_and_refuse_legacy_events() {
     let fixture = security_fixture().await;
     let admin = access_token(&fixture.state, 2).await;
     let (_, model) = send(&fixture, "POST", "/api/graphics/1/templates", Some(&admin), json!({
@@ -1435,9 +1435,20 @@ async fn model_schedules_validate_channel_ownership_fields_and_keep_legacy_event
     )
     .await;
     assert_eq!(usage["events"][0]["id"], id);
-    let (_,legacy)=send(&fixture,"POST","/api/schedule/1/graphics",Some(&admin),json!({"title":"Existing actions","start_date":"2026-11-08","start_time":"12:00","actions":{"logo":"hide","lshape":"on"}})).await;
-    assert!(legacy.get("template").is_none());
-    assert_eq!(legacy["actions"]["lshape"], "on");
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/schedule/1/graphics",
+        Some(&admin),
+        json!({"title": "Existing actions", "start_date": "2026-11-08", "start_time": "12:00",
+               "actions": {"logo": "hide", "lshape": "on"}}),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "logo and L-shape events without a template are no longer accepted"
+    );
 }
 
 #[tokio::test]
