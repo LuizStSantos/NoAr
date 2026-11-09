@@ -2,10 +2,10 @@
 
 All checks in the matrix below completed successfully.
 
-Evidence: [HTTP comparison](compat-c-api-evidence.json),
-[real HLS frames and pixels](compat-c-output-evidence.json),
-[desktop visual checks and limitations](compat-c-desktop-evidence.json),
-[backend restart and channel-file log](compat-c-restart-evidence.json).
+Evidence: [HTTP comparison](https://github.com/LuizStSantos/NoAr/blob/evidence/graphics-2.3/docs/graphics-handoff/compat-c-api-evidence.json),
+[real HLS frames and pixels](https://github.com/LuizStSantos/NoAr/blob/evidence/graphics-2.3/docs/graphics-handoff/compat-c-output-evidence.json),
+[desktop visual checks and limitations](https://github.com/LuizStSantos/NoAr/blob/evidence/graphics-2.3/docs/graphics-handoff/compat-c-desktop-evidence.json),
+[backend restart and channel-file log](https://github.com/LuizStSantos/NoAr/blob/evidence/graphics-2.3/docs/graphics-handoff/compat-c-restart-evidence.json).
 
 All integration fixtures are disposable, use synthetic media and UTC, and
 remain on `claude/branch-review-opz967`. HTTP reference: the official 2.2.1
