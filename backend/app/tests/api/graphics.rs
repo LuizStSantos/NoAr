@@ -1193,81 +1193,166 @@ async fn data_sources_enforce_channel_access_keep_last_good_rows_and_protect_ref
 
 #[tokio::test]
 #[serial]
-async fn removing_a_lshape_assignment_clears_its_external_art_and_returns_full_screen() {
+async fn any_template_goes_on_and_off_air_by_name_with_a_duration_or_a_key() {
     let fixture = security_fixture().await;
+    let user = access_token(&fixture.state, 1).await;
     let admin = access_token(&fixture.state, 2).await;
-    let manager = fixture.state.controller.read().await.get(1).unwrap();
-    let storage = manager.config.read().await.channel.storage.clone();
-    std::fs::copy(
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests_assets/storage/logo.png"),
-        storage.join("override.png"),
+    let (status, logo) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        json!({"name": "Logo do canal", "duration": 0, "always_on": true, "layers": [
+            {"id": "mark", "kind": "text", "x": 80, "y": 5, "width": 15, "height": 8, "text": "NoAr", "fill": "#f39223"}
+        ]}),
     )
-    .unwrap();
-    let (status, template) = send(&fixture, "POST", "/api/graphics/1/templates", Some(&admin), json!({"name":"Removable L-shape","layers":[{"id":"art","kind":"image","image":"override.png","x":0,"y":0,"width":100,"height":100},{"id":"video","kind":"video","x":25,"y":0,"width":75,"height":75}]})).await;
-    assert_eq!(status, StatusCode::OK, "{template}");
-    let path = format!("/api/graphics/1/templates/{}/assignment", template["id"]);
-    assert_eq!(
-        send(
-            &fixture,
-            "PUT",
-            &path,
-            Some(&admin),
-            json!({"role":"lshape"})
-        )
-        .await
-        .0,
-        StatusCode::OK
+    .await;
+    assert_eq!(status, StatusCode::OK, "{logo}");
+    let logo_id = logo["id"].as_i64().unwrap();
+    let logo_on = |fixture: &SecurityFixture| {
+        let manager = fixture.state.controller.try_read().unwrap().get(1).unwrap();
+        manager
+            .graphics_control
+            .persistent_visible(logo_id as u64)
+            .unwrap_or(false)
+    };
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/out",
+        Some(&user),
+        json!({"template": "logo-do-canal"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        !logo_on(&fixture),
+        "an always-on template is taken off by name"
     );
+
+    let (status, taken) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template": "Logo do canal", "duration": 0}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{taken}");
+    assert_eq!(taken["state"], "on_air");
+    assert_eq!(taken["template_id"], logo_id);
+    assert!(
+        taken.get("take_id").is_none(),
+        "no GC take for a channel graphic"
+    );
+    assert!(logo_on(&fixture));
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/out",
+        Some(&user),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        logo_on(&fixture),
+        "taking every GC off leaves always-on templates on"
+    );
+
+    let (status, taken) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template_id": logo_id, "duration": 1}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{taken}");
+    tokio::time::sleep(std::time::Duration::from_millis(1600)).await;
+    assert!(!logo_on(&fixture), "a duration takes it off by itself");
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template": "missing"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/take",
+        Some(&user),
+        json!({"template": "logo-do-canal", "duration": -2}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        "/graphics/1/take/logo-do-canal",
+        None,
+        json!(null),
+    )
+    .await;
     assert_eq!(
-        send(
+        status,
+        StatusCode::FORBIDDEN,
+        "the keyed route needs the key"
+    );
+
+    let (status, key) = send(
+        &fixture,
+        "POST",
+        "/api/playout/config/1/keys/logo",
+        Some(&admin),
+        json!({"action": "renew"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{key}");
+    let key = key["key"].as_str().unwrap().to_string();
+
+    let (status, taken) = send(
+        &fixture,
+        "POST",
+        &format!("/graphics/1/take/logo-do-canal?key={key}&duration=0"),
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{taken}");
+    assert!(logo_on(&fixture));
+
+    let (status, out) = send(
+        &fixture,
+        "GET",
+        &format!("/graphics/1/out/{logo_id}?key={key}"),
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{out}");
+    assert_eq!(out["state"], "off");
+    assert!(!logo_on(&fixture));
+
+    for old in ["/logo/1/hide", "/lshape/1/on", "/scene/1/intervalo"] {
+        let (status, _) = send(
             &fixture,
             "POST",
-            "/api/control/1/lshape",
-            Some(&admin),
-            json!({"action":"replace","graphic":"override.png"})
+            &format!("{old}?key={key}"),
+            None,
+            json!(null),
         )
-        .await
-        .0,
-        StatusCode::OK
-    );
-    assert_eq!(
-        send(
-            &fixture,
-            "POST",
-            "/api/control/1/lshape",
-            Some(&admin),
-            json!({"action":"move","position":"bottom-left","scale":60})
-        )
-        .await
-        .0,
-        StatusCode::OK
-    );
-    assert_eq!(
-        send(
-            &fixture,
-            "POST",
-            "/api/control/1/lshape",
-            Some(&admin),
-            json!({"action":"on"})
-        )
-        .await
-        .0,
-        StatusCode::OK
-    );
-    assert!(manager.lshape_control.is_on());
-    assert!(manager.lshape_control.replacement().is_some());
-    assert!(manager.lshape_control.placement().is_some());
-    assert_eq!(
-        send(&fixture, "PUT", &path, Some(&admin), json!({"role":null}))
-            .await
-            .0,
-        StatusCode::OK
-    );
-    assert!(!manager.lshape_control.is_on());
-    assert!(!manager.lshape_control.is_ready());
-    assert!(manager.lshape_control.replacement().is_none());
-    assert!(manager.lshape_control.placement().is_none());
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{old} was removed");
+    }
 }
 
 #[tokio::test]

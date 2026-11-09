@@ -276,23 +276,10 @@ watch(channelId, () => {
         </ul>
         <p class="text-xs text-muted">{{ t('graphics.library.deleteAssets') }}</p>
     </GenericModal>
-    <RouterLink
-        v-if="isAdmin"
-        :to="{ name: 'graphics-channel-editor', params: { kind: 'scene' }, query: { channel: channelId } }"
-        class="link-accent text-sm"
-        >{{ t('graphics.assigned.editScenes') }}</RouterLink
-    >
     <p v-if="loaded && !templates.length" class="m-0 text-muted">{{ t('graphics.templates.none') }}</p>
     <section v-for="section in sections" :key="section.key" :aria-label="section.name" class="flex flex-col gap-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="m-0 text-base font-semibold">{{ section.name }}</h2>
-            <RouterLink
-                v-if="section.key === '@scenes' && isAdmin"
-                :to="{ name: 'graphics-channel-editor', params: { kind: 'scene' }, query: { channel: channelId } }"
-                class="link-accent text-sm"
-            >
-                {{ t('graphics.assigned.editScenes') }}
-            </RouterLink>
         </div>
         <p v-if="section.key === '@scenes' && !section.cards.length" class="m-0 text-sm text-muted">
             {{ t('graphics.scenes.empty') }}

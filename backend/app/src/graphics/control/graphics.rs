@@ -11,7 +11,7 @@ use crate::{
     file::norm_abs_path,
     player::controller::ChannelManager,
     utils::{
-        config::{GraphicsScene, SceneLShape, SceneLogo, slug},
+        config::{GraphicsScene, SceneLShape, SceneLogo},
         errors::ServiceError,
         xmltv::library::has_image_extension,
     },
@@ -104,183 +104,6 @@ fn resolve_logo_position(position: Option<&str>) -> Result<Option<String>, Servi
         "bottom" => Some(format!("{center}:{bottom}")),
         "bottom-right" => Some(format!("{right}:{bottom}")),
         expression => Some(expression.to_string()),
-    })
-}
-
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum LShapeAction {
-    /// Shrink the picture into the L-shape; with `graphic`, that one.
-    On,
-    /// Bring the picture back to the full screen.
-    Off,
-    /// Use another graphic from now on, on or off, until `reset`.
-    Replace,
-    /// Back to the channel's graphic.
-    Reset,
-    /// Put the picture somewhere else in the L-shape, or back where the
-    /// graphic places it.
-    Move,
-}
-
-#[derive(Debug, Serialize)]
-pub struct LShapeStatus {
-    /// Switched on from outside; a stretch marked in a video also shows it.
-    on: bool,
-    /// Whether there is a graphic to show.
-    ready: bool,
-    /// Storage path of the graphic swapped in for the channel's.
-    replacement: Option<String>,
-    /// The corner the picture was moved to; `null` is the graphic's.
-    position: Option<String>,
-    /// The size it was given with the move, in percent of the screen.
-    scale: Option<f64>,
-}
-
-/// Where the picture goes for `place` and `scale`: `Ok(None)` puts it back
-/// where the graphic places it.
-fn resolve_lshape_placement(
-    position: Option<&str>,
-    scale: Option<f64>,
-) -> Result<Option<LShapePlacement>, ServiceError> {
-    let position = position.map(str::trim).unwrap_or_default();
-
-    match position {
-        "default" => Ok(None),
-        "" => Err(ServiceError::BadRequest(
-            "Say which corner in `position` (top-left, top-right, bottom-left, bottom-right) or default"
-                .to_string(),
-        )),
-        corner => {
-            let corner = LShapeCorner::parse(corner).ok_or_else(|| {
-                ServiceError::BadRequest(format!(
-                    "Unknown L-shape corner '{corner}': use top-left, top-right, bottom-left, bottom-right or default"
-                ))
-            })?;
-
-            Ok(Some(LShapePlacement { corner, scale }))
-        }
-    }
-}
-
-pub(crate) async fn apply_lshape_action(
-    manager: &ChannelManager,
-    action: LShapeAction,
-    graphic: Option<&str>,
-    position: Option<&str>,
-    scale: Option<f64>,
-) -> Result<LShapeStatus, ServiceError> {
-    let control = &manager.lshape_control;
-    let graphic = graphic.map(str::trim).filter(|graphic| !graphic.is_empty());
-
-    // Placed first, so `on` shrinks the picture straight to its new corner.
-    if action == LShapeAction::Move || (action == LShapeAction::On && position.is_some()) {
-        control
-            .place(resolve_lshape_placement(position, scale)?)
-            .map_err(|error| ServiceError::BadRequest(format!("{error:#}")))?;
-    }
-
-    if let Some(graphic) =
-        graphic.filter(|_| matches!(action, LShapeAction::On | LShapeAction::Replace))
-    {
-        swap_lshape(manager, graphic).await?;
-    } else if action == LShapeAction::Replace {
-        return Err(ServiceError::BadRequest(
-            "Name the graphic in `graphic`".to_string(),
-        ));
-    }
-
-    match action {
-        LShapeAction::On if !control.is_ready() => {
-            return Err(ServiceError::Conflict(
-                "No L-shape graphic: choose one in Settings › Logo".to_string(),
-            ));
-        }
-        LShapeAction::On => control.on(),
-        LShapeAction::Off => control.off(),
-        LShapeAction::Replace | LShapeAction::Move => {}
-        LShapeAction::Reset => control.reset(),
-    }
-
-    Ok(lshape_status(manager))
-}
-
-/// Load the storage image at `graphic` in place of the channel's L-shape graphic.
-async fn swap_lshape(manager: &ChannelManager, graphic: &str) -> Result<(), ServiceError> {
-    let config = manager.config.read().await.clone();
-    let (path, _, relative) = norm_abs_path(&config.channel.storage, graphic)?;
-
-    if !path.is_file() || !has_image_extension(&path) {
-        return Err(ServiceError::BadRequest(format!(
-            "{relative} is not an image in the storage"
-        )));
-    }
-
-    let mut processing = config.processing.clone();
-    processing.lshape = relative.clone();
-    let lshape = processing
-        .lshape_config(&config.channel.storage)
-        .map_err(ServiceError::BadRequest)?
-        .ok_or_else(|| ServiceError::BadRequest("Name the graphic in `graphic`".to_string()))?;
-    let control = manager.lshape_control.clone();
-    let (width, height) = (config.output.width, config.output.height);
-    let label = relative.clone();
-
-    tokio::task::spawn_blocking(move || control.replace_model_art(&label, &lshape, width, height))
-        .await
-        .map_err(|_| ServiceError::InternalServerError)?
-        .map_err(|error| {
-            ServiceError::BadRequest(format!(
-                "{relative}: the L-shape graphic cannot be read ({})",
-                error.root_cause()
-            ))
-        })
-}
-
-pub(crate) fn lshape_status(manager: &ChannelManager) -> LShapeStatus {
-    let placement = manager.lshape_control.placement();
-
-    LShapeStatus {
-        on: manager.lshape_control.is_on(),
-        ready: manager.lshape_control.is_ready(),
-        replacement: manager.lshape_control.replacement(),
-        position: placement.map(|placement| placement.corner.to_string()),
-        scale: placement.and_then(|placement| placement.scale),
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct SceneStatus {
-    /// The scene's name as written.
-    scene: String,
-    logo: LogoStatus,
-    lshape: LShapeStatus,
-}
-
-/// Apply the scene called `name`: the L-shape graphic and place first, then
-/// the logo, then the L-shape in or out.
-pub(crate) async fn apply_named_scene(
-    manager: &ChannelManager,
-    name: &str,
-) -> Result<SceneStatus, ServiceError> {
-    let wanted = slug(name);
-    let scene = manager
-        .config
-        .read()
-        .await
-        .processing
-        .graphics_scenes
-        .iter()
-        .find(|scene| scene.slug() == wanted)
-        .cloned()
-        .ok_or_else(|| ServiceError::NotFound(format!("No scene called '{}'", name.trim())))?;
-
-    apply_scene_actions(manager, &scene).await?;
-
-    Ok(SceneStatus {
-        scene: scene.name,
-        logo: logo_status(manager),
-        lshape: lshape_status(manager),
     })
 }
 
@@ -484,6 +307,64 @@ pub(crate) fn logo_status(manager: &ChannelManager) -> LogoStatus {
         replacement: state.replacement,
         position: state.position,
     }
+}
+
+/// Where the picture goes for `place` and `scale`: `Ok(None)` puts it back
+/// where the graphic places it.
+fn resolve_lshape_placement(
+    position: Option<&str>,
+    scale: Option<f64>,
+) -> Result<Option<LShapePlacement>, ServiceError> {
+    let position = position.map(str::trim).unwrap_or_default();
+
+    match position {
+        "default" => Ok(None),
+        "" => Err(ServiceError::BadRequest(
+            "Say which corner in `position` (top-left, top-right, bottom-left, bottom-right) or default"
+                .to_string(),
+        )),
+        corner => {
+            let corner = LShapeCorner::parse(corner).ok_or_else(|| {
+                ServiceError::BadRequest(format!(
+                    "Unknown L-shape corner '{corner}': use top-left, top-right, bottom-left, bottom-right or default"
+                ))
+            })?;
+
+            Ok(Some(LShapePlacement { corner, scale }))
+        }
+    }
+}
+
+/// Load the storage image at `graphic` in place of the channel's L-shape graphic.
+async fn swap_lshape(manager: &ChannelManager, graphic: &str) -> Result<(), ServiceError> {
+    let config = manager.config.read().await.clone();
+    let (path, _, relative) = norm_abs_path(&config.channel.storage, graphic)?;
+
+    if !path.is_file() || !has_image_extension(&path) {
+        return Err(ServiceError::BadRequest(format!(
+            "{relative} is not an image in the storage"
+        )));
+    }
+
+    let mut processing = config.processing.clone();
+    processing.lshape = relative.clone();
+    let lshape = processing
+        .lshape_config(&config.channel.storage)
+        .map_err(ServiceError::BadRequest)?
+        .ok_or_else(|| ServiceError::BadRequest("Name the graphic in `graphic`".to_string()))?;
+    let control = manager.lshape_control.clone();
+    let (width, height) = (config.output.width, config.output.height);
+    let label = relative.clone();
+
+    tokio::task::spawn_blocking(move || control.replace_model_art(&label, &lshape, width, height))
+        .await
+        .map_err(|_| ServiceError::InternalServerError)?
+        .map_err(|error| {
+            ServiceError::BadRequest(format!(
+                "{relative}: the L-shape graphic cannot be read ({})",
+                error.root_cause()
+            ))
+        })
 }
 
 #[cfg(test)]

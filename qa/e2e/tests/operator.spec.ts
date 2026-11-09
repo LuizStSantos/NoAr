@@ -493,41 +493,6 @@ test('channel graphics editors replace legacy navigation and retain bookmarked l
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
-test('the library can create the first scene after legacy menu removal', async ({ page, request }) => {
-    await page.goto('/graphics/templates?channel=1')
-    const token = await page.evaluate(() => localStorage.getItem('token'))
-    const headers = { Authorization: `Bearer ${token}` }
-    const config = await api(page, '/api/playout/config/1')
-    const scenes = config.processing.graphics_scenes
-
-    try {
-        config.processing.graphics_scenes = []
-        expect((await page.request.put('/api/playout/config/1', { headers, data: config })).ok()).toBeTruthy()
-        await page.reload()
-        const section = page.getByRole('region', { name: 'Scenes', exact: true })
-        await expect(section).toHaveCount(0)
-        await page.getByRole('link', { name: 'Manage scenes', exact: true }).click()
-        await page.getByRole('button', { name: 'New scene', exact: true }).click()
-        const name = `E2E first scene ${Date.now()}`
-        await page.getByLabel('Name', { exact: true }).fill(name)
-        const response = page.waitForResponse(
-            (item) => item.url().endsWith('/api/playout/config/1') && item.request().method() === 'PUT',
-        )
-        await page.getByRole('button', { name: 'Save', exact: true }).click()
-        expect((await response).ok()).toBeTruthy()
-        await page.getByRole('link', { name: 'Back to templates', exact: true }).click()
-        await expect(section.locator('article[data-kind="scene"]')).toContainText(name)
-        const applied = await page.request.post('/api/control/1/scene', { headers, data: { name } })
-        expect(applied.ok()).toBeTruthy()
-    } finally {
-        const response = await request.get('/api/playout/config/1', { headers })
-        expect(response.ok()).toBeTruthy()
-        const current = await response.json()
-        current.processing.graphics_scenes = scenes
-        expect((await request.put('/api/playout/config/1', { headers, data: current })).ok()).toBeTruthy()
-    }
-})
-
 test('the XMLTV logo tab saves its independent guide icon without changing layers', async ({ page }) => {
     await page.goto('/graphics/templates?channel=1')
     const roles = await api(page, '/api/graphics/1/channel')
@@ -564,17 +529,13 @@ test('the XMLTV logo tab saves its independent guide icon without changing layer
     }
 })
 
-test('the API tutorial uses actual model IDs, separates tokens and keys, and stays read-only', async ({ page }) => {
-    await page.goto('/graphics/api?channel=1')
-    await expect(page.getByText('Read data sources and cached records', { exact: true })).toBeVisible()
-    await expect(page.getByText('Read uploaded font assets', { exact: true })).toBeVisible()
-    await expect(page.getByText('Read the server clock reference', { exact: true })).toBeVisible()
-
+test('the API page shows take and out commands for a template by name, and stays read-only', async ({ page }) => {
     const token = await page.evaluate(() => localStorage.getItem('token'))
+    const name = `Comercial L-shape ${Date.now()}`
     const created = await page.request.post('/api/graphics/1/templates', {
         headers: { Authorization: `Bearer ${token}` },
         data: {
-            name: `API tutorial ${Date.now()}`,
+            name,
             group: 'API examples',
             layers: [
                 {
@@ -591,61 +552,29 @@ test('the API tutorial uses actual model IDs, separates tokens and keys, and sta
         },
     })
     expect(created.ok()).toBeTruthy()
-    const ordinary = await created.json()
-    const models = await api(page, '/api/graphics/1/channel')
+    const template = await created.json()
+    const slug = name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-')
     let graphicsWrites = 0
     page.on('request', (request) => {
         if (request.url().includes('/api/graphics/') && request.method() !== 'GET') {
             graphicsWrites += 1
         }
     })
-    await page.reload()
-    const authenticated = page.getByRole('region', { name: 'Authenticated API for models and ticker', exact: true })
-    await expect(authenticated).toContainText('The graphics key below only authorizes')
-    await expect(authenticated).toContainText('Authorization: Bearer $TOKEN')
-    const selected = page.getByRole('combobox', { name: 'Channel model for these examples', exact: true })
 
-    for (const kind of ['logo', 'ticker', 'lshape']) {
-        const model = models.find((item: { kind: string }) => item.kind === kind)
-        await selected.selectOption(String(model.template.id))
-        await expect(authenticated).toContainText(`/api/graphics/1/channel/${model.template.id}`)
-        await expect(authenticated).toContainText('"on":true')
-        await expect(authenticated).toContainText('"on":false')
-        await expect(authenticated.getByText('Save Always on air through the API', { exact: true })).toHaveCount(
-            kind === 'lshape' ? 0 : 1,
-        )
-    }
-
-    const temporary = page.getByRole('region', { name: 'Temporary templates: take and out', exact: true })
-    await page
-        .getByRole('combobox', { name: 'Temporary template for these examples', exact: true })
-        .selectOption(String(ordinary.id))
-    await expect(temporary).toContainText(`"template_id":${ordinary.id}`)
-    await expect(temporary).toContainText('"topic":"Example value"')
-    await expect(temporary).toContainText('/api/graphics/1/take')
-    await expect(temporary).toContainText('/api/graphics/1/out')
-    await expect(temporary).toContainText('returns 409')
-    await expect(page.getByRole('region', { name: 'Channel models and layers', exact: true })).toContainText(
-        'XMLTV logo',
-    )
-    await expect(
-        page
-            .getByRole('region', { name: 'Channel models and layers', exact: true })
-            .getByRole('link', { name: 'See templates', exact: true }),
-    ).toHaveAttribute('href', '/graphics/templates?channel=1')
+    await page.goto('/graphics/api?channel=1')
+    await page.getByRole('combobox', { name: 'Template', exact: true }).selectOption(String(template.id))
+    await page.getByRole('textbox', { name: 'Time on air (s)' }).fill('50')
+    const commands = page.getByRole('region', { name: 'Commands', exact: true })
+    await expect(commands).toContainText(`/graphics/1/take/${slug}?key=`)
+    await expect(commands).toContainText('duration=50')
+    await expect(commands).toContainText('topic=Example+value')
+    await expect(commands).toContainText(`/graphics/1/out/${slug}?key=`)
+    await expect(commands).toContainText(`"template":"${slug}","duration":50`)
+    await expect(commands).toContainText('/api/graphics/1/out')
+    await expect(page.getByText('/logo/1/')).toHaveCount(0)
+    await expect(page.getByText('/scene/1/')).toHaveCount(0)
     await page.setViewportSize({ width: 390, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    expect(graphicsWrites).toBe(0)
-
-    await page.route('**/api/graphics/1/channel', (route) =>
-        route.fulfill({ status: 503, body: 'Tutorial unavailable' }),
-    )
-    await page.reload()
-    await expect(authenticated.getByRole('alert')).toBeVisible()
-    await expect(selected).toHaveCount(0)
-    await page.unroute('**/api/graphics/1/channel')
-    await authenticated.getByRole('button', { name: 'Retry', exact: true }).click()
-    await expect(selected).toBeVisible()
     expect(graphicsWrites).toBe(0)
 })
 

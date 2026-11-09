@@ -11,6 +11,15 @@ one is tagged.
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking:** the keyed `/logo/{id}/{action}`, `/lshape/{id}/{action}` and
+  `/scene/{id}/{name}` routes and `/api/control/{id}/logo|lshape|scene`. Use
+  the graphics commands instead: `/graphics/{id}/take/{template}` and
+  `/graphics/{id}/out/{template}` with the same graphics key, or
+  `POST /api/graphics/{id}/take|out` with a login token. Encoders, vMix, OBS
+  or Stream Deck buttons that call the old URLs must be updated.
+
 ### Changed
 
 - Separate configuration updates, scheduled playback, XMLTV serialization and
@@ -59,6 +68,11 @@ one is tagged.
   preserve the assigned model's freely positioned picture window.
 
 ### Added
+
+- One take/out command pair for every graphics template, GC, L-shape, logo
+  or ticker alike, by id or by name, with an optional time on air
+  (`duration`, 0 keeps it on until taken off), with a login token or the
+  graphics key. The External control page shows them ready to copy.
 
 - Author continuous left/right scrolling on Composer text layers, with output-pixel
   speed, repeat spacing, clipped previews, manual fields and live data mappings.

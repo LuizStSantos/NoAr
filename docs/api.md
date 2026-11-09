@@ -246,112 +246,29 @@ curl -X POST http://127.0.0.1:8787/api/control/1/process \
   --data '{"command":"restart"}'
 ```
 
-### Logo on air
+### Graphics commands
 
-The logo can be hidden or swapped for another image while the channel plays,
-for example during the commercial break of a live. It changes with the
-channel's [logo animation](logo.md#how-the-logo-comes-up-and-goes-off) (a
-0.4 s fade unless set; a swap cross-fades), applies to clips, lives and live
-ingest alike, and lasts until the next
-command or a server restart. A commercial in the playlist still keeps any logo
-off.
+Two commands drive every graphics template: a GC (lower third), an L-shape
+(a template with a video window) and an always-on logo or ticker. They replace
+the removed `/logo`, `/lshape`, `/scene` and `/api/control/{id}/logo|lshape|scene`
+routes (see the [changelog](../CHANGELOG.md)).
 
-| Method        | Endpoint                                 | Access      | Request body                                                                                                                                                                                                                  |
-| ------------- | ---------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`         | `/api/control/{id}/logo`                 | `GA, CA, U` | Read the state: `{ "hidden": false, "replacement": null, "position": null }`.                                                                                                                                                 |
-| `POST`        | `/api/control/{id}/logo`                 | `GA, CA, U` | `{ "action": "hide" \| "show" \| "replace" \| "move", "logo": "<storage path>", "position": "bottom-left" }`, or `"x": 90, "y": 5` instead of `position`; `logo` only for `replace`, `position` (or `x`/`y`) only for `move`. |
-| `GET`, `POST` | `/logo/{id}/{hide\|show\|replace\|move}` | Logo key    | Query `key` (or header `X-Logo-Key`), `logo` for `replace`, `position` or `x` and `y` for `move`.                                                                                                                             |
+| Method | Endpoint | Access | Request |
+| --- | --- | --- | --- |
+| `POST` | `/api/graphics/{id}/take` | `GA, CA, U` | `{ "template": "comercial-l-shape", "duration": 50, "fields": { ... } }`. `template` is the template id or its name in lower case with dashes; `template_id` also works. `duration` is in seconds, 0 or none keeps it on air until it is taken off. |
+| `POST` | `/api/graphics/{id}/out` | `GA, CA, U` | `{ "template": "logo" }` takes that template off (its GCs, or the logo, ticker or L-shape it is); `{ "take_id" }` one GC; `{}` every GC, leaving always-on templates on. |
+| `GET`, `POST` | `/graphics/{id}/take/{template}` | Graphics key | Query `key` (or header `X-Graphics-Key`), optional `duration`; every other parameter fills the template field of the same name. |
+| `GET`, `POST` | `/graphics/{id}/out/{template}` | Graphics key | Query `key` or header `X-Graphics-Key`. |
 
-`show` brings back the configured logo and drops a replacement. A replacement
-takes the size, position and opacity of the configured logo. `move` puts the
-logo anywhere:
-
-- `x` and `y`, from 0 to 100: shares of the room around the logo, so 0 is
-  the left (or top) edge, 100 the right (or bottom) one and 50 the middle.
-  It fits any output size and any logo. `position` takes the same as
-  `X%:Y%`, such as `90%:5%`;
-- `position` as a place, 12 px from the edges: `top-left`, `top`,
-  `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`,
-  `bottom-right`;
-- `position` as an `X:Y` expression in pixels, such as `W-w-40:H-h-40`;
-- `position` `default`, back to the channel's place.
-
-The state then has `"position"`, which a swapped logo uses too.
-
-The `/logo/...` route is for encoders and scripts that cannot log in (vMix,
-OBS, Bitfocus Companion). It needs the channel's logo key, created in
-Graphics › External control (API), where a tutorial lists the addresses ready
-to copy. Without
-a key, or with a wrong one, it answers 403. A key stays the same until it is
-renewed or turned off with `POST /api/playout/config/{id}/keys/{logo|scte35}`;
-saving the configuration never changes it.
+`take` answers `{ "state": "on_air", "template_id", "take_id" }` (`take_id`
+only for a GC) or `{ "state": "waiting", "template_id" }` when a GC waits for
+the L-shape on air to end; the keyed `out` answers
+`{ "state": "off", "template_id" }`. The graphics key is the channel key that
+`/api/playout/config/{id}/keys/logo` renews.
 
 ```bash
-curl -X POST 'http://127.0.0.1:8787/logo/1/hide?key=<KEY>'
-curl -X POST 'http://127.0.0.1:8787/logo/1/replace?key=<KEY>&logo=00-assets/logo-ao-vivo.png'
-curl -X POST 'http://127.0.0.1:8787/logo/1/show?key=<KEY>'
-curl -X POST 'http://127.0.0.1:8787/logo/1/move?key=<KEY>&x=90&y=5'
-curl -X POST 'http://127.0.0.1:8787/logo/1/move?key=<KEY>&position=default'
-```
-
-### L-shape
-
-The picture shrinks into a corner over the channel's L-shape graphic
-([docs](logo.md#l-shape)). Switched on here, it stays until switched off or
-the server restarts; stretches marked in a video go into it by themselves.
-The keyed route takes the channel’s graphics key (the logo key).
-
-| Method        | Endpoint                                       | Access      | Request body                                                                                                                                                                                                                                                                                                                                             |
-| ------------- | ---------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`         | `/api/control/{id}/lshape`                     | `GA, CA, U` | Read the state: `{ "on": false, "ready": true, "replacement": null, "position": null, "scale": null }`; `ready` is false without a graphic, `replacement` names a graphic swapped in, `position` and `scale` the corner and size the picture was moved to.                                                                                               |
-| `POST`        | `/api/control/{id}/lshape`                     | `GA, CA, U` | `{ "action": "on" \| "off" \| "replace" \| "reset" \| "move", "graphic": "<storage path>", "position": "bottom-left", "scale": 70 }`. `replace` swaps the graphic (needs `graphic`); `on` with `graphic` swaps and goes in; `reset` goes back to the channel's graphic; `move` puts the picture elsewhere (below). `on` without any graphic answers 409. |
-| `GET`, `POST` | `/lshape/{id}/{on\|off\|replace\|reset\|move}` | Logo key    | Query `key` (or header `X-Logo-Key`), `graphic`, `position` and `scale`.                                                                                                                                                                                                                                                                                 |
-
-```bash
-curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>'
-curl -X POST 'http://127.0.0.1:8787/lshape/1/off?key=<KEY>'
-curl -X POST 'http://127.0.0.1:8787/lshape/1/replace?key=<KEY>&graphic=00-assets/sponsor.png'
-curl -X POST 'http://127.0.0.1:8787/lshape/1/reset?key=<KEY>'
-curl -X POST 'http://127.0.0.1:8787/lshape/1/move?key=<KEY>&position=bottom-left&scale=70'
-curl -X POST 'http://127.0.0.1:8787/lshape/1/on?key=<KEY>&position=top-left'
-```
-
-`move` (or `on` with a position) puts the picture in another corner, on air
-or not, for a graphic whose space for the video is elsewhere: `position` is
-`top-left`, `top-right`, `bottom-left` or `bottom-right`. `scale` is its size
-in percent of the screen (30 to 95); without it the graphic's size stays. It
-applies to the channel's graphic and to a swapped one, not to a video's own
-graphic for its marked stretches, until moved again, `position` `default`,
-or a server restart.
-
-The logo goes off while the picture is in the L-shape and comes back after.
-
-After conversion, replacing only the artwork preserves the assigned model's
-picture window, including a freely placed window. An explicit `move` still
-uses the legacy corner/scale contract; `position=default` restores the model's
-window. A clip artwork override without `lshape_corner` or `lshape_scale`
-inherits that window too. Explicit clip geometry retains its own corner/scale.
-Each new playlist clip resolves the current models at the running output size.
-
-### Quick scenes
-
-A scene is a named set of logo and L-shape changes applied in one go.
-After migration 00029, it is stored in a bound template and exposed through
-`processing.graphics_scenes` in the compatibility configuration API (at most
-24, unique names) ([docs](logo.md#quick-scenes)).
-
-| Method        | Endpoint                  | Access      | Request body                                                                                                                                                                       |
-| ------------- | ------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`        | `/api/control/{id}/scene` | `GA, CA, U` | `{ "name": "Intervalo comercial" }`. Answers `{ "scene", "logo", "lshape" }` with the state after it; 404 for an unknown scene, 409 when it goes to the L-shape without a graphic. |
-| `GET`, `POST` | `/scene/{id}/{name}`      | Logo key    | `name` in lower case with dashes (`intervalo-comercial`); query `key` or header `X-Logo-Key`.                                                                                      |
-
-A scene in `graphics_scenes` is
-`{ "name", "logo": "keep" | "hide" | "show" | "replace", "logo_image", "logo_position", "lshape": "keep" | "on" | "off", "lshape_graphic", "lshape_corner", "lshape_scale" }`;
-`null` values leave that part as it is on air, `logo_position` and
-`lshape_corner` also take `default`.
-
-```bash
-curl -X POST 'http://127.0.0.1:8787/scene/1/intervalo-comercial?key=<KEY>'
+curl -X POST 'http://127.0.0.1:8787/graphics/1/take/comercial-l-shape?key=<KEY>&duration=50'
+curl -X POST 'http://127.0.0.1:8787/graphics/1/out/logo?key=<KEY>'
 ```
 
 ### Graphics templates
@@ -364,12 +281,8 @@ A template is a graphic a channel designs once and puts on air many times:
 layers placed in percent of the frame, with `{field}` names filled in on
 air ([roadmap](graphics-roadmap.md)).
 
-Models assigned to channel logo, ticker, L-shape or quick-scene bindings are
-operated through the channel graphics controls. `POST /take` returns 409 for
-these models: it must not stack a second logo or silently ignore scene actions.
-Ordinary temporary templates retain their take/out behavior. User-authored
-permanent templates use the channel control endpoint and never stack a temporary
-copy through take.
+Every template is put on air and taken off with the
+[graphics commands](#graphics-commands).
 
 Channel `on` is the requested runtime control state; clip-logo gaps and L-shape
 suppression can still hide a logo on a particular frame. Scene `on` is always
@@ -425,8 +338,8 @@ reads project these values and writes update layers, not layout `settings`.
 | `DELETE` | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA`    | `"removed"`. Detaches channel/scene assignments, takes active temporary instances out and reloads model state. Removed logo/L-shape bindings also clear transient external/clip artwork and placement; L-shape returns to full screen. Uploaded media/fonts and scheduled event records remain. Legacy action snapshots may still execute; a deleted model reference cannot air until edited. A reload failure after commit is reported; restart restores the saved state. Intentional removal is never re-imported.                                                                                          |
 | `GET`    | `/api/graphics/{id}/templates/{template_id}/usage`      | `GA, CA, U` | Assignment, current/startup visibility, temporary instance count and retained scheduled actions potentially affected by removing the assignment. Legacy events retain action snapshots; new events retain model references and are skipped if their template is deleted.                                                                                                                                                                                         |
 | `PUT`    | `/api/graphics/{id}/templates/{template_id}/assignment` | `GA, CA`    | `{ "role": "logo"/"ticker"/"lshape"/null, "control_layer_id": "image-id" }`. Optional role and image target; does not rename or regroup. Omitted target retains the saved image or chooses the first image initially. Invalid/foreign targets are 400. Replacing a role makes the old model temporary to avoid a second permanent copy. Removing/changing this model's previous role clears that role's transient external/clip artwork and placement. Unassigning retains the model and its independent permanent setting; ordinary saves and replacement assignments preserve shared transient controls.                                                    |
-| `POST`   | `/api/graphics/{id}/take`                               | `GA, CA, U` | `{ "template_id", "fields": { "name": "Maria" }, "duration" }`. `duration` (seconds) replaces the template's; 0 stays until taken out. Answers `{ "state": "on_air", "take_id" }`, or `{ "state": "waiting" }` when the template waits for the L-shape on air to end. 409 for an assigned channel model, or when it skips L-shapes and one is on; 400 when an image is not in the storage. |
-| `POST`   | `/api/graphics/{id}/out`                                | `GA, CA, U` | `{ "take_id" }` takes that graphic out, `{}` every graphic. Each plays its exit animation. Answers `{ "on_air": [...] }`; 404 for a graphic not on air.                                                                                                                                                                                                                                    |
+| `POST`   | `/api/graphics/{id}/take` | `GA, CA, U` | See [graphics commands](#graphics-commands). |
+| `POST`   | `/api/graphics/{id}/out` | `GA, CA, U` | See [graphics commands](#graphics-commands). |
 | `GET`    | `/api/graphics/{id}/on-air`                             | `GA, CA, U` | `[{ "take_id", "template_id", "name", "since", "leaving" }]`, `since` in seconds.                                                                                                                                                                                                                                                                                                          |
 
 Template `POST` and `PUT` optionally accept an `assignment` object in the same

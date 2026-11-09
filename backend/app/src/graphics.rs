@@ -20,6 +20,8 @@ use serde::Serialize;
 
 #[path = "graphics/channel/graphics.rs"]
 mod channel;
+#[path = "graphics/commands/graphics.rs"]
+pub mod commands;
 #[path = "graphics/control/graphics.rs"]
 pub mod control;
 #[path = "graphics/fonts/graphics.rs"]
@@ -55,6 +57,10 @@ pub struct GraphicsTakes {
     pending: Arc<StdMutex<HashMap<u64, tokio_util::sync::CancellationToken>>>,
     next_pending: Arc<AtomicU64>,
     generation_gate: Arc<StdMutex<()>>,
+    /// The latest take/off command per channel graphic, so a duration timer
+    /// left by an earlier command does nothing.
+    channel_timers: Arc<StdMutex<HashMap<i32, u64>>>,
+    next_channel_timer: Arc<AtomicU64>,
 }
 
 pub struct GraphicsLifecycleGuard {
@@ -106,6 +112,27 @@ pub struct TakeRecord {
 }
 
 impl GraphicsTakes {
+    /// Start a new command generation for a channel graphic; any timer of an
+    /// earlier command for it no longer applies.
+    pub fn arm_channel_timer(&self, template_id: i32) -> u64 {
+        let generation = self.next_channel_timer.fetch_add(1, Ordering::SeqCst) + 1;
+
+        self.channel_timers
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(template_id, generation);
+
+        generation
+    }
+
+    pub fn channel_timer_is(&self, template_id: i32, generation: u64) -> bool {
+        self.channel_timers
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&template_id)
+            == Some(&generation)
+    }
+
     pub async fn begin_edit(&self) -> GraphicsEditGuard {
         let guard = self.editing.clone().lock_owned().await;
         self.cancel_pending();

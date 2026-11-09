@@ -10,14 +10,11 @@ use axum::{
 use protect_axum::authorities::AuthDetails;
 use serde::{Deserialize, Serialize};
 
-#[path = "graphics/control/graphics.rs"]
-mod control;
 #[path = "graphics/fonts/graphics.rs"]
 mod fonts;
 #[path = "graphics/sources/graphics.rs"]
 mod sources;
 
-pub use control::*;
 pub use fonts::*;
 pub use sources::*;
 
@@ -31,8 +28,8 @@ use crate::{
         models::{GraphicsRole, GraphicsTemplate, Role},
     },
     graphics::{
-        GraphicOnAirView, TakeOutcome, TemplateInput, graphics_on_air, prepare_template,
-        take_template,
+        GraphicOnAirView, TemplateInput, commands::CommandOutcome, graphics_on_air,
+        prepare_template,
     },
     player::controller::ChannelManager,
     utils::errors::ServiceError,
@@ -393,7 +390,12 @@ pub async fn delete_graphics_template(
 
 #[derive(Debug, Deserialize)]
 pub struct TakeRequest {
-    pub template_id: i32,
+    /// The template by id; or use `template`.
+    #[serde(default)]
+    pub template_id: Option<i32>,
+    /// The template by id or name (`comercial-l-shape`).
+    #[serde(default)]
+    pub template: Option<String>,
     /// Values for the template's `{field}` names.
     #[serde(default)]
     pub fields: HashMap<String, String>,
@@ -406,9 +408,32 @@ pub struct TakeRequest {
 
 #[derive(Debug, Default, Deserialize)]
 pub struct OutRequest {
-    /// The graphic to take out; none takes every graphic out.
+    /// One GC on air, as answered by a take.
     #[serde(default)]
     pub take_id: Option<u64>,
+    /// A template by id: its GCs, or the logo, ticker or L-shape it is.
+    #[serde(default)]
+    pub template_id: Option<i32>,
+    /// A template by id or name.
+    #[serde(default)]
+    pub template: Option<String>,
+}
+
+/// The template a request names, by `template_id` or `template`.
+async fn requested_template(
+    manager: &ChannelManager,
+    template_id: Option<i32>,
+    template: Option<&str>,
+) -> Result<Option<GraphicsTemplate>, ServiceError> {
+    match (template_id, template) {
+        (Some(id), _) => crate::graphics::commands::find_template(manager, &id.to_string())
+            .await
+            .map(Some),
+        (None, Some(reference)) => crate::graphics::commands::find_template(manager, reference)
+            .await
+            .map(Some),
+        (None, None) => Ok(None),
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -418,14 +443,16 @@ pub struct OutStatus {
 
 /// **Put a template on air**
 ///
-/// Answers `{"state": "on_air", "take_id"}`, or `{"state": "waiting"}` when
-/// the template waits for the L-shape on air to end. 409 when the template
-/// does not go on air during an L-shape and one is on.
+/// Any template: a GC, an L-shape or an always-on logo or ticker, by
+/// `template_id` or by `template` (id or name). `duration` is in seconds;
+/// 0 keeps it on until it is taken off. Answers `{"state": "on_air",
+/// "template_id", "take_id"}` (`take_id` only for a GC), or
+/// `{"state": "waiting", "template_id"}` when a GC waits for the L-shape on
+/// air to end.
 ///
 /// ```BASH
 /// curl -X POST http://127.0.0.1:8787/api/graphics/1/take -H 'Content-Type: application/json' \
-/// -d '{"template_id": 3, "fields": {"name": "Maria da Silva", "role": "Farmer"}}' \
-/// -H 'Authorization: Bearer <TOKEN>'
+/// -d '{"template": "comercial-l-shape", "duration": 50}' -H 'Authorization: Bearer <TOKEN>'
 /// ```
 pub async fn take_graphic(
     State(state): State<AppState>,
@@ -433,23 +460,14 @@ pub async fn take_graphic(
     user: AuthUser,
     details: AuthDetails<Role>,
     Json(request): Json<TakeRequest>,
-) -> Result<Json<TakeOutcome>, ServiceError> {
+) -> Result<Json<CommandOutcome>, ServiceError> {
     let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
-    let template = handles::select_graphics_template(&state.pool, id, request.template_id)
+    let template = requested_template(&manager, request.template_id, request.template.as_deref())
         .await?
-        .ok_or_else(|| template_not_found(request.template_id))?;
-
-    if template.always_on == Some(true)
-        || handles::graphics_template_is_bound(&state.pool, id, request.template_id).await?
-    {
-        return Err(ServiceError::Conflict(
-            "Use the channel logo, L-shape or quick-scene controls for this assigned model"
-                .to_string(),
-        ));
-    }
+        .ok_or_else(|| ServiceError::BadRequest("Name the template".to_string()))?;
 
     Ok(Json(
-        take_template(
+        crate::graphics::commands::take(
             &manager,
             template,
             request.fields,
@@ -460,10 +478,17 @@ pub async fn take_graphic(
     ))
 }
 
-/// **Take graphics out of the air**
+/// **Take graphics off air**
 ///
-/// With `take_id`, that graphic; without it, every graphic. Each plays its
-/// exit animation. Answers what is still on air.
+/// `template_id` or `template` takes that template off (its GCs, or the
+/// logo, ticker or L-shape it is); `take_id` one GC; `{}` every GC, leaving
+/// always-on templates as they are. Each plays its exit animation. Answers
+/// what is still on air.
+///
+/// ```BASH
+/// curl -X POST http://127.0.0.1:8787/api/graphics/1/out -H 'Content-Type: application/json' \
+/// -d '{"template": "logo"}' -H 'Authorization: Bearer <TOKEN>'
+/// ```
 pub async fn take_graphic_out(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -472,6 +497,16 @@ pub async fn take_graphic_out(
     Json(request): Json<OutRequest>,
 ) -> Result<Json<OutStatus>, ServiceError> {
     let manager = authorize_channel_access(&state, id, &user, &details, false).await?;
+
+    if let Some(template) =
+        requested_template(&manager, request.template_id, request.template.as_deref()).await?
+    {
+        crate::graphics::commands::off(&manager, &template).await?;
+
+        return Ok(Json(OutStatus {
+            on_air: graphics_on_air(&manager),
+        }));
+    }
 
     let _publication = manager.graphics_takes.lock_publication().await;
 
@@ -492,6 +527,92 @@ pub async fn take_graphic_out(
     Ok(Json(OutStatus {
         on_air: graphics_on_air(&manager),
     }))
+}
+
+/// Header an encoder or a Stream Deck can send the graphics key in.
+const GRAPHICS_KEY_HEADER: &str = "x-graphics-key";
+
+async fn keyed_manager(
+    state: &AppState,
+    id: i32,
+    query: &HashMap<String, String>,
+    headers: &axum::http::HeaderMap,
+) -> Result<ChannelManager, ServiceError> {
+    let manager = {
+        let guard = state.controller.read().await;
+        guard.get(id)
+    }
+    .ok_or_else(|| ServiceError::NotFound(format!("Channel {id} not found!")))?;
+    let expected = manager.config.read().await.processing.logo_key.clone();
+    let given = headers
+        .get(GRAPHICS_KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .or(query.get("key").map(String::as_str))
+        .unwrap_or_default();
+
+    if !crate::api::auth::control_key_matches(&expected, given) {
+        return Err(ServiceError::Forbidden(
+            "Wrong or missing graphics key".to_string(),
+        ));
+    }
+
+    Ok(manager)
+}
+
+/// **Put a template on air, with the channel's graphics key**
+///
+/// For encoders and controllers that only send a URL. `duration` (seconds)
+/// is optional; every other query parameter fills the template field of the
+/// same name.
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/graphics/1/take/comercial-l-shape?key=<KEY>&duration=50'
+/// curl -X POST 'http://127.0.0.1:8787/graphics/1/take/entrevistado?key=<KEY>&nome=Maria'
+/// ```
+pub async fn take_graphic_with_key(
+    State(state): State<AppState>,
+    Path((id, reference)): Path<(i32, String)>,
+    axum::extract::Query(query): axum::extract::Query<HashMap<String, String>>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<CommandOutcome>, ServiceError> {
+    let manager = keyed_manager(&state, id, &query, &headers).await?;
+    let template = crate::graphics::commands::find_template(&manager, &reference).await?;
+    let duration = query
+        .get("duration")
+        .map(|value| {
+            value.trim().replace(',', ".").parse::<f64>().map_err(|_| {
+                ServiceError::BadRequest("duration is a number of seconds".to_string())
+            })
+        })
+        .transpose()?;
+    let fields = query
+        .into_iter()
+        .filter(|(name, _)| name != "key" && name != "duration")
+        .collect();
+
+    Ok(Json(
+        crate::graphics::commands::take(&manager, template, fields, HashMap::new(), duration)
+            .await?,
+    ))
+}
+
+/// **Take a template off air, with the channel's graphics key**
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/graphics/1/out/logo?key=<KEY>'
+/// ```
+pub async fn take_graphic_out_with_key(
+    State(state): State<AppState>,
+    Path((id, reference)): Path<(i32, String)>,
+    axum::extract::Query(query): axum::extract::Query<HashMap<String, String>>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<CommandOutcome>, ServiceError> {
+    let manager = keyed_manager(&state, id, &query, &headers).await?;
+    let template = crate::graphics::commands::find_template(&manager, &reference).await?;
+
+    Ok(Json(
+        crate::graphics::commands::off(&manager, &template).await?,
+    ))
 }
 
 /// **Graphics on air**
