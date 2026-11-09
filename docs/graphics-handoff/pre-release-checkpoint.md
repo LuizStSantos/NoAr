@@ -37,7 +37,7 @@ logs, large JSON, archives and repeated captures remain on the evidence branch.
 | --- | --- |
 | Migration 00029–00034 bytes versus f925f608 | PASS: all six SHA-256 values unchanged |
 | Initial Rust checks before peer-challenge fixes | PASS: fmt, no-default Clippy, 747 tests; 14 ignored; engine processing-bench tests passed separately |
-| Final Rust checks after peer-challenge fixes | IN PROGRESS; final result recorded in the handoff README |
+| Final Rust checks after peer-challenge fixes | PASS: fmt, no-default Clippy/all-targets/deny warnings; 757 tests passed, 14 ignored |
 | Vue types, changed-file ESLint/Prettier, E2E TypeScript | PASS after frontend source fixes |
 | Initial browser suite | 42/45 passed; handle sizing, restore and one test selector failed; source corrections and expanded regressions added |
 | Final expanded browser suite | NOT_RUN at this checkpoint; 48 tests prepared against fresh owned staging |

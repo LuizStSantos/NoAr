@@ -8,11 +8,20 @@ read this file, [the roadmap](../graphics-roadmap.md), `CLAUDE.md` and
 
 See the [checkpoint matrix and resume steps](pre-release-checkpoint.md).
 
-Status: **IN PROGRESS — NOT READY FOR RELEASE**. The current review covers
+Status: **CHECKPOINT — NOT READY FOR RELEASE**. The current review covers
 converted display names, graphics lifecycle/rendering, migrations, uploads,
 the code reorganization, comparison with main, a 90-minute graphics soak and
 1080p25 processing measurements. Record results from executed checks only.
 Council findings and pending checks do not authorize a release.
+
+Checkpoint code: `6cf6721c`. Final `cargo fmt --all`,
+`cargo clippy --no-default-features --all-targets -- --deny warnings`, and
+`cargo test --no-default-features` passed: **757 tests, 14 ignored**.
+Vue types, changed-file ESLint/Prettier and E2E TypeScript passed; soak harness
+unit tests passed (25). The expanded 48-test browser suite, candidate loss
+comparison, performance matrix, 90-minute soak and council Round C remain
+**NOT_RUN**. The user requested this checkpoint push before the remaining
+weekly budget is consumed. No release or main push was performed.
 
 The published fire test at `f925f608` was `PASS_WITH_CAPTURE_RECHECK`, not a clean
 PASS: a short-mark snapshot was rechecked across decoded frames. Its audio-only
