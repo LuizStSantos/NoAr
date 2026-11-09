@@ -127,6 +127,49 @@ pub async fn insert_configuration(
     Ok(config_id)
 }
 
+/// Point a channel's default subtitle file and default logo layers from
+/// `00-assets` to `folder`, for a storage set up without the old folder.
+/// Paths a user chose stay as they are.
+pub async fn point_default_assets_to(
+    pool: &sqlx::SqlitePool,
+    channel_id: i32,
+    folder: &str,
+) -> Result<(), ProcessError> {
+    let legacy = crate::file::LEGACY_ASSETS_FOLDER;
+
+    if folder == legacy {
+        return Ok(());
+    }
+
+    let mut transaction = pool.begin().await?;
+
+    sqlx::query(
+        "UPDATE config_processing SET vtt_dummy = $2 || '/dummy.vtt'
+         WHERE vtt_dummy = $3 || '/dummy.vtt'
+           AND config_id IN (SELECT id FROM config WHERE channel_id = $1)",
+    )
+    .bind(channel_id)
+    .bind(folder)
+    .bind(legacy)
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query(
+        r#"UPDATE graphics_templates
+         SET layers = replace(layers, '"' || $3 || '/logo.png"', '"' || $2 || '/logo.png"')
+         WHERE channel_id = $1"#,
+    )
+    .bind(channel_id)
+    .bind(folder)
+    .bind(legacy)
+    .execute(&mut *transaction)
+    .await?;
+
+    transaction.commit().await?;
+
+    Ok(())
+}
+
 pub async fn update_configuration(
     pool: &SqlitePool,
     id: i32,

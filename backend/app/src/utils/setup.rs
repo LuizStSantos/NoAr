@@ -173,11 +173,23 @@ pub async fn complete_setup(
     };
     let storage = init_storage(PathBuf::from(&setup.channel_storage), Vec::new()).await?;
 
-    if let Err(error) = storage.copy_assets().await {
-        warn!("Could not copy initial storage assets: {error}");
-    }
+    let assets = match storage.copy_assets().await {
+        Ok(folder) => folder,
+        Err(error) => {
+            warn!("Could not copy initial storage assets: {error}");
+            crate::file::ASSETS_FOLDER
+        }
+    };
 
     let snapshot = handles::initialize_setup_with_rollback(pool, &setup).await?;
+
+    // A new storage holds the defaults in Graphics: point the first
+    // channel's default logo and subtitle file there.
+    for channel in handles::select_related_channels(pool, None).await? {
+        if let Err(error) = handles::point_default_assets_to(pool, channel.id, assets).await {
+            warn!("Default assets of channel {}: {error}", channel.id);
+        }
+    }
 
     // Log into the chosen folder from now on, so the log page finds the lines
     // without a restart.

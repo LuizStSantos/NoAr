@@ -22,6 +22,11 @@ one is tagged.
 
 ### Changed
 
+- A new storage keeps the default logo, the empty subtitle file and the
+  images uploaded from the Composer in one `Graphics` folder instead of
+  `00-assets`. A storage that already has `00-assets` keeps it, with its
+  settings unchanged.
+
 - Separate configuration updates, scheduled playback, XMLTV serialization and
   native output policy into domain owners; split playlist, Scheduler, Storage,
   report and device-discovery coordination from their presentation panels.

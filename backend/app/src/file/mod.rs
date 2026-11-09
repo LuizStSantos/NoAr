@@ -130,6 +130,13 @@ pub async fn init_storage(
 /// Normalize absolut path
 ///
 /// This function takes care, that it is not possible to break out from root_path.
+/// The storage folder for graphics: the default logo, the empty subtitle
+/// file and the images uploaded from the Composer.
+pub const ASSETS_FOLDER: &str = "Graphics";
+
+/// Where versions before 3.0 put the default logo and subtitle file.
+pub const LEGACY_ASSETS_FOLDER: &str = "00-assets";
+
 pub fn norm_abs_path(
     root_path: &Path,
     input_path: &str,

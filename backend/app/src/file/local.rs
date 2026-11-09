@@ -554,20 +554,36 @@ impl LocalStorage {
         filler_list
     }
 
-    pub async fn copy_assets(&self) -> Result<(), std::io::Error> {
+    /// Put the default logo and empty subtitle file in the storage, in
+    /// `Graphics`. A storage set up by an earlier version keeps its
+    /// `00-assets` folder, which its settings point to. Answers the folder
+    /// the defaults live in.
+    pub async fn copy_assets(&self) -> Result<&'static str, std::io::Error> {
         let root = self.root.read().await.clone();
+
+        if root.join(crate::file::LEGACY_ASSETS_FOLDER).is_dir() {
+            return Ok(crate::file::LEGACY_ASSETS_FOLDER);
+        }
+
         if root.is_dir() {
-            let target = root.join("00-assets");
+            let target = root.join(crate::file::ASSETS_FOLDER);
             let dummy_source = default_asset_path("dummy.vtt");
             let logo_source = default_asset_path("logo.png");
 
-            if !target.is_dir() {
-                let dummy_target = target.join("dummy.vtt");
-                let logo_target = target.join("logo.png");
+            let dummy_target = target.join("dummy.vtt");
+            let logo_target = target.join("logo.png");
 
+            // The folder may already hold Composer uploads: add only what is missing.
+            if !dummy_target.is_file() || !logo_target.is_file() {
                 fs::create_dir_all(&target).await?;
-                fs::copy(&dummy_source, &dummy_target).await?;
-                fs::copy(&logo_source, &logo_target).await?;
+
+                if !dummy_target.is_file() {
+                    fs::copy(&dummy_source, &dummy_target).await?;
+                }
+
+                if !logo_target.is_file() {
+                    fs::copy(&logo_source, &logo_target).await?;
+                }
 
                 #[cfg(target_family = "unix")]
                 {
@@ -612,7 +628,7 @@ impl LocalStorage {
             error!("Storage path {:?} not exists!", self.root);
         }
 
-        Ok(())
+        Ok(crate::file::ASSETS_FOLDER)
     }
 }
 
