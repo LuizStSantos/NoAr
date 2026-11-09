@@ -38,6 +38,10 @@ one is tagged.
 
 ### Fixed
 
+- An uploaded font with a single face (only bold, or bold italic) is used on
+  air whatever the layer's Bold setting; asking it for another weight made the
+  text fall back to the default font.
+
 - Localize converted channel-template and generated-layer names for display
   without rewriting saved identities or custom names.
 - Preserve authored fractional logo geometry on compatibility saves and output

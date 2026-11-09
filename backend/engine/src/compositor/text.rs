@@ -503,17 +503,15 @@ fn render_text_overlay(
     let mut buffer = Buffer::new(font_system, metrics);
     buffer.set_size(Some(text_width as f32), Some(text_height as f32));
 
-    let mut attrs = Attrs::new();
-
-    if let Some(family) = &config.font_family {
-        attrs = attrs.family(Family::Name(family));
-    }
-
-    attrs = attrs.weight(match config.font_weight {
+    let weight = match config.font_weight {
         TextWeight::Normal => Weight::NORMAL,
         TextWeight::Semibold => Weight::SEMIBOLD,
         TextWeight::Bold => Weight::BOLD,
-    });
+    };
+    let attrs = match &config.font_family {
+        Some(family) => family_attrs(font_system, family, weight),
+        None => Attrs::new().weight(weight),
+    };
     buffer.set_text(text, &attrs, Shaping::Advanced, None);
     buffer.shape_until_scroll(font_system, false);
 
@@ -632,6 +630,45 @@ pub(crate) struct TextStyle<'a> {
     pub align: BlockAlign,
 }
 
+/// The attributes that select `family` at `weight`: the requested weight and
+/// an upright style when the family has such a face, otherwise the weight and
+/// style of its nearest face. An uploaded font often has a single face (only
+/// bold, or bold italic); asking it for another weight made the shaper fall
+/// back to the default font.
+fn family_attrs<'a>(font_system: &FontSystem, family: &'a str, weight: Weight) -> Attrs<'a> {
+    let faces: Vec<_> = font_system
+        .db()
+        .faces()
+        .filter(|face| face.families.iter().any(|(name, _)| name == family))
+        .collect();
+    let attrs = Attrs::new().family(Family::Name(family)).weight(weight);
+
+    if faces.iter().any(|face| face.weight == weight) {
+        let upright = faces
+            .iter()
+            .any(|face| face.weight == weight && face.style == cosmic_text::Style::Normal);
+
+        return if upright {
+            attrs
+        } else {
+            let style = faces
+                .iter()
+                .find(|face| face.weight == weight)
+                .map_or(cosmic_text::Style::Normal, |face| face.style);
+
+            attrs.style(style)
+        };
+    }
+
+    match faces
+        .iter()
+        .min_by_key(|face| (i32::from(face.weight.0) - i32::from(weight.0)).abs())
+    {
+        Some(face) => attrs.weight(face.weight).style(face.style),
+        None => attrs,
+    }
+}
+
 pub(crate) fn render_text_block(
     text: &str,
     style: &TextStyle<'_>,
@@ -679,11 +716,11 @@ fn render_graphic_text(
         cache_checked,
     } = &mut *renderer;
     let mut buffer = Buffer::new(font_system, Metrics::new(font_size, line_height));
-    let mut attrs = Attrs::new().weight(if bold { Weight::BOLD } else { Weight::NORMAL });
-
-    if let Some(family) = font_family.filter(|family| !family.trim().is_empty()) {
-        attrs = attrs.family(Family::Name(family));
-    }
+    let weight = if bold { Weight::BOLD } else { Weight::NORMAL };
+    let attrs = match font_family.filter(|family| !family.trim().is_empty()) {
+        Some(family) => family_attrs(font_system, family, weight),
+        None => Attrs::new().weight(weight),
+    };
 
     buffer.set_size(width.map(|width| width as f32), None);
     buffer.set_wrap(if scrolling {
@@ -1059,6 +1096,51 @@ mod uploaded_font_tests {
                 .filter(|face| face.families.iter().any(|(name, _)| name == alias))
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn a_single_face_upload_is_used_whatever_weight_is_asked() {
+        let data = std::fs::read(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests_assets/fonts/graphics.ttf"),
+        )
+        .unwrap();
+        let alias = "NoArFont_single_face_weight";
+        register_uploaded_font(alias, data).unwrap();
+        let renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+        let face_weight = renderer
+            .font_system
+            .db()
+            .faces()
+            .find(|face| face.families.iter().any(|(name, _)| name == alias))
+            .unwrap()
+            .weight;
+        let other = if face_weight == Weight::BOLD {
+            Weight::NORMAL
+        } else {
+            Weight::BOLD
+        };
+
+        for asked in [face_weight, other] {
+            let attrs = family_attrs(&renderer.font_system, alias, asked);
+            let query = cosmic_text::fontdb::Query {
+                families: &[Family::Name(alias)],
+                weight: attrs.weight,
+                style: attrs.style,
+                ..Default::default()
+            };
+            let id = renderer.font_system.db().query(&query);
+
+            assert!(
+                id.is_some(),
+                "the uploaded face is selected when {asked:?} is asked"
+            );
+            assert_eq!(attrs.weight, face_weight);
+        }
+
+        assert_eq!(
+            family_attrs(&renderer.font_system, "No such family", Weight::BOLD).weight,
+            Weight::BOLD
         );
     }
 }
