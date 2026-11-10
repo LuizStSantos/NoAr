@@ -548,7 +548,7 @@ test('the API page shows keyed commands for a template, everything off with exce
         },
     })
     expect(created.ok()).toBeTruthy()
-    const template = await created.json()
+    await created.json()
     const slug = name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-')
     let graphicsWrites = 0
     page.on('request', (request) => {

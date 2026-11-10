@@ -76,7 +76,6 @@ async function playoutCommand(control: 'back' | 'next' | 'reset') {
             headers: { ...configStore.contentType, ...authStore.authHeader },
             body: JSON.stringify({ control }),
         })
-
     } catch (e: any) {
         indexStore.msgAlert('error', e?.data ?? e, 3)
     } finally {

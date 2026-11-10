@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
-import { expectBackToTemplates, openTab, reopenSaved } from './composer'
+import { openTab, reopenSaved } from './composer'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Requires runner-owned disposable staging.')
 test.use({ storageState: process.env.NOAR_E2E_STATE_PATH })
