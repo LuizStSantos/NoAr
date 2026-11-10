@@ -74,8 +74,16 @@ class GraphicsCycler:
              'x': 10, 'y': 81, 'width': 56, 'height': 8}])
 
     def control(self, role, on):
+        """Put a channel model on or off air with the take/out commands, then
+        check the channel state reports it."""
         model_id = self.models[role]['id']
-        views = self.call(f'/api/graphics/1/channel/{model_id}', {'on': on}, 'POST')
+        if on:
+            taken = self.call('/api/graphics/1/take', {'template_id': model_id, 'duration': 0}, 'POST')
+            if taken.get('state') != 'on_air':
+                raise RuntimeError(f'Graphics {role} take was not acknowledged: {taken}')
+        else:
+            self.call('/api/graphics/1/out', {'template_id': model_id}, 'POST')
+        views = self.call('/api/graphics/1/channel')
         view = next((view for view in views if view['template']['id'] == model_id), None)
         if view is None or view['on'] != on or (on and not view['ready']):
             raise RuntimeError(f'Graphics {role} did not acknowledge requested state {on}: {view}')

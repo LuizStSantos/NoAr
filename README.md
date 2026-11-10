@@ -71,8 +71,7 @@ artwork, and the Report for what aired.
   interrupted programme or return to the clock; once, every day or on chosen weekdays ([docs](docs/scheduler.md)).
 - **Scheduled graphics**: choose a Composer template, fill its fields or select
   a data-source record, and set its start and end. Temporary graphics leave
-  automatically; scheduled visibility changes restore the earlier state.
-  Existing logo/L-shape scene events remain compatible
+  automatically; scheduled visibility changes restore the earlier state
   ([docs](docs/scheduler.md#scheduled-graphics)).
 
 **Graphics**
@@ -104,13 +103,12 @@ artwork, and the Report for what aired.
   swapped and can go anywhere on screen.
 - **L-shape**: the picture shrinks into a corner over a full-screen graphic,
   with artwork layers and an editable video window.
-- **Quick scenes**: manage them from the Templates **Scenes** group, then
-  apply their logo/L-shape changes from NoAr or an encoder.
-- On air offers model preview, a real program monitor, temporary take/out and
-  logo/ticker visibility. Select the channel L-shape to enter or return to full
-  screen. Edit layers in Composer; apply scenes from Templates. Temporary image
-  replacement/placement remains available through the compatible control API
-  ([docs](docs/logo.md)).
+- **Two commands for every graphic**: put a template on air (for a time, or
+  until taken off) and take it off, from On air, from cues marked inside a
+  video, from the Scheduler, or from an encoder, vMix, OBS or a Stream Deck
+  with the graphics key ([docs](docs/logo.md)).
+- On air offers a template preview, a real program monitor, put on air / take
+  off, and the logo and ticker switches. Edit layers in Composer.
 - **WebVTT subtitles** in the HLS output ([docs](docs/closed_captions.md)).
 
 **Storage**

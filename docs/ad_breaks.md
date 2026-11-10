@@ -151,7 +151,7 @@ curl -X POST http://127.0.0.1:8787/api/control/1/scte35/break \
 
 The `/scte35/...` route is for switchers, encoders and automation that cannot
 log in (vMix, OBS, Bitfocus Companion, a playout system), like the
-[logo key](api.md#logo-on-air). Create the key in **Settings › Ad breaks ›
+[graphics key](api.md#graphics-commands). Create the key in **Settings › Ad breaks ›
 Breaks by API**: it works at once and stays the same until you make a new
 one there (saving other settings never changes it); the tutorial there lists the addresses ready to
 copy, with examples for each tool. Without a key, or with a wrong one, it

@@ -13,7 +13,7 @@ use super::{insert_converted_model, native_model_layers};
 /// Convert all channels atomically. A durable marker tracks the completed import,
 /// independently of later binding deletion or reassignment.
 pub async fn convert_channel_graphics(pool: &SqlitePool) -> Result<(), ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     let channels: Vec<i32> =
         sqlx::query_scalar("SELECT channel_id FROM config ORDER BY channel_id")
             .fetch_all(&mut *transaction)

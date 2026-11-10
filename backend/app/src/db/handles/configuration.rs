@@ -141,7 +141,7 @@ pub async fn point_default_assets_to(
         return Ok(());
     }
 
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     sqlx::query(
         "UPDATE config_processing SET vtt_dummy = $2 || '/dummy.vtt'
@@ -175,7 +175,7 @@ pub async fn update_configuration(
     id: i32,
     config: PlayoutConfig,
 ) -> Result<SqliteQueryResult, ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     let result = update_configuration_on(&mut transaction, id, config).await?;
     transaction.commit().await?;
     Ok(result)

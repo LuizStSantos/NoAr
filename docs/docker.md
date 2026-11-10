@@ -221,8 +221,8 @@ Migrations `00029` and `00030` are normal sqlx migrations. Startup then converts
 channel's logo, L-shape and quick scenes to templates in one transaction.
 It leaves the old graphics columns intact, but the new application no longer
 reads them after conversion. Logo/L-shape/ticker editing now opens Composer;
-legacy configuration writes update the same layers and bindings. Scene actions
-remain models with scene bindings. Migration 00030 also upgrades existing
+legacy configuration writes update the same layers and bindings. Quick scenes
+are no longer used after 3.0. Migration 00030 also upgrades existing
 00029 templates once, preserving edited layers on subsequent starts. Clock
 support is not part of this conversion.
 

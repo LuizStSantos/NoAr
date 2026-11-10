@@ -116,12 +116,9 @@ A restart during an interval re-applies it when its end is still ahead. An event
 without an end is caught up only within 60 seconds of its start. The worker checks
 once per second; this is not a frame-accurate external automation time signal.
 
-Existing scene-action events remain compatible and retain their original action
-snapshots. Their editor appears only when editing one of those events; uncheck
-**Keep this legacy event's actions** to replace it explicitly with a model
-selection. Migration `00034` adds a nullable template payload and never rewrites
-the old actions. Legacy ends retain the previous logo/L-shape reversal rules;
-editing a named quick scene does not rewrite a legacy event's action snapshot.
+Scheduled graphics always select a template. Scheduled logo/L-shape changes
+(scene actions) of earlier versions were removed in 3.0: they no longer run, and
+saving one without a template answers 400.
 
 Scheduled graphics have their own timeline lane and list. The selected model's
 name appears in the summary; edit/remove works from that list on desktop/phone.
@@ -203,41 +200,13 @@ Scheduled model event (migration `00034` and later):
 }
 ```
 
-`template_id` must belong to this channel and select a layered model rather than
-a quick scene. `records` uses source IDs and zero-based row indexes; nonempty
+`template_id` must belong to this channel. `records` uses source IDs and zero-based row indexes; nonempty
 manual values override mapped values, and empty values use automatic data.
 `values` accepts at most 64 fields of 1000 characters; `records` at most 16 sources.
 Permanent/assigned-logo/ticker selections require empty `values`/`records` and
 use their saved mappings. Responses add the model's name in `template.name`.
-Timing/repetition fields and the existing `/api/schedule/{id}/graphics` routes
-are unchanged. Legacy requests still accept `actions`; old responses omit
-`template` entirely when absent. New template events do not execute `actions`.
-
-Legacy scene-action event (preserved):
-
-```json
-{
-  "title": "Sponsor",
-  "actions": {
-    "logo": "show",
-    "logo_image": null,
-    "logo_position": "90%:50%",
-    "lshape": "on",
-    "lshape_graphic": "Graphics/sponsor.png",
-    "lshape_corner": "bottom-left",
-    "lshape_scale": 70
-  },
-  "start_date": "2026-10-27",
-  "start_time": "21:00",
-  "end_time": "21:05",
-  "repeat_days": 0,
-  "enabled": true
-}
-```
-
-`actions` takes the same fields as a [quick scene](logo.md) without its name:
-`logo` is `keep`, `show`, `hide` or `replace` (with `logo_image`); `lshape` is
-`keep`, `on` or `off`; `null` leaves a field as it is.
+Timing/repetition fields and the `/api/schedule/{id}/graphics` routes are
+unchanged. A request without `template` is refused.
 
 ## Extending or ending a live on air
 

@@ -73,6 +73,6 @@ arrows, or type the in and out points. Below it:
 ## API
 
 The trim is part of the video's marks: `trim` in
-[`/api/file/{id}/logo-marks`](api.md#files), next to `hide` and `breaks`.
+[`/api/file/{id}/logo-marks`](api.md#files), next to `breaks` and `graphics`.
 `null` or no `trim` plays the whole video. The browse response and the
 program episodes list give each video's `trim` when it has one.

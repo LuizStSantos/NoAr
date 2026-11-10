@@ -144,7 +144,7 @@ pub async fn insert_graphics_template_with_assignment(
     role: Option<GraphicsRole>,
     target: Option<Option<&str>>,
 ) -> Result<i32, ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     if let Some(role) = role {
         // The replacement may use the final permanent slot in a full channel.
@@ -176,7 +176,7 @@ pub async fn update_graphics_template(
     pool: &SqlitePool,
     template: &GraphicsTemplate,
 ) -> Result<bool, ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     let updated = update_graphics_template_on(&mut transaction, template).await?;
     transaction.commit().await?;
 
@@ -254,7 +254,7 @@ pub async fn update_graphics_template_with_assignment(
     role: Option<GraphicsRole>,
     target: Option<Option<&str>>,
 ) -> Result<bool, ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     if let Some(role) = role {
         // Free the replaced role's permanent slot before enabling the new model.
@@ -290,7 +290,7 @@ pub async fn delete_graphics_template(
     channel_id: i32,
     template_id: i32,
 ) -> Result<bool, ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     for query in [
         "DELETE FROM graphics_channel_bindings WHERE channel_id=$1 AND template_id=$2",
@@ -344,7 +344,7 @@ pub async fn save_graphics_binding(
     pool: &SqlitePool,
     binding: &GraphicsChannelBinding,
 ) -> Result<bool, ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     let result = sqlx::query(
         "INSERT INTO graphics_channel_bindings (channel_id, role, template_id, enabled)
          SELECT $1, $2, id, $4 FROM graphics_templates WHERE channel_id = $1 AND id = $3
@@ -397,7 +397,7 @@ pub async fn assign_graphics_template(
     role: Option<GraphicsRole>,
     target: Option<&str>,
 ) -> Result<(), ProcessError> {
-    let mut transaction = pool.begin().await?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     assign_graphics_template_on(&mut transaction, channel, template, role, target.map(Some))
         .await?;
     transaction.commit().await?;

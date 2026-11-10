@@ -177,11 +177,18 @@ class FakeGraphicsApi:
             return 200, [{'template': copy.deepcopy(model), 'on': self.on.get(model_id, False), 'ready': True}
                          for model_id, model in self.models.items()]
         if path.endswith('/take'):
+            model = self.models[data['template_id']]
+            if model.get('role'):
+                self.on[data['template_id']] = True
+                return 200, {'state': 'on_air', 'template_id': data['template_id']}
             take = {'template_id': data['template_id'], 'take_id': len(self.calls)}
             self.takes.append(take)
-            return 200, {'state': 'on_air', 'take_id': take['take_id']}
+            return 200, {'state': 'on_air', 'template_id': data['template_id'], 'take_id': take['take_id']}
         if path.endswith('/out'):
-            self.takes = [take for take in self.takes if take['take_id'] != data['take_id']]
+            if 'template_id' in data:
+                self.on[data['template_id']] = False
+            else:
+                self.takes = [take for take in self.takes if take['take_id'] != data['take_id']]
             return 200, {'on_air': copy.deepcopy(self.takes)}
         if path.endswith('/on-air'):
             return 200, copy.deepcopy(self.takes)
@@ -223,8 +230,12 @@ class GraphicsCycleTests(unittest.TestCase):
 
     def test_control_state_mismatch_fails_even_when_http_succeeds(self):
         with tempfile.TemporaryDirectory(prefix='noar-soak-unit-') as directory:
-            cycle = GraphicsCycler(lambda *args: (200, [{'template': {'id': 1}, 'on': False, 'ready': True}]),
-                                  Path(directory), Path(directory))
+            def answer(path, data=None, method=None):
+                if path.endswith('/take'):
+                    return 200, {'state': 'on_air', 'template_id': 1}
+                return 200, [{'template': {'id': 1}, 'on': False, 'ready': True}]
+
+            cycle = GraphicsCycler(answer, Path(directory), Path(directory))
             cycle.models['logo'] = {'id': 1}
             with self.assertRaisesRegex(RuntimeError, 'did not acknowledge'):
                 cycle.control('logo', True)
