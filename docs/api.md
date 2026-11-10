@@ -277,9 +277,11 @@ curl 'http://127.0.0.1:8787/graphics/1/on-air?key=<KEY>'
 
 ### Graphics templates
 
-The Graphics → External control (API) page explains channel versus temporary
-models, shows examples with saved model IDs, and distinguishes login tokens
-from the legacy graphics key. Its examples do not execute on page load.
+**Settings › External control** gathers the keys and ready-to-copy commands
+of the three areas a controller can drive without a login: the live
+(`/live/...`), the graphics (`/graphics/...`) and SCTE-35 breaks
+(`/scte35/...`). Each area has its own key. Its examples do not execute on
+page load.
 
 A template is a graphic a channel designs once and puts on air many times:
 layers placed in percent of the frame, with `{field}` names filled in on

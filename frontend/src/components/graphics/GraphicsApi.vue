@@ -15,6 +15,8 @@ import { useIndex } from '@/stores/index'
  * optional time), take it off, take everything off (except chosen templates)
  * and list what is on air.
  */
+/** `embedded`: inside Settings › External control, which has its own heading. */
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 const { t } = useI18n()
 const { templateName } = useGraphicsDisplayNames()
 const configStore = useConfig()
@@ -123,7 +125,7 @@ async function copy(text: string) {
 }
 </script>
 <template>
-    <div>
+    <div v-if="!props.embedded">
         <h1 class="m-0 text-xl font-semibold">{{ t('graphics.sections.api') }}</h1>
         <p class="mt-1 mb-0 text-muted">{{ t('graphics.api.commandsIntro') }}</p>
     </div>

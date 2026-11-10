@@ -20,7 +20,6 @@ const PAGES = [
     { name: 'sources', icon: 'bi-table', admins: true, group: 'main' },
     { name: 'xmltv', icon: 'bi-image', admins: true, group: 'main' },
     { name: 'subtitles', icon: 'bi-badge-cc', admins: true, group: 'main' },
-    { name: 'api', icon: 'bi-plug', admins: true, group: 'main' },
 ] as const
 
 const GROUPS = ['main'] as const

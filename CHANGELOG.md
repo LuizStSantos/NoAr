@@ -38,6 +38,13 @@ one is tagged.
   live key for encoders and scripts moved to **Settings › External control**;
   old `/schedule#live-api` links open it there.
 
+- **Settings › External control** gathers every way to control NoAr without a
+  login, in three tabs: **Live** (extend or end the live), **Graphics** (put
+  templates on and off air) and **SCTE-35** (mark and cancel breaks), each
+  with its key, commands and tutorial. Graphics › External control (API) and
+  the SCTE-35 key panel in Ad breaks moved there; old `/graphics/api` links
+  open the Graphics tab.
+
 - The Composer fits the window on wide screens: one toolbar row (back, name,
   group, actions), a preview that takes the height left and stays 16:9, a
   compact timeline that is always visible, and the layer's properties in tabs

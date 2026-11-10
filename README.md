@@ -97,8 +97,9 @@ artwork, and the Report for what aired.
   ([docs](docs/graphics-data-sources.md)). Values update in place. Text layers
   can scroll continuously in either direction, with speed and repeat spacing
   set in Composer; this works with manual text and mapped fields.
-- **On air**, **Templates**, **Data sources**, **XMLTV logo**, **Subtitles** and
-  **External control (API)** are the Graphics navigation. The logo and L-shape
+- **On air**, **Templates**, **Data sources**, **XMLTV logo** and **Subtitles**
+  are the Graphics navigation; the graphics key and commands are in
+  **Settings › External control**, with the live and SCTE-35 keys. The logo and L-shape
   are edited as layers in Composer. The logo fades or cuts, cross-fades when
   swapped and can go anywhere on screen.
 - **L-shape**: the picture shrinks into a corner over a full-screen graphic,

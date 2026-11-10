@@ -446,7 +446,9 @@ test('assigned channel models use dedicated controls and layered Composer', asyn
 test('channel graphics editors replace legacy navigation and retain bookmarked links', async ({ page }) => {
     await page.goto('/graphics/templates?channel=1')
     const navigation = page.getByRole('navigation', { name: 'Graphics', exact: true })
-    await expect(navigation.locator('a')).toHaveCount(6)
+    // External control moved to Settings, with the live and SCTE-35 keys.
+    await expect(navigation.locator('a')).toHaveCount(5)
+    await expect(navigation.locator('a[href*="/graphics/api"]')).toHaveCount(0)
     await expect(navigation.getByRole('link', { name: 'Data sources', exact: true })).toBeVisible()
     await expect(
         navigation.locator('a[href*="/graphics/logo"], a[href*="/graphics/lshape"], a[href*="/graphics/scenes"]'),
@@ -477,7 +479,7 @@ test('channel graphics editors replace legacy navigation and retain bookmarked l
 
     await page.setViewportSize({ width: 390, height: 844 })
     const selector = page.getByLabel('Page', { exact: true })
-    await expect(selector.locator('option')).toHaveCount(6)
+    await expect(selector.locator('option')).toHaveCount(5)
     await expect(selector.locator('option[value="logo"], option[value="lshape"], option[value="scenes"]')).toHaveCount(
         0,
     )
@@ -1175,4 +1177,23 @@ test('On air lists temporary graphics in its own tab next to the templates', asy
     } finally {
         await page.request.delete(`/api/graphics/1/templates/${template.id}`, { headers })
     }
+})
+
+test('Settings › External control gathers the live, graphics and SCTE-35 keys in tabs', async ({ page }) => {
+    await page.goto('/configure/remote?channel=1')
+    await expect(page.getByRole('heading', { name: 'External control', exact: true })).toBeVisible()
+    const tabs = page.getByRole('tablist', { name: 'Areas', exact: true })
+    await expect(tabs.getByRole('tab')).toHaveCount(3)
+    await expect(tabs.getByRole('tab', { name: /^Live/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('tabpanel')).toContainText('Live by API')
+    await tabs.getByRole('tab', { name: /^Graphics/ }).click()
+    await expect(page).toHaveURL(/#graphics$/)
+    await expect(page.getByRole('tabpanel')).toContainText('Graphics key')
+    await tabs.getByRole('tab', { name: /^SCTE-35/ }).click()
+    await expect(page.getByRole('tabpanel')).toContainText('SCTE-35')
+    await page.goto('/graphics/api?channel=1')
+    await expect(page).toHaveURL(/\/configure\/remote\?channel=1#graphics$/)
+    await page.goto('/schedule#live-api')
+    await expect(page).toHaveURL(/\/configure\/remote.*#live-api$/)
+    await expect(tabs.getByRole('tab', { name: /^Live/ })).toHaveAttribute('aria-selected', 'true')
 })

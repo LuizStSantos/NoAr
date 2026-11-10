@@ -12,8 +12,9 @@ commands. Everything about them is in the **Graphics** tab of the main menu:
 - **Data sources**: CSV/public Sheets CSV, RSS/Atom or HTTP JSON mapped to fields;
 - **XMLTV logo**: the independent guide icon, with storage selection and preview;
 - **Subtitles**: the WebVTT subtitles of the HLS output;
-- **External control (API)**: the graphics key and the take/out commands ready
-  to copy.
+- The graphics key and the take/out commands ready to copy are in
+  **Settings › External control › Graphics**, with the live and SCTE-35 keys
+  (old `/graphics/api` links open it).
 
 Old `/graphics/logo` and `/graphics/lshape` links open the channel logo or
 L-shape in the Composer; `/graphics/scenes` opens Templates.
@@ -136,7 +137,7 @@ channel logo, the ticker, an L-shape. Two commands drive them all:
 From NoAr, use **Graphics › On air** or the template cards in
 **Graphics › Templates** (the logo and the ticker have an On air / Off
 switch). From an encoder, vMix, OBS, a Stream Deck or a script, create the
-channel's **graphics key** in **Graphics › External control (API)** and call
+channel's **graphics key** in **Settings › External control › Graphics** and call
 these addresses (GET or POST), naming the template by its name in lower case
 with dashes, or by its number:
 
@@ -152,7 +153,8 @@ http://<server>:8787/graphics/<channel>/on-air?key=<KEY>
 Other query parameters fill the template's fields. `out` without a template
 takes **everything** off air, the logo, ticker and L-shape included; `except=`
 lists the templates that stay on, separated by commas. `on-air` lists what is
-on air with the name to use in commands. **External control (API)** shows
+on air with the name to use in commands. **Settings › External control ›
+Graphics** shows
 these addresses ready to copy for the template, time and exceptions you pick. The API is described in
 [api.md](api.md#graphics-commands).
 

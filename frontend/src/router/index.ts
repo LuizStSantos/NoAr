@@ -143,10 +143,10 @@ const router = createRouter({
                     redirect: (to) => ({ name: 'graphics-templates', query: to.query }),
                 },
                 {
+                    // Moved to Settings › External control, with the live and SCTE-35 keys.
                     path: 'api',
                     name: 'graphics-api',
-                    component: () => import('@/components/graphics/GraphicsApi.vue'),
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({ name: 'settings-remote', query: to.query, hash: '#graphics' }),
                 },
             ],
         },
