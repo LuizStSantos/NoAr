@@ -1342,6 +1342,110 @@ async fn any_template_goes_on_and_off_air_by_name_with_a_duration_or_a_key() {
     assert_eq!(out["state"], "off");
     assert!(!logo_on(&fixture));
 
+    // Everything off, except what the controller names; the key also lists
+    // what is on air.
+    let (status, band) = send(
+        &fixture,
+        "POST",
+        "/api/graphics/1/templates",
+        Some(&admin),
+        json!({"name": "Faixa", "duration": 0, "always_on": true, "layers": [
+            {"id": "band", "kind": "text", "x": 5, "y": 85, "width": 60, "height": 8, "text": "Ao vivo"}
+        ]}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{band}");
+    let band_id = band["id"].as_i64().unwrap();
+    let band_on = |fixture: &SecurityFixture| {
+        let manager = fixture.state.controller.try_read().unwrap().get(1).unwrap();
+        manager
+            .graphics_control
+            .persistent_visible(band_id as u64)
+            .unwrap_or(false)
+    };
+
+    for name in ["logo-do-canal", "faixa"] {
+        let (status, taken) = send(
+            &fixture,
+            "POST",
+            &format!("/graphics/1/take/{name}?key={key}"),
+            None,
+            json!(null),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{taken}");
+    }
+    assert!(logo_on(&fixture) && band_on(&fixture));
+
+    let (status, _) = send(&fixture, "GET", "/graphics/1/on-air", None, json!(null)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "the list needs the key");
+    let (status, list) = send(
+        &fixture,
+        "GET",
+        &format!("/graphics/1/on-air?key={key}"),
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{list}");
+    let names: Vec<_> = list
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| {
+            (
+                item["template"].as_str().unwrap(),
+                item["kind"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert!(names.contains(&("logo-do-canal", "permanent")), "{list}");
+    assert!(names.contains(&("faixa", "permanent")), "{list}");
+
+    let (status, _) = send(
+        &fixture,
+        "POST",
+        &format!("/graphics/1/out?key={key}&except=missing"),
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "an unknown exception changes nothing"
+    );
+    assert!(logo_on(&fixture) && band_on(&fixture));
+
+    let (status, left) = send(
+        &fixture,
+        "POST",
+        &format!("/graphics/1/out?key={key}&except=logo-do-canal"),
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{left}");
+    assert!(logo_on(&fixture), "the exception stays on");
+    assert!(!band_on(&fixture), "everything else goes off");
+    assert_eq!(left.as_array().unwrap().len(), 1, "{left}");
+    assert_eq!(left[0]["template"], "logo-do-canal");
+
+    let (status, left) = send(
+        &fixture,
+        "GET",
+        &format!("/graphics/1/out?key={key}"),
+        None,
+        json!(null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{left}");
+    assert!(
+        !logo_on(&fixture),
+        "without exceptions the logo goes off too"
+    );
+    assert_eq!(left, json!([]));
+
     for old in ["/logo/1/hide", "/lshape/1/on", "/scene/1/intervalo"] {
         let (status, _) = send(
             &fixture,

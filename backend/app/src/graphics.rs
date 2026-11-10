@@ -52,7 +52,8 @@ pub struct GraphicsTakes {
     records: Arc<StdMutex<Vec<TakeRecord>>>,
     version: Arc<AtomicU64>,
     editing: Arc<tokio::sync::Mutex<()>>,
-    pending: Arc<StdMutex<HashMap<u64, tokio_util::sync::CancellationToken>>>,
+    /// Takes waiting for the L-shape: their template and cancellation.
+    pending: Arc<StdMutex<HashMap<u64, (i32, tokio_util::sync::CancellationToken)>>>,
     next_pending: Arc<AtomicU64>,
     generation_gate: Arc<StdMutex<()>>,
     /// The latest take/off command per channel graphic, so a duration timer
@@ -154,13 +155,27 @@ impl GraphicsTakes {
             .unwrap_or_else(PoisonError::into_inner);
         self.version.fetch_add(2, Ordering::SeqCst);
 
-        for cancel in self
+        for (_, cancel) in self
             .pending
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .values()
         {
             cancel.cancel();
+        }
+    }
+
+    /// Cancel the takes waiting for the L-shape, except those of `keep`.
+    pub fn cancel_pending_except(&self, keep: &[i32]) {
+        for (template_id, cancel) in self
+            .pending
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .values()
+        {
+            if !keep.contains(template_id) {
+                cancel.cancel();
+            }
         }
     }
 
@@ -193,7 +208,7 @@ impl GraphicsTakes {
         Some(publish())
     }
 
-    fn queue(&self, version: u64) -> Result<PendingTake, ServiceError> {
+    fn queue(&self, version: u64, template_id: i32) -> Result<PendingTake, ServiceError> {
         let _publication = self
             .generation_gate
             .lock()
@@ -215,7 +230,7 @@ impl GraphicsTakes {
 
         let id = self.next_pending.fetch_add(1, Ordering::Relaxed);
         let cancel = tokio_util::sync::CancellationToken::new();
-        pending.insert(id, cancel.clone());
+        pending.insert(id, (template_id, cancel.clone()));
 
         Ok(PendingTake {
             takes: self.clone(),
@@ -418,7 +433,7 @@ async fn take_template_prepared(
                 )));
             }
             DuringLShape::Wait => {
-                let pending = manager.graphics_takes.queue(version)?;
+                let pending = manager.graphics_takes.queue(version, template.id)?;
                 let manager = manager.clone();
 
                 tokio::spawn(async move {
@@ -790,29 +805,54 @@ mod tests {
     #[test]
     fn pending_takes_are_bounded_and_output_lifecycle_cancels_them() {
         let takes = GraphicsTakes::default();
-        let before_start = takes.queue(takes.version.load(Ordering::SeqCst)).unwrap();
+        let before_start = takes
+            .queue(takes.version.load(Ordering::SeqCst), 1)
+            .unwrap();
         let lifecycle = takes.lifecycle_guard();
         assert!(before_start.cancel.is_cancelled());
         drop(before_start);
         let pending: Vec<_> = (0..MAX_PENDING_TAKES)
-            .map(|_| takes.queue(takes.version.load(Ordering::SeqCst)).unwrap())
+            .map(|_| {
+                takes
+                    .queue(takes.version.load(Ordering::SeqCst), 1)
+                    .unwrap()
+            })
             .collect();
         assert!(matches!(
-            takes.queue(takes.version.load(Ordering::SeqCst)),
+            takes.queue(takes.version.load(Ordering::SeqCst), 1),
             Err(ServiceError::Conflict(_))
         ));
         drop(lifecycle);
         assert!(pending.iter().all(|take| take.cancel.is_cancelled()));
         // Cancelled work keeps its admission slot until its task actually ends.
-        assert!(takes.queue(takes.version.load(Ordering::SeqCst)).is_err());
+        assert!(
+            takes
+                .queue(takes.version.load(Ordering::SeqCst), 1)
+                .is_err()
+        );
         drop(pending);
-        assert!(takes.queue(takes.version.load(Ordering::SeqCst)).is_ok());
+        assert!(takes.queue(takes.version.load(Ordering::SeqCst), 1).is_ok());
+    }
+
+    #[test]
+    fn taking_all_off_except_some_keeps_their_waiting_takes() {
+        let takes = GraphicsTakes::default();
+        let version = takes.version.load(Ordering::SeqCst);
+        let logo = takes.queue(version, 1).unwrap();
+        let other = takes.queue(version, 2).unwrap();
+        takes.cancel_pending_except(&[1]);
+        assert!(!logo.cancel.is_cancelled());
+        assert!(other.cancel.is_cancelled());
+        takes.cancel_pending_except(&[]);
+        assert!(logo.cancel.is_cancelled());
     }
 
     #[tokio::test]
     async fn editing_waits_for_publication_and_cancels_queued_takes() {
         let takes = GraphicsTakes::default();
-        let pending = takes.queue(takes.version.load(Ordering::SeqCst)).unwrap();
+        let pending = takes
+            .queue(takes.version.load(Ordering::SeqCst), 1)
+            .unwrap();
         let publication = takes.lock_publication().await;
         let editing = takes.begin_edit();
         tokio::pin!(editing);
@@ -894,7 +934,7 @@ mod tests {
                 .is_none()
         );
         assert!(
-            takes.queue(version).is_err(),
+            takes.queue(version, 1).is_err(),
             "a cancellation cannot miss stale queue admission"
         );
     }

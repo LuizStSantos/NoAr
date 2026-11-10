@@ -4,6 +4,9 @@
 //! picture-window template (L-shape) and an always-on template (logo,
 //! ticker). A duration takes the template off by itself; zero or none keeps
 //! it on until it is taken off.
+//!
+//! Two more serve controllers: the list of everything on air, and taking
+//! everything off at once, optionally except some templates.
 
 use std::{collections::HashMap, time::Duration};
 
@@ -154,6 +157,100 @@ pub async fn off(
     }
 
     Ok(CommandOutcome::Off { template_id })
+}
+
+/// One graphic on air, as an external controller sees it.
+#[derive(Debug, Serialize)]
+pub struct OnAirGraphic {
+    pub template_id: i32,
+    /// The name to use in commands (`comercial-l-shape`).
+    pub template: String,
+    pub name: String,
+    /// `temporary` for a GC; `logo`, `ticker`, `lshape` or `permanent` for
+    /// the channel's graphics.
+    pub kind: String,
+    /// GCs only: seconds since taken, and the id of this take.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub since: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub take_id: Option<u64>,
+}
+
+/// Everything on air: the channel's graphics that are on, then the GCs.
+pub async fn on_air(manager: &ChannelManager) -> Result<Vec<OnAirGraphic>, ServiceError> {
+    let mut list: Vec<_> = super::channel_graphics(manager)
+        .await?
+        .into_iter()
+        .filter(|view| view.on)
+        .map(|view| OnAirGraphic {
+            template_id: view.template.id,
+            template: slug(&view.template.name),
+            name: view.template.name,
+            kind: view.kind,
+            since: None,
+            take_id: None,
+        })
+        .collect();
+    let templates = handles::select_graphics_templates(&manager.db_pool, manager.id).await?;
+
+    list.extend(
+        super::graphics_on_air(manager)
+            .into_iter()
+            .filter(|graphic| !graphic.leaving)
+            .map(|graphic| OnAirGraphic {
+                template_id: graphic.template_id,
+                template: templates
+                    .iter()
+                    .find(|template| template.id == graphic.template_id)
+                    .map_or_else(
+                        || graphic.template_id.to_string(),
+                        |template| slug(&template.name),
+                    ),
+                name: graphic.name,
+                kind: "temporary".to_string(),
+                since: Some(graphic.since),
+                take_id: Some(graphic.take_id),
+            }),
+    );
+
+    Ok(list)
+}
+
+/// Take everything off air (GCs, GCs waiting for the L-shape, and the
+/// channel's logo, ticker, L-shape and always-on graphics) except `keep`.
+pub async fn all_off(
+    manager: &ChannelManager,
+    keep: &[GraphicsTemplate],
+) -> Result<(), ServiceError> {
+    let keep: Vec<i32> = keep.iter().map(|template| template.id).collect();
+    let channel = super::channel_graphics(manager).await?;
+
+    {
+        let _publication = manager.graphics_takes.lock_publication().await;
+
+        if keep.is_empty() {
+            manager.graphics_takes.cancel_pending();
+            manager.graphics_control.take_all_out();
+        } else {
+            manager.graphics_takes.cancel_pending_except(&keep);
+
+            for graphic in super::graphics_on_air(manager)
+                .into_iter()
+                .filter(|graphic| !graphic.leaving && !keep.contains(&graphic.template_id))
+            {
+                manager.graphics_control.take_out(graphic.take_id);
+            }
+        }
+    }
+
+    for view in channel
+        .into_iter()
+        .filter(|view| view.on && !keep.contains(&view.template.id))
+    {
+        off(manager, &view.template).await?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

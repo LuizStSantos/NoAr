@@ -615,6 +615,60 @@ pub async fn take_graphic_out_with_key(
     ))
 }
 
+/// **Everything on air, with the channel's graphics key**
+///
+/// The channel's logo, ticker, L-shape and always-on graphics that are on,
+/// then the GCs; `template` is the name to use in the other commands.
+///
+/// ```BASH
+/// curl 'http://127.0.0.1:8787/graphics/1/on-air?key=<KEY>'
+/// ```
+pub async fn graphics_on_air_with_key(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    axum::extract::Query(query): axum::extract::Query<HashMap<String, String>>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<Vec<crate::graphics::commands::OnAirGraphic>>, ServiceError> {
+    let manager = keyed_manager(&state, id, &query, &headers).await?;
+
+    Ok(Json(crate::graphics::commands::on_air(&manager).await?))
+}
+
+/// **Take everything off air, with the channel's graphics key**
+///
+/// GCs and the channel's logo, ticker, L-shape and always-on graphics.
+/// `except` lists templates (name or id, separated by commas) that stay on.
+/// Answers with what is still on air.
+///
+/// ```BASH
+/// curl -X POST 'http://127.0.0.1:8787/graphics/1/out?key=<KEY>'
+/// curl -X POST 'http://127.0.0.1:8787/graphics/1/out?key=<KEY>&except=logo,ticker'
+/// ```
+pub async fn all_graphics_out_with_key(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    axum::extract::Query(query): axum::extract::Query<HashMap<String, String>>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<Vec<crate::graphics::commands::OnAirGraphic>>, ServiceError> {
+    let manager = keyed_manager(&state, id, &query, &headers).await?;
+    let mut keep = Vec::new();
+
+    for reference in query
+        .get("except")
+        .map(String::as_str)
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|reference| !reference.is_empty())
+    {
+        keep.push(crate::graphics::commands::find_template(&manager, reference).await?);
+    }
+
+    crate::graphics::commands::all_off(&manager, &keep).await?;
+
+    Ok(Json(crate::graphics::commands::on_air(&manager).await?))
+}
+
 /// **Graphics on air**
 pub async fn get_graphics_on_air(
     State(state): State<AppState>,

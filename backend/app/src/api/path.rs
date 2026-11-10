@@ -206,6 +206,14 @@ pub fn routes() -> Router<AppState> {
             get(take_graphic_with_key).post(take_graphic_with_key),
         )
         .route(
+            "/graphics/{id}/on-air",
+            get(graphics_on_air_with_key).post(graphics_on_air_with_key),
+        )
+        .route(
+            "/graphics/{id}/out",
+            get(all_graphics_out_with_key).post(all_graphics_out_with_key),
+        )
+        .route(
             "/graphics/{id}/out/{template}",
             get(take_graphic_out_with_key).post(take_graphic_out_with_key),
         )
