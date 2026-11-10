@@ -22,6 +22,11 @@ one is tagged.
 
 ### Changed
 
+- On air's program monitor keeps its picture clear: its state, what is
+  playing, sound and quality are in a slim bar under it (the Player's
+  monitor is unchanged). The On air tabs fit their names and counts, and the
+  Composer's side panels are as tall as their content.
+
 - In Graphics › On air the right column has three tabs: **Templates**, with
   a search and a group filter; **On air (n)**, with the temporary graphics on
   air, their time, Take out and Take all out; and **Always on air (n)**, with

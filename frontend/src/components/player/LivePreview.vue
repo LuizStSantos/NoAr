@@ -11,6 +11,8 @@ import { useConfig } from '@/stores/config'
 import { usePlaylist } from '@/stores/playlist'
 import { useSchedule } from '@/stores/schedule'
 
+/** `compact`: a small monitor (Graphics › On air) keeps its picture clear; the details go under it. */
+withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
 const { t } = useI18n()
 const authStore = useAuth()
 const configStore = useConfig()
@@ -276,7 +278,7 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                 {{ placeholder }}
             </div>
 
-            <div class="absolute top-3.5 left-3.5 flex gap-2">
+            <div v-if="!compact" class="absolute top-3.5 left-3.5 flex gap-2">
                 <span
                     v-if="playlistStore.playoutIsRunning && playlistStore.failure"
                     class="bg-[#5a2a2d] text-white font-semibold text-xs tracking-wider px-2.5 py-1 rounded-md"
@@ -299,7 +301,7 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                     sourceLabel
                 }}</span>
             </div>
-            <div class="absolute top-3.5 right-3.5 flex items-center gap-2">
+            <div v-if="!compact" class="absolute top-3.5 right-3.5 flex items-center gap-2">
                 <span
                     v-if="outputLabel"
                     class="bg-[rgba(23,24,26,0.86)] text-[#c9c7c3] font-mono text-xs px-2.5 py-1 rounded-md hidden sm:inline"
@@ -349,6 +351,7 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
             </div>
 
             <div
+                v-if="!compact"
                 class="absolute inset-x-0 bottom-0 bg-[rgba(11,12,13,0.82)] px-4 py-3 flex items-center gap-3.5 text-[#e8e6e3]"
             >
                 <button
@@ -365,6 +368,58 @@ const xmltvUrl = computed(() => (channel.value ? `/xmltv/${channel.value.id}/gui
                     <div v-if="clipLabel" class="text-[#a9a7a3] text-[13px] truncate">{{ clipLabel }}</div>
                 </div>
             </div>
+        </div>
+
+        <div v-if="compact" class="flex items-center gap-2 min-w-0 text-[13px]">
+            <span
+                v-if="playlistStore.playoutIsRunning && playlistStore.failure"
+                class="bg-[#5a2a2d] text-white font-semibold text-[11px] tracking-wider px-2 py-0.5 rounded shrink-0"
+                >{{ t('nav.offAir') }}</span
+            >
+            <span
+                v-else-if="playlistStore.playoutIsRunning"
+                class="bg-on-air text-white font-semibold text-[11px] tracking-wider px-2 py-0.5 rounded shrink-0"
+                >● {{ t('nav.onAir') }}</span
+            >
+            <span
+                v-else-if="playlistStore.statusKnown"
+                class="bg-base-300 font-semibold text-[11px] tracking-wider px-2 py-0.5 rounded shrink-0"
+                >{{ t('nav.stopped') }}</span
+            >
+            <span class="min-w-0 truncate" :title="clipLabel || title">
+                <strong class="font-semibold">{{ title }}</strong>
+                <span v-if="clipLabel" class="text-muted"> · {{ clipLabel }}</span>
+            </span>
+            <div
+                v-if="direct && previewUrl"
+                role="radiogroup"
+                :aria-label="t('onair.previewQuality')"
+                class="ms-auto flex bg-base-200 rounded-md p-0.5 text-xs shrink-0"
+            >
+                <button
+                    v-for="option in ['light', 'high'] as const"
+                    :key="option"
+                    type="button"
+                    role="radio"
+                    :aria-checked="quality === option"
+                    :title="option === 'light' ? t('onair.previewLightHint') : t('onair.previewHighHint')"
+                    class="px-2 py-0.5 rounded cursor-pointer"
+                    :class="quality === option ? 'bg-base-300' : 'text-muted'"
+                    @click="chooseQuality(option)"
+                >
+                    {{ option === 'light' ? t('onair.previewLight') : t('onair.previewHigh') }}
+                </button>
+            </div>
+            <button
+                class="btn-icon min-h-8 min-w-8 shrink-0"
+                :class="{ 'ms-auto': !(direct && previewUrl) }"
+                :aria-label="muted ? t('onair.listen') : t('onair.mute')"
+                :aria-pressed="!muted"
+                :disabled="!previewUrl"
+                @click="muted = !muted"
+            >
+                <i class="bi" :class="muted ? 'bi-volume-mute' : 'bi-volume-up'" aria-hidden="true" />
+            </button>
         </div>
 
         <div class="flex flex-wrap gap-x-4.5 gap-y-2 text-muted text-[13px]">

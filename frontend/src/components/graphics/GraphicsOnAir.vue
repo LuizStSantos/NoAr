@@ -313,7 +313,7 @@ onMounted(() => {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <figure class="m-0 card-box p-2.5 flex flex-col gap-2">
                     <figcaption class="flex items-center justify-between gap-2 text-xs">
-                        <span class="font-semibold tracking-[0.08em] text-success">{{
+                        <span class="font-semibold tracking-[0.08em] text-success shrink-0 whitespace-nowrap">{{
                             t('graphics.onAir.preview')
                         }}</span>
                         <span class="text-muted truncate">{{
@@ -338,12 +338,12 @@ onMounted(() => {
                 </figure>
                 <figure class="m-0 card-box p-2.5 flex flex-col gap-2">
                     <figcaption class="flex items-center justify-between gap-2 text-xs">
-                        <span class="font-semibold tracking-[0.08em] text-error">{{
+                        <span class="font-semibold tracking-[0.08em] text-error shrink-0 whitespace-nowrap">{{
                             t('graphics.onAir.program')
                         }}</span>
                         <span class="text-muted truncate">{{ programName }}</span>
                     </figcaption>
-                    <LivePreview data-testid="graphics-program-monitor" />
+                    <LivePreview compact data-testid="graphics-program-monitor" />
                 </figure>
             </div>
 
@@ -467,7 +467,7 @@ onMounted(() => {
             <div
                 role="tablist"
                 :aria-label="t('graphics.onAir.sideTabs')"
-                class="grid grid-cols-3 border-b border-line -mx-4 -mt-4 mb-1"
+                class="grid grid-cols-[auto_auto_auto] justify-between gap-1 border-b border-line -mx-4 -mt-4 mb-1 px-2"
             >
                 <button
                     v-for="tab in sideTabs"
@@ -475,7 +475,7 @@ onMounted(() => {
                     :key="tab.name"
                     type="button"
                     role="tab"
-                    class="min-h-11 px-1 text-[13px] whitespace-nowrap border-0 border-b-2 bg-transparent cursor-pointer inline-flex items-center justify-center gap-1"
+                    class="min-h-11 min-w-0 px-1 text-xs whitespace-nowrap border-0 border-b-2 bg-transparent cursor-pointer inline-flex items-center justify-center gap-1"
                     :class="sideTab === tab.name ? 'border-accent font-semibold' : 'border-transparent text-muted'"
                     :aria-selected="sideTab === tab.name"
                     :aria-controls="`onair-panel-${tab.name}`"
@@ -484,7 +484,7 @@ onMounted(() => {
                     <span v-if="tab.name === 'onair' && tab.count" class="dot bg-error" aria-hidden="true" />{{
                         tab.label
                     }}
-                    <span class="font-mono text-xs opacity-75">{{ tab.count }}</span>
+                    <span class="font-mono text-[10px] leading-4 px-1.5 rounded-full bg-base-300">{{ tab.count }}</span>
                 </button>
             </div>
             <div

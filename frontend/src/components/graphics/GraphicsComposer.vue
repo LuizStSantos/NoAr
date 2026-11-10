@@ -1182,7 +1182,10 @@ onBeforeUnmount(() => {
         align-items: stretch;
         grid-template-columns: 236px minmax(0, 1fr) 300px;
     }
+    /* The side panels are as tall as their content, up to the window, then scroll. */
     .composer-grid > aside {
+        align-self: start;
+        max-height: 100%;
         min-height: 0;
         overflow-y: auto;
     }
