@@ -43,7 +43,10 @@ one is tagged.
   templates on and off air) and **SCTE-35** (mark and cancel breaks), each
   with its key, commands and tutorial. Graphics › External control (API) and
   the SCTE-35 key panel in Ad breaks moved there; old `/graphics/api` links
-  open the Graphics tab.
+  open the Graphics tab. The Graphics tab is in two parts: **One template**,
+  picked with a search, with its put on air and take off commands; and
+  **Everything at once**, with the templates that stay on air added by
+  search as chips, take everything off and the on-air list.
 
 - The Composer fits the window on wide screens: one toolbar row (back, name,
   group, actions), a preview that takes the height left and stays 16:9, a

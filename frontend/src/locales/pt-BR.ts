@@ -1890,13 +1890,21 @@ export default {
             },
         },
         api: {
+            oneTitle: 'Um modelo',
+            allTitle: 'Tudo de uma vez',
+            allIntro:
+                'Tirar tudo do ar, inclusive logo e letreiro, ou tudo menos alguns modelos; e ver o que está no ar.',
+            searchTemplate: 'Buscar modelo',
+            searchKeep: 'Buscar um modelo que fica no ar',
+            removeKeep: 'Não manter {name}',
+            noneKept: 'Nenhum: tudo sai.',
+            keepHint: 'Nos seus comandos, liste quaisquer modelos em except=, separados por vírgula.',
             commandsIntro:
                 'Comandos para qualquer modelo (GC, logo, L-shape, letreiro) com a chave de gráficos: pôr no ar com tempo opcional, tirar do ar, tirar tudo e ver o que está no ar.',
             keyTitle: 'Chave do grafismo',
             keyIntro: 'Para encoders, vMix, OBS e Stream Deck que só chamam um endereço.',
             key: 'Chave',
             keyHint: 'Envie em ?key= ou no cabeçalho X-Graphics-Key. Renove se ela vazar.',
-            commandsTitle: 'Comandos',
             commandsHint:
                 'O modelo é chamado pelo nome em minúsculas com hífens, ou pelo número. Os outros parâmetros preenchem os campos do modelo.',
             template: 'Modelo',
@@ -1905,11 +1913,9 @@ export default {
             takeWithKey: 'Pôr no ar, com a chave',
             outWithKey: 'Tirar do ar, com a chave',
             allOut: 'Tirar tudo do ar (inclusive logo, letreiro e L-shape)',
-            allOutExcept: 'Tirar tudo, menos os modelos marcados acima',
+            allOutExcept: 'Tirar tudo, menos os modelos que ficam no ar',
             keep: 'Ficam no ar',
-            keepHint:
-                'Para o exemplo de tirar tudo: marque os modelos que ficam no ar, por exemplo a logo. Nos seus comandos, liste quaisquer modelos em except=, separados por vírgula.',
-            chooseKeep: 'Marque pelo menos um modelo acima.',
+            chooseKeep: 'Escolha pelo menos um modelo que fica no ar.',
             onAirList: 'O que está no ar (com o nome do modelo para usar nos comandos)',
             dataSources: 'Ler fontes de dados e registros em cache',
             fontAssets: 'Ler fontes de texto enviadas',

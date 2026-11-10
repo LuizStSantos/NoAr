@@ -1880,13 +1880,21 @@ export default {
             },
         },
         api: {
+            oneTitle: 'One template',
+            allTitle: 'Everything at once',
+            allIntro:
+                'Take everything off air, the logo and ticker too, or everything except some templates; and list what is on air.',
+            searchTemplate: 'Search template',
+            searchKeep: 'Search a template that stays on air',
+            removeKeep: 'Stop keeping {name}',
+            noneKept: 'None: everything goes off.',
+            keepHint: 'In your own commands, list any templates in except=, separated by commas.',
             commandsIntro:
                 'Commands for every template (GC, logo, L-shape, ticker) with the graphics key: put on air with an optional time, take off air, take everything off and list what is on air.',
             keyTitle: 'Graphics key',
             keyIntro: 'For encoders, vMix, OBS and Stream Deck that only call a URL.',
             key: 'Key',
             keyHint: 'Send it in ?key= or the X-Graphics-Key header. Renew it if it leaks.',
-            commandsTitle: 'Commands',
             commandsHint:
                 'Name the template in lower case with dashes, or by its number. Other parameters fill the template fields.',
             template: 'Template',
@@ -1895,11 +1903,9 @@ export default {
             takeWithKey: 'Put on air, with the key',
             outWithKey: 'Take off air, with the key',
             allOut: 'Take everything off air (logo, ticker and L-shape too)',
-            allOutExcept: 'Take everything off except the templates chosen above',
+            allOutExcept: 'Take everything off, except the templates that stay on air',
             keep: 'Stay on air',
-            keepHint:
-                'For the take-everything-off example: tick the templates that stay on air, for example the logo. In your own commands, list any templates in except=, separated by commas.',
-            chooseKeep: 'Tick at least one template above.',
+            chooseKeep: 'Choose at least one template that stays on air.',
             onAirList: 'What is on air (the template names to use in commands)',
             dataSources: 'Read data sources and cached records',
             fontAssets: 'Read uploaded font assets',
