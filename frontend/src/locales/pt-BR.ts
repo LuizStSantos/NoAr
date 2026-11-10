@@ -1702,6 +1702,8 @@ export default {
             },
         },
         onAir: {
+            sideTabs: 'Modelos e grafismos no ar',
+            onAirTab: 'No ar',
             search: 'Buscar modelo',
             group: 'Grupo',
             allGroups: 'Todos os grupos',

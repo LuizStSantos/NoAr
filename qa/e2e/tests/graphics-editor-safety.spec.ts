@@ -413,6 +413,7 @@ test('library refreshes temporary badges and waiting takes can be cancelled with
         })
         await page.goto(`/graphics/onair?channel=1&template=${template.id}`)
         await page.getByRole('button', { name: /^put on air$/i }).click()
+        await page.getByRole('tab', { name: /^On air/ }).click()
         const allOut = page.getByRole('button', { name: 'Take all out', exact: true })
         await expect(allOut).toBeEnabled()
         await allOut.click()

@@ -96,6 +96,17 @@ function templateHint(template: GraphicsTemplate) {
         : fieldList(template) || t('graphics.templates.noFields')
 }
 
+/** The right column shows the templates or what is on air, in tabs. */
+const sideTab = ref<'templates' | 'onair'>('templates')
+const sideTabs = computed(() => [
+    { name: 'templates' as const, label: t('graphics.onAir.templates'), count: templates.value.length },
+    {
+        name: 'onair' as const,
+        label: t('graphics.onAir.onAirTab'),
+        count: onAir.value.filter((graphic) => !graphic.leaving).length,
+    },
+])
+
 /** The template list's search text and group (empty = every group). */
 const search = ref('')
 const groupFilter = ref('')
@@ -444,37 +455,6 @@ onMounted(() => {
                 </button>
             </div>
 
-            <section class="card-box px-5 py-4 flex flex-col gap-3" role="status" aria-live="polite">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="m-0 text-base font-semibold">{{ t('graphics.onAir.temporaryOnAir') }}</h2>
-                    <button type="button" class="btn-quiet min-h-9" :disabled="busy" @click="takeAllOut">
-                        {{ t('graphics.templates.allOut') }}
-                    </button>
-                </div>
-                <p v-if="!onAir.length" class="m-0 text-sm text-muted">{{ t('graphics.onAir.noTemporary') }}</p>
-                <ul v-else class="m-0 p-0 list-none flex flex-col gap-1.5">
-                    <li
-                        v-for="graphic in onAir"
-                        :key="graphic.take_id"
-                        class="flex flex-wrap items-center gap-3 px-3 py-2 rounded-field border border-line-strong bg-base-100"
-                    >
-                        <span class="dot" :class="graphic.leaving ? 'bg-muted' : 'bg-error'" aria-hidden="true" />
-                        <strong class="font-semibold text-sm flex-auto">{{ onAirName(graphic) }}</strong>
-                        <span class="text-xs text-muted font-mono">
-                            {{ graphic.leaving ? t('graphics.templates.leaving') : onAirSince(graphic.since) }}
-                        </span>
-                        <button
-                            type="button"
-                            class="btn-quiet min-h-9"
-                            :disabled="graphic.leaving"
-                            @click="takeOut(graphic.take_id)"
-                        >
-                            {{ t('graphics.templates.out') }}
-                        </button>
-                    </li>
-                </ul>
-            </section>
-
             <SectionCard :title="t('graphics.onAir.permanentTitle')" :description="t('graphics.onAir.permanentHint')">
                 <p v-if="unavailable" class="m-0 text-sm text-muted">{{ t('graphics.onAir.statusUnavailable') }}</p>
                 <div class="flex flex-wrap gap-2">
@@ -506,58 +486,127 @@ onMounted(() => {
             class="onair-templates flex-[1_1_300px] min-w-0 card-box px-4 py-4 flex flex-col gap-3"
             :aria-label="t('graphics.onAir.templates')"
         >
-            <div class="flex items-center justify-between gap-2">
-                <h2 class="m-0 text-base font-semibold">{{ t('graphics.onAir.templates') }}</h2>
-                <span class="text-xs text-muted">{{ t('graphics.onAir.count', { count: templates.length }) }}</span>
-            </div>
-            <input
-                v-model="search"
-                type="search"
-                class="field-input"
-                :aria-label="t('graphics.onAir.search')"
-                :placeholder="t('graphics.onAir.search')"
-            />
-            <label v-if="groupNames.length > 1" class="flex items-center gap-2 text-sm text-muted"
-                ><span class="shrink-0">{{ t('graphics.onAir.group') }}</span
-                ><select v-model="groupFilter" class="field-input flex-auto">
-                    <option value="">{{ t('graphics.onAir.allGroups') }}</option>
-                    <option v-for="name in groupNames" :key="name" :value="name">{{ name }}</option>
-                </select></label
+            <div
+                role="tablist"
+                :aria-label="t('graphics.onAir.sideTabs')"
+                class="grid grid-cols-2 border-b border-line -mx-4 -mt-4 mb-1"
             >
-            <p v-if="loaded && !templates.length" class="m-0 text-sm text-muted">{{ t('graphics.templates.none') }}</p>
-            <p v-else-if="loaded && !filtered.length" class="m-0 text-sm text-muted">
-                {{ t('graphics.onAir.noMatch') }}
-            </p>
-            <div class="onair-list flex flex-col gap-3 min-h-0">
-                <div v-for="group in groups" :key="group.name" class="flex flex-col gap-1.5">
-                    <span class="text-[11px] text-muted uppercase tracking-[0.08em]">{{ group.name }}</span>
-                    <button
-                        v-for="template in group.items"
-                        :key="template.id"
-                        type="button"
-                        class="cursor-pointer min-h-12 px-3 py-2 flex flex-col gap-0.5 border rounded-field text-left bg-base-100"
-                        :class="
-                            selectedId === template.id ? 'border-success' : 'border-line-strong hover:border-accent'
-                        "
-                        :aria-pressed="selectedId === template.id"
-                        @click="select(template)"
-                    >
-                        <span class="flex items-center gap-2">
-                            <strong class="font-semibold text-sm flex-auto">{{ templateName(template) }}</strong>
-                            <span
-                                v-if="
-                                    onAir.some((graphic) => graphic.template_id === template.id && !graphic.leaving) ||
-                                    channelModels.some((model) => model.template.id === template.id && model.on)
-                                "
-                                class="text-[11px] font-bold text-error"
-                            >
-                                {{ t('graphics.onAir.badge') }}
+                <button
+                    v-for="tab in sideTabs"
+                    :id="`onair-tab-${tab.name}`"
+                    :key="tab.name"
+                    type="button"
+                    role="tab"
+                    class="min-h-11 px-2 border-0 border-b-2 bg-transparent cursor-pointer inline-flex items-center justify-center gap-1.5"
+                    :class="sideTab === tab.name ? 'border-accent font-semibold' : 'border-transparent text-muted'"
+                    :aria-selected="sideTab === tab.name"
+                    :aria-controls="`onair-panel-${tab.name}`"
+                    @click="sideTab = tab.name"
+                >
+                    <span v-if="tab.name === 'onair' && tab.count" class="dot bg-error" aria-hidden="true" />{{
+                        tab.label
+                    }}
+                    <span class="font-mono text-xs opacity-75">{{ tab.count }}</span>
+                </button>
+            </div>
+            <div
+                v-show="sideTab === 'templates'"
+                id="onair-panel-templates"
+                role="tabpanel"
+                aria-labelledby="onair-tab-templates"
+                class="flex flex-col gap-3 min-h-0 flex-auto"
+            >
+                <input
+                    v-model="search"
+                    type="search"
+                    class="field-input"
+                    :aria-label="t('graphics.onAir.search')"
+                    :placeholder="t('graphics.onAir.search')"
+                />
+                <label v-if="groupNames.length > 1" class="flex items-center gap-2 text-sm text-muted"
+                    ><span class="shrink-0">{{ t('graphics.onAir.group') }}</span
+                    ><select v-model="groupFilter" class="field-input flex-auto">
+                        <option value="">{{ t('graphics.onAir.allGroups') }}</option>
+                        <option v-for="name in groupNames" :key="name" :value="name">{{ name }}</option>
+                    </select></label
+                >
+                <p v-if="loaded && !templates.length" class="m-0 text-sm text-muted">
+                    {{ t('graphics.templates.none') }}
+                </p>
+                <p v-else-if="loaded && !filtered.length" class="m-0 text-sm text-muted">
+                    {{ t('graphics.onAir.noMatch') }}
+                </p>
+                <div class="onair-list flex flex-col gap-3 min-h-0">
+                    <div v-for="group in groups" :key="group.name" class="flex flex-col gap-1.5">
+                        <span class="text-[11px] text-muted uppercase tracking-[0.08em]">{{ group.name }}</span>
+                        <button
+                            v-for="template in group.items"
+                            :key="template.id"
+                            type="button"
+                            class="cursor-pointer min-h-12 px-3 py-2 flex flex-col gap-0.5 border rounded-field text-left bg-base-100"
+                            :class="
+                                selectedId === template.id ? 'border-success' : 'border-line-strong hover:border-accent'
+                            "
+                            :aria-pressed="selectedId === template.id"
+                            @click="select(template)"
+                        >
+                            <span class="flex items-center gap-2">
+                                <strong class="font-semibold text-sm flex-auto">{{ templateName(template) }}</strong>
+                                <span
+                                    v-if="
+                                        onAir.some(
+                                            (graphic) => graphic.template_id === template.id && !graphic.leaving,
+                                        ) ||
+                                        channelModels.some((model) => model.template.id === template.id && model.on)
+                                    "
+                                    class="text-[11px] font-bold text-error"
+                                >
+                                    {{ t('graphics.onAir.badge') }}
+                                </span>
                             </span>
-                        </span>
-                        <span class="text-xs text-muted">{{ templateHint(template) }}</span>
-                    </button>
+                            <span class="text-xs text-muted">{{ templateHint(template) }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
+            <section
+                v-show="sideTab === 'onair'"
+                id="onair-panel-onair"
+                role="tabpanel"
+                aria-labelledby="onair-tab-onair"
+                class="flex flex-col gap-3 min-h-0 flex-auto"
+            >
+                <div role="status" aria-live="polite" class="contents">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="m-0 text-sm font-semibold">{{ t('graphics.onAir.temporaryOnAir') }}</h2>
+                        <button type="button" class="btn-quiet min-h-9" :disabled="busy" @click="takeAllOut">
+                            {{ t('graphics.templates.allOut') }}
+                        </button>
+                    </div>
+                    <p v-if="!onAir.length" class="m-0 text-sm text-muted">{{ t('graphics.onAir.noTemporary') }}</p>
+                    <ul v-else class="onair-list m-0 p-0 list-none flex flex-col gap-1.5">
+                        <li
+                            v-for="graphic in onAir"
+                            :key="graphic.take_id"
+                            class="flex flex-wrap items-center gap-3 px-3 py-2 rounded-field border border-line-strong bg-base-100"
+                        >
+                            <span class="dot" :class="graphic.leaving ? 'bg-muted' : 'bg-error'" aria-hidden="true" />
+                            <strong class="font-semibold text-sm flex-auto">{{ onAirName(graphic) }}</strong>
+                            <span class="text-xs text-muted font-mono">
+                                {{ graphic.leaving ? t('graphics.templates.leaving') : onAirSince(graphic.since) }}
+                            </span>
+                            <button
+                                type="button"
+                                class="btn-quiet min-h-9"
+                                :disabled="graphic.leaving"
+                                @click="takeOut(graphic.take_id)"
+                            >
+                                {{ t('graphics.templates.out') }}
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </section>
         </aside>
     </div>
 </template>

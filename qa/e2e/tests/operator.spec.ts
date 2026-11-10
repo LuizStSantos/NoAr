@@ -1142,3 +1142,32 @@ test('On air filters the template list by search and group', async ({ page }) =>
         for (const id of ids) await page.request.delete(`/api/graphics/1/templates/${id}`, { headers })
     }
 })
+
+test('On air lists temporary graphics in its own tab next to the templates', async ({ page }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const created = await page.request.post('/api/graphics/1/templates', {
+        headers,
+        data: { name: `Tabbed ${Date.now()}`, duration: 0, layers: [] },
+    })
+    const template = await created.json()
+    await page.route('**/api/graphics/1/on-air', (route) =>
+        route.fulfill({
+            json: [{ take_id: 91, template_id: template.id, name: template.name, since: 4, leaving: false }],
+        }),
+    )
+    try {
+        await page.goto('/graphics/onair?channel=1')
+        const side = page.getByRole('complementary', { name: 'Templates', exact: true })
+        const tab = side.getByRole('tab', { name: /^On air/ })
+        await expect(tab).toContainText('1')
+        await expect(side.getByRole('tab', { name: /^Templates/ })).toHaveAttribute('aria-selected', 'true')
+        await expect(side.getByRole('button', { name: 'Take all out', exact: true })).toBeHidden()
+        await tab.click()
+        await expect(side.getByRole('tabpanel')).toContainText(template.name)
+        await expect(side.getByRole('button', { name: 'Take all out', exact: true })).toBeVisible()
+    } finally {
+        await page.request.delete(`/api/graphics/1/templates/${template.id}`, { headers })
+    }
+})

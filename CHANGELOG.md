@@ -22,9 +22,11 @@ one is tagged.
 
 ### Changed
 
-- In Graphics › On air the template list has a search and a group filter,
-  stops at the window's height and scrolls by itself, so a long list no
-  longer stretches the page.
+- In Graphics › On air the right column has two tabs: **Templates**, with a
+  search and a group filter, and **On air (n)**, with the temporary graphics
+  on air, their time, Take out and Take all out. The column stops at the
+  window's height and scrolls by itself, so a long list no longer stretches
+  the page.
 
 - The Composer's layer list shows the whole layer name (the order arrows and
   delete appear on the selected row, on hover and on keyboard focus), and a

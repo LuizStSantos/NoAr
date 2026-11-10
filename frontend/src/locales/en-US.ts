@@ -1692,6 +1692,8 @@ export default {
             },
         },
         onAir: {
+            sideTabs: 'Templates and graphics on air',
+            onAirTab: 'On air',
             search: 'Search templates',
             group: 'Group',
             allGroups: 'All groups',
