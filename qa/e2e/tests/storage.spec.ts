@@ -184,3 +184,31 @@ test('Storage previews the graphics cued in a video over its player at their tim
         await page.request.put('/api/playout/config/1', { headers, data: config })
     }
 })
+
+test('a playable video without marks shows its player, not the cannot-play notice', async ({ page }) => {
+    const videoName = `plain-${Date.now()}.mp4`
+    const video = await readFile(resolve('../../tests_assets/storage/media_mix/ad.mp4'))
+    await page.goto('/media')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const config = await (await page.request.get('/api/playout/config/1', { headers })).json()
+    const convertUploads = config.storage.convert_uploads
+    config.storage.convert_uploads = false
+    expect((await page.request.put('/api/playout/config/1', { headers, data: config })).ok()).toBeTruthy()
+    try {
+        await page
+            .locator('input[type=file]')
+            .setInputFiles([{ name: videoName, mimeType: 'video/mp4', buffer: video }])
+        const open = page.getByRole('button', {
+            name: `Trim, graphics and breaks in this video: ${videoName}`,
+            exact: true,
+        })
+        await open.click()
+        const player = page.locator('video').first()
+        await expect.poll(() => player.evaluate((element: HTMLVideoElement) => element.readyState)).toBeGreaterThan(0)
+        await expect(page.getByText('The browser cannot play this format', { exact: false })).toHaveCount(0)
+    } finally {
+        config.storage.convert_uploads = convertUploads
+        await page.request.put('/api/playout/config/1', { headers, data: config })
+    }
+})

@@ -88,6 +88,9 @@ one is tagged.
 
 ### Fixed
 
+- The video marks editor no longer shows "The browser cannot play this
+  format" over a playable video that has no graphics cues.
+
 - A data source that cannot be read says which step failed and on which
   server (DNS lookup, connection with its cause, no answer within 10 s over
   IPv6/IPv4, slow data) instead of only "Data source request timed out".

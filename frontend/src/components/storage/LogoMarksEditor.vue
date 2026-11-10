@@ -605,7 +605,7 @@ onBeforeUnmount(() => {
                             :position="position"
                         />
                         <p
-                            v-else
+                            v-if="!videoUrl || videoFailed"
                             class="absolute inset-0 m-0 flex items-center justify-center p-6 text-center text-muted"
                         >
                             {{ t('storage.logoMarks.noVideo') }}
