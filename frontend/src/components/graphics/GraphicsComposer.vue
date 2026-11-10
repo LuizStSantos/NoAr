@@ -30,6 +30,7 @@ import {
     sanitizeGraphicsUploadFilename,
 } from '@/composables/graphicsTemplates'
 import { useConfig } from '@/stores/config'
+import { useIndex } from '@/stores/index'
 import { useComposerGeometry } from '@/composables/graphicsComposerGeometry'
 import { useComposerPreview } from '@/composables/graphicsComposerPreview'
 
@@ -45,6 +46,7 @@ const { sources: dataSources } = useGraphicsSources()
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
 const route = useRoute()
 const router = useRouter()
+const indexStore = useIndex()
 const authStore = useAuth()
 const draft = ref<TemplateInput>({
     name: '',
@@ -114,7 +116,6 @@ const canvasTemplate = computed(() =>
     time.value === undefined ? preview.value : { ...preview.value, duration: previewDuration.value },
 )
 let loadVersion = 0
-let saveNavigation: { version: number; channel: number | undefined; template: number } | undefined
 let interactionSnapshot: string | undefined
 const dirty = computed(
     () => JSON.stringify(draft.value) !== baseline.value || assignment.value !== originalAssignment.value,
@@ -458,19 +459,9 @@ async function saveTemplate() {
         }
         baseline.value = JSON.stringify(draft.value)
         saving.value = false
-        const navigation = { version, channel, template: result.id }
-        saveNavigation = navigation
-        try {
-            await router.replace({ name: 'graphics-composer', query: { channel, template: result.id } })
-        } finally {
-            if (saveNavigation === navigation) {
-                saveNavigation = undefined
-            }
-        }
-
-        if (current()) {
-            note.value = t('graphics.composer.saved', { name: templateName(result) })
-        }
+        // Saved: back to the templates, where the saved one is listed.
+        indexStore.msgAlert('success', t('graphics.composer.saved', { name: templateName(result) }), 3)
+        await router.push({ name: 'graphics-templates', query: { channel } })
     } catch (err) {
         if (current()) {
             error.value =
@@ -739,16 +730,6 @@ function confirmBeforeUnload(event: BeforeUnloadEvent) {
 }
 
 const unregisterNavigationGuard = registerEditorNavigationGuard((to) => {
-    // A successful first save only adds this document's new ID to its URL.
-    if (
-        saveNavigation?.version === loadVersion &&
-        to.name === 'graphics-composer' &&
-        String(to.query.channel ?? '') === String(saveNavigation.channel ?? '') &&
-        String(to.query.template ?? '') === String(saveNavigation.template)
-    ) {
-        return true
-    }
-
     if (
         to.name === route.name &&
         String(to.query.template ?? '') === String(route.query.template ?? '') &&

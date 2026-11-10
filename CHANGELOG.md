@@ -22,6 +22,9 @@ one is tagged.
 
 ### Changed
 
+- Saving a template in the Composer returns to the Templates list, with a
+  confirmation message. A failed save stays in the Composer with the changes.
+
 - A new storage keeps the default logo, the empty subtitle file and the
   images uploaded from the Composer in one `Graphics` folder instead of
   `00-assets`. A storage that already has `00-assets` keeps it, with its

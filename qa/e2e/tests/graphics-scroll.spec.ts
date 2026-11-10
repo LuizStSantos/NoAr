@@ -1,5 +1,6 @@
 import { dirname, join } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
+import { reopenSaved } from './composer'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Requires runner-owned disposable staging.')
 test.use({ storageState: process.env.NOAR_E2E_STATE_PATH })
@@ -77,7 +78,7 @@ test('Composer saves scrolling data fields, previews both directions, and edits 
         expect(response.ok()).toBeTruthy()
         const template = await response.json()
         templateId = template.id
-        await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+        await reopenSaved(page, template.id)
         expect(template.layers[0].scroll).toEqual({ direction: 'left', speed: 80, gap: 40 })
         expect(template.layers[0].data_fields.price).toMatchObject({ source_id: source.id, column: 'price', row: 0 })
         await page.reload()

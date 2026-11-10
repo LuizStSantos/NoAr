@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { reopenSaved } from './composer'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Requires runner-owned disposable staging.')
 test.use({ storageState: process.env.NOAR_E2E_STATE_PATH })
@@ -119,6 +120,7 @@ test('converted display names follow the locale while saves retain raw defaults 
             ['picture', 'Picture'],
         ])
         expect(raw.layers[0].x).toBe(1)
+        await reopenSaved(page, lshape.id)
 
         await page.getByLabel('Nome do modelo', { exact: true }).fill('My custom model' + suffix)
         await page.getByLabel('Nome da camada', { exact: true }).fill('My custom layer')
@@ -129,7 +131,7 @@ test('converted display names follow the locale while saves retain raw defaults 
         )
         await page.getByRole('button', { name: 'Salvar', exact: true }).click()
         expect((await renamed).ok()).toBeTruthy()
-        await expect(page.getByRole('button', { name: 'Salvar', exact: true })).toHaveCount(0)
+        await reopenSaved(page, lshape.id)
         await page.evaluate(() => localStorage.setItem('language', 'en'))
         await page.reload()
         await expect(page.getByLabel('Template name', { exact: true })).toHaveValue('My custom model' + suffix)

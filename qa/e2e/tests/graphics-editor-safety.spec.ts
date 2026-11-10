@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
+import { expectBackToTemplates, reopenSaved } from './composer'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Requires runner-owned disposable staging.')
 test.use({ storageState: process.env.NOAR_E2E_STATE_PATH })
@@ -88,6 +89,7 @@ test('a rejected new template leaves no model behind and the corrected draft can
         const response = await saved
         expect(response.ok()).toBeTruthy()
         id = (await response.json()).id
+        await reopenSaved(page, id!)
         await expect(page.getByLabel('Layer name', { exact: true })).toBeEnabled()
     } finally {
         if (id !== undefined) await page.request.delete(`/api/graphics/1/templates/${id}`, { headers })
@@ -200,7 +202,7 @@ test('an abandoned image upload cannot unlock a newer document load or upload in
     }
 })
 
-test('the first save adds the new model ID to the URL and leaves its controls editable', async ({ page }) => {
+test('the first save returns to the templates and the new model opens editable', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('language', 'en'))
     await page.goto('/graphics/composer?channel=1')
     const token = await page.evaluate(() => localStorage.getItem('token'))
@@ -221,7 +223,7 @@ test('the first save adds the new model ID to the URL and leaves its controls ed
         const response = await created
         expect(response.ok()).toBeTruthy()
         id = (await response.json()).id
-        await expect(page).toHaveURL(new RegExp(`template=${id}(?:&|$)`))
+        await reopenSaved(page, id!)
         await expect(page.getByLabel('Layer name', { exact: true })).toBeEnabled()
         await expect(page.getByLabel('Template name', { exact: true })).toBeEnabled()
         await page.getByLabel('Layer name', { exact: true }).fill('Edited after first save')
@@ -232,6 +234,7 @@ test('the first save adds the new model ID to the URL and leaves its controls ed
         )
         await page.getByRole('button', { name: 'Save', exact: true }).click()
         expect((await updated).ok()).toBeTruthy()
+        await reopenSaved(page, id!)
         await expect(page.getByLabel('Layer name', { exact: true })).toHaveValue('Edited after first save')
         await expect(page.getByLabel('Layer name', { exact: true })).toBeEnabled()
     } finally {
@@ -460,6 +463,7 @@ test('shared placeholders discard former-layer mappings when remapped or returne
         const remapped = await (await page.request.get(`/api/graphics/1/templates/${template.id}`, { headers })).json()
         expect(remapped.layers[0].data_fields ?? {}).toEqual({})
         expect(remapped.layers[1].data_fields.price.column).toBe('b')
+        await reopenSaved(page, template.id)
 
         await page.getByRole('button', { name: 'Save template', exact: true }).click()
         await page.getByRole('combobox', { name: 'Source for price', exact: true }).selectOption('')

@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
+import { expectBackToTemplates, reopenSaved } from './composer'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Run with run_staging.py for disposable authenticated tests.')
 test.use({ storageState: process.env.NOAR_E2E_STATE_PATH })
@@ -315,7 +316,7 @@ test('graphics Composer saves layers, fields, artwork and animation through the 
         animation_ms: 800,
         delay_ms: 400,
     })
-    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await reopenSaved(page, template.id)
     await page.reload()
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
     await page.getByRole('link', { name: 'Back to templates', exact: true }).click()
@@ -349,7 +350,7 @@ test('graphics Composer keeps unsaved layers after conflicts and a failed update
     )
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     const template = await (await created).json()
-    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await reopenSaved(page, template.id)
     await page.getByLabel('Layer name', { exact: true }).fill('Unsaved shape')
     await page.getByLabel('Layer name', { exact: true }).press('Tab')
     await page.route(`**/api/graphics/1/templates/${template.id}`, (route) =>
@@ -364,7 +365,7 @@ test('graphics Composer keeps unsaved layers after conflicts and a failed update
     await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
     await page.unroute(`**/api/graphics/1/templates/${template.id}`)
     await page.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
+    await reopenSaved(page, template.id)
     await page.reload()
     await expect(page.getByLabel('Layer name', { exact: true })).toHaveValue('Unsaved shape')
 })
@@ -411,7 +412,7 @@ test('assigned channel models use dedicated controls and layered Composer', asyn
     await page.getByLabel('Always on air', { exact: true }).check()
     await page.getByRole('button', { name: 'Save template', exact: true }).click()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
+    await expectBackToTemplates(page)
     await page.goto('/graphics/templates?channel=1')
     const ticker = page.getByRole('switch', { name: 'Ticker', exact: true })
 
@@ -428,7 +429,7 @@ test('assigned channel models use dedicated controls and layered Composer', asyn
     await page.getByLabel('Text', { exact: true }).fill(`${text} updated`)
     await page.getByRole('button', { name: 'Save template', exact: true }).click()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
+    await expectBackToTemplates(page)
     await page.goto('/graphics/templates?channel=1')
     await expect(ticker).not.toBeChecked()
     const saved = await api(page, '/api/graphics/1/channel')
@@ -598,7 +599,7 @@ test('Composer adds every layer when the secure UUID browser API is unavailable'
     const template = await saved.json()
     expect(template.layers).toHaveLength(4)
     expect(new Set(template.layers.map((layer: { id: string }) => layer.id)).size).toBe(4)
-    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await reopenSaved(page, template.id)
     await page.reload()
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
     expect(errors).toEqual([])
@@ -626,7 +627,7 @@ test('the channel logo can explicitly restore its natural size and corner with u
         await expect(page.getByLabel('Width', { exact: true })).not.toHaveValue('100')
         await page.getByRole('button', { name: 'Save template', exact: true }).click()
         await page.getByRole('button', { name: 'Save', exact: true }).click()
-        await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
+        await reopenSaved(page, logo.id)
         const saved = await api(page, `/api/graphics/1/templates/${logo.id}`)
         const config = await api(page, '/api/playout/config/1')
         const result = saved.layers.find((layer: { id: string }) => layer.id === saved.control_layer_id)
@@ -702,7 +703,7 @@ test('free template names and groups support permanent compositions and deletion
     )
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     expect((await posted).ok()).toBeTruthy()
-    await expect(page.getByRole('status').filter({ hasText: 'saved' })).toBeVisible()
+    await expectBackToTemplates(page)
     await page.goto('/graphics/templates?channel=1')
     const group = page.getByRole('region', { name: 'My programme', exact: true })
     const card = group.locator('article').filter({ hasText: name })
@@ -767,7 +768,7 @@ test('Composer authors shape primitives and a live server-time clock', async ({ 
         'line',
     ])
     expect(template.layers[4]).toMatchObject({ kind: 'clock', clock_timezone: 'UTC', clock_format: 'HH:mm:ss' })
-    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await reopenSaved(page, template.id)
     await page.reload()
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
     await page.setViewportSize({ width: 390, height: 844 })
@@ -821,7 +822,7 @@ test('Composer uploads immutable fonts used by text and live clock previews', as
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     const template = await (await saving).json()
     expect(template.layers.every((layer: { font_family: string }) => layer.font_family === font.family)).toBe(true)
-    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await reopenSaved(page, template.id)
     await page.reload()
     await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(name)
     await expect
@@ -903,7 +904,7 @@ test('Composer maps live fields and On air selects records with manual overrides
     const saved = await saving
     expect(saved.ok(), await saved.text()).toBeTruthy()
     const template = await saved.json()
-    await expect(page).toHaveURL(new RegExp(`template=${template.id}(?:&|$)`))
+    await expectBackToTemplates(page)
     expect(template.layers[0].data_fields.price).toMatchObject({ source_id: source.id, column: 'price', row: 0 })
     await page.goto(`/graphics/onair?channel=1&template=${template.id}`)
     await page.getByRole('combobox', { name: `Record from ${name}`, exact: true }).selectOption('1')
