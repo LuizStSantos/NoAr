@@ -50,6 +50,10 @@ one is tagged.
 
 ### Fixed
 
+- A data source that cannot be read says which step failed and on which
+  server (DNS lookup, connection with its cause, no answer within 10 s over
+  IPv6/IPv4, slow data) instead of only "Data source request timed out".
+
 - A Google Sheets data source accepts the sheet's ordinary link (Share dialog
   or address bar, with `#gid=` for a tab) and its published `pubhtml` page,
   and reads their CSV. Before, these returned Google's web page and the source

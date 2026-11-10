@@ -529,22 +529,42 @@ fn http_client() -> reqwest::ClientBuilder {
         .redirect(reqwest::redirect::Policy::none())
 }
 
+/// How long a refresh may take, redirects included.
+const DOWNLOAD_TIME: Duration = Duration::from_secs(10);
+
+/// The innermost cause of an HTTP error, which names what failed (DNS,
+/// refused connection, certificate, reset...).
+fn root_cause(error: &reqwest::Error) -> String {
+    let mut cause: &dyn std::error::Error = error;
+
+    while let Some(source) = cause.source() {
+        cause = source;
+    }
+
+    cause.to_string()
+}
+
+/// Download a public document, saying in the error which step failed and on
+/// which server, so a stuck source can be diagnosed from its message.
 async fn download(value: &str) -> Result<String, String> {
+    let deadline = tokio::time::Instant::now() + DOWNLOAD_TIME;
+    let seconds = DOWNLOAD_TIME.as_secs();
     let mut url = public_url(value)?;
 
     for _ in 0..4 {
         let host = url
             .host_str()
             .ok_or("Missing source hostname")?
-            .trim_matches(['[', ']']);
+            .trim_matches(['[', ']'])
+            .to_string();
         let port = url.port_or_known_default().ok_or("Missing source port")?;
-        let addresses: Vec<_> = tokio::time::timeout(
-            Duration::from_secs(3),
-            tokio::net::lookup_host((host, port)),
+        let addresses: Vec<_> = tokio::time::timeout_at(
+            deadline.min(tokio::time::Instant::now() + Duration::from_secs(3)),
+            tokio::net::lookup_host((host.as_str(), port)),
         )
         .await
-        .map_err(|_| "Source DNS lookup timed out")?
-        .map_err(|_| "Source DNS lookup failed")?
+        .map_err(|_| format!("DNS lookup of {host} timed out"))?
+        .map_err(|error| format!("DNS lookup of {host} failed: {error}"))?
         .collect();
 
         if addresses.is_empty()
@@ -555,15 +575,41 @@ async fn download(value: &str) -> Result<String, String> {
             return Err("Private and local data source addresses are not allowed".to_string());
         }
 
+        let families = match (
+            addresses.iter().any(std::net::SocketAddr::is_ipv6),
+            addresses.iter().any(std::net::SocketAddr::is_ipv4),
+        ) {
+            (true, true) => "IPv6 and IPv4",
+            (true, false) => "IPv6",
+            _ => "IPv4",
+        };
         let client = http_client()
-            .resolve_to_addrs(host, &addresses)
+            .resolve_to_addrs(&host, &addresses)
             .build()
             .map_err(|_| "Could not create the data source client")?;
-        let response = client
-            .get(url.clone())
-            .send()
-            .await
-            .map_err(|_| "Data source request failed or timed out")?;
+        let response = match tokio::time::timeout_at(deadline, client.get(url.clone()).send()).await
+        {
+            Err(_) => {
+                return Err(format!(
+                    "No answer from {host} ({families}) within {seconds} s"
+                ));
+            }
+            Ok(Err(error)) if error.is_timeout() => {
+                return Err(format!(
+                    "No answer from {host} ({families}) within {seconds} s"
+                ));
+            }
+            Ok(Err(error)) if error.is_connect() => {
+                return Err(format!(
+                    "Could not connect to {host} ({families}): {}",
+                    root_cause(&error)
+                ));
+            }
+            Ok(Err(error)) => {
+                return Err(format!("Request to {host} failed: {}", root_cause(&error)));
+            }
+            Ok(Ok(response)) => response,
+        };
 
         if response.status().is_redirection() {
             let location = response
@@ -574,7 +620,10 @@ async fn download(value: &str) -> Result<String, String> {
             url = public_url(url.join(location).map_err(|_| "Invalid redirect")?.as_str())?;
             continue;
         }
-        return response_text(response).await;
+
+        return tokio::time::timeout_at(deadline, response_text(response))
+            .await
+            .map_err(|_| format!("{host} did not finish sending the data within {seconds} s"))?;
     }
 
     Err("Too many data source redirects".to_string())
@@ -594,7 +643,9 @@ pub async fn refresh(manager: &ChannelManager, source_id: i32) -> Result<(), Ser
                 source.url.clone()
             };
 
-            tokio::time::timeout(Duration::from_secs(10), download(&url))
+            // `download` keeps its own deadline and names the step that ran
+            // out of time; this only guards against a stuck future.
+            tokio::time::timeout(DOWNLOAD_TIME + Duration::from_secs(2), download(&url))
                 .await
                 .map_err(|_| "Data source request timed out")??
         };
@@ -1046,6 +1097,31 @@ mod tests {
                 .unwrap()
                 .rows
                 .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    async fn download_errors_name_the_failing_step_and_server() {
+        // A refused connection is a connect error with a readable cause
+        // (`download` itself refuses local addresses, so ask the client).
+        let error = http_client()
+            .build()
+            .unwrap()
+            .get("http://127.0.0.1:9/")
+            .send()
+            .await
+            .unwrap_err();
+        assert!(error.is_connect());
+        assert!(!root_cause(&error).is_empty());
+        assert_eq!(
+            download("http://localhost/feed").await.unwrap_err(),
+            "Private and local data source addresses are not allowed"
+        );
+        assert!(
+            download("https://name.invalid/feed")
+                .await
+                .unwrap_err()
+                .starts_with("DNS lookup of name.invalid")
         );
     }
 
