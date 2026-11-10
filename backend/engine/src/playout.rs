@@ -465,8 +465,17 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             );
         }
     }
-    debug!(channel = cfg.channel_id.unwrap_or_default();
-        "GStreamer source opened in {:?}; output video={}, audio={}", opening_started.elapsed(), timeline.video_pts, timeline.audio_pts);
+    // A slow open holds the output back: say so, the HLS watchdog restarts
+    // the playout once the muxer waits three segments.
+    // A live waits for its signal; only files and clips count as slow.
+    let opening = opening_started.elapsed();
+    if !live && opening >= std::time::Duration::from_secs(1) {
+        warn!(channel = cfg.channel_id.unwrap_or_default();
+            "Slow source open: {path} took {:.3} s; output video={}, audio={}", opening.as_secs_f64(), timeline.video_pts, timeline.audio_pts);
+    } else {
+        debug!(channel = cfg.channel_id.unwrap_or_default();
+            "GStreamer source opened in {opening:?}; output video={}, audio={}", timeline.video_pts, timeline.audio_pts);
+    }
     let mut info = opened.input.info();
     let duration =
         duration_seconds.or_else(|| info.duration.map(|v| (v - seek.unwrap_or(0.0)).max(0.0)));

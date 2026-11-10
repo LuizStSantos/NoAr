@@ -2,7 +2,7 @@ use std::{
     fmt,
     path::{Path, PathBuf},
     sync::atomic::Ordering,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use log::*;
@@ -215,6 +215,59 @@ pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
 
 /// Before a clip plays: clear any logo or L-shape of the clip before it.
 /// Graphics inside a video are now cues that put templates on and off air.
+/// Between two clips longer than this, the log says where the time went:
+/// the HLS watchdog restarts the playout once the muxer waits three segments.
+const SLOW_SWITCH: Duration = Duration::from_secs(1);
+
+/// The steps NoAr takes between two clips, and how long each took.
+struct SwitchTimer {
+    started: Instant,
+    last: Instant,
+    steps: Vec<(&'static str, Duration)>,
+}
+
+impl SwitchTimer {
+    fn start() -> Self {
+        let now = Instant::now();
+        Self {
+            started: now,
+            last: now,
+            steps: Vec::new(),
+        }
+    }
+
+    fn mark(&mut self, step: &'static str) {
+        let now = Instant::now();
+        self.steps.push((step, now - self.last));
+        self.last = now;
+    }
+
+    fn summary(&self) -> String {
+        self.steps
+            .iter()
+            .map(|(step, took)| format!("{step} {:.3} s", took.as_secs_f64()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    fn report(&self, channel: i32, source: &str) {
+        let total = self.started.elapsed();
+        if total >= SLOW_SWITCH {
+            warn!(channel = channel;
+                "Slow switch to <span class=\"log-addr\">{source}</span>: <span class=\"log-number\">{:.3}s</span> between clips ({})",
+                total.as_secs_f64(),
+                self.summary()
+            );
+        } else {
+            debug!(channel = channel;
+                "Switch to {source} took {:.3} s ({})",
+                total.as_secs_f64(),
+                self.summary()
+            );
+        }
+    }
+}
+
 async fn reset_clip_graphics(playout: &AsyncPlayout, config: &PlayoutConfig) {
     let (width, height) = (config.output.width, config.output.height);
     let _ = playout
@@ -426,8 +479,12 @@ async fn play_loop(
     let mut preloaded: Option<String> = None;
     // The run of commercials on air or next has had its SCTE-35 break.
     let mut break_announced = false;
+    // Time spent between two clips, kept across a scheduled event so the
+    // way back to the playlist is measured too.
+    let mut switch: Option<SwitchTimer> = None;
 
     loop {
+        let timer = switch.get_or_insert_with(SwitchTimer::start);
         // A due scheduled event airs between clips; afterwards the playlist
         // restarts from the time shift the event left behind.
         match schedule::play_queued_event(&manager, config, playout, interrupted.take()).await? {
@@ -437,15 +494,19 @@ async fn play_loop(
                 return Ok(());
             }
             Some(false) => {
+                // The event itself aired: measure from its end.
+                *timer = SwitchTimer::start();
                 node_sources = source_generator(manager.clone()).await;
+                timer.mark("playlist rebuilt after the event");
                 continue;
             }
-            None => {}
+            None => timer.mark("scheduled events checked"),
         }
 
         let Some(node) = node_sources.next().await else {
             break;
         };
+        timer.mark("next playlist entry");
 
         *manager.current_media.lock().await = Some(node.clone());
         // A clip started: the output is open, so the playout is on air.
@@ -505,6 +566,9 @@ async fn play_loop(
         }
 
         let duration = playout_duration(&node);
+        if let Some(timer) = switch.as_mut() {
+            timer.mark("clip announced");
+        }
         let next_preload = match (duration, next_source(&manager).await) {
             (Some(duration), Some(next)) => {
                 preloaded = Some(next.clone());
@@ -521,21 +585,28 @@ async fn play_loop(
         let is_ad = node.ad;
         // An entry marked while building the playlist keeps its own marks;
         // other entries use the video's, from the storage.
+        let mut timer = switch.take().unwrap_or_else(SwitchTimer::start);
+        timer.mark("next clip and playout rate");
         let marks = match &node.marks {
             Some(marks) => marks.clone(),
             None => clip_marks(&config.channel.storage, &node.source).await,
         };
+        timer.mark("video marks read");
         reset_clip_graphics(playout, config).await;
+        timer.mark("clip graphics reset");
         let mut breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
         // Breaks marked inside the video itself, when it is not a commercial.
         if !node.ad {
             breaks.within = marks.breaks_in_clip(node.seek, duration);
         }
         manager.splice_control.plan_next_clip(breaks.clone());
+        timer.mark("ad breaks planned");
         let aired = as_run::record_start(&manager, as_run::programme_entry(config, &node)).await;
+        timer.mark("as-run recorded");
         let clip_started = std::time::Instant::now();
         let _cues =
             crate::player::clip_cues::run_clip_cues(&manager, marks.cues_in_clip(node.seek));
+        timer.report(id, display_source);
         let result = playout
             .play_with_timing_logo_fade_rate_and_audio(
                 node.source.clone(),
@@ -1169,10 +1240,28 @@ fn request_shutdown(shutdown: &CancellationToken) {
 
 #[cfg(test)]
 mod tests {
-    use super::{hls_rate_correction, playout_duration, recording_config, request_shutdown};
+    use super::{
+        SLOW_SWITCH, SwitchTimer, hls_rate_correction, playout_duration, recording_config,
+        request_shutdown,
+    };
     use crate::player::utils::Media;
     use crate::utils::config::{OutputMode, PlayoutConfig, RecordingSource};
     use tokio_util::sync::CancellationToken;
+
+    #[test]
+    fn switch_timer_names_each_step_in_order() {
+        let mut timer = SwitchTimer::start();
+        timer.mark("video marks read");
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        timer.mark("clip graphics reset");
+
+        let summary = timer.summary();
+        let marks = summary.find("video marks read ").unwrap();
+        let graphics = summary.find("clip graphics reset ").unwrap();
+        assert!(marks < graphics, "{summary}");
+        assert!(timer.steps[1].1 >= std::time::Duration::from_millis(20));
+        assert!(timer.started.elapsed() < SLOW_SWITCH * 60);
+    }
 
     fn recording_test_config(mode: OutputMode, source: RecordingSource) -> PlayoutConfig {
         let mut config = PlayoutConfig::default();

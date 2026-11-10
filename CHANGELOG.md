@@ -87,6 +87,9 @@ one is tagged.
 - Enforce service/API/data/engine dependencies with source-level CI checks.
 - Refresh the API tutorial to describe live clock layers, mapped text and free
   permanent compositions.
+- A switch between clips that takes a second or more is logged as a warning
+  naming each step and how long it took, and so is a file or clip that takes
+  that long to open. The soak test lists these warnings in its summary.
 - The soak test checks decoded moving pictures as well as transport progress,
   detecting frozen video even while output bytes and `/health` keep advancing.
   Its CI matrix covers SRT and HLS separately, with bounded allowances for the

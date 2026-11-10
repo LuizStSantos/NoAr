@@ -656,6 +656,8 @@ def main():
         report['live_waits'] = sum('waiting for the signal' in line for line in lines)
         errors = [line for line in lines if '[ERROR]' in line]
         report['errors_logged'] = len(errors)
+        # Slow clip switches do not fail the run, but explain a stall.
+        report['slow_switches'] = [line[:400] for line in lines if 'Slow switch' in line or 'Slow source open' in line]
         if errors:
             report['incidents'].append({'at': None, 'what': f'{len(errors)} error(s) in the channel log',
                                         'first': errors[0][:300]})
@@ -674,6 +676,9 @@ def main():
     summary += [f'- {incident["what"]}' + (f' (at {incident["at"]} s)' if incident['at'] is not None else '')
                 + (f': `{incident["first"]}`' if incident.get('first') else '')
                 for incident in report['incidents']] or ['No incidents: transport and decoded moving pictures passed.']
+    slow = report.get('slow_switches') or []
+    if slow:
+        summary += ['', f'{len(slow)} slow clip switch(es) logged:'] + [f'- `{line}`' for line in slow[:20]]
     (WORK / 'summary.md').write_text('\n'.join(summary) + '\n')
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:
