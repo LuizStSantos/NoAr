@@ -186,7 +186,9 @@ pick the action and the template, and **Go** jumps to it.
 
 While the video plays or is moved in the editor, the cued templates are drawn
 over it at their times, following the same rules as on air (a take without
-its own time uses the template's; 0 stays until a cue takes it off). The
+its own time uses the template's; 0 stays until a cue takes it off), with
+the entry and exit animations made in the Composer: the exit plays when the
+time ends or at the off cue. The
 drawing is the browser's approximation: fields show their names, and an
 L-shape's video window stays see-through instead of shrinking the video.
 

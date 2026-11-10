@@ -101,7 +101,20 @@ test('Storage previews the graphics cued in a video over its player at their tim
         data: {
             name: `Cue preview ${stamp}`,
             duration: 0,
-            layers: [{ id: 'title', kind: 'text', text: 'CUE PREVIEW', x: 5, y: 70, width: 60, height: 10 }],
+            layers: [
+                {
+                    id: 'title',
+                    kind: 'text',
+                    text: 'CUE PREVIEW',
+                    x: 5,
+                    y: 70,
+                    width: 60,
+                    height: 10,
+                    animation_in: 'fade',
+                    animation_out: 'fade',
+                    animation_ms: 800,
+                },
+            ],
         },
     })
     expect(created.ok()).toBeTruthy()
@@ -133,11 +146,15 @@ test('Storage previews the graphics cued in a video over its player at their tim
         await expect.poll(() => player.evaluate((element: HTMLVideoElement) => element.readyState)).toBeGreaterThan(0)
         const overlay = page.getByTestId('graphics-cues-overlay')
 
+        // Each exit plays the template's 0.8 s fade, after its time ends (5 s)
+        // or after the off cue (15 s).
         for (const [seconds, shown] of [
             [1, false],
             [3, true],
+            [5.4, true],
             [6, false],
             [12, true],
+            [15.4, true],
             [16, false],
         ] as const) {
             await player.evaluate((element: HTMLVideoElement, time) => {
@@ -145,6 +162,18 @@ test('Storage previews the graphics cued in a video over its player at their tim
             }, seconds)
             if (shown) {
                 await expect(overlay, `${seconds} s`).toContainText('CUE PREVIEW')
+                const layer = overlay
+                    .getByText('CUE PREVIEW')
+                    .locator('xpath=ancestor::div[contains(@class, "overflow-hidden")][1]')
+                const opacity = () =>
+                    layer.evaluate((element) => Number(getComputedStyle(element).opacity)).catch(() => -1)
+                // Fully in while on air, half faded 0.4 s into the 0.8 s exit.
+                if (seconds % 1 === 0) {
+                    await expect.poll(opacity, { message: `${seconds} s` }).toBeCloseTo(1, 1)
+                } else {
+                    await expect.poll(opacity, { message: `${seconds} s` }).toBeGreaterThan(0.2)
+                    await expect.poll(opacity, { message: `${seconds} s` }).toBeLessThan(0.8)
+                }
             } else {
                 await expect(overlay, `${seconds} s`).toHaveCount(0)
             }

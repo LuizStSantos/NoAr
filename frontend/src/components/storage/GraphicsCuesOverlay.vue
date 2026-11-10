@@ -24,7 +24,21 @@ onMounted(async () => {
     }
 })
 
-/** Same rules as on air: a take without its own time uses the template's; 0 stays until taken off. */
+/** How long a template's exit animation lasts after it leaves, in seconds. */
+function exitTime(template: GraphicsTemplate): number {
+    return Math.max(
+        0,
+        ...template.layers
+            .filter((layer) => layer.visible !== false && layer.animation_out && layer.animation_out !== 'none')
+            .map((layer) => layer.animation_ms / 1000),
+    )
+}
+
+/**
+ * Same rules as on air: a take without its own time uses the template's; 0
+ * stays until a cue takes it off. Leaving, by time or by an off cue, plays
+ * the template's exit animation as the Composer does.
+ */
 const active = computed(() => {
     const onAir = new Map<number, { start: number; end: number }>()
 
@@ -33,8 +47,12 @@ const active = computed(() => {
             break
         }
 
+        const span = onAir.get(cue.template_id)
+
         if (cue.action === 'out') {
-            onAir.delete(cue.template_id)
+            if (span && span.end > cue.at) {
+                span.end = cue.at
+            }
             continue
         }
 
@@ -46,11 +64,12 @@ const active = computed(() => {
     return [...onAir.entries()].flatMap(([id, span]) => {
         const template = templates.value.find((item) => item.id === id)
 
-        if (!template || props.position >= span.end) {
+        if (!template || props.position >= span.end + exitTime(template)) {
             return []
         }
 
-        const shown = span.end === Infinity ? 0 : span.end - span.start
+        // The preview starts its exit when `time` reaches `duration`.
+        const shown = span.end === Infinity ? 0 : Math.max(0.001, span.end - span.start)
 
         return [{ template: { ...template, duration: shown }, time: props.position - span.start }]
     })
