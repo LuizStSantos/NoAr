@@ -22,6 +22,10 @@ one is tagged.
 
 ### Changed
 
+- The Composer's colours (text, fill and stroke) have a colour picker next to
+  the code, which can still be typed or pasted; picking keeps the code's
+  opacity, and fill and stroke can be cleared to none.
+
 - Saving a template in the Composer returns to the Templates list, with a
   confirmation message. A failed save stays in the Composer with the changes.
 

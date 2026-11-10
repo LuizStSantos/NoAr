@@ -1052,3 +1052,23 @@ test('a template is duplicated off air under a free name and opens in the Compos
         }
     }
 })
+
+test('Composer colours come from a picker or a typed code, and the picker keeps the opacity', async ({ page }) => {
+    await page.goto('/graphics/composer?channel=1')
+    await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Shape', exact: true }).click()
+    const code = page.getByLabel('Fill (empty = transparent)', { exact: true })
+    const picker = page.getByLabel('Pick Fill (empty = transparent)', { exact: true })
+
+    await picker.fill('#ff0000')
+    await expect(code).toHaveValue('#ff0000')
+    await code.fill('#00ff0080')
+    await code.press('Tab')
+    await expect(picker).toHaveValue('#00ff00')
+    await picker.fill('#0000ff')
+    await expect(code).toHaveValue('#0000ff80')
+    await page.getByRole('button', { name: 'Clear Fill (empty = transparent)', exact: true }).click()
+    await expect(code).toHaveValue('')
+    await page.getByRole('button', { name: 'Undo', exact: true }).first().click()
+    await expect(code).toHaveValue('#0000ff80')
+})

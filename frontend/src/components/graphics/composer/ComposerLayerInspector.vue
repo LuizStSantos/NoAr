@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import ColorField from '@/components/graphics/composer/ColorField.vue'
 
 import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
 
@@ -224,13 +225,11 @@ function setScroll(direction: string) {
                         @change="emit('updateLayer', { bold: ($event.target as HTMLInputElement).checked })"
                     />{{ t('graphics.composer.bold') }}</label
                 >
-                <label class="field-label"
-                    >{{ t('graphics.composer.color')
-                    }}<input
-                        class="field-input"
-                        :value="selected.color"
-                        @change="emit('updateLayer', { color: ($event.target as HTMLInputElement).value })"
-                /></label>
+                <ColorField
+                    :label="t('graphics.composer.color')"
+                    :value="selected.color"
+                    @change="emit('updateLayer', { color: $event ?? '#ffffff' })"
+                />
                 <label class="field-label"
                     >{{ t('graphics.composer.align')
                     }}<select
@@ -270,14 +269,12 @@ function setScroll(direction: string) {
                         </option>
                     </select>
                 </label>
-                <label class="field-label"
-                    >{{ t('graphics.composer.stroke')
-                    }}<input
-                        class="field-input"
-                        :value="selected.stroke || ''"
-                        placeholder="#rrggbb"
-                        @change="emit('updateLayer', { stroke: ($event.target as HTMLInputElement).value || null })"
-                /></label>
+                <ColorField
+                    :label="t('graphics.composer.stroke')"
+                    :value="selected.stroke"
+                    clearable
+                    @change="emit('updateLayer', { stroke: $event })"
+                />
                 <label class="field-label"
                     >{{ t('graphics.composer.strokeWidth') }} (%)<input
                         class="field-input"
@@ -294,14 +291,12 @@ function setScroll(direction: string) {
                 /></label>
             </template>
             <template v-if="selected.kind !== 'video'">
-                <label class="field-label"
-                    >{{ t('graphics.composer.fill')
-                    }}<input
-                        class="field-input"
-                        :value="selected.fill ?? ''"
-                        placeholder="#rrggbb"
-                        @change="emit('updateLayer', { fill: ($event.target as HTMLInputElement).value || null })"
-                /></label>
+                <ColorField
+                    :label="t('graphics.composer.fill')"
+                    :value="selected.fill"
+                    clearable
+                    @change="emit('updateLayer', { fill: $event })"
+                />
                 <label class="field-label"
                     >{{ t('graphics.composer.radius') }} (%)<input
                         class="field-input"

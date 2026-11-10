@@ -1521,6 +1521,8 @@ export default {
             sourceRecord: 'Record from {name}',
         },
         composer: {
+            pickColor: 'Pick {name}',
+            clearColor: 'Clear {name}',
             orderHint: 'The layer at the top of the list is in front. Use the arrows to change the order.',
             toFront: 'Bring {name} forward',
             toBack: 'Send {name} backward',
