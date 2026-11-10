@@ -1397,7 +1397,6 @@ export default {
             },
             legend: 'Up to now: actual times. Later: the plan from the playlist and the Scheduler.',
             toNow: 'Go to now',
-            noMatch: 'Nothing matches these filters.',
             empty: 'Nothing in this range.',
         },
         days: {
@@ -1691,11 +1690,6 @@ export default {
             },
         },
         onAir: {
-            nowOnAir: 'On air now',
-            search: 'Search templates',
-            groups: 'Template groups',
-            allGroups: 'All',
-            noMatch: 'No template matches.',
             permanentTitle: 'Always on air',
             permanentHint: 'Click to hide or show the channel model. Edit its layers in Templates.',
             permanentRequested:

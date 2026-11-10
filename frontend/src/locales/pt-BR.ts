@@ -1400,7 +1400,6 @@ export default {
             },
             legend: 'Até agora: horários reais. Depois: o previsto pela playlist e pelo Agendador.',
             toNow: 'Ir para agora',
-            noMatch: 'Nada com esses filtros.',
             empty: 'Nada neste intervalo.',
         },
         days: {
@@ -1701,11 +1700,6 @@ export default {
             },
         },
         onAir: {
-            nowOnAir: 'No ar agora',
-            search: 'Buscar modelo',
-            groups: 'Grupos de modelos',
-            allGroups: 'Todos',
-            noMatch: 'Nenhum modelo encontrado.',
             permanentTitle: 'Sempre no ar',
             permanentHint: 'Clique para esconder ou mostrar o modelo do canal. Edite suas camadas em Modelos.',
             permanentRequested:

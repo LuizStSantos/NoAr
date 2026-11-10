@@ -100,13 +100,12 @@ function confirmChannel(discard: boolean) {
 <template>
     <div
         class="mx-auto px-4 sm:px-6 flex flex-wrap gap-6 items-start"
-        :class="current === 'composer' || current === 'onair' ? 'max-w-[1920px] py-3' : 'max-w-[1440px] py-6'"
+        :class="current === 'composer' ? 'max-w-[1920px] py-3' : 'max-w-[1440px] py-6'"
     >
         <aside
             v-if="current !== 'composer'"
             :aria-label="t('graphics.sectionsLabel')"
-            class="w-full flex flex-col gap-4 lg:sticky lg:top-16"
-            :class="current === 'onair' ? 'flex-[1_1_200px] lg:max-w-[200px]' : 'flex-[1_1_240px] lg:max-w-[280px]'"
+            class="flex-[1_1_240px] w-full lg:max-w-[280px] flex flex-col gap-4 lg:sticky lg:top-16"
         >
             <label class="field-label">
                 {{ t('nav.channel') }}
@@ -122,8 +121,7 @@ function confirmChannel(discard: boolean) {
                 </select>
             </label>
 
-            <!-- On air is the operator's screen: the header already shows the playout state. -->
-            <PlayoutCard v-if="current !== 'onair'" />
+            <PlayoutCard />
 
             <label class="field-label lg:hidden">
                 {{ t('graphics.page') }}
