@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import GenericModal from '@/components/utils/GenericModal.vue'
@@ -9,6 +10,7 @@ import {
     type ChannelGraphic,
     type GraphicOnAir,
     type GraphicsTemplate,
+    type TemplateInput,
     type TemplateUsage,
     fieldList,
     useGraphicsApi,
@@ -23,6 +25,7 @@ const { templateName } = useGraphicsDisplayNames()
 const configStore = useConfig()
 const indexStore = useIndex()
 const graphicsApi = useGraphicsApi()
+const router = useRouter()
 const authStore = useAuth()
 const isAdmin = computed(() => ['global_admin', 'channel_admin'].includes(authStore.role))
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
@@ -102,6 +105,54 @@ async function deleteTemplate() {
         await graphicsApi.remove(deleting.value.id)
         deleting.value = null
         await loadLibrary()
+    } catch (error) {
+        reportError(error)
+    } finally {
+        busy.value = null
+    }
+}
+
+/**
+ * Save a copy under a free name ("Name (copy)", "Name (copy 2)", ...), off
+ * air, and open it in the Composer to change it.
+ */
+async function duplicate(template: GraphicsTemplate) {
+    if (busy.value !== null) {
+        return
+    }
+
+    const requestedChannel = channelId.value
+    const input: TemplateInput = {
+        name: template.name,
+        group: template.group,
+        duration: template.duration,
+        during_lshape: template.during_lshape,
+        layers: JSON.parse(JSON.stringify(template.layers)),
+        always_on: false,
+        control_layer_id: template.control_layer_id,
+    }
+    const taken = new Set(templates.value.map((item) => item.name.trim().toLowerCase()))
+    const base = templateName(template)
+    let name = ''
+
+    for (let copy = 1; copy < 100; copy++) {
+        const suffix = copy === 1 ? t('graphics.library.copySuffix') : t('graphics.library.copySuffixN', { n: copy })
+        name = `${base.slice(0, 100 - suffix.length - 1)} ${suffix}`
+
+        if (!taken.has(name.toLowerCase())) {
+            break
+        }
+    }
+
+    busy.value = template.id
+
+    try {
+        const copy = await graphicsApi.save({ ...input, name })
+
+        if (requestedChannel === channelId.value) {
+            indexStore.msgAlert('success', t('graphics.library.duplicated', { name }), 3)
+            await router.push({ name: 'graphics-composer', query: { channel: requestedChannel, template: copy.id } })
+        }
     } catch (error) {
         reportError(error)
     } finally {
@@ -343,6 +394,17 @@ watch(channelId, () => {
                         >
                             {{ t('graphics.composer.edit') }}
                         </RouterLink>
+                        <button
+                            v-if="isAdmin && card.assigned?.kind !== 'scene'"
+                            class="btn-quiet min-h-9"
+                            :disabled="busy !== null"
+                            :aria-label="
+                                t('graphics.library.duplicateNamed', { name: title(card.template, card.assigned) })
+                            "
+                            @click="duplicate(card.template)"
+                        >
+                            {{ t('graphics.library.duplicate') }}
+                        </button>
                         <label
                             v-if="card.assigned && ['logo', 'ticker', 'permanent'].includes(card.assigned.kind)"
                             class="inline-flex items-center gap-2 min-h-9 px-2 text-sm cursor-pointer"

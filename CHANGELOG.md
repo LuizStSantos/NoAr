@@ -87,6 +87,21 @@ one is tagged.
 
 ### Added
 
+- The video marks editor in Storage draws the cued graphics over the video
+  at their times, so a cue can be checked without putting it on air.
+
+- **Duplicate** on a template card saves a copy, off air, under a free name
+  ("Name (copy)") and opens it in the Composer to change it.
+
+- Graphics key commands to take everything off air, the logo, ticker and
+  L-shape included, optionally except some templates
+  (`/graphics/{id}/out?key=…&except=logo`), and to list everything on air
+  (`/graphics/{id}/on-air?key=…`). The External control (API) page shows only
+  the keyed commands, with the templates that stay on air chosen there.
+
+- Animated WebP images play on air like animated GIFs, with their
+  transparency, frame times and loop. GStreamer decodes only still WebP.
+
 - One take/out command pair for every graphics template, GC, L-shape, logo
   or ticker alike, by id or by name, with an optional time on air
   (`duration`, 0 keeps it on until taken off), with a login token or the

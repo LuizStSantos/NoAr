@@ -1701,6 +1701,11 @@ export default {
                 'Rundowns (several, with items in order and guests) come in version 2.5. For now, pick the template here.',
         },
         library: {
+            duplicate: 'Duplicate',
+            duplicateNamed: 'Duplicate {name}',
+            duplicated: 'Copy “{name}” created, off air. Change it and save.',
+            copySuffix: '(copy)',
+            copySuffixN: '(copy {n})',
             eventRetained: 'scheduled event retained',
             deleteScheduled:
                 'Model schedules keep their event records but cannot air a deleted template. Legacy action snapshots are retained.',
@@ -1850,7 +1855,7 @@ export default {
         },
         api: {
             commandsIntro:
-                'Two commands for every template (GC, logo, L-shape, ticker): put on air, with an optional time, and take off air.',
+                'Commands for every template (GC, logo, L-shape, ticker) with the graphics key: put on air with an optional time, take off air, take everything off and list what is on air.',
             keyTitle: 'Graphics key',
             keyIntro: 'For encoders, vMix, OBS and Stream Deck that only call a URL.',
             key: 'Key',
@@ -1863,10 +1868,13 @@ export default {
             copy: 'Copy',
             takeWithKey: 'Put on air, with the key',
             outWithKey: 'Take off air, with the key',
-            takeWithToken: 'Put on air, with a login token',
-            outWithToken: 'Take off air, with a login token',
-            allOut: 'Take every GC off (logo and ticker stay)',
-            onAirList: 'What is on air',
+            allOut: 'Take everything off air (logo, ticker and L-shape too)',
+            allOutExcept: 'Take everything off except the templates chosen above',
+            keep: 'Stay on air',
+            keepHint:
+                'For the take-everything-off example: tick the templates that stay on air, for example the logo. In your own commands, list any templates in except=, separated by commas.',
+            chooseKeep: 'Tick at least one template above.',
+            onAirList: 'What is on air (the template names to use in commands)',
             dataSources: 'Read data sources and cached records',
             fontAssets: 'Read uploaded font assets',
             clockReference: 'Read the server clock reference',

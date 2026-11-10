@@ -515,7 +515,9 @@ test('the XMLTV logo tab saves its independent guide icon without changing layer
     }
 })
 
-test('the API page shows take and out commands for a template by name, and stays read-only', async ({ page }) => {
+test('the API page shows keyed commands for a template, everything off with exceptions and the on-air list', async ({
+    page,
+}) => {
     await page.goto('/graphics/api?channel=1')
     const token = await page.evaluate(() => localStorage.getItem('token'))
     const name = `Comercial L-shape ${Date.now()}`
@@ -556,8 +558,13 @@ test('the API page shows take and out commands for a template by name, and stays
     await expect(commands).toContainText('duration=50')
     await expect(commands).toContainText('topic=Example+value')
     await expect(commands).toContainText(`/graphics/1/out/${slug}?key=`)
-    await expect(commands).toContainText(`"template":"${slug}","duration":50`)
-    await expect(commands).toContainText('/api/graphics/1/out')
+    await expect(commands).toContainText('/graphics/1/on-air?key=')
+    await expect(commands).toContainText('Tick at least one template above.')
+    await commands.getByRole('checkbox', { name: new RegExp(slug) }).check()
+    await expect(commands).toContainText(`/graphics/1/out?key=`)
+    await expect(commands).toContainText(`&except=${slug}`)
+    await expect(commands).not.toContainText('Authorization: Bearer')
+    await expect(commands).not.toContainText('/api/graphics/')
     await expect(page.getByText('/logo/1/')).toHaveCount(0)
     await expect(page.getByText('/scene/1/')).toHaveCount(0)
     await page.setViewportSize({ width: 390, height: 844 })
@@ -1002,4 +1009,46 @@ test('Scheduler selects a Composer model with fields and preserves the selection
     await expect(edit.getByLabel('{headline}', { exact: true })).toHaveValue('Scheduled bulletin')
     await page.setViewportSize({ width: 390, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('a template is duplicated off air under a free name and opens in the Composer', async ({ page }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const name = `Duplicable ${Date.now()}`
+    const created = await page.request.post('/api/graphics/1/templates', {
+        headers,
+        data: {
+            name,
+            group: 'Copies',
+            duration: 7,
+            layers: [{ id: 'title', name: 'Title', kind: 'text', text: '{name}', x: 5, y: 70, width: 60, height: 10 }],
+        },
+    })
+    expect(created.ok()).toBeTruthy()
+    const original = await created.json()
+    const ids = [original.id]
+
+    try {
+        await page.reload()
+        await page.getByRole('button', { name: `Duplicate ${name}`, exact: true }).click()
+        await expect(page).toHaveURL(/\/graphics\/composer\?channel=1&template=\d+/)
+        const copyId = Number(new URL(page.url()).searchParams.get('template'))
+        ids.push(copyId)
+        expect(copyId).not.toBe(original.id)
+        await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(`${name} (copy)`)
+        const copy = await (await page.request.get(`/api/graphics/1/templates/${copyId}`, { headers })).json()
+        expect(copy).toMatchObject({ group: 'Copies', duration: 7, fields: ['name'] })
+        expect(copy.layers).toEqual(original.layers)
+        expect(copy.always_on).not.toBe(true)
+
+        await page.goto('/graphics/templates?channel=1')
+        await page.getByRole('button', { name: `Duplicate ${name}`, exact: true }).click()
+        await expect(page.getByLabel('Template name', { exact: true })).toHaveValue(`${name} (copy 2)`)
+        ids.push(Number(new URL(page.url()).searchParams.get('template')))
+    } finally {
+        for (const id of ids) {
+            await page.request.delete(`/api/graphics/1/templates/${id}`, { headers })
+        }
+    }
 })

@@ -259,6 +259,8 @@ routes (see the [changelog](../CHANGELOG.md)).
 | `POST` | `/api/graphics/{id}/out` | `GA, CA, U` | `{ "template": "logo" }` takes that template off (its GCs, or the logo, ticker or L-shape it is); `{ "take_id" }` one GC; `{}` every GC, leaving always-on templates on. |
 | `GET`, `POST` | `/graphics/{id}/take/{template}` | Graphics key | Query `key` (or header `X-Graphics-Key`), optional `duration`; every other parameter fills the template field of the same name. |
 | `GET`, `POST` | `/graphics/{id}/out/{template}` | Graphics key | Query `key` or header `X-Graphics-Key`. |
+| `GET`, `POST` | `/graphics/{id}/out` | Graphics key | Takes everything off air: GCs, GCs waiting for the L-shape, and the logo, ticker, L-shape and always-on templates. `except=logo,ticker` (names or ids, separated by commas) keeps those on; an unknown name answers 404 and changes nothing. Answers the on-air list below. |
+| `GET`, `POST` | `/graphics/{id}/on-air` | Graphics key | Everything on air: `[{ "template_id", "template", "name", "kind" }]`, where `template` is the name to use in commands and `kind` is `logo`, `ticker`, `lshape`, `permanent` or `temporary`; a GC also has `since` (seconds) and `take_id`. |
 
 `take` answers `{ "state": "on_air", "template_id", "take_id" }` (`take_id`
 only for a GC) or `{ "state": "waiting", "template_id" }` when a GC waits for
@@ -269,6 +271,8 @@ the L-shape on air to end; the keyed `out` answers
 ```bash
 curl -X POST 'http://127.0.0.1:8787/graphics/1/take/comercial-l-shape?key=<KEY>&duration=50'
 curl -X POST 'http://127.0.0.1:8787/graphics/1/out/logo?key=<KEY>'
+curl -X POST 'http://127.0.0.1:8787/graphics/1/out?key=<KEY>&except=logo'
+curl 'http://127.0.0.1:8787/graphics/1/on-air?key=<KEY>'
 ```
 
 ### Graphics templates

@@ -1711,6 +1711,11 @@ export default {
                 'Roteiros (vários, com itens em ordem e convidados) chegam na versão 2.5. Por enquanto, escolha o modelo aqui.',
         },
         library: {
+            duplicate: 'Duplicar',
+            duplicateNamed: 'Duplicar {name}',
+            duplicated: 'Cópia “{name}” criada, fora do ar. Altere e salve.',
+            copySuffix: '(cópia)',
+            copySuffixN: '(cópia {n})',
             eventRetained: 'agendamento preservado',
             deleteScheduled:
                 'Agendamentos por modelo ficam salvos, mas não podem exibir um modelo excluído. As ações dos agendamentos antigos são preservadas.',
@@ -1860,7 +1865,7 @@ export default {
         },
         api: {
             commandsIntro:
-                'Dois comandos para qualquer modelo (GC, logo, L-shape, letreiro): pôr no ar, com tempo opcional, e tirar do ar.',
+                'Comandos para qualquer modelo (GC, logo, L-shape, letreiro) com a chave de gráficos: pôr no ar com tempo opcional, tirar do ar, tirar tudo e ver o que está no ar.',
             keyTitle: 'Chave do grafismo',
             keyIntro: 'Para encoders, vMix, OBS e Stream Deck que só chamam um endereço.',
             key: 'Chave',
@@ -1873,10 +1878,13 @@ export default {
             copy: 'Copiar',
             takeWithKey: 'Pôr no ar, com a chave',
             outWithKey: 'Tirar do ar, com a chave',
-            takeWithToken: 'Pôr no ar, com login (token)',
-            outWithToken: 'Tirar do ar, com login (token)',
-            allOut: 'Tirar todos os GCs (logo e letreiro ficam)',
-            onAirList: 'O que está no ar',
+            allOut: 'Tirar tudo do ar (inclusive logo, letreiro e L-shape)',
+            allOutExcept: 'Tirar tudo, menos os modelos marcados acima',
+            keep: 'Ficam no ar',
+            keepHint:
+                'Para o exemplo de tirar tudo: marque os modelos que ficam no ar, por exemplo a logo. Nos seus comandos, liste quaisquer modelos em except=, separados por vírgula.',
+            chooseKeep: 'Marque pelo menos um modelo acima.',
+            onAirList: 'O que está no ar (com o nome do modelo para usar nos comandos)',
             dataSources: 'Ler fontes de dados e registros em cache',
             fontAssets: 'Ler fontes de texto enviadas',
             clockReference: 'Ler a referência do relógio do servidor',

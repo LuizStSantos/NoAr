@@ -22,6 +22,8 @@ const props = withDefaults(
         records?: Record<string, number>
         time?: number
         animateText?: boolean
+        /** Over a video: no checkerboard, and an L-shape's video window stays see-through. */
+        transparent?: boolean
     }>(),
     { animateText: true },
 )
@@ -135,7 +137,10 @@ function shapeSize(layer: TemplateLayer) {
 }
 </script>
 <template>
-    <div class="graphics-preview relative w-full aspect-video overflow-hidden [container-type:size]">
+    <div
+        class="relative w-full aspect-video overflow-hidden [container-type:size]"
+        :class="transparent ? '' : 'graphics-preview'"
+    >
         <slot />
         <p
             v-if="dataMissing"
@@ -172,7 +177,7 @@ function shapeSize(layer: TemplateLayer) {
                 }"
             />
             <span
-                v-if="layer.kind === 'video'"
+                v-if="layer.kind === 'video' && !transparent"
                 class="w-full h-full flex items-center justify-center bg-slate-700 text-white border border-white/40 text-[3cqh]"
                 >VIDEO</span
             >

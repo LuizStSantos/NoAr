@@ -5,6 +5,7 @@ import { cloneDeep } from 'es-toolkit/object'
 import { isEqual } from 'es-toolkit/predicate'
 
 import GraphicsCuesPanel from '@/components/storage/GraphicsCuesPanel.vue'
+import GraphicsCuesOverlay from '@/components/storage/GraphicsCuesOverlay.vue'
 import SpanBar from '@/components/storage/SpanBar.vue'
 import TrimBar from '@/components/storage/TrimBar.vue'
 import { useDialogFocus } from '@/composables/dialogFocus'
@@ -597,6 +598,11 @@ onBeforeUnmount(() => {
                             @pause="stopAt = null"
                             @loadedmetadata="duration = ($event.target as HTMLVideoElement).duration || duration"
                             @error="videoFailed = true"
+                        />
+                        <GraphicsCuesOverlay
+                            v-if="videoUrl && !videoFailed && marks.graphics.length"
+                            :cues="marks.graphics"
+                            :position="position"
                         />
                         <p
                             v-else

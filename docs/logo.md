@@ -42,7 +42,7 @@ the model, appear in On air or change the output. The checkbox starts off when
 the editor is opened/reloaded. Opaque full-frame artwork covers the checkerboard;
 enabled safety guides remain visible above the artwork.
 
-## Image sizing and animated GIF
+## Image sizing and animated GIF or WebP
 
 The first upload/storage selection in an empty image layer uses its natural
 pixel size relative to the channel output, with proportional fit-down only when
@@ -65,8 +65,13 @@ Limits: 10 MiB file, 256 frames, 60-second cycle, 32 MiB decoded GIF buffers at
 its rendered size and 64 MiB GIF buffers per composition. Source dimensions are
 bounded too. Invalid/unsupported/oversized animations fail preflight or take
 explicitly, instead of silently becoming a still. Native GIF demux/decoder
-plugins from GStreamer's libav plugin are required. PNG/JPEG/WebP still-image
-rendering retains its previous path. See the [executed handoff](graphics-handoff/README.md)
+plugins from GStreamer's libav plugin are required.
+
+Animated WebP plays the same way, with the same limits. GStreamer's WebP
+decoder reads only still pictures, so NoAr reads the frames of an animated
+WebP itself, composed on a transparent canvas (the file's background colour is
+not used); a frame without a delay shows for 100 ms. PNG/JPEG and still WebP
+keep the GStreamer image path. See the [executed handoff](graphics-handoff/README.md)
 for actual output proofs and untested output/device boundaries.
 
 ## Placing the logo
@@ -139,11 +144,16 @@ with dashes, or by its number:
 http://<server>:8787/graphics/<channel>/take/comercial-l-shape?key=<KEY>&duration=50
 http://<server>:8787/graphics/<channel>/take/entrevistado?key=<KEY>&nome=Maria
 http://<server>:8787/graphics/<channel>/out/logo?key=<KEY>
+http://<server>:8787/graphics/<channel>/out?key=<KEY>
+http://<server>:8787/graphics/<channel>/out?key=<KEY>&except=logo,ticker
+http://<server>:8787/graphics/<channel>/on-air?key=<KEY>
 ```
 
-Other query parameters fill the template's fields. **External control (API)**
-shows these addresses, and the same commands with a login token, ready to copy
-for the template and time you pick. The API is described in
+Other query parameters fill the template's fields. `out` without a template
+takes **everything** off air, the logo, ticker and L-shape included; `except=`
+lists the templates that stay on, separated by commas. `on-air` lists what is
+on air with the name to use in commands. **External control (API)** shows
+these addresses ready to copy for the template, time and exceptions you pick. The API is described in
 [api.md](api.md#graphics-commands).
 
 The routes of earlier versions (`/logo/...`, `/lshape/...`, `/scene/...` and
@@ -173,6 +183,12 @@ the **Graphics** tab. Each line is a cue: at a time of the video, a template
 goes on air (for a time, or until taken off) or goes off. **Template on at
 …** and **Template off at …** add a cue at the play position; type the time,
 pick the action and the template, and **Go** jumps to it.
+
+While the video plays or is moved in the editor, the cued templates are drawn
+over it at their times, following the same rules as on air (a take without
+its own time uses the template's; 0 stays until a cue takes it off). The
+drawing is the browser's approximation: fields show their names, and an
+L-shape's video window stays see-through instead of shrinking the video.
 
 Cues are saved in the video's `<name>.marks.json` as `"graphics"` and run
 wherever the video plays, counted from the start of the file: a playlist that

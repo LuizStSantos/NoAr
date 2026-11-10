@@ -11,8 +11,9 @@ import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
 /**
- * External control: two commands for every template, put on air (with an
- * optional time) and take off air, by login token or with the graphics key.
+ * External control with the graphics key: put a template on air (with an
+ * optional time), take it off, take everything off (except chosen templates)
+ * and list what is on air.
  */
 const { t } = useI18n()
 const { templateName } = useGraphicsDisplayNames()
@@ -24,6 +25,8 @@ const templates = ref<GraphicsTemplate[]>([])
 const selectedId = ref<number>()
 const seconds = ref('50')
 const loadError = ref(false)
+/** Templates that stay on air in the take-everything-off example. */
+const keep = ref<number[]>([])
 
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
 const key = computed(() => configStore.playout?.processing?.logo_key?.trim() || '<KEY>')
@@ -59,10 +62,11 @@ const examples = computed(() => {
     const name = slug(template.name)
     const fields = Object.fromEntries(template.fields.map((field) => [field, t('graphics.api.sampleValue')]))
     const keyed = `${window.location.origin}/graphics/${channelId.value}`
-    const authed = `${window.location.origin}/api/graphics/${channelId.value}`
     const query = `key=${key.value}&${new URLSearchParams({ duration: String(duration.value), ...fields })}`
-    const takeBody = { template: name, duration: duration.value, ...(template.fields.length ? { fields } : {}) }
-    const bearer = `-H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json'`
+    const except = templates.value
+        .filter((item) => keep.value.includes(item.id))
+        .map((item) => slug(item.name))
+        .join(',')
 
     return [
         {
@@ -74,26 +78,25 @@ const examples = computed(() => {
             command: `curl -X POST ${shellQuote(`${keyed}/out/${name}?key=${key.value}`)}`,
         },
         {
-            label: t('graphics.api.takeWithToken'),
-            command: `curl -X POST ${bearer} --data ${shellQuote(JSON.stringify(takeBody))} ${shellQuote(`${authed}/take`)}`,
-        },
-        {
-            label: t('graphics.api.outWithToken'),
-            command: `curl -X POST ${bearer} --data ${shellQuote(JSON.stringify({ template: name }))} ${shellQuote(`${authed}/out`)}`,
-        },
-        {
             label: t('graphics.api.allOut'),
-            command: `curl -X POST ${bearer} --data '{}' ${shellQuote(`${authed}/out`)}`,
+            command: `curl -X POST ${shellQuote(`${keyed}/out?key=${key.value}`)}`,
+        },
+        {
+            label: t('graphics.api.allOutExcept'),
+            command: except
+                ? `curl -X POST ${shellQuote(`${keyed}/out?key=${key.value}&except=${except}`)}`
+                : t('graphics.api.chooseKeep'),
         },
         {
             label: t('graphics.api.onAirList'),
-            command: `curl -H "Authorization: Bearer $TOKEN" ${shellQuote(`${authed}/on-air`)}`,
+            command: `curl ${shellQuote(`${keyed}/on-air?key=${key.value}`)}`,
         },
     ]
 })
 
 async function load() {
     templates.value = []
+    keep.value = []
     loadError.value = false
 
     if (!channelId.value) {
@@ -152,6 +155,17 @@ async function copy(text: string) {
                 <span class="text-xs text-muted">{{ t('graphics.templates.durationHint') }}</span>
             </label>
         </div>
+        <fieldset v-if="templates.length" class="flex flex-col gap-2 border-0 p-0 m-0">
+            <legend class="text-sm font-medium">{{ t('graphics.api.keep') }}</legend>
+            <p class="m-0 text-xs text-muted">{{ t('graphics.api.keepHint') }}</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-2">
+                <label v-for="template in templates" :key="template.id" class="inline-flex items-center gap-2 text-sm">
+                    <input v-model="keep" type="checkbox" class="checkbox checkbox-sm" :value="template.id" />
+                    {{ templateName(template) }}
+                    <span class="font-mono text-xs text-muted">{{ slug(template.name) }}</span>
+                </label>
+            </div>
+        </fieldset>
         <div v-for="example in examples" :key="example.label" class="flex flex-col gap-1">
             <span class="text-sm font-medium">{{ example.label }}</span>
             <div class="flex items-start gap-2">

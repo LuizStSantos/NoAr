@@ -162,7 +162,7 @@ channel-logo renderer.
 - A scheduled temporary graphic owns a take ID. End/removal must retire only
   that take; permanent visibility uses the existing overlapping-event leases.
 - GIF caches, decode limits and phase behavior are documented in the
-  [operator guide](logo.md#image-sizing-and-animated-gif). Moving code must not
+  [operator guide](logo.md#image-sizing-and-animated-gif-or-webp). Moving code must not
   introduce per-frame decoding or reset the animation during a visibility change.
 - `/logo`, `/lshape`, `/scene`, `/api/control/...` URLs, response DTOs, key header,
   errors and authentication policy remain compatibility contracts. Internal names

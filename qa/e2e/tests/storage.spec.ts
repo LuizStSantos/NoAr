@@ -84,3 +84,74 @@ test('Storage downloads original video, image and WebVTT files and recovers from
     config.storage.convert_uploads = convertUploads
     expect((await page.request.put('/api/playout/config/1', { headers, data: config })).ok()).toBeTruthy()
 })
+
+test('Storage previews the graphics cued in a video over its player at their times', async ({ page }) => {
+    const stamp = Date.now()
+    const videoName = `cues-${stamp}.mp4`
+    const video = await readFile(resolve('../../tests_assets/storage/media_mix/ad.mp4'))
+    await page.goto('/media')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const config = await (await page.request.get('/api/playout/config/1', { headers })).json()
+    const convertUploads = config.storage.convert_uploads
+    config.storage.convert_uploads = false
+    expect((await page.request.put('/api/playout/config/1', { headers, data: config })).ok()).toBeTruthy()
+    const created = await page.request.post('/api/graphics/1/templates', {
+        headers,
+        data: {
+            name: `Cue preview ${stamp}`,
+            duration: 0,
+            layers: [{ id: 'title', kind: 'text', text: 'CUE PREVIEW', x: 5, y: 70, width: 60, height: 10 }],
+        },
+    })
+    expect(created.ok()).toBeTruthy()
+    const template = await created.json()
+
+    try {
+        await page
+            .locator('input[type=file]')
+            .setInputFiles([{ name: videoName, mimeType: 'video/mp4', buffer: video }])
+        const open = page.getByRole('button', {
+            name: `Trim, graphics and breaks in this video: ${videoName}`,
+            exact: true,
+        })
+        await expect(open).toBeVisible()
+        const saved = await page.request.put('/api/file/1/logo-marks', {
+            headers,
+            data: {
+                path: videoName,
+                graphics: [
+                    { at: 2, action: 'take', template_id: template.id, duration: 3 },
+                    { at: 10, action: 'take', template_id: template.id, duration: 0 },
+                    { at: 15, action: 'out', template_id: template.id },
+                ],
+            },
+        })
+        expect(saved.ok(), await saved.text()).toBeTruthy()
+        await open.click()
+        const player = page.locator('video').first()
+        await expect.poll(() => player.evaluate((element: HTMLVideoElement) => element.readyState)).toBeGreaterThan(0)
+        const overlay = page.getByTestId('graphics-cues-overlay')
+
+        for (const [seconds, shown] of [
+            [1, false],
+            [3, true],
+            [6, false],
+            [12, true],
+            [16, false],
+        ] as const) {
+            await player.evaluate((element: HTMLVideoElement, time) => {
+                element.currentTime = time
+            }, seconds)
+            if (shown) {
+                await expect(overlay, `${seconds} s`).toContainText('CUE PREVIEW')
+            } else {
+                await expect(overlay, `${seconds} s`).toHaveCount(0)
+            }
+        }
+    } finally {
+        await page.request.delete(`/api/graphics/1/templates/${template.id}`, { headers })
+        config.storage.convert_uploads = convertUploads
+        await page.request.put('/api/playout/config/1', { headers, data: config })
+    }
+})
