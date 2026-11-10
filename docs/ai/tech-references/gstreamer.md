@@ -52,7 +52,6 @@ official web pages describe newer native releases; compare every property with
 the installed plugin. If network policy blocks a documentation host, use the
 installed bindings and introspection, and report the unavailable reference.
 
-The standalone Python prototype in `qa/gstreamer` is separate evidence. Verify
-the integrated NoAr process, actual source transitions, wall-clock receiver
+Verify the integrated NoAr process, actual source transitions, wall-clock receiver
 progress, A/V packet timing and persistent MediaMTX sessions before reporting
 continuity. No runtime claim follows from this navigation guide.

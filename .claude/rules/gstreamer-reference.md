@@ -4,7 +4,6 @@ paths:
   - "backend/app/src/player/**"
   - "Dockerfile"
   - ".github/workflows/validate.yml"
-  - "qa/gstreamer/**"
 ---
 
 # GStreamer source-reference rule (NoAr)

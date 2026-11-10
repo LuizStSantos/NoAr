@@ -13,10 +13,10 @@ has commercials of its own.
 ## What it needs
 
 - An **SRT or UDP output** (Settings › Output). SCTE-35 travels inside the
-  MPEG-TS next to the video. This integration branch also implements experimental
-  native HLS signaling, currently **NOT_READY** pending runtime validation; see
-  [the integration checkpoint](gstreamer-integration.md). RTMP carries no SCTE-35; with
-  them the page says so and nothing is marked.
+  MPEG-TS next to the video. The HLS output also writes the breaks as
+  `#EXT-X-DATERANGE` and `#EXT-X-CUE-OUT` tags; that is experimental and not
+  yet checked with an ad platform (see [the study](scte35.md)). RTMP carries
+  no SCTE-35; with it the page says so and nothing is marked.
 - A receiver that keeps the SCTE-35 track. **A stock MediaMTX drops it** (it
   only keeps the video, audio, subtitle and KLV tracks it knows), so a
   MediaMTX in the path loses every break. See [the study](scte35.md#mediamtx)
@@ -186,5 +186,6 @@ To record a UDP output for a while: `ffmpeg -i udp://127.0.0.1:41234 -c copy
 
 ## Not yet
 
-- HLS and RTMP outputs (see the [study](scte35.md)).
+- RTMP output, and HLS checked with a real ad platform (see the
+  [study](scte35.md)).
 - Reading SCTE-35 from the lives NoAr receives.

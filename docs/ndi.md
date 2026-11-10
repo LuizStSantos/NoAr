@@ -61,28 +61,6 @@ To check that the source is announced, choose NDI in *Settings › Output*, then
 on the server run `avahi-browse -rt _ndi._tcp` (package `avahi-utils`): it
 lists `SERVER (name)`.
 
-For the isolated test project, run it from the test checkout with `--test`.
-It writes `qa/gstreamer/compose.ndi.yaml`, which keeps the test interface on
-port 18787 (it does not take the installation's 8787) and leaves out the
-updater the test project does not have. Pass that file with the other `-f`
-files:
-
-```sh
-cd ~/NoAr-gstreamer-test
-sudo sh docker/ndi/enable-ndi.sh --test
-docker compose --env-file .env -f qa/gstreamer/compose.integrated.yaml \
-  -f qa/gstreamer/compose.ndi.yaml up -d --no-build
-```
-
-When the runtime is already in `/opt/ndi` (from an earlier run, or the
-installation), `sh docker/ndi/enable-ndi.sh --test --compose-only` only writes
-the file, without downloading anything or needing sudo.
-
-With host networking the `mediamtx` service name does not resolve inside
-NoAr; use `127.0.0.1` with the published test ports (for example
-`srt://127.0.0.1:19890?streamid=read:input`). Without NDI, start the test as
-usual, without `-f qa/gstreamer/compose.ndi.yaml`.
-
 ## Docker settings by hand
 
 The lines the script writes, to add to your own override file:
@@ -145,7 +123,7 @@ network (host networking in Docker) or an NDI Discovery Server.
 
 - Compiled-in elements, name and address validation, and the refusal of NDI
   output and input without the runtime are covered by automated tests.
-- NDI output was verified on a real network with the GStreamer test project
+- NDI output was verified on a real network
   (NDI Runtime 6.3.2, Docker with host networking and `/run/dbus` mounted):
   the source was announced through avahi-daemon and a receiver on another
   machine showed picture and sound.

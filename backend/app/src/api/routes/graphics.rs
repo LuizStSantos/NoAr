@@ -880,7 +880,6 @@ pub async fn graphics_template_usage(
                         event.actions.lshape != crate::utils::config::SceneLShape::Keep
                             || event.actions.lshape_graphic.is_some()
                     }
-                    "scene" => event.actions.name == view.scene_name.as_deref().unwrap_or_default(),
                     _ => false,
                 })
         })

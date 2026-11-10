@@ -155,11 +155,10 @@ export interface GraphicsTemplate {
 }
 
 export interface ChannelGraphic {
-    kind: 'logo' | 'ticker' | 'lshape' | 'scene' | 'permanent'
+    kind: 'logo' | 'ticker' | 'lshape' | 'permanent'
     template: GraphicsTemplate
     on: boolean
     ready: boolean
-    scene_name: string | null
 }
 
 export interface TemplateUsage {

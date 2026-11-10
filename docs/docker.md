@@ -4,12 +4,6 @@
 NoAr ships as a single container. `docker-compose.yml` in the repository root
 has everything a normal installation needs.
 
-## Testing a source branch on a disposable machine
-
-For the graphics review branch, use the [test-machine guide](graphics-testing.md)
-and `docker-compose.graphics-test.yml`. It builds a local image, starts with a
-new test volume and disables automatic replacement by the stable updater.
-
 ## First start
 
 ```sh
@@ -218,11 +212,11 @@ update goes on.
 #### Restoring before graphics conversion (00029)
 
 Migrations `00029` and `00030` are normal sqlx migrations. Startup then converts every
-channel's logo, L-shape and quick scenes to templates in one transaction.
+channel's logo and L-shape to templates in one transaction.
 It leaves the old graphics columns intact, but the new application no longer
 reads them after conversion. Logo/L-shape/ticker editing now opens Composer;
-legacy configuration writes update the same layers and bindings. Quick scenes
-are no longer used after 3.0. Migration 00030 also upgrades existing
+legacy configuration writes update the same layers and bindings. The quick
+scenes of earlier versions were removed in 3.0. Migration 00030 also upgrades existing
 00029 templates once, preserving edited layers on subsequent starts. Clock
 support is not part of this conversion.
 
@@ -262,9 +256,7 @@ and the real output before resuming normal operation. Never restore a file
 while either version is using that database. Custom `DB` paths and named
 volumes need the equivalent steps at their actual database location.
 
-The disposable 2.2.1 upgrade/restoration test and HLS captures are recorded in
-the [graphics handoff](graphics-handoff/README.md). This procedure does not
-choose a release version or authorize publishing an image; see the
+This procedure does not choose a release version or authorize publishing an image; see the
 [release compatibility policy](releasing.md#what-each-number-means).
 
 The updater only replaces containers labelled

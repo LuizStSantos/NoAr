@@ -38,9 +38,9 @@ artwork, and the Report for what aired.
 - **Video cards**: the program on a Blackmagic DeckLink card (SDI/HDMI), and
   DeckLink or V4L2 capture cards as live inputs
   ([docs](docs/video-cards.md)).
-- **Scheduled live sources**: NoAr pulls streams from an external ingest server
-  such as MediaMTX and switches between files and live sources through GStreamer
-  ([docs](docs/live_ingest.md)).
+- **Scheduled live sources**: NoAr pulls SRT, RTMP, RTSP, HLS or UDP streams
+  from an external ingest server such as MediaMTX and switches between files
+  and live sources through GStreamer ([docs](docs/live_ingest.md)).
 - **Recording** of the output, loudness normalization and an audio meter.
 
 **Playlists**
@@ -52,8 +52,8 @@ artwork, and the Report for what aired.
   the selection or at a time; move, duplicate, mark as a break, with undo,
   keys and how much of the day is still to fill.
 - **Per-item edits**: an item's in and out points, title, audio, filter and
-  its own **marks** (logo, breaks, L-shape) that apply to that item only and
-  leave the video in Storage as it is.
+  its own **marks** (trim, ad breaks, graphics cues) that apply to that item
+  only and leave the video in Storage as it is.
 - **Daily playlists** with a custom day start, editable while playing, or
   **folder mode**, which plays the storage folder without a playlist
   ([docs](docs/folder_mode.md)); fillers cover missing clips.
@@ -65,7 +65,7 @@ artwork, and the Report for what aired.
 
 **Scheduler**
 
-- Place a break, a clip or a live show (SRT, RTMP, HLS) at a time over
+- Place a break, a clip or a live show at a time over
   whatever is on air, either waiting for the current clip to end or
   interrupting it without dropping the output. In playlist mode, continue the
   interrupted programme or return to the clock; once, every day or on chosen weekdays ([docs](docs/scheduler.md)).
@@ -81,13 +81,11 @@ artwork, and the Report for what aired.
   Drag, resize in percent or pixels, keep proportions, set opacity and animations,
   and use the timeline, grid and optional safety margins to arrange the design.
   Layers can be hidden, deleted and restored with undo. Open **Edit** or
-  **+ New template** from Templates or On air
-  ([roadmap and status](docs/graphics-roadmap.md)).
+  **+ New template** from Templates or On air.
 - **Your names and groups**: organize templates by channel, programme, sponsor
   or any group you create. Logo, clock and text compositions can stay **Always
-  on air**; optional logo/ticker/L-shape assignments connect models to existing
-  channel controls. New installations contain only one removable Logo example.
-  Templates can be deleted without returning after restart.
+  on air**; a template can be assigned as the channel's logo, ticker or
+  L-shape. New installations contain only one removable Logo example.
 - **Fonts and fields**: upload TTF/OTF fonts from Composer for text and clock
   layers. Add `{fields}` for operators to fill before taking a template on air;
   preview and output use the uploaded font assets.
@@ -97,24 +95,20 @@ artwork, and the Report for what aired.
   ([docs](docs/graphics-data-sources.md)). Values update in place. Text layers
   can scroll continuously in either direction, with speed and repeat spacing
   set in Composer; this works with manual text and mapped fields.
-- **On air**, **Templates**, **Data sources**, **XMLTV logo** and **Subtitles**
-  are the Graphics navigation; the graphics key and commands are in
-  **Settings › External control**, with the live and SCTE-35 keys. The logo and L-shape
-  are edited as layers in Composer. The logo fades or cuts, cross-fades when
-  swapped and can go anywhere on screen.
+- The logo and L-shape are edited as layers in Composer. The logo fades or
+  cuts, cross-fades when swapped and can go anywhere on screen.
 - **L-shape**: the picture shrinks into a corner over a full-screen graphic,
   with artwork layers and an editable video window.
 - **Two commands for every graphic**: put a template on air (for a time, or
   until taken off) and take it off, from On air, from cues marked inside a
   video, from the Scheduler, or from an encoder, vMix, OBS or a Stream Deck
-  with the graphics key ([docs](docs/logo.md)).
-- On air offers a template preview, a real program monitor and put on air /
+  with the graphics key ([docs](docs/logo.md)). With the key, encoders can also
+  list what is on air and take everything off except the templates you name.
+- **On air**: a template preview, a real program monitor and put on air /
   take off, with the templates, the graphics on air and the always-on ones in
-  three tabs. Edit layers in Composer, or duplicate a template to start from it.
+  three tabs. Duplicate a template to start a new one from it.
 - **Animated GIF and WebP** images play on air; a very long animation plays
   one frame in two (or four, …) instead of being refused.
-- **Keyed commands** for encoders and Stream Decks: list what is on air, take
-  one template off, or take everything off except the templates you name.
 - **WebVTT subtitles** in the HLS output ([docs](docs/closed_captions.md)).
 
 **Storage**
@@ -141,7 +135,8 @@ artwork, and the Report for what aired.
 - **SCTE-35**: runs of commercials, breaks marked by hand, by API from an
   encoder, or inside a programme video are signalled in the SRT or UDP output
   for FAST platforms and ad servers to replace, frame-accurately and announced
-  ahead ([docs](docs/ad_breaks.md), [docs](docs/scte35.md)).
+  ahead; HLS tags are experimental ([docs](docs/ad_breaks.md),
+  [study](docs/scte35.md)).
 - **XMLTV guide** built from the playlists and a Kodi-style `.nfo` file in
   each program folder, with posters, episode images, credits with photos and a
   channel logo of its own ([docs](docs/xmltv.md)).
@@ -153,7 +148,8 @@ artwork, and the Report for what aired.
 **Operation**
 
 - **Multiple channels**, users with roles, and a **REST API**
-  ([docs](docs/api.md)).
+  ([docs](docs/api.md)). **Settings › External control** gathers the keys and
+  ready-to-copy commands for lives, graphics and SCTE-35 breaks.
 - **Alerts** by mail and HTTP push (ntfy) for log errors
   ([docs](docs/notifications.md)); a **log** that follows the channel live, in
   **Settings › Log**.
@@ -251,6 +247,13 @@ rate.
 
 ![Settings](docs/images/settings.png)
 
+**Settings › External control**: one page for everything controlled from
+outside without a login, with a tab each for lives, graphics and SCTE-35
+breaks. Here the graphics tab: its key, a template picked by search, and the
+commands to put it on air and take it off, ready to copy.
+
+![External control](docs/images/remote.png)
+
 **Sign in**: what NoAr does, next to the sign-in form.
 
 ![Sign in](docs/images/login.png)
@@ -258,10 +261,6 @@ rate.
 ## Install with Docker
 
 Requirements: Docker with the Compose plugin.
-
-To test the graphics review branch on a disposable machine, follow the
-[branch test guide](docs/graphics-testing.md) instead of the published-image
-commands below. It builds this checkout and starts a fresh test installation.
 
 ```sh
 git clone https://github.com/LuizStSantos/NoAr.git
@@ -303,10 +302,6 @@ Forgot the admin password? Set a new one from the server with
 `docker exec -it noar noar --user-set`; see
 [docs/docker.md](docs/docker.md#forgotten-admin-password).
 
-The Player preview keeps playing even when the SRT or RTMP destination is
-down or an SRT listener waits for its receiver; the line under it says how the
-output is doing. See [docs/output.md](docs/output.md#when-the-destination-is-down).
-
 ## Versions
 
 NoAr follows [Semantic Versioning](https://semver.org); every release is
@@ -316,12 +311,12 @@ listed in [CHANGELOG.md](CHANGELOG.md). The images on
 | Tag            | What it is                                           |
 | -------------- | ---------------------------------------------------- |
 | `latest`       | The newest stable release                            |
-| `2.2`, `2.2.1` | A release line (gets its fixes) or one exact release |
+| `3.0`, `3.0.0` | A release line (gets its fixes) or one exact release |
 | `main`         | The development build, not for air                   |
 | `sha-…`        | One commit, for tests                                |
 
 To stay on a release line, pin it in `docker-compose.yml`, for example
-`ghcr.io/luizstsantos/noar:2.2`. Releases are prepared and published by the
+`ghcr.io/luizstsantos/noar:3.0`. Releases are prepared and published by the
 **Prepare release** and **Tag release** workflows; see
 [docs/releasing.md](docs/releasing.md).
 

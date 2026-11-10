@@ -75,7 +75,7 @@ const programName = computed(
     () =>
         (latest.value ? onAirName(latest.value) : '') ||
         channelModels.value
-            .filter((model) => model.kind !== 'scene' && model.on && model.ready)
+            .filter((model) => model.on && model.ready)
             .map((model) => templateName(model.template))
             .join(' · ') ||
         t('graphics.onAir.noGraphic'),
@@ -163,10 +163,7 @@ async function load() {
             throw new Error(t('graphics.templates.loadFailed'))
         }
 
-        const scenes = new Set(
-            channelModels.value.filter((model) => model.kind === 'scene').map((model) => model.template.id),
-        )
-        templates.value = models.filter((model) => !scenes.has(model.id))
+        templates.value = models
     } catch (error) {
         indexStore.msgAlert('error', message(error, t('graphics.templates.loadFailed')), 4)
     } finally {

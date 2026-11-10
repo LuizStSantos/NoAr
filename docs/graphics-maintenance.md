@@ -3,8 +3,7 @@
 This guide describes the source boundaries introduced after the graphics model,
 Composer, scheduling, data-source, font and GIF changes. Start with the
 [project architecture map](ai/architecture-overview.md), then use this guide for
-Graphics. The [handoff](graphics-handoff/README.md) records executed checks and
-limits. The repository index is a navigation aid; source and tests define behavior.
+Graphics. The repository index is a navigation aid; source and tests define behavior.
 
 ## Design decision: one Graphics domain
 
@@ -58,13 +57,11 @@ responsibility. Consumers import Rust module paths rather than disk filenames.
 | Responsibility | Source owner |
 | --- | --- |
 | HTTP model, take, assignment and usage endpoints; shared access policy | `backend/app/src/api/routes/graphics.rs` |
-| Existing logo/L-shape/scene HTTP DTOs and keyed adapters | `backend/app/src/api/routes/graphics/control/graphics.rs` |
 | Font HTTP endpoints | `backend/app/src/api/routes/graphics/fonts/graphics.rs` |
 | Data-source HTTP endpoints | `backend/app/src/api/routes/graphics/sources/graphics.rs` |
 | Shared control-key comparison | `backend/app/src/api/auth.rs::control_key_matches` |
 | Model schema, validation, fields and conversion to engine specs | `backend/app/src/graphics/templates/graphics.rs` |
 | Channel bindings, views, visibility and ticker loading | `backend/app/src/graphics/channel/graphics.rs` |
-| Apply/revert scene actions, replacement and placement | `backend/app/src/graphics/control/graphics.rs` |
 | Take ownership, permanent loading and dynamic refresh | `backend/app/src/graphics.rs` |
 | Font and data-provider application services | `backend/app/src/graphics/{fonts,sources}/graphics.rs` |
 | Model CRUD and bindings repository facade | `backend/app/src/db/handles/graphics.rs` |
@@ -95,7 +92,6 @@ prepared artwork epoch, including model-based replacement and clip artwork.
 Composer owns authored timeline time and leaves the
 edit canvas static. The Program monitor still shows actual output. See the
 [operator/schema guide](graphics-data-sources.md#scroll-text-and-live-information)
-and `qa/graphics/scroll.py` for the scoped HLS displacement check.
 The specializations preserve their existing algorithms, synchronization,
 transitions and processing order.
 
@@ -146,8 +142,9 @@ channel-logo renderer.
   processing view used by existing engine/API controls. Do not introduce a
   second authoring path into frozen legacy database columns.
 - HTTP adapters own authorization and response serialization. Shared application
-  operations return ordinary values, not Axum `Json` wrappers. Scheduler events
-  and HTTP requests call the same `apply_scene_actions`/`revert_scene_actions`.
+  operations return ordinary values, not Axum `Json` wrappers. Scheduler events,
+  clip cues and HTTP requests put templates on air and off through the same take
+  and out commands.
 - Definition edits invalidate queued/prepared takes; runtime visibility controls
   and take publication serialize without invalidating unrelated waiting commands.
   Preserve generation checks across asynchronous work and final publication.
@@ -164,9 +161,10 @@ channel-logo renderer.
 - GIF caches, decode limits and phase behavior are documented in the
   [operator guide](logo.md#image-sizing-and-animated-gif-or-webp). Moving code must not
   introduce per-frame decoding or reset the animation during a visibility change.
-- `/logo`, `/lshape`, `/scene`, `/api/control/...` URLs, response DTOs, key header,
-  errors and authentication policy remain compatibility contracts. Internal names
-  can change; wire names and migration checksums cannot change incidentally.
+- The keyed `/graphics/{id}/...` URLs, response DTOs, key header, errors and
+  authentication policy are compatibility contracts (the `/logo`, `/lshape` and
+  `/scene` routes were removed in 3.0). Internal names can change; wire names and
+  migration checksums cannot change incidentally.
 
 ## Making common changes
 
@@ -219,16 +217,13 @@ For backend refactors run fmt, denied-warning no-default/all-target Clippy,
 the full no-default suite and applicable desktop-feature compilation. Frontend
 refactors require Vue types, ESLint, Prettier, build and actual disposable browser
 flows. Rendering changes/moves also repeat deterministic frame/HLS proof;
-scheduler changes need timed on/off and ownership evidence. The
-[graphics QA guide](../qa/graphics/README.md) describes the retained fixtures.
+scheduler changes need timed on/off and ownership evidence.
 
 The inventory covers the whole project structure; the implementation targets
 verified coupling and duplicated/unreachable graphics paths introduced or exposed
 by these changes. Larger unrelated modules such as desktop device presentation,
 playlist editing and general output configuration keep their existing owners.
 Their size alone does not justify changing timing-sensitive or unrelated logic.
-The handoff records which paths were executed; this structural refactor does not
-constitute a production deployment, a physical-device test or a long-running soak.
 
 ## Processing measurement boundaries
 

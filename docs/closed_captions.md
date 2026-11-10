@@ -67,4 +67,3 @@ such as desktop, SRT or UDP do not carry this WebVTT track.
 For troubleshooting, check that the two filenames and folder match, the VTT
 file has valid timing, HLS is enabled, the pending restart has been applied and
 the client opened the master rather than only the video rendition playlist.
-The [handoff](graphics-handoff/README.md) records the executed checks.

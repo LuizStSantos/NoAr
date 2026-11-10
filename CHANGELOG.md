@@ -11,6 +11,25 @@ one is tagged.
 
 ## [Unreleased]
 
+### Removed
+
+- The verification handoffs, branch test guides and prototypes kept in the
+  repository while 3.0 was built: `docs/graphics-handoff`,
+  `docs/maintenance-handoff`, the graphics and GStreamer branch guides,
+  `docker-compose.graphics-test.yml`, the graphics roadmap, the saved audits in
+  `docs/ai/audits`, and `qa/gstreamer`, `qa/graphics`, `qa/maintenance` and
+  `qa/fire`. They remain in the git history.
+- `docker/ndi/enable-ndi.sh --test`, which served only the removed GStreamer
+  test project.
+- Interface texts and code paths left from the quick scenes removed in 3.0.
+
+### Changed
+
+- The documentation no longer describes quick scenes, the removed
+  `/logo`, `/lshape` and `/scene` routes or the 3.0 branch as current.
+  `scene_name` in `GET /api/graphics/{id}/channel` is documented as always
+  `null`.
+
 ## [3.0.0] - 2026-11-10
 
 ### Removed
@@ -240,8 +259,7 @@ one is tagged.
 - Graphics templates: channels store their own graphics (layers of text,
   images and boxes in percent of the frame, with `{field}` names) through
   `/api/graphics/{id}/templates`. Admins create and change them; everyone on
-  the channel can read them. See
-  [docs/graphics-roadmap.md](docs/graphics-roadmap.md).
+  the channel can read them. See [docs/api.md](docs/api.md).
 - Templates go on air through `/api/graphics/{id}/take`, `/out` and
   `/on-air`, with their fields filled in and entry and exit animations
   (fade, slide, wipe). They are drawn under the L-shape, so a lower third

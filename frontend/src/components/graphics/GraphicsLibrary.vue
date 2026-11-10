@@ -164,16 +164,8 @@ function sample(template: GraphicsTemplate): Record<string, string> {
     return Object.fromEntries(template.fields.map((field) => [field, `[${field}]`]))
 }
 
-function title(template: GraphicsTemplate, assigned?: ChannelGraphic): string {
-    return assigned?.kind === 'scene' ? assigned.scene_name! : templateName(template)
-}
-
-function editTarget(template: GraphicsTemplate, assigned?: ChannelGraphic) {
-    return {
-        name: assigned?.kind === 'scene' ? 'graphics-channel-editor' : 'graphics-composer',
-        params: assigned?.kind === 'scene' ? { kind: 'scene' } : {},
-        query: { channel: channelId.value, ...(assigned?.kind !== 'scene' ? { template: template.id } : {}) },
-    }
+function editTarget(template: GraphicsTemplate) {
+    return { name: 'graphics-composer', query: { channel: channelId.value, template: template.id } }
 }
 
 function reportError(error: unknown) {
@@ -238,10 +230,6 @@ async function control(view: ChannelGraphic) {
 
     try {
         replaceChannelModels(await graphicsApi.controlChannel(view.template.id, !view.on))
-
-        if (view.kind === 'scene') {
-            indexStore.msgAlert('success', t('graphics.scenes.applied', { name: view.scene_name }), 2)
-        }
     } catch (error) {
         reportError(error)
     } finally {
@@ -359,7 +347,7 @@ watch(channelId, () => {
                     </template>
                 </TemplatePreview>
                 <div class="px-4 py-3 flex flex-col gap-1.5 flex-auto">
-                    <h3 class="m-0 text-sm font-semibold">{{ title(card.template, card.assigned) }}</h3>
+                    <h3 class="m-0 text-sm font-semibold">{{ templateName(card.template) }}</h3>
                     <template v-if="!card.assigned">
                         <span class="text-xs text-muted">{{
                             card.template.group || t('graphics.templates.noGroup')
@@ -387,20 +375,14 @@ watch(channelId, () => {
                         >
                             {{ t('graphics.library.delete') }}
                         </button>
-                        <RouterLink
-                            v-if="isAdmin"
-                            :to="editTarget(card.template, card.assigned)"
-                            class="btn-quiet min-h-9"
-                        >
+                        <RouterLink v-if="isAdmin" :to="editTarget(card.template)" class="btn-quiet min-h-9">
                             {{ t('graphics.composer.edit') }}
                         </RouterLink>
                         <button
-                            v-if="isAdmin && card.assigned?.kind !== 'scene'"
+                            v-if="isAdmin"
                             class="btn-quiet min-h-9"
                             :disabled="busy !== null"
-                            :aria-label="
-                                t('graphics.library.duplicateNamed', { name: title(card.template, card.assigned) })
-                            "
+                            :aria-label="t('graphics.library.duplicateNamed', { name: templateName(card.template) })"
                             @click="duplicate(card.template)"
                         >
                             {{ t('graphics.library.duplicate') }}
@@ -413,7 +395,7 @@ watch(channelId, () => {
                                 type="checkbox"
                                 role="switch"
                                 class="toggle toggle-accent"
-                                :aria-label="title(card.template, card.assigned)"
+                                :aria-label="templateName(card.template)"
                                 :checked="card.assigned.on"
                                 :disabled="busy !== null || (!card.assigned.ready && !card.assigned.on)"
                                 @click.prevent="control(card.assigned)"
@@ -427,13 +409,7 @@ watch(channelId, () => {
                             :disabled="busy !== null || (!card.assigned.ready && !card.assigned.on)"
                             @click="control(card.assigned)"
                         >
-                            {{
-                                card.assigned.kind === 'scene'
-                                    ? t('graphics.assigned.apply')
-                                    : card.assigned.on
-                                      ? t('graphics.assigned.fullscreen')
-                                      : t('graphics.assigned.enter')
-                            }}
+                            {{ card.assigned.on ? t('graphics.assigned.fullscreen') : t('graphics.assigned.enter') }}
                         </button>
                         <RouterLink
                             v-else
