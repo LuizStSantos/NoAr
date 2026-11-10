@@ -88,6 +88,11 @@ one is tagged.
 
 ### Fixed
 
+- A long or large animated GIF or WebP no longer fails with "decoded GIF
+  exceeds 32 MiB at this layer size": an animation may take 64 MiB at its
+  layer size (128 MiB per composition), and beyond that or 256 frames NoAr
+  plays one frame in 2, 4… with the same loop length, and logs it.
+
 - The video marks editor no longer shows "The browser cannot play this
   format" over a playable video that has no graphics cues.
 

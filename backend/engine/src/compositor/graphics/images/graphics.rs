@@ -20,7 +20,12 @@ use crate::{
 };
 
 const MAX_FRAMES: usize = 256;
+/// Largest decoded source frame, and layer frame, accepted.
 const MAX_BYTES: usize = 32 * 1024 * 1024;
+/// Memory one animation's cached frames may take at its layer size. Over it,
+/// or over [`MAX_FRAMES`], frames are skipped (every 2nd, then every 4th...)
+/// and the kept ones show longer, so the loop keeps its length.
+pub(crate) const ANIMATION_BUDGET: usize = 64 * 1024 * 1024;
 const MAX_DURATION: Duration = Duration::from_secs(60);
 
 pub(crate) struct ImageFrame {
@@ -245,8 +250,8 @@ fn webp_decoder(
         "WebP animation source frame exceeds 32 MiB"
     );
     ensure!(
-        (decoder.num_frames() as usize) <= MAX_FRAMES,
-        "WebP animation exceeds 256 frames"
+        (decoder.num_frames() as usize) <= MAX_FRAMES * 8,
+        "WebP animation exceeds 2048 frames"
     );
     decoder.set_memory_limit(MAX_BYTES * 2);
     // Overlays show what is under them where the animation is empty, not the
@@ -323,6 +328,96 @@ impl WebPFrames {
     }
 }
 
+/// Collects an animation's frames within [`ANIMATION_BUDGET`] and
+/// [`MAX_FRAMES`]: when either is passed, every other kept frame is dropped
+/// and the next source frames are sampled half as often. A dropped frame's
+/// time goes to the frame before it, so timing and loop length stay.
+struct FrameBudget {
+    frames: Vec<ImageFrame>,
+    bytes: usize,
+    /// Keep one source frame in `step`.
+    step: usize,
+    seen: usize,
+}
+
+impl FrameBudget {
+    fn new() -> Self {
+        Self {
+            frames: Vec::new(),
+            bytes: 0,
+            step: 1,
+            seen: 0,
+        }
+    }
+
+    /// Whether the next source frame is kept; when not, the previous kept
+    /// frame shows until `end`.
+    fn keeps_next(&mut self, end: Duration) -> bool {
+        let keep = self.seen.is_multiple_of(self.step) || self.frames.is_empty();
+        self.seen += 1;
+
+        if !keep && let Some(last) = self.frames.last_mut() {
+            last.end = end;
+        }
+
+        keep
+    }
+
+    fn push(&mut self, frame: ImageFrame) {
+        self.bytes += frame_bytes(&frame);
+        self.frames.push(frame);
+
+        while (self.bytes > ANIMATION_BUDGET || self.frames.len() > MAX_FRAMES)
+            && self.frames.len() > 1
+        {
+            let frames = std::mem::take(&mut self.frames);
+            let mut kept: Vec<ImageFrame> = Vec::with_capacity(frames.len() / 2 + 1);
+
+            for (index, frame) in frames.into_iter().enumerate() {
+                if index.is_multiple_of(2) {
+                    kept.push(frame);
+                } else if let Some(previous) = kept.last_mut() {
+                    previous.end = frame.end;
+                }
+            }
+
+            self.bytes = kept.iter().map(frame_bytes).sum();
+            self.frames = kept;
+            self.step *= 2;
+        }
+    }
+}
+
+fn finish(
+    path: &Path,
+    budget: FrameBudget,
+    duration: Duration,
+    kind: &str,
+) -> Result<ImageAnimation> {
+    ensure!(
+        !budget.frames.is_empty(),
+        "{kind} contains no decoded frames"
+    );
+
+    if budget.step > 1 {
+        log::info!(
+            "{kind} {} plays one frame in {} ({} of {} frames) to stay within {} MiB at its layer size",
+            path.display(),
+            budget.step,
+            budget.frames.len(),
+            budget.seen,
+            ANIMATION_BUDGET / (1024 * 1024)
+        );
+    }
+
+    Ok(ImageAnimation {
+        frames: budget.frames,
+        started: Instant::now(),
+        duration,
+        bytes: budget.bytes,
+    })
+}
+
 /// Animated WebP: GStreamer's `webpdec` decodes only still pictures, so the
 /// frames come from `image-webp`, composed on a transparent canvas.
 fn decode_webp(path: &Path, width: u32, height: u32, radius: f64) -> Result<ImageAnimation> {
@@ -330,9 +425,8 @@ fn decode_webp(path: &Path, width: u32, height: u32, radius: f64) -> Result<Imag
     crate::gstreamer::init()?;
     let (decoder, source_width, source_height) = webp_decoder(path)?;
     let mut source = WebPFrames::new(decoder, source_width, source_height)?;
-    let mut frames = Vec::new();
+    let mut budget = FrameBudget::new();
     let mut duration = Duration::ZERO;
-    let mut bytes = 0;
     let deadline = Instant::now() + Duration::from_secs(10);
 
     while let Some((rgba, even_width, even_height, delay)) = source.next()? {
@@ -347,24 +441,14 @@ fn decode_webp(path: &Path, width: u32, height: u32, radius: f64) -> Result<Imag
             duration <= MAX_DURATION,
             "WebP animation exceeds 60 seconds"
         );
+        if !budget.keeps_next(duration) {
+            continue;
+        }
         let decoded = crate::compositor::text::rgba_to_yuva420p(rgba, even_width, even_height)?;
-        let frame = layer_frame(&decoded, width, height, radius, duration)?;
-        bytes += frame_bytes(&frame);
-        ensure!(
-            bytes <= MAX_BYTES,
-            "decoded WebP animation exceeds 32 MiB at this layer size"
-        );
-        frames.push(frame);
+        budget.push(layer_frame(&decoded, width, height, radius, duration)?);
     }
 
-    ensure!(!frames.is_empty(), "WebP animation contains no frames");
-
-    Ok(ImageAnimation {
-        frames,
-        started: Instant::now(),
-        duration,
-        bytes,
-    })
+    finish(path, budget, duration, "WebP animation")
 }
 
 fn decode(path: &Path, width: u32, height: u32, radius: f64) -> Result<ImageAnimation> {
@@ -406,9 +490,8 @@ fn decode(path: &Path, width: u32, height: u32, radius: f64) -> Result<ImageAnim
     });
     let result = (|| {
         pipeline.set_state(gst::State::Playing)?;
-        let mut frames = Vec::new();
+        let mut budget = FrameBudget::new();
         let mut duration = Duration::ZERO;
-        let mut bytes = 0;
         let deadline = Instant::now() + Duration::from_secs(10);
 
         loop {
@@ -428,14 +511,12 @@ fn decode(path: &Path, width: u32, height: u32, radius: f64) -> Result<ImageAnim
 
                 continue;
             };
-            ensure!(frames.len() < MAX_FRAMES, "GIF exceeds 256 frames");
             let info = VideoInfo::from_caps(sample.caps().context("GIF frame has no caps")?)?;
             ensure!(
                 (info.width() as u64) * (info.height() as u64) * 4 <= MAX_BYTES as u64,
                 "GIF frame exceeds 32 MiB"
             );
             let buffer = sample.buffer().context("GIF frame has no pixels")?;
-            let decoded = copy_sample_frame(buffer, &info, PixelFormat::Yuva420p)?;
             let delay = Duration::from_nanos(
                 buffer
                     .duration()
@@ -444,23 +525,14 @@ fn decode(path: &Path, width: u32, height: u32, radius: f64) -> Result<ImageAnim
             .max(Duration::from_millis(10));
             duration += delay;
             ensure!(duration <= MAX_DURATION, "GIF exceeds 60 seconds");
-            let frame = layer_frame(&decoded, width, height, radius, duration)?;
-            bytes += frame_bytes(&frame);
-            ensure!(
-                bytes <= MAX_BYTES,
-                "decoded GIF exceeds 32 MiB at this layer size"
-            );
-            frames.push(frame);
+            if !budget.keeps_next(duration) {
+                continue;
+            }
+            let decoded = copy_sample_frame(buffer, &info, PixelFormat::Yuva420p)?;
+            budget.push(layer_frame(&decoded, width, height, radius, duration)?);
         }
 
-        ensure!(!frames.is_empty(), "GIF contains no decoded frames");
-
-        Ok(ImageAnimation {
-            frames,
-            started: Instant::now(),
-            duration,
-            bytes,
-        })
+        finish(path, budget, duration, "GIF")
     })();
     let _ = pipeline.set_state(gst::State::Null);
 
@@ -524,6 +596,42 @@ mod tests {
         let still = crate::gstreamer::load_image(&path.to_string_lossy()).unwrap();
         assert_eq!((still.width(), still.height()), (34, 26));
         assert_eq!(still.data(3)[0], 0);
+    }
+
+    #[test]
+    fn a_long_animation_skips_frames_instead_of_failing_and_keeps_its_length() {
+        let mut budget = FrameBudget::new();
+        let mut end = Duration::ZERO;
+
+        for _ in 0..1000 {
+            end += Duration::from_millis(40);
+            if budget.keeps_next(end) {
+                let frame = VideoFrame::new(PixelFormat::Yuva420p, 2, 2);
+                budget.push(ImageFrame {
+                    frame,
+                    alpha: vec![0; 1],
+                    end,
+                });
+            }
+        }
+
+        assert!(budget.frames.len() <= MAX_FRAMES, "{}", budget.frames.len());
+        assert!(
+            budget.frames.len() >= MAX_FRAMES / 2,
+            "{}",
+            budget.frames.len()
+        );
+        assert_eq!(budget.step, 4);
+        assert_eq!(budget.seen, 1000);
+        assert_eq!(budget.frames.last().unwrap().end, Duration::from_secs(40));
+        assert!(
+            budget
+                .frames
+                .windows(2)
+                .all(|pair| pair[0].end < pair[1].end)
+        );
+        // Each kept frame stands for `step` source frames of 40 ms.
+        assert_eq!(budget.frames[0].end, Duration::from_millis(160));
     }
 
     #[test]

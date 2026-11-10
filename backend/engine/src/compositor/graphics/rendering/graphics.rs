@@ -292,8 +292,8 @@ pub fn render_graphic(
         .map(|animation| animation.bytes)
         .sum();
     ensure!(
-        animation_bytes <= 64 * 1024 * 1024,
-        "GIF frames exceed 64 MiB in this composition"
+        animation_bytes <= 2 * images::ANIMATION_BUDGET,
+        "animated images exceed 128 MiB in this composition"
     );
 
     let Some(window) = spec.picture else {

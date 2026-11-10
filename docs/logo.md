@@ -62,10 +62,13 @@ size and radius share a loop phase across models/refreshes; a new decode, change
 geometry/file or backend restart starts a new sequence. Browser GIF preview runs
 independently and is not frame-synchronized to Program.
 
-Limits: 10 MiB file, 256 frames, 60-second cycle, 32 MiB decoded GIF buffers at
-its rendered size and 64 MiB GIF buffers per composition. Source dimensions are
-bounded too. Invalid/unsupported/oversized animations fail preflight or take
-explicitly, instead of silently becoming a still. Native GIF demux/decoder
+Limits: 10 MiB file and a 60-second cycle. Frames are kept ready at the
+layer's size, up to 256 frames and 64 MiB per animation (128 MiB of animated
+images per composition). A longer or larger animation is not refused: NoAr
+keeps one frame in 2 (then 4, 8…), the kept frames show longer so the loop
+keeps its length, and the log says so. Source dimensions are bounded too.
+Invalid or unsupported animations fail preflight or take explicitly, instead
+of silently becoming a still. Native GIF demux/decoder
 plugins from GStreamer's libav plugin are required.
 
 Animated WebP plays the same way, with the same limits. GStreamer's WebP
