@@ -12,7 +12,7 @@ const { templateName } = useGraphicsDisplayNames()
 const config = useConfig()
 const { models, onAir, unavailable } = useChannelGraphics()
 const channelId = computed(() => config.channels[config.i]?.id)
-const active = computed(() => models.value.filter((model) => model.kind !== 'scene' && model.on && model.ready))
+const active = computed(() => models.value.filter((model) => model.on && model.ready))
 </script>
 
 <template>

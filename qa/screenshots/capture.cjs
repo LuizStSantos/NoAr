@@ -275,6 +275,12 @@ const screens = {
         await expect(page.getByText('HLS', { exact: true }).first()).toBeVisible()
         await shot(page, 'settings')
     },
+    async remote(page) {
+        await open(page, '/configure/remote#graphics')
+        await expect(page.getByRole('tab', { name: /^Graphics/ })).toHaveAttribute('aria-selected', 'true')
+        await expect(page.getByText('One template', { exact: true }).first()).toBeVisible()
+        await shot(page, 'remote')
+    },
 }
 
 async function main() {

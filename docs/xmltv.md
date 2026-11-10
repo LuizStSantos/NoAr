@@ -172,7 +172,7 @@ The channel icon in the guide is the *Logo in the guide (XMLTV)* image from
 **Graphics › XMLTV logo** when set.
 Its independent guide path has a **Save guide icon** button. Otherwise the guide
 uses the configured model's controlled image; a missing guide image falls back
-to that image. Transient API/scene/clip image replacements do not change it.
+to that image. Image replacements from the API or a clip's marks do not change it.
 
 ## How the guide is built
 

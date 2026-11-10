@@ -22,7 +22,7 @@
       "file": "player.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "6447091e93a7401cdb956762ab31197468c44c75a6c447b5a53e1ba5fb28f45b",
+      "sha256": "662967720643c905326f804f204f961c8ee1072ae52fef412d1e41eb5aea3c8d",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -34,7 +34,7 @@
       "file": "scheduler.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "fb84a7870209307b6bfaca07281aeb917b56cbd738ba86f65e4431fbc187e6bd",
+      "sha256": "0e97bf3bc19bf51daf328e9a40c7a0f3c0f6cf6e00fd62adebeb32389b66a062",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -46,7 +46,7 @@
       "file": "storage.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "baca1004588ed6970ddf0288834b2db96778531a87c0fdb6bbf6ed22d9b56151",
+      "sha256": "18210b56b7ed8c3116e8e3fd903546313bfb25b719f59b25e7acdb08d5e9245b",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -58,7 +58,7 @@
       "file": "builder.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "a56b7d8ca10a69e68193e39f06374677d9563e8c05e2bb5484960cc430b2edba",
+      "sha256": "95447b178aebe790a740f3c938260dec327041767d9b4203ddb0f503ff89ca96",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -70,7 +70,7 @@
       "file": "program-folder.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "b47a1844adf4fb602fa6e8531e785d62edf5a0031b76164c3b25ac2b81d8441d",
+      "sha256": "9c6ac86efffdaba0ffe28f0d433a8e2f484c969a2b097884becf51c86c7af41e",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -82,7 +82,7 @@
       "file": "program-editor.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "fb6ae9515d8ce4c436784fe63aefd7b071f109d534fef0c9e80eecc90df67367",
+      "sha256": "7240e59057343923bc59c14329a55ed694cc4d77abadcd2c10513fe5e30f0aba",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -94,7 +94,7 @@
       "file": "marks.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "adb0493ec7f9a9e0af95fece2cf3e0520caae6d3acdde060ee89c7c148c96da3",
+      "sha256": "86a8710a11747668124ad3ad16d8ec625b5bbb9c6bbbb5328eca680830e8ea17",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -140,7 +140,7 @@
       "file": "onair.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "62fab04b3631b1ed3ec0ad098d1292162c4fb2799269f773b5e01121f58a208d",
+      "sha256": "0b9472ea6683af30bcf5ff47901c2eee908e7f5d45db4a7cffc1a0cafc6b244d",
       "preview_background": {
         "color": "rgb(36, 39, 44)",
         "image": "conic-gradient(rgb(48, 52, 58) 25%, rgba(0, 0, 0, 0) 0deg, rgba(0, 0, 0, 0) 50%, rgb(48, 52, 58) 0deg, rgb(48, 52, 58) 75%, rgba(0, 0, 0, 0) 0deg)",
@@ -157,7 +157,7 @@
       "file": "data-sources.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "626def394d7f777ded2f979d1851fa24d0def38b364f4e5ad2a258fa57df27c8",
+      "sha256": "3669a2b4f9b7e64fbd1b933b315022c191eae0d47e966e210085c4971bc38737",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -169,7 +169,7 @@
       "file": "report.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "823733d119e3baf8023cab0aee99a3c47210a2673d62412d1fc0e8303f269e52",
+      "sha256": "6fd5e0046b672ef7de17b03ebd9238420882362f42bb4e2a9faea389f35a4f42",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -181,7 +181,19 @@
       "file": "settings.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "78ad8a7c06a97c8616739484bc12dc4407ba25279cf249b0d0ac2dcb8d28c2ab",
+      "sha256": "f92be22580ab7da7740b158943ff7be838fdc2840ab01fa49b24a3256eb296ad",
+      "theme": "ffp-dark",
+      "viewport": 1440,
+      "viewport_height": 1000,
+      "device_scale": 1,
+      "scroll": 1425,
+      "prefers_dark": true
+    },
+    {
+      "file": "remote.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "23850643ff843a7f6443dbaaae9a704951f7ff0210ed534a80fa3f204f955ecf",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -193,36 +205,36 @@
   "video_checks": [
     {
       "screen": "player",
-      "previous_time": 0.05336,
+      "previous_time": 7.839274,
       "width": 640,
       "height": 360,
-      "time": 0.073148
+      "time": 7.855478
     },
     {
       "screen": "onair",
-      "previous_time": 0.012202,
+      "previous_time": 0.225732,
       "width": 640,
       "height": 360,
-      "time": 0.017009
+      "time": 0.239913
     }
   ],
   "page_errors": [],
-  "application_revision": "3e8c25e5ec545f01194512814c222764a8a8aa50",
+  "application_revision": "ca07168f6b97a0fd658d190f6820bd86af9d7b9f",
   "application_source_sha256": {
     "frontend/src/components/graphics/TemplatePreview.vue": "a936caddd2fecadda743e7408f2d8f88a45d54a0ddb90c5b35ae9d16206a511c",
-    "frontend/src/components/graphics/GraphicsLibrary.vue": "dcc31f1c98adae833448fd7e15d790c13801cf6c277e21242c8f4f3c3bf679da",
-    "frontend/src/components/graphics/GraphicsOnAir.vue": "61fbd55f83e8c04ca92fd620b3b8a8f13c102222dfb1b68e63c5e787d2d94c52",
+    "frontend/src/components/graphics/GraphicsLibrary.vue": "72ffc6cb103573573b3680ab23cd6d383ab7d271292f5c7b5247886e7d9cf0b1",
+    "frontend/src/components/graphics/GraphicsOnAir.vue": "0f35f4e5ccd8e98524efd6f429286ff80f9aa48998f0f79255c5060ff6918699",
     "frontend/src/components/graphics/composer/ComposerCanvas.vue": "2c272ccc0880a31658601ee3a9799b48be711ce1e0ee050cca2d53c5e0c42c7f"
   },
   "health": {
     "status": "ok",
-    "version": "2.2.1",
+    "version": "3.0.0",
     "channels": [
       {
         "id": 1,
         "state": "on_air",
-        "uptime": 25,
-        "output_age": 0.1
+        "uptime": 30,
+        "output_age": 0.3
       }
     ]
   },

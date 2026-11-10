@@ -164,7 +164,7 @@ when one is not:
 ```json
 {
     "status": "ok",
-    "version": "2.2.0",
+    "version": "3.0.0",
     "channels": [{ "id": 1, "state": "on_air", "uptime": 3600, "output_age": 0.2 }]
 }
 ```
@@ -285,26 +285,23 @@ page load.
 
 A template is a graphic a channel designs once and puts on air many times:
 layers placed in percent of the frame, with `{field}` names filled in on
-air ([roadmap](graphics-roadmap.md)).
+air.
 
 Every template is put on air and taken off with the
 [graphics commands](#graphics-commands).
 
 Channel `on` is the requested runtime control state; clip-logo gaps and L-shape
-suppression can still hide a logo on a particular frame. Scene `on` is always
-false because Apply is a one-shot action, not a toggle or undo. For roles,
-`ready` checks saved content availability, not successful output decoding.
-Scenes are offered as saved actions; applying one still validates its assets. Thumbnails show
-saved models rather than the program monitor or all transient replacements.
+suppression can still hide a logo on a particular frame. For roles, `ready`
+checks saved content availability, not successful output decoding. Thumbnails
+show saved models rather than the program monitor or all transient
+replacements.
 Showing a previously disabled logo/ticker enables its binding; hiding changes
 runtime visibility while retaining its definition. A full server restart resets
 these transient hide/show overrides and loads enabled definitions again, as for
 the legacy controls. A playout restart retains the shared control handles.
-Templates opens Composer for channel logo/ticker/L-shape models. Scenes retain
-their action editor at `/graphics/channel/scene`. Old channel-model and legacy
-UI URLs resolve their binding and redirect with the channel preserved; the old
-logo `#ticker` link opens the ticker model. These redirects do not change legacy
-HTTP control endpoints. Text layers support optional `scroll` configuration:
+Templates opens Composer for channel logo/ticker/L-shape models. Old
+channel-model and legacy UI URLs resolve their binding and redirect with the
+channel preserved; the old logo `#ticker` link opens the ticker model. Text layers support optional `scroll` configuration:
 `{"direction":"left","speed":80,"gap":80}` (or `"right"`). Speed is output
 pixels per second, from 1 to 2000; gap is 0–4096 output pixels. Omitted/null
 means static text. Non-text layers reject scrolling. The prepared line is
@@ -334,15 +331,15 @@ reads project these values and writes update layers, not layout `settings`.
 
 | Method   | Endpoint                                                | Access      | Request body                                                                                                                                                                                                                                                                                                                                                                               |
 | -------- | ------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET`    | `/api/graphics/{id}/channel`                            | `GA, CA, U` | Assigned and permanent models with `kind` (logo/ticker/lshape/scene/permanent), `template` (saved preview), requested `on`, content-availability `ready`, and nullable `scene_name`.                                                                                                                                                                                                       |
-| `POST`   | `/api/graphics/{id}/channel/{template_id}`              | `GA, CA, U` | `{ "on": true/false }` controls the assigned model on this channel; returns the refreshed list above. 404 for an unassigned/other-channel model; 409 when content must first be configured or L-shape artwork cannot be loaded. For scenes, `on:true` applies the action; `on:false` is 400.                                                                                               |
+| `GET`    | `/api/graphics/{id}/channel`                            | `GA, CA, U` | Assigned and permanent models with `kind` (logo/ticker/lshape/permanent), `template` (saved preview), requested `on` and content-availability `ready`. `scene_name` is always `null` since 3.0 (quick scenes were removed) and is kept for existing clients.                                                                                                                                                                                                       |
+| `POST`   | `/api/graphics/{id}/channel/{template_id}`              | `GA, CA, U` | `{ "on": true/false }` controls the assigned model on this channel; returns the refreshed list above. 404 for an unassigned/other-channel model; 409 when content must first be configured or L-shape artwork cannot be loaded.                                                                                               |
 | `GET`    | `/api/graphics/{id}/fonts`                              | `GA, CA, U` | Available font family names for text layers.                                                                                                                                                                                                                                                                                                                                               |
 | `GET`    | `/api/graphics/{id}/templates`                          | `GA, CA, U` | Every template of the channel, sorted by group and name.                                                                                                                                                                                                                                                                                                                                   |
 | `GET`    | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA, U` | One template; 404 when the channel has no such template.                                                                                                                                                                                                                                                                                                                                   |
 | `POST`   | `/api/graphics/{id}/templates`                          | `GA, CA`    | A template (below). 409 when the channel already has that name, ignoring case.                                                                                                                                                                                                                                                                                                             |
 | `PUT`    | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA`    | The whole template again.                                                                                                                                                                                                                                                                                                                                                                  |
-| `DELETE` | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA`    | `"removed"`. Detaches channel/scene assignments, takes active temporary instances out and reloads model state. Removed logo/L-shape bindings also clear transient external/clip artwork and placement; L-shape returns to full screen. Uploaded media/fonts and scheduled event records remain. Legacy action snapshots may still execute; a deleted model reference cannot air until edited. A reload failure after commit is reported; restart restores the saved state. Intentional removal is never re-imported.                                                                                          |
-| `GET`    | `/api/graphics/{id}/templates/{template_id}/usage`      | `GA, CA, U` | Assignment, current/startup visibility, temporary instance count and retained scheduled actions potentially affected by removing the assignment. Legacy events retain action snapshots; new events retain model references and are skipped if their template is deleted.                                                                                                                                                                                         |
+| `DELETE` | `/api/graphics/{id}/templates/{template_id}`            | `GA, CA`    | `"removed"`. Detaches channel assignments, takes active temporary instances out and reloads model state. Removed logo/L-shape bindings also clear transient external/clip artwork and placement; L-shape returns to full screen. Uploaded media/fonts and scheduled event records remain; a deleted model reference cannot air until edited. A reload failure after commit is reported; restart restores the saved state. Intentional removal is never re-imported.                                                                                          |
+| `GET`    | `/api/graphics/{id}/templates/{template_id}/usage`      | `GA, CA, U` | Assignment, current/startup visibility, temporary instance count and retained scheduled actions potentially affected by removing the assignment. Events keep a model reference and are skipped if their template is deleted.                                                                                                                                                                                         |
 | `PUT`    | `/api/graphics/{id}/templates/{template_id}/assignment` | `GA, CA`    | `{ "role": "logo"/"ticker"/"lshape"/null, "control_layer_id": "image-id" }`. Optional role and image target; does not rename or regroup. Omitted target retains the saved image or chooses the first image initially. Invalid/foreign targets are 400. Replacing a role makes the old model temporary to avoid a second permanent copy. Removing/changing this model's previous role clears that role's transient external/clip artwork and placement. Unassigning retains the model and its independent permanent setting; ordinary saves and replacement assignments preserve shared transient controls.                                                    |
 | `POST`   | `/api/graphics/{id}/take` | `GA, CA, U` | See [graphics commands](#graphics-commands). |
 | `POST`   | `/api/graphics/{id}/out` | `GA, CA, U` | See [graphics commands](#graphics-commands). |
@@ -463,8 +460,8 @@ without `trim`): they apply to that item only, instead of the video's marks
 in the storage. They are checked when the playlist is saved; an empty `marks`
 is dropped ([docs](logo.md#marks-of-one-playlist-item)).
 
-Scheduled graphics (Composer models with fields/records; legacy logo/L-shape
-action events remain supported) are under
+Scheduled graphics (Composer models with fields/records; the logo/L-shape
+action events of earlier versions no longer run) are under
 `/api/schedule/{id}/graphics`; see [Scheduler](scheduler.md#api).
 
 ## Files
@@ -573,15 +570,15 @@ is appropriate for previewing and simple deployments.
 
 ## Scheduler
 
-Scheduled events and lives: see [Scheduler](/docs/scheduler.md#api) for the
+Scheduled events and lives: see [Scheduler](scheduler.md#api) for the
 routes under `/api/schedule/{id}` and the event format. Assembled programs
 (`/api/schedule/{id}/programs`) are described in
-[Assembled programs](/docs/programs.md#api).
+[Assembled programs](programs.md#api).
 
 ## Public XMLTV guide
 
 The program guide and its artwork are public, so IPTV players can load them
-without authentication. See [XMLTV / EPG](/docs/xmltv.md) for the folder layout
+without authentication. See [XMLTV / EPG](xmltv.md) for the folder layout
 and `.nfo` fields.
 
 | Method | Endpoint                    | Description                                                                                     |

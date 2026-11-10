@@ -85,9 +85,10 @@ HTTP(S). The capture helper checks the demo channel/storage scope, fixes both
 browser color preference and NoAr's saved theme, and asserts `ffp-dark` before
 every picture. It also checks document width and real video advancement.
 
-The complete set has **14 screens**: login, Player, Scheduler, Storage, Playlist,
+The complete set has **15 screens**: login, Player, Scheduler, Storage, Playlist,
 adding a programme folder, assembled-program editor, video marks, Templates,
-Composer, Graphics On air, Data sources, Report and Output settings. Viewport
+Composer, Graphics On air, Data sources, Report, Output settings and External
+control. Viewport
 and every PNG have exactly **1440×1000 pixels**, at device scale 1. Templates
 uses the same viewport capture as the other screens; scroll or filter groups
 in the application to inspect the remaining cards. The helper asserts both

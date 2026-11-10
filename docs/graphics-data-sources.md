@@ -125,5 +125,4 @@ Deleting a source used by a model returns a conflict naming the dependent models
 Unlink its fields or remove those templates first. Source deletion does not delete
 artwork or fonts. No default feed, ticker, clock or extra L-shape model is created.
 
-See [API reference](api.md#graphics-data-source-api) and
-[executed graphics handoff](graphics-handoff/README.md) for evidence and limits.
+See the [API reference](api.md#graphics-data-source-api).

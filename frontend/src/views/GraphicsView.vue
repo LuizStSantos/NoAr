@@ -55,7 +55,7 @@ useHead({
         const title =
             route.name === 'graphics-channel-editor'
                 ? t('graphics.editor.title', {
-                      name: t(`graphics.assigned.${route.params.kind === 'scene' ? 'scenes' : route.params.kind}`),
+                      name: t(`graphics.assigned.${route.params.kind}`),
                   })
                 : t(`graphics.sections.${current.value}`)
 

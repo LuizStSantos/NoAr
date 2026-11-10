@@ -50,6 +50,8 @@ pub struct ChannelGraphicView {
     pub template: GraphicsTemplate,
     pub on: bool,
     pub ready: bool,
+    /// Always `null`: the quick scenes of earlier versions were removed in
+    /// 3.0. Kept so API clients that read the field still find it.
     pub scene_name: Option<String>,
 }
 

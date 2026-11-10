@@ -1,8 +1,7 @@
 # NoAr architecture and maintenance
 
 This guide records the organization of the Rust application, media engine and
-Vue frontend. The [verification handoff](maintenance-handoff/README.md) records
-what was changed, executed and left untested. The indexed
+Vue frontend. The indexed
 [repository map](ai/repository-map.md) helps locate symbols; source code remains
 authoritative. Graphics has an additional [domain guide](graphics-maintenance.md).
 
@@ -112,7 +111,7 @@ thread ownership, queue limits and shutdown order explicit.
 4. Preserve public exports, serialized defaults, URL shapes, error responses,
    migration checksums, clock units and resource cleanup unless a behavior
    change is explicitly requested.
-5. Run the matching checks below and update the handoff with observed evidence.
+5. Run the matching checks below and report what was actually observed.
 
 ## Verification and references
 
@@ -128,7 +127,7 @@ feature gates too, especially desktop output. Vue changes require type checking,
 ESLint, changed-file Prettier and a production build. Operator workflows require
 real browser actions against disposable SQLite; media changes require actual
 output, logs and health evidence. See [developer setup](developer.md), the
-[isolated browser harness](../qa/e2e/README.md) and the handoff for exact results.
+[isolated browser harness](../qa/e2e/README.md).
 
 The organization follows [Rust module visibility](https://doc.rust-lang.org/book/ch07-02-defining-modules-to-control-scope-and-privacy.html),
 [Vue composable ownership](https://vuejs.org/guide/reusability/composables.html)

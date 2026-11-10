@@ -60,5 +60,3 @@ __pycache__/
 
 # Local Compose additions (docker/ndi/enable-ndi.sh, video cards).
 docker-compose.override.yml
-qa/gstreamer/compose.ndi.yaml
-qa/gstreamer/compose.cards.yaml

@@ -101,8 +101,7 @@ watch(
                 return
             }
 
-            const scenes = channelModels.filter((model) => model.kind === 'scene').map((model) => model.template.id)
-            templates.value = models.filter((model) => !scenes.includes(model.id))
+            templates.value = models
             permanentIds.value = channelModels
                 .filter((model) => ['logo', 'ticker', 'permanent'].includes(model.kind))
                 .map((model) => model.template.id)

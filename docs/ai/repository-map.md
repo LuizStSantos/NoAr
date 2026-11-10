@@ -4,7 +4,7 @@ Machine-generated navigation index; verify behavior against current source code.
 
 ## File counts by top-level directory
 
-- `(root)/`: 19 indexed files
+- `(root)/`: 18 indexed files
 - `.agents/`: 7 indexed files
 - `.cargo/`: 1 indexed files
 - `.claude/`: 51 indexed files
@@ -13,27 +13,27 @@ Machine-generated navigation index; verify behavior against current source code.
 - `assets/`: 1 indexed files
 - `backend/`: 231 indexed files
 - `docker/`: 4 indexed files
-- `docs/`: 64 indexed files
+- `docs/`: 31 indexed files
 - `frontend/`: 178 indexed files
 - `migrations/`: 34 indexed files
-- `qa/`: 85 indexed files
+- `qa/`: 40 indexed files
 - `tests_assets/`: 15 indexed files
 
 ## Languages and formats
 
 - Rust: 225
 - Vue: 108
-- Markdown: 99
-- TypeScript: 78
-- Python: 48
-- JSON: 43
-- Other: 37
+- Markdown: 84
+- TypeScript: 79
 - SQL: 34
-- YAML: 15
+- JSON: 29
+- Python: 25
+- Other: 18
+- YAML: 9
 - TOML: 4
-- Shell: 4
-- Build: 2
-- HTML: 2
+- Shell: 3
+- Build: 1
+- HTML: 1
 - CSS: 1
 
 ## Find files or symbols

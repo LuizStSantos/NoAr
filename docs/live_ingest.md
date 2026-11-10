@@ -41,7 +41,3 @@ Existing databases retain historical input settings and aired-report rows.
 Those settings are not returned by the configuration API, changed by ordinary
 settings saves, or activated at startup. Reports can still show historical
 entries identified as ingest. No destructive database migration is required.
-
-The independent Python experiment in `qa/gstreamer` is useful continuity
-reference evidence. It is not a substitute for testing the integrated NoAr
-scheduler, API, database and frontend with disposable data.

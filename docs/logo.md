@@ -17,7 +17,7 @@ commands. Everything about them is in the **Graphics** tab of the main menu:
   (old `/graphics/api` links open it).
 
 Old `/graphics/logo` and `/graphics/lshape` links open the channel logo or
-L-shape in the Composer; `/graphics/scenes` opens Templates.
+L-shape in the Composer; the old `/graphics/scenes` link opens Templates.
 
 The Player reports what is on air below its preview, with **Open Graphics**
 linking to On air. The On air **Preview** is a browser illustration; **Program**
@@ -75,8 +75,7 @@ Animated WebP plays the same way, with the same limits. GStreamer's WebP
 decoder reads only still pictures, so NoAr reads the frames of an animated
 WebP itself, composed on a transparent canvas (the file's background colour is
 not used); a frame without a delay shows for 100 ms. PNG/JPEG and still WebP
-keep the GStreamer image path. See the [executed handoff](graphics-handoff/README.md)
-for actual output proofs and untested output/device boundaries.
+keep the GStreamer image path.
 
 ## Placing the logo
 

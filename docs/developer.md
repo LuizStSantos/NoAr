@@ -9,9 +9,6 @@ frontend verification.
 
 ## Build NoAr
 
-For an isolated Docker installation of the current GStreamer integration
-branch from GitHub, see [the test-server guide](gstreamer-testing.md).
-
 Use Rust 1.99.1 and Node.js 24, matching `Dockerfile` and
 `.github/workflows/validate.yml`. NoAr uses one mandatory GStreamer media
 runtime and does not link FFmpeg.
