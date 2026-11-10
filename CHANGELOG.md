@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-10
+
 ### Removed
 
 - **Breaking:** the keyed `/logo/{id}/{action}`, `/lshape/{id}/{action}` and
@@ -85,6 +87,10 @@ one is tagged.
 - Enforce service/API/data/engine dependencies with source-level CI checks.
 - Refresh the API tutorial to describe live clock layers, mapped text and free
   permanent compositions.
+- The soak test checks decoded moving pictures as well as transport progress,
+  detecting frozen video even while output bytes and `/health` keep advancing.
+  Its CI matrix covers SRT and HLS separately, with bounded allowances for the
+  intentional live-source faults. NDI and SDI still require separate fixtures.
 
 ### Fixed
 
@@ -245,13 +251,6 @@ one is tagged.
   former Live now page, which now opens On air. **Templates** shows the
   library as cards, filtered by group. The menu keeps Logo, L-shape and Quick
   scenes apart, as channel settings, until they move over to templates.
-
-### Changed
-
-- The soak test checks decoded moving pictures as well as transport progress,
-  detecting frozen video even while output bytes and `/health` keep advancing.
-  Its CI matrix covers SRT and HLS separately, with bounded allowances for the
-  intentional live-source faults. NDI and SDI still require separate fixtures.
 
 ## [2.2.1] - 2026-11-05
 
@@ -1236,7 +1235,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...v3.0.0
 [2.2.1]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/LuizStSantos/NoAr/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/LuizStSantos/NoAr/compare/v2.1.3...v2.1.4
