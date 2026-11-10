@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
-import { expectBackToTemplates, reopenSaved } from './composer'
+import { expectBackToTemplates, openTab, reopenSaved } from './composer'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Run with run_staging.py for disposable authenticated tests.')
 test.use({ storageState: process.env.NOAR_E2E_STATE_PATH })
@@ -202,6 +202,7 @@ test('graphics Composer saves layers, fields, artwork and animation through the 
     await add('Shape')
     await add('Text')
     await set('Text', 'Guest: {name} — {role}')
+    await openTab(page, 'Style')
     const font = page.getByRole('combobox', { name: 'Font', exact: true })
     const family = await font.locator('option').nth(1).getAttribute('value')
     expect(family).toBeTruthy()
@@ -209,6 +210,7 @@ test('graphics Composer saves layers, fields, artwork and animation through the 
     await set('Colour', '#123456')
     await page.getByLabel('Bold', { exact: true }).check()
     await page.getByRole('combobox', { name: 'Alignment', exact: true }).selectOption('center')
+    await openTab(page, 'Position')
     await page.getByLabel('Proportional', { exact: true }).check()
     await set('Width', '30')
     await expect(page.getByLabel('Height', { exact: true })).toHaveValue('9')
@@ -277,6 +279,7 @@ test('graphics Composer saves layers, fields, artwork and animation through the 
             .getByRole('button', { name: 'Video in the corner', exact: true }),
     ).toBeDisabled()
     await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await openTab(page, 'Animation')
     await page.getByRole('combobox', { name: 'Entry', exact: true }).selectOption('scale')
     await page.getByRole('combobox', { name: 'Exit', exact: true }).selectOption('wipe')
     await set('Duration (ms)', '800')
@@ -409,6 +412,7 @@ test('assigned channel models use dedicated controls and layered Composer', asyn
     await add.click()
     await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Text', exact: true }).click()
     await page.getByLabel('Text', { exact: true }).fill(text)
+    await openTab(page, 'Template')
     await page.getByLabel('Always on air', { exact: true }).check()
     await page.getByRole('button', { name: 'Save template', exact: true }).click()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -426,6 +430,7 @@ test('assigned channel models use dedicated controls and layered Composer', asyn
     await ticker.click()
     await expect(ticker).not.toBeChecked()
     await channel.locator('article[data-kind="ticker"]').getByRole('link', { name: 'Edit', exact: true }).click()
+    await openTab(page, 'Content')
     await page.getByLabel('Text', { exact: true }).fill(`${text} updated`)
     await page.getByRole('button', { name: 'Save template', exact: true }).click()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -699,6 +704,7 @@ test('free template names and groups support permanent compositions and deletion
     await page.getByRole('button', { name: 'Add layer', exact: true }).click()
     await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Text', exact: true }).click()
     await page.getByLabel('Text', { exact: true }).fill('Programme information')
+    await openTab(page, 'Template')
     await page.getByLabel('Always on air', { exact: true }).check()
     const name = `Programme graphic ${Date.now()}`
     await page.getByLabel('Template name', { exact: true }).fill(name)
@@ -741,6 +747,7 @@ test('Composer authors shape primitives and a live server-time clock', async ({ 
         await page.getByLabel('Shape type', { exact: true }).selectOption(shape)
         await page.getByLabel('Layer name', { exact: true }).fill(shape)
         await page.getByLabel('Layer name', { exact: true }).press('Tab')
+        await openTab(page, 'Style')
         await page.getByLabel('Stroke colour', { exact: true }).fill('#ffffff')
         await page.getByLabel('Stroke colour', { exact: true }).press('Tab')
         await page.getByLabel('Stroke width (%)', { exact: true }).fill('0.5')
@@ -757,6 +764,7 @@ test('Composer authors shape primitives and a live server-time clock', async ({ 
     await expect(clock).toBeVisible()
     const first = await clock.textContent()
     await expect.poll(() => clock.textContent()).not.toBe(first)
+    await openTab(page, 'Template')
     await page.getByLabel('Always on air', { exact: true }).check()
     const name = `Shapes and clock ${Date.now()}`
     await page.getByLabel('Template name', { exact: true }).fill(name)
@@ -791,6 +799,7 @@ test('Composer uploads immutable fonts used by text and live clock previews', as
         .click()
     await page.getByLabel('Text', { exact: true }).fill('NoAr typography 123')
     await page.getByLabel('Text', { exact: true }).press('Tab')
+    await openTab(page, 'Style')
     const file = resolve(__dirname, '../../../tests_assets/fonts/graphics.ttf')
     const upload = page.waitForResponse(
         (r) => r.url().includes('/font-assets?filename=') && r.request().method() === 'POST',
@@ -819,6 +828,7 @@ test('Composer uploads immutable fonts used by text and live clock previews', as
         .getByRole('group', { name: 'Layer type', exact: true })
         .getByRole('button', { name: 'Clock', exact: true })
         .click()
+    await openTab(page, 'Style')
     await page.getByRole('combobox', { name: 'Font', exact: true }).selectOption(font.family)
     const name = `Uploaded typeface ${Date.now()}`
     await page.getByLabel('Template name', { exact: true }).fill(name)
@@ -950,15 +960,18 @@ test('new image layers use natural output geometry while replacements retain the
         mimeType: 'image/png',
         buffer: Buffer.from(png, 'base64'),
     })
+    await openTab(page, 'Position')
     for (const [name, value] of Object.entries({ X: '0', Y: '0', Width: '100', Height: '100' })) {
         await expect(page.getByLabel(name, { exact: true })).toHaveValue(value)
     }
     await page.getByLabel('Width', { exact: true }).fill('50')
     await page.getByLabel('Width', { exact: true }).press('Tab')
+    await openTab(page, 'Content')
     await page
         .getByLabel('Upload to Graphics/', { exact: true })
         .setInputFiles(resolve('../../tests_assets/graphics.gif'))
     await expect(page.getByLabel('Image path or field', { exact: true })).toHaveValue(/graphics(?:-\d+)?\.gif$/)
+    await openTab(page, 'Position')
     await expect(page.getByLabel('Width', { exact: true })).toHaveValue('50')
     await expect(page.getByLabel('Height', { exact: true })).toHaveValue('100')
 })
@@ -1057,6 +1070,7 @@ test('Composer colours come from a picker or a typed code, and the picker keeps 
     await page.goto('/graphics/composer?channel=1')
     await page.getByRole('button', { name: 'Add layer', exact: true }).click()
     await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Shape', exact: true }).click()
+    await openTab(page, 'Style')
     const code = page.getByLabel('Fill (empty = transparent)', { exact: true })
     const picker = page.getByLabel('Pick Fill (empty = transparent)', { exact: true })
 

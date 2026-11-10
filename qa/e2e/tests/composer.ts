@@ -11,3 +11,8 @@ export async function reopenSaved(page: Page, id: number, channel = 1) {
     await page.goto(`/graphics/composer?channel=${channel}&template=${id}`)
     await expect(page.getByRole('button', { name: /^(Save template|Salvar modelo)$/ })).toBeEnabled()
 }
+
+/** Open a tab of the Composer's properties panel (Position, Content, Style, Animation, Template). */
+export async function openTab(page: Page, name: string) {
+    await page.getByRole('tab', { name, exact: true }).click()
+}

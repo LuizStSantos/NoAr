@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
-import { expectBackToTemplates, reopenSaved } from './composer'
+import { expectBackToTemplates, openTab, reopenSaved } from './composer'
 
 test.skip(process.env.NOAR_E2E_WRITES !== '1', 'Requires runner-owned disposable staging.')
 test.use({ storageState: process.env.NOAR_E2E_STATE_PATH })
@@ -126,6 +126,7 @@ test('a delayed font failure cannot keep a new document locked or publish its ol
     })
     try {
         await page.goto(`/graphics/composer?channel=1&template=${first.template.id}`)
+        await openTab(page, 'Style')
         await page
             .getByLabel('Upload font', { exact: true })
             .setInputFiles(resolve(__dirname, '../../../tests_assets/fonts/graphics.ttf'))
@@ -180,6 +181,7 @@ test('an abandoned image upload cannot unlock a newer document load or upload in
     })
     try {
         await page.goto(`/graphics/composer?channel=1&template=${first.template.id}`)
+        await openTab(page, 'Content')
         await page
             .locator('input[type="file"][accept*="image"]')
             .setInputFiles(resolve(__dirname, '../../../tests_assets/storage/logo.png'))
@@ -449,11 +451,13 @@ test('shared placeholders discard former-layer mappings when remapped or returne
     )
     try {
         await page.goto(`/graphics/composer?channel=1&template=${template.id}`)
+        await openTab(page, 'Style')
         await page.getByRole('combobox', { name: 'Font', exact: true }).focus()
         await page.keyboard.press('Tab')
         const fontInput = page.getByLabel('Upload font', { exact: true })
         await expect(fontInput).toBeFocused()
         await expect(fontInput.locator('..')).toHaveCSS('outline-width', '2px')
+        await openTab(page, 'Content')
         await page.getByLabel('Text', { exact: true }).fill('Literal text')
         await page.getByLabel('Text', { exact: true }).press('Tab')
         await page.getByRole('button', { name: 'Save template', exact: true }).click()

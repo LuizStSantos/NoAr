@@ -99,8 +99,8 @@ function confirmChannel(discard: boolean) {
 </script>
 <template>
     <div
-        class="mx-auto px-4 sm:px-6 py-6 flex flex-wrap gap-6 items-start"
-        :class="current === 'composer' ? 'max-w-[1920px]' : 'max-w-[1440px]'"
+        class="mx-auto px-4 sm:px-6 flex flex-wrap gap-6 items-start"
+        :class="current === 'composer' ? 'max-w-[1920px] py-3' : 'max-w-[1440px] py-6'"
     >
         <aside
             v-if="current !== 'composer'"

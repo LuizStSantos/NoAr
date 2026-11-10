@@ -9,7 +9,7 @@ import ComposerCanvas from '@/components/graphics/composer/ComposerCanvas.vue'
 import ComposerLayerList from '@/components/graphics/composer/ComposerLayerList.vue'
 import ComposerFieldMappings from '@/components/graphics/composer/ComposerFieldMappings.vue'
 import ComposerTimeline from '@/components/graphics/composer/ComposerTimeline.vue'
-import ComposerLayerInspector from '@/components/graphics/composer/ComposerLayerInspector.vue'
+import ComposerLayerInspector, { type InspectorTab } from '@/components/graphics/composer/ComposerLayerInspector.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import { sendFileInChunks } from '@/composables/chunkedUpload'
 import { registerEditorNavigationGuard } from '@/composables/editorNavigation'
@@ -86,6 +86,25 @@ const groups = ref<string[]>([])
 const assignment = ref('')
 const originalAssignment = ref('')
 const navigationPending = ref(false)
+/** The properties tab in use, kept for this browser (a convenience: it falls back to Position). */
+const INSPECTOR_TABS: InspectorTab[] = ['position', 'content', 'style', 'animation', 'template']
+const inspectorTab = ref<InspectorTab>(
+    (() => {
+        try {
+            const saved = localStorage.getItem('composer-tab') as InspectorTab | null
+            return saved && INSPECTOR_TABS.includes(saved) ? saved : 'position'
+        } catch {
+            return 'position'
+        }
+    })(),
+)
+watch(inspectorTab, (value) => {
+    try {
+        localStorage.setItem('composer-tab', value)
+    } catch {
+        // Private windows may refuse storage; the tab simply is not remembered.
+    }
+})
 const saving = ref(false)
 const busy = ref(false)
 const editorReady = ref(false)
@@ -273,6 +292,8 @@ function addLayer(kind: TemplateLayer['kind']) {
     }
 
     draft.value.layers.push(layer)
+    // A new layer starts with what it shows: its text, image, shape or clock.
+    inspectorTab.value = kind === 'video' ? 'position' : 'content'
     rememberScaleBase(layer)
     selectedId.value = layer.id
     adding.value = false
@@ -309,6 +330,22 @@ function moveLayer(id: string, toward: 'front' | 'back') {
     rememberDraft()
     const reordered = [...layers]
     ;[reordered[index], reordered[target]] = [reordered[target]!, reordered[index]!]
+    draft.value.layers = reordered
+}
+
+/** Put a layer at `target` in the drawing order (0 = back), as a drag in the list does. */
+function reorderLayer(id: string, target: number) {
+    const layers = draft.value.layers
+    const index = layers.findIndex((layer) => layer.id === id)
+
+    if (editorLocked.value || index < 0 || target < 0 || target >= layers.length || index === target) {
+        return
+    }
+
+    rememberDraft()
+    const reordered = [...layers]
+    const [layer] = reordered.splice(index, 1)
+    reordered.splice(target, 0, layer!)
     draft.value.layers = reordered
 }
 
@@ -785,47 +822,53 @@ onBeforeUnmount(() => {
 </script>
 <template>
     <fieldset
-        class="flex flex-col gap-4 min-w-0 border-0 p-0 m-0"
+        class="composer-page flex flex-col gap-3 min-w-0 border-0 p-0 m-0"
         :aria-label="t('graphics.composer.title')"
         :disabled="editorLocked"
         :inert="editorLocked"
         :aria-busy="busy"
     >
-        <RouterLink
-            :to="{ name: 'graphics-templates', query: { channel: channelId } }"
-            class="inline-flex items-center gap-2 self-start min-h-9 text-sm font-medium text-accent-text"
-        >
-            <i class="bi bi-arrow-left" aria-hidden="true" />{{ t('graphics.editor.back') }}
-        </RouterLink>
-        <header class="flex flex-wrap items-end gap-3">
-            <label class="field-label flex-auto min-w-48"
-                >{{ t('graphics.composer.title') }}
-                <input
-                    v-model="displayedName"
-                    :aria-label="t('graphics.composer.templateName')"
-                    class="field-input font-semibold"
-                    maxlength="100"
-                    :placeholder="t('graphics.composer.templateName')"
-                />
-            </label>
+        <header class="flex flex-wrap items-center gap-2" role="toolbar" :aria-label="t('graphics.composer.title')">
+            <RouterLink
+                :to="{ name: 'graphics-templates', query: { channel: channelId } }"
+                class="inline-flex items-center gap-1.5 min-h-9 px-1 text-sm font-medium text-accent-text"
+            >
+                <i class="bi bi-arrow-left" aria-hidden="true" />{{ t('graphics.editor.back') }}
+            </RouterLink>
+            <span class="w-px h-6 bg-line-strong" aria-hidden="true" />
+            <input
+                v-model="displayedName"
+                :aria-label="t('graphics.composer.templateName')"
+                class="field-input font-semibold w-64 max-w-full min-h-9"
+                maxlength="100"
+                :placeholder="t('graphics.composer.templateName')"
+            />
+            <span v-if="draft.group" class="text-xs text-muted px-2 py-1 bg-base-200 rounded">{{ draft.group }}</span>
             <span class="font-mono text-xs text-muted"
                 >{{ frame.width }}×{{ frame.height }} · {{ output?.fps || 30 }} fps</span
             >
-            <button class="btn-quiet" :disabled="!history.length" @click="undo">
-                {{ t('graphics.composer.undo') }}
-            </button>
-            <button class="btn-quiet" :disabled="!draft.layers.length" @click="playPreview">
-                <i class="bi" :class="playing ? 'bi-stop-fill' : 'bi-play-fill'" aria-hidden="true" />
-                {{ t(playing ? 'graphics.composer.stop' : 'graphics.composer.play') }}
-            </button>
-            <button class="btn-main" :disabled="busy || !editorReady" @click="saving = !saving">
-                {{ t('graphics.composer.saveTemplate') }}
-            </button>
-            <RouterLink
-                :to="{ name: 'graphics-onair', query: { channel: channelId, template: savedId } }"
-                class="btn-quiet"
-                >{{ t('graphics.composer.openOnAir') }}</RouterLink
-            >
+            <div class="ml-auto flex flex-wrap items-center gap-2">
+                <button class="btn-quiet min-h-9" :disabled="!history.length" @click="undo">
+                    {{ t('graphics.composer.undo') }}
+                </button>
+                <button
+                    class="btn-quiet min-h-9"
+                    :disabled="!draft.layers.length"
+                    :aria-label="t(playing ? 'graphics.composer.stop' : 'graphics.composer.play')"
+                    @click="playPreview"
+                >
+                    <i class="bi" :class="playing ? 'bi-stop-fill' : 'bi-play-fill'" aria-hidden="true" />
+                    {{ t(playing ? 'graphics.composer.stopShort' : 'graphics.composer.playShort') }}
+                </button>
+                <RouterLink
+                    :to="{ name: 'graphics-onair', query: { channel: channelId, template: savedId } }"
+                    class="btn-quiet min-h-9"
+                    >{{ t('graphics.composer.openOnAir') }}</RouterLink
+                >
+                <button class="btn-main min-h-9" :disabled="busy || !editorReady" @click="saving = !saving">
+                    {{ t('graphics.composer.saveTemplate') }}
+                </button>
+            </div>
         </header>
         <div v-if="error" role="alert" class="text-error">
             {{ error }}
@@ -883,8 +926,9 @@ onBeforeUnmount(() => {
                 @toggle="toggleLayer"
                 @remove="removeLayer"
                 @move="moveLayer"
+                @reorder="reorderLayer"
             />
-            <main class="min-w-0 flex flex-col gap-3">
+            <main class="min-w-0 min-h-0 flex flex-col gap-2">
                 <ComposerCanvas
                     v-model:selected-id="selectedId"
                     :template="canvasTemplate"
@@ -913,6 +957,7 @@ onBeforeUnmount(() => {
                 />
             </main>
             <ComposerLayerInspector
+                v-model:tab="inspectorTab"
                 :selected="selected"
                 :fonts="fonts"
                 :uploaded-fonts="uploadedFonts"
@@ -923,6 +968,14 @@ onBeforeUnmount(() => {
             >
                 <template #geometry>
                     <template v-if="selected">
+                        <template v-if="assignment === 'logo' && selected.id === draft.control_layer_id">
+                            <button class="btn-quiet" :disabled="busy || !selected.image" @click="restoreLogoPlacement">
+                                {{ t('graphics.composer.restoreLogoPlacement') }}
+                            </button>
+                            <p class="m-0 text-xs text-muted">
+                                {{ t('graphics.composer.restoreLogoPlacementHint') }}
+                            </p>
+                        </template>
                         <div class="flex items-center justify-between">
                             <strong class="text-sm">{{ t('graphics.composer.position') }}</strong>
                             <div class="flex gap-1">
@@ -1033,20 +1086,6 @@ onBeforeUnmount(() => {
                 </template>
                 <template #image>
                     <template v-if="selected?.kind === 'image'">
-                        <button
-                            v-if="assignment === 'logo' && selected.id === draft.control_layer_id"
-                            class="btn-quiet"
-                            :disabled="busy || !selected.image"
-                            @click="restoreLogoPlacement"
-                        >
-                            {{ t('graphics.composer.restoreLogoPlacement') }}
-                        </button>
-                        <p
-                            v-if="assignment === 'logo' && selected.id === draft.control_layer_id"
-                            class="m-0 text-xs text-muted"
-                        >
-                            {{ t('graphics.composer.restoreLogoPlacementHint') }}
-                        </p>
                         <label class="field-label"
                             >{{ t('graphics.composer.image')
                             }}<input
@@ -1116,16 +1155,25 @@ onBeforeUnmount(() => {
 <style scoped>
 .composer-grid {
     display: grid;
-    gap: 1rem;
+    gap: 0.75rem;
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
 }
+/* Wide screens: the whole editor fits the window. Only the side panels and
+   the layer list scroll, never the page. */
 @media (min-width: 1100px) {
+    .composer-page {
+        height: calc(100dvh - 5.5rem);
+        min-height: 36rem;
+    }
     .composer-grid {
-        grid-template-columns: 210px minmax(0, 1fr) 280px;
+        flex: 1 1 0;
+        min-height: 0;
+        align-items: stretch;
+        grid-template-columns: 216px minmax(0, 1fr) 300px;
     }
     .composer-grid > aside {
-        max-height: calc(100vh - 190px);
+        min-height: 0;
         overflow-y: auto;
     }
 }

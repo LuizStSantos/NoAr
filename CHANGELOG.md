@@ -22,6 +22,13 @@ one is tagged.
 
 ### Changed
 
+- The Composer fits the window on wide screens: one toolbar row (back, name,
+  group, actions), a preview that takes the height left and stays 16:9, a
+  compact timeline that is always visible, and the layer's properties in tabs
+  (Position, Content, Style, Animation, Template) so only the side panel
+  scrolls. Layers are reordered by dragging as well as with their arrows; a
+  new layer opens on Content, and the last tab used is remembered.
+
 - The Composer's colours (text, fill and stroke) have a colour picker next to
   the code, which can still be typed or pasted; picking keeps the code's
   opacity, and fill and stroke can be cleared to none.

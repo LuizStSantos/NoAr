@@ -150,98 +150,123 @@ function endInteraction() {
     <p v-if="showSafeAreas" class="m-0 text-xs text-muted">
         {{ t('graphics.composer.safeAreaHint') }}
     </p>
-    <div
-        ref="canvas"
-        class="relative touch-none select-none"
-        @pointermove="moveInteraction"
-        @pointerup="endInteraction"
-        @pointercancel="endInteraction"
-        @lostpointercapture="endInteraction"
-    >
-        <TemplatePreview
-            :template="template"
-            :values="values"
-            :time="time"
-            :animate-text="false"
-            class="composer-canvas rounded-field border border-line-strong"
+    <div class="composer-fit">
+        <div
+            ref="canvas"
+            class="composer-fit-inner relative touch-none select-none"
+            @pointermove="moveInteraction"
+            @pointerup="endInteraction"
+            @pointercancel="endInteraction"
+            @lostpointercapture="endInteraction"
         >
-            <template #overlay>
-                <template v-if="showSafeAreas">
-                    <div
-                        class="composer-safe-area composer-action-safe"
-                        role="img"
-                        :aria-label="t('graphics.composer.actionSafe')"
-                    />
-                    <div
-                        class="composer-safe-area composer-title-safe"
-                        role="img"
-                        :aria-label="t('graphics.composer.titleSafe')"
-                    />
-                </template>
-                <div v-if="guideV" class="absolute left-1/2 inset-y-0 border-l border-cyan-300 pointer-events-none" />
-                <div v-if="guideH" class="absolute top-1/2 inset-x-0 border-t border-cyan-300 pointer-events-none" />
-                <template v-if="time === undefined">
-                    <template v-for="layer in template.layers.filter((layer) => layer.visible)" :key="layer.id">
+            <TemplatePreview
+                :template="template"
+                :values="values"
+                :time="time"
+                :animate-text="false"
+                class="composer-canvas rounded-field border border-line-strong"
+            >
+                <template #overlay>
+                    <template v-if="showSafeAreas">
                         <div
-                            class="absolute"
-                            :class="selectedId === layer.id ? 'outline-2 outline-cyan-300 z-10' : ''"
-                            :style="{
-                                left: layer.x + '%',
-                                top: layer.y + '%',
-                                width: layer.width + '%',
-                                height: layer.height + '%',
-                            }"
-                        >
-                            <button
-                                type="button"
-                                :aria-label="t('graphics.composer.selectNamed', { name: layerName(layer) })"
-                                :aria-pressed="selectedId === layer.id"
-                                class="absolute inset-0 w-full h-full cursor-move outline-offset-1 focus-visible:outline-2 focus-visible:outline-accent"
-                                @click="selectedId = layer.id"
-                                @pointerdown.stop="startInteraction($event, layer, 'move')"
-                            />
-                        </div>
-                        <template v-if="selectedId === layer.id">
-                            <button
-                                v-for="handle in ['width', 'height', 'both'] as const"
-                                :key="handle"
-                                type="button"
-                                class="absolute w-[24px] h-[24px] border-2 border-cyan-300 bg-base-100 rounded-xs z-20"
-                                :class="
-                                    handle === 'width'
-                                        ? 'cursor-ew-resize'
-                                        : handle === 'height'
-                                          ? 'cursor-ns-resize'
-                                          : 'cursor-nwse-resize'
-                                "
-                                :style="handleStyle(layer, handle)"
-                                :aria-label="t('graphics.composer.handles.' + handle)"
-                                :title="t('graphics.composer.resizeKeys')"
-                                aria-describedby="composer-resize-help"
-                                @keydown="resizeFromKeyboard($event, layer, handle)"
-                                @pointerdown.stop="startInteraction($event, layer, handle)"
+                            class="composer-safe-area composer-action-safe"
+                            role="img"
+                            :aria-label="t('graphics.composer.actionSafe')"
+                        />
+                        <div
+                            class="composer-safe-area composer-title-safe"
+                            role="img"
+                            :aria-label="t('graphics.composer.titleSafe')"
+                        />
+                    </template>
+                    <div
+                        v-if="guideV"
+                        class="absolute left-1/2 inset-y-0 border-l border-cyan-300 pointer-events-none"
+                    />
+                    <div
+                        v-if="guideH"
+                        class="absolute top-1/2 inset-x-0 border-t border-cyan-300 pointer-events-none"
+                    />
+                    <template v-if="time === undefined">
+                        <template v-for="layer in template.layers.filter((layer) => layer.visible)" :key="layer.id">
+                            <div
+                                class="absolute"
+                                :class="selectedId === layer.id ? 'outline-2 outline-cyan-300 z-10' : ''"
+                                :style="{
+                                    left: layer.x + '%',
+                                    top: layer.y + '%',
+                                    width: layer.width + '%',
+                                    height: layer.height + '%',
+                                }"
                             >
-                                <i
-                                    class="bi text-[10px]"
+                                <button
+                                    type="button"
+                                    :aria-label="t('graphics.composer.selectNamed', { name: layerName(layer) })"
+                                    :aria-pressed="selectedId === layer.id"
+                                    class="absolute inset-0 w-full h-full cursor-move outline-offset-1 focus-visible:outline-2 focus-visible:outline-accent"
+                                    @click="selectedId = layer.id"
+                                    @pointerdown.stop="startInteraction($event, layer, 'move')"
+                                />
+                            </div>
+                            <template v-if="selectedId === layer.id">
+                                <button
+                                    v-for="handle in ['width', 'height', 'both'] as const"
+                                    :key="handle"
+                                    type="button"
+                                    class="absolute w-[24px] h-[24px] border-2 border-cyan-300 bg-base-100 rounded-xs z-20"
                                     :class="
                                         handle === 'width'
-                                            ? 'bi-arrow-left-right'
+                                            ? 'cursor-ew-resize'
                                             : handle === 'height'
-                                              ? 'bi-arrow-down-up'
-                                              : 'bi-arrows-angle-expand'
+                                              ? 'cursor-ns-resize'
+                                              : 'cursor-nwse-resize'
                                     "
-                                    aria-hidden="true"
-                                />
-                            </button>
+                                    :style="handleStyle(layer, handle)"
+                                    :aria-label="t('graphics.composer.handles.' + handle)"
+                                    :title="t('graphics.composer.resizeKeys')"
+                                    aria-describedby="composer-resize-help"
+                                    @keydown="resizeFromKeyboard($event, layer, handle)"
+                                    @pointerdown.stop="startInteraction($event, layer, handle)"
+                                >
+                                    <i
+                                        class="bi text-[10px]"
+                                        :class="
+                                            handle === 'width'
+                                                ? 'bi-arrow-left-right'
+                                                : handle === 'height'
+                                                  ? 'bi-arrow-down-up'
+                                                  : 'bi-arrows-angle-expand'
+                                        "
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </template>
                         </template>
                     </template>
                 </template>
-            </template>
-        </TemplatePreview>
+            </TemplatePreview>
+        </div>
     </div>
 </template>
 
 <style scoped>
+.composer-fit-inner {
+    width: 100%;
+}
+/* On a wide screen the editor fits the window: the preview takes the height
+   left by the timeline and stays 16:9, centred. */
+@media (min-width: 1100px) {
+    .composer-fit {
+        container-type: size;
+        flex: 1 1 0;
+        min-height: 10rem;
+        display: flex;
+        justify-content: center;
+    }
+    .composer-fit-inner {
+        width: min(100cqw, calc(100cqh * 16 / 9));
+    }
+}
 .composer-canvas.graphics-preview {
     background-image:
         linear-gradient(to right, #ffffff24 1px, transparent 1px),
