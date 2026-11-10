@@ -157,6 +157,13 @@ fn plane_bytes(frame: &VideoFrame, plane: usize) -> usize {
 
 /// Decode a graphic through GStreamer, preserving its alpha plane.
 pub(crate) fn load_image(path: &str) -> Result<VideoFrame> {
+    // `webpdec` decodes only still WebP pictures.
+    if let Some(frame) =
+        crate::compositor::graphics::images::animated_webp_still(std::path::Path::new(path))?
+    {
+        return Ok(frame);
+    }
+
     init()?;
     let pipeline = gst::Pipeline::new();
     let decoder = gst::ElementFactory::make("uridecodebin")
