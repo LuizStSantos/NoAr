@@ -1086,3 +1086,59 @@ test('Composer colours come from a picker or a typed code, and the picker keeps 
     await page.getByRole('button', { name: 'Undo', exact: true }).first().click()
     await expect(code).toHaveValue('#0000ff80')
 })
+
+test('a Composer layer is renamed in the list with a double-click, and Escape cancels', async ({ page }) => {
+    await page.goto('/graphics/composer?channel=1')
+    await page.getByRole('button', { name: 'Add layer', exact: true }).click()
+    await page.getByRole('group', { name: 'Layer type' }).getByRole('button', { name: 'Text', exact: true }).click()
+    const list = page.getByRole('complementary', { name: 'Layers', exact: true })
+    await list.getByRole('button', { name: 'Text', exact: false }).first().dblclick()
+    const field = page.getByLabel('Rename Text', { exact: true })
+    await field.fill('Guest name')
+    await field.press('Enter')
+    await expect(list).toContainText('Guest name')
+    await expect(page.getByLabel('Layer name', { exact: true })).toHaveValue('Guest name')
+    await list
+        .getByRole('button', { name: /Guest name/ })
+        .first()
+        .dblclick()
+    await page.getByLabel('Rename Guest name', { exact: true }).fill('Discarded')
+    await page.getByLabel('Rename Guest name', { exact: true }).press('Escape')
+    await expect(list).toContainText('Guest name')
+    await expect(list).not.toContainText('Discarded')
+    await page.getByRole('button', { name: 'Undo', exact: true }).first().click()
+    await expect(page.getByLabel('Layer name', { exact: true })).toHaveValue('Text')
+})
+
+test('On air filters the template list by search and group', async ({ page }) => {
+    await page.goto('/graphics/templates?channel=1')
+    const token = await page.evaluate(() => localStorage.getItem('token'))
+    const headers = { Authorization: `Bearer ${token}` }
+    const stamp = Date.now()
+    const ids: number[] = []
+    for (const [name, group] of [
+        [`Search guest ${stamp}`, `Search group ${stamp}`],
+        [`Search score ${stamp}`, `Other group ${stamp}`],
+    ]) {
+        const created = await page.request.post('/api/graphics/1/templates', {
+            headers,
+            data: { name, group, layers: [] },
+        })
+        ids.push((await created.json()).id)
+    }
+    try {
+        await page.goto('/graphics/onair?channel=1')
+        const list = page.getByRole('complementary', { name: 'Templates', exact: true })
+        await list.getByRole('searchbox', { name: 'Search templates', exact: true }).fill(`guest ${stamp}`)
+        await expect(list.getByRole('button', { name: new RegExp(`Search guest ${stamp}`) })).toHaveCount(1)
+        await expect(list.getByRole('button', { name: new RegExp(`Search score ${stamp}`) })).toHaveCount(0)
+        await list.getByRole('searchbox', { name: 'Search templates', exact: true }).fill('')
+        await list.getByRole('combobox', { name: 'Group', exact: true }).selectOption(`Other group ${stamp}`)
+        await expect(list.getByRole('button', { name: new RegExp(`Search score ${stamp}`) })).toHaveCount(1)
+        await expect(list.getByRole('button', { name: new RegExp(`Search guest ${stamp}`) })).toHaveCount(0)
+        await list.getByRole('searchbox', { name: 'Search templates', exact: true }).fill('nothing-matches-this')
+        await expect(list).toContainText('No template matches.')
+    } finally {
+        for (const id of ids) await page.request.delete(`/api/graphics/1/templates/${id}`, { headers })
+    }
+})

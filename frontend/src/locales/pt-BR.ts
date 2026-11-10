@@ -1533,6 +1533,8 @@ export default {
             sourceRecord: 'Registro de {name}',
         },
         composer: {
+            renameNamed: 'Renomear {name}',
+            renameHint: 'clique duas vezes ou F2 para renomear',
             tabs: {
                 position: 'Posição',
                 content: 'Conteúdo',
@@ -1700,6 +1702,10 @@ export default {
             },
         },
         onAir: {
+            search: 'Buscar modelo',
+            group: 'Grupo',
+            allGroups: 'Todos os grupos',
+            noMatch: 'Nenhum modelo encontrado.',
             permanentTitle: 'Sempre no ar',
             permanentHint: 'Clique para esconder ou mostrar o modelo do canal. Edite suas camadas em Modelos.',
             permanentRequested:

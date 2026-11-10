@@ -1529,6 +1529,8 @@ export default {
             sourceRecord: 'Record from {name}',
         },
         composer: {
+            renameNamed: 'Rename {name}',
+            renameHint: 'double-click or F2 to rename',
             tabs: {
                 position: 'Position',
                 content: 'Content',
@@ -1690,6 +1692,10 @@ export default {
             },
         },
         onAir: {
+            search: 'Search templates',
+            group: 'Group',
+            allGroups: 'All groups',
+            noMatch: 'No template matches.',
             permanentTitle: 'Always on air',
             permanentHint: 'Click to hide or show the channel model. Edit its layers in Templates.',
             permanentRequested:

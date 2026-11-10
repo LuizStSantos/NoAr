@@ -96,10 +96,29 @@ function templateHint(template: GraphicsTemplate) {
         : fieldList(template) || t('graphics.templates.noFields')
 }
 
+/** The template list's search text and group (empty = every group). */
+const search = ref('')
+const groupFilter = ref('')
+const groupNames = computed(() => [
+    ...new Set(templates.value.map((template) => template.group || t('graphics.templates.noGroup'))),
+])
+const filtered = computed(() => {
+    const needle = search.value.trim().toLocaleLowerCase()
+
+    return templates.value.filter(
+        (template) =>
+            (!groupFilter.value || (template.group || t('graphics.templates.noGroup')) === groupFilter.value) &&
+            (!needle ||
+                `${templateName(template)} ${template.name} ${template.fields.join(' ')}`
+                    .toLocaleLowerCase()
+                    .includes(needle)),
+    )
+})
+
 const groups = computed(() => {
     const byGroup = new Map<string, GraphicsTemplate[]>()
 
-    for (const template of templates.value) {
+    for (const template of filtered.value) {
         const group = template.group || t('graphics.templates.noGroup')
         byGroup.set(group, [...(byGroup.get(group) ?? []), template])
     }
@@ -484,40 +503,78 @@ onMounted(() => {
         </section>
 
         <aside
-            class="flex-[1_1_300px] min-w-0 card-box px-4 py-4 flex flex-col gap-3"
+            class="onair-templates flex-[1_1_300px] min-w-0 card-box px-4 py-4 flex flex-col gap-3"
             :aria-label="t('graphics.onAir.templates')"
         >
             <div class="flex items-center justify-between gap-2">
                 <h2 class="m-0 text-base font-semibold">{{ t('graphics.onAir.templates') }}</h2>
                 <span class="text-xs text-muted">{{ t('graphics.onAir.count', { count: templates.length }) }}</span>
             </div>
+            <input
+                v-model="search"
+                type="search"
+                class="field-input"
+                :aria-label="t('graphics.onAir.search')"
+                :placeholder="t('graphics.onAir.search')"
+            />
+            <label v-if="groupNames.length > 1" class="flex items-center gap-2 text-sm text-muted"
+                ><span class="shrink-0">{{ t('graphics.onAir.group') }}</span
+                ><select v-model="groupFilter" class="field-input flex-auto">
+                    <option value="">{{ t('graphics.onAir.allGroups') }}</option>
+                    <option v-for="name in groupNames" :key="name" :value="name">{{ name }}</option>
+                </select></label
+            >
             <p v-if="loaded && !templates.length" class="m-0 text-sm text-muted">{{ t('graphics.templates.none') }}</p>
-            <div v-for="group in groups" :key="group.name" class="flex flex-col gap-1.5">
-                <span class="text-[11px] text-muted uppercase tracking-[0.08em]">{{ group.name }}</span>
-                <button
-                    v-for="template in group.items"
-                    :key="template.id"
-                    type="button"
-                    class="cursor-pointer min-h-12 px-3 py-2 flex flex-col gap-0.5 border rounded-field text-left bg-base-100"
-                    :class="selectedId === template.id ? 'border-success' : 'border-line-strong hover:border-accent'"
-                    :aria-pressed="selectedId === template.id"
-                    @click="select(template)"
-                >
-                    <span class="flex items-center gap-2">
-                        <strong class="font-semibold text-sm flex-auto">{{ templateName(template) }}</strong>
-                        <span
-                            v-if="
-                                onAir.some((graphic) => graphic.template_id === template.id && !graphic.leaving) ||
-                                channelModels.some((model) => model.template.id === template.id && model.on)
-                            "
-                            class="text-[11px] font-bold text-error"
-                        >
-                            {{ t('graphics.onAir.badge') }}
+            <p v-else-if="loaded && !filtered.length" class="m-0 text-sm text-muted">
+                {{ t('graphics.onAir.noMatch') }}
+            </p>
+            <div class="onair-list flex flex-col gap-3 min-h-0">
+                <div v-for="group in groups" :key="group.name" class="flex flex-col gap-1.5">
+                    <span class="text-[11px] text-muted uppercase tracking-[0.08em]">{{ group.name }}</span>
+                    <button
+                        v-for="template in group.items"
+                        :key="template.id"
+                        type="button"
+                        class="cursor-pointer min-h-12 px-3 py-2 flex flex-col gap-0.5 border rounded-field text-left bg-base-100"
+                        :class="
+                            selectedId === template.id ? 'border-success' : 'border-line-strong hover:border-accent'
+                        "
+                        :aria-pressed="selectedId === template.id"
+                        @click="select(template)"
+                    >
+                        <span class="flex items-center gap-2">
+                            <strong class="font-semibold text-sm flex-auto">{{ templateName(template) }}</strong>
+                            <span
+                                v-if="
+                                    onAir.some((graphic) => graphic.template_id === template.id && !graphic.leaving) ||
+                                    channelModels.some((model) => model.template.id === template.id && model.on)
+                                "
+                                class="text-[11px] font-bold text-error"
+                            >
+                                {{ t('graphics.onAir.badge') }}
+                            </span>
                         </span>
-                    </span>
-                    <span class="text-xs text-muted">{{ templateHint(template) }}</span>
-                </button>
+                        <span class="text-xs text-muted">{{ templateHint(template) }}</span>
+                    </button>
+                </div>
             </div>
         </aside>
     </div>
 </template>
+
+<style scoped>
+/* On a wide screen the template list stops at the window's height and
+   scrolls by itself, so the page is not stretched by a long list. */
+@media (min-width: 1024px) {
+    .onair-templates {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100dvh - 6rem);
+    }
+    .onair-list {
+        overflow-y: auto;
+        margin-inline: -0.25rem;
+        padding-inline: 0.25rem;
+    }
+}
+</style>

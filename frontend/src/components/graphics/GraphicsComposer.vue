@@ -349,6 +349,15 @@ function reorderLayer(id: string, target: number) {
     draft.value.layers = reordered
 }
 
+/** A name typed in the layer list. */
+function renameLayer(id: string, name: string) {
+    const layer = draft.value.layers.find((item) => item.id === id)
+
+    if (layer && !editorLocked.value) {
+        applyLayerPatch(layer, { name })
+    }
+}
+
 function toggleLayer(layer: TemplateLayer) {
     if (editorLocked.value) {
         return
@@ -927,6 +936,7 @@ onBeforeUnmount(() => {
                 @remove="removeLayer"
                 @move="moveLayer"
                 @reorder="reorderLayer"
+                @rename="renameLayer"
             />
             <main class="min-w-0 min-h-0 flex flex-col gap-2">
                 <ComposerCanvas
@@ -1170,7 +1180,7 @@ onBeforeUnmount(() => {
         flex: 1 1 0;
         min-height: 0;
         align-items: stretch;
-        grid-template-columns: 216px minmax(0, 1fr) 300px;
+        grid-template-columns: 236px minmax(0, 1fr) 300px;
     }
     .composer-grid > aside {
         min-height: 0;

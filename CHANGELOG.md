@@ -22,6 +22,14 @@ one is tagged.
 
 ### Changed
 
+- In Graphics › On air the template list has a search and a group filter,
+  stops at the window's height and scrolls by itself, so a long list no
+  longer stretches the page.
+
+- The Composer's layer list shows the whole layer name (the order arrows and
+  delete appear on the selected row, on hover and on keyboard focus), and a
+  layer is renamed there with a double-click or F2; Escape cancels.
+
 - The Scheduler shows the day's materials, lives and graphics in one agenda
   with All / Materials / Lives / Graphics filters, as tall as its rows. The
   live key for encoders and scripts moved to **Settings › External control**;

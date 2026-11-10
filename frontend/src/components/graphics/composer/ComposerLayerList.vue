@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useGraphicsDisplayNames } from '@/composables/graphicsDisplayNames'
@@ -17,6 +17,7 @@ const emit = defineEmits<{
     move: [layerId: string, toward: 'front' | 'back']
     /** Put the layer at `index` of the drawing order (0 = back). */
     reorder: [layerId: string, index: number]
+    rename: [layerId: string, name: string]
 }>()
 const { t } = useI18n()
 const { layerName } = useGraphicsDisplayNames()
@@ -24,8 +25,31 @@ const { layerName } = useGraphicsDisplayNames()
 /** The layer drawn last is in front: it is listed first. */
 const stacked = computed(() => [...props.layers].reverse())
 
-/** On wide screens the order arrows show on the selected row, on hover and on keyboard focus, leaving room for the name. */
+/** On wide screens the order arrows and delete show on the selected row, on hover and on keyboard focus, leaving room for the name. */
 const reorderHidden = 'lg:hidden lg:group-hover:inline-flex lg:group-focus-within:inline-flex'
+
+/** The layer being renamed in the list (double-click or F2 on its name). */
+const renaming = ref<string>()
+const renameInput = ref<HTMLInputElement[]>()
+
+async function startRename(layer: TemplateLayer) {
+    renaming.value = layer.id
+    await nextTick()
+    renameInput.value?.[0]?.select()
+}
+
+function finishRename(layer: TemplateLayer, value: string | null) {
+    if (renaming.value !== layer.id) {
+        return
+    }
+
+    renaming.value = undefined
+    const name = value?.trim()
+
+    if (name && name !== layerName(layer)) {
+        emit('rename', layer.id, name)
+    }
+}
 
 /** Dragging a row onto another puts it in that row's place. */
 const dragged = ref<string>()
@@ -94,19 +118,37 @@ function drop(targetId: string) {
                 @drop.prevent="drop(layer.id)"
             >
                 <i class="bi bi-grip-vertical text-muted cursor-grab pl-1" aria-hidden="true" />
+                <input
+                    v-if="renaming === layer.id"
+                    ref="renameInput"
+                    class="field-input flex-auto min-w-0 min-h-8 py-0 px-1.5 text-sm"
+                    :value="layerName(layer)"
+                    maxlength="100"
+                    :aria-label="t('graphics.composer.renameNamed', { name: layerName(layer) })"
+                    @keydown.enter.prevent="finishRename(layer, ($event.target as HTMLInputElement).value)"
+                    @keydown.esc.prevent="finishRename(layer, null)"
+                    @blur="finishRename(layer, ($event.target as HTMLInputElement).value)"
+                />
                 <button
-                    class="flex-auto min-w-0 min-h-9 text-left px-1 cursor-pointer flex items-baseline gap-1.5"
+                    v-else
+                    class="flex-auto min-w-0 min-h-9 text-left px-1 cursor-pointer flex flex-col justify-center"
                     :aria-pressed="selectedId === layer.id"
-                    :title="t('graphics.composer.kinds.' + layer.kind)"
+                    :title="`${layerName(layer)} · ${t('graphics.composer.kinds.' + layer.kind)} — ${t('graphics.composer.renameHint')}`"
                     @click="selectedId = layer.id"
+                    @dblclick="startRename(layer)"
+                    @keydown.f2.prevent="startRename(layer)"
                 >
                     <span class="sr-only">{{ t('graphics.composer.kinds.' + layer.kind) }}</span>
-                    <span class="text-sm truncate">{{ layerName(layer) }}</span>
-                    <span class="font-mono text-[11px] text-accent truncate">{{
-                        templateFields([layer])
-                            .map((field) => '{' + field + '}')
-                            .join(' ')
-                    }}</span>
+                    <span class="text-sm leading-tight truncate">{{ layerName(layer) }}</span>
+                    <span
+                        v-if="templateFields([layer]).length"
+                        class="font-mono text-[11px] leading-tight text-accent truncate"
+                        >{{
+                            templateFields([layer])
+                                .map((field) => '{' + field + '}')
+                                .join(' ')
+                        }}</span
+                    >
                 </button>
                 <button
                     class="btn-icon min-h-8 min-w-7"
@@ -142,6 +184,7 @@ function drop(targetId: string) {
                 </button>
                 <button
                     class="btn-icon min-h-8 min-w-8"
+                    :class="selectedId === layer.id ? '' : reorderHidden"
                     :aria-label="t('graphics.composer.deleteNamed', { name: layerName(layer) })"
                     @click="emit('remove', layer.id)"
                 >
