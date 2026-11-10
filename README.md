@@ -108,8 +108,13 @@ artwork, and the Report for what aired.
   until taken off) and take it off, from On air, from cues marked inside a
   video, from the Scheduler, or from an encoder, vMix, OBS or a Stream Deck
   with the graphics key ([docs](docs/logo.md)).
-- On air offers a template preview, a real program monitor, put on air / take
-  off, and the logo and ticker switches. Edit layers in Composer.
+- On air offers a template preview, a real program monitor and put on air /
+  take off, with the templates, the graphics on air and the always-on ones in
+  three tabs. Edit layers in Composer, or duplicate a template to start from it.
+- **Animated GIF and WebP** images play on air; a very long animation plays
+  one frame in two (or four, …) instead of being refused.
+- **Keyed commands** for encoders and Stream Decks: list what is on air, take
+  one template off, or take everything off except the templates you name.
 - **WebVTT subtitles** in the HLS output ([docs](docs/closed_captions.md)).
 
 **Storage**
@@ -124,9 +129,9 @@ artwork, and the Report for what aired.
 - **Downloads**: save a stored video, image or sidecar file to your computer
   from its row, image card or viewer. WebVTT subtitle files can be uploaded
   beside their videos ([docs](docs/storage.md)).
-- **Marks in a video**: its trim, stretches without logo, ad breaks and
-  L-shape stretches on one timeline, played back as they air, plus where the
-  logo goes and the L-shape's graphic, corner and size for that video.
+- **Marks in a video**: its trim, ad breaks and graphics cues on one
+  timeline, played back as they air, with each template drawn over the video
+  with its entry and exit animations.
 - **Commercials folders**: mark a folder once and everything in it plays as a
   commercial: out of the guide and without the logo
   ([docs](docs/commercials.md)).
@@ -171,7 +176,8 @@ The [screenshot guide](qa/screenshots/README.md) rebuilds and verifies the galle
 
 **Scheduler**: the day's programme with each clip at its real length, a
 scheduled break and a live on the events lane, and a Composer template scheduled
-on its own graphics lane, with the lists below.
+on its own graphics lane. Below it, one list of the day's events, filtered by
+all, materials, lives or graphics.
 
 ![Scheduler](docs/images/scheduler.png)
 
@@ -197,26 +203,33 @@ the videos you pick, at the end, after the selection or at a time.
 
 ![Adding a program folder](docs/images/program-folder.png)
 
-**Marks in a video**: the trim, the logo, the SCTE-35 breaks and the L-shape
-on one timeline; here a break edited into the programme, where it leaves and
-comes back, next to where the logo goes off.
+**Marks in a video**: the trim, the SCTE-35 breaks and the graphics cues on
+one timeline. Here, the graphics cues: a market update on air for 20 seconds and
+a presenter put on and taken off. The player previews each template over the
+video, with its entry and exit animations.
 
 ![Marks in a video](docs/images/marks.png)
 
 **Graphics › Templates**: custom groups, thumbnails on a neutral transparency
 checkerboard and controls appropriate to each model's assignment. Edit opens
-Composer; scroll or filter groups to see the other templates.
+Composer and Duplicate copies a template to change it; scroll or filter groups
+to see the other templates.
 
 ![Graphics templates in dark mode](docs/images/graphics.png)
 
 **Composer**: image, shape and text layers, named fields, resize handles,
 percent/pixel geometry, font upload, animation timing and editor safety margins.
-The shared checkerboard gains an alignment grid in the editor.
+Layers are reordered by dragging and renamed in the list; the layer's settings
+are split into Position, Content, Style, Animation and Template tabs, with a
+colour picker for every colour. The shared checkerboard gains an alignment grid
+in the editor.
 
 ![Composer in dark mode](docs/images/composer.png)
 
 **Graphics › On air**: fill the presenter fields on the preview, compare them
-with the real program monitor, take graphics in/out and control always-on models.
+with the real program monitor and take graphics in/out. The right column has
+three tabs: Templates, with search and a group filter; On air, the temporary
+graphics with their time left; and Always on air, the permanent ones.
 Preview uses the same checkerboard as Templates; Program shows the actual video.
 
 ![Graphics On air in dark mode](docs/images/onair.png)

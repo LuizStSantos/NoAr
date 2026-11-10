@@ -10,7 +10,7 @@
       "file": "login.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "c8f13bda62a58c36a27cca410d4f6b7d063fa5c2211f22fd541710530fce266c",
+      "sha256": "32239b0f0aaedbaaca74818fc62af5eb6e1b066fb95e1a5b6b005418c00d9c7b",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -22,7 +22,7 @@
       "file": "player.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "e6849b64e968a1302386ae495aca7eb4975511ea904fa60667b53b5a98eef437",
+      "sha256": "6447091e93a7401cdb956762ab31197468c44c75a6c447b5a53e1ba5fb28f45b",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -34,7 +34,7 @@
       "file": "scheduler.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "2071042bcbb091ca6467f8024a62707c9af2762dbe25e98946014f1923a92a71",
+      "sha256": "fb84a7870209307b6bfaca07281aeb917b56cbd738ba86f65e4431fbc187e6bd",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -46,7 +46,7 @@
       "file": "storage.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "75b2e9b5eaa0df262a850f2244064a29b4c06f09aaba336bbbd67eda7e35f7b0",
+      "sha256": "baca1004588ed6970ddf0288834b2db96778531a87c0fdb6bbf6ed22d9b56151",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -58,7 +58,7 @@
       "file": "builder.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "35a0da86ea6380cac31b959e55335bc01d058c44c58951f89c2f325c4c4c098c",
+      "sha256": "a56b7d8ca10a69e68193e39f06374677d9563e8c05e2bb5484960cc430b2edba",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -70,7 +70,7 @@
       "file": "program-folder.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "a37674e7df66fb176ffa65db6ddfe91e772f74c5cd04ec60cb630eb133e0f859",
+      "sha256": "b47a1844adf4fb602fa6e8531e785d62edf5a0031b76164c3b25ac2b81d8441d",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -82,7 +82,7 @@
       "file": "program-editor.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "0d6523ba1426fa36326671faf8d782dc35ef8f574f97ce7f7682d05e8077caf7",
+      "sha256": "fb6ae9515d8ce4c436784fe63aefd7b071f109d534fef0c9e80eecc90df67367",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -94,7 +94,7 @@
       "file": "marks.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "32cb3c0bb1b8f094d4dc5123d8b566aa87863cf11ec093bb2c6b8e642757a5a5",
+      "sha256": "adb0493ec7f9a9e0af95fece2cf3e0520caae6d3acdde060ee89c7c148c96da3",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -106,7 +106,7 @@
       "file": "graphics.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "90aeb6cda1d0df7e2dbf350801483cc573d7fbb17c9407fd450f8dbce0f8a708",
+      "sha256": "f44e4ca005adab8e9d62501af48190d494ffdcc6baf882cb639bdb10144bb577",
       "preview_background": {
         "color": "rgb(36, 39, 44)",
         "image": "conic-gradient(rgb(48, 52, 58) 25%, rgba(0, 0, 0, 0) 0deg, rgba(0, 0, 0, 0) 50%, rgb(48, 52, 58) 0deg, rgb(48, 52, 58) 75%, rgba(0, 0, 0, 0) 0deg)",
@@ -123,7 +123,7 @@
       "file": "composer.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "b84472edc3d6e33b82189dde94182ba9ee23b3ece249c755915b0cbf97e3010e",
+      "sha256": "802506c6ec6318c1718a22a02705706a9598783e3261abc662fe58500b650ae9",
       "preview_background": {
         "color": "rgb(36, 39, 44)",
         "image": "linear-gradient(to right, rgba(255, 255, 255, 0.14) 1px, rgba(0, 0, 0, 0) 1px), linear-gradient(rgba(255, 255, 255, 0.14) 1px, rgba(0, 0, 0, 0) 1px), conic-gradient(rgb(48, 52, 58) 25%, rgba(0, 0, 0, 0) 0deg, rgba(0, 0, 0, 0) 50%, rgb(48, 52, 58) 0deg, rgb(48, 52, 58) 75%, rgba(0, 0, 0, 0) 0deg)",
@@ -140,7 +140,7 @@
       "file": "onair.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "1da951d5d21c23ced9032ba27e2642b4e782ef5090f913bbdb04e784190ab3a9",
+      "sha256": "62fab04b3631b1ed3ec0ad098d1292162c4fb2799269f773b5e01121f58a208d",
       "preview_background": {
         "color": "rgb(36, 39, 44)",
         "image": "conic-gradient(rgb(48, 52, 58) 25%, rgba(0, 0, 0, 0) 0deg, rgba(0, 0, 0, 0) 50%, rgb(48, 52, 58) 0deg, rgb(48, 52, 58) 75%, rgba(0, 0, 0, 0) 0deg)",
@@ -157,7 +157,7 @@
       "file": "data-sources.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "70b26f16f848d79631e2af558cb187efade0639f913732bc0ba1cd420d5e0b37",
+      "sha256": "626def394d7f777ded2f979d1851fa24d0def38b364f4e5ad2a258fa57df27c8",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -169,7 +169,7 @@
       "file": "report.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "1429e9b9e574e8d7a211bb98168616df24c061b4a32787d874cd6ee82cca80c5",
+      "sha256": "823733d119e3baf8023cab0aee99a3c47210a2673d62412d1fc0e8303f269e52",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -181,7 +181,7 @@
       "file": "settings.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "501571a497661bdaba6ff7c792d8cd869f787f5c34d6e09f159a3e449a65f56b",
+      "sha256": "78ad8a7c06a97c8616739484bc12dc4407ba25279cf249b0d0ac2dcb8d28c2ab",
       "theme": "ffp-dark",
       "viewport": 1440,
       "viewport_height": 1000,
@@ -193,26 +193,26 @@
   "video_checks": [
     {
       "screen": "player",
-      "previous_time": 38.317397,
+      "previous_time": 0.05336,
       "width": 640,
       "height": 360,
-      "time": 41.097162
+      "time": 0.073148
     },
     {
       "screen": "onair",
-      "previous_time": 0.12116,
+      "previous_time": 0.012202,
       "width": 640,
       "height": 360,
-      "time": 0.131261
+      "time": 0.017009
     }
   ],
   "page_errors": [],
-  "application_revision": "45e4265710f1451618f1ef79a94334dca87d4439",
+  "application_revision": "3e8c25e5ec545f01194512814c222764a8a8aa50",
   "application_source_sha256": {
-    "frontend/src/components/graphics/TemplatePreview.vue": "5100428f01b80abff7655de01205e2d625ce5e41cd31e9f7f5abd131753e342f",
-    "frontend/src/components/graphics/GraphicsLibrary.vue": "eafd19c7952f4a320c05f6e518eda67420402fec6bc341f090272d5e68b62b40",
-    "frontend/src/components/graphics/GraphicsOnAir.vue": "bfaaa1a37c260e42fa1191e469009c4c623bd8e19ea22a030a6220a86e743ca4",
-    "frontend/src/components/graphics/composer/ComposerCanvas.vue": "1515c13151c0da4f119630c0a1919b4009ccb0cdd7130167c1c185b7b1ed7992"
+    "frontend/src/components/graphics/TemplatePreview.vue": "a936caddd2fecadda743e7408f2d8f88a45d54a0ddb90c5b35ae9d16206a511c",
+    "frontend/src/components/graphics/GraphicsLibrary.vue": "dcc31f1c98adae833448fd7e15d790c13801cf6c277e21242c8f4f3c3bf679da",
+    "frontend/src/components/graphics/GraphicsOnAir.vue": "61fbd55f83e8c04ca92fd620b3b8a8f13c102222dfb1b68e63c5e787d2d94c52",
+    "frontend/src/components/graphics/composer/ComposerCanvas.vue": "2c272ccc0880a31658601ee3a9799b48be711ce1e0ee050cca2d53c5e0c42c7f"
   },
   "health": {
     "status": "ok",
@@ -221,7 +221,7 @@
       {
         "id": 1,
         "state": "on_air",
-        "uptime": 30,
+        "uptime": 25,
         "output_age": 0.1
       }
     ]

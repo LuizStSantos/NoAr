@@ -222,12 +222,12 @@ const screens = {
     async marks(page) {
         await open(page, '/media?path=Documentaries%2FOceans%20(2024)', 'Storage')
         await page
-            .getByRole('button', { name: 'Trim, logo, breaks and L-shape in this video: Oceans.mp4', exact: true })
+            .getByRole('button', { name: 'Trim, graphics and breaks in this video: Oceans.mp4', exact: true })
             .click()
         await expect(page.getByRole('dialog')).toBeVisible()
-        await page.getByRole('radio', { name: /^SCTE-35 breaks/ }).click()
+        await page.getByRole('radio', { name: /^Graphics/ }).click()
         await page.locator('[role=dialog] video').evaluate((video) => {
-            video.currentTime = 610
+            video.currentTime = 306
         })
         await pause(1000)
         await shot(page, 'marks')

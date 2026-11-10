@@ -141,7 +141,7 @@ def build_media(storage: Path) -> dict[str, float]:
         lengths[str(clip.relative_to(storage))] = 30.0
 
     shutil.rmtree(work)
-    assets = storage / "00-assets"
+    assets = storage / "Graphics"
     assets.mkdir(exist_ok=True)
     shutil.copy(ROOT / "assets" / "logo.png", assets / "logo.png")
 
@@ -150,18 +150,6 @@ def build_media(storage: Path) -> dict[str, float]:
     (live / "signal.live").write_text("srt://127.0.0.1:19890?streamid=read:city\n")
     card(live / "poster.jpg", "City Live", "Live", ("0x7b2cbf", "0xe0aaff"), "600x900")
 
-    # A trim, two breaks edited into the programme with the logo off during
-    # them, and two L-shape stretches.
-    (storage / "Documentaries/Oceans (2024)/Oceans.marks.json").write_text(
-        json.dumps(
-            {
-                "trim": {"from": 4.0, "to": 1796.0},
-                "hide": [{"from": 600.0, "to": 720.0}, {"from": 1320.0, "to": 1380.0}],
-                "breaks": [{"from": 600.0, "to": 720.0}, {"from": 1320.0, "to": 1380.0}],
-                "lshape": [{"from": 300.0, "to": 420.0}, {"from": 1020.0, "to": 1140.0}],
-            }
-        )
-    )
     return lengths
 
 
@@ -232,7 +220,7 @@ def graphics(api: Api) -> dict[str, int]:
     logo = next(item["template"] for item in api.call("GET", "/api/graphics/1/channel")
                 if item["kind"] == "logo")
     logo.update(name="Example TV logo", group="Channel", always_on=True)
-    logo["layers"][0].update(image="00-assets/logo.png", x=90, y=4, width=8, height=14.222222,
+    logo["layers"][0].update(image="Graphics/logo.png", x=90, y=4, width=8, height=14.222222,
                              opacity=0.9, animation_in="fade", animation_out="fade", animation_ms=400)
     api.call("PUT", f"/api/graphics/1/templates/{logo['id']}", logo)
     api.call("POST", f"/api/graphics/1/channel/{logo['id']}", {"on": True})
@@ -259,7 +247,7 @@ def graphics(api: Api) -> dict[str, int]:
     lower_third = model("Presenter", "Programmes", [
         layer("nameplate", "box", 5, 74, 75, 21, fill="#14213d", radius=1.2, shape="rounded"),
         layer("accent", "box", 5, 74, 1, 21, fill="#f28c18"),
-        layer("programme-image", "image", 7, 78, 8, 14, image="00-assets/logo.png"),
+        layer("programme-image", "image", 7, 78, 8, 14, image="Graphics/logo.png"),
         layer("presenter-name", "text", 18, 77, 59, 8, text="{name}", font_size=5.5, bold=True),
         layer("presenter-role", "text", 18, 86, 59, 6, text="{role}", font_size=3.4, color="#e7e9ed"),
     ])
@@ -356,6 +344,21 @@ def main() -> None:
     config["recording"]["enable"] = False
     api.call("PUT", "/api/playout/config/1", config)
     models = graphics(api)
+    # A trim, two breaks edited into the programme and graphics cues: the
+    # market update on air for a while, the presenter until taken off.
+    (storage / "Documentaries/Oceans (2024)/Oceans.marks.json").write_text(
+        json.dumps(
+            {
+                "trim": {"from": 4.0, "to": 1796.0},
+                "breaks": [{"from": 600.0, "to": 720.0}, {"from": 1320.0, "to": 1380.0}],
+                "graphics": [
+                    {"at": 300.0, "action": "take", "template_id": models["market"], "duration": 20.0},
+                    {"at": 900.0, "action": "take", "template_id": models["presenter"]},
+                    {"at": 960.0, "action": "out", "template_id": models["presenter"]},
+                ],
+            }
+        )
+    )
 
     playlist(api, storage, lengths, config["playlist"]["day_start"])
 
