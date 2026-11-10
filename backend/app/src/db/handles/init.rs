@@ -35,8 +35,13 @@ pub async fn db_migrate(pool: &SqlitePool) -> Result<bool, ProcessError> {
     }
 
     MIGRATOR.run(pool).await?;
+    super::convert_channel_graphics(pool).await?;
 
     if !existing_schema {
+        let mut transaction = pool.begin().await?;
+        super::initialize_channel_graphics_on(&mut transaction, 1).await?;
+        transaction.commit().await?;
+
         // Earlier migrations seed the initial channel. It is a new configuration,
         // not an existing installation whose legacy selection must be preserved.
         sqlx::query("UPDATE config_audio SET loudness_scope = 'all', loudness_enable = 1")
@@ -165,6 +170,44 @@ mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
 
     use super::*;
+
+    #[tokio::test]
+    async fn fresh_graphics_has_only_a_logo_and_deletion_survives_restart() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        db_migrate(&pool).await.unwrap();
+        let models = crate::db::handles::select_graphics_templates(&pool, 1)
+            .await
+            .unwrap();
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].name, "Logo");
+        assert!(models[0].group.is_empty());
+        let frozen: String = sqlx::query_scalar("SELECT json_object('logo',logo,'lshape',lshape,'scenes',graphics_scenes) FROM config_processing WHERE config_id=1").fetch_one(&pool).await.unwrap();
+        crate::db::handles::delete_graphics_template(&pool, 1, models[0].id)
+            .await
+            .unwrap();
+        db_migrate(&pool).await.unwrap();
+        assert!(
+            crate::db::handles::select_graphics_templates(&pool, 1)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            crate::db::handles::select_graphics_bindings(&pool, 1)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let after: String = sqlx::query_scalar("SELECT json_object('logo',logo,'lshape',lshape,'scenes',graphics_scenes) FROM config_processing WHERE config_id=1").fetch_one(&pool).await.unwrap();
+        assert_eq!(frozen, after);
+        crate::db::handles::select_configuration(&pool, 1)
+            .await
+            .unwrap();
+    }
 
     #[tokio::test]
     async fn a_first_start_cut_short_after_the_trigger_still_initializes() {

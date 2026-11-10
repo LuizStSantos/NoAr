@@ -50,7 +50,7 @@ operator credentials. It signs in once through the browser and shares only that
 disposable session across authenticated tests, respecting the login rate limit.
 Anonymous tests retain separate, empty sessions.
 
-The full suite has 15 tests, including:
+The full suite includes:
 
 - Add a clip, edit title/in/out, undo/redo, save and reload; verify saved fields
   through the authenticated API.
@@ -60,6 +60,11 @@ The full suite has 15 tests, including:
 - Create, edit and delete an event, change it to daily recurrence and verify
   next-day occurrences through the real API and after full page reloads.
 - Move, trap and restore keyboard focus in ScheduleDialog; close with Escape.
+- Create/cancel/rename/move/delete Storage folders, including bookmarked-folder
+  reload, and download uploaded MP4/PNG/WebVTT bytes from desktop and phone.
+- Fail a report read, clear stale exportable data and recover on day navigation.
+- Exercise Graphics model/Composer editing, fonts, sources and compatibility
+  navigation through the real backend.
 - Create another event, then let the runner restart the backend and compare
   both saved playlists and the scheduled events through the authenticated API.
 

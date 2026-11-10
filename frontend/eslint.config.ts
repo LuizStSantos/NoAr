@@ -23,6 +23,12 @@ export default defineConfigWithVueTs(
     skipFormatting,
 
     {
+        name: 'qa/commonjs-tools',
+        files: ['qa/**/*.cjs'],
+        rules: { '@typescript-eslint/no-require-imports': 'off' },
+    },
+
+    {
         name: 'custom/rules',
         rules: {
             '@typescript-eslint/no-explicit-any': 'off',

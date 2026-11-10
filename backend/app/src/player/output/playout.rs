@@ -2,7 +2,7 @@ use std::{
     fmt,
     path::{Path, PathBuf},
     sync::atomic::Ordering,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use log::*;
@@ -17,7 +17,7 @@ use crate::{
     file::norm_abs_path,
     player::{
         as_run::{self, AiredEnd},
-        controller::{ChannelManager, loudness_config},
+        controller::{ChannelManager, RunningConfigGuard, loudness_config},
         input::source_generator,
         schedule::{self, InterruptedClip},
         utils::{Media, get_delta, sec_to_time},
@@ -26,7 +26,7 @@ use crate::{
         config::{ENGINE_AUDIO_SAMPLE_RATE, OutputMode, PlayoutConfig, RecordingSource},
         control::{PlayerCtl, control_state},
         errors::ServiceError,
-        logo_marks::{LogoMarks, clip_marks},
+        logo_marks::clip_marks,
     },
 };
 
@@ -55,121 +55,239 @@ pub fn channel_logo(config: &PlayoutConfig) -> Option<LogoConfig> {
 /// without restarting, sized for the output the playout runs with. An image
 /// that cannot be read leaves the logo on air as it was.
 pub fn load_logo(manager: &ChannelManager, config: &PlayoutConfig, width: u32, height: u32) {
-    let logo = channel_logo(config);
-
-    if let Err(error) = manager
-        .logo_control
-        .set_configured(logo.as_ref(), width, height)
-    {
-        warn!(channel = config.general.channel_id; "Logo not changed on air: {error:#}");
+    if let Err(error) = load_logo_inner(manager, config, width, height, false, || Some(())) {
+        warn!(channel = config.general.channel_id; "Logo model not changed on air: {error}");
     }
 }
 
-pub fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
-    let loaded = config
-        .processing
-        .lshape_config(&config.channel.storage)
-        .and_then(|lshape| {
+pub(crate) fn refresh_logo_guarded<G>(
+    manager: &ChannelManager,
+    config: &PlayoutConfig,
+    width: u32,
+    height: u32,
+    before_commit: impl FnMut() -> Option<G>,
+) -> Result<(), ServiceError> {
+    load_logo_inner(manager, config, width, height, true, before_commit)
+}
+
+fn load_logo_inner<G>(
+    manager: &ChannelManager,
+    config: &PlayoutConfig,
+    width: u32,
+    height: u32,
+    refresh: bool,
+    mut before_commit: impl FnMut() -> Option<G>,
+) -> Result<(), ServiceError> {
+    use crate::graphics::{Animation, graphic_spec_for_channel_controlled};
+
+    let model = config.logo_model.as_ref();
+    let prepared = model
+        .map(|model| {
+            graphic_spec_for_channel_controlled(model, &std::collections::HashMap::new(), config)
+        })
+        .transpose()?;
+    let primary = prepared
+        .as_ref()
+        .map_or(usize::MAX, |(_, primary)| *primary);
+    let spec = prepared.map(|(spec, _)| spec);
+    let image = model.and_then(|model| {
+        model
+            .layers
+            .iter()
+            .find(|layer| Some(layer.id.as_str()) == model.control_layer_id.as_deref())
+    });
+    let transition = |animation| {
+        if animation == Animation::None {
+            noar_engine::LogoTransition::Cut
+        } else {
+            noar_engine::LogoTransition::Fade
+        }
+    };
+
+    if let Some(image) = image {
+        let Some(_publication) = before_commit() else {
+            return Ok(());
+        };
+        manager
+            .logo_control
+            .set_transitions(noar_engine::LogoTransitions {
+                show: transition(image.animation_in),
+                hide: transition(image.animation_out),
+                seconds: Some(f64::from(image.animation_ms.max(1)) / 1000.0),
+            });
+    }
+
+    let spec = spec.as_ref().filter(|spec| !spec.layers.is_empty());
+    let clip_animation = image.map(|image| image.clip_animation_ms.unwrap_or(image.animation_ms));
+    let enabled = model.is_some_and(|model| model.always_on == Some(true));
+
+    if refresh {
+        manager.logo_control.refresh_model_guarded(
+            spec,
+            primary,
+            clip_animation,
+            enabled,
+            (width, height),
+            before_commit,
+        )
+    } else {
+        manager
+            .logo_control
+            .set_model(spec, primary, clip_animation, enabled, width, height)
+    }
+    .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+
+    Ok(())
+}
+
+pub async fn load_lshape(manager: &ChannelManager, config: &PlayoutConfig) {
+    async fn load(manager: &ChannelManager, config: &PlayoutConfig) -> Result<(), ServiceError> {
+        use crate::{
+            db::{handles, models::GraphicsRole},
+            graphics::{LayerKind, graphic_spec_for_channel_controlled},
+        };
+
+        let bindings = handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
+        let Some(binding) = bindings
+            .iter()
+            .find(|binding| binding.role == GraphicsRole::Lshape)
+        else {
             manager
                 .lshape_control
-                .set_graphic(lshape.as_ref(), config.output.width, config.output.height)
-                .map_err(|error| format!("{error:#}"))
+                .set_graphic(None, 0, 0)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            return Ok(());
+        };
+        let template =
+            handles::select_graphics_template(&manager.db_pool, manager.id, binding.template_id)
+                .await?
+                .ok_or_else(|| {
+                    ServiceError::Conflict("Missing channel L-shape model".to_string())
+                })?;
+        let has_art = template.layers.iter().any(|layer| {
+            layer.visible
+                && match layer.kind {
+                    LayerKind::Video => false,
+                    LayerKind::Image => layer
+                        .image
+                        .as_deref()
+                        .is_some_and(|image| !image.is_empty()),
+                    LayerKind::Text => !layer.text.is_empty(),
+                    LayerKind::Clock => true,
+                    LayerKind::Box => layer.fill.is_some() || layer.style.stroke.is_some(),
+                }
         });
 
-    if let Err(error) = loaded {
+        if !has_art {
+            manager
+                .lshape_control
+                .set_graphic(None, 0, 0)
+                .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+            return Ok(());
+        }
+
+        let (spec, primary) = graphic_spec_for_channel_controlled(
+            &template,
+            &std::collections::HashMap::new(),
+            config,
+        )?;
+        let control = manager.lshape_control.clone();
+        let running = manager.running_config();
+        let (width, height) = running
+            .as_deref()
+            .map_or((config.output.width, config.output.height), |running| {
+                (running.output.width, running.output.height)
+            });
+        tokio::task::spawn_blocking(move || {
+            control.set_template_controlled(&spec, primary, width, height)
+        })
+        .await
+        .map_err(|_| ServiceError::InternalServerError)?
+        .map_err(|error| ServiceError::Conflict(error.to_string()))?;
+        Ok(())
+    }
+
+    if let Err(error) = load(manager, config).await {
         let _ = manager.lshape_control.set_graphic(None, 0, 0);
         warn!(channel = config.general.channel_id; "L-shape off: {error}");
     }
 }
 
-/// Before a clip plays: where it puts the logo, which logo it shows (while
-/// the channel has one), and the L-shape of its own for its marked stretches
-/// (its graphic, corner or size, each falling back to the channel's), or the
-/// channel's. A setting that cannot be used is
-/// logged, and the channel's is used.
-async fn set_clip_lshape(playout: &AsyncPlayout, config: &PlayoutConfig, marks: &LogoMarks) {
-    let (width, height) = (config.output.width, config.output.height);
+/// Before a clip plays: clear any logo or L-shape of the clip before it.
+/// Graphics inside a video are now cues that put templates on and off air.
+/// Between two clips longer than this, the log says where the time went:
+/// the HLS watchdog restarts the playout once the muxer waits three segments.
+const SLOW_SWITCH: Duration = Duration::from_secs(1);
 
-    if let Err(error) =
-        playout
-            .logo_control()
-            .set_clip_position(marks.logo_position.as_deref(), width, height)
-    {
-        warn!(channel = config.general.channel_id; "Logo position of the clip: {error:#}");
-        let _ = playout
-            .logo_control()
-            .set_clip_position(None, width, height);
+/// The steps NoAr takes between two clips, and how long each took.
+struct SwitchTimer {
+    started: Instant,
+    last: Instant,
+    steps: Vec<(&'static str, Duration)>,
+}
+
+impl SwitchTimer {
+    fn start() -> Self {
+        let now = Instant::now();
+        Self {
+            started: now,
+            last: now,
+            steps: Vec::new(),
+        }
     }
 
-    let image = marks
-        .logo_image
-        .as_deref()
-        .filter(|_| config.processing.add_logo)
-        .and_then(
-            |image| match norm_abs_path(&config.channel.storage, image) {
-                Ok((path, _, _)) => Some(LogoConfig {
-                    path: path.to_string_lossy().to_string(),
-                    scale: (!config.processing.logo_scale.trim().is_empty())
-                        .then(|| config.processing.logo_scale.clone()),
-                    opacity: config.processing.logo_opacity,
-                    position: config.processing.logo_position.clone(),
-                }),
-                Err(error) => {
-                    warn!(channel = config.general.channel_id; "Logo of the clip: {error}");
-                    None
-                }
-            },
-        );
-    let logo = playout.logo_control();
-    let loaded =
-        tokio::task::spawn_blocking(move || logo.set_clip_image(image.as_ref(), width, height))
-            .await;
-
-    if let Ok(Err(error)) = loaded {
-        warn!(channel = config.general.channel_id; "Logo of the clip, the channel's is shown: {error:#}");
+    fn mark(&mut self, step: &'static str) {
+        let now = Instant::now();
+        self.steps.push((step, now - self.last));
+        self.last = now;
     }
 
-    let own = marks.lshape_graphic.is_some()
-        || marks.lshape_corner.is_some()
-        || marks.lshape_scale.is_some();
-    let graphic = (own && !marks.lshape.is_empty())
-        .then(|| {
-            let mut processing = config.processing.clone();
+    fn summary(&self) -> String {
+        self.steps
+            .iter()
+            .map(|(step, took)| format!("{step} {:.3} s", took.as_secs_f64()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 
-            if let Some(graphic) = &marks.lshape_graphic {
-                processing.lshape = graphic.clone();
-            }
-            if let Some(corner) = &marks.lshape_corner {
-                processing.lshape_corner = corner.clone();
-            }
-            if let Some(scale) = marks.lshape_scale {
-                processing.lshape_scale = scale;
-            }
-
-            match processing.lshape_config(&config.channel.storage) {
-                Ok(lshape) => lshape,
-                Err(error) => {
-                    warn!(channel = config.general.channel_id; "L-shape of the clip: {error}");
-                    None
-                }
-            }
-        })
-        .flatten();
-    let control = playout.lshape_control();
-
-    let loaded = tokio::task::spawn_blocking(move || {
-        control.set_clip_graphic(graphic.as_ref(), width, height)
-    })
-    .await;
-
-    if let Ok(Err(error)) = loaded {
-        warn!(channel = config.general.channel_id; "L-shape graphic of the clip: {error:#}");
+    fn report(&self, channel: i32, source: &str) {
+        let total = self.started.elapsed();
+        if total >= SLOW_SWITCH {
+            warn!(channel = channel;
+                "Slow switch to <span class=\"log-addr\">{source}</span>: <span class=\"log-number\">{:.3}s</span> between clips ({})",
+                total.as_secs_f64(),
+                self.summary()
+            );
+        } else {
+            debug!(channel = channel;
+                "Switch to {source} took {:.3} s ({})",
+                total.as_secs_f64(),
+                self.summary()
+            );
+        }
     }
 }
 
-pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
+async fn reset_clip_graphics(playout: &AsyncPlayout, config: &PlayoutConfig) {
+    let (width, height) = (config.output.width, config.output.height);
+    let _ = playout
+        .logo_control()
+        .set_clip_position(None, width, height);
+    let logo = playout.logo_control();
+    let control = playout.lshape_control();
+    let _ = tokio::task::spawn_blocking(move || {
+        let _ = logo.set_clip_image(None, width, height);
+        let _ = control.set_clip_model_art(None, width, height);
+    })
+    .await;
+}
+
+async fn load_startup_graphics(
+    manager: &ChannelManager,
+) -> Result<(PlayoutConfig, RunningConfigGuard), ServiceError> {
+    let graphics_loading = manager.graphics_takes.lock_publication().await;
     let config = manager.config.read().await.clone();
-    let _running_config = manager.track_running_config(config.clone());
+    let running_config = manager.track_running_config(config.clone());
     validate_supported_config(&config)?;
 
     manager
@@ -188,7 +306,17 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
             .logo_transitions()
             .map_err(ServiceError::Conflict)?,
     );
-    load_lshape(&manager, &config);
+    load_logo(manager, &config, config.output.width, config.output.height);
+    load_lshape(manager, &config).await;
+    crate::graphics::load_channel_ticker(manager).await?;
+    drop(graphics_loading);
+
+    Ok((config, running_config))
+}
+
+pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
+    let _graphics_lifecycle = manager.graphics_takes.lifecycle_guard();
+    let (config, _running_config) = load_startup_graphics(&manager).await?;
     let output_config = engine_output_config(
         &config,
         manager.audio_effects.clone(),
@@ -201,6 +329,7 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     .with_preview_url(Some(manager.preview.url().to_string()))
     .with_logo_control(manager.logo_control.clone())
     .with_lshape_control(manager.lshape_control.clone())
+    .with_graphics_control(manager.graphics_control.clone())
     .with_splice_control(manager.splice_control.clone())
     .with_output_link(manager.output_link.clone());
     let playout = open_playout(&config, output_config.clone()).await?;
@@ -235,6 +364,16 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
         ticker_cancel.clone(),
     ));
 
+    let dynamic_graphics = tokio::spawn(crate::graphics::run_dynamic_graphics(
+        manager.clone(),
+        ticker_cancel.clone(),
+    ));
+
+    let data_sources = tokio::spawn(crate::graphics::sources::run(
+        manager.clone(),
+        ticker_cancel.clone(),
+    ));
+
     let result = match config.output.mode {
         OutputMode::HLS => play_hls(manager.clone(), &config, &playout).await,
         _ => play_loop(manager.clone(), &config, &playout, None).await,
@@ -243,6 +382,8 @@ pub async fn player(manager: ChannelManager) -> Result<(), ServiceError> {
     ticker_cancel.cancel();
     let _ = ticker.await;
     let _ = graphics_ticker.await;
+    let _ = dynamic_graphics.await;
+    let _ = data_sources.await;
 
     let finish_result = playout.finish().await.map_err(engine_error);
     result?;
@@ -338,8 +479,12 @@ async fn play_loop(
     let mut preloaded: Option<String> = None;
     // The run of commercials on air or next has had its SCTE-35 break.
     let mut break_announced = false;
+    // Time spent between two clips, kept across a scheduled event so the
+    // way back to the playlist is measured too.
+    let mut switch: Option<SwitchTimer> = None;
 
     loop {
+        let timer = switch.get_or_insert_with(SwitchTimer::start);
         // A due scheduled event airs between clips; afterwards the playlist
         // restarts from the time shift the event left behind.
         match schedule::play_queued_event(&manager, config, playout, interrupted.take()).await? {
@@ -349,15 +494,19 @@ async fn play_loop(
                 return Ok(());
             }
             Some(false) => {
+                // The event itself aired: measure from its end.
+                *timer = SwitchTimer::start();
                 node_sources = source_generator(manager.clone()).await;
+                timer.mark("playlist rebuilt after the event");
                 continue;
             }
-            None => {}
+            None => timer.mark("scheduled events checked"),
         }
 
         let Some(node) = node_sources.next().await else {
             break;
         };
+        timer.mark("next playlist entry");
 
         *manager.current_media.lock().await = Some(node.clone());
         // A clip started: the output is open, so the playout is on air.
@@ -417,6 +566,9 @@ async fn play_loop(
         }
 
         let duration = playout_duration(&node);
+        if let Some(timer) = switch.as_mut() {
+            timer.mark("clip announced");
+        }
         let next_preload = match (duration, next_source(&manager).await) {
             (Some(duration), Some(next)) => {
                 preloaded = Some(next.clone());
@@ -433,21 +585,28 @@ async fn play_loop(
         let is_ad = node.ad;
         // An entry marked while building the playlist keeps its own marks;
         // other entries use the video's, from the storage.
+        let mut timer = switch.take().unwrap_or_else(SwitchTimer::start);
+        timer.mark("next clip and playout rate");
         let marks = match &node.marks {
             Some(marks) => marks.clone(),
             None => clip_marks(&config.channel.storage, &node.source).await,
         };
-        let logo_gaps = marks.gaps();
-        let lshape = marks.lshape_spans();
-        set_clip_lshape(playout, config, &marks).await;
+        timer.mark("video marks read");
+        reset_clip_graphics(playout, config).await;
+        timer.mark("clip graphics reset");
         let mut breaks = playlist_breaks(&manager, config, &node, &mut break_announced).await;
         // Breaks marked inside the video itself, when it is not a commercial.
         if !node.ad {
             breaks.within = marks.breaks_in_clip(node.seek, duration);
         }
         manager.splice_control.plan_next_clip(breaks.clone());
+        timer.mark("ad breaks planned");
         let aired = as_run::record_start(&manager, as_run::programme_entry(config, &node)).await;
+        timer.mark("as-run recorded");
         let clip_started = std::time::Instant::now();
+        let _cues =
+            crate::player::clip_cues::run_clip_cues(&manager, marks.cues_in_clip(node.seek));
+        timer.report(id, display_source);
         let result = playout
             .play_with_timing_logo_fade_rate_and_audio(
                 node.source.clone(),
@@ -461,8 +620,7 @@ async fn play_loop(
                     // Commercials keep the logo off even without a programme
                     // fading it out before them (a playlist that opens on one).
                     hidden: is_ad,
-                    gaps: logo_gaps,
-                    lshape,
+                    ..LogoFade::default()
                 },
                 playout_rate,
             )
@@ -791,7 +949,6 @@ fn engine_output_config(
     }
     let fps = config.output.fps.round() as u32;
 
-    let logo = channel_logo(config);
     let media_log_level = config
         .logging
         .media_level
@@ -828,7 +985,6 @@ fn engine_output_config(
                     *last_output = Some(std::time::Instant::now());
                 }
             })))
-            .with_logo(logo)
             .with_desktop_fullscreen(config.output.desktop_fullscreen)
             .with_desktop_control_callback(desktop_control_callback)
             .with_logging(media_log_level, ingest_log_level)
@@ -1056,13 +1212,10 @@ pub(crate) async fn play_plain_from(
             None,
             subtitle_media_path(config, source),
             {
-                let marks = clip_marks(&config.channel.storage, source).await;
-                set_clip_lshape(playout, config, &marks).await;
+                reset_clip_graphics(playout, config).await;
 
                 LogoFade {
                     hidden: commercial,
-                    gaps: marks.gaps(),
-                    lshape: marks.lshape_spans(),
                     ..LogoFade::default()
                 }
             },
@@ -1087,10 +1240,28 @@ fn request_shutdown(shutdown: &CancellationToken) {
 
 #[cfg(test)]
 mod tests {
-    use super::{hls_rate_correction, playout_duration, recording_config, request_shutdown};
+    use super::{
+        SLOW_SWITCH, SwitchTimer, hls_rate_correction, playout_duration, recording_config,
+        request_shutdown,
+    };
     use crate::player::utils::Media;
     use crate::utils::config::{OutputMode, PlayoutConfig, RecordingSource};
     use tokio_util::sync::CancellationToken;
+
+    #[test]
+    fn switch_timer_names_each_step_in_order() {
+        let mut timer = SwitchTimer::start();
+        timer.mark("video marks read");
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        timer.mark("clip graphics reset");
+
+        let summary = timer.summary();
+        let marks = summary.find("video marks read ").unwrap();
+        let graphics = summary.find("clip graphics reset ").unwrap();
+        assert!(marks < graphics, "{summary}");
+        assert!(timer.steps[1].1 >= std::time::Duration::from_millis(20));
+        assert!(timer.started.elapsed() < SLOW_SWITCH * 60);
+    }
 
     fn recording_test_config(mode: OutputMode, source: RecordingSource) -> PlayoutConfig {
         let mut config = PlayoutConfig::default();
@@ -1108,6 +1279,69 @@ mod tests {
         config.recording.audio_codec = "aac".to_string();
         config.recording.audio_bitrate = 128;
         config
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn startup_graphics_wait_for_authored_edits_and_do_not_resurrect_deleted_models() {
+        use crate::{
+            db::{handles, models::GraphicsTemplate},
+            player::controller::ChannelManager,
+            utils::system::SystemStat,
+        };
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        handles::db_migrate(&pool).await.unwrap();
+        let root =
+            std::env::temp_dir().join(format!("noar-startup-graphics-{}", uuid::Uuid::new_v4()));
+        tokio::fs::create_dir_all(&root).await.unwrap();
+        let mut config = PlayoutConfig::new(&pool, 1, None).await.unwrap();
+        config.channel.storage = root.clone();
+        config.storage.path = root.clone();
+        let shutdown = CancellationToken::new();
+        let manager = ChannelManager::new(
+            pool.clone(),
+            handles::select_channel(&pool, &1).await.unwrap(),
+            config,
+            shutdown.clone(),
+            SystemStat::new(),
+        )
+        .await
+        .unwrap();
+        let id = handles::insert_graphics_template(
+            &pool,
+            &GraphicsTemplate {
+                channel_id: 1,
+                name: "Deleted before startup snapshot".to_string(),
+                always_on: Some(true),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        let edit = manager.graphics_takes.begin_edit().await;
+        let startup = super::load_startup_graphics(&manager);
+        tokio::pin!(startup);
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(10), &mut startup)
+                .await
+                .is_err(),
+            "startup must acquire the same publication lock as authoring"
+        );
+        handles::delete_graphics_template(&pool, 1, id)
+            .await
+            .unwrap();
+        drop(edit);
+        let (_, running) = startup.await.unwrap();
+        assert_eq!(manager.graphics_control.persistent_visible(id as u64), None);
+        drop(running);
+        shutdown.cancel();
+        tokio::fs::remove_dir_all(root).await.unwrap();
     }
 
     #[test]

@@ -36,7 +36,7 @@ const parts = ref(1)
 const configStore = useConfig()
 const indexStore = useIndex()
 /** The marks of the video are open in their editor, on this tab. */
-const editingMarks = ref<'trim' | 'hide' | null>(null)
+const editingMarks = ref<'trim' | 'graphics' | null>(null)
 /** The marks of this entry alone are open in the editor. */
 const editingEntryMarks = ref(false)
 /** This entry has marks of its own. */
@@ -204,14 +204,7 @@ function entryMarksSaved(marks: VideoMarks) {
     setInOut(marks.trim?.from ?? 0, marks.trim?.to ?? draft.value.duration)
 
     const own = { ...marks, trim: null }
-    const empty =
-        !own.hide.length &&
-        !own.breaks.length &&
-        !own.lshape.length &&
-        !own.lshape_graphic &&
-        !own.lshape_corner &&
-        own.lshape_scale === null &&
-        !own.logo_position
+    const empty = !own.breaks.length && !own.graphics.length
 
     draft.value.marks = empty ? null : own
 }
@@ -393,7 +386,7 @@ function apply() {
                 <button v-if="hasEntryMarks" class="link-accent min-h-8 text-[13px]" @click="draft.marks = null">
                     {{ t('onair.entryMarksReset') }}
                 </button>
-                <button class="link-accent min-h-8 text-[13px]" @click="editingMarks = 'hide'">
+                <button class="link-accent min-h-8 text-[13px]" @click="editingMarks = 'graphics'">
                     {{ t('onair.videoMarks') }}
                 </button>
             </span>
@@ -448,7 +441,7 @@ function apply() {
             :channel-id="channelId"
             :path="storagePath"
             :length="draft.duration"
-            initial-kind="hide"
+            initial-kind="graphics"
             :entry="{ marks: draft.marks ?? null, from: parsedIn ?? 0, to: parsedOut ?? draft.duration }"
             @saved="entryMarksSaved"
             @close="editingEntryMarks = false"

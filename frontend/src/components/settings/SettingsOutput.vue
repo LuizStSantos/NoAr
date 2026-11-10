@@ -10,6 +10,7 @@ import SectionCard from '@/components/settings/SectionCard.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import { useCodecLabels } from '@/composables/codecs'
 import { usePlayoutPage } from '@/composables/settingsPage'
+import { useVideoDevices } from '@/composables/videoDevices'
 import { parseDeckLink, videoModeInfo, videoModeLabel } from '@/composables/videoModes'
 
 const { t, locale } = useI18n()
@@ -42,32 +43,9 @@ function modeOf(name: string | undefined): 'desktop' | 'hls' | 'stream' | 'ndi' 
 /** Why NDI cannot be used on this server; null when it can. */
 const ndiUnavailable = computed(() => configStore.outputCodecs.ndi_unavailable)
 
-/** Video cards on the server, looked up when the SDI destination is shown. */
-const videoDevices = ref<VideoDevices | null>(null)
-const devicesError = ref('')
-const loadingDevices = ref(false)
-
-async function loadVideoDevices() {
-    loadingDevices.value = true
-    devicesError.value = ''
-
-    try {
-        videoDevices.value = await configStore.getVideoDevices()
-    } catch (err) {
-        devicesError.value = err instanceof Error ? err.message : String(err)
-    } finally {
-        loadingDevices.value = false
-    }
-}
-
-watch(
+const { videoDevices, devicesError, loadingDevices } = useVideoDevices(
     () => output.value?.mode,
-    (mode) => {
-        if (mode === 'sdi' && !videoDevices.value && !loadingDevices.value) {
-            loadVideoDevices()
-        }
-    },
-    { immediate: true },
+    () => configStore.getVideoDevices(),
 )
 
 const sdi = computed(() => parseDeckLink(output.value.stream_url ?? ''))

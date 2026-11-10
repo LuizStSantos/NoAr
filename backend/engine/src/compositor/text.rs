@@ -7,7 +7,6 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-#[cfg(feature = "desktop-base")]
 use cosmic_text::{Align, Wrap};
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache, Weight};
 use regex::Regex;
@@ -107,6 +106,59 @@ fn renderer() -> &'static Mutex<TextRenderer> {
     TEXT_RENDERER.get_or_init(|| Mutex::new(TextRenderer::new()))
 }
 
+/// Validate one immutable OpenType/TrueType face before persisting an upload.
+pub(crate) fn uploaded_font_name(data: &[u8]) -> Result<String> {
+    if !matches!(data.get(..4), Some(b"OTTO" | b"\0\x01\0\0")) {
+        return Err(anyhow!("Upload a TrueType (.ttf) or OpenType (.otf) font"));
+    }
+
+    let mut database = cosmic_text::fontdb::Database::new();
+    database.load_font_data(data.to_vec());
+    let faces: Vec<_> = database.faces().collect();
+
+    if faces.len() != 1 {
+        return Err(anyhow!("The file must contain exactly one valid font face"));
+    }
+
+    faces[0]
+        .families
+        .first()
+        .map(|(name, _)| name.clone())
+        .context("The font has no family name")
+}
+
+/// Namespace faces by asset identity so identical filenames cannot replace a model's font.
+pub(crate) fn register_uploaded_font(family: &str, data: Vec<u8>) -> Result<()> {
+    uploaded_font_name(&data)?;
+    let mut renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+    let database = renderer.font_system.db_mut();
+
+    if database
+        .faces()
+        .any(|face| face.families.iter().any(|(name, _)| name == family))
+    {
+        return Ok(());
+    }
+
+    let ids = database.load_font_source(cosmic_text::fontdb::Source::Binary(std::sync::Arc::new(
+        data,
+    )));
+
+    for id in ids {
+        let mut face = database
+            .face(id)
+            .context("The validated font could not be registered")?
+            .clone();
+        database.remove_face(id);
+        face.families
+            .iter_mut()
+            .for_each(|(name, _)| *name = family.to_string());
+        database.push_face_info(face);
+    }
+
+    Ok(())
+}
+
 pub(crate) fn available_font_families() -> Vec<String> {
     let renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
     renderer
@@ -114,6 +166,7 @@ pub(crate) fn available_font_families() -> Vec<String> {
         .db()
         .faces()
         .filter_map(|face| face.families.first().map(|(family, _)| family.clone()))
+        .filter(|family| !family.starts_with("NoArFont_"))
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect()
@@ -450,17 +503,15 @@ fn render_text_overlay(
     let mut buffer = Buffer::new(font_system, metrics);
     buffer.set_size(Some(text_width as f32), Some(text_height as f32));
 
-    let mut attrs = Attrs::new();
-
-    if let Some(family) = &config.font_family {
-        attrs = attrs.family(Family::Name(family));
-    }
-
-    attrs = attrs.weight(match config.font_weight {
+    let weight = match config.font_weight {
         TextWeight::Normal => Weight::NORMAL,
         TextWeight::Semibold => Weight::SEMIBOLD,
         TextWeight::Bold => Weight::BOLD,
-    });
+    };
+    let attrs = match &config.font_family {
+        Some(family) => family_attrs(font_system, family, weight),
+        None => Attrs::new().weight(weight),
+    };
     buffer.set_text(text, &attrs, Shaping::Advanced, None);
     buffer.shape_until_scroll(font_system, false);
 
@@ -559,7 +610,180 @@ fn render_width(config: &TextConfig, text: &str, output_width: u32, padding: u32
     even(estimated.max(output_width).min(max_width)).max(2)
 }
 
-fn rgba_to_yuva420p(rgba: &[u8], width: u32, height: u32) -> Result<VideoFrame> {
+/// How a text sits across its box.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum BlockAlign {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
+/// Draw `text` into a `width` x `height` RGBA block, wrapped to the width
+/// and centred top to bottom; what does not fit is cut off.
+pub(crate) struct TextStyle<'a> {
+    pub font_family: Option<&'a str>,
+    /// Pixels.
+    pub font_size: f32,
+    pub bold: bool,
+    pub color: RgbaColor,
+    pub align: BlockAlign,
+}
+
+/// The attributes that select `family` at `weight`: the requested weight and
+/// an upright style when the family has such a face, otherwise the weight and
+/// style of its nearest face. An uploaded font often has a single face (only
+/// bold, or bold italic); asking it for another weight made the shaper fall
+/// back to the default font.
+fn family_attrs<'a>(font_system: &FontSystem, family: &'a str, weight: Weight) -> Attrs<'a> {
+    let faces: Vec<_> = font_system
+        .db()
+        .faces()
+        .filter(|face| face.families.iter().any(|(name, _)| name == family))
+        .collect();
+    let attrs = Attrs::new().family(Family::Name(family)).weight(weight);
+
+    if faces.iter().any(|face| face.weight == weight) {
+        let upright = faces
+            .iter()
+            .any(|face| face.weight == weight && face.style == cosmic_text::Style::Normal);
+
+        return if upright {
+            attrs
+        } else {
+            let style = faces
+                .iter()
+                .find(|face| face.weight == weight)
+                .map_or(cosmic_text::Style::Normal, |face| face.style);
+
+            attrs.style(style)
+        };
+    }
+
+    match faces
+        .iter()
+        .min_by_key(|face| (i32::from(face.weight.0) - i32::from(weight.0)).abs())
+    {
+        Some(face) => attrs.weight(face.weight).style(face.style),
+        None => attrs,
+    }
+}
+
+pub(crate) fn render_text_block(
+    text: &str,
+    style: &TextStyle<'_>,
+    width: u32,
+    height: u32,
+) -> Result<Vec<u8>> {
+    render_graphic_text(text, style, Some(width), height).map(|(_, pixels)| pixels)
+}
+
+/// Shape a complete single line before allocating its bounded scrolling strip.
+pub(crate) fn render_text_line(
+    text: &str,
+    style: &TextStyle<'_>,
+    height: u32,
+) -> Result<(u32, Vec<u8>)> {
+    let line = text.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    render_graphic_text(&line, style, None, height)
+}
+
+fn render_graphic_text(
+    text: &str,
+    style: &TextStyle<'_>,
+    width: Option<u32>,
+    height: u32,
+) -> Result<(u32, Vec<u8>)> {
+    let TextStyle {
+        font_family,
+        font_size,
+        bold,
+        color,
+        align,
+    } = *style;
+
+    if !font_size.is_finite() || font_size <= 0.0 {
+        return Err(anyhow!("text font size must be a positive number"));
+    }
+
+    let scrolling = width.is_none();
+    let line_height = (font_size * 1.2).ceil();
+    let mut renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+    let TextRenderer {
+        font_system,
+        swash_cache,
+        cache_checked,
+    } = &mut *renderer;
+    let mut buffer = Buffer::new(font_system, Metrics::new(font_size, line_height));
+    let weight = if bold { Weight::BOLD } else { Weight::NORMAL };
+    let attrs = match font_family.filter(|family| !family.trim().is_empty()) {
+        Some(family) => family_attrs(font_system, family, weight),
+        None => Attrs::new().weight(weight),
+    };
+
+    buffer.set_size(width.map(|width| width as f32), None);
+    buffer.set_wrap(if scrolling {
+        Wrap::None
+    } else {
+        Wrap::WordOrGlyph
+    });
+    buffer.set_text(
+        text,
+        &attrs,
+        Shaping::Advanced,
+        Some(match align {
+            BlockAlign::Left => Align::Left,
+            BlockAlign::Center => Align::Center,
+            BlockAlign::Right => Align::Right,
+        }),
+    );
+    buffer.shape_until_scroll(font_system, false);
+
+    let measured = buffer
+        .layout_runs()
+        .map(|run| run.line_w)
+        .fold(0.0_f32, f32::max);
+    let width = width.unwrap_or(((measured.ceil() as u32 + 3) & !1).max(2));
+    anyhow::ensure!(
+        !scrolling || (width <= 32768 && u64::from(width) * u64::from(height) <= 8 * 1024 * 1024),
+        "scrolling text strip exceeds 32768 pixels or 32 MiB; reduce text or font size"
+    );
+    let mut rgba = vec![0_u8; width as usize * height as usize * 4];
+
+    if text.trim().is_empty() || width < 2 || height < 2 {
+        return Ok((width, rgba));
+    }
+
+    let text_height: f32 = buffer.layout_runs().map(|run| run.line_height).sum();
+    let top = ((height as f32 - text_height) / 2.0).round() as i32;
+
+    buffer.draw(
+        font_system,
+        swash_cache,
+        Color::rgba(color.r, color.g, color.b, color.a),
+        |x, y, pixel_width, pixel_height, color| {
+            let color = rgba_color(color);
+            let Some(dest) = PixelRect::new(x, y + top, pixel_width, pixel_height, width, height)
+            else {
+                return;
+            };
+
+            for py in 0..dest.height {
+                for px in 0..dest.width {
+                    let idx = ((dest.y + py) * width as usize + dest.x + px) * 4;
+                    alpha_composite(&mut rgba[idx..idx + 4], color);
+                }
+            }
+        },
+    );
+
+    trim_glyph_cache(swash_cache, cache_checked);
+
+    Ok((width, rgba))
+}
+
+pub(crate) fn rgba_to_yuva420p(rgba: &[u8], width: u32, height: u32) -> Result<VideoFrame> {
     let mut frame = VideoFrame::new(PixelFormat::Yuva420p, width, height);
     let width = width as usize;
     let height = height as usize;
@@ -637,7 +861,7 @@ fn rgba_color(color: Color) -> RgbaColor {
     RgbaColor { r, g, b, a }
 }
 
-fn alpha_composite(dst: &mut [u8], src: RgbaColor) {
+pub(crate) fn alpha_composite(dst: &mut [u8], src: RgbaColor) {
     let alpha = src.a as u16;
     let inv_alpha = 255 - alpha;
     dst[0] = (((u16::from(dst[0]) * inv_alpha) + (u16::from(src.r) * alpha) + 127) / 255) as u8;
@@ -833,6 +1057,90 @@ mod cache_tests {
             "1000 changing overlays: {:?}, slowest render: {:?}",
             started.elapsed(),
             worst
+        );
+    }
+}
+
+#[cfg(test)]
+mod uploaded_font_tests {
+    use super::*;
+
+    #[test]
+    fn validated_upload_selects_its_exact_bytes_by_immutable_family() {
+        let data = std::fs::read(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests_assets/fonts/graphics.ttf"),
+        )
+        .unwrap();
+        assert!(uploaded_font_name(b"not a font").is_err());
+        assert!(uploaded_font_name(&data).unwrap().contains("NoAr"));
+        let alias = "NoArFont_stage3_verified";
+        register_uploaded_font(alias, data.clone()).unwrap();
+        register_uploaded_font(alias, data.clone()).unwrap();
+        let renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+        let database = renderer.font_system.db();
+        let families = [Family::Name(alias)];
+        let id = database
+            .query(&cosmic_text::fontdb::Query {
+                families: &families,
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(
+            database
+                .with_face_data(id, |selected, _| selected == data)
+                .unwrap()
+        );
+        assert_eq!(
+            database
+                .faces()
+                .filter(|face| face.families.iter().any(|(name, _)| name == alias))
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn a_single_face_upload_is_used_whatever_weight_is_asked() {
+        let data = std::fs::read(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests_assets/fonts/graphics.ttf"),
+        )
+        .unwrap();
+        let alias = "NoArFont_single_face_weight";
+        register_uploaded_font(alias, data).unwrap();
+        let renderer = renderer().lock().unwrap_or_else(PoisonError::into_inner);
+        let face_weight = renderer
+            .font_system
+            .db()
+            .faces()
+            .find(|face| face.families.iter().any(|(name, _)| name == alias))
+            .unwrap()
+            .weight;
+        let other = if face_weight == Weight::BOLD {
+            Weight::NORMAL
+        } else {
+            Weight::BOLD
+        };
+
+        for asked in [face_weight, other] {
+            let attrs = family_attrs(&renderer.font_system, alias, asked);
+            let query = cosmic_text::fontdb::Query {
+                families: &[Family::Name(alias)],
+                weight: attrs.weight,
+                style: attrs.style,
+                ..Default::default()
+            };
+            let id = renderer.font_system.db().query(&query);
+
+            assert!(
+                id.is_some(),
+                "the uploaded face is selected when {asked:?} is asked"
+            );
+            assert_eq!(attrs.weight, face_weight);
+        }
+
+        assert_eq!(
+            family_attrs(&renderer.font_system, "No such family", Weight::BOLD).weight,
+            Weight::BOLD
         );
     }
 }

@@ -21,7 +21,7 @@ use tokio::{
 use tokio_stream::StreamExt;
 
 use crate::file::{
-    MoveObject, PathObject, VideoFile, norm_abs_path,
+    MoveObject, PathObject, VideoFile, default_asset_path, norm_abs_path,
     upload::{
         UploadStatus, UploadStatusQuery, finalize_upload, get_or_create_upload, received_ranges,
         sanitize_upload_filename, validate_chunk, validate_upload_metadata, write_upload_chunk,
@@ -199,12 +199,12 @@ impl LocalStorage {
             };
 
             // Read the marks file only when there is one: whether it keeps the
-            // logo off or marks breaks, and its trim, are told apart.
+            // has graphics cues or marks breaks, and its trim, are told apart.
             let (logo_marks, trim) = if media && logo_stems.contains(&stem) {
                 let marks = read_marks(&file).await;
 
                 (
-                    !marks.hide.is_empty() || !marks.breaks.is_empty() || !marks.lshape.is_empty(),
+                    !marks.graphics.is_empty() || !marks.breaks.is_empty(),
                     marks.trim,
                 )
             } else {
@@ -554,29 +554,36 @@ impl LocalStorage {
         filler_list
     }
 
-    pub async fn copy_assets(&self) -> Result<(), std::io::Error> {
+    /// Put the default logo and empty subtitle file in the storage, in
+    /// `Graphics`. A storage set up by an earlier version keeps its
+    /// `00-assets` folder, which its settings point to. Answers the folder
+    /// the defaults live in.
+    pub async fn copy_assets(&self) -> Result<&'static str, std::io::Error> {
         let root = self.root.read().await.clone();
+
+        if root.join(crate::file::LEGACY_ASSETS_FOLDER).is_dir() {
+            return Ok(crate::file::LEGACY_ASSETS_FOLDER);
+        }
+
         if root.is_dir() {
-            let target = root.join("00-assets");
-            // Installed with the image, from before the rename, or beside
-            // the binary when run from the source tree.
-            let asset = |name: &str| {
-                ["/usr/share/noar", "/usr/share/ffplayout", "./assets"]
-                    .iter()
-                    .map(|dir| Path::new(dir).join(name))
-                    .find(|path| path.is_file())
-                    .unwrap_or_else(|| Path::new("./assets").join(name))
-            };
-            let dummy_source = asset("dummy.vtt");
-            let logo_source = asset("logo.png");
+            let target = root.join(crate::file::ASSETS_FOLDER);
+            let dummy_source = default_asset_path("dummy.vtt");
+            let logo_source = default_asset_path("logo.png");
 
-            if !target.is_dir() {
-                let dummy_target = target.join("dummy.vtt");
-                let logo_target = target.join("logo.png");
+            let dummy_target = target.join("dummy.vtt");
+            let logo_target = target.join("logo.png");
 
+            // The folder may already hold Composer uploads: add only what is missing.
+            if !dummy_target.is_file() || !logo_target.is_file() {
                 fs::create_dir_all(&target).await?;
-                fs::copy(&dummy_source, &dummy_target).await?;
-                fs::copy(&logo_source, &logo_target).await?;
+
+                if !dummy_target.is_file() {
+                    fs::copy(&dummy_source, &dummy_target).await?;
+                }
+
+                if !logo_target.is_file() {
+                    fs::copy(&logo_source, &logo_target).await?;
+                }
 
                 #[cfg(target_family = "unix")]
                 {
@@ -621,7 +628,7 @@ impl LocalStorage {
             error!("Storage path {:?} not exists!", self.root);
         }
 
-        Ok(())
+        Ok(crate::file::ASSETS_FOLDER)
     }
 }
 

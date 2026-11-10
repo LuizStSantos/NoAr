@@ -19,7 +19,7 @@ use log::{debug, trace, warn};
 use crate::{
     LogoFade, MAX_LOGO_GAPS, PlaybackControl,
     benchmark::{self, Stage},
-    compositor::{logo::*, text::TextOverlay},
+    compositor::{graphics::logo::*, text::TextOverlay},
     input::{
         gstreamer::{FrameEvent, Source},
         preload::{OpenedInput, Preloaded},
@@ -313,7 +313,7 @@ impl LogoFadePlan {
             lshape_count += 1;
         }
 
-        let transitions = cfg.logo_control.transitions();
+        let transitions = cfg.logo_control.clip_transitions();
         let frames = (transitions.fade_seconds(LOGO_FADE_SECONDS) * fps)
             .round()
             .max(1.0) as i64;
@@ -340,7 +340,7 @@ impl LogoFadePlan {
 
     /// How far into the L-shape the stretches marked in the clip put `pts`.
     fn lshape_level(self, pts: i64) -> f64 {
-        crate::compositor::lshape::marked_level(
+        crate::compositor::graphics::lshape::marked_level(
             &self.lshape[..self.lshape_count],
             pts,
             self.lshape_frames,
@@ -465,8 +465,17 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             );
         }
     }
-    debug!(channel = cfg.channel_id.unwrap_or_default();
-        "GStreamer source opened in {:?}; output video={}, audio={}", opening_started.elapsed(), timeline.video_pts, timeline.audio_pts);
+    // A slow open holds the output back: say so, the HLS watchdog restarts
+    // the playout once the muxer waits three segments.
+    // A live waits for its signal; only files and clips count as slow.
+    let opening = opening_started.elapsed();
+    if !live && opening >= std::time::Duration::from_secs(1) {
+        warn!(channel = cfg.channel_id.unwrap_or_default();
+            "Slow source open: {path} took {:.3} s; output video={}, audio={}", opening.as_secs_f64(), timeline.video_pts, timeline.audio_pts);
+    } else {
+        debug!(channel = cfg.channel_id.unwrap_or_default();
+            "GStreamer source opened in {opening:?}; output video={}, audio={}", timeline.video_pts, timeline.audio_pts);
+    }
     let mut info = opened.input.info();
     let duration =
         duration_seconds.or_else(|| info.duration.map(|v| (v - seek.unwrap_or(0.0)).max(0.0)));
@@ -979,7 +988,8 @@ struct VideoCompositor {
     moved_logo: Option<(String, usize, LogoOverlay)>,
     logo_control: LogoControl,
     lshape_control: crate::LShapeControl,
-    lshape_scaler: crate::compositor::lshape::LShapeScaler,
+    lshape_scaler: crate::compositor::graphics::lshape::LShapeScaler,
+    graphics_control: crate::GraphicsControl,
     text: Option<TextOverlay>,
     runtime_text: RuntimeTextOverlay,
     last_composited_frame: Option<VideoFrame>,
@@ -1000,6 +1010,7 @@ impl VideoCompositor {
             logo_control: cfg.logo_control.clone(),
             lshape_control: cfg.lshape_control.clone(),
             lshape_scaler: Default::default(),
+            graphics_control: cfg.graphics_control.clone(),
             text: cfg
                 .text
                 .as_ref()
@@ -1235,18 +1246,30 @@ fn encode_composited_frame<O: FrameOutput>(
     video
         .runtime_text
         .update(timeline.video_pts, timeline.text_pts);
+    // Template graphics go on the picture before the L-shape shrinks it, so
+    // a lower third on air during an L-shape follows the picture.
+    video.graphics_control.blend(&mut frame);
+
     // The L-shape first: the texts go over it, and the logo gives way to it,
     // going off before the picture shrinks and back after it grew back.
     let mut logo_off = 0.0;
 
-    if let Some((graphic, progress)) = video
-        .lshape_control
-        .frame(logo_fade_plan.lshape_level(timeline.video_pts))
-    {
-        let (gone, picture) = crate::compositor::lshape::lshape_phases(progress);
+    // An L-shape template on air takes the place of the channel's L-shape.
+    let template_lshape = video
+        .graphics_control
+        .picture(frame.width(), frame.height());
+    let channel_lshape = match template_lshape {
+        Some(_) => None,
+        None => video
+            .lshape_control
+            .frame(logo_fade_plan.lshape_level(timeline.video_pts)),
+    };
+
+    if let Some((graphic, progress)) = template_lshape.or(channel_lshape) {
+        let (gone, picture) = crate::compositor::graphics::lshape::lshape_phases(progress);
         logo_off = gone;
 
-        if let Err(error) = crate::compositor::lshape::apply_lshape(
+        if let Err(error) = crate::compositor::graphics::lshape::apply_lshape(
             &mut frame,
             &graphic,
             picture,
@@ -1297,6 +1320,8 @@ fn apply_overlays(
     let logo = video.logo_control.frame();
     // The logo is off for the L-shape: it goes before the picture shrinks
     // and comes back after the picture grew back.
+    let permanent_logo_visibility =
+        opacity * logo_fade_plan.gap_factor(timeline.video_pts) * (1.0 - logo_off.clamp(0.0, 1.0));
     let opacity = opacity
         * logo.visibility
         * logo_fade_plan.gap_factor(timeline.video_pts)
@@ -1339,13 +1364,21 @@ fn apply_overlays(
     // comes up.
     if let Some((image, left)) = &logo.outgoing {
         if let Some(old) = image.as_deref().or(configured) {
-            draw_logo(frame, old, opacity * left, output);
+            if old.is_model() {
+                old.blend_model(frame, &logo, permanent_logo_visibility * left, 1.0, true);
+            } else {
+                draw_logo(frame, old, opacity * left, output);
+            }
         }
         incoming = 1.0 - left;
     }
 
     if let Some(current) = logo.replacement.as_deref().or(configured) {
-        draw_logo(frame, current, opacity * incoming, output);
+        if current.is_model() {
+            current.blend_model(frame, &logo, permanent_logo_visibility, incoming, false);
+        } else {
+            draw_logo(frame, current, opacity * incoming, output);
+        }
     }
 
     if let Some(text) = &mut video.text {
@@ -1361,6 +1394,12 @@ fn apply_overlays(
             text.blend(frame, timeline.video_pts, timeline.text_pts);
         });
     }
+
+    // Permanent text models live above the picture. The channel logo uses
+    // the shared layer model control above for clip and desktop compatibility.
+    video
+        .graphics_control
+        .blend_always_on(frame, permanent_logo_visibility);
 
     timeline.text_pts += 1;
 }

@@ -41,13 +41,19 @@ pub use audio_mixer::{
     LiveLoudnessControl, LiveLoudnessMeasurement, LiveLoudnessMetrics, LiveLoudnessProcessor,
     LoudnessScope,
 };
-pub use compositor::logo::{
+pub use compositor::graphics::logo::{
     LogoControl, LogoState, LogoTransition, LogoTransitions, MAX_LOGO_TRANSITION_SECONDS,
 };
-pub use compositor::lshape::{
+pub use compositor::graphics::lshape::{
     LSHAPE_LOGO_SECONDS, LSHAPE_MAX_SCALE, LSHAPE_MIN_SCALE, LSHAPE_SECONDS, LSHAPE_SWITCH_SECONDS,
     LShapeConfig, LShapeControl, LShapeCorner, LShapePlacement, lshape_phases,
 };
+pub use compositor::graphics::{
+    AlwaysOnSlot, GraphicAnimation, GraphicContent, GraphicLayerSpec, GraphicOnAir, GraphicShape,
+    GraphicSpec, GraphicsControl, MAX_GRAPHICS_ON_AIR, PictureWindow, RenderedGraphic,
+    ScrollDirection, TextScroll as GraphicTextScroll, logo_layer_geometry, render_graphic,
+};
+pub use compositor::text::BlockAlign;
 pub use convert::{ConvertTarget, MediaShape, convert_to_output, probe_shape, video_matches};
 use input::preload::Preloaded;
 pub use input::preload::{PreloadSignal, Preloader};
@@ -92,6 +98,14 @@ pub use utils::{
         probe_media, probe_media_info,
     },
 };
+
+pub fn uploaded_font_name(data: &[u8]) -> anyhow::Result<String> {
+    compositor::text::uploaded_font_name(data)
+}
+
+pub fn register_uploaded_font(family: &str, data: Vec<u8>) -> anyhow::Result<()> {
+    compositor::text::register_uploaded_font(family, data)
+}
 
 pub fn available_font_families() -> Vec<String> {
     compositor::text::available_font_families()

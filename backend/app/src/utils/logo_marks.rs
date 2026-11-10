@@ -22,7 +22,7 @@
 use std::path::{Path, PathBuf};
 
 use log::warn;
-use noar_engine::{LogoGaps, MAX_LOGO_GAPS};
+use noar_engine::MAX_LOGO_GAPS;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
@@ -35,10 +35,36 @@ pub struct LogoSpan {
     pub to: f64,
 }
 
+/// What a graphics cue in a video does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CueAction {
+    /// Put the template on air.
+    Take,
+    /// Take the template off air.
+    Out,
+}
+
+/// At `at` seconds of the video, put a graphics template on air (for
+/// `duration` seconds, or until taken off) or take it off.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct GraphicsCue {
+    pub at: f64,
+    pub action: CueAction,
+    pub template_id: i32,
+    /// Seconds on air for a take; none or 0 stays until taken off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration: Option<f64>,
+}
+
+/// At most this many graphics cues in one video.
+pub const MAX_GRAPHICS_CUES: usize = 64;
+
+/// Marks saved next to a video. Fields of older versions (logo and L-shape
+/// stretches, the clip's own logo and L-shape) are no longer read: graphics
+/// inside a video are now cues that put templates on and off air.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 pub struct LogoMarks {
-    #[serde(default)]
-    pub hide: Vec<LogoSpan>,
     /// Ad breaks inside the video, signalled with SCTE-35 when the output
     /// carries it: the break leaves at `from` and returns at `to`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -47,32 +73,9 @@ pub struct LogoMarks {
     /// in seconds of the video. A playlist entry still sets its own.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trim: Option<LogoSpan>,
-    /// Stretches shown in the L-shape: the picture shrinks into its corner
-    /// over the channel's L-shape graphic.
+    /// Graphics templates put on and off air while the video plays.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub lshape: Vec<LogoSpan>,
-    /// The L-shape graphic of this video, a storage path, for its stretches
-    /// in place of the channel's.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lshape_graphic: Option<String>,
-    /// The corner of the picture in this video's L-shape stretches, in place
-    /// of the channel's: `top-left`, `top-right`, `bottom-left` or
-    /// `bottom-right`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lshape_corner: Option<String>,
-    /// The size of the picture in this video's L-shape stretches, in percent
-    /// of the screen, in place of the channel's.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lshape_scale: Option<f64>,
-    /// Where the logo goes while this video plays, as `X%:Y%` (shares of the
-    /// room around it), in place of the channel's place. A move from outside
-    /// still goes first.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub logo_position: Option<String>,
-    /// The logo of this video, a storage path, shown while it plays in place
-    /// of the channel's. A swap from outside still goes first.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub logo_image: Option<String>,
+    pub graphics: Vec<GraphicsCue>,
     /// An ident or promo: the guide and the Player count it inside the
     /// programme before it instead of naming it. Kept here rather than in a
     /// sheet, so a clip of a series keeps using its folder's sheet.
@@ -88,67 +91,47 @@ impl LogoMarks {
     /// Sorted, and refused when a stretch is empty, reversed or overlaps the
     /// next, or when there are more than the engine takes.
     pub fn validated(mut self) -> Result<Self, ServiceError> {
-        self.hide = validated_spans(self.hide, "stretches without logo")?;
         self.breaks = validated_spans(self.breaks, "ad breaks")?;
-        self.lshape = validated_spans(self.lshape, "L-shape stretches")?;
-        self.lshape_graphic = self
-            .lshape_graphic
-            .map(|graphic| graphic.trim().to_string())
-            .filter(|graphic| !graphic.is_empty());
-        self.logo_image = self
-            .logo_image
-            .map(|image| image.trim().to_string())
-            .filter(|image| !image.is_empty());
-        self.lshape_corner = self
-            .lshape_corner
-            .map(|corner| corner.trim().to_string())
-            .filter(|corner| !corner.is_empty() && corner != "default");
-
-        if let Some(corner) = &self.lshape_corner
-            && noar_engine::LShapeCorner::parse(corner).is_none()
-        {
-            return Err(ServiceError::BadRequest(format!(
-                "Unknown L-shape corner '{corner}': use top-left, top-right, bottom-left or bottom-right"
-            )));
-        }
-
-        if let Some(scale) = self.lshape_scale
-            && !(noar_engine::LSHAPE_MIN_SCALE..=noar_engine::LSHAPE_MAX_SCALE).contains(&scale)
-        {
-            return Err(ServiceError::BadRequest(format!(
-                "The picture in the L-shape must be between {} and {}% of the screen",
-                noar_engine::LSHAPE_MIN_SCALE,
-                noar_engine::LSHAPE_MAX_SCALE
-            )));
-        }
-
-        self.logo_position = match self.logo_position.as_deref().map(str::trim) {
-            None | Some("" | "default") => None,
-            Some(position) => Some(logo_shares(position).ok_or_else(|| {
-                ServiceError::BadRequest(format!(
-                    "The logo position '{position}' must be X%:Y%, each from 0 to 100"
-                ))
-            })?),
-        };
 
         if let Some(trim) = self.trim {
             validated_spans(vec![trim], "trim")?;
         }
 
+        if self.graphics.len() > MAX_GRAPHICS_CUES {
+            return Err(ServiceError::BadRequest(format!(
+                "At most {MAX_GRAPHICS_CUES} graphics cues in a video"
+            )));
+        }
+
+        for cue in &self.graphics {
+            if !cue.at.is_finite() || cue.at < 0.0 {
+                return Err(ServiceError::BadRequest(
+                    "Graphics cue times are seconds from the start of the video".to_string(),
+                ));
+            }
+
+            if cue.template_id <= 0 {
+                return Err(ServiceError::BadRequest(
+                    "Each graphics cue names a template".to_string(),
+                ));
+            }
+
+            if cue.duration.is_some_and(|duration| {
+                !duration.is_finite() || !(0.0..=86_400.0).contains(&duration)
+            }) {
+                return Err(ServiceError::BadRequest(
+                    "A cue duration is in seconds, 0 (until taken off) up to a day".to_string(),
+                ));
+            }
+        }
+
+        self.graphics.sort_by(|a, b| a.at.total_cmp(&b.at));
+
         Ok(self)
     }
 
     pub fn is_empty(&self) -> bool {
-        self.hide.is_empty()
-            && self.breaks.is_empty()
-            && self.lshape.is_empty()
-            && self.lshape_graphic.is_none()
-            && self.lshape_corner.is_none()
-            && self.lshape_scale.is_none()
-            && self.logo_position.is_none()
-            && self.logo_image.is_none()
-            && self.trim.is_none()
-            && !self.insert
+        self.breaks.is_empty() && self.graphics.is_empty() && self.trim.is_none() && !self.insert
     }
 
     /// Where the video starts and how long it plays, after its saved trim,
@@ -164,13 +147,14 @@ impl LogoMarks {
         }
     }
 
-    pub fn gaps(&self) -> LogoGaps {
-        LogoGaps::new(self.hide.iter().map(|span| (span.from, span.to)))
-    }
-
-    /// The stretches in the L-shape, for the engine.
-    pub fn lshape_spans(&self) -> LogoGaps {
-        LogoGaps::new(self.lshape.iter().map(|span| (span.from, span.to)))
+    /// The cues of a clip that plays from `seek`: when each comes from the
+    /// start of the clip as it plays. Cues before `seek` are skipped.
+    pub fn cues_in_clip(&self, seek: f64) -> Vec<(f64, GraphicsCue)> {
+        self.graphics
+            .iter()
+            .filter(|cue| cue.at >= seek)
+            .map(|cue| (cue.at - seek, cue.clone()))
+            .collect()
     }
 
     /// The ad breaks of a clip that plays from `seek` for `duration`
@@ -189,26 +173,6 @@ impl LogoMarks {
             })
             .collect()
     }
-}
-
-/// `X%:Y%` (the `%` may be left out, spaces and `×` too), each share from 0
-/// to 100, written back as `X%:Y%`.
-fn logo_shares(position: &str) -> Option<String> {
-    let normalized = position.replace(['×', 'x', 'X'], ":");
-    let (x, y) = normalized.split_once(':')?;
-    let share = |value: &str| {
-        value
-            .trim()
-            .trim_end_matches('%')
-            .trim()
-            .replace(',', ".")
-            .parse::<f64>()
-            .ok()
-            .filter(|share| (0.0..=100.0).contains(share))
-            .map(|share| (share * 10.0).round() / 10.0)
-    };
-
-    Some(format!("{}%:{}%", share(x)?, share(y)?))
 }
 
 fn validated_spans(mut spans: Vec<LogoSpan>, what: &str) -> Result<Vec<LogoSpan>, ServiceError> {
@@ -428,85 +392,21 @@ pub async fn clip_marks(storage: &Path, source: &str) -> LogoMarks {
 }
 
 /// The stretches without logo for the clip at `source`.
-pub async fn logo_gaps(storage: &Path, source: &str) -> LogoGaps {
-    clip_marks(storage, source).await.gaps()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_logo_of_its_own_is_trimmed_and_an_empty_one_dropped() {
-        let marks = LogoMarks {
-            logo_image: Some("  Logos/sponsor.png ".to_string()),
-            ..LogoMarks::default()
-        }
-        .validated()
-        .unwrap();
-
-        assert_eq!(marks.logo_image.as_deref(), Some("Logos/sponsor.png"));
-        assert!(!marks.is_empty());
-
-        let marks = LogoMarks {
-            logo_image: Some("  ".to_string()),
-            ..LogoMarks::default()
-        }
-        .validated()
-        .unwrap();
-
-        assert!(marks.logo_image.is_none());
-        assert!(marks.is_empty());
-    }
-
-    #[test]
-    fn a_video_places_its_logo_and_its_lshape_picture() {
-        let marks = LogoMarks {
-            logo_position: Some(" 50 × 1 ".to_string()),
-            lshape_corner: Some("bottom-left".to_string()),
-            lshape_scale: Some(70.0),
-            ..LogoMarks::default()
-        }
-        .validated()
-        .unwrap();
-
-        assert_eq!(marks.logo_position.as_deref(), Some("50%:1%"));
-        assert_eq!(marks.lshape_corner.as_deref(), Some("bottom-left"));
-        assert!(!marks.is_empty());
-
-        let back = LogoMarks {
-            logo_position: Some("default".to_string()),
-            lshape_corner: Some("default".to_string()),
-            ..LogoMarks::default()
-        }
-        .validated()
-        .unwrap();
-        assert!(back.is_empty());
-
-        for wrong in [
-            LogoMarks {
-                logo_position: Some("120%:0%".to_string()),
-                ..LogoMarks::default()
-            },
-            LogoMarks {
-                logo_position: Some("W-w-12:12".to_string()),
-                ..LogoMarks::default()
-            },
-            LogoMarks {
-                lshape_corner: Some("middle".to_string()),
-                ..LogoMarks::default()
-            },
-            LogoMarks {
-                lshape_scale: Some(10.0),
-                ..LogoMarks::default()
-            },
-        ] {
-            assert!(wrong.validated().is_err());
-        }
-    }
-
     fn span(from: f64, to: f64) -> LogoSpan {
         LogoSpan { from, to }
+    }
+
+    fn cue(at: f64, action: CueAction, template_id: i32) -> GraphicsCue {
+        GraphicsCue {
+            at,
+            action,
+            template_id,
+            duration: None,
+        }
     }
 
     #[test]
@@ -518,74 +418,80 @@ mod tests {
             !marks.is_empty(),
             "a file holding only the mark must be kept"
         );
+        assert_eq!(serde_json::to_string(&LogoMarks::default()).unwrap(), "{}");
+    }
+
+    #[test]
+    fn older_logo_and_lshape_marks_are_no_longer_read() {
+        let marks: LogoMarks = serde_json::from_str(
+            r#"{"hide": [{"from": 1, "to": 2}], "lshape": [{"from": 3, "to": 4}],
+                "logo_image": "a.png", "trim": {"from": 5, "to": 50}}"#,
+        )
+        .unwrap();
+
+        assert_eq!(marks.trim, Some(span(5.0, 50.0)));
+        assert!(marks.graphics.is_empty());
         assert_eq!(
-            serde_json::to_string(&LogoMarks::default()).unwrap(),
-            r#"{"hide":[]}"#
+            serde_json::to_value(&marks).unwrap(),
+            serde_json::json!({"trim": {"from": 5.0, "to": 50.0}})
         );
     }
 
     #[test]
-    fn marks_are_sorted_and_must_make_sense() {
+    fn graphics_cues_are_sorted_checked_and_placed_in_the_clip() {
         let marks = LogoMarks {
-            hide: vec![span(300.0, 360.0), span(60.0, 90.0)],
-            breaks: Vec::new(),
-            trim: None,
-            lshape: Vec::new(),
-            lshape_graphic: None,
-            lshape_corner: None,
-            lshape_scale: None,
-            logo_position: None,
-            logo_image: None,
-            insert: false,
+            graphics: vec![
+                GraphicsCue {
+                    duration: Some(50.0),
+                    ..cue(120.0, CueAction::Take, 3)
+                },
+                cue(30.0, CueAction::Out, 1),
+                cue(90.0, CueAction::Take, 1),
+            ],
+            ..LogoMarks::default()
         }
         .validated()
         .unwrap();
 
-        assert_eq!(marks.hide, [span(60.0, 90.0), span(300.0, 360.0)]);
-        assert!(
-            LogoMarks {
-                hide: vec![span(10.0, 5.0)],
-                breaks: Vec::new(),
-                trim: None,
-                lshape: Vec::new(),
-                lshape_graphic: None,
-                lshape_corner: None,
-                lshape_scale: None,
-                logo_position: None,
-                logo_image: None,
-                insert: false,
-            }
-            .validated()
-            .is_err()
+        assert_eq!(
+            marks.graphics.iter().map(|cue| cue.at).collect::<Vec<_>>(),
+            [30.0, 90.0, 120.0]
         );
-        assert!(
-            LogoMarks {
-                hide: vec![span(10.0, 30.0), span(20.0, 40.0)],
-                breaks: Vec::new(),
-                trim: None,
-                lshape: Vec::new(),
-                lshape_graphic: None,
-                lshape_corner: None,
-                lshape_scale: None,
-                logo_position: None,
-                logo_image: None,
-                insert: false,
-            }
-            .validated()
-            .is_err()
+        // Played from 60 s: the cue at 30 s is past, the others shift.
+        let placed = marks.cues_in_clip(60.0);
+        assert_eq!(
+            placed
+                .iter()
+                .map(|(at, cue)| (*at, cue.template_id))
+                .collect::<Vec<_>>(),
+            [(30.0, 1), (60.0, 3)]
         );
+
+        for bad in [
+            cue(-1.0, CueAction::Take, 1),
+            cue(f64::NAN, CueAction::Take, 1),
+            cue(1.0, CueAction::Take, 0),
+            GraphicsCue {
+                duration: Some(-5.0),
+                ..cue(1.0, CueAction::Take, 1)
+            },
+        ] {
+            assert!(
+                LogoMarks {
+                    graphics: vec![bad],
+                    ..LogoMarks::default()
+                }
+                .validated()
+                .is_err()
+            );
+        }
+
         assert!(
             LogoMarks {
-                hide: vec![span(-1.0, 5.0)],
-                breaks: Vec::new(),
-                trim: None,
-                lshape: Vec::new(),
-                lshape_graphic: None,
-                lshape_corner: None,
-                lshape_scale: None,
-                logo_position: None,
-                logo_image: None,
-                insert: false,
+                graphics: (0..=MAX_GRAPHICS_CUES as i32)
+                    .map(|index| cue(f64::from(index), CueAction::Take, 1))
+                    .collect(),
+                ..LogoMarks::default()
             }
             .validated()
             .is_err()
@@ -593,30 +499,35 @@ mod tests {
     }
 
     #[test]
-    fn breaks_are_placed_in_the_part_of_the_video_that_plays() {
+    fn breaks_are_sorted_must_make_sense_and_are_placed_in_the_part_that_plays() {
         let marks = LogoMarks {
-            hide: Vec::new(),
-            breaks: vec![span(60.0, 90.0), span(290.0, 320.0), span(900.0, 960.0)],
-            trim: None,
-            lshape: Vec::new(),
-            lshape_graphic: None,
-            lshape_corner: None,
-            lshape_scale: None,
-            logo_position: None,
-            logo_image: None,
-            insert: false,
-        };
+            breaks: vec![span(290.0, 320.0), span(60.0, 90.0), span(900.0, 960.0)],
+            ..LogoMarks::default()
+        }
+        .validated()
+        .unwrap();
 
-        // The whole video.
         assert_eq!(
             marks.breaks_in_clip(0.0, None),
             [(60.0, 30.0), (290.0, 30.0), (900.0, 60.0)]
         );
-        // From 300 s for 10 minutes: the second break is under way, the
-        // third falls after the end.
         assert_eq!(marks.breaks_in_clip(300.0, Some(600.0)), [(0.0, 20.0)]);
-        // The clip ends inside a break: only the part that plays.
         assert_eq!(marks.breaks_in_clip(0.0, Some(75.0)), [(60.0, 15.0)]);
+
+        for spans in [
+            vec![span(10.0, 5.0)],
+            vec![span(10.0, 30.0), span(20.0, 40.0)],
+            vec![span(-1.0, 5.0)],
+        ] {
+            assert!(
+                LogoMarks {
+                    breaks: spans,
+                    ..LogoMarks::default()
+                }
+                .validated()
+                .is_err()
+            );
+        }
     }
 
     #[test]
@@ -626,9 +537,7 @@ mod tests {
 
         marks.trim = Some(span(12.5, 590.0));
         assert_eq!(marks.trimmed(600.0), (12.5, 577.5));
-        // A shorter file than when it was trimmed: it ends with the file.
         assert_eq!(marks.trimmed(300.0), (12.5, 287.5));
-        // Past the end: the whole video.
         assert_eq!(marks.trimmed(10.0), (0.0, 10.0));
 
         assert!(
@@ -642,61 +551,23 @@ mod tests {
         assert!(!marks.is_empty());
     }
 
-    #[test]
-    fn lshape_stretches_are_checked_and_given_to_the_engine() {
-        let marks = LogoMarks {
-            lshape: vec![span(120.0, 180.0), span(10.0, 20.0)],
-            ..LogoMarks::default()
-        }
-        .validated()
-        .unwrap();
-
-        assert!(!marks.is_empty());
-        assert_eq!(
-            marks.lshape_spans().iter().collect::<Vec<_>>(),
-            [(10_000, 20_000), (120_000, 180_000)]
-        );
-        assert!(
-            LogoMarks {
-                lshape: vec![span(10.0, 30.0), span(20.0, 40.0)],
-                ..LogoMarks::default()
-            }
-            .validated()
-            .is_err()
-        );
-    }
-
     #[tokio::test]
     async fn marks_live_next_to_the_video() {
         let dir = std::env::temp_dir().join(format!("noar-logo-marks-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let video = dir.join("Programa 01.mp4");
         let marks = LogoMarks {
-            hide: vec![span(750.0, 990.5)],
-            breaks: Vec::new(),
-            trim: None,
-            lshape: Vec::new(),
-            lshape_graphic: None,
-            lshape_corner: None,
-            lshape_scale: None,
-            logo_position: None,
-            logo_image: None,
-            insert: false,
+            graphics: vec![cue(750.0, CueAction::Take, 2)],
+            ..LogoMarks::default()
         };
 
         assert_eq!(marks_path(&video), dir.join("Programa 01.marks.json"));
-        assert!(logo_gaps(&dir, "Programa 01.mp4").await.is_empty());
+        assert!(clip_marks(&dir, "Programa 01.mp4").await.is_empty());
 
         write_marks(&video, &marks).await.unwrap();
         assert_eq!(read_marks(&video).await, marks);
-        assert_eq!(
-            logo_gaps(&dir, "Programa 01.mp4")
-                .await
-                .iter()
-                .collect::<Vec<_>>(),
-            [(750_000, 990_500)]
-        );
-        assert!(logo_gaps(&dir, "srt://127.0.0.1:9000").await.is_empty());
+        assert_eq!(clip_marks(&dir, "Programa 01.mp4").await, marks);
+        assert!(clip_marks(&dir, "srt://127.0.0.1:9000").await.is_empty());
 
         write_marks(&video, &LogoMarks::default()).await.unwrap();
         assert!(!marks_path(&video).exists());
@@ -712,25 +583,23 @@ mod tests {
         std::fs::write(&video, b"x").unwrap();
         std::fs::write(
             dir.join("Programa.logo.json"),
-            r#"{ "hide": [{ "from": 1.0, "to": 2.0 }] }"#,
+            r#"{ "breaks": [{ "from": 1.0, "to": 2.0 }] }"#,
         )
         .unwrap();
 
         let marks = read_marks(&video).await;
-        assert_eq!(marks.hide, [span(1.0, 2.0)]);
+        assert_eq!(marks.breaks, [span(1.0, 2.0)]);
 
-        // Moved: it lands under the new name.
         let moved = dir.join("Outro.mp4");
         std::fs::rename(&video, &moved).unwrap();
         follow_move(&video, &moved).await;
         assert!(dir.join("Outro.marks.json").exists());
         assert!(!dir.join("Programa.logo.json").exists());
 
-        // Saved: the new name only.
         std::fs::write(dir.join("Outro.logo.json"), "{}").unwrap();
         write_marks(&moved, &marks).await.unwrap();
         assert!(!dir.join("Outro.logo.json").exists());
-        assert_eq!(read_marks(&moved).await.hide, [span(1.0, 2.0)]);
+        assert_eq!(read_marks(&moved).await.breaks, [span(1.0, 2.0)]);
 
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -740,29 +609,19 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("noar-logo-follow-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(dir.join("folder")).unwrap();
         let marks = LogoMarks {
-            hide: vec![span(1.0, 2.0)],
-            breaks: Vec::new(),
-            trim: None,
-            lshape: Vec::new(),
-            lshape_graphic: None,
-            lshape_corner: None,
-            lshape_scale: None,
-            logo_position: None,
-            logo_image: None,
-            insert: false,
+            breaks: vec![span(1.0, 2.0)],
+            ..LogoMarks::default()
         };
         let video = dir.join("A.mp4");
         std::fs::write(&video, b"x").unwrap();
         write_marks(&video, &marks).await.unwrap();
 
-        // Renamed: the marks go along.
         let renamed = dir.join("B.mp4");
         std::fs::rename(&video, &renamed).unwrap();
         follow_move(&video, &renamed).await;
         assert!(!marks_path(&video).exists());
         assert_eq!(read_marks(&renamed).await, marks);
 
-        // Moved while B.mov still shares them: copied, B.mov keeps them.
         std::fs::write(dir.join("B.mov"), b"x").unwrap();
         let moved = dir.join("folder").join("B.mp4");
         std::fs::rename(&renamed, &moved).unwrap();
@@ -770,7 +629,6 @@ mod tests {
         assert_eq!(read_marks(&moved).await, marks);
         assert_eq!(read_marks(&dir.join("B.mov")).await, marks);
 
-        // Deleted: gone, unless shared.
         std::fs::write(dir.join("folder").join("B.mkv"), b"x").unwrap();
         std::fs::remove_file(&moved).unwrap();
         follow_remove(&moved).await;

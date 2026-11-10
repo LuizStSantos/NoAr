@@ -1,3 +1,12 @@
+## Architecture and maintenance
+
+Use the [repository architecture map](ai/architecture-overview.md) for navigation,
+the [project maintenance guide](maintenance.md) for cross-project ownership,
+and [Graphics maintenance guide](graphics-maintenance.md) for the graphics
+module boundaries, Composer contracts and safe extension workflow. CI checks
+layer dependencies with `python3 qa/architecture/check.py` alongside Cargo and
+frontend verification.
+
 ## Build NoAr
 
 For an isolated Docker installation of the current GStreamer integration
@@ -77,6 +86,12 @@ cargo run -p noar --features processing-bench -- \
 ```
 
 `--processing-bench-interval` is measured in seconds and defaults to `1`.
+The `graphics_blend` stage measures model blending across several disjoint
+scopes per frame; its per-call average is not a full-frame cost. Combine stage
+totals with output frame counts and process CPU/RSS. See
+[graphics measurement boundaries](graphics-maintenance.md#processing-measurement-boundaries)
+for preparation, scaling and encoder work excluded from that stage.
+
 The `NOAR_PROCESSING_BENCH_INTERVAL` environment variable provides the
 same setting. The reported times measure the instrumented caller thread; use
 `perf` or GStreamer tracing for work performed asynchronously by native plugins.

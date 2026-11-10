@@ -1,0 +1,197 @@
+[
+  {
+    "elapsed_seconds": 0.055,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "starting",
+          "uptime": 0,
+          "output_age": null
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 1.116,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "starting",
+          "uptime": 1,
+          "output_age": null
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 2.171,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 2,
+          "output_age": 0.1
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 3.237,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 4,
+          "output_age": 0.1
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 4.291,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 5,
+          "output_age": 0.2
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 5.347,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 6,
+          "output_age": 0.3
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 6.403,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 7,
+          "output_age": 0.3
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 7.458,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 8,
+          "output_age": 0.4
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 8.517,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 9,
+          "output_age": 0.4
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 9.606,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 10,
+          "output_age": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 10.659,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 11,
+          "output_age": 0.1
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 11.718,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 12,
+          "output_age": 0.2
+        }
+      ]
+    }
+  },
+  {
+    "elapsed_seconds": 12.775,
+    "health": {
+      "status": "ok",
+      "version": "2.2.1",
+      "channels": [
+        {
+          "id": 1,
+          "state": "on_air",
+          "uptime": 13,
+          "output_age": 0.2
+        }
+      ]
+    }
+  }
+]

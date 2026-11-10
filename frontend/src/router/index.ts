@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 // import { i18n } from '../i18n'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
+import { confirmEditorNavigation } from '@/composables/editorNavigation'
 
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
@@ -68,46 +69,84 @@ const router = createRouter({
             name: 'graphics',
             component: () => import('@/views/GraphicsView.vue'),
             meta: { showHeader: true },
-            redirect: (to) => ({ path: '/graphics/live', query: to.query }),
+            redirect: (to) => ({ path: '/graphics/onair', query: to.query }),
             children: [
                 {
+                    path: 'composer',
+                    name: 'graphics-composer',
+                    component: () => import('@/components/graphics/GraphicsComposer.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'onair',
+                    name: 'graphics-onair',
+                    component: () => import('@/components/graphics/GraphicsOnAir.vue'),
+                    meta: { showHeader: true, roles: ALL },
+                },
+                {
+                    path: 'templates',
+                    name: 'graphics-templates',
+                    component: () => import('@/components/graphics/GraphicsLibrary.vue'),
+                    meta: { showHeader: true, roles: ALL },
+                },
+                {
+                    // The former Live now page: its controls are in On air.
                     path: 'live',
                     name: 'graphics-live',
-                    component: () => import('@/components/graphics/GraphicsLive.vue'),
-                    meta: { showHeader: true, roles: ALL },
+                    redirect: (to) => ({ name: 'graphics-onair', query: to.query }),
+                },
+                {
+                    path: 'channel/:kind(logo|ticker|lshape)',
+                    name: 'graphics-channel-editor',
+                    component: () => import('@/components/graphics/GraphicsChannelEditor.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
                 },
                 {
                     path: 'logo',
                     name: 'graphics-logo',
-                    component: () => import('@/components/settings/SettingsLogo.vue'),
-                    props: { part: 'logo' },
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({
+                        name: 'graphics-channel-editor',
+                        params: { kind: to.hash === '#ticker' ? 'ticker' : 'logo' },
+                        query: to.query,
+                    }),
                 },
                 {
                     path: 'lshape',
                     name: 'graphics-lshape',
-                    component: () => import('@/components/settings/SettingsLogo.vue'),
-                    props: { part: 'lshape' },
+                    redirect: (to) => ({
+                        name: 'graphics-channel-editor',
+                        params: { kind: 'lshape' },
+                        query: to.query,
+                    }),
+                },
+                {
+                    path: 'sources',
+                    name: 'graphics-sources',
+                    component: () => import('@/components/graphics/GraphicsSources.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'xmltv',
+                    name: 'graphics-xmltv',
+                    component: () => import('@/components/graphics/GraphicsGuideLogo.vue'),
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {
                     path: 'subtitles',
                     name: 'graphics-subtitles',
-                    component: () => import('@/components/settings/SettingsLogo.vue'),
-                    props: { part: 'subtitles' },
+                    component: () => import('@/components/graphics/GraphicsSubtitles.vue'),
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {
                     path: 'scenes',
                     name: 'graphics-scenes',
-                    component: () => import('@/components/graphics/GraphicsScenes.vue'),
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({ name: 'graphics-templates', query: to.query }),
                 },
                 {
+                    // Moved to Settings › External control, with the live and SCTE-35 keys.
                     path: 'api',
                     name: 'graphics-api',
-                    component: () => import('@/components/graphics/GraphicsApi.vue'),
-                    meta: { showHeader: true, roles: ADMINS },
+                    redirect: (to) => ({ name: 'settings-remote', query: to.query, hash: '#graphics' }),
                 },
             ],
         },
@@ -116,6 +155,9 @@ const router = createRouter({
             name: 'schedule',
             component: () => import('@/views/ScheduleView.vue'),
             meta: { showHeader: true },
+            // The live API moved to Settings › External control; old links follow it.
+            beforeEnter: (to) =>
+                to.hash === '#live-api' ? { name: 'settings-remote', query: to.query, hash: '#live-api' } : true,
         },
         {
             path: '/media',
@@ -197,6 +239,12 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {
+                    path: 'remote',
+                    name: 'settings-remote',
+                    component: () => import('@/components/settings/SettingsRemote.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
                     path: 'advanced',
                     name: 'settings-advanced',
                     component: () => import('@/components/settings/SettingsAdvanced.vue'),
@@ -232,6 +280,10 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+    if (!confirmEditorNavigation(to)) {
+        return false
+    }
+
     const auth = useAuth()
     const configStore = useConfig()
 
@@ -275,7 +327,7 @@ router.beforeEach(async (to) => {
     const allowedRoles = to.meta.roles as string[] | undefined
 
     if (allowedRoles && !allowedRoles.includes(auth.role)) {
-        return { name: to.path.startsWith('/graphics') ? 'graphics-live' : 'settings-general', query: to.query }
+        return { name: to.path.startsWith('/graphics') ? 'graphics-onair' : 'settings-general', query: to.query }
     }
 
     return

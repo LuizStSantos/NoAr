@@ -59,6 +59,37 @@ class PictureTrackerTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which('ffmpeg'), 'Independent FFmpeg receiver is unavailable')
 class PictureDecoderTests(unittest.TestCase):
+    def test_moving_overlay_cannot_hide_a_frozen_video_roi(self):
+        with tempfile.TemporaryDirectory(prefix='noar-picture-roi-') as folder:
+            directory = Path(folder)
+            clip = directory / 'overlay.mkv'
+            subprocess.run([
+                'ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error',
+                '-f', 'lavfi', '-i', 'testsrc2=size=320x180:rate=4',
+                '-vf', 'drawbox=x=0:y=0:w=160:h=90:color=blue:t=fill',
+                '-t', '1', '-c:v', 'ffv1', str(clip),
+            ], check=True, timeout=15)
+            monitor = PictureMonitor(str(clip), directory, limit=2.5,
+                video_filter='crop=160:90:0:0,fps=2,scale=160:90,format=gray')
+            monitor.start()
+
+            try:
+                deadline = time.monotonic() + 8
+
+                while time.monotonic() < deadline:
+                    snapshot = monitor.sample()
+
+                    if snapshot['problem'] == 'decoded picture frozen':
+                        self.assertGreaterEqual(snapshot['frames'], 4)
+                        self.assertEqual(snapshot['changes'], 0)
+                        break
+
+                    time.sleep(0.05)
+                else:
+                    self.fail('Moving pixels outside the video ROI masked the freeze')
+            finally:
+                monitor.close()
+
     def exercise(self, frozen):
         with tempfile.TemporaryDirectory(prefix='noar-picture-') as folder:
             directory = Path(folder)

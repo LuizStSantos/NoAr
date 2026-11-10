@@ -4,6 +4,12 @@
 NoAr ships as a single container. `docker-compose.yml` in the repository root
 has everything a normal installation needs.
 
+## Testing a source branch on a disposable machine
+
+For the graphics review branch, use the [test-machine guide](graphics-testing.md)
+and `docker-compose.graphics-test.yml`. It builds a local image, starts with a
+new test volume and disables automatic replacement by the stable updater.
+
 ## First start
 
 ```sh
@@ -209,6 +215,58 @@ place of `noar.db` (removing `noar.db-wal` and `noar.db-shm` beside it). If
 the copy cannot be made, for example on a full disk, the log says so and the
 update goes on.
 
+#### Restoring before graphics conversion (00029)
+
+Migrations `00029` and `00030` are normal sqlx migrations. Startup then converts every
+channel's logo, L-shape and quick scenes to templates in one transaction.
+It leaves the old graphics columns intact, but the new application no longer
+reads them after conversion. Logo/L-shape/ticker editing now opens Composer;
+legacy configuration writes update the same layers and bindings. Quick scenes
+are no longer used after 3.0. Migration 00030 also upgrades existing
+00029 templates once, preserving edited layers on subsequent starts. Clock
+support is not part of this conversion.
+
+Keeping old columns does **not** make an upgraded database usable by an old
+binary: sqlx rejects migrations unknown to that binary. Released 2.2.1 knows
+through `00027`, so even a database with `00028` already needs restoration.
+Rollback means restoring the **pre-update database and previous image
+together**. Changes made after the backup, including edited templates, are
+not included in the restored database.
+
+Before updating, record the current image digest and keep a database backup.
+After startup, confirm the pre-update `.bak` file exists beside the database
+and record its exact name and pre-update migration version. Verify the file
+itself rather than relying only on console messages. Automatic backups are best effort,
+keep only three copies, and run only when sqlx migrations are pending. A
+failed conversion can leave the schema migrations applied; a retry does not create another
+pre-update copy. Keep the first successful copy separately.
+
+For the default Compose bind mount (`./data:/data`), restore as follows,
+substituting the verified backup filename and recorded image digest:
+
+```sh
+docker compose stop noar
+# Preserve the stopped upgraded database and any SQLite sidecars together.
+mkdir -p rollback-saved
+cp -a data/db/. rollback-saved/
+cp data/db/noar.db.pre-update-<date>-<time>-v27.bak data/db/noar.db
+rm -f data/db/noar.db-wal data/db/noar.db-shm
+```
+
+Run these commands with the permissions needed by the installation. Preserve
+the database's owner and mode. Set `services.noar.image` in a Compose override
+to the recorded digest, for example
+`ghcr.io/luizstsantos/noar@sha256:<previous-image-digest>`, then run
+`docker compose up -d --no-build noar`. Check `/health`, login, configuration
+and the real output before resuming normal operation. Never restore a file
+while either version is using that database. Custom `DB` paths and named
+volumes need the equivalent steps at their actual database location.
+
+The disposable 2.2.1 upgrade/restoration test and HLS captures are recorded in
+the [graphics handoff](graphics-handoff/README.md). This procedure does not
+choose a release version or authorize publishing an image; see the
+[release compatibility policy](releasing.md#what-each-number-means).
+
 The updater only replaces containers labelled
 `com.centurylinklabs.watchtower.enable: "true"`, which the compose file puts
 on NoAr. A private image needs the `docker login ghcr.io` credentials mounted
@@ -267,3 +325,13 @@ location / {
     proxy_buffering off;
 }
 ```
+
+### Uploaded graphics fonts
+
+Composer's **Upload font** stores validated TTF/OTF bytes with channel metadata
+in SQLite (migration 00032), and registers them again when the backend starts.
+Back up/restore the database to retain those assets. Do not install them into a
+running container or expect uploaded fonts to appear as Storage files. Duplicate
+filenames create independent immutable assets. A channel accepts up to 32 fonts,
+10 MiB each; deleting templates preserves them, and this stage does not provide
+a font deletion command. Use fonts whose license permits your intended usage.

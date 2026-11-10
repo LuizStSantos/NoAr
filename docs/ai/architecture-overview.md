@@ -13,3 +13,25 @@
 - Build/test/release: `.github/workflows/{validate,docker,release}.yml`, `Dockerfile`, `docker-compose.yml`, `docs/releasing.md`.
 
 Read `docs/ai/repository-map.md` for the updated machine-generated file map and query symbols with the index script before opening whole files. Revalidate module descriptions after refactors.
+
+## Graphics feature ownership
+
+Graphics HTTP adapters, application services, data handles and engine rendering
+have separate responsibilities within one Graphics domain. Logo and L-shape are
+specializations under `compositor/graphics/`; legacy URLs adapt the same shared
+application controls used by the scheduler. Composer owns one editable document
+and delegates panels through typed props/events.
+
+See [Graphics architecture and maintenance](../graphics-maintenance.md) for the
+source ownership table, dependency diagram, compatibility rules, extension guide
+and executable architecture checks. Run `python3 qa/architecture/check.py` after
+moving service/API/data code; CI runs it too.
+
+## Project maintenance owners
+
+See [Architecture and maintenance](../maintenance.md) for the cross-project
+owner table and configuration-save, playlist, Scheduler, Storage, report, XMLTV
+and native-output flows. Extracted UI panels use typed inputs/commands;
+application save operations remain independent of HTTP adapters. The
+[maintenance handoff](../maintenance-handoff/README.md) records executed checks
+and the precise scope of the organization pass.

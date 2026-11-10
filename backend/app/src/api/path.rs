@@ -32,16 +32,62 @@ pub fn routes() -> Router<AppState> {
                 .route("/channels", get(get_all_channels))
                 .route("/global", get(get_global).put(update_global))
                 .route("/global/test-mail", post(send_global_test_mail))
+                .route("/graphics/{id}/channel", get(get_channel_graphics))
+                .route(
+                    "/graphics/{id}/channel/{template_id}",
+                    post(control_channel_graphics),
+                )
+                .route(
+                    "/graphics/{id}/templates/{template_id}/usage",
+                    get(graphics_template_usage),
+                )
+                .route("/graphics/{id}/take", post(take_graphic))
+                .route("/graphics/{id}/out", post(take_graphic_out))
+                .route("/graphics/{id}/on-air", get(get_graphics_on_air))
+                .route("/graphics/{id}/fonts", get(get_graphics_fonts))
+                .route(
+                    "/graphics/{id}/font-assets",
+                    get(get_graphics_font_assets)
+                        .post(upload_graphics_font)
+                        .layer(DefaultBodyLimit::max(
+                            crate::graphics::fonts::MAX_FONT_BYTES,
+                        )),
+                )
+                .route(
+                    "/graphics/{id}/font-assets/{font_id}",
+                    get(download_graphics_font),
+                )
+                .route("/graphics/{id}/clock", get(graphics_clock))
+                .route(
+                    "/graphics/{id}/sources",
+                    get(get_graphics_sources).post(add_graphics_source),
+                )
+                .route(
+                    "/graphics/{id}/sources/{source_id}",
+                    put(update_graphics_source).delete(delete_graphics_source),
+                )
+                .route(
+                    "/graphics/{id}/sources/{source_id}/refresh",
+                    post(refresh_graphics_source),
+                )
+                .route(
+                    "/graphics/{id}/templates/{template_id}/assignment",
+                    put(assign_graphics_template),
+                )
+                .route(
+                    "/graphics/{id}/templates",
+                    get(get_graphics_templates).post(add_graphics_template),
+                )
+                .route(
+                    "/graphics/{id}/templates/{template_id}",
+                    get(get_graphics_template)
+                        .put(update_graphics_template)
+                        .delete(delete_graphics_template),
+                )
                 .route("/control/{id}/playout", post(control_playout))
                 .route("/control/{id}/audio", put(update_audio_effects))
                 .route("/control/{id}/media/current", get(media_current))
                 .route("/control/{id}/process", post(process_control))
-                .route("/control/{id}/logo", get(get_logo_state).post(control_logo))
-                .route(
-                    "/control/{id}/lshape",
-                    get(get_lshape_state).post(control_lshape),
-                )
-                .route("/control/{id}/scene", post(control_scene))
                 .route("/control/{id}/scte35", get(get_scte35_state))
                 .route("/control/{id}/scte35/break", post(insert_scte35_break))
                 .route(
@@ -156,16 +202,20 @@ pub fn routes() -> Router<AppState> {
         .route("/public/{id}/{public}/{*file_stem}", get(get_public))
         .route("/xmltv/{id}/guide.xml", get(get_xmltv))
         .route(
-            "/logo/{id}/{action}",
-            get(control_logo_with_key).post(control_logo_with_key),
+            "/graphics/{id}/take/{template}",
+            get(take_graphic_with_key).post(take_graphic_with_key),
         )
         .route(
-            "/lshape/{id}/{action}",
-            get(control_lshape_with_key).post(control_lshape_with_key),
+            "/graphics/{id}/on-air",
+            get(graphics_on_air_with_key).post(graphics_on_air_with_key),
         )
         .route(
-            "/scene/{id}/{name}",
-            get(control_scene_with_key).post(control_scene_with_key),
+            "/graphics/{id}/out",
+            get(all_graphics_out_with_key).post(all_graphics_out_with_key),
+        )
+        .route(
+            "/graphics/{id}/out/{template}",
+            get(take_graphic_out_with_key).post(take_graphic_out_with_key),
         )
         .route(
             "/scte35/{id}/{action}",

@@ -302,6 +302,10 @@ pub fn is_temporary(file: &Path) -> bool {
 
 /// Temporary files under `storage` that no conversion writes to any more.
 fn stale_temporaries(storage: &Path) -> Vec<PathBuf> {
+    stale_temporaries_at(storage, SystemTime::now())
+}
+
+fn stale_temporaries_at(storage: &Path, now: SystemTime) -> Vec<PathBuf> {
     let mut found = Vec::new();
     let mut folders = vec![storage.to_path_buf()];
 
@@ -325,7 +329,7 @@ fn stale_temporaries(storage: &Path) -> Vec<PathBuf> {
                     .metadata()
                     .and_then(|metadata| metadata.modified())
                     .ok()
-                    .and_then(|modified| modified.elapsed().ok())
+                    .and_then(|modified| now.duration_since(modified).ok())
                     .is_some_and(|age| age >= STALE_TEMPORARY)
             {
                 found.push(path);
@@ -496,21 +500,17 @@ mod tests {
         for file in [&old, &fresh, &media] {
             std::fs::write(file, b"x").unwrap();
         }
-        let long_ago = SystemTime::now() - STALE_TEMPORARY - Duration::from_secs(60);
+        // Other channel tests can sweep the system temporary directory. Keep
+        // these files fresh in real time and advance only this scan's clock.
+        let now = SystemTime::now() + STALE_TEMPORARY + Duration::from_secs(60);
         std::fs::File::options()
             .write(true)
-            .open(&old)
+            .open(&fresh)
             .unwrap()
-            .set_modified(long_ago)
-            .unwrap();
-        std::fs::File::options()
-            .write(true)
-            .open(&media)
-            .unwrap()
-            .set_modified(long_ago)
+            .set_modified(now)
             .unwrap();
 
-        assert_eq!(stale_temporaries(&dir), vec![old]);
+        assert_eq!(stale_temporaries_at(&dir, now), vec![old]);
 
         let _ = std::fs::remove_dir_all(&dir);
     }

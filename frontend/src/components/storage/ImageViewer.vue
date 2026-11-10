@@ -6,19 +6,11 @@ import { useEventListener } from '@vueuse/core'
 import { useDialogFocus } from '@/composables/dialogFocus'
 import { stringFormatter } from '@/composables/helper'
 
-/** One image of the open folder, with the address it can be shown from. */
-export interface ViewerImage {
-    key: string
-    name: string
-    url: string | null
-    size: number
-    /** Width × height once the image has loaded. */
-    dims: string | null
-}
+import type { StorageViewerImage } from '@/composables/storageImages'
 
 /** The open folder's images one at a time, in a full-screen viewer. */
 const props = defineProps<{
-    images: ViewerImage[]
+    images: StorageViewerImage[]
     folder: string
     /** Name of the image that is the folder's poster or wide image, if any. */
     poster: string | null
@@ -28,6 +20,7 @@ const props = defineProps<{
     /** Using an image as artwork is offered (not in the storage root). */
     canUse: boolean
     busy: boolean
+    downloading?: boolean
 }>()
 
 const index = defineModel<number>({ required: true })
@@ -36,6 +29,7 @@ const emit = defineEmits<{
     close: []
     use: [kind: ArtworkKind, name: string]
     loaded: [key: string, dims: string]
+    download: [name: string]
 }>()
 
 const { t } = useI18n()
@@ -70,7 +64,7 @@ function go(step: number) {
     }
 }
 
-function loaded(event: Event, item: ViewerImage) {
+function loaded(event: Event, item: StorageViewerImage) {
     const element = event.target as HTMLImageElement
 
     if (!item.dims && element.naturalWidth) {
@@ -142,14 +136,15 @@ onBeforeUnmount(() => {
                     {{ t('storage.images.useBackdrop') }}
                 </button>
             </template>
-            <a
-                v-if="image?.url"
-                :href="image.url"
-                :download="image.name"
+            <button
+                v-if="image"
+                type="button"
+                :disabled="busy || downloading"
                 class="btn-quiet min-h-10 text-white border-white/25 no-underline"
+                @click="emit('download', image.name)"
             >
                 {{ t('storage.images.download') }}
-            </a>
+            </button>
             <button
                 type="button"
                 class="btn-icon text-white/80"

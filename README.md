@@ -8,9 +8,9 @@ interruption, lets you schedule breaks and live shows over the running
 programme, and publishes an XMLTV guide with artwork for IPTV players.
 
 Everything is run from the browser: the Player for what is on air, the
-Playlist page to build the days, the Scheduler for what goes in over them,
-Graphics for the logo and the L-shape, Storage for the videos and the guide,
-and the Report for what aired.
+Playlist page to build the days, the Scheduler for timed programmes and graphics,
+Graphics to design and operate reusable templates, Storage for media and guide
+artwork, and the Report for what aired.
 
 ## Features
 
@@ -21,10 +21,9 @@ and the Report for what aired.
   or the output's own; a clock with what is on air and what comes next, the
   next break and scheduled event, the sync state and the audio levels; and
   transport controls that lock against a stray click.
-- **Graphics bar** under the preview: switch the logo and the L-shape, move
-  them (dragged or typed, confirmed before they go on air), pick the L-shape's
-  corner, apply quick scenes and mark a commercial break; it locks like the
-  transport.
+- **Graphics status** under the preview: a read-only list of active channel
+  models and temporary graphics, with **Open Graphics** to operate them.
+  Graphics › On air has the model preview, program monitor and channel controls.
 - **Output that keeps going**: HLS (with adaptive renditions) and SRT, RTMP or
   UDP streams. A destination that is down never stops the channel: NoAr
   reconnects by itself, the preview keeps playing, and the Player says whether
@@ -68,24 +67,54 @@ and the Report for what aired.
 
 - Place a break, a clip or a live show (SRT, RTMP, HLS) at a time over
   whatever is on air, either waiting for the current clip to end or
-  interrupting it and resuming at the exact point, without dropping the
-  output; once, every day or on chosen weekdays ([docs](docs/scheduler.md)).
-- **Scheduled graphics**: at a time, bring the L-shape in (with its graphic,
-  corner and size), hide, swap or bring back the logo (the channel's one too)
-  and move it anywhere; undone by itself when the event ends
+  interrupting it without dropping the output. In playlist mode, continue the
+  interrupted programme or return to the clock; once, every day or on chosen weekdays ([docs](docs/scheduler.md)).
+- **Scheduled graphics**: choose a Composer template, fill its fields or select
+  a data-source record, and set its start and end. Temporary graphics leave
+  automatically; scheduled visibility changes restore the earlier state
   ([docs](docs/scheduler.md#scheduled-graphics)).
 
 **Graphics**
 
-- Its own menu tab for the logo, the L-shape and the subtitles. The logo comes
-  up and goes off with a fade or a cut, cross-fades when swapped, and goes
-  anywhere on the screen (`X% × Y%`).
+- **Templates and Composer**: design text, images and animated GIFs, rectangles,
+  rounded rectangles, ellipses, lines, live clocks and a video corner as layers.
+  Drag, resize in percent or pixels, keep proportions, set opacity and animations,
+  and use the timeline, grid and optional safety margins to arrange the design.
+  Layers can be hidden, deleted and restored with undo. Open **Edit** or
+  **+ New template** from Templates or On air
+  ([roadmap and status](docs/graphics-roadmap.md)).
+- **Your names and groups**: organize templates by channel, programme, sponsor
+  or any group you create. Logo, clock and text compositions can stay **Always
+  on air**; optional logo/ticker/L-shape assignments connect models to existing
+  channel controls. New installations contain only one removable Logo example.
+  Templates can be deleted without returning after restart.
+- **Fonts and fields**: upload TTF/OTF fonts from Composer for text and clock
+  layers. Add `{fields}` for operators to fill before taking a template on air;
+  preview and output use the uploaded font assets.
+- **Data sources**: CSV files and public Sheets CSV links, RSS/Atom feeds and
+  HTTP JSON supply fields such as prices, scores and headlines. Choose a record,
+  refresh it periodically and retain the last good values when a provider fails
+  ([docs](docs/graphics-data-sources.md)). Values update in place. Text layers
+  can scroll continuously in either direction, with speed and repeat spacing
+  set in Composer; this works with manual text and mapped fields.
+- **On air**, **Templates**, **Data sources**, **XMLTV logo** and **Subtitles**
+  are the Graphics navigation; the graphics key and commands are in
+  **Settings › External control**, with the live and SCTE-35 keys. The logo and L-shape
+  are edited as layers in Composer. The logo fades or cuts, cross-fades when
+  swapped and can go anywhere on screen.
 - **L-shape**: the picture shrinks into a corner over a full-screen graphic,
-  with a downloadable template.
-- **Quick scenes**: a set of logo and L-shape changes applied in one click,
-  from NoAr or an encoder.
-- Everything can be hidden, swapped, moved or applied on air from NoAr or by
-  API with a fixed key, with a tutorial ([docs](docs/logo.md)).
+  with artwork layers and an editable video window.
+- **Two commands for every graphic**: put a template on air (for a time, or
+  until taken off) and take it off, from On air, from cues marked inside a
+  video, from the Scheduler, or from an encoder, vMix, OBS or a Stream Deck
+  with the graphics key ([docs](docs/logo.md)).
+- On air offers a template preview, a real program monitor and put on air /
+  take off, with the templates, the graphics on air and the always-on ones in
+  three tabs. Edit layers in Composer, or duplicate a template to start from it.
+- **Animated GIF and WebP** images play on air; a very long animation plays
+  one frame in two (or four, …) instead of being refused.
+- **Keyed commands** for encoders and Stream Decks: list what is on air, take
+  one template off, or take everything off except the templates you name.
 - **WebVTT subtitles** in the HLS output ([docs](docs/closed_captions.md)).
 
 **Storage**
@@ -97,9 +126,12 @@ and the Report for what aired.
   playout does less on air ([docs](docs/uploads.md)), and **trimmed** once, by
   dragging the in and out points while the video plays, so they come in
   trimmed everywhere ([docs](docs/trim.md)).
-- **Marks in a video**: its trim, stretches without logo, ad breaks and
-  L-shape stretches on one timeline, played back as they air, plus where the
-  logo goes and the L-shape's graphic, corner and size for that video.
+- **Downloads**: save a stored video, image or sidecar file to your computer
+  from its row, image card or viewer. WebVTT subtitle files can be uploaded
+  beside their videos ([docs](docs/storage.md)).
+- **Marks in a video**: its trim, ad breaks and graphics cues on one
+  timeline, played back as they air, with each template drawn over the video
+  with its entry and exit animations.
 - **Commercials folders**: mark a folder once and everything in it plays as a
   commercial: out of the guide and without the logo
   ([docs](docs/commercials.md)).
@@ -132,16 +164,20 @@ and the Report for what aired.
   the browser.
 - **Docker-only install**: one command, then a setup page in the browser.
 
-The interface is in English and Brazilian Portuguese; the screenshots show the
-English one, with a demo channel (`qa/screenshots/` rebuilds them).
+The interface is in English and Brazilian Portuguese. All screenshots below
+show **dark mode**, in English, at **1440×1000 pixels**, on the synthetic
+**Example TV** demo channel.
+Its programmes, artwork, templates and market records are examples.
+The [screenshot guide](qa/screenshots/README.md) rebuilds and verifies the gallery.
 
 ![Player](docs/images/player.png)
 
 ## Screens
 
 **Scheduler**: the day's programme with each clip at its real length, a
-scheduled break and a live on the events lane, and a scheduled graphics event
-(the L-shape with the logo hidden) on its own lane, with the lists below.
+scheduled break and a live on the events lane, and a Composer template scheduled
+on its own graphics lane. Below it, one list of the day's events, filtered by
+all, materials, lives or graphics.
 
 ![Scheduler](docs/images/scheduler.png)
 
@@ -167,16 +203,41 @@ the videos you pick, at the end, after the selection or at a time.
 
 ![Adding a program folder](docs/images/program-folder.png)
 
-**Marks in a video**: the trim, the logo, the SCTE-35 breaks and the L-shape
-on one timeline; here a break edited into the programme, where it leaves and
-comes back, next to where the logo goes off.
+**Marks in a video**: the trim, the SCTE-35 breaks and the graphics cues on
+one timeline. Here, the graphics cues: a market update on air for 20 seconds and
+a presenter put on and taken off. The player previews each template over the
+video, with its entry and exit animations.
 
 ![Marks in a video](docs/images/marks.png)
 
-**Graphics › Live now**: the logo and the L-shape on air, placed by dragging
-or typing and confirmed before they move, and the quick scenes.
+**Graphics › Templates**: custom groups, thumbnails on a neutral transparency
+checkerboard and controls appropriate to each model's assignment. Edit opens
+Composer and Duplicate copies a template to change it; scroll or filter groups
+to see the other templates.
 
-![Graphics](docs/images/graphics.png)
+![Graphics templates in dark mode](docs/images/graphics.png)
+
+**Composer**: image, shape and text layers, named fields, resize handles,
+percent/pixel geometry, font upload, animation timing and editor safety margins.
+Layers are reordered by dragging and renamed in the list; the layer's settings
+are split into Position, Content, Style, Animation and Template tabs, with a
+colour picker for every colour. The shared checkerboard gains an alignment grid
+in the editor.
+
+![Composer in dark mode](docs/images/composer.png)
+
+**Graphics › On air**: fill the presenter fields on the preview, compare them
+with the real program monitor and take graphics in/out. The right column has
+three tabs: Templates, with search and a group filter; On air, the temporary
+graphics with their time left; and Always on air, the permanent ones.
+Preview uses the same checkerboard as Templates; Program shows the actual video.
+
+![Graphics On air in dark mode](docs/images/onair.png)
+
+**Graphics › Data sources**: a CSV example with two market records, ready to
+map to template fields. RSS/Atom and HTTP JSON sources use the same page.
+
+![Graphics data sources in dark mode](docs/images/data-sources.png)
 
 **Report**: a day with the actual times of what aired and how each item ended; on
 the current day, also what is still to come
@@ -198,6 +259,10 @@ rate.
 
 Requirements: Docker with the Compose plugin.
 
+To test the graphics review branch on a disposable machine, follow the
+[branch test guide](docs/graphics-testing.md) instead of the published-image
+commands below. It builds this checkout and starts a fresh test installation.
+
 ```sh
 git clone https://github.com/LuizStSantos/NoAr.git
 cd NoAr
@@ -215,13 +280,13 @@ under `/data`.
 
 Everything NoAr stores lives in `./data` next to `docker-compose.yml`:
 
-| Folder | Content |
-| --- | --- |
-| `data/media` | Media storage: videos, program folders with `.nfo` and artwork |
-| `data/playlists` | Daily playlists |
-| `data/public` | HLS output |
-| `data/db` | Database |
-| `data/logs` | Channel logs |
+| Folder           | Content                                                        |
+| ---------------- | -------------------------------------------------------------- |
+| `data/media`     | Media storage: videos, program folders with `.nfo` and artwork |
+| `data/playlists` | Daily playlists                                                |
+| `data/public`    | HLS output                                                     |
+| `data/db`        | Database                                                       |
+| `data/logs`      | Channel logs                                                   |
 
 Set your time zone in `docker-compose.yml` (`TZ`, default
 `America/Sao_Paulo`). Live source URLs connect to an external server and need no
@@ -248,15 +313,15 @@ NoAr follows [Semantic Versioning](https://semver.org); every release is
 listed in [CHANGELOG.md](CHANGELOG.md). The images on
 `ghcr.io/luizstsantos/noar` are tagged:
 
-| Tag | What it is |
-| --- | --- |
-| `latest` | The newest stable release |
-| `1.1`, `1.1.1` | A release line (gets its fixes) or one exact release |
-| `main` | The development build, not for air |
-| `sha-…` | One commit, for tests |
+| Tag            | What it is                                           |
+| -------------- | ---------------------------------------------------- |
+| `latest`       | The newest stable release                            |
+| `2.2`, `2.2.1` | A release line (gets its fixes) or one exact release |
+| `main`         | The development build, not for air                   |
+| `sha-…`        | One commit, for tests                                |
 
 To stay on a release line, pin it in `docker-compose.yml`, for example
-`ghcr.io/luizstsantos/noar:1.1`. Releases are prepared and published by the
+`ghcr.io/luizstsantos/noar:2.2`. Releases are prepared and published by the
 **Prepare release** and **Tag release** workflows; see
 [docs/releasing.md](docs/releasing.md).
 
@@ -267,7 +332,9 @@ need this README and [docs/docker.md](docs/docker.md).
 
 ## Development
 
-See [docs/developer.md](docs/developer.md). The workspace has two crates:
+See [docs/developer.md](docs/developer.md) for builds and
+[Architecture and maintenance](docs/maintenance.md) for module ownership and
+regression checks. The workspace has two crates:
 `noar`, the server and web interface (the binary is `noar`), and
 `noar-engine`, which decodes, composites and encodes.
 

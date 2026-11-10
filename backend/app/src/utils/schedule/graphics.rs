@@ -8,7 +8,6 @@ use serde::Deserialize;
 use super::{parse_date, parse_time};
 use crate::{
     db::models::GraphicsEvent,
-    file::norm_abs_path,
     utils::{config::GraphicsScene, errors::ServiceError},
 };
 
@@ -17,7 +16,10 @@ use crate::{
 pub struct GraphicsEventInput {
     #[serde(default)]
     pub title: String,
+    #[serde(default)]
     pub actions: GraphicsScene,
+    #[serde(default)]
+    pub template: Option<crate::db::models::ScheduledGraphic>,
     pub start_date: String,
     pub start_time: String,
     #[serde(default)]
@@ -35,7 +37,7 @@ fn default_enabled() -> bool {
 /// Check an event from the web interface and turn it into a row: its
 /// images become storage-relative.
 pub fn prepare_graphics_event(
-    storage: &std::path::Path,
+    _storage: &std::path::Path,
     channel_id: i32,
     id: i32,
     input: GraphicsEventInput,
@@ -56,28 +58,25 @@ pub fn prepare_graphics_event(
     }
 
     let title = input.title.trim().to_string();
-    let mut actions = GraphicsScene {
-        name: title.clone(),
-        ..input.actions
-    };
 
-    actions.check().map_err(bad_request)?;
-
-    for image in [&mut actions.logo_image, &mut actions.lshape_graphic] {
-        *image = match image
-            .as_deref()
-            .map(str::trim)
-            .filter(|path| !path.is_empty())
-        {
-            Some(path) => Some(norm_abs_path(storage, path)?.2),
-            None => None,
-        };
+    // Scheduled graphics put a template on and off air. Logo and L-shape
+    // actions of older versions are no longer accepted.
+    if input.template.is_none() {
+        return Err(bad_request(
+            "Choose the template this scheduled graphic puts on air".to_string(),
+        ));
     }
+
+    let actions = GraphicsScene {
+        name: title.clone(),
+        ..GraphicsScene::default()
+    };
 
     Ok(GraphicsEvent {
         id,
         channel_id,
         title,
+        template: input.template,
         actions,
         start_date: start_date.format("%Y-%m-%d").to_string(),
         start_time: start_time.format("%H:%M:%S").to_string(),
@@ -125,23 +124,101 @@ impl GraphicsEvent {
     }
 }
 
+/// Validate ownership/renderability before persisting a model schedule. Legacy
+/// action events keep their original API shape and validation.
+pub async fn validate_scheduled_template(
+    manager: &crate::player::controller::ChannelManager,
+    event: &mut GraphicsEvent,
+) -> Result<(), ServiceError> {
+    let Some(selection) = &mut event.template else {
+        return Ok(());
+    };
+    let template = crate::db::handles::select_graphics_template(
+        &manager.db_pool,
+        manager.id,
+        selection.template_id,
+    )
+    .await?
+    .ok_or_else(|| {
+        ServiceError::NotFound("Graphics template not found in this channel".to_string())
+    })?;
+    let scenes =
+        crate::db::handles::select_graphics_scene_templates(&manager.db_pool, manager.id).await?;
+
+    if scenes.iter().any(|(id, _)| *id == template.id) {
+        return Err(ServiceError::BadRequest(
+            "Choose a layered template, not a legacy quick scene".to_string(),
+        ));
+    }
+
+    let bindings =
+        crate::db::handles::select_graphics_bindings(&manager.db_pool, manager.id).await?;
+    let permanent = template.always_on == Some(true)
+        || bindings.iter().any(|binding| {
+            binding.template_id == template.id
+                && binding.role != crate::db::models::GraphicsRole::Lshape
+        });
+
+    if selection.values.len() > 64
+        || selection
+            .values
+            .values()
+            .any(|value| value.chars().count() > 1000)
+        || selection.records.len() > 16
+    {
+        return Err(ServiceError::BadRequest(
+            "Scheduled fields exceed their limits".to_string(),
+        ));
+    }
+
+    if permanent && (!selection.values.is_empty() || !selection.records.is_empty()) {
+        return Err(ServiceError::BadRequest(
+            "Always-on models use their saved fields and data mappings".to_string(),
+        ));
+    }
+
+    let config = manager.config.read().await.clone();
+    if permanent && !crate::graphics::graphic_has_content(&template, &config) {
+        return Err(ServiceError::BadRequest(
+            "Configure the permanent model before scheduling it".to_string(),
+        ));
+    }
+
+    let spec = crate::graphics::graphic_spec_for_records(
+        &template,
+        &selection.values,
+        &selection.records,
+        &config,
+    )?;
+    tokio::task::spawn_blocking(move || {
+        noar_engine::render_graphic(&spec, config.output.width, config.output.height)
+    })
+    .await
+    .map_err(|_| ServiceError::InternalServerError)?
+    .map_err(|error| {
+        ServiceError::BadRequest(format!("Scheduled model cannot be rendered: {error:#}"))
+    })?;
+    selection.name = template.name;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
 
     use super::*;
-    use crate::utils::config::{SceneLShape, SceneLogo};
 
     fn input(start: &str, end: Option<&str>, repeat_days: u8) -> GraphicsEventInput {
         GraphicsEventInput {
             title: " Patrocínio ".to_string(),
-            actions: GraphicsScene {
-                logo: SceneLogo::Hide,
-                lshape: SceneLShape::On,
-                lshape_corner: Some("bottom-left".to_string()),
-                lshape_scale: Some(70.0),
-                ..GraphicsScene::default()
-            },
+            template: Some(crate::db::models::ScheduledGraphic {
+                template_id: 3,
+                name: "Patrocínio".to_string(),
+                values: Default::default(),
+                records: Default::default(),
+            }),
+            actions: GraphicsScene::default(),
             start_date: "2026-10-27".to_string(),
             start_time: start.to_string(),
             end_time: end.map(str::to_string),
@@ -173,9 +250,12 @@ mod tests {
             Some(next.succ_opt().unwrap().and_hms_opt(0, 2, 0).unwrap())
         );
 
-        let mut wrong = input("12:00", None, 0);
-        wrong.actions.lshape_corner = Some("middle".to_string());
-        assert!(prepare_graphics_event(storage, 1, 0, wrong).is_err());
+        let mut legacy = input("12:00", None, 0);
+        legacy.template = None;
+        assert!(
+            prepare_graphics_event(storage, 1, 0, legacy).is_err(),
+            "logo and L-shape events without a template are no longer accepted"
+        );
         assert!(prepare_graphics_event(storage, 1, 0, input("25:00", None, 0)).is_err());
     }
 }

@@ -7,6 +7,7 @@ pub(crate) enum Stage {
     LogoOverlay,
     TextStatic,
     TextRuntime,
+    GraphicsBlend,
     #[cfg(feature = "desktop-base")]
     DesktopSend,
     #[cfg(feature = "desktop-base")]
@@ -25,6 +26,7 @@ impl Stage {
         Self::LogoOverlay,
         Self::TextStatic,
         Self::TextRuntime,
+        Self::GraphicsBlend,
         #[cfg(feature = "desktop-base")]
         Self::DesktopSend,
         #[cfg(feature = "desktop-base")]
@@ -44,12 +46,13 @@ impl Stage {
             Self::LogoOverlay => 4,
             Self::TextStatic => 5,
             Self::TextRuntime => 6,
+            Self::GraphicsBlend => 7,
             #[cfg(feature = "desktop-base")]
-            Self::DesktopSend => 7,
+            Self::DesktopSend => 8,
             #[cfg(feature = "desktop-base")]
-            Self::DesktopConvert => 8,
+            Self::DesktopConvert => 9,
             #[cfg(feature = "desktop-base")]
-            Self::DesktopPresent => 9,
+            Self::DesktopPresent => 10,
         }
     }
 
@@ -62,6 +65,7 @@ impl Stage {
             Self::LogoOverlay => "logo",
             Self::TextStatic => "text_static",
             Self::TextRuntime => "text_runtime",
+            Self::GraphicsBlend => "graphics_blend",
             #[cfg(feature = "desktop-base")]
             Self::DesktopSend => "desktop_send",
             #[cfg(feature = "desktop-base")]
@@ -309,6 +313,71 @@ mod enabled {
 
         result
     }
+
+    #[cfg(test)]
+    mod tests {
+        use crate::{
+            GraphicAnimation, GraphicContent, GraphicLayerSpec, GraphicSpec, GraphicsControl,
+            RgbaColor,
+            compositor::graphics::{RoleImageBlend, render_graphic},
+            frame::{PixelFormat, VideoFrame},
+        };
+
+        use super::{Stage, finish, start};
+
+        #[test]
+        fn model_blends_are_counted_once_and_preparation_is_excluded() {
+            let handle = start(Some(0));
+            let spec = GraphicSpec {
+                picture: None,
+                layers: vec![GraphicLayerSpec {
+                    content: GraphicContent::Box {
+                        fill: RgbaColor::opaque(255, 255, 255),
+                    },
+                    x: 10.0,
+                    y: 10.0,
+                    width: 20.0,
+                    height: 20.0,
+                    opacity: 1.0,
+                    radius: 0.0,
+                    animation_in: GraphicAnimation::None,
+                    animation_out: GraphicAnimation::None,
+                    animation_ms: 0,
+                    delay_ms: 0,
+                }],
+            };
+            let graphic = render_graphic(&spec, 320, 180).unwrap();
+            let control = GraphicsControl::default();
+            control.take(render_graphic(&spec, 320, 180).unwrap(), None);
+            control
+                .set_persistent(42, render_graphic(&spec, 320, 180).unwrap())
+                .unwrap();
+            assert_eq!(
+                handle.lock().unwrap().stats[Stage::GraphicsBlend.index()].calls,
+                0
+            );
+            let mut frame = VideoFrame::new(PixelFormat::Yuv420p, 320, 180);
+            control.blend(&mut frame);
+            control.blend_always_on(&mut frame, 1.0);
+            graphic.blend_role(
+                &mut frame,
+                &[1.0],
+                false,
+                1.0,
+                RoleImageBlend {
+                    index: 0,
+                    opacity: 1.0,
+                    only: false,
+                    offset: (0, 0),
+                },
+            );
+            graphic.blend_steady(&mut frame);
+            let stats = handle.lock().unwrap().stats[Stage::GraphicsBlend.index()];
+            assert_eq!(stats.calls, 4);
+            assert_eq!(stats.overlay_size, Some((320, 180)));
+            finish();
+        }
+    }
 }
 
 #[cfg(feature = "processing-bench")]
@@ -372,4 +441,19 @@ pub(crate) fn measure_success<T, E>(
     operation: impl FnOnce() -> Result<T, E>,
 ) -> Result<T, E> {
     operation()
+}
+
+#[cfg(all(test, feature = "processing-bench"))]
+mod tests {
+    use super::Stage;
+
+    #[test]
+    fn stage_indices_follow_the_complete_reporting_order() {
+        for (index, stage) in Stage::ALL.iter().copied().enumerate() {
+            assert_eq!(stage.index(), index);
+        }
+
+        assert_eq!(Stage::GraphicsBlend.name(), "graphics_blend");
+        assert_eq!(Stage::COUNT, Stage::ALL.len());
+    }
 }

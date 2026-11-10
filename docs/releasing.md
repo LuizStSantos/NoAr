@@ -13,9 +13,15 @@ act on when they update:
 
 | Part | Goes up when | Examples |
 | --- | --- | --- |
-| **MAJOR** | An update needs the operator to do something, or something that worked stops working. | An API endpoint or field removed or renamed. A playlist, `.nfo` or `.marks.json` format that older files no longer satisfy. A database migration that cannot be undone by going back to the previous image. A setting removed or its meaning changed. A required change to `docker-compose.yml`. |
+| **MAJOR** | An update needs the operator to do something, or something that worked stops working. | An API endpoint or field removed or renamed. A playlist, `.nfo` or `.marks.json` format that older files no longer satisfy. A destructive or lossy database migration that requires operator action beyond the documented backup/image restoration procedure. A setting removed or its meaning changed. A required change to `docker-compose.yml`. |
 | **MINOR** | Something new, and everything that worked keeps working. | A new page, setting, API endpoint or optional field. A database migration that only adds tables or columns. |
 | **PATCH** | Only fixes, with no new behaviour to learn. | A bug fix, a translation, a performance improvement. |
+
+SQLx checks migration history. Even additive migrations require restoring the
+pre-migration database backup together with the previous image when downgrading;
+switching only the image is not a supported rollback. See
+[the Docker rollback procedure](docker.md). This restoration requirement alone
+does not turn an otherwise compatible additive migration into a MAJOR change.
 
 A release candidate for a larger change can be tagged `v1.2.0-rc.1`. Images
 built from it are never published as `latest`.

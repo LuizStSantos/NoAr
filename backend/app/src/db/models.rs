@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, str::FromStr};
+use std::{collections::HashMap, error::Error, fmt, str::FromStr};
 
 use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,65 @@ use crate::{
     db::handles,
     utils::config::{OutputMode, PlayoutConfig},
 };
+
+/// Persisted configuration and last-good rows for an external or uploaded data source.
+#[derive(Clone, Debug, Serialize)]
+pub struct GraphicsDataSource {
+    pub id: i32,
+    #[serde(skip)]
+    pub channel_id: i32,
+    pub name: String,
+    pub kind: String,
+    pub url: String,
+    pub interval: i64,
+    pub records_path: String,
+    #[serde(skip)]
+    pub document: String,
+    pub rows: crate::graphics::sources::DataRows,
+    pub last_success: Option<i64>,
+    pub last_attempt: Option<i64>,
+    pub error: Option<String>,
+    pub revision: i64,
+    #[serde(skip)]
+    pub fetch_seq: i64,
+}
+
+impl FromRow<'_, SqliteRow> for GraphicsDataSource {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let data: String = row.try_get("data")?;
+        let rows = serde_json::from_str(&data).map_err(|error| sqlx::Error::ColumnDecode {
+            index: "data".to_string(),
+            source: Box::new(error),
+        })?;
+
+        Ok(Self {
+            id: row.try_get("id")?,
+            channel_id: row.try_get("channel_id")?,
+            name: row.try_get("name")?,
+            kind: row.try_get("kind")?,
+            url: row.try_get("url")?,
+            interval: row.try_get("interval")?,
+            records_path: row.try_get("records_path")?,
+            document: row.try_get("document")?,
+            rows,
+            last_success: row.try_get("last_success")?,
+            last_attempt: row.try_get("last_attempt")?,
+            error: row.try_get("error")?,
+            revision: row.try_get("revision")?,
+            fetch_seq: row.try_get("fetch_seq")?,
+        })
+    }
+}
+
+/// Uploaded font identity; bytes are read separately by authorized callers.
+#[derive(Clone, Debug, Serialize, sqlx::FromRow)]
+pub struct GraphicsFont {
+    pub id: String,
+    pub name: String,
+    pub filename: String,
+    pub family: String,
+    pub size: i64,
+}
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct GlobalSettings {
@@ -645,6 +704,18 @@ text_enum!(ScheduleKind { Media => "media", Live => "live" });
 text_enum!(EntryMode { AfterClip => "after_clip", Interrupt => "interrupt" });
 text_enum!(AfterMode { Continue => "continue", Clock => "clock" });
 
+/// A model selected by a graphics schedule, with per-airing fields/records.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ScheduledGraphic {
+    pub template_id: i32,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub values: HashMap<String, String>,
+    #[serde(default)]
+    pub records: HashMap<i32, usize>,
+}
+
 /// A row of `graphics_events`: logo and L-shape changes at a set time,
 /// undone at the end. Times are in the channel time zone.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -652,7 +723,10 @@ pub struct GraphicsEvent {
     pub id: i32,
     pub channel_id: i32,
     pub title: String,
-    /// What it does to the logo and the L-shape.
+    /// Absent on legacy scene-action events.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<ScheduledGraphic>,
+    /// Legacy actions retained without rewriting existing schedules.
     pub actions: crate::utils::config::GraphicsScene,
     /// `YYYY-MM-DD`
     pub start_date: String,
@@ -673,6 +747,15 @@ impl FromRow<'_, SqliteRow> for GraphicsEvent {
             id: row.try_get("id")?,
             channel_id: row.try_get("channel_id")?,
             title: row.try_get("title")?,
+            template: row
+                .try_get::<Option<String>, _>("template")?
+                .map(|value| {
+                    serde_json::from_str(&value).map_err(|error| sqlx::Error::ColumnDecode {
+                        index: "template".to_string(),
+                        source: error.to_string().into(),
+                    })
+                })
+                .transpose()?,
             actions: serde_json::from_str(&actions).map_err(|e| sqlx::Error::ColumnDecode {
                 index: "actions".to_string(),
                 source: e.to_string().into(),
@@ -682,6 +765,90 @@ impl FromRow<'_, SqliteRow> for GraphicsEvent {
             end_time: row.try_get("end_time")?,
             repeat_days: row.try_get::<i64, _>("repeat_days")?.clamp(0, 127) as u8,
             enabled: row.try_get("enabled")?,
+        })
+    }
+}
+
+/// A stable channel binding. L-shape is a manual role, never always on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GraphicsRole {
+    Logo,
+    Ticker,
+    Lshape,
+}
+
+text_enum!(GraphicsRole { Logo => "logo", Ticker => "ticker", Lshape => "lshape" });
+
+/// Saved association between a channel role and a template, installed by
+/// migration 00029 and populated transactionally before channels initialize.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GraphicsChannelBinding {
+    pub channel_id: i32,
+    pub role: GraphicsRole,
+    pub template_id: i32,
+    pub enabled: bool,
+}
+
+impl FromRow<'_, SqliteRow> for GraphicsChannelBinding {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let role: String = row.try_get("role")?;
+
+        Ok(Self {
+            channel_id: row.try_get("channel_id")?,
+            role: role
+                .parse()
+                .map_err(|error: String| sqlx::Error::ColumnDecode {
+                    index: "role".to_string(),
+                    source: error.into(),
+                })?,
+            template_id: row.try_get("template_id")?,
+            enabled: row.try_get("enabled")?,
+        })
+    }
+}
+
+/// A row of `graphics_templates`: a graphic a channel designed once and
+/// puts on air many times.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct GraphicsTemplate {
+    pub id: i32,
+    pub channel_id: i32,
+    pub name: String,
+    pub group: String,
+    /// Seconds on air before it goes out by itself; 0 stays until taken out.
+    pub duration: f64,
+    pub during_lshape: crate::graphics::DuringLShape,
+    pub layers: Vec<crate::graphics::TemplateLayer>,
+    /// The `{field}` names to fill in on air, read from the layers.
+    pub fields: Vec<String>,
+    /// Startup visibility for bound permanent roles; not applicable to GCs/scenes.
+    pub always_on: Option<bool>,
+    /// Stable image layer addressed by compatibility image/placement controls.
+    pub control_layer_id: Option<String>,
+}
+
+impl FromRow<'_, SqliteRow> for GraphicsTemplate {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let layers: String = row.try_get("layers")?;
+        let layers: Vec<crate::graphics::TemplateLayer> =
+            serde_json::from_str(&layers).map_err(|e| sqlx::Error::ColumnDecode {
+                index: "layers".to_string(),
+                source: e.to_string().into(),
+            })?;
+        let during_lshape: String = row.try_get("during_lshape")?;
+
+        Ok(Self {
+            id: row.try_get("id")?,
+            channel_id: row.try_get("channel_id")?,
+            name: row.try_get("name")?,
+            group: row.try_get("group_name")?,
+            duration: row.try_get("duration")?,
+            during_lshape: crate::graphics::DuringLShape::parse(&during_lshape).unwrap_or_default(),
+            fields: crate::graphics::template_fields(&layers),
+            always_on: row.try_get("always_on").unwrap_or(None),
+            control_layer_id: row.try_get("control_layer_id").unwrap_or(None),
+            layers,
         })
     }
 }

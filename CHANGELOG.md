@@ -11,12 +11,249 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-10
+
+### Removed
+
+- **Breaking:** the keyed `/logo/{id}/{action}`, `/lshape/{id}/{action}` and
+  `/scene/{id}/{name}` routes and `/api/control/{id}/logo|lshape|scene`. Use
+  the graphics commands instead: `/graphics/{id}/take/{template}` and
+  `/graphics/{id}/out/{template}` with the same graphics key, or
+  `POST /api/graphics/{id}/take|out` with a login token. Encoders, vMix, OBS
+  or Stream Deck buttons that call the old URLs must be updated.
+
 ### Changed
 
+- On air's program monitor keeps its picture clear: its state, what is
+  playing, sound and quality are in a slim bar under it (the Player's
+  monitor is unchanged). The On air tabs fit their names and counts, and the
+  Composer's side panels are as tall as their content.
+
+- In Graphics › On air the right column has three tabs: **Templates**, with
+  a search and a group filter; **On air (n)**, with the temporary graphics on
+  air, their time, Take out and Take all out; and **Always on air (n)**, with
+  the logo, ticker and other always-on templates and their switches. The column stops at the
+  window's height and scrolls by itself, so a long list no longer stretches
+  the page.
+
+- The Composer's layer list shows the whole layer name (the order arrows and
+  delete appear on the selected row, on hover and on keyboard focus), and a
+  layer is renamed there with a double-click or F2; Escape cancels.
+
+- The Scheduler shows the day's materials, lives and graphics in one agenda
+  with All / Materials / Lives / Graphics filters, as tall as its rows. The
+  live key for encoders and scripts moved to **Settings › External control**;
+  old `/schedule#live-api` links open it there.
+
+- **Settings › External control** gathers every way to control NoAr without a
+  login, in three tabs: **Live** (extend or end the live), **Graphics** (put
+  templates on and off air) and **SCTE-35** (mark and cancel breaks), each
+  with its key, commands and tutorial. Graphics › External control (API) and
+  the SCTE-35 key panel in Ad breaks moved there; old `/graphics/api` links
+  open the Graphics tab. The Graphics tab is in two parts: **One template**,
+  picked with a search, with its put on air and take off commands; and
+  **Everything at once**, with the templates that stay on air added by
+  search as chips, take everything off and the on-air list.
+
+- The Composer fits the window on wide screens: one toolbar row (back, name,
+  group, actions), a preview that takes the height left and stays 16:9, a
+  compact timeline that is always visible, and the layer's properties in tabs
+  (Position, Content, Style, Animation, Template) so only the side panel
+  scrolls. Layers are reordered by dragging as well as with their arrows; a
+  new layer opens on Content, and the last tab used is remembered.
+
+- The Composer's colours (text, fill and stroke) have a colour picker next to
+  the code, which can still be typed or pasted; picking keeps the code's
+  opacity, and fill and stroke can be cleared to none.
+
+- Saving a template in the Composer returns to the Templates list, with a
+  confirmation message. A failed save stays in the Composer with the changes.
+
+- A new storage keeps the default logo, the empty subtitle file and the
+  images uploaded from the Composer in one `Graphics` folder instead of
+  `00-assets`. A storage that already has `00-assets` keeps it, with its
+  settings unchanged.
+
+- Separate configuration updates, scheduled playback, XMLTV serialization and
+  native output policy into domain owners; split playlist, Scheduler, Storage,
+  report and device-discovery coordination from their presentation panels.
+  Preserve APIs, migrations and operator behavior, document source ownership,
+  and guard presentation/data boundaries in architecture checks.
+
+- Organize logo, L-shape and model rendering under the Graphics domain; move
+  shared controller actions out of HTTP handlers and separate Composer panels.
+- Remove unreachable legacy graphics editors, give subtitles/controller examples
+  their own components, and document ownership and maintenance boundaries.
+- Enforce service/API/data/engine dependencies with source-level CI checks.
+- Refresh the API tutorial to describe live clock layers, mapped text and free
+  permanent compositions.
+- A switch between clips that takes a second or more is logged as a warning
+  naming each step and how long it took, and so is a file or clip that takes
+  that long to open. The soak test lists these warnings in its summary.
 - The soak test checks decoded moving pictures as well as transport progress,
   detecting frozen video even while output bytes and `/health` keep advancing.
   Its CI matrix covers SRT and HLS separately, with bounded allowances for the
   intentional live-source faults. NDI and SDI still require separate fixtures.
+
+### Fixed
+
+- A long or large animated GIF or WebP no longer fails with "decoded GIF
+  exceeds 32 MiB at this layer size": an animation may take 64 MiB at its
+  layer size (128 MiB per composition), and beyond that or 256 frames NoAr
+  plays one frame in 2, 4… with the same loop length, and logs it.
+
+- The video marks editor no longer shows "The browser cannot play this
+  format" over a playable video that has no graphics cues.
+
+- A data source that cannot be read says which step failed and on which
+  server (DNS lookup, connection with its cause, no answer within 10 s over
+  IPv6/IPv4, slow data) instead of only "Data source request timed out".
+
+- A Google Sheets data source accepts the sheet's ordinary link (Share dialog
+  or address bar, with `#gid=` for a tab) and its published `pubhtml` page,
+  and reads their CSV. Before, these returned Google's web page and the source
+  failed with a CSV quoting error. Empty columns after the data are ignored,
+  and a web page in place of CSV is reported as such.
+
+- An uploaded font with a single face (only bold, or bold italic) is used on
+  air whatever the layer's Bold setting; asking it for another weight made the
+  text fall back to the default font.
+
+- Localize converted channel-template and generated-layer names for display
+  without rewriting saved identities or custom names.
+- Preserve authored fractional logo geometry on compatibility saves and output
+  changes; adopt surviving intermediate-conversion bindings without reimporting
+  frozen settings. Keep installed migration checksums unchanged.
+- Bound manual graphics expansion and pending takes, cancel stale work on edits
+  and output lifecycle changes, and isolate unavailable optional permanent art.
+- Cache model-logo movement, prepare artwork outside frame-critical locks, and
+  preserve animation epochs and controlled-image indices on refresh.
+- Save Composer content and channel assignment atomically; protect dirty
+  navigation and asynchronous authoring operations, restore natural image size,
+  and expose visible, keyboard-operable resize and upload controls.
+
+- Share Composer's neutral transparency checkerboard with On air and template
+  thumbnails; keep alignment grids and safety margins specific to the editor.
+- Capture every README gallery image at exactly 1440×1000 in dark mode, including
+  Templates, and reject PNG dimension mismatches in the screenshot helper.
+
+- Preserve a ticker hide issued before its runtime definition loads, including
+  the next playout start, without changing its saved startup visibility.
+
+- Clear external and clip artwork/placement when an assigned template is deleted
+  or its compatibility binding is removed; leaving L-shape returns to full screen.
+
+- Desktop output composes the active model, clip or externally replaced logo
+  into the video frame, matching encoded output instead of using a stale
+  startup bitmap. L-shape artwork replacements and image-only clip overrides
+  preserve the assigned model's freely positioned picture window.
+
+### Added
+
+- The video marks editor in Storage draws the cued graphics over the video
+  at their times, so a cue can be checked without putting it on air.
+
+- **Duplicate** on a template card saves a copy, off air, under a free name
+  ("Name (copy)") and opens it in the Composer to change it.
+
+- Graphics key commands to take everything off air, the logo, ticker and
+  L-shape included, optionally except some templates
+  (`/graphics/{id}/out?key=…&except=logo`), and to list everything on air
+  (`/graphics/{id}/on-air?key=…`). The External control (API) page shows only
+  the keyed commands, with the templates that stay on air chosen there.
+
+- Animated WebP images play on air like animated GIFs, with their
+  transparency, frame times and loop. GStreamer decodes only still WebP.
+
+- One take/out command pair for every graphics template, GC, L-shape, logo
+  or ticker alike, by id or by name, with an optional time on air
+  (`duration`, 0 keeps it on until taken off), with a login token or the
+  graphics key. The External control page shows them ready to copy.
+- Graphics cues in a video's marks (Storage › Marks › Graphics): at a time of
+  the video, put a template on air for a time or until taken off, or take one
+  off. They run while the video plays, from wherever it starts.
+- Composer: change the order of layers (the layer at the top of the list is in
+  front), play the whole animation (in, hold and out, also for templates that
+  stay until taken off), and a clear "Back to templates" link at the top. The
+  control assignment and "image controlled by the API" fields are gone.
+
+- Author continuous left/right scrolling on Composer text layers, with output-pixel
+  speed, repeat spacing, clipped previews, manual fields and live data mappings.
+  Temporary and permanent models share the existing take clock; static models
+  retain their behavior without a database migration.
+
+- Download stored media and sidecar files from Storage, with fresh access tickets
+  for list, image-grid and viewer actions; accept WebVTT subtitle uploads.
+
+- Replace Composer's scenery background with a neutral checkerboard and 10%
+  grid, plus optional action/text safety guides at 5%/10% from each edge.
+
+- Schedule Composer models with previews, fields, data records and second-level
+  time inputs; retain legacy action events through migration `00034`. Each timed
+  composition owns its take, and permanent visibility leases restore prior state.
+- Play bounded animated GIFs with transparency and per-frame delays in image
+  layers, logo and L-shape artwork. First image insertion uses natural output
+  geometry, including full-frame artwork; replacements retain authored layout.
+
+- Add Graphics Data sources for uploaded/published CSV (including public Google
+  Sheets CSV), RSS/Atom and HTTP JSON, with Composer field mappings, record
+  selection, live updates and persistent last-good data during provider failures.
+
+- Upload immutable channel fonts from Composer for text/clock layers; the browser
+  and server use the same bytes, persisted in SQLite and restored on restart.
+
+- Add Composer shape outlines, rounded rectangles, ellipses and lines, plus live
+  server-time clock layers with channel or explicit timezone and date formats.
+
+- Free template names/groups, optional compatibility assignments with explicit
+  image targets, deletion of assigned models with a usage confirmation, and
+  user-authored permanent compositions. Fresh installations/new channels start
+  with only one removable logo example; existing installations retain their models.
+
+- The graphics API tutorial explains layer-based channel models, startup
+  visibility and temporary take/out, using real model IDs and separate token/key
+  examples. A disposable-machine Compose file builds this branch locally.
+
+- Channel logo, L-shape and ticker models are edited as Composer layers, with
+  permanent visibility and video-window corner/size controls. Migration `00030`
+  upgrades already converted layouts without duplicating models or changing
+  frozen legacy columns. Compatibility image/placement controls act on the
+  composed layers and retain additional artwork. The independent guide icon
+  has an XMLTV logo tab in Graphics.
+
+- Assigned channel graphics and scenes have separate library cards, localized
+  role names, saved-model previews, visibility/scene controls and Composer editing for channel layers
+  (with a scene action editor). Logo, L-shape and Quick scenes no longer have separate menu entries;
+  old browser URLs redirect with the channel preserved. Manage scenes remains
+  available in an empty library group. Static ticker text is edited in Composer. Assigned models
+  are excluded from the ordinary On air GC picker.
+- Channel graphics conversion: sqlx migration `00029` and automatic, atomic
+  conversion to bound logo, ticker and L-shape templates and quick-scene models.
+  Compatibility configuration writes save these models; legacy columns stay
+  unchanged. Returning to an older image requires restoring the pre-update
+  database backup. See [Docker rollback](docs/docker.md#restoring-before-graphics-conversion-00029).
+- Graphics Composer: admins can create and edit templates from Templates or
+  On air, arrange and resize layers in percent or output pixels, lock proportions,
+  undo edits, choose fonts and fields, upload or select storage artwork, set a
+  video corner, preview animation timing and save a named template in a group.
+  Failed loads cannot overwrite a template; failed saves preserve the draft.
+- Graphics templates: channels store their own graphics (layers of text,
+  images and boxes in percent of the frame, with `{field}` names) through
+  `/api/graphics/{id}/templates`. Admins create and change them; everyone on
+  the channel can read them. See
+  [docs/graphics-roadmap.md](docs/graphics-roadmap.md).
+- Templates go on air through `/api/graphics/{id}/take`, `/out` and
+  `/on-air`, with their fields filled in and entry and exit animations
+  (fade, slide, wipe). They are drawn under the L-shape, so a lower third
+  follows the picture into the L-shape's corner; a template can also wait
+  for the L-shape to end or skip it.
+- The Graphics tab opens on **On air**, the operator's screen: a preview
+  that draws the picked template with what is typed in its fields, a program
+  monitor with the real output, Put on air / Take out / Next, the graphics on
+  air, and below them the live logo, L-shape and quick scene controls of the
+  former Live now page, which now opens On air. **Templates** shows the
+  library as cards, filtered by group. The menu keeps Logo, L-shape and Quick
+  scenes apart, as channel settings, until they move over to templates.
 
 ## [2.2.1] - 2026-11-05
 
@@ -134,13 +371,13 @@ one is tagged.
 
 ### Added
 
-- *Ident or promo* in a video's marks (*Storage › trim, logo, breaks and
-  L-shape*): a marked clip airs inside the program before it, so the Player
+- _Ident or promo_ in a video's marks (_Storage › trim, logo, breaks and
+  L-shape_): a marked clip airs inside the program before it, so the Player
   keeps that program's name and the XMLTV guide does not list it. Saved as
   `"insert": true` in the video's `<name>.marks.json`, not in a sheet, so a
   clip in a series folder keeps using the folder's `.nfo`. The report items
   gain an `insert` field.
-- Assembled programs (`.program`, made with *Storage › New program*) are
+- Assembled programs (`.program`, made with _Storage › New program_) are
   listed in the Scheduler's storage panel and in the event dialog, so they
   can be scheduled.
 - `docker/ndi/enable-ndi.sh --test` sets NDI up for the isolated GStreamer
@@ -165,7 +402,7 @@ one is tagged.
 - Idents are no longer guessed. Short clips without a sheet used to count as
   idents of the program before them, so a playlist of music videos aired in
   the Player and the guide under one clip's name. Every clip is now a program
-  under its own name unless its marks say *Ident or promo*. **On updating:**
+  under its own name unless its marks say _Ident or promo_. **On updating:**
   mark the idents and promos that should stay inside their programs.
 - `index` in the playout status (`media/current` and the event stream) is the
   entry of the saved playlist on air; the clips of an assembled program share
@@ -185,7 +422,7 @@ one is tagged.
   and the playout restarts them only after five seconds without taking any.
 - The Player keeps the clip on air (name and progress) after an assembled
   program in the playlist, the progress of a scheduled program runs over the
-  whole program instead of restarting with each block, and *Up next* and the
+  whole program instead of restarting with each block, and _Up next_ and the
   playlist's past and coming entries take the time shift into account.
 - `docker/ndi/enable-ndi.sh` run with sudo gives the Compose file it writes
   to the user who ran it.
@@ -201,18 +438,18 @@ one is tagged.
   programme; the as-run log lists every clip. See `docs/programs.md`.
 
 - NDI output: publish the uncompressed program as an NDI source on the local
-  network (*Settings › Output › NDI*). The NDI elements are compiled in; the
+  network (_Settings › Output › NDI_). The NDI elements are compiled in; the
   proprietary NDI Runtime is installed on the server and NDI stays disabled,
   with an explanation, until it is present. Migration `00024` adds an inactive
   NDI output to every channel. `docker/ndi/enable-ndi.sh` installs the
   runtime (after the NDI license is accepted), mDNS discovery and the Compose
   override in one step. See `docs/ndi.md`.
 - NDI input for lives: `ndi://SERVER (Source name)` addresses in Storage and
-  the Scheduler, a *Find NDI sources* list from network discovery
+  the Scheduler, a _Find NDI sources_ list from network discovery
   (`GET /api/schedule/{id}/lives/ndi`) and the signal test. Picture-only
   sources are accepted and get silence.
 - Video cards: play the program on a Blackmagic DeckLink card
-  (*Settings › Output › SDI*, any DeckLink/UltraStudio sub-device, NTSC/PAL
+  (_Settings › Output › SDI_, any DeckLink/UltraStudio sub-device, NTSC/PAL
   to 2160p modes, including 1080i59.94, 1080p29.97 and 1080p30), and take
   DeckLink or V4L2 capture cards as lives (`decklink://`, `v4l2://`).
   `GET /api/playout/devices/{id}` lists the cards the server sees. Migration
@@ -244,7 +481,7 @@ one is tagged.
 - A channel **live key** (migration `00026`) lets encoders and scripts extend
   or end the live on air without logging in:
   `/live/{id}/extend?key=…&minutes=30|until=13:30` and `/live/{id}/end?key=…`,
-  set under *Scheduler › Lives › Live remote control*.
+  set under _Scheduler › Lives › Live remote control_.
 - Lives go into playlists (dragged from the Player library for their default
   length) and into assembled programs as a **Live** part with its own length;
   both air the live's current address. A program's clips follow trims made
@@ -610,8 +847,8 @@ Includes the changes prepared for 1.4.3, which was never published as its own re
   so a title with markup ran script in the browser of whoever removed it.
   Confirmation texts are now always plain text.
 - Files opened from the storage are sent with `X-Content-Type-Options:
-  nosniff`, and HTML, SVG and XML files also with `Content-Security-Policy:
-  sandbox`, so such a file opened on its own runs no script with access to
+nosniff`, and HTML, SVG and XML files also with `Content-Security-Policy:
+sandbox`, so such a file opened on its own runs no script with access to
   NoAr.
 - **Test signal** on a live answers every failure with the same message (the
   cause is in the server log) and runs at most two tests at once, so it can
@@ -781,13 +1018,13 @@ Includes the changes prepared for 1.4.3, which was never published as its own re
   connecting, waiting for a receiver, or no connection and why
   ([docs](docs/output.md#when-the-destination-is-down)).
 - Building a playlist in the Player:
-  - a **Build the playlist** view that puts the library and the list on top;
-  - **undo and redo** (Ctrl+Z, Ctrl+Shift+Z);
-  - add after the selected clips, at the start or at a time;
-  - **To the start** and **To the end** for the selection;
-  - keys for the selection (Delete, Alt+↑/↓, Esc);
-  - how much of the day is still to fill or runs over, with **Fill the day**
-    at the end of the list.
+    - a **Build the playlist** view that puts the library and the list on top;
+    - **undo and redo** (Ctrl+Z, Ctrl+Shift+Z);
+    - add after the selected clips, at the start or at a time;
+    - **To the start** and **To the end** for the selection;
+    - keys for the selection (Delete, Alt+↑/↓, Esc);
+    - how much of the day is still to fill or runs over, with **Fill the day**
+      at the end of the list.
 
 ### Changed
 
@@ -959,12 +1196,12 @@ adds and changes.
 - **Commercials folders**: everything in them plays as a commercial in
   playlists and breaks, out of the guide and without the logo.
 - **Logo**:
-  - stretches without logo inside a video, for breaks edited into a
-    programme;
-  - hiding or swapping the logo on air by API, with a key for encoders and a
-    tutorial in Settings;
-  - a separate logo for the XMLTV guide;
-  - a preview in the shape of the output, with reference lines.
+    - stretches without logo inside a video, for breaks edited into a
+      programme;
+    - hiding or swapping the logo on air by API, with a key for encoders and a
+      tutorial in Settings;
+    - a separate logo for the XMLTV guide;
+    - a preview in the shape of the output, with reference lines.
 - **Report**: what aired, with the actual times and how each item ended, and
   what is still to come. It covers a day or a period, can be narrowed to one
   commercial, programme, live or event, and downloads as a PDF or a
@@ -1001,7 +1238,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...v3.0.0
 [2.2.1]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/LuizStSantos/NoAr/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/LuizStSantos/NoAr/compare/v2.1.3...v2.1.4

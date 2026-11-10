@@ -95,25 +95,22 @@ export interface LogoSpan {
     to: number
 }
 
-/** Marks inside a video: where it keeps the logo off, and its ad breaks. */
+/** At `at` seconds of a video, a graphics template goes on air (for `duration` s, 0 until taken off) or off. */
+export interface GraphicsCue {
+    at: number
+    action: 'take' | 'out'
+    template_id: number
+    duration?: number | null
+}
+
+/** Marks inside a video: its ad breaks, its trim and its graphics cues. */
 export interface VideoMarks {
-    hide: LogoSpan[]
     /** Ad breaks signalled with SCTE-35: out at `from`, back at `to`. */
     breaks: LogoSpan[]
     /** The part of the video that airs by default; a playlist entry may still set its own. */
     trim: LogoSpan | null
-    /** Stretches shown in the L-shape. */
-    lshape: LogoSpan[]
-    /** This video's own L-shape graphic (storage path), for its stretches. */
-    lshape_graphic: string | null
-    /** The corner of the picture in this video's L-shape; null is the channel's. */
-    lshape_corner: string | null
-    /** The size of the picture in this video's L-shape, in percent; null is the channel's. */
-    lshape_scale: number | null
-    /** Where the logo goes while this video plays (`X%:Y%`); null is the channel's place. */
-    logo_position: string | null
-    /** The logo shown while this video plays (storage path); null is the channel's. */
-    logo_image: string | null
+    /** Graphics templates put on and off air while the video plays. */
+    graphics: GraphicsCue[]
     /** An ident or promo: it airs inside the program before it, under that program's name. */
     insert: boolean
 }
@@ -121,15 +118,9 @@ export interface VideoMarks {
 /** Marks read or saved, with every part present. */
 function completeMarks(marks: Partial<VideoMarks>): VideoMarks {
     return {
-        hide: marks.hide ?? [],
         breaks: marks.breaks ?? [],
         trim: marks.trim ?? null,
-        lshape: marks.lshape ?? [],
-        lshape_graphic: marks.lshape_graphic ?? null,
-        lshape_corner: marks.lshape_corner ?? null,
-        lshape_scale: marks.lshape_scale ?? null,
-        logo_position: marks.logo_position ?? null,
-        logo_image: marks.logo_image ?? null,
+        graphics: marks.graphics ?? [],
         insert: marks.insert ?? false,
     }
 }

@@ -1,0 +1,1 @@
+PASS scheduled HLS interruption/return, 512 decoded frames, 75 event frames

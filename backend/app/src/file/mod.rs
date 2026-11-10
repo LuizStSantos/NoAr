@@ -102,6 +102,20 @@ pub struct VideoFile {
     live: bool,
 }
 
+/// Find the same packaged assets before storage is initialized and when copying them.
+pub(crate) fn default_asset_path(name: &str) -> PathBuf {
+    [
+        PathBuf::from("/usr/share/noar"),
+        PathBuf::from("/usr/share/ffplayout"),
+        PathBuf::from("./assets"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets"),
+    ]
+    .into_iter()
+    .map(|directory| directory.join(name))
+    .find(|path| path.is_file())
+    .unwrap_or_else(|| Path::new("./assets").join(name))
+}
+
 fn default_true() -> bool {
     true
 }
@@ -116,6 +130,13 @@ pub async fn init_storage(
 /// Normalize absolut path
 ///
 /// This function takes care, that it is not possible to break out from root_path.
+/// The storage folder for graphics: the default logo, the empty subtitle
+/// file and the images uploaded from the Composer.
+pub const ASSETS_FOLDER: &str = "Graphics";
+
+/// Where versions before 3.0 put the default logo and subtitle file.
+pub const LEGACY_ASSETS_FOLDER: &str = "00-assets";
+
 pub fn norm_abs_path(
     root_path: &Path,
     input_path: &str,

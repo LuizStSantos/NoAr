@@ -2,7 +2,7 @@
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
 
@@ -10,7 +10,7 @@ import ReportDays from '@/components/report/ReportDays.vue'
 import ReportList from '@/components/report/ReportList.vue'
 import ReportPicker from '@/components/report/ReportPicker.vue'
 import ReportSummary from '@/components/report/ReportSummary.vue'
-import { authFetch } from '@/composables/authFetch'
+import { useReportData } from '@/composables/reportData'
 import {
     REPORT_KINDS,
     fileName,
@@ -37,8 +37,6 @@ useHead({ title: computed(() => t('report.title')) })
 
 /** Longest period, as the server allows. */
 const MAX_DAYS = 62
-/** How often a range that includes now is read again. */
-const REFRESH_SECONDS = 60
 
 const channel = computed(() => configStore.channels[configStore.i])
 const zone = computed(() => configStore.timezone)
@@ -76,12 +74,8 @@ const part = ref<ReportPart>('all')
 const kinds = ref<ReportKind[]>([...REPORT_KINDS])
 const picks = ref<ReportPick[]>([])
 const periodView = ref<'days' | 'items'>('days')
-const report = ref<Report | null>(null)
-const loading = ref(false)
 const exporting = ref(false)
 const list = ref<InstanceType<typeof ReportList>>()
-let timer: ReturnType<typeof setInterval> | undefined
-let request = 0
 
 const range = computed<[string, string]>(() => (mode.value === 'day' ? [day.value, day.value] : [from.value, to.value]))
 
@@ -103,6 +97,13 @@ const rangeError = computed(() => {
     return ''
 })
 
+const { report, loading, bounds, includesNow } = useReportData({
+    channelId: () => channel.value?.id,
+    range,
+    rangeError,
+    onError: (error) => indexStore.msgAlert('error', error instanceof Error ? error.message : String(error), 5),
+})
+
 const items = computed(() => report.value?.items ?? [])
 const rows = computed(() =>
     filterItems(items.value, { part: part.value, kinds: kinds.value, search: '', picks: picks.value }),
@@ -113,16 +114,6 @@ const daySummaries = computed(() => (report.value ? summarizeDays(report.value.d
 const groups = computed(() =>
     pickGroups(items.value, (folder) => t('report.picker.wholeFolder', { folder: fileName(folder) })),
 )
-const bounds = computed<[number, number]>(() => {
-    const days = report.value?.days ?? []
-
-    return [days[0]?.start ?? 0, days[days.length - 1]?.end ?? 0]
-})
-const includesNow = computed(() => {
-    const now = report.value?.now ?? Date.now()
-
-    return now >= bounds.value[0] && now < bounds.value[1]
-})
 const unrecordedSince = computed(() => {
     const since = report.value?.recorded_since
 
@@ -205,35 +196,6 @@ const pickDetail = computed(() => {
 
     return picks.value.length === 1 && pick && pick.type !== 'event' ? pick.value : ''
 })
-
-async function load(quiet = false) {
-    if (!channel.value || rangeError.value) {
-        return
-    }
-
-    const ticket = ++request
-    const [first, last] = range.value
-
-    loading.value = !quiet
-
-    try {
-        const query = new URLSearchParams({ from: first, to: last })
-        const data = await authFetch<Report>(`/api/report/${channel.value.id}?${query}`)
-
-        if (ticket === request) {
-            report.value = data
-        }
-    } catch (error) {
-        if (ticket === request && !quiet) {
-            report.value = null
-            indexStore.msgAlert('error', error instanceof Error ? error.message : String(error), 5)
-        }
-    } finally {
-        if (ticket === request) {
-            loading.value = false
-        }
-    }
-}
 
 function shiftDay(days: number) {
     day.value = dayjs(day.value).add(days, 'day').format('YYYY-MM-DD')
@@ -380,19 +342,7 @@ function kindChipClass(kind: ReportKind): string {
     }
 }
 
-watch([range, () => channel.value?.id], () => load())
 watch(mode, (value) => writeSetting('report-mode', value))
-
-onMounted(() => {
-    load()
-    timer = setInterval(() => {
-        if (includesNow.value && !document.hidden) {
-            load(true)
-        }
-    }, REFRESH_SECONDS * 1000)
-})
-
-onBeforeUnmount(() => clearInterval(timer))
 </script>
 
 <template>

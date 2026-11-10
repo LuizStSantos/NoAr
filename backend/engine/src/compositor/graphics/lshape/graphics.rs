@@ -1,0 +1,1541 @@
+//! The L-shape: the picture shrinks into a corner of the screen, over a
+//! full-screen graphic that fills the band around it (news, sponsors, the
+//! next programme), and grows back when it ends. It is switched from outside
+//! the playout, like the logo, or by stretches marked in the video itself.
+
+use std::{
+    fmt,
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
+    time::Instant,
+};
+
+use anyhow::{Context, Result, anyhow};
+
+use crate::{
+    compositor::graphics::{GraphicContent, GraphicSpec, RenderedGraphic, render_graphic},
+    frame::{PixelFormat, VideoFrame},
+    utils::helper::even,
+};
+
+/// How long the picture takes to shrink or grow back.
+pub const LSHAPE_SECONDS: f64 = 0.8;
+
+/// How long the logo takes to go off before the picture shrinks, and to come
+/// back after it grew back.
+pub const LSHAPE_LOGO_SECONDS: f64 = 0.4;
+
+/// A whole switch: the logo off, then the picture in (or the other way).
+pub const LSHAPE_SWITCH_SECONDS: f64 = LSHAPE_LOGO_SECONDS + LSHAPE_SECONDS;
+
+/// How far a switch `progress` (0 to 1) is, as the logo's share gone (0 to 1)
+/// and the picture's way into the L-shape (0 to 1): the logo goes off first,
+/// then the picture shrinks; coming out, the picture grows back first, then
+/// the logo returns.
+pub fn lshape_phases(progress: f64) -> (f64, f64) {
+    let progress = progress.clamp(0.0, 1.0);
+    let logo_share = LSHAPE_LOGO_SECONDS / LSHAPE_SWITCH_SECONDS;
+
+    (
+        (progress / logo_share).min(1.0),
+        ((progress - logo_share) / (1.0 - logo_share)).max(0.0),
+    )
+}
+
+/// The smallest and largest the picture gets, in percent of the screen.
+pub const LSHAPE_MIN_SCALE: f64 = 30.0;
+pub const LSHAPE_MAX_SCALE: f64 = 95.0;
+
+/// The corner the picture shrinks into.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum LShapeCorner {
+    #[default]
+    TopRight,
+    TopLeft,
+    BottomRight,
+    BottomLeft,
+}
+
+impl LShapeCorner {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim() {
+            "top-right" => Some(Self::TopRight),
+            "top-left" => Some(Self::TopLeft),
+            "bottom-right" => Some(Self::BottomRight),
+            "bottom-left" => Some(Self::BottomLeft),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for LShapeCorner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TopRight => f.write_str("top-right"),
+            Self::TopLeft => f.write_str("top-left"),
+            Self::BottomRight => f.write_str("bottom-right"),
+            Self::BottomLeft => f.write_str("bottom-left"),
+        }
+    }
+}
+
+/// The graphic and where the picture goes in it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LShapeConfig {
+    /// A full-screen image, sized to the output; its band frames the picture.
+    pub path: String,
+    /// Size of the picture in the L-shape, in percent of the screen.
+    pub scale: f64,
+    pub corner: LShapeCorner,
+}
+
+/// The graphic as drawn: the background at the output's size, and the
+/// window the picture takes in it.
+#[derive(Clone)]
+pub struct LShapeGraphic {
+    background: Arc<VideoFrame>,
+    animated_art: Option<Arc<RenderedGraphic>>,
+    window: Rect,
+    /// The window the graphic was made for, before any move from outside.
+    home: Rect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Rect {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+}
+
+impl LShapeGraphic {
+    pub(super) fn inherit_motion(&mut self, previous: &Self) {
+        if let (Some(next), Some(previous)) = (
+            self.animated_art.as_mut().and_then(Arc::get_mut),
+            &previous.animated_art,
+        ) {
+            next.inherit_motion(previous);
+        }
+    }
+
+    /// A graphic from a background already at the output's size and the
+    /// window the picture takes in it, in pixels.
+    pub(crate) fn from_parts(
+        background: VideoFrame,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> Self {
+        let frame_width = background.width();
+        let frame_height = background.height();
+        let x = even(x.min(frame_width.saturating_sub(2)));
+        let y = even(y.min(frame_height.saturating_sub(2)));
+        let window = Rect {
+            x,
+            y,
+            width: even(width.min(frame_width - x)).max(2),
+            height: even(height.min(frame_height - y)).max(2),
+        };
+
+        Self {
+            background: Arc::new(background),
+            animated_art: None,
+            window,
+            home: window,
+        }
+    }
+
+    pub(crate) fn set_animated_art(&mut self, graphic: RenderedGraphic) {
+        self.animated_art = Some(Arc::new(graphic));
+    }
+
+    pub fn load(config: &LShapeConfig, width: u32, height: u32) -> Result<Self> {
+        if !(LSHAPE_MIN_SCALE..=LSHAPE_MAX_SCALE).contains(&config.scale) {
+            return Err(anyhow!(
+                "the picture in the L-shape must be between {LSHAPE_MIN_SCALE} and {LSHAPE_MAX_SCALE}% of the screen"
+            ));
+        }
+
+        let decoded = crate::gstreamer::load_image(&config.path)
+            .with_context(|| format!("cannot load the L-shape graphic {}", config.path))?;
+        let background =
+            crate::gstreamer::FrameConverter::new(&decoded, PixelFormat::Yuv420p, width, height)?
+                .run(&decoded)?;
+
+        let home = window(config, width, height);
+
+        let spec = GraphicSpec {
+            layers: vec![crate::GraphicLayerSpec {
+                content: GraphicContent::Image {
+                    path: config.path.clone().into(),
+                },
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: crate::GraphicAnimation::None,
+                animation_out: crate::GraphicAnimation::None,
+                animation_ms: 0,
+                delay_ms: 0,
+            }],
+            picture: None,
+        };
+        let animated_art = if std::path::Path::new(&config.path)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("gif"))
+        {
+            let rendered = render_graphic(&spec, width, height)?;
+            rendered.is_animated().then(|| Arc::new(rendered))
+        } else {
+            None
+        };
+
+        Ok(Self {
+            background: Arc::new(background),
+            animated_art,
+            window: home,
+            home,
+        })
+    }
+
+    /// The same graphic with the picture placed elsewhere, or back home.
+    fn placed(&self, placement: Option<LShapePlacement>) -> Self {
+        let (width, height) = (self.background.width(), self.background.height());
+        let window = placement.map_or(self.home, |placement| {
+            let scale = placement
+                .scale
+                .unwrap_or_else(|| f64::from(self.home.width) * 100.0 / f64::from(width.max(1)));
+
+            window_in(placement.corner, scale, width, height)
+        });
+
+        Self {
+            background: self.background.clone(),
+            animated_art: self.animated_art.clone(),
+            window,
+            home: self.home,
+        }
+    }
+
+    /// Where the picture is when the L-shape is `level` of the way in (0 is
+    /// the full screen, 1 the window), easing in and out.
+    fn rect_at(&self, level: f64) -> Rect {
+        let eased = level * level * (3.0 - 2.0 * level);
+        let (width, height) = (self.background.width(), self.background.height());
+        let mix = |full: u32, window: u32| {
+            (f64::from(full) + (f64::from(window) - f64::from(full)) * eased).round() as u32
+        };
+
+        Rect {
+            x: even(mix(0, self.window.x)),
+            y: even(mix(0, self.window.y)),
+            width: even(mix(width, self.window.width)).max(2),
+            height: even(mix(height, self.window.height)).max(2),
+        }
+    }
+}
+
+fn window(config: &LShapeConfig, width: u32, height: u32) -> Rect {
+    window_in(config.corner, config.scale, width, height)
+}
+
+fn window_in(corner: LShapeCorner, scale: f64, width: u32, height: u32) -> Rect {
+    let share = scale.clamp(LSHAPE_MIN_SCALE, LSHAPE_MAX_SCALE) / 100.0;
+    let window_width = even((f64::from(width) * share).round() as u32).max(2);
+    let window_height = even((f64::from(height) * share).round() as u32).max(2);
+    let right = width - window_width;
+    let bottom = height - window_height;
+    let (x, y) = match corner {
+        LShapeCorner::TopRight => (right, 0),
+        LShapeCorner::TopLeft => (0, 0),
+        LShapeCorner::BottomRight => (right, bottom),
+        LShapeCorner::BottomLeft => (0, bottom),
+    };
+
+    Rect {
+        x: even(x),
+        y: even(y),
+        width: window_width,
+        height: window_height,
+    }
+}
+
+/// Where the picture goes when moved from outside, over any graphic.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LShapePlacement {
+    pub corner: LShapeCorner,
+    /// Size of the picture, in percent of the screen; `None` keeps the
+    /// graphic's.
+    pub scale: Option<f64>,
+}
+
+/// Switches the L-shape on air from outside the playout. Clones share the
+/// same state; it applies to clips, lives and ingest alike, and outlasts a
+/// playout restart.
+#[derive(Clone, Default)]
+pub struct LShapeControl(Arc<Mutex<LShapeState>>);
+
+#[derive(Default)]
+struct LShapeState {
+    model_generation: u64,
+    model: Option<(GraphicSpec, usize)>,
+    replacement_image: Option<String>,
+    replacement_uses_model: bool,
+    clip_uses_model: bool,
+    clip_inherits_window: bool,
+    /// The channel's graphic.
+    graphic: Option<Arc<LShapeGraphic>>,
+    /// Another graphic swapped in from outside, and its name.
+    replacement: Option<(String, Arc<LShapeGraphic>)>,
+    /// The graphic of the clip playing, for its marked stretches.
+    clip: Option<(LShapeConfig, Arc<LShapeGraphic>)>,
+    /// Where the picture was moved to from outside; it applies to the
+    /// channel's graphic and the one swapped in, not to a clip's own.
+    placement: Option<LShapePlacement>,
+    on: bool,
+    /// Level when the last switch began, and when that was.
+    from: f64,
+    switched_at: Option<Instant>,
+}
+
+impl LShapeState {
+    fn level(&self, now: Instant) -> f64 {
+        let target = if self.on { 1.0 } else { 0.0 };
+
+        match self.switched_at {
+            Some(at) => {
+                let progress =
+                    now.saturating_duration_since(at).as_secs_f64() / LSHAPE_SWITCH_SECONDS;
+
+                self.from + (target - self.from) * progress.min(1.0)
+            }
+            None => target,
+        }
+    }
+
+    fn set_on(&mut self, on: bool) {
+        if on != self.on {
+            let now = Instant::now();
+
+            self.from = self.level(now);
+            self.on = on;
+            self.switched_at = Some(now);
+        }
+    }
+}
+
+impl fmt::Debug for LShapeControl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LShapeControl")
+            .field("on", &self.is_on())
+            .field("ready", &self.is_ready())
+            .finish()
+    }
+}
+
+impl LShapeControl {
+    pub(super) fn begin_model_update(&self) -> u64 {
+        let mut state = self.lock();
+        state.model_generation = state.model_generation.wrapping_add(1);
+
+        state.model_generation
+    }
+
+    /// Replace the channel model without changing its on/off phase, remote
+    /// replacement, placement or clip override.
+    pub(crate) fn set_rendered_graphic(
+        &self,
+        graphic: Option<Arc<LShapeGraphic>>,
+        spec: &GraphicSpec,
+        primary: usize,
+        generation: u64,
+    ) -> Result<()> {
+        self.set_rendered_graphic_with(graphic, spec, primary, generation, render_model_art)
+    }
+
+    fn set_rendered_graphic_with(
+        &self,
+        graphic: Option<Arc<LShapeGraphic>>,
+        spec: &GraphicSpec,
+        primary: usize,
+        generation: u64,
+        render: impl FnMut(&(GraphicSpec, usize), &str, u32, u32) -> Result<LShapeGraphic>,
+    ) -> Result<()> {
+        self.set_rendered_graphic_guarded(graphic, (spec, primary), generation, render, || Some(()))
+    }
+
+    pub(super) fn set_rendered_graphic_guarded<G>(
+        &self,
+        mut graphic: Option<Arc<LShapeGraphic>>,
+        definition: (&GraphicSpec, usize),
+        generation: u64,
+        mut render: impl FnMut(&(GraphicSpec, usize), &str, u32, u32) -> Result<LShapeGraphic>,
+        mut before_commit: impl FnMut() -> Option<G>,
+    ) -> Result<()> {
+        let model = (definition.0.clone(), definition.1);
+
+        loop {
+            let (
+                previous,
+                replacement,
+                replacement_image,
+                clip,
+                use_replacement,
+                use_clip,
+                inherit_window,
+            ) = {
+                let state = self.lock();
+
+                if state.model_generation != generation {
+                    return Ok(());
+                }
+
+                (
+                    state.graphic.clone(),
+                    state.replacement.clone(),
+                    state.replacement_image.clone(),
+                    state.clip.clone(),
+                    state.replacement_uses_model,
+                    state.clip_uses_model,
+                    state.clip_inherits_window,
+                )
+            };
+
+            if let (Some(next), Some(previous)) =
+                (graphic.as_mut().and_then(Arc::get_mut), &previous)
+            {
+                next.inherit_motion(previous);
+            }
+
+            let mut next_replacement = None;
+            let mut next_clip = None;
+
+            if let Some(graphic) = &graphic {
+                let (width, height) = (graphic.background.width(), graphic.background.height());
+
+                // Preparing overrides can decode images; frames must remain able
+                // to snapshot the current artwork throughout that work.
+                if use_replacement
+                    && let Some(path) = &replacement_image
+                    && let Some((label, old)) = &replacement
+                {
+                    let mut next = render(&model, path, width, height)?;
+                    next.inherit_motion(old);
+                    next_replacement = Some((label.clone(), next));
+                }
+
+                if use_clip && let Some((config, old)) = &clip {
+                    let mut next = render(&model, &config.path, width, height)?;
+                    next.inherit_motion(old);
+
+                    if !inherit_window {
+                        next.home = old.home;
+                        next.window = old.home;
+                    }
+
+                    next_clip = Some((config.clone(), Arc::new(next)));
+                }
+            }
+
+            let Some(_publication) = before_commit() else {
+                return Ok(());
+            };
+            let mut state = self.lock();
+
+            if state.model_generation != generation {
+                return Ok(());
+            }
+
+            if !super::same_prepared(
+                state.replacement.as_ref().map(|(_, image)| image),
+                replacement.as_ref().map(|(_, image)| image),
+            ) || !super::same_prepared(
+                state.clip.as_ref().map(|(_, image)| image),
+                clip.as_ref().map(|(_, image)| image),
+            ) {
+                continue;
+            }
+
+            let placement = state.placement;
+
+            if let Some((label, next)) = next_replacement {
+                state.replacement = Some((label, Arc::new(next.placed(placement))));
+            }
+
+            if next_clip.is_some() {
+                state.clip = next_clip;
+            }
+
+            state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
+            state.model = Some(model);
+
+            return Ok(());
+        }
+    }
+
+    fn lock(&self) -> MutexGuard<'_, LShapeState> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Use the graphic of `config` for an output of `width` x `height`, or
+    /// none: without a graphic the L-shape never shows.
+    pub fn set_graphic(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        let generation = self.begin_model_update();
+        let graphic = config
+            .map(|config| LShapeGraphic::load(config, width, height))
+            .transpose()?;
+        let mut state = self.lock();
+
+        if state.model_generation != generation {
+            return Ok(());
+        }
+
+        let placement = state.placement;
+        state.graphic = graphic.map(|graphic| Arc::new(graphic.placed(placement)));
+        state.model = None;
+
+        Ok(())
+    }
+
+    /// Use the graphic of `config` in place of the channel's, from now on
+    /// (also while it is on), until [`Self::reset`]. `label` names it in the
+    /// state.
+    pub fn replace(
+        &self,
+        label: &str,
+        config: &LShapeConfig,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.replace_graphic(label, config, width, height, false)
+    }
+
+    /// Replace channel artwork while keeping the assigned model's picture
+    /// window. Legacy corner/scale requests still apply through `place`.
+    pub fn replace_model_art(
+        &self,
+        label: &str,
+        config: &LShapeConfig,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.replace_graphic(label, config, width, height, true)
+    }
+
+    fn replace_graphic(
+        &self,
+        label: &str,
+        config: &LShapeConfig,
+        width: u32,
+        height: u32,
+        inherit_window: bool,
+    ) -> Result<()> {
+        let model = self.lock().model.clone().filter(|_| inherit_window);
+        let mut graphic = match model {
+            Some(model) => render_model_art(&model, &config.path, width, height)?,
+            None => LShapeGraphic::load(config, width, height)?,
+        };
+        let mut state = self.lock();
+        let placement = state.placement;
+
+        if inherit_window && let Some(model) = &state.graphic {
+            graphic.home = model.home;
+            graphic.window = model.home;
+        }
+
+        state.replacement = Some((label.to_string(), Arc::new(graphic.placed(placement))));
+        state.replacement_image = Some(config.path.clone());
+        state.replacement_uses_model = inherit_window;
+
+        Ok(())
+    }
+
+    /// Put the picture somewhere else in the L-shape, on or off, until moved
+    /// again; `None` puts it back where each graphic places it.
+    pub fn place(&self, placement: Option<LShapePlacement>) -> Result<()> {
+        if let Some(scale) = placement.and_then(|placement| placement.scale)
+            && !(LSHAPE_MIN_SCALE..=LSHAPE_MAX_SCALE).contains(&scale)
+        {
+            return Err(anyhow!(
+                "the picture in the L-shape must be between {LSHAPE_MIN_SCALE} and {LSHAPE_MAX_SCALE}% of the screen"
+            ));
+        }
+
+        let mut state = self.lock();
+        state.placement = placement;
+        state.graphic = state
+            .graphic
+            .as_ref()
+            .map(|graphic| Arc::new(graphic.placed(placement)));
+
+        if let Some((label, graphic)) = state.replacement.take() {
+            state.replacement = Some((label, Arc::new(graphic.placed(placement))));
+        }
+
+        Ok(())
+    }
+
+    /// Where the picture was moved to from outside, if it was.
+    pub fn placement(&self) -> Option<LShapePlacement> {
+        self.lock().placement
+    }
+
+    /// Back to the channel's graphic.
+    pub fn reset(&self) {
+        let mut state = self.lock();
+        state.replacement = None;
+        state.replacement_image = None;
+    }
+
+    /// The graphic of the clip about to play, for the stretches marked in
+    /// it, or none to use the channel's. Loaded once while the same clip
+    /// graphic follows.
+    pub fn set_clip_graphic(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.set_clip_graphic_with_window(config, width, height, false, false)
+    }
+
+    /// Clip image-only overrides inherit the assigned model's free window.
+    pub fn set_clip_model_art(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.set_clip_graphic_with_window(config, width, height, true, true)
+    }
+
+    pub fn set_clip_model_art_placed(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        self.set_clip_graphic_with_window(config, width, height, false, true)
+    }
+
+    fn set_clip_graphic_with_window(
+        &self,
+        config: Option<&LShapeConfig>,
+        width: u32,
+        height: u32,
+        inherit_window: bool,
+        use_model: bool,
+    ) -> Result<()> {
+        let Some(config) = config else {
+            self.lock().clip = None;
+            return Ok(());
+        };
+
+        let state = self.lock();
+        let home = state.graphic.as_ref().map(|model| model.home);
+        let expected_home = if inherit_window && home.is_some() {
+            home
+        } else if width >= 2 && height >= 2 {
+            Some(window(config, width, height))
+        } else {
+            None
+        };
+        let cached = state.clip.as_ref().is_some_and(|(loaded, graphic)| {
+            loaded == config
+                && state.clip_uses_model == use_model
+                && state.clip_inherits_window == inherit_window
+                && expected_home == Some(graphic.home)
+                && graphic.background.width() == width
+                && graphic.background.height() == height
+        });
+        drop(state);
+
+        if cached {
+            return Ok(());
+        }
+
+        let model = self.lock().model.clone().filter(|_| use_model);
+        let loaded = match model {
+            Some(model) => render_model_art(&model, &config.path, width, height),
+            None => LShapeGraphic::load(config, width, height),
+        };
+        let graphic = loaded.map(|mut graphic| {
+            if inherit_window && let Some(home) = home {
+                graphic.home = home;
+                graphic.window = home;
+            } else if !inherit_window {
+                graphic.home = window(config, width, height);
+                graphic.window = graphic.home;
+            }
+
+            graphic
+        });
+        let mut state = self.lock();
+
+        match graphic {
+            Ok(graphic) => {
+                state.clip = Some((config.clone(), Arc::new(graphic)));
+                state.clip_uses_model = use_model;
+                state.clip_inherits_window = inherit_window;
+                Ok(())
+            }
+            Err(error) => {
+                state.clip = None;
+                Err(error)
+            }
+        }
+    }
+
+    /// The name of the graphic swapped in from outside, when there is one.
+    pub fn replacement(&self) -> Option<String> {
+        self.lock()
+            .replacement
+            .as_ref()
+            .map(|(label, _)| label.clone())
+    }
+
+    /// Shrink the picture into the L-shape.
+    pub fn on(&self) {
+        self.lock().set_on(true);
+    }
+
+    /// Bring the picture back to the full screen.
+    pub fn off(&self) {
+        self.lock().set_on(false);
+    }
+
+    /// Switched on from outside (a marked stretch also shows it).
+    pub fn is_on(&self) -> bool {
+        self.lock().on
+    }
+
+    /// Whether there is a graphic to show when switched on.
+    pub fn is_ready(&self) -> bool {
+        let state = self.lock();
+
+        state.graphic.is_some() || state.replacement.is_some()
+    }
+
+    /// For the frame being drawn, with the clip's marks putting it `marked`
+    /// of the way in: the graphic, and how far in the L-shape is, between 0
+    /// (full screen) and 1. A marked stretch uses the clip's own graphic
+    /// when it has one; otherwise the one swapped in, else the channel's.
+    pub(crate) fn frame(&self, marked: f64) -> Option<(Arc<LShapeGraphic>, f64)> {
+        let state = self.lock();
+        let switched = state.level(Instant::now());
+        let current = state
+            .replacement
+            .as_ref()
+            .map(|(_, graphic)| graphic.clone())
+            .or_else(|| state.graphic.clone());
+
+        if marked > switched
+            && let Some((_, clip)) = &state.clip
+        {
+            return Some((clip.clone(), marked));
+        }
+
+        current.map(|graphic| (graphic, switched.max(marked)))
+    }
+
+    #[cfg(test)]
+    fn level_after(&self, elapsed: std::time::Duration) -> f64 {
+        let state = self.lock();
+        let at = state.switched_at.unwrap_or_else(Instant::now);
+
+        state.level(at + elapsed)
+    }
+}
+
+pub(super) fn render_model_art(
+    model: &(GraphicSpec, usize),
+    path: &str,
+    width: u32,
+    height: u32,
+) -> Result<LShapeGraphic> {
+    let mut spec = model.0.clone();
+    if let Some(layer) = spec.layers.get_mut(model.1) {
+        layer.content = GraphicContent::Image { path: path.into() };
+    } else {
+        use crate::{GraphicAnimation, GraphicLayerSpec};
+
+        spec.layers.insert(
+            0,
+            GraphicLayerSpec {
+                content: GraphicContent::Image { path: path.into() },
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: GraphicAnimation::None,
+                animation_out: GraphicAnimation::None,
+                animation_ms: 0,
+                delay_ms: 0,
+            },
+        );
+    }
+    let rendered = render_graphic(&spec, width, height)?;
+
+    rendered
+        .picture_graphic()
+        .cloned()
+        .ok_or_else(|| anyhow!("model has no video window"))
+}
+
+/// Scales pictures into the L-shape window, reusing the scaler while the
+/// size stays the same.
+#[derive(Default)]
+pub(crate) struct LShapeScaler(Option<(crate::gstreamer::FrameConverter, ScaleKey)>);
+
+/// The source's format and size, and the window's size.
+type ScaleKey = (PixelFormat, u32, u32, u32, u32);
+
+/// Draw `frame` (YUV 4:2:0, the output's size) as `level` of the way into
+/// the L-shape of `graphic`. Nothing changes at level 0.
+pub(crate) fn apply_lshape(
+    frame: &mut VideoFrame,
+    graphic: &LShapeGraphic,
+    level: f64,
+    scaler: &mut LShapeScaler,
+) -> Result<()> {
+    if level <= 0.0
+        || frame.format() != PixelFormat::Yuv420p
+        || frame.width() != graphic.background.width()
+        || frame.height() != graphic.background.height()
+    {
+        return Ok(());
+    }
+
+    let rect = graphic.rect_at(level.min(1.0));
+    let key = (
+        frame.format(),
+        frame.width(),
+        frame.height(),
+        rect.width,
+        rect.height,
+    );
+
+    if scaler.0.as_ref().is_none_or(|(_, size)| *size != key) {
+        scaler.0 = Some((
+            crate::gstreamer::FrameConverter::new(
+                frame,
+                PixelFormat::Yuv420p,
+                rect.width,
+                rect.height,
+            )?,
+            key,
+        ));
+    }
+
+    let (context, _) = scaler.0.as_mut().context("L-shape scaler")?;
+    let picture = context.run(frame)?;
+
+    let mut composed = (*graphic.background).clone();
+
+    if let Some(art) = &graphic.animated_art {
+        composed.data_mut(0).fill(16);
+        composed.data_mut(1).fill(128);
+        composed.data_mut(2).fill(128);
+        art.blend_steady(&mut composed);
+    }
+
+    paste(&picture, &mut composed, rect);
+    composed.set_pts(frame.pts());
+    *frame = composed;
+
+    Ok(())
+}
+
+/// Copy `picture` into `target` at `rect`, plane by plane.
+fn paste(picture: &VideoFrame, target: &mut VideoFrame, rect: Rect) {
+    for plane in 0..3 {
+        let shift = u32::from(plane > 0);
+        let (x, y) = ((rect.x >> shift) as usize, (rect.y >> shift) as usize);
+        let width = ((rect.width >> shift) as usize)
+            .min(picture.plane_width(plane) as usize)
+            .min(target.plane_width(plane) as usize - x);
+        let height = ((rect.height >> shift) as usize)
+            .min(picture.plane_height(plane) as usize)
+            .min(target.plane_height(plane) as usize - y);
+        let (from_stride, to_stride) = (picture.stride(plane), target.stride(plane));
+        let source = picture.data(plane);
+        let destination = target.data_mut(plane);
+
+        for row in 0..height {
+            let from = row * from_stride;
+            let to = (y + row) * to_stride + x;
+            destination[to..to + width].copy_from_slice(&source[from..from + width]);
+        }
+    }
+}
+
+/// How far into the L-shape stretches marked in a clip put the frame at
+/// `pts`: 1 inside one, easing over `frames` on both sides.
+pub(crate) fn marked_level(spans: &[(i64, i64)], pts: i64, frames: i64) -> f64 {
+    spans
+        .iter()
+        .filter(|&&(from, to)| pts >= from && pts <= to)
+        .map(|&(from, to)| {
+            // Grows in over the first frames of the stretch, back out over
+            // the last ones.
+            if frames <= 0 {
+                1.0
+            } else {
+                ((pts - from).min(to - pts) as f64 / frames as f64).min(1.0)
+            }
+        })
+        .fold(0.0, f64::max)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+
+    #[test]
+    fn cancelled_owner_cannot_publish_an_lshape_after_preparation() {
+        use std::sync::{
+            Barrier,
+            atomic::{AtomicBool, Ordering},
+        };
+
+        let control = LShapeControl::default();
+        let original = crate::GraphicSpec {
+            layers: Vec::new(),
+            picture: Some(crate::PictureWindow {
+                x: 25.0,
+                y: 0.0,
+                width: 75.0,
+                height: 75.0,
+            }),
+        };
+        let next = crate::GraphicSpec {
+            layers: Vec::new(),
+            picture: Some(crate::PictureWindow {
+                x: 50.0,
+                y: 50.0,
+                width: 50.0,
+                height: 50.0,
+            }),
+        };
+        control.set_template(&original, 320, 180).unwrap();
+        let original_window = control.lock().graphic.as_ref().unwrap().window;
+        let allowed = Arc::new(AtomicBool::new(true));
+        let prepared = Arc::new(Barrier::new(2));
+        let release = Arc::new(Barrier::new(2));
+        let worker_control = control.clone();
+        let worker_allowed = allowed.clone();
+        let worker_prepared = prepared.clone();
+        let worker_release = release.clone();
+        let worker = std::thread::spawn(move || {
+            let mut calls = 0;
+            worker_control
+                .set_template_controlled_guarded(&next, usize::MAX, (320, 180), || {
+                    calls += 1;
+
+                    if calls == 2 {
+                        worker_prepared.wait();
+                        worker_release.wait();
+                    }
+
+                    worker_allowed.load(Ordering::SeqCst).then_some(())
+                })
+                .unwrap();
+        });
+        prepared.wait();
+        let frames_unlocked = control.0.try_lock().is_ok();
+        allowed.store(false, Ordering::SeqCst);
+        release.wait();
+        worker.join().unwrap();
+        assert!(frames_unlocked, "preparation must leave frames unlocked");
+        assert_eq!(
+            control.lock().graphic.as_ref().unwrap().window,
+            original_window
+        );
+    }
+
+    fn scrolling_spec() -> crate::GraphicSpec {
+        crate::GraphicSpec {
+            picture: Some(crate::PictureWindow {
+                x: 25.0,
+                y: 0.0,
+                width: 75.0,
+                height: 75.0,
+            }),
+            layers: vec![crate::GraphicLayerSpec {
+                content: crate::GraphicContent::Text {
+                    text: "Scrolling artwork".to_string(),
+                    scroll: Some(crate::GraphicTextScroll {
+                        direction: crate::ScrollDirection::Left,
+                        speed: 80.0,
+                        gap: 40,
+                    }),
+                    font_family: None,
+                    font_size: 6.0,
+                    bold: false,
+                    color: crate::RgbaColor::opaque(255, 255, 255),
+                    align: crate::BlockAlign::Left,
+                    fill: None,
+                },
+                x: 5.0,
+                y: 80.0,
+                width: 90.0,
+                height: 10.0,
+                opacity: 1.0,
+                radius: 0.0,
+                animation_in: crate::GraphicAnimation::None,
+                animation_out: crate::GraphicAnimation::None,
+                animation_ms: 0,
+                delay_ms: 0,
+            }],
+        }
+    }
+
+    #[test]
+    fn refreshing_scrolling_artwork_preserves_its_motion_epoch() {
+        let control = LShapeControl::default();
+        let spec = scrolling_spec();
+        control.set_template(&spec, 320, 180).unwrap();
+        let epoch = control
+            .lock()
+            .graphic
+            .as_ref()
+            .unwrap()
+            .animated_art
+            .as_ref()
+            .unwrap()
+            .layers[0]
+            .prepared_at;
+        control.set_template(&spec, 320, 180).unwrap();
+        let next = control
+            .lock()
+            .graphic
+            .as_ref()
+            .unwrap()
+            .animated_art
+            .as_ref()
+            .unwrap()
+            .layers[0]
+            .prepared_at;
+        assert_eq!(next, epoch);
+    }
+
+    #[test]
+    fn temporary_picture_refresh_inherits_nested_scroll_epoch() {
+        let control = crate::GraphicsControl::default();
+        let spec = scrolling_spec();
+        let mut initial = render_graphic(&spec, 320, 180).unwrap();
+        let epoch = Instant::now() - Duration::from_secs(5);
+        let picture = Arc::get_mut(initial.picture.as_mut().unwrap()).unwrap();
+        Arc::get_mut(picture.animated_art.as_mut().unwrap())
+            .unwrap()
+            .layers[0]
+            .prepared_at = epoch;
+        let id = control.take(initial, Some(Duration::from_secs(30)));
+        let entered = control.state().on_air[0].taken_at;
+        control.take_out(id);
+        let leaving = control.state().on_air[0].taken_out_at;
+        assert!(control.update_graphic(id, render_graphic(&spec, 320, 180).unwrap()));
+        let state = control.state();
+        let take = &state.on_air[0];
+        let art = take
+            .graphic
+            .picture
+            .as_ref()
+            .unwrap()
+            .animated_art
+            .as_ref()
+            .unwrap();
+        assert_eq!(art.layers[0].prepared_at, epoch);
+        assert_eq!(take.taken_at, entered);
+        assert_eq!(take.taken_out_at, leaving);
+        assert_eq!(take.out_after, Some(Duration::from_secs(30)));
+    }
+
+    #[test]
+    fn model_override_refresh_prepares_without_frame_lock_and_keeps_newer_controls() {
+        let control = LShapeControl::default();
+        let spec = scrolling_spec();
+        control.set_template(&spec, 320, 180).unwrap();
+        {
+            let mut state = control.lock();
+            let graphic = state.graphic.as_ref().unwrap().clone();
+            state.replacement = Some(("old".to_string(), graphic.clone()));
+            state.replacement_image = Some("old.png".to_string());
+            state.replacement_uses_model = true;
+            state.clip = Some((
+                LShapeConfig {
+                    path: "clip.png".to_string(),
+                    scale: 60.0,
+                    corner: LShapeCorner::TopRight,
+                },
+                graphic,
+            ));
+            state.clip_uses_model = true;
+        }
+        let next = render_graphic(&spec, 320, 180).unwrap().picture;
+        let mut preparations = 0;
+        control
+            .set_rendered_graphic_with(
+                next,
+                &spec,
+                0,
+                control.begin_model_update(),
+                |_, _, width, height| {
+                    preparations += 1;
+                    assert!(
+                        control.0.try_lock().is_ok(),
+                        "override preparation holds the frame mutex"
+                    );
+                    assert!(control.frame(1.0).is_some());
+                    if preparations == 1 {
+                        control.reset();
+                        control.set_clip_graphic(None, width, height).unwrap();
+                        control
+                            .place(Some(LShapePlacement {
+                                corner: LShapeCorner::BottomLeft,
+                                scale: Some(60.0),
+                            }))
+                            .unwrap();
+                    }
+
+                    Ok(render_graphic(&spec, width, height)
+                        .unwrap()
+                        .picture
+                        .unwrap()
+                        .as_ref()
+                        .clone())
+                },
+            )
+            .unwrap();
+        let state = control.lock();
+        assert!(preparations >= 1);
+        assert!(state.replacement.is_none());
+        assert!(state.clip.is_none());
+        assert_eq!(state.graphic.as_ref().unwrap().window.x, 0);
+        assert!(state.graphic.as_ref().unwrap().window.y > 0);
+    }
+
+    #[test]
+    fn older_lshape_override_preparation_cannot_publish_after_a_model_clear() {
+        let control = LShapeControl::default();
+        let spec = scrolling_spec();
+        control.set_template(&spec, 320, 180).unwrap();
+        {
+            let mut state = control.lock();
+            state.replacement = Some(("old".to_string(), state.graphic.as_ref().unwrap().clone()));
+            state.replacement_image = Some("old.png".to_string());
+            state.replacement_uses_model = true;
+        }
+        let next = render_graphic(&spec, 320, 180).unwrap().picture;
+        control
+            .set_rendered_graphic_with(
+                next,
+                &spec,
+                0,
+                control.begin_model_update(),
+                |_, _, width, height| {
+                    control.set_graphic(None, width, height).unwrap();
+
+                    Ok(render_graphic(&spec, width, height)
+                        .unwrap()
+                        .picture
+                        .unwrap()
+                        .as_ref()
+                        .clone())
+                },
+            )
+            .unwrap();
+        let state = control.lock();
+        assert!(state.graphic.is_none());
+        assert!(state.model.is_none());
+    }
+
+    #[test]
+    fn loading_a_model_preserves_free_picture_geometry_and_on_air_state() {
+        let control = LShapeControl::default();
+        let spec = crate::GraphicSpec {
+            picture: Some(crate::PictureWindow {
+                x: 10.0,
+                y: 20.0,
+                width: 70.0,
+                height: 50.0,
+            }),
+            layers: Vec::new(),
+        };
+        control.set_template(&spec, 640, 360).unwrap();
+        assert!(!control.is_on());
+        let (graphic, _) = control.frame(0.0).unwrap();
+        assert_eq!(
+            graphic.window,
+            Rect {
+                x: 64,
+                y: 72,
+                width: 448,
+                height: 180
+            }
+        );
+        control.on();
+        control.set_template(&spec, 640, 360).unwrap();
+        assert!(control.is_on());
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::BottomLeft,
+                scale: None,
+            }))
+            .unwrap();
+        control.set_template(&spec, 640, 360).unwrap();
+        let (graphic, _) = control.frame(0.0).unwrap();
+        assert_eq!(graphic.window.x, 0);
+        assert_eq!(graphic.window.y, 108);
+        control.place(None).unwrap();
+        let (graphic, _) = control.frame(0.0).unwrap();
+        assert_eq!(
+            graphic.window,
+            Rect {
+                x: 64,
+                y: 72,
+                width: 448,
+                height: 180
+            }
+        );
+    }
+
+    #[test]
+    fn model_art_replacement_and_clip_art_inherit_free_windows_without_changing_sdk_placement() {
+        let control = LShapeControl::default();
+        let spec = crate::GraphicSpec {
+            layers: Vec::new(),
+            picture: Some(crate::PictureWindow {
+                x: 10.0,
+                y: 10.0,
+                width: 70.0,
+                height: 50.0,
+            }),
+        };
+        control.set_template(&spec, 640, 360).unwrap();
+        let config = LShapeConfig {
+            path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests_assets/storage/logo.png")
+                .to_string_lossy()
+                .to_string(),
+            scale: 70.0,
+            corner: LShapeCorner::TopRight,
+        };
+        let free = Rect {
+            x: 64,
+            y: 36,
+            width: 448,
+            height: 180,
+        };
+        control
+            .replace_model_art("replacement", &config, 640, 360)
+            .unwrap();
+        assert_eq!(control.frame(0.0).unwrap().0.window, free);
+        assert!(
+            !control.is_on(),
+            "loading artwork does not enter the L-shape"
+        );
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::BottomLeft,
+                scale: Some(60.0),
+            }))
+            .unwrap();
+        assert_eq!(
+            control.frame(0.0).unwrap().0.window,
+            Rect {
+                x: 0,
+                y: 144,
+                width: 384,
+                height: 216
+            }
+        );
+        control.place(None).unwrap();
+        assert_eq!(control.frame(0.0).unwrap().0.window, free);
+        control.reset();
+        control.set_clip_model_art(Some(&config), 640, 360).unwrap();
+        assert_eq!(control.frame(1.0).unwrap().0.window, free);
+        control.set_clip_graphic(Some(&config), 640, 360).unwrap();
+        assert_eq!(
+            control.frame(1.0).unwrap().0.window,
+            Rect {
+                x: 192,
+                y: 0,
+                width: 448,
+                height: 252
+            }
+        );
+        control.set_clip_model_art(Some(&config), 640, 360).unwrap();
+        assert_eq!(control.frame(1.0).unwrap().0.window, free);
+        control.set_clip_model_art(None, 640, 360).unwrap();
+        assert_eq!(control.frame(1.0).unwrap().0.window, free);
+    }
+
+    fn graphic(corner: LShapeCorner) -> LShapeGraphic {
+        let mut background = VideoFrame::new(PixelFormat::Yuv420p, 1920, 1080);
+        for plane in 0..3 {
+            background
+                .data_mut(plane)
+                .fill(if plane == 0 { 200 } else { 128 });
+        }
+        let config = LShapeConfig {
+            path: String::new(),
+            scale: 75.0,
+            corner,
+        };
+
+        let home = window(&config, 1920, 1080);
+
+        LShapeGraphic {
+            background: Arc::new(background),
+            animated_art: None,
+            window: home,
+            home,
+        }
+    }
+
+    #[test]
+    fn the_window_sits_in_its_corner() {
+        let config = |corner| LShapeConfig {
+            path: String::new(),
+            scale: 75.0,
+            corner,
+        };
+
+        assert_eq!(
+            window(&config(LShapeCorner::TopRight), 1920, 1080),
+            Rect {
+                x: 480,
+                y: 0,
+                width: 1440,
+                height: 810
+            }
+        );
+        assert_eq!(
+            window(&config(LShapeCorner::BottomLeft), 1920, 1080),
+            Rect {
+                x: 0,
+                y: 270,
+                width: 1440,
+                height: 810
+            }
+        );
+        assert_eq!(
+            LShapeCorner::parse("bottom-right"),
+            Some(LShapeCorner::BottomRight)
+        );
+        assert_eq!(LShapeCorner::parse("middle"), None);
+    }
+
+    #[test]
+    fn a_corner_reads_back_as_its_name() {
+        for corner in [
+            LShapeCorner::TopRight,
+            LShapeCorner::TopLeft,
+            LShapeCorner::BottomRight,
+            LShapeCorner::BottomLeft,
+        ] {
+            assert_eq!(LShapeCorner::parse(&corner.to_string()), Some(corner));
+        }
+        assert_eq!(LShapeCorner::parse("50%:50%"), None);
+    }
+
+    #[test]
+    fn a_move_from_outside_places_every_graphic_until_it_is_undone() {
+        let control = LShapeControl::default();
+        control.lock().graphic = Some(Arc::new(graphic(LShapeCorner::TopRight)));
+        let window = |control: &LShapeControl| control.frame(1.0).unwrap().0.window;
+        let home = window(&control);
+
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::BottomLeft,
+                scale: Some(50.0),
+            }))
+            .unwrap();
+        assert_eq!(
+            window(&control),
+            Rect {
+                x: 0,
+                y: 540,
+                width: 960,
+                height: 540
+            }
+        );
+
+        // The size stays the graphic's when only the corner is given.
+        control
+            .place(Some(LShapePlacement {
+                corner: LShapeCorner::TopLeft,
+                scale: None,
+            }))
+            .unwrap();
+        assert_eq!(window(&control).width, home.width);
+        assert_eq!((window(&control).x, window(&control).y), (0, 0));
+
+        assert!(
+            control
+                .place(Some(LShapePlacement {
+                    corner: LShapeCorner::TopLeft,
+                    scale: Some(10.0),
+                }))
+                .is_err()
+        );
+
+        control.place(None).unwrap();
+        assert_eq!(window(&control), home);
+    }
+
+    #[test]
+    fn the_picture_moves_from_the_full_screen_to_the_window() {
+        let graphic = graphic(LShapeCorner::TopRight);
+
+        assert_eq!(
+            graphic.rect_at(0.0),
+            Rect {
+                x: 0,
+                y: 0,
+                width: 1920,
+                height: 1080
+            }
+        );
+        assert_eq!(graphic.rect_at(1.0), graphic.window);
+        let half = graphic.rect_at(0.5);
+        assert!(half.width < 1920 && half.width > 1440, "{half:?}");
+        assert_eq!(half.y, 0);
+    }
+
+    #[test]
+    fn the_frame_is_drawn_into_the_window_over_the_graphic() {
+        let graphic = graphic(LShapeCorner::TopRight);
+        let mut frame = VideoFrame::new(PixelFormat::Yuv420p, 1920, 1080);
+        for plane in 0..3 {
+            frame
+                .data_mut(plane)
+                .fill(if plane == 0 { 50 } else { 128 });
+        }
+        frame.set_pts(Some(7));
+        let mut scaler = LShapeScaler::default();
+
+        apply_lshape(&mut frame, &graphic, 1.0, &mut scaler).unwrap();
+
+        let luma = |x: usize, y: usize| frame.data(0)[y * frame.stride(0) + x];
+        // The band shows the graphic, the window the picture.
+        assert_eq!(luma(100, 500), 200);
+        assert_eq!(luma(100, 1000), 200);
+        assert_eq!(luma(1000, 400), 50);
+        assert_eq!(frame.pts(), Some(7));
+
+        // Off: untouched.
+        let mut plain = VideoFrame::new(PixelFormat::Yuv420p, 1920, 1080);
+        plain.data_mut(0).fill(50);
+        apply_lshape(&mut plain, &graphic, 0.0, &mut scaler).unwrap();
+        assert_eq!(plain.data(0)[0], 50);
+    }
+
+    #[test]
+    fn switching_animates_both_ways() {
+        let control = LShapeControl::default();
+
+        control.on();
+        assert!(control.is_on());
+        assert!(control.level_after(Duration::ZERO) < 0.01);
+        assert!(
+            (control.level_after(Duration::from_secs_f64(LSHAPE_SWITCH_SECONDS / 2.0)) - 0.5).abs()
+                < 0.01
+        );
+        assert_eq!(control.level_after(Duration::from_secs(2)), 1.0);
+
+        control.lock().switched_at = None;
+        control.off();
+        assert_eq!(control.level_after(Duration::ZERO), 1.0);
+        assert_eq!(control.level_after(Duration::from_secs(2)), 0.0);
+        // No graphic: nothing to draw.
+        assert!(control.frame(1.0).is_none());
+    }
+
+    #[test]
+    fn a_swapped_or_clip_graphic_takes_the_channels_place() {
+        let control = LShapeControl::default();
+        let channel = Arc::new(graphic(LShapeCorner::TopRight));
+        let other = Arc::new(graphic(LShapeCorner::BottomLeft));
+        let clip = Arc::new(graphic(LShapeCorner::TopLeft));
+        control.lock().graphic = Some(channel.clone());
+
+        let (shown, level) = control.frame(0.0).unwrap();
+        assert!(Arc::ptr_eq(&shown, &channel));
+        assert_eq!(level, 0.0);
+
+        control.lock().replacement = Some(("sponsor.png".to_string(), other.clone()));
+        assert_eq!(control.replacement().as_deref(), Some("sponsor.png"));
+        assert!(Arc::ptr_eq(&control.frame(0.0).unwrap().0, &other));
+
+        // A marked stretch uses the clip's graphic.
+        let config = LShapeConfig {
+            path: String::new(),
+            scale: 75.0,
+            corner: LShapeCorner::TopLeft,
+        };
+        control.lock().clip = Some((config, clip.clone()));
+        let (shown, level) = control.frame(0.6).unwrap();
+        assert!(Arc::ptr_eq(&shown, &clip));
+        assert_eq!(level, 0.6);
+        // Without marks, the swapped one.
+        assert!(Arc::ptr_eq(&control.frame(0.0).unwrap().0, &other));
+
+        control.reset();
+        assert!(control.replacement().is_none());
+        control.set_clip_graphic(None, 1920, 1080).unwrap();
+        assert!(Arc::ptr_eq(&control.frame(0.6).unwrap().0, &channel));
+        assert!(
+            control
+                .set_clip_graphic(
+                    Some(&LShapeConfig {
+                        path: "/missing.png".to_string(),
+                        scale: 75.0,
+                        corner: LShapeCorner::TopLeft,
+                    }),
+                    1920,
+                    1080
+                )
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn the_logo_goes_off_before_the_picture_shrinks() {
+        assert_eq!(lshape_phases(0.0), (0.0, 0.0));
+        // A third of the way: the logo is gone, the picture not moved yet.
+        let (logo, picture) = lshape_phases(LSHAPE_LOGO_SECONDS / LSHAPE_SWITCH_SECONDS);
+        assert!((logo - 1.0).abs() < 1e-9 && picture.abs() < 1e-9);
+        let (logo, picture) = lshape_phases(0.2);
+        assert!(logo > 0.5 && logo < 1.0 && picture == 0.0);
+        let (logo, picture) = lshape_phases(0.75);
+        assert!((logo - 1.0).abs() < 1e-9 && picture > 0.5 && picture < 1.0);
+        assert_eq!(lshape_phases(1.0), (1.0, 1.0));
+    }
+
+    #[test]
+    fn marked_stretches_ease_in_and_out() {
+        let spans = [(100, 200)];
+
+        assert_eq!(marked_level(&spans, 50, 20), 0.0);
+        assert_eq!(marked_level(&spans, 100, 20), 0.0);
+        assert!((marked_level(&spans, 110, 20) - 0.5).abs() < 0.01);
+        assert_eq!(marked_level(&spans, 150, 20), 1.0);
+        assert!((marked_level(&spans, 190, 20) - 0.5).abs() < 0.01);
+        assert_eq!(marked_level(&spans, 201, 20), 0.0);
+        assert_eq!(marked_level(&spans, 150, 0), 1.0);
+    }
+}

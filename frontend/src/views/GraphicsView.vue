@@ -11,19 +11,20 @@ import { useConfig } from '@/stores/config'
 import { useSettings } from '@/stores/settings'
 
 /**
- * The channel's graphics: what is on air now, the logo, the L-shape, the
- * subtitles, quick scenes and control from outside NoAr.
+ * Channel graphics are managed from On air and Templates. Assigned models
+ * open Composer; the guide icon has its own XMLTV page.
  */
 const PAGES = [
-    { name: 'live', icon: 'bi-broadcast', admins: false },
-    { name: 'logo', icon: 'bi-badge-tm', admins: true },
-    { name: 'lshape', icon: 'bi-aspect-ratio', admins: true },
-    { name: 'subtitles', icon: 'bi-badge-cc', admins: true },
-    { name: 'scenes', icon: 'bi-collection-play', admins: true },
-    { name: 'api', icon: 'bi-plug', admins: true },
+    { name: 'onair', icon: 'bi-record-circle', admins: false, group: 'main' },
+    { name: 'templates', icon: 'bi-grid-1x2', admins: false, group: 'main' },
+    { name: 'sources', icon: 'bi-table', admins: true, group: 'main' },
+    { name: 'xmltv', icon: 'bi-image', admins: true, group: 'main' },
+    { name: 'subtitles', icon: 'bi-badge-cc', admins: true, group: 'main' },
 ] as const
 
-type PageName = (typeof PAGES)[number]['name']
+const GROUPS = ['main'] as const
+
+type PageName = (typeof PAGES)[number]['name'] | 'composer'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -35,13 +36,31 @@ const settings = useSettings()
 const pendingChannel = ref<number | null>(null)
 
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
-const current = computed(() => String(route.name ?? '').replace('graphics-', '') as PageName)
+const current = computed(() =>
+    route.name === 'graphics-channel-editor'
+        ? 'templates'
+        : (String(route.name ?? '').replace('graphics-', '') as PageName),
+)
 const pages = computed(() =>
     PAGES.filter((page) => !page.admins || ['global_admin', 'channel_admin'].includes(authStore.role)),
 )
+const groupedPages = computed(() =>
+    GROUPS.map((group) => ({ group, pages: pages.value.filter((page) => page.group === group) })).filter(
+        (entry) => entry.pages.length,
+    ),
+)
 
 useHead({
-    title: computed(() => `${t(`graphics.sections.${current.value}`)} · ${t('nav.graphics')}`),
+    title: computed(() => {
+        const title =
+            route.name === 'graphics-channel-editor'
+                ? t('graphics.editor.title', {
+                      name: t(`graphics.assigned.${route.params.kind === 'scene' ? 'scenes' : route.params.kind}`),
+                  })
+                : t(`graphics.sections.${current.value}`)
+
+        return `${title} · ${t('nav.graphics')}`
+    }),
 })
 
 function link(name: PageName) {
@@ -78,8 +97,12 @@ function confirmChannel(discard: boolean) {
 }
 </script>
 <template>
-    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 flex flex-wrap gap-6 items-start">
+    <div
+        class="mx-auto px-4 sm:px-6 flex flex-wrap gap-6 items-start"
+        :class="current === 'composer' ? 'max-w-[1920px] py-3' : 'max-w-[1440px] py-6'"
+    >
         <aside
+            v-if="current !== 'composer'"
             :aria-label="t('graphics.sectionsLabel')"
             class="flex-[1_1_240px] w-full lg:max-w-[280px] flex flex-col gap-4 lg:sticky lg:top-16"
         >
@@ -101,37 +124,48 @@ function confirmChannel(discard: boolean) {
 
             <label class="field-label lg:hidden">
                 {{ t('graphics.page') }}
-                <select class="field-input bg-base-100!" :value="current" @change="selectPage">
-                    <option v-for="page in pages" :key="page.name" :value="page.name">
-                        {{ t(`graphics.sections.${page.name}`) }}
-                    </option>
+                <select
+                    class="field-input bg-base-100!"
+                    :aria-label="t('graphics.page')"
+                    :value="current"
+                    @change="selectPage"
+                >
+                    <optgroup
+                        v-for="entry in groupedPages"
+                        :key="entry.group"
+                        :label="t(`graphics.groups.${entry.group}`)"
+                    >
+                        <option v-for="page in entry.pages" :key="page.name" :value="page.name">
+                            {{ t(`graphics.sections.${page.name}`) }}
+                        </option>
+                    </optgroup>
                 </select>
             </label>
 
-            <nav class="hidden lg:flex flex-col gap-0.5">
-                <div class="text-[11px] text-subtle tracking-[0.08em] uppercase px-2.5 pt-1.5 pb-1.5">
-                    {{ t('nav.graphics') }}
-                </div>
-                <RouterLink
-                    v-for="page in pages"
-                    :key="page.name"
-                    :to="link(page.name)"
-                    :aria-current="current === page.name ? 'page' : undefined"
-                    class="flex items-center gap-2.5 px-2.5 py-2 rounded-field"
-                    :class="
-                        current === page.name
-                            ? 'bg-base-300 text-base-content'
-                            : 'text-muted hover:bg-raised hover:text-base-content'
-                    "
-                >
-                    <i class="bi" :class="page.icon" aria-hidden="true" />
-                    <span class="flex-auto">{{ t(`graphics.sections.${page.name}`) }}</span>
-                    <span
-                        v-if="page.admins && settings.changedSections.includes('logo')"
-                        class="dot bg-accent"
-                        :title="t('settings.hasChanges')"
-                    />
-                </RouterLink>
+            <nav class="hidden lg:flex flex-col gap-0.5" :aria-label="t('nav.graphics')">
+                <template v-for="entry in groupedPages" :key="entry.group">
+                    <div
+                        class="text-[11px] text-subtle tracking-[0.08em] uppercase px-2.5 pb-1.5"
+                        :class="entry.group === 'main' ? 'pt-1.5' : 'pt-5'"
+                    >
+                        {{ t(`graphics.groups.${entry.group}`) }}
+                    </div>
+                    <RouterLink
+                        v-for="page in entry.pages"
+                        :key="page.name"
+                        :to="link(page.name)"
+                        :aria-current="current === page.name ? 'page' : undefined"
+                        class="flex items-center gap-2.5 px-2.5 py-2 rounded-field"
+                        :class="
+                            current === page.name
+                                ? 'bg-base-300 text-base-content'
+                                : 'text-muted hover:bg-raised hover:text-base-content'
+                        "
+                    >
+                        <i class="bi" :class="page.icon" aria-hidden="true" />
+                        <span class="flex-auto">{{ t(`graphics.sections.${page.name}`) }}</span>
+                    </RouterLink>
+                </template>
                 <p class="m-0 mt-3 px-2.5 text-xs text-muted leading-relaxed">{{ t('graphics.marksHint') }}</p>
             </nav>
         </aside>

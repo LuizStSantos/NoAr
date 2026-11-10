@@ -8,30 +8,33 @@ import 'dayjs/locale/ru'
 
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useElementSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useHead } from '@unhead/vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import GenericModal from '@/components/utils/GenericModal.vue'
-import LiveRemote from '@/components/settings/LiveRemote.vue'
 import GraphicsEventDialog from '@/components/schedule/GraphicsEventDialog.vue'
 import LiveDialog from '@/components/schedule/LiveDialog.vue'
 import ScheduleDialog from '@/components/schedule/ScheduleDialog.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
+import ScheduleTimeline from '@/components/schedule/ScheduleTimeline.vue'
+import ScheduleAgenda from '@/components/schedule/ScheduleAgenda.vue'
+import {
+    SCHEDULE_DAY_SECONDS as DAY,
+    SCHEDULE_DRAG_TYPE as DRAG_TYPE,
+    SCHEDULE_ZOOM_OPTIONS as zoomOptions,
+    type ScheduleGradeBlock,
+} from '@/composables/schedulePresentation'
 import {
     SCHEDULE_COLORS,
     addDays,
     eventColor,
     fileName,
     fileStem,
-    formatLength,
     parentFolder,
     secondsFromDay,
     secondsToTime,
-    splitDateTime,
     timeToSeconds,
-    useScheduleText,
 } from '@/composables/schedule'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
@@ -41,7 +44,6 @@ dayjs.extend(utc)
 dayjs.extend(timezone)
 
 const { t, locale } = useI18n()
-const { repeatLabel, entryLabel, afterLabel } = useScheduleText()
 const configStore = useConfig()
 const indexStore = useIndex()
 const scheduleStore = useSchedule()
@@ -51,30 +53,16 @@ const { i } = storeToRefs(configStore)
 
 useHead({ title: computed(() => t('button.schedule')) })
 
-const DAY = 86400
-const LABEL_WIDTH = 112
-const DRAG_TYPE = 'application/x-noar-schedule'
-
-const zoomOptions = [
-    { minutes: 60, label: '1 h', tick: 600 },
-    { minutes: 360, label: '6 h', tick: 3600 },
-    { minutes: 1440, label: '24 h', tick: 7200 },
-]
-
 const tab = ref<'storage' | 'lives'>('storage')
 const zoom = ref(360)
 const date = ref(channelNow().format('YYYY-MM-DD'))
 const nowSeconds = ref(secondsOfDay())
-const scroller = ref<HTMLElement>()
-const { width: scrollerWidth } = useElementSize(scroller)
-const ghost = ref<{ lane: 'grade' | 'events'; seconds: number; label: string } | null>(null)
+const timeline = ref<InstanceType<typeof ScheduleTimeline>>()
 const mediaDraft = ref<MediaDraft | null>(null)
 const liveDraft = ref<LiveDraft | null>(null)
 const deleting = ref<ScheduleEvent | null>(null)
 const graphicsDraft = ref<{ event: GraphicsEvent | null; date: string; time: string } | null>(null)
 const deletingGraphics = ref<GraphicsEvent | null>(null)
-/** The colour of graphics on the timeline. */
-const GRAPHICS_COLOR = '#8f7ae6'
 
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 let clockTimer: ReturnType<typeof setInterval> | undefined
@@ -94,30 +82,8 @@ const isToday = computed(() => date.value === today.value)
 const dateLabel = computed(() =>
     dayjs(`${date.value}T12:00:00`).locale(locale.value.toLowerCase()).format('ddd, D MMM YYYY'),
 )
-const zoomTick = computed(() => zoomOptions.find((option) => option.minutes === zoom.value)?.tick ?? 3600)
-const pxPerSecond = computed(() => Math.max(scrollerWidth.value - LABEL_WIDTH - 8, 300) / (zoom.value * 60))
-const laneWidth = computed(() => DAY * pxPerSecond.value)
-
-const ticks = computed(() => {
-    const list = []
-
-    for (let second = 0; second <= DAY; second += zoomTick.value) {
-        list.push({ second, label: second === DAY ? '24:00' : secondsToTime(second).slice(0, 5) })
-    }
-
-    return list
-})
-
-interface GradeBlock {
-    start: number
-    end: number
-    label: string
-    detail: string | null
-    scheduled: boolean
-}
-
 /** The day's programme from the guide: program names and times moved by events. */
-const gradeBlocks = computed<GradeBlock[]>(() =>
+const gradeBlocks = computed<ScheduleGradeBlock[]>(() =>
     scheduleStore.grade.map((block) => ({
         start: secondsFromDay(block.start, date.value),
         end: secondsFromDay(block.stop, date.value),
@@ -157,89 +123,6 @@ const eventBlocks = computed(() =>
     }),
 )
 
-function left(seconds: number): string {
-    return `${Math.max(0, seconds) * pxPerSecond.value}px`
-}
-
-function width(start: number, end: number, minimum = 4): string {
-    return `${Math.max(minimum, pixels(start, end))}px`
-}
-
-function pixels(start: number, end: number): number {
-    return (Math.min(end, DAY) - Math.max(start, 0)) * pxPerSecond.value
-}
-
-/** Narrower than its text: the block keeps its true length and the label goes beside it. */
-const LABEL_INSIDE_PX = 120
-
-function narrow(start: number, end: number): boolean {
-    return pixels(start, end) < LABEL_INSIDE_PX
-}
-
-function textColor(color: string): string {
-    return color === SCHEDULE_COLORS.after_clip ? '#ffffff' : '#1c1c1c'
-}
-
-function occurrenceState(occurrence: ScheduleOccurrence): { label: string; tone: string } {
-    const active = scheduleStore.status.active
-    const start = secondsFromDay(occurrence.start, date.value)
-
-    if (active && active.event_id === occurrence.event.id && occurrence.status === 'running') {
-        return { label: t('schedule.onAir'), tone: 'accent' }
-    }
-
-    if (occurrence.status === 'done') {
-        return { label: t('schedule.done'), tone: 'muted' }
-    }
-
-    if (occurrence.status === 'failed' || occurrence.status === 'skipped') {
-        return { label: t('schedule.failed'), tone: 'error' }
-    }
-
-    if (occurrence.status === 'running') {
-        return { label: t('schedule.waitingClip'), tone: 'accent' }
-    }
-
-    if (date.value < today.value || (isToday.value && start < nowSeconds.value - 60)) {
-        return { label: t('schedule.notAired'), tone: 'muted' }
-    }
-
-    if (isToday.value && start - nowSeconds.value < 3600) {
-        return {
-            label: t('schedule.waitingIn', { minutes: Math.max(0, Math.ceil((start - nowSeconds.value) / 60)) }),
-            tone: 'waiting',
-        }
-    }
-
-    return { label: t('schedule.scheduled'), tone: 'neutral' }
-}
-
-function stateClass(tone: string): string {
-    return (
-        {
-            accent: 'bg-accent text-accent-content font-semibold',
-            waiting: 'bg-accent-soft text-accent-text',
-            error: 'bg-on-air-soft text-on-air-text',
-            muted: 'bg-base-200 text-muted',
-            neutral: 'bg-base-200 text-base-content/85',
-        }[tone] ?? ''
-    )
-}
-
-function sourcesLabel(event: ScheduleEvent): string {
-    if (event.kind === 'live') {
-        const live = scheduleStore.lives.find((item) => item.path === event.sources[0])
-
-        return live ? `${live.protocol} · ${live.url}` : (event.sources[0] ?? '')
-    }
-
-    return [
-        t('schedule.files', { count: event.sources.length }, event.sources.length),
-        formatLength(event.duration),
-        repeatLabel(event.repeat_days),
-    ].join(' · ')
-}
-
 async function refresh() {
     try {
         await Promise.all([scheduleStore.loadDay(date.value), scheduleStore.loadStatus(), scheduleStore.loadGraphics()])
@@ -250,12 +133,8 @@ async function refresh() {
 
 function scrollToFocus() {
     nextTick(() => {
-        if (!scroller.value) {
-            return
-        }
-
         const focus = isToday.value ? nowSeconds.value : (gradeBlocks.value[0]?.start ?? 6 * 3600)
-        scroller.value.scrollLeft = Math.max(0, (focus - zoom.value * 60 * 0.25) * pxPerSecond.value)
+        timeline.value?.scrollToFocus(focus)
     })
 }
 
@@ -263,58 +142,7 @@ function changeDay(days: number) {
     date.value = days === 0 ? today.value : addDays(date.value, days)
 }
 
-function laneSeconds(event: DragEvent): number {
-    const lane = event.currentTarget as HTMLElement
-    const offset = event.clientX - lane.getBoundingClientRect().left
-    const step = zoom.value <= 60 ? 10 : 60
-
-    return Math.min(DAY - step, Math.max(0, Math.round(offset / pxPerSecond.value / step) * step))
-}
-
-function readPayload(event: DragEvent): ScheduleDragItem | null {
-    const raw = event.dataTransfer?.getData(DRAG_TYPE)
-
-    try {
-        return raw ? (JSON.parse(raw) as ScheduleDragItem) : null
-    } catch {
-        return null
-    }
-}
-
-function dragOver(event: DragEvent, lane: 'grade' | 'events') {
-    if (!event.dataTransfer?.types.includes(DRAG_TYPE)) {
-        return
-    }
-
-    event.preventDefault()
-    event.dataTransfer.dropEffect = event.dataTransfer.effectAllowed === 'move' ? 'move' : 'copy'
-    const seconds = laneSeconds(event)
-    ghost.value = {
-        lane,
-        seconds,
-        label: t('schedule.dropAt', { time: secondsToTime(seconds).slice(0, zoom.value <= 60 ? 8 : 5) }),
-    }
-}
-
-function dragLeave(event: DragEvent) {
-    const lane = event.currentTarget as HTMLElement
-
-    if (!lane.contains(event.relatedTarget as Node)) {
-        ghost.value = null
-    }
-}
-
-async function drop(event: DragEvent) {
-    const payload = readPayload(event)
-    const seconds = laneSeconds(event)
-    ghost.value = null
-
-    if (!payload) {
-        return
-    }
-
-    event.preventDefault()
-
+async function drop(payload: ScheduleDragItem, seconds: number) {
     if (payload.type === 'media') {
         mediaDraft.value = {
             sources: [{ path: payload.path, name: payload.name, duration: payload.duration }],
@@ -341,16 +169,6 @@ function dragLive(event: DragEvent, live: LiveSource) {
 
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'copy'
-    }
-}
-
-function dragEvent(event: DragEvent, occurrence: ScheduleOccurrence) {
-    const payload: ScheduleDragItem = { type: 'event', id: occurrence.event.id }
-
-    event.dataTransfer?.setData(DRAG_TYPE, JSON.stringify(payload))
-
-    if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move'
     }
 }
 
@@ -489,34 +307,6 @@ const graphicsBlocks = computed(() =>
         .sort((a, b) => a.start - b.start),
 )
 
-/** What a graphics event does, in a few words. */
-function graphicsSummary(event: GraphicsEvent): string {
-    const actions = event.actions
-    const parts: string[] = []
-
-    if (actions.logo !== 'keep') {
-        parts.push(t(`graphics.scenes.summary.logo.${actions.logo}`))
-    }
-
-    if (actions.logo_position) {
-        parts.push(t('graphics.scenes.summary.logoMoves'))
-    }
-
-    if (actions.lshape !== 'keep') {
-        parts.push(t(`graphics.scenes.summary.lshape.${actions.lshape}`))
-    }
-
-    if (actions.lshape_corner && actions.lshape_corner !== 'default') {
-        parts.push(t(`lshape.corners.${actions.lshape_corner}`).toLowerCase())
-    }
-
-    if (actions.lshape_scale) {
-        parts.push(`${actions.lshape_scale}%`)
-    }
-
-    return parts.join(' · ') || t('graphics.scenes.summary.nothing')
-}
-
 function newGraphics() {
     graphicsDraft.value = {
         event: null,
@@ -586,13 +376,6 @@ async function saved() {
     await refresh()
 }
 
-const nextUp = computed(() =>
-    scheduleStore.occurrences.filter(
-        (occurrence) =>
-            !occurrence.status && isToday.value && secondsFromDay(occurrence.start, date.value) >= nowSeconds.value,
-    ),
-)
-
 /** A link from Storage (`?live=<path>`) opens the live, ready to schedule. */
 function openLinkedLive() {
     const path = route.query.live
@@ -618,11 +401,6 @@ onMounted(async () => {
     await Promise.all([refresh(), scheduleStore.loadLives().catch(() => undefined)])
     openLinkedLive()
     scrollToFocus()
-    if (route.hash === '#live-api') {
-        // From the Player's live controls: straight to the API tutorial.
-        await nextTick()
-        document.getElementById('live-api')?.scrollIntoView({ block: 'start' })
-    }
     refreshTimer = setInterval(refresh, 5000)
     clockTimer = setInterval(() => (nowSeconds.value = secondsOfDay()), 1000)
 })
@@ -778,415 +556,35 @@ watch(zoom, scrollToFocus)
             </aside>
 
             <main class="flex-[999_1_560px] min-w-0 flex flex-col gap-4">
-                <section :aria-label="t('schedule.timeline')" class="card-box px-4.5 py-4">
-                    <div class="flex flex-wrap gap-x-4.5 gap-y-2 text-[13px] text-base-content/85 mb-3.5">
-                        <span class="flex items-center gap-2"
-                            ><span class="w-3 h-3 rounded-[3px] bg-[#4a4a4a]" />{{ t('schedule.legendGrade') }}</span
-                        >
-                        <span class="flex items-center gap-2"
-                            ><span
-                                class="w-3 h-3 rounded-[3px]"
-                                :style="{ background: SCHEDULE_COLORS.after_clip }"
-                            />{{ t('schedule.afterClip') }}</span
-                        >
-                        <span class="flex items-center gap-2"
-                            ><span class="w-3 h-3 rounded-[3px]" :style="{ background: SCHEDULE_COLORS.interrupt }" />{{
-                                t('schedule.interrupt')
-                            }}</span
-                        >
-                        <span class="flex items-center gap-2"
-                            ><span class="w-3 h-3 rounded-[3px]" :style="{ background: SCHEDULE_COLORS.live }" />{{
-                                t('schedule.live')
-                            }}</span
-                        >
-                        <span class="flex items-center gap-2"
-                            ><span class="w-3 h-3 rounded-[3px]" :style="{ background: GRAPHICS_COLOR }" />{{
-                                t('schedule.graphics.lane')
-                            }}</span
-                        >
-                    </div>
+                <ScheduleTimeline
+                    ref="timeline"
+                    :grade-blocks="gradeBlocks"
+                    :event-blocks="eventBlocks"
+                    :graphics-blocks="graphicsBlocks"
+                    :zoom="zoom"
+                    :is-today="isToday"
+                    :now-seconds="nowSeconds"
+                    :active-event-id="scheduleStore.status.active?.event_id"
+                    @drop="drop"
+                    @edit="edit"
+                    @edit-graphics="editGraphics"
+                />
 
-                    <div ref="scroller" class="overflow-x-auto overflow-y-hidden pb-2">
-                        <div
-                            class="grid gap-y-2.5 w-max"
-                            :style="{ gridTemplateColumns: `${LABEL_WIDTH}px ${laneWidth}px` }"
-                        >
-                            <div class="sticky left-0 z-20 bg-base-100" />
-                            <div class="relative h-5 font-mono text-[13px] text-muted">
-                                <span
-                                    v-for="tick in ticks"
-                                    :key="tick.second"
-                                    class="absolute -translate-x-1/2 first:translate-x-0 whitespace-nowrap"
-                                    :style="{ left: left(tick.second) }"
-                                >
-                                    {{ tick.label }}
-                                </span>
-                            </div>
-
-                            <div
-                                class="sticky left-0 z-20 bg-base-100 text-[13px] text-base-content/85 flex items-center"
-                            >
-                                {{ t('schedule.grade') }}
-                            </div>
-                            <div
-                                class="relative h-16 bg-base-200 rounded-lg"
-                                @dragover="dragOver($event, 'grade')"
-                                @dragleave="dragLeave"
-                                @drop="drop"
-                            >
-                                <div
-                                    v-for="(block, index) in gradeBlocks"
-                                    :key="`g${index}`"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md px-2.5 py-1.5 overflow-hidden [overflow-wrap:normal] border-r-2 border-base-200"
-                                    :class="block.scheduled ? 'text-[#1c1c1c]' : 'bg-[#44464c] text-white'"
-                                    :style="{
-                                        left: left(block.start),
-                                        width: width(block.start, block.end, 2),
-                                        background: block.scheduled ? SCHEDULE_COLORS.live : undefined,
-                                    }"
-                                    :title="`${block.label}${block.detail ? ` — ${block.detail}` : ''} · ${secondsToTime(block.start)} – ${secondsToTime(block.end)}`"
-                                >
-                                    <div class="text-sm font-semibold truncate">{{ block.label }}</div>
-                                    <div class="font-mono text-xs opacity-80 truncate">
-                                        {{ secondsToTime(block.start).slice(0, 5) }} –
-                                        {{ secondsToTime(block.end).slice(0, 5) }}
-                                    </div>
-                                </div>
-                                <p
-                                    v-if="!gradeBlocks.length"
-                                    class="absolute inset-0 flex items-center px-4 text-sm text-base-content/50"
-                                >
-                                    {{ t('schedule.noPlaylist') }}
-                                </p>
-                                <template v-if="isToday">
-                                    <div
-                                        class="absolute -top-8 -bottom-21 w-0.5 bg-accent z-10 pointer-events-none"
-                                        :style="{ left: left(nowSeconds) }"
-                                    />
-                                    <div
-                                        class="absolute -top-8 -translate-x-1/2 bg-accent text-accent-content text-xs font-semibold px-1.5 rounded z-10 whitespace-nowrap pointer-events-none"
-                                        :style="{ left: left(nowSeconds) }"
-                                    >
-                                        {{ t('schedule.now') }} {{ secondsToTime(nowSeconds).slice(0, 5) }}
-                                    </div>
-                                </template>
-                            </div>
-
-                            <div
-                                class="sticky left-0 z-20 bg-base-100 text-[13px] text-base-content/85 flex items-center"
-                            >
-                                {{ t('schedule.events') }}
-                            </div>
-                            <div
-                                class="relative h-16 bg-base-200 rounded-lg"
-                                @dragover="dragOver($event, 'events')"
-                                @dragleave="dragLeave"
-                                @drop="drop"
-                            >
-                                <button
-                                    v-for="block in eventBlocks"
-                                    :key="`${block.occurrence.event.id}-${block.occurrence.start}`"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md py-1 [overflow-wrap:normal] text-left cursor-grab border-0"
-                                    :class="{
-                                        'px-2.5 overflow-hidden': !narrow(block.start, block.end),
-                                        'px-0 overflow-visible hover:z-10': narrow(block.start, block.end),
-                                        'opacity-50': block.occurrence.status === 'done',
-                                        'ring-2 ring-error': block.occurrence.status === 'failed',
-                                        'ring-2 ring-white animate-pulse':
-                                            scheduleStore.status.active?.event_id === block.occurrence.event.id,
-                                    }"
-                                    :style="{
-                                        left: left(block.start),
-                                        width: width(block.start, block.end),
-                                        background: block.color,
-                                        color: textColor(block.color),
-                                    }"
-                                    :title="`${block.occurrence.event.title} · ${secondsToTime(block.start)}`"
-                                    draggable="true"
-                                    @dragstart="dragEvent($event, block.occurrence)"
-                                    @click="edit(block.occurrence)"
-                                >
-                                    <div
-                                        :class="
-                                            narrow(block.start, block.end)
-                                                ? 'absolute left-[calc(100%+4px)] top-0 bottom-0 flex flex-col justify-center px-2 rounded-md bg-base-300 text-base-content whitespace-nowrap border-l-3'
-                                                : 'contents'
-                                        "
-                                        :style="
-                                            narrow(block.start, block.end) ? { borderColor: block.color } : undefined
-                                        "
-                                    >
-                                        <div class="text-sm font-semibold truncate flex items-center gap-1.5">
-                                            <span
-                                                v-if="block.occurrence.event.kind === 'live'"
-                                                class="bg-[#1c1c1c] text-[#ffb1a3] text-[11px] px-1 rounded"
-                                            >
-                                                {{ t('schedule.liveBadge') }}
-                                            </span>
-                                            {{ block.occurrence.event.title }}
-                                        </div>
-                                        <div class="font-mono text-xs opacity-85 truncate">
-                                            {{ secondsToTime(block.start).slice(0, 5) }}
-                                            <template v-if="block.occurrence.event.kind === 'live'">
-                                                – {{ secondsToTime(block.end).slice(0, 5) }}</template
-                                            >
-                                            <template v-else>
-                                                · {{ formatLength(block.occurrence.event.duration) }}</template
-                                            >
-                                        </div>
-                                    </div>
-                                </button>
-                                <div
-                                    v-if="ghost"
-                                    class="absolute top-1.5 bottom-1.5 w-34 rounded-md border-2 border-dashed border-accent bg-base-300 text-accent-text px-2 py-1 text-sm font-semibold whitespace-nowrap pointer-events-none z-20"
-                                    :style="{ left: left(ghost.seconds) }"
-                                >
-                                    {{ ghost.label }}
-                                </div>
-                            </div>
-
-                            <div
-                                class="sticky left-0 z-20 bg-base-100 text-[13px] text-base-content/85 flex items-center"
-                            >
-                                {{ t('schedule.graphics.lane') }}
-                            </div>
-                            <div class="relative h-12 bg-base-200 rounded-lg">
-                                <button
-                                    v-for="block in graphicsBlocks"
-                                    :key="`gr-${block.event.id}`"
-                                    type="button"
-                                    class="absolute top-1.5 bottom-1.5 rounded-md [overflow-wrap:normal] text-left cursor-pointer border-0 text-[#16121f]"
-                                    :class="[
-                                        block.open ? 'rounded-e-none' : '',
-                                        !block.open && narrow(block.start, block.end)
-                                            ? 'px-0 overflow-visible hover:z-10'
-                                            : 'px-2.5 overflow-hidden',
-                                    ]"
-                                    :style="{
-                                        left: left(block.start),
-                                        width: width(block.start, block.end),
-                                        background: block.open
-                                            ? `linear-gradient(90deg, ${GRAPHICS_COLOR} 70%, transparent)`
-                                            : GRAPHICS_COLOR,
-                                    }"
-                                    :title="`${block.event.title} · ${graphicsSummary(block.event)}`"
-                                    @click="editGraphics(block.event)"
-                                >
-                                    <div
-                                        :class="
-                                            !block.open && narrow(block.start, block.end)
-                                                ? 'absolute left-[calc(100%+4px)] top-0 bottom-0 flex flex-col justify-center px-2 rounded-md bg-base-300 text-base-content whitespace-nowrap border-l-3'
-                                                : 'contents'
-                                        "
-                                        :style="
-                                            !block.open && narrow(block.start, block.end)
-                                                ? { borderColor: GRAPHICS_COLOR }
-                                                : undefined
-                                        "
-                                    >
-                                        <div class="text-[13px] font-semibold truncate leading-tight">
-                                            {{ block.event.title }}
-                                        </div>
-                                        <div class="font-mono text-[11px] opacity-85 truncate">
-                                            {{ block.event.start_time.slice(0, 5) }}
-                                            <template v-if="block.event.end_time">
-                                                – {{ block.event.end_time.slice(0, 5) }}</template
-                                            >
-                                        </div>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section :aria-label="t('schedule.todayEvents')" class="card-box">
-                    <div class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
-                        <h2 class="m-0 text-base font-semibold">
-                            {{ isToday ? t('schedule.todayEvents') : t('schedule.dayEvents') }}
-                        </h2>
-                        <span class="text-[13px] text-muted">
-                            {{
-                                t(
-                                    'schedule.countScheduled',
-                                    { count: scheduleStore.occurrences.length },
-                                    scheduleStore.occurrences.length,
-                                )
-                            }}
-                            <template v-if="nextUp[0]">
-                                ·
-                                {{
-                                    t('schedule.nextIn', {
-                                        minutes: Math.max(
-                                            0,
-                                            Math.ceil((secondsFromDay(nextUp[0].start, date) - nowSeconds) / 60),
-                                        ),
-                                    })
-                                }}
-                            </template>
-                        </span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full min-w-215 text-sm">
-                            <thead>
-                                <tr class="text-left text-[13px] text-muted">
-                                    <th class="px-4.5 py-2.5 font-medium">{{ t('schedule.time') }}</th>
-                                    <th class="px-2 py-2.5 font-medium">{{ t('schedule.material') }}</th>
-                                    <th class="px-2 py-2.5 font-medium">{{ t('schedule.howEnters') }}</th>
-                                    <th class="px-2 py-2.5 font-medium">{{ t('schedule.afterwards') }}</th>
-                                    <th class="px-2 py-2.5 font-medium">{{ t('schedule.inGuide') }}</th>
-                                    <th class="px-2 py-2.5 font-medium">{{ t('schedule.state') }}</th>
-                                    <th class="px-4.5 py-2.5 font-medium text-right">{{ t('schedule.actions') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="block in eventBlocks"
-                                    :key="`row-${block.occurrence.event.id}-${block.occurrence.start}`"
-                                    class="border-t border-line"
-                                >
-                                    <td class="px-4.5 py-3 font-mono align-top">
-                                        <template v-if="block.occurrence.event.kind === 'live'">
-                                            {{ splitDateTime(block.occurrence.start).time.slice(0, 5) }} –
-                                            {{ splitDateTime(block.occurrence.end).time.slice(0, 5) }}
-                                        </template>
-                                        <template v-else>{{ splitDateTime(block.occurrence.start).time }}</template>
-                                        <div
-                                            v-if="block.start !== block.nominal"
-                                            class="text-xs"
-                                            :style="{ color: '#9cc0e6' }"
-                                        >
-                                            {{ t('schedule.expected', { time: secondsToTime(block.start) }) }}
-                                        </div>
-                                    </td>
-                                    <td class="px-2 py-3 align-top">
-                                        {{ block.occurrence.event.kind === 'live' ? `${t('schedule.live')} · ` : ''
-                                        }}{{ block.occurrence.event.title }}
-                                        <div class="text-[13px] text-muted truncate max-w-72">
-                                            {{ sourcesLabel(block.occurrence.event) }}
-                                        </div>
-                                    </td>
-                                    <td class="px-2 py-3 align-top">
-                                        <span class="inline-flex items-center gap-1.5">
-                                            <span
-                                                class="w-2.5 h-2.5 rounded-[3px]"
-                                                :style="{ background: block.color }"
-                                                aria-hidden="true"
-                                            />
-                                            {{ entryLabel(block.occurrence.event) }}
-                                        </span>
-                                    </td>
-                                    <td class="px-2 py-3 align-top">{{ afterLabel(block.occurrence.event) }}</td>
-                                    <td
-                                        class="px-2 py-3 align-top"
-                                        :class="{ 'text-muted': !block.occurrence.event.show_in_guide }"
-                                    >
-                                        {{
-                                            block.occurrence.event.show_in_guide ? t('schedule.yes') : t('schedule.no')
-                                        }}
-                                    </td>
-                                    <td class="px-2 py-3 align-top">
-                                        <span
-                                            class="rounded-md px-2 py-0.5 text-[13px] whitespace-nowrap"
-                                            :class="stateClass(occurrenceState(block.occurrence).tone)"
-                                        >
-                                            {{ occurrenceState(block.occurrence).label }}
-                                        </span>
-                                    </td>
-                                    <td class="px-4.5 py-2 text-right whitespace-nowrap align-top">
-                                        <button
-                                            class="btn-icon min-w-10 min-h-10 border border-line-strong"
-                                            :aria-label="t('schedule.playNow')"
-                                            :title="t('schedule.playNow')"
-                                            @click="trigger(block.occurrence)"
-                                        >
-                                            <i class="bi bi-lightning-charge" aria-hidden="true" />
-                                        </button>
-                                        <button
-                                            class="btn-icon min-w-10 min-h-10 border border-line-strong ms-1.5"
-                                            :aria-label="t('schedule.edit')"
-                                            :title="t('schedule.edit')"
-                                            @click="edit(block.occurrence)"
-                                        >
-                                            <i class="bi bi-pencil" aria-hidden="true" />
-                                        </button>
-                                        <button
-                                            class="btn-icon min-w-10 min-h-10 border border-line-strong text-error ms-1.5"
-                                            :aria-label="t('schedule.remove')"
-                                            :title="t('schedule.remove')"
-                                            @click="deleting = block.occurrence.event"
-                                        >
-                                            <i class="bi bi-trash" aria-hidden="true" />
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr v-if="!eventBlocks.length">
-                                    <td colspan="7" class="px-4 py-7 text-center text-muted">
-                                        {{ t('schedule.empty') }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section :aria-label="t('schedule.graphics.list')" class="card-box">
-                    <div class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
-                        <h2 class="m-0 text-base font-semibold inline-flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-[3px]" :style="{ background: GRAPHICS_COLOR }" />
-                            {{ t('schedule.graphics.list') }}
-                        </h2>
-                        <button class="btn-quiet" @click="newGraphics">
-                            <i class="bi bi-plus-lg" aria-hidden="true" />{{ t('schedule.graphics.new') }}
-                        </button>
-                    </div>
-                    <ul class="m-0 p-0 list-none">
-                        <li
-                            v-for="block in graphicsBlocks"
-                            :key="`grl-${block.event.id}`"
-                            class="flex items-center gap-3 px-4.5 py-3 border-t border-line first:border-t-0"
-                        >
-                            <span class="flex-1 min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
-                                <span class="font-mono text-sm w-28">
-                                    {{ block.event.start_time.slice(0, 5) }}
-                                    –
-                                    {{ block.event.end_time?.slice(0, 5) ?? t('schedule.graphics.untilChanged') }}
-                                </span>
-                                <span class="flex-1 min-w-40">
-                                    <strong class="font-semibold">{{ block.event.title }}</strong>
-                                    <span class="block text-[13px] text-muted">
-                                        {{ graphicsSummary(block.event) }} · {{ repeatLabel(block.event.repeat_days) }}
-                                    </span>
-                                </span>
-                            </span>
-                            <span class="flex gap-2 shrink-0">
-                                <button
-                                    class="btn-icon min-w-10 min-h-10 border border-line-strong"
-                                    :aria-label="t('schedule.edit')"
-                                    :title="t('schedule.edit')"
-                                    @click="editGraphics(block.event)"
-                                >
-                                    <i class="bi bi-pencil" aria-hidden="true" />
-                                </button>
-                                <button
-                                    class="btn-icon min-w-10 min-h-10 border border-line-strong text-error"
-                                    :aria-label="t('schedule.graphics.remove')"
-                                    :title="t('schedule.graphics.remove')"
-                                    @click="deletingGraphics = block.event"
-                                >
-                                    <i class="bi bi-trash" aria-hidden="true" />
-                                </button>
-                            </span>
-                        </li>
-                        <li v-if="!graphicsBlocks.length" class="px-4.5 py-6 text-center text-muted">
-                            {{ t('schedule.graphics.none') }}
-                        </li>
-                    </ul>
-                </section>
-
-                <div id="live-api" class="scroll-mt-20">
-                    <LiveRemote :open="route.hash === '#live-api'" />
-                </div>
+                <ScheduleAgenda
+                    :event-blocks="eventBlocks"
+                    :graphics-blocks="graphicsBlocks"
+                    :lives="scheduleStore.lives"
+                    :date="date"
+                    :today="today"
+                    :now-seconds="nowSeconds"
+                    :active-event-id="scheduleStore.status.active?.event_id"
+                    @trigger="trigger"
+                    @edit="edit"
+                    @remove="deleting = $event"
+                    @create-graphics="newGraphics"
+                    @edit-graphics="editGraphics"
+                    @remove-graphics="deletingGraphics = $event"
+                />
             </main>
         </div>
 

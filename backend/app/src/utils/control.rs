@@ -181,13 +181,8 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .unwrap();
-        sqlx::query(
-            "CREATE TABLE channels (id INTEGER PRIMARY KEY, last_date TEXT, time_shift REAL)",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        sqlx::query("INSERT INTO channels VALUES (1, '2026-09-08', 42.0)")
+        crate::db::handles::db_migrate(&pool).await.unwrap();
+        sqlx::query("UPDATE channels SET last_date = '2026-09-08', time_shift = 42.0 WHERE id = 1")
             .execute(&pool)
             .await
             .unwrap();

@@ -26,3 +26,18 @@ export async function createFilePreviewUrl(channelId: number | undefined, path: 
 
     return fileUrl(channelId, path, token.access)
 }
+
+/** Let the browser stream the stored file, using a fresh path-scoped access ticket. */
+export async function downloadStorageFile(channelId: number, path: string, filename: string): Promise<void> {
+    const url = await createFilePreviewUrl(channelId, path)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.append(link)
+
+    try {
+        link.click()
+    } finally {
+        link.remove()
+    }
+}

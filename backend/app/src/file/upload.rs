@@ -35,6 +35,7 @@ const ALLOWED_MIME_TYPES: &[&str] = &[
     "image/webp",
     "text/csv",
     "text/plain",
+    "text/vtt",
     "text/xml",
     "video/mp2t",
     "video/mp4",
@@ -550,6 +551,8 @@ mod tests {
             "tvshow.nfo",
             "Episódio 1.NFO",
             "poster.jpg",
+            "programme.vtt",
+            "Programme captions.VTT",
         ] {
             assert!(sanitize_upload_filename(name).is_ok(), "{name}");
         }

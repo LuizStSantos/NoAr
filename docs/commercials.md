@@ -24,25 +24,24 @@ Scheduled events made only of commercials never show in the guide; their
 
 ## A break inside a video
 
-When a programme file has a commercial break edited into it, mark the
-stretches where the logo goes off instead: in **Storage**, open the
-video's **Trim, logo and breaks in this video** (or the same button in the Player's clip editor), choose the **Logo** tab
-and mark, while it plays, where the logo goes off and where it comes back, or
-type the times. Each stretch then has two handles on the bar, as the
-[trim](trim.md) does: drag them to the exact frame, or select one and use the
-arrow keys (Shift moves a second). Up to 16 stretches, in seconds of the video itself, so they
-hold whatever part of the video a playlist plays. The logo fades out and back
-in with its usual fade, wherever the video plays, from the next time it starts.
+When a programme file has a commercial break edited into it, take the logo
+off for that stretch with two graphics cues: in **Storage**, open the video's
+**Trim, graphics and breaks in this video** (or the same button in the Player's
+clip editor), choose the **Graphics** tab, and add **Template off** with the
+logo template where the break starts and **Template on** where it ends. The
+times are seconds of the video itself, so they hold whatever part of the video
+a playlist plays ([docs](logo.md#graphics-inside-a-video)).
 
-The stretches are kept next to the video in `<name>.marks.json`, like its
-`.nfo` sheet, and follow it when it is renamed, moved or deleted in Storage:
+The cues are kept next to the video in `<name>.marks.json`, like its `.nfo`
+sheet, and follow it when it is renamed, moved or deleted in Storage:
 
 ```json
-{ "hide": [{ "from": 750.0, "to": 990.5 }] }
+{ "graphics": [{ "at": 750.0, "action": "out", "template_id": 1 },
+               { "at": 990.5, "action": "take", "template_id": 1 }] }
 ```
 
 Videos with marks show a "marks" tag in Storage. A live with a
-break of its own uses the [logo API](api.md#logo-on-air) instead.
+break of its own takes the logo off with the [graphics commands](api.md#graphics-commands) instead.
 
 The same panel marks the break itself for SCTE-35, so FAST platforms and ad
 servers can replace it: see

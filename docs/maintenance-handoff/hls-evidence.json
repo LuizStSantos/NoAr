@@ -1,0 +1,54 @@
+{
+  "status": "PASS",
+  "event_id": 4,
+  "event_duration": 3.0,
+  "running_observed": true,
+  "done_observed": true,
+  "playout_mode": "playlist",
+  "resume_mode": "continue",
+  "playlist_day_start": "02:26:24",
+  "video": {
+    "codec": "h264",
+    "width": 640,
+    "height": 360,
+    "frame_rate": "25/1"
+  },
+  "audio": {
+    "codec": "aac",
+    "rate": "48000",
+    "channels": 2
+  },
+  "decoded_frames": 512,
+  "red_frames": 75,
+  "blue_before": 239,
+  "blue_after": 198,
+  "captures": [
+    {
+      "file": "output-hls-before.jpg",
+      "decoded_frame": 119
+    },
+    {
+      "file": "output-hls-event.jpg",
+      "decoded_frame": 276
+    },
+    {
+      "file": "output-hls-after.jpg",
+      "decoded_frame": 413
+    }
+  ],
+  "segment_sha256": {
+    "maintenance_1794104788554293055_95624_0.ts": "4f9f22ffe708845a84ffd2f411281ab82570edd11ca864b667dfed617d1e360a",
+    "maintenance_1794104788554293055_95624_1.ts": "fc8350fc932e4f0b3e12babde66d996c0ad908dd517a881847a5b5f5986ddd3f",
+    "maintenance_1794104788554293055_95624_2.ts": "c9ca575943ce9d656001f0bfa14def54817966ed2d931053e5fc894d607f2e80",
+    "maintenance_1794104788554293055_95624_3.ts": "d8b9f3fdbeca0f4a03736277a51d259c970d02a5905bbe46365705419d947ba1",
+    "maintenance_1794104788554293055_95624_4.ts": "c178b819078891e422aaf00cc5d18729c801910399456b1bd4a5a806b61b73b6",
+    "maintenance_1794104788554293055_95624_5.ts": "88fa15d229de5c9bcfb57f82159ed43880a1e62c7029e9ff7e3c5a1fa3ee97bd",
+    "maintenance_1794104788554293055_95624_6.ts": "50cf8a5bb52e1e118201914f84a5f887a2ee6f0e4fd25b0f16349b5c9bd804f7",
+    "maintenance_1794104788554293055_95624_7.ts": "f1e13965e90917f57bc75cdb5ee7d8d3724da2656475674fe56d45c18e50e895",
+    "maintenance_1794104788554293055_95624_8.ts": "dee7d280117655c2d54a44f2933ba9c76d509649ac4681e04235d49afadee88e",
+    "maintenance_1794104788554293055_95624_9.ts": "631b4bff4a18117e529ba20b004501440c99eee26c597b9317314e96a4e324f5",
+    "maintenance_1794104788554293055_95624_10.ts": "b54836a4497dc9b48f863a392a3318dc95651f8cae82cf9974e566bc42f83043"
+  },
+  "channel_errors": 0,
+  "scope": "Actual synthetic HLS/scheduler interruption and programme return; not full frame parity."
+}

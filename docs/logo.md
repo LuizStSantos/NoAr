@@ -1,219 +1,206 @@
 **Logo**
 ================
 
-NoAr puts the channel logo over the picture of everything it plays: clips,
-scheduled lives and live ingest. Everything about it is in the **Graphics**
-tab of the main menu (Settings › Logo and subtitles before 1.6.0), whose pages
-are:
+The channel logo, the ticker, L-shapes and lower thirds are all graphics
+templates made in the Composer, put on air and taken off with the same two
+commands. Everything about them is in the **Graphics** tab of the main menu:
 
-- **Live now**: the logo, the L-shape and the quick scenes on air (every user);
-- **Logo**: the image, its place, how it comes and goes, and the guide logo;
-- **L-shape**: the graphic and where the video goes in it;
+- **On air**: template preview, the real program monitor, put on air / take
+  off, and the logo and ticker switches (every user);
+- **Templates**: the channel's templates by group. **Edit** opens a template's
+  layers in the Composer; **+ New template** starts one;
+- **Data sources**: CSV/public Sheets CSV, RSS/Atom or HTTP JSON mapped to fields;
+- **XMLTV logo**: the independent guide icon, with storage selection and preview;
 - **Subtitles**: the WebVTT subtitles of the HLS output;
-- **Quick scenes**: sets of changes applied in one go ([below](#quick-scenes));
-- **External control (API)**: the graphics key and a tutorial for encoders.
+- The graphics key and the take/out commands ready to copy are in
+  **Settings › External control › Graphics**, with the live and SCTE-35 keys
+  (old `/graphics/api` links open it).
 
-The Player has the same at hand under its preview: the logo on and off and
-where it is, the L-shape in and out and its corner, the quick scenes, and a
-link to the tab. A move there also waits for **Move on air**. Like the
-transport, the bar starts **locked** while the channel is on air: unlock
-**Graphics locked** to use it.
+Old `/graphics/logo` and `/graphics/lshape` links open the channel logo or
+L-shape in the Composer; `/graphics/scenes` opens Templates.
 
-Wherever the logo is placed on a small screen (Live now, the Player, a
-video's marks), the place can also be typed: **X** across and **Y** down,
-in percent of the room around the logo (`50 × 1` is the top centre).
+The Player reports what is on air below its preview, with **Open Graphics**
+linking to On air. The On air **Preview** is a browser illustration; **Program**
+shows the actual decoded playout output. The logo and ticker switches report
+the requested state: commercials and an L-shape can still keep the logo off in
+the output.
+
+A fresh installation or a new channel starts with one removable **Logo**
+template, whose image is in the storage's `Graphics` folder (a storage set up
+by an earlier version keeps `00-assets`). Images uploaded in the Composer go
+to `Graphics` too. Deleting a template takes it off air and keeps its uploaded
+images.
+
+## Composer canvas guides
+
+Composer uses a neutral checkerboard for transparency, with grid lines every
+10% of the output to help position layers. Enable **Safety margins** above the
+canvas to show two guides: white at 5% from each edge for action, yellow at 10%
+for text. These insets leave a 90% action area and an 80% text area.
+The guides scale with the canvas on desktop and phone, and pointer gestures
+pass through them. They are local editor aids: they do not add layers, modify
+the model, appear in On air or change the output. The checkbox starts off when
+the editor is opened/reloaded. Opaque full-frame artwork covers the checkerboard;
+enabled safety guides remain visible above the artwork.
+
+## Image sizing and animated GIF or WebP
+
+The first upload/storage selection in an empty image layer uses its natural
+pixel size relative to the channel output, with proportional fit-down only when
+it exceeds the output. Position is clamped inside the canvas. An image with the
+same dimensions as the output becomes X/Y 0 and width/height 100%. Replacing an
+existing image preserves its authored position and size. Undo restores the prior
+image/geometry; the logo's explicit natural-size/corner repair remains available.
+
+GIF animation is decoded by GStreamer before publishing a composition, then
+cached frames are selected by their durations on air, preserving transparency.
+It works in ordinary/permanent compositions, channel logo and L-shape artwork,
+and their image overrides. GIFs play as continuous loops; finite file repeat
+counts are not used. Use template duration, event end or take-out to stop one.
+Hide/show does not reset an already loaded sequence. Matching file identity,
+size and radius share a loop phase across models/refreshes; a new decode, changed
+geometry/file or backend restart starts a new sequence. Browser GIF preview runs
+independently and is not frame-synchronized to Program.
+
+Limits: 10 MiB file and a 60-second cycle. Frames are kept ready at the
+layer's size, up to 256 frames and 64 MiB per animation (128 MiB of animated
+images per composition). A longer or larger animation is not refused: NoAr
+keeps one frame in 2 (then 4, 8…), the kept frames show longer so the loop
+keeps its length, and the log says so. Source dimensions are bounded too.
+Invalid or unsupported animations fail preflight or take explicitly, instead
+of silently becoming a still. Native GIF demux/decoder
+plugins from GStreamer's libav plugin are required.
+
+Animated WebP plays the same way, with the same limits. GStreamer's WebP
+decoder reads only still pictures, so NoAr reads the frames of an animated
+WebP itself, composed on a transparent canvas (the file's background colour is
+not used); a frame without a delay shows for 100 ms. PNG/JPEG and still WebP
+keep the GStreamer image path. See the [executed handoff](graphics-handoff/README.md)
+for actual output proofs and untested output/device boundaries.
 
 ## Placing the logo
 
-- **File**: an image from the storage, PNG with transparency being the usual
-  choice.
-- **Position**: drag the logo on the small screen, click where it goes, or
-  type `X %` and `Y %` (0 is the left or top edge, 100 the other; it snaps to
-  the edges and the middle). The **margin** keeps it that many pixels of the
-  output clear of the edges. The edges and the middle are saved as before
-  (`W-w-12:12`); anywhere else as a share with the margin, such as
-  `25%+15:80%-18`. **Advanced** takes any position expression instead,
-  such as `W-w-30:30` (`W`/`H` are the output size, `w`/`h` the logo's).
-- **Size**: a share of the output width, or the image's own size; Advanced
-  takes `WIDTH:HEIGHT` in pixels or percent, with `-1` keeping the proportion.
-- **Opacity**.
+Open **Graphics › Templates › Channel logo › Edit**. The logo is a model with
+an image layer; add other image, text or shape layers if needed. Select the
+image to choose a storage path or upload to `Graphics/`, drag it and resize
+with the canvas handles, or type X/Y/width/height in percent of the output.
+The px toggle uses the actual channel output size. Proportional, scale,
+centering and opacity controls apply to the selected layer.
 
-The preview frame has the shape of the output (16:9 for 1920×1080, and so on)
-and can show reference lines: thirds and center, the action safe (93 %) and
-title safe (90 %) areas, and the margin.
+A fresh installation places the bundled 42×42 px logo at the top right with
+12 px margins, even before Storage has copied its assets. Existing authored
+models are preserved. To repair a previously saved oversized logo, select its
+primary image, click **Restore image size and top-right position**, review the
+preview and **Save template**. This uses the natural image size, reduces it if
+necessary to fit the output and supports **Undo**; it does not save automatically.
+The permanent logo/ticker cannot contain a video window; use the channel L-shape
+or an ordinary temporary model for that layer.
+
+Enable **Always on air** to load the logo model at startup. The library's
+**On air / Off** switch hides or shows it during operation. Hiding does not
+delete the definition, and saving a temporarily hidden model keeps it hidden.
+Saving a model updates output without restarting playout.
+
+Legacy position/scale expressions remain accepted by the configuration API.
+Conversion evaluates them at the output size and stores the resulting layer
+geometry; the Composer does not maintain a second expression-based layout.
+Live/clip placement controls retain their legacy room-around-the-logo units.
 
 ## How the logo comes up and goes off
 
-**Logo animations**, in the same settings page, sets how the logo appears and
-disappears, each on its own:
+Select the image layer's entry and exit animation in Composer. **None** gives
+a cut; **Fade** gives a fade. Duration and delay are in milliseconds. Additional
+layer presets are available in the editor. The timeline previews their timing.
 
-- **Fade**: gradually (the default).
-- **Cut**: at once.
-
-It applies everywhere the logo comes and goes: at the start and end of clips,
-around commercials and marked stretches, and when it is hidden or shown live.
-**Length** sets how long a fade takes, up to 10 s; empty keeps the built-in
-lengths, 1 s on clips and 0.4 s when the logo is hidden, shown or swapped live.
-Swapping the logo for another image always cross-fades, the old image fading
-out as the new one fades in, over that length. Changes take effect at once,
-without restarting the playout.
+An imported logo without an explicit duration retains the legacy defaults:
+1000 ms for clip marks and 400 ms for external controls. Editing Duration in
+Composer makes the new duration apply to both. Swapping the primary image
+cross-fades that image and preserves other composed layers. External placement
+translates the composition relative to its controlled image. Commercial gaps
+and L-shape transitions still suppress the logo.
 
 ## Where the logo goes off by itself
 
 - **Commercials**: clips marked as commercials in the playlist, and everything
   in a [commercials folder](commercials.md), play without the logo. It fades
   back in on the next clip.
-- **Stretches inside a video**: when a programme file has a break edited into
-  it, open **Logo and breaks in this video** for that video (a row action in Storage, or the
-  same button in the Player's clip editor). Then mark, while it plays, where the
-  logo goes off and where it comes back, or type the times, and drag the
-  handles of each stretch on the bar to adjust it. **Watch stretch**, **Watch
-  it go in** and **Watch it come out** play the picked stretch (or the first)
-  with 3 seconds before and after, as it airs, and stop by themselves; the
-  play button of each row of the list does the same. The same buttons are on
-  the SCTE-35 breaks and L-shape tabs. See
-  [commercials](commercials.md#a-break-inside-a-video).
+- **During an L-shape**: the logo goes off before the picture shrinks and
+  comes back after it grew back.
+- **At times inside a video**: mark it in the video's graphics (below).
 
-## Hiding, swapping or moving the logo on air
+## Putting graphics on and off air
 
-While the channel plays, the logo can be hidden, swapped for another image
-from the storage, or moved to another place, until the next command or a
-server restart. A typical case is
-a live whose encoder runs its own commercial break.
+Every graphic is a template made in the Composer: a GC (lower third), the
+channel logo, the ticker, an L-shape. Two commands drive them all:
 
-- From NoAr: **Graphics › Live now** (or the Player's graphics bar) shows
-  what the logo and the L-shape are doing. Its Logo row
-  has **Hide**, **Back to the channel logo**, **Swap for…** and **Position**
-  (a corner, or back to the channel's); its L-shape row is described
-  [below](#l-shape).
-- From an encoder or a script: create the channel's **graphics key** (logo,
-  L-shape and scenes) in **Graphics › External control (API)**. It works at once and stays the same until
-  you make a new one there.
-  Calling these addresses (GET or POST) then changes the logo,
-  with the channel's logo animation:
+- **Put on air**, with an optional time in seconds. 0, or no time, keeps it on
+  air until it is taken off.
+- **Take off air**.
 
-  ```text
-  http://<server>:8787/logo/<channel>/hide?key=<KEY>
-  http://<server>:8787/logo/<channel>/show?key=<KEY>
-  http://<server>:8787/logo/<channel>/replace?key=<KEY>&logo=00-assets/other-logo.png
-  http://<server>:8787/logo/<channel>/move?key=<KEY>&x=90&y=5
-  http://<server>:8787/logo/<channel>/move?key=<KEY>&position=bottom-left
-  http://<server>:8787/logo/<channel>/move?key=<KEY>&position=default
-  ```
+From NoAr, use **Graphics › On air** or the template cards in
+**Graphics › Templates** (the logo and the ticker have an On air / Off
+switch). From an encoder, vMix, OBS, a Stream Deck or a script, create the
+channel's **graphics key** in **Settings › External control › Graphics** and call
+these addresses (GET or POST), naming the template by its name in lower case
+with dashes, or by its number:
 
-  `x` and `y` go from 0 to 100: shares of the room around the logo, so
-  `x=0` is the left edge, `x=100` the right one and `50` the middle, on any
-  output size. `position` is also a place 12 pixels from the edges
-  (`top-left`, `top`, `top-right`, `left`, `center`, `right`,
-  `bottom-left`, `bottom`, `bottom-right`), an `X:Y` expression like the one
-  in the logo settings (`W-w-40:H-h-40`), or `default` for the channel's
-  place. A swapped image goes to the same place. In the card, the logo's
-  small screen does the same: click or drag the logo where it goes, or move
-  it with the arrow keys, then **Move on air**. Nothing moves before that
-  confirmation; a dashed box shows where the logo is on air meanwhile.
+```text
+http://<server>:8787/graphics/<channel>/take/comercial-l-shape?key=<KEY>&duration=50
+http://<server>:8787/graphics/<channel>/take/entrevistado?key=<KEY>&nome=Maria
+http://<server>:8787/graphics/<channel>/out/logo?key=<KEY>
+http://<server>:8787/graphics/<channel>/out?key=<KEY>
+http://<server>:8787/graphics/<channel>/out?key=<KEY>&except=logo,ticker
+http://<server>:8787/graphics/<channel>/on-air?key=<KEY>
+```
 
-  The card has a tutorial with these addresses ready to copy, and examples for
-  curl, vMix, OBS (Advanced Scene Switcher) and Bitfocus Companion.
+Other query parameters fill the template's fields. `out` without a template
+takes **everything** off air, the logo, ticker and L-shape included; `except=`
+lists the templates that stay on, separated by commas. `on-air` lists what is
+on air with the name to use in commands. **Settings › External control ›
+Graphics** shows
+these addresses ready to copy for the template, time and exceptions you pick. The API is described in
+[api.md](api.md#graphics-commands).
 
-A swapped logo takes the size, position and opacity of the configured one, and
-cross-fades with the image it replaces. A
-commercial still keeps any logo off. The API is described in
-[api.md](api.md#logo-on-air).
+The routes of earlier versions (`/logo/...`, `/lshape/...`, `/scene/...` and
+`/api/control/{id}/logo|lshape|scene`) were removed in 3.0: update encoders
+and buttons that called them.
 
 ## L-shape
 
-In an L-shape the programme picture shrinks into a corner of the screen and a
-full-screen graphic fills the band around it, with news, a sponsor or what is
-on next, over the picture of clips, lives and ingest alike; texts stay on
-top. Going in, the logo goes off first (0.4 s) and then the picture shrinks
-(0.8 s, easing in and out); coming out, the picture grows back first and then
-the logo returns. A stretch marked in a video starts this at its first mark
-and ends it at its second.
+An L-shape is a template with a **Video in the corner** layer: the programme
+picture shrinks into that window and the template's other layers (images,
+shapes, texts) fill the band around it, over clips, lives and ingest alike.
+Going in, the logo goes off first (0.4 s) and then the picture shrinks
+(0.8 s); coming out, the picture grows back first and then the logo returns.
 
-Set it up in **Graphics › L-shape**:
+Make it in the Composer: add the artwork layers and one **Video in the
+corner** layer, then pick its corner and size (30–95%) or drag it to any
+place. Put it on and off air like any other template. A template that goes
+over the picture (a GC) follows the picture into the corner, waits for the
+L-shape to end or does not go on air, as set in its **During an L-shape**
+option.
 
-- **L-shape graphic**: an image in the storage, made for the whole screen
-  (1920×1080 for a 1080p output; another size is stretched to the output).
-  Draw the band and leave the video's space plain: the picture covers it.
-  **Download a base for the image editor** gives a PNG of the output's size
-  with that space marked in magenta, its size and place in pixels, and the
-  title safe area: open it in the editor, draw the band around it on a layer
-  above, and export the full image.
-- **Video corner**: top right, top left, bottom right or bottom left.
-- **Video size**: how much of the screen the picture keeps, from 30% to 95%
-  (75% by default), its aspect ratio kept.
+## Graphics inside a video
 
-The preview there shows the graphic and the picture's rectangle as on air.
-Saving loads the graphic at once, without a restart; one that cannot be read
-is refused when saving. Without a graphic the L-shape stays off.
+Open the video's marks in Storage (**Trim, graphics and breaks in this
+video**, a row action, or the same button in the Player's clip editor) and use
+the **Graphics** tab. Each line is a cue: at a time of the video, a template
+goes on air (for a time, or until taken off) or goes off. **Template on at
+…** and **Template off at …** add a cue at the play position; type the time,
+pick the action and the template, and **Go** jumps to it.
 
-It goes on air:
+While the video plays or is moved in the editor, the cued templates are drawn
+over it at their times, following the same rules as on air (a take without
+its own time uses the template's; 0 stays until a cue takes it off), with
+the entry and exit animations made in the Composer: the exit plays when the
+time ends or at the off cue. The
+drawing is the browser's approximation: fields show their names, and an
+L-shape's video window stays see-through instead of shrinking the video.
 
-- **For stretches of a video**, marked in **Storage › Trim, logo, breaks and
-  L-shape** on the L-shape tab, like the [stretches without logo](#where-the-logo-goes-off-by-itself).
-  They are kept in the video's `<name>.marks.json` as `"lshape"` and apply
-  wherever the video plays; a playlist that plays part of the video gets the
-  stretches of that part. **This video's L-shape graphic** on that tab gives
-  the video a graphic of its own (a sponsor of that programme), used for its
-  stretches with the channel's size and corner; empty uses the channel's.
-- **From NoAr**: the L-shape row of **Graphics › Live now** (or the Player's
-  graphics bar),
-  with **Go to L-shape**, **Back to full screen**, **Swap graphic…** and,
-  after a swap, **Channel graphic**. It stays until switched back or the
-  server restarts. Its four corner buttons and size slider move the video to
-  where another graphic needs it, after **Move on air** (or **Use this
-  place** while the L-shape is off); **Back to the graphic’s position**
-  undoes that. Use it with a graphic drawn for that corner: the band stays
-  where the graphic has it.
-- **From an encoder or a script**, with the graphics key, like the logo:
-
-  ```text
-  http://<server>:8787/lshape/<channel>/on?key=<KEY>
-  http://<server>:8787/lshape/<channel>/off?key=<KEY>
-  http://<server>:8787/lshape/<channel>/replace?key=<KEY>&graphic=00-assets/sponsor.png
-  http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/sponsor.png
-  http://<server>:8787/lshape/<channel>/reset?key=<KEY>
-  ```
-
-  `replace` swaps the graphic without going in, so the next `on` shows it;
-  `on` with `graphic` swaps and goes in at once; `reset` goes back to the
-  channel's graphic. A swap lasts until `reset` or a server restart.
-
-  For a graphic whose space for the video is in another corner, move it:
-
-  ```text
-  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=bottom-left&scale=70
-  http://<server>:8787/lshape/<channel>/on?key=<KEY>&graphic=00-assets/news.png&position=top-left
-  http://<server>:8787/lshape/<channel>/move?key=<KEY>&position=default
-  ```
-
-  `position` is `top-left`, `top-right`, `bottom-left` or `bottom-right`;
-  `scale` is the video's size in percent of the screen (30 to 95), the
-  graphic's when left out. It lasts until moved again,
-  `position=default` or a server restart.
-
-  The API is described in [api.md](api.md#l-shape).
-
-## Logo and L-shape of one video
-
-A video can show another logo or put it somewhere else, and its L-shape in
-another corner or size, for itself alone, wherever it plays: open its marks in
-the Storage (**Cut, logo, breaks and L-shape in this video**).
-
-- **Logo** tab › **Logo of this video**: an image from the storage shown in
-  place of the channel's logo while the video plays, at the channel's size,
-  place and opacity (or the video's own place). It needs the channel's logo
-  on; commercials still play without a logo.
-- **Logo** tab › **Logo position in this video**: **This video's own**, then
-  drag or type it. It applies while the video plays.
-- **L-shape** tab › **This video's L-shape**: its graphic, the video's corner
-  and its size, for its L-shape stretches; each left empty uses the channel's.
-  Pick the corner where that graphic left the video's space.
-
-They are saved in the video's `<name>.marks.json` (`logo_image`,
-`logo_position`, `lshape_graphic`, `lshape_corner`, `lshape_scale`). A swap or
-move from outside (Graphics, the Player, the API) goes before the video's own
-logo and position.
+Cues are saved in the video's `<name>.marks.json` as `"graphics"` and run
+wherever the video plays, counted from the start of the file: a playlist that
+plays part of the video skips the cues before its in point. Logo and L-shape
+stretches marked by earlier versions are no longer read.
 
 ### Marks of one playlist item
 
@@ -225,31 +212,15 @@ drops them. They are saved with the playlist, in the item's `marks` field,
 which takes the same fields as `<name>.marks.json` (its trim becomes the
 item's in and out points). Items without `marks` use the video's.
 
-## Quick scenes
+## Scheduled graphics
 
-A scene is a named set of changes for a moment that repeats, like a
-commercial break: hide the logo, swap it or move it, and put the L-shape in or
-out with a given graphic, corner and size. Make them in **Graphics › Quick
-scenes** (up to 24 per channel) and save. Each scene changes only what it
-says; anything set to **Leave as it is** stays as it is on air.
-
-A scene is applied with one click in **Graphics › Live now** and in the
-Player's graphics bar, or from an encoder with the graphics key, its name in
-the address in lower case with dashes:
-
-```text
-http://<server>:8787/scene/<channel>/intervalo-comercial?key=<KEY>
-```
-
-**Graphics › External control (API)** lists each saved scene's address ready
-to copy. A scene applies the L-shape graphic and place first, then the logo,
-then the L-shape in or out, so the picture shrinks straight to its corner.
-
-A scene's changes can also be put on a timetable in the
-[Scheduler](scheduler.md#scheduled-graphics), and are undone when it ends.
+The [Scheduler](scheduler.md#scheduled-graphics) puts a template on air at a
+time and takes it off at the end, once or on chosen weekdays. Quick scenes and
+scheduled logo/L-shape changes of earlier versions were removed in 3.0.
 
 ## Logo in the guide
 
-The XMLTV guide shows the logo on the video as the channel icon, unless
+The XMLTV guide uses the configured model's controlled image as the channel icon, unless
 **Logo in the guide (XMLTV)** sets another image, such as a version in colour
-instead of a white one. See [xmltv.md](xmltv.md).
+instead of a white one. Set this independent guide path in **Graphics › XMLTV logo** and use **Save guide icon**. Transient on-air replacements do
+not change the guide icon. See [xmltv.md](xmltv.md).

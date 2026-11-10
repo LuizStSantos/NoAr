@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import SaveBar from '@/components/settings/SaveBar.vue'
-import Scte35Remote from '@/components/settings/Scte35Remote.vue'
 import SectionCard from '@/components/settings/SectionCard.vue'
 import UnitInput from '@/components/settings/UnitInput.vue'
 import { usePlayoutPage } from '@/composables/settingsPage'
@@ -27,8 +26,9 @@ const manualDuration = ref(120)
 
 /** SCTE-35 is carried by MPEG-TS over SRT/UDP and native HLS. */
 const outputCarries = computed(
-    () => output.value.mode === 'hls'
-        || (output.value.mode === 'stream' && ['srt', 'udp'].includes(output.value.stream_type)),
+    () =>
+        output.value.mode === 'hls' ||
+        (output.value.mode === 'stream' && ['srt', 'udp'].includes(output.value.stream_type)),
 )
 
 const state = computed(() => {
@@ -270,7 +270,14 @@ async function cancel(eventId: number) {
             </div>
         </SectionCard>
 
-        <Scte35Remote />
+        <p class="m-0 text-sm text-muted">
+            {{ t('settings.remote.scte35Moved') }}
+            <RouterLink
+                class="link-accent"
+                :to="{ name: 'settings-remote', query: { channel: channelId }, hash: '#scte35' }"
+                >{{ t('settings.remote.openScte35') }}</RouterLink
+            >
+        </p>
 
         <SaveBar
             :changes="changes"

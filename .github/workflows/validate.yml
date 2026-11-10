@@ -52,6 +52,7 @@ jobs:
             libgstreamer-plugins-base1.0-dev \
             libgstreamer-plugins-bad1.0-dev \
             make \
+            python3 \
             pkg-config
           ffmpeg -version
           for library in gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0 \
@@ -61,6 +62,11 @@ jobs:
           done
 
       - uses: actions/checkout@v6
+      - name: Verify architecture boundaries
+        run: |
+          python3 qa/architecture/check.py
+          python3 -m unittest discover -s qa/architecture -v
+
       - name: Build and test the corrected SRT lifecycle
         run: |
           sh docker/srt/build.sh /usr/local

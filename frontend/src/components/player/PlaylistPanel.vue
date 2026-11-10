@@ -4,7 +4,7 @@ import 'dayjs/locale/de'
 import 'dayjs/locale/pt-br'
 import 'dayjs/locale/ru'
 
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'es-toolkit/object'
 import { onClickOutside, useElementSize, useEventListener } from '@vueuse/core'
@@ -12,7 +12,6 @@ import { onClickOutside, useElementSize, useEventListener } from '@vueuse/core'
 import ClipEditor from '@/components/player/ClipEditor.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
-import { authFetch } from '@/composables/authFetch'
 import { playlistOperations } from '@/composables/helper'
 import { useOnAir } from '@/composables/onAir'
 import {
@@ -29,13 +28,15 @@ import {
     type LibraryFile,
     fileInOut,
 } from '@/composables/player'
-import { addDays, secondsFromDay, splitDateTime } from '@/composables/schedule'
-import { useAuth } from '@/stores/auth'
+import { addDays } from '@/composables/schedule'
+import { usePlaylistRows } from '@/composables/playlistRows'
+import { usePlaylistDayActions } from '@/composables/playlistDayActions'
+import PlaylistDayMap from '@/components/player/playlist/PlaylistDayMap.vue'
+import PlaylistDayDialogs from '@/components/player/playlist/PlaylistDayDialogs.vue'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { usePlaylist } from '@/stores/playlist'
-import { useProgrammes, type ProgrammeGroup } from '@/stores/programmes'
-import { useSchedule } from '@/stores/schedule'
+import { useProgrammes } from '@/stores/programmes'
 
 const props = withDefaults(
     defineProps<{
@@ -50,29 +51,18 @@ const emit = defineEmits<{ preview: [path: string]; generate: []; addProgram: [f
 
 const { t, locale } = useI18n()
 const { genUID } = playlistOperations()
-const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const playlistStore = usePlaylist()
 const programmes = useProgrammes()
-const scheduleStore = useSchedule()
-const { onAirDate, onAirIndex, listNow, playlistNow, viewingOnAir } = useOnAir()
+const onAir = useOnAir()
+const { onAirDate, onAirIndex } = onAir
 
-const PAGE = 10
-const MORE = 20
-/** Programs with fewer clips than this are always shown whole. */
-const WHOLE_GROUP = 40
-
-/** Groups the user opened or closed; others follow `defaultExpanded`. */
 /** The list's scroller: on a phone the table is wider and scrolls sideways. */
 const tableScroller = ref<HTMLElement>()
 const { width: scrollerWidth } = useElementSize(tableScroller)
 /** The table scrolls sideways: the clip editor then keeps to the visible width. */
 const narrowTable = computed(() => scrollerWidth.value > 0 && scrollerWidth.value < 640)
-
-const toggled = reactive(new Map<string, boolean>())
-/** Extra rows revealed above and below the default window of a group. */
-const reveal = reactive(new Map<string, { before: number; after: number }>())
 
 const editing = ref<{ uid: string; item: PlaylistItem } | null>(null)
 /** Clips just edited; their program stays open so the change can be seen. */
@@ -84,13 +74,24 @@ const dragRow = ref<string | null>(null)
 const menuOpen = ref(false)
 const menu = ref<HTMLElement>()
 const dateInput = ref<HTMLInputElement>()
-const saving = ref(false)
-
-const showCopy = ref(false)
-const copyDate = ref('')
-const showImport = ref(false)
-const importFile = ref<File | null>(null)
-const showDelete = ref(false)
+const {
+    saving,
+    showCopy,
+    copyDate,
+    showImport,
+    importFile,
+    showDelete,
+    showDiscard,
+    save,
+    discard,
+    openCopy,
+    copyTo,
+    importList,
+    fillDay,
+    deleteList,
+} = usePlaylistDayActions(load, () => {
+    menuOpen.value = false
+})
 const pendingDate = ref<string | null>(null)
 
 /** Grouped by program, or one running list of clips. */
@@ -158,8 +159,7 @@ async function load(date: string) {
     newRemote.value = null
     recent.value = []
     selected.value = []
-    toggled.clear()
-    reveal.clear()
+    resetGroups()
 
     await playlistStore.getPlaylist(date)
     await scrollToOnAir()
@@ -280,327 +280,19 @@ useEventListener(window, 'beforeunload', (event: BeforeUnloadEvent) => {
 // ---------------------------------------------------------------------------
 // Grouping and rows
 
-interface LiveRow {
-    key: string
-    title: string
-    start: number
-    end: number
-    protocol: string
-    status: RunStatus | null
-}
-
-interface GroupChip {
-    label: string
-    kind: 'live' | 'event'
-}
-
-const dayEvents = computed(() => {
-    const date = playlistStore.listDate
-
-    if (scheduleStore.date !== date) {
-        return []
-    }
-
-    return scheduleStore.occurrences
-        .map((occurrence) => ({
-            occurrence,
-            start: secondsFromDay(occurrence.start, date),
-            end: secondsFromDay(occurrence.end, date),
-        }))
-        .filter((event) => event.start >= dayStart.value)
+const { rows, dayMap, toggleGroup, setAllGroups, openGroup, showMore, groupSummary, resetGroups } = usePlaylistRows({
+    view,
+    editing,
+    recent,
+    onAir,
 })
 
-const lives = computed<LiveRow[]>(() =>
-    dayEvents.value
-        .filter((event) => event.occurrence.event.kind === 'live')
-        .map((event) => ({
-            key: `${event.occurrence.event.id}-${event.occurrence.start}`,
-            title: event.occurrence.event.title,
-            start: event.start,
-            end: event.end,
-            protocol: protocolOf(event.occurrence.event.sources[0] ?? ''),
-            status: event.occurrence.status,
-        })),
-)
-
-function protocolOf(path: string): string {
-    const live = scheduleStore.lives.find((item) => item.path === path)
-
-    return live?.protocol?.toUpperCase() ?? ''
-}
-
-/** Scheduled clips that land inside a program; lives get their own row. */
-function chipsOf(group: ProgrammeGroup): GroupChip[] {
-    return dayEvents.value
-        .filter((event) => event.occurrence.event.kind !== 'live')
-        .filter((event) => group.start < event.start && event.start < group.end)
-        .map((event) => ({
-            kind: 'event',
-            label: t('onair.eventChip', {
-                title: event.occurrence.event.title,
-                time: splitDateTime(event.occurrence.start).time.slice(0, 5),
-                mode:
-                    event.occurrence.event.entry_mode === 'interrupt'
-                        ? t('onair.eventInterrupts')
-                        : t('onair.eventAfterClip'),
-            }),
-        }))
-}
-
-/** Groups get an id that survives edits inside them: key plus occurrence count. */
-const keyedGroups = computed(() => {
-    const seen = new Map<string, number>()
-
-    return programmes.groups.map((group) => {
-        const count = seen.get(group.key) ?? 0
-        seen.set(group.key, count + 1)
-
-        return { group, id: `${group.key}#${count}` }
-    })
-})
-
-function groupStatus(group: ProgrammeGroup): 'past' | 'current' | 'future' {
-    if (onAirIndex.value >= 0) {
-        if (group.last < onAirIndex.value) {
-            return 'past'
-        }
-
-        return group.first <= onAirIndex.value ? 'current' : 'future'
-    }
-
-    if (viewingOnAir.value && !infinite.value && playlistStore.playoutIsRunning) {
-        if (group.end <= listNow.value) {
-            return 'past'
-        }
-
-        return group.start <= listNow.value ? 'current' : 'future'
-    }
-
-    return 'future'
-}
-
-function containsUid(group: ProgrammeGroup, uids: string[]): number {
-    for (let index = group.last; index >= group.first; index--) {
-        if (uids.includes(playlistStore.playlist[index]?.uid ?? '')) {
-            return index
-        }
-    }
-
-    return -1
-}
-
-/** The row a group's window is centred on. */
-function anchorOf(group: ProgrammeGroup): number {
-    if (editing.value) {
-        const index = containsUid(group, [editing.value.uid])
-
-        if (index >= 0) {
-            return index
-        }
-    }
-
-    const added = containsUid(group, [...playlistStore.addedUids, ...recent.value])
-
-    if (added >= 0) {
-        return added
-    }
-
-    if (group.first <= onAirIndex.value && onAirIndex.value <= group.last) {
-        return onAirIndex.value
-    }
-
-    return group.first
-}
-
-function isExpanded(id: string, group: ProgrammeGroup, position: number): boolean {
-    const choice = toggled.get(id)
-
-    if (choice !== undefined) {
-        return choice
-    }
-
-    if (groupStatus(group) === 'current') {
-        return true
-    }
-
-    // Programs with the clip being edited, or clips just added or changed.
-    const touched = [...playlistStore.addedUids, ...recent.value, ...(editing.value ? [editing.value.uid] : [])]
-
-    if (containsUid(group, touched) >= 0) {
-        return true
-    }
-
-    // Nothing on air in this list: open the first program.
-    return onAirIndex.value < 0 && position === 0 && !viewingOnAir.value
-}
-
-function toggleGroup(id: string, expanded: boolean) {
-    toggled.set(id, !expanded)
-}
-
-type Row =
-    | { type: 'group'; id: string; group: ProgrammeGroup; status: string; expanded: boolean; chips: GroupChip[] }
-    | { type: 'clip'; index: number; item: PlaylistItem; past: boolean }
-    | { type: 'editor'; index: number }
-    | { type: 'more'; id: string; direction: 'before' | 'after'; count: number }
-    | { type: 'live'; live: LiveRow }
-
-/** The running list: clips around the one on air (or the first), with lives in between. */
-function flatRows(): Row[] {
-    const list: Row[] = []
-    const pendingLives = [...lives.value].sort((a, b) => a.start - b.start)
-    const items = playlistStore.playlist
-    const extra = reveal.get('flat') ?? { before: 0, after: 0 }
-    const touched = [...playlistStore.addedUids, ...recent.value, ...(editing.value ? [editing.value.uid] : [])]
-    const touchedIndex = items.findIndex((item) => touched.includes(item.uid))
-    const anchor = touchedIndex >= 0 ? touchedIndex : Math.max(onAirIndex.value, 0)
-    const from = Math.max(0, anchor - 3 - extra.before)
-    const to = Math.min(items.length - 1, anchor + PAGE * 3 + extra.after)
-
-    if (from > 0) {
-        list.push({ type: 'more', id: 'flat', direction: 'before', count: Math.min(MORE, from) })
-    }
-
-    // Lives before the shown clips stay hidden with them.
-    const firstBegin = items[from]?.begin ?? 0
-
-    while (from > 0 && pendingLives[0] && pendingLives[0].start < firstBegin) {
-        pendingLives.shift()
-    }
-
-    for (let index = from; index <= to; index++) {
-        const item = items[index]
-
-        if (!item) {
-            continue
-        }
-
-        while (pendingLives[0] && pendingLives[0].start <= (item.begin ?? 0)) {
-            list.push({ type: 'live', live: pendingLives.shift()! })
-        }
-
-        if (editing.value?.uid === item.uid) {
-            list.push({ type: 'editor', index })
-        } else {
-            list.push({ type: 'clip', index, item, past: onAirIndex.value >= 0 && index < onAirIndex.value })
-        }
-    }
-
-    if (to < items.length - 1) {
-        list.push({ type: 'more', id: 'flat', direction: 'after', count: Math.min(MORE, items.length - 1 - to) })
-    } else {
-        list.push(...pendingLives.map((live) => ({ type: 'live' as const, live })))
-    }
-
-    return list
-}
-
-const rows = computed<Row[]>(() => {
-    if (view.value === 'flat') {
-        return flatRows()
-    }
-
-    const list: Row[] = []
-    const pendingLives = [...lives.value].sort((a, b) => a.start - b.start)
-
-    keyedGroups.value.forEach(({ group, id }, position) => {
-        while (pendingLives[0] && pendingLives[0].start <= group.start) {
-            list.push({ type: 'live', live: pendingLives.shift()! })
-        }
-
-        const status = groupStatus(group)
-        const expanded = isExpanded(id, group, position)
-
-        list.push({ type: 'group', id, group, status, expanded, chips: chipsOf(group) })
-
-        if (!expanded) {
-            return
-        }
-
-        const extra = reveal.get(id) ?? { before: 0, after: 0 }
-        const anchor = anchorOf(group)
-        // A program of a few clips shows them all: hiding some looked like
-        // they were missing.
-        const whole = group.last - group.first < WHOLE_GROUP
-        const from = whole ? group.first : Math.max(group.first, anchor - 1 - extra.before)
-        const to = whole ? group.last : Math.min(group.last, Math.max(anchor, from) + PAGE - 1 + extra.after)
-
-        if (from > group.first) {
-            list.push({ type: 'more', id, direction: 'before', count: Math.min(MORE, from - group.first) })
-        }
-
-        for (let index = from; index <= to; index++) {
-            const item = playlistStore.playlist[index]
-
-            if (!item) {
-                continue
-            }
-
-            if (editing.value?.uid === item.uid) {
-                list.push({ type: 'editor', index })
-            } else {
-                list.push({ type: 'clip', index, item, past: onAirIndex.value >= 0 && index < onAirIndex.value })
-            }
-        }
-
-        if (to < group.last) {
-            list.push({ type: 'more', id, direction: 'after', count: Math.min(MORE, group.last - to) })
-        }
-    })
-
-    for (const live of pendingLives) {
-        list.push({ type: 'live', live })
-    }
-
-    return list
-})
-
-function setAllGroups(open: boolean) {
-    for (const { id } of keyedGroups.value) {
-        toggled.set(id, open)
-    }
-}
-
-/** Open a program from the day map and bring it into view. */
+/** Open a programme from the day map and bring its first row into view. */
 async function jumpTo(id: string) {
-    view.value = 'program'
-    toggled.set(id, true)
+    openGroup(id)
     await nextTick()
     document.getElementById(`group-${id}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
 }
-
-/** The day as a strip: programs, lives and scheduled clips by their time. */
-const dayMap = computed(() => {
-    const start = dayStart.value
-    const length = configStore.playout.playlist?.lengthInSec || 86400
-    const percent = (seconds: number) => Math.min(100, Math.max(0, ((seconds - start) / length) * 100))
-    const blocks = keyedGroups.value.map(({ group, id }) => ({
-        id,
-        title: group.title,
-        left: percent(group.start),
-        width: Math.max(0.15, percent(group.end) - percent(group.start)),
-        status: groupStatus(group),
-        range: `${clockShort(group.start)}–${clockShort(group.end)}`,
-    }))
-    const liveBlocks = lives.value.map((live) => ({
-        key: live.key,
-        title: live.title,
-        left: percent(live.start),
-        width: Math.max(0.3, percent(live.end) - percent(live.start)),
-        range: `${clockShort(live.start)}–${clockShort(live.end)}`,
-    }))
-    const markers = dayEvents.value
-        .filter((event) => event.occurrence.event.kind !== 'live')
-        .map((event) => ({
-            key: `${event.occurrence.event.id}-${event.occurrence.start}`,
-            title: `${event.occurrence.event.title} · ${clockShort(event.start)}`,
-            left: percent(event.start),
-        }))
-    const ticks = Array.from({ length: 9 }, (_, index) => clockShort(start + (length / 8) * index))
-    const now = viewingOnAir.value && playlistStore.playoutIsRunning ? percent(playlistNow.value) : null
-
-    return { blocks, liveBlocks, markers, ticks, now }
-})
 
 // ---------------------------------------------------------------------------
 // Selection and actions on several clips
@@ -798,34 +490,6 @@ function moveToTime(confirm: boolean) {
     playlistStore.playlist.splice(at < 0 ? playlistStore.playlist.length : at, 0, ...taken)
     taken.forEach((item) => markAdded(item.uid))
     playlistStore.touch()
-}
-
-function showMore(id: string, direction: 'before' | 'after') {
-    const current = reveal.get(id) ?? { before: 0, after: 0 }
-
-    reveal.set(id, { ...current, [direction]: current[direction] + MORE })
-}
-
-function groupSummary(group: ProgrammeGroup, status: string): string {
-    const clips = group.last - group.first + 1 - group.inserts - group.breaks
-    const parts = [
-        `${clockShort(group.start)}–${clockShort(group.end)}`,
-        t('onair.clipCount', { total: clips.toLocaleString(locale.value) }, clips),
-    ]
-
-    if (group.inserts) {
-        parts.push(t('onair.insertCount', { count: group.inserts }, group.inserts))
-    }
-
-    if (group.breaks) {
-        parts.push(t('onair.breakCount', { count: group.breaks }, group.breaks))
-    }
-
-    if (status === 'past') {
-        parts.push(t('onair.aired'))
-    }
-
-    return `· ${parts.join(' · ')}`
 }
 
 // ---------------------------------------------------------------------------
@@ -1099,168 +763,12 @@ function dropClass(before: number, after: number) {
 // ---------------------------------------------------------------------------
 // Saving and the actions menu
 
-async function save(date = playlistStore.listDate) {
-    // A list is still loading: what is on screen belongs to the day or the
-    // channel before, and must not be written over the one being loaded.
-    if (playlistStore.isLoading) {
-        return
-    }
-    // Every clip removed: saving an empty day means deleting its playlist,
-    // which asks first.
-    if (!playlistStore.playlist.length) {
-        if (date === playlistStore.listDate) {
-            showDelete.value = true
-        }
-        return
-    }
-    if (playlistStore.loadFailed && date === playlistStore.listDate) {
-        indexStore.msgAlert('error', t('onair.loadFailedNoSave'), 5)
-        return
-    }
-
-    saving.value = true
-
-    try {
-        const { processPlaylist } = playlistOperations()
-        const program = processPlaylist(date, cloneDeep(playlistStore.playlist), true).map((item) => {
-            const copy = { ...item } as Partial<PlaylistItem>
-
-            delete copy.uid
-            delete copy.begin
-            delete copy.overtime
-
-            return copy
-        })
-
-        await authFetch(`/api/playlist/${channel.value?.id}`, {
-            method: 'POST',
-            headers: { ...configStore.contentType, ...authStore.authHeader },
-            body: JSON.stringify({ channel: channel.value?.name, date, program }),
-        })
-
-        if (date === playlistStore.listDate) {
-            playlistStore.markSaved()
-        }
-
-        indexStore.msgAlert('success', t('onair.saved', { date }), 2)
-    } catch (e: any) {
-        if (e?.status === 409) {
-            if (date === playlistStore.listDate) {
-                playlistStore.markSaved()
-            }
-
-            indexStore.msgAlert('success', t('onair.alreadySaved'), 2)
-        } else {
-            indexStore.msgAlert('error', e?.data ?? e, 4)
-        }
-    } finally {
-        saving.value = false
-    }
-}
-
-const showDiscard = ref(false)
-
-function discard(confirm = true) {
-    showDiscard.value = false
-
-    if (confirm) {
-        load(playlistStore.listDate)
-    }
-}
-
 /** Start a list by hand: take the user to the library search. */
 function focusLibrary() {
     const search = document.getElementById('library-search') as HTMLInputElement | null
 
     search?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     search?.focus()
-}
-
-function openCopy() {
-    menuOpen.value = false
-    copyDate.value = addDays(playlistStore.listDate, 1)
-    showCopy.value = true
-}
-
-async function copyTo(confirm: boolean) {
-    showCopy.value = false
-
-    if (confirm && copyDate.value) {
-        await save(copyDate.value)
-    }
-}
-
-async function importList(confirm: boolean) {
-    showImport.value = false
-
-    const file = importFile.value
-    importFile.value = null
-
-    if (!confirm || !file) {
-        return
-    }
-
-    const formData = new FormData()
-    formData.append(file.name, file)
-
-    try {
-        await authFetch(
-            `/api/file/${channel.value?.id}/import?file=${encodeURIComponent(file.name)}&date=${playlistStore.listDate}`,
-            { method: 'PUT', headers: authStore.authHeader, body: formData },
-        )
-        indexStore.msgAlert('success', t('onair.imported'), 2)
-        await load(playlistStore.listDate)
-    } catch (e: any) {
-        indexStore.msgAlert('error', e?.data ?? e, 4)
-    }
-}
-
-function fillDay() {
-    menuOpen.value = false
-
-    const original = playlistStore.playlist
-    const target = configStore.playout.playlist.lengthInSec || 86400
-    const filled: PlaylistItem[] = []
-    let length = 0
-
-    if (!original.length) {
-        return
-    }
-
-    while (length < target) {
-        for (const item of original) {
-            if (length >= target) {
-                break
-            }
-
-            // Repeats do not take the marks of a single entry.
-            filled.push({ ...cloneDeep(item), uid: genUID(), marks: undefined })
-            length += item.out - item.in
-        }
-    }
-
-    playlistStore.playlist = filled
-    playlistStore.touch()
-}
-
-async function deleteList(confirm: boolean) {
-    showDelete.value = false
-
-    if (!confirm) {
-        return
-    }
-
-    try {
-        await authFetch(`/api/playlist/${channel.value?.id}/${playlistStore.listDate}`, {
-            method: 'DELETE',
-            headers: { ...configStore.contentType, ...authStore.authHeader },
-        })
-        playlistStore.playlist = []
-        playlistStore.markSaved()
-        indexStore.msgAlert('warning', t('onair.deleted'), 2)
-    } catch (e: any) {
-        indexStore.msgAlert('error', e?.data ?? e, 4)
-    }
 }
 
 onBeforeUnmount(() => {
@@ -1463,63 +971,11 @@ defineExpose({ addFile, addFiles })
             <ClipEditor :item="newRemote" :storage="storage" remote @apply="applyRemote" @cancel="newRemote = null" />
         </div>
 
-        <div
+        <PlaylistDayMap
             v-if="!infinite && playlistStore.playlist.length && !playlistStore.isLoading"
-            :aria-label="t('onair.dayMap')"
-            role="group"
-            class="px-4 pt-3 pb-3.5 flex flex-col gap-1.5 border-b border-line"
-        >
-            <div class="relative h-8.5 rounded-lg overflow-hidden bg-base-200">
-                <button
-                    v-for="(block, position) in dayMap.blocks"
-                    :key="block.id"
-                    type="button"
-                    class="absolute top-0 bottom-0 border-0 border-e-2 border-base-100 px-1.5 text-left text-xs truncate cursor-pointer"
-                    :class="[
-                        block.status === 'current'
-                            ? 'bg-accent-soft text-accent-text outline-2 -outline-offset-2 outline-accent'
-                            : position % 2
-                              ? 'bg-base-300 text-base-content/80'
-                              : 'bg-raised text-base-content/80',
-                        block.status === 'past' ? 'opacity-55' : '',
-                    ]"
-                    :style="{ left: `${block.left}%`, width: `${block.width}%` }"
-                    :title="`${block.title} · ${block.range}`"
-                    :aria-label="`${block.title} · ${block.range}`"
-                    @click="jumpTo(block.id)"
-                >
-                    {{ block.width > 4 ? block.title : '' }}
-                </button>
-                <span
-                    v-for="live in dayMap.liveBlocks"
-                    :key="live.key"
-                    class="absolute top-0 bottom-0 bg-live text-base-100 text-[10px] font-semibold px-1 flex items-center overflow-hidden whitespace-nowrap pointer-events-none"
-                    :style="{ left: `${live.left}%`, width: `${live.width}%` }"
-                    :title="`${live.title} · ${live.range}`"
-                    >LIVE</span
-                >
-                <span
-                    v-for="marker in dayMap.markers"
-                    :key="marker.key"
-                    class="absolute top-0 w-0 h-0 border-x-[6px] border-x-transparent border-t-8 border-t-accent -ms-1.5 pointer-events-none"
-                    :style="{ left: `${marker.left}%` }"
-                    :title="marker.title"
-                    aria-hidden="true"
-                />
-                <span
-                    v-if="dayMap.now !== null"
-                    class="absolute -top-0.5 -bottom-0.5 w-0.5 bg-on-air pointer-events-none"
-                    :style="{ left: `${dayMap.now}%` }"
-                    aria-hidden="true"
-                />
-            </div>
-            <div
-                class="flex justify-between font-mono text-[11px] text-subtle whitespace-nowrap max-sm:[&>:nth-child(even)]:hidden"
-                aria-hidden="true"
-            >
-                <span v-for="(tick, index) in dayMap.ticks" :key="index">{{ tick }}</span>
-            </div>
-        </div>
+            :map="dayMap"
+            @jump="jumpTo"
+        />
 
         <div
             v-if="selected.length"
@@ -1948,69 +1404,23 @@ defineExpose({ addFile, addFiles })
             </div>
         </GenericModal>
 
-        <GenericModal
-            :show="showCopy"
-            :title="t('onair.copyToDay')"
-            :ok-label="t('onair.copy')"
-            :ok-disabled="!copyDate"
-            :modal-action="copyTo"
-        >
-            <div class="flex flex-col gap-3 w-[min(380px,85vw)]">
-                <label class="field-label">
-                    {{ t('onair.targetDay') }}
-                    <input v-model="copyDate" type="date" class="field-input" />
-                </label>
-                <p class="m-0 text-sm text-muted">{{ t('onair.copyHint') }}</p>
-            </div>
-        </GenericModal>
-
-        <GenericModal
-            :show="showImport"
-            :title="t('onair.importList')"
-            :ok-label="t('onair.import')"
-            :ok-disabled="!importFile"
-            :modal-action="importList"
-        >
-            <div class="flex flex-col gap-3 w-[min(420px,85vw)]">
-                <input
-                    type="file"
-                    accept=".m3u,.m3u8,.txt,text/plain"
-                    class="file-input file-input-sm w-full"
-                    @change="importFile = ($event.target as HTMLInputElement).files?.[0] ?? null"
-                />
-                <p class="m-0 text-sm text-muted">{{ t('onair.importHint', { date: dateLabel }) }}</p>
-            </div>
-        </GenericModal>
-
-        <GenericModal
-            :show="showDelete"
-            :title="t('onair.deleteList', { date: shortDateLabel })"
-            :ok-label="t('onair.delete')"
-            danger
-            :modal-action="deleteList"
-        >
-            <p class="m-0 max-w-sm">{{ t('onair.deleteQuestion', { date: dateLabel }) }}</p>
-        </GenericModal>
-
-        <GenericModal
-            :show="showDiscard"
-            :title="t('onair.discardTitle')"
-            :ok-label="t('onair.discard')"
-            danger
-            :modal-action="discard"
-        >
-            <p class="m-0 max-w-sm">{{ t('onair.discardQuestion', unsaved) }}</p>
-        </GenericModal>
-
-        <GenericModal
-            :show="pendingDate !== null"
-            :title="t('onair.unsavedTitle')"
-            :ok-label="t('onair.discardAndContinue')"
-            danger
-            :modal-action="confirmDateChange"
-        >
-            <p class="m-0 max-w-sm">{{ t('onair.unsavedQuestion', unsaved) }}</p>
-        </GenericModal>
+        <PlaylistDayDialogs
+            v-model:show-copy="showCopy"
+            v-model:copy-date="copyDate"
+            v-model:show-import="showImport"
+            v-model:import-file="importFile"
+            v-model:show-delete="showDelete"
+            v-model:show-discard="showDiscard"
+            v-model:pending-date="pendingDate"
+            :date-label="dateLabel"
+            :short-date-label="shortDateLabel"
+            :unsaved="unsaved"
+            @copy="copyTo"
+            @import="importList"
+            @remove="deleteList"
+            @discard="discard"
+            @change-date="confirmDateChange"
+        />
     </section>
 </template>
 <style scoped>

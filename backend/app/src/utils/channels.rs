@@ -88,8 +88,20 @@ pub async fn create_channel(
             }
         };
 
-    if let Err(e) = manager.storage.copy_assets().await {
-        error!("{e}");
+    match manager.storage.copy_assets().await {
+        Ok(folder) if folder != crate::file::LEGACY_ASSETS_FOLDER => {
+            // A new channel's defaults point to the folder they were copied to.
+            match handles::point_default_assets_to(conn, channel.id, folder).await {
+                Ok(()) => {
+                    if let Ok(config) = get_config(conn, channel.id).await {
+                        manager.update_config(config).await;
+                    }
+                }
+                Err(error) => error!("Default assets of channel {}: {error}", channel.id),
+            }
+        }
+        Ok(_) => {}
+        Err(e) => error!("{e}"),
     };
 
     controllers.write().await.add(manager);
