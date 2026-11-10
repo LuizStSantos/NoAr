@@ -280,7 +280,7 @@ test('graphics Composer saves layers, fields, artwork and animation through the 
     await page.getByRole('combobox', { name: 'Exit', exact: true }).selectOption('wipe')
     await set('Duration (ms)', '800')
     await set('Delay (ms)', '400')
-    await page.getByRole('button', { name: 'Play entry', exact: true }).click()
+    await page.getByRole('button', { name: 'Play the animation (in, hold and out)', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Stop preview', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Stop preview', exact: true }).click()
     await page.getByLabel('Preview time', { exact: true }).fill('0.2')
@@ -515,6 +515,7 @@ test('the XMLTV logo tab saves its independent guide icon without changing layer
 })
 
 test('the API page shows take and out commands for a template by name, and stays read-only', async ({ page }) => {
+    await page.goto('/graphics/api?channel=1')
     const token = await page.evaluate(() => localStorage.getItem('token'))
     const name = `Comercial L-shape ${Date.now()}`
     const created = await page.request.post('/api/graphics/1/templates', {

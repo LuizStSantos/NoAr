@@ -50,7 +50,7 @@ async function openDocument(page: Page, id: number) {
     }, id)
 }
 
-test('a rejected new assignment leaves no model behind and the corrected draft can be saved', async ({ page }) => {
+test('a rejected new template leaves no model behind and the corrected draft can be saved', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('language', 'en'))
     await page.goto('/graphics/composer?channel=1')
     const token = await page.evaluate(() => localStorage.getItem('token'))
@@ -65,17 +65,22 @@ test('a rejected new assignment leaves no model behind and the corrected draft c
             .getByRole('button', { name: 'Text', exact: true })
             .click()
         await page.getByRole('button', { name: 'Save template', exact: true }).click()
-        await page.getByRole('combobox', { name: 'Control assignment (optional)', exact: true }).selectOption('lshape')
+        // The server refuses the first save; nothing may be created and the draft stays open.
+        await page.route('**/api/graphics/1/templates', (route) =>
+            route.request().method() === 'POST'
+                ? route.fulfill({ status: 400, contentType: 'text/plain', body: 'Rejected draft' })
+                : route.continue(),
+        )
         const rejected = page.waitForResponse(
             (response) => response.url().endsWith('/templates') && response.request().method() === 'POST',
         )
         await page.getByRole('button', { name: 'Save', exact: true }).click()
         expect((await rejected).ok()).toBe(false)
-        await expect(page.getByRole('alert')).toContainText(/visible video/i)
+        await expect(page.getByRole('alert')).toBeVisible()
         const models = await (await page.request.get('/api/graphics/1/templates', { headers })).json()
         expect(models.some((model: { name: string }) => model.name === name)).toBe(false)
         expect(new URL(page.url()).searchParams.has('template')).toBe(false)
-        await page.getByRole('combobox', { name: 'Control assignment (optional)', exact: true }).selectOption('')
+        await page.unroute('**/api/graphics/1/templates')
         const saved = page.waitForResponse(
             (response) => response.url().endsWith('/templates') && response.request().method() === 'POST',
         )
@@ -290,7 +295,6 @@ test('save disables native editing and a late response cannot navigate back afte
         await requested
         await expect(page.getByLabel('Layer name', { exact: true })).toBeDisabled()
         await expect(page.getByLabel('X', { exact: true })).toBeDisabled()
-        await expect(page.getByLabel('Control assignment (optional)', { exact: true })).toBeDisabled()
         for (const input of await page.getByLabel('Template name', { exact: true }).all()) {
             await expect(input).toBeDisabled()
         }
