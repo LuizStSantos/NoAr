@@ -5,7 +5,6 @@ import { useRoute } from 'vue-router'
 
 import { sourceBindings, sourceValues, useGraphicsSources } from '@/composables/graphicsSources'
 import LivePreview from '@/components/player/LivePreview.vue'
-import SectionCard from '@/components/settings/SectionCard.vue'
 import TemplatePreview from '@/components/graphics/TemplatePreview.vue'
 import { useChannelGraphics } from '@/composables/channelGraphics'
 import { AuthFetchError } from '@/composables/authFetch'
@@ -97,13 +96,18 @@ function templateHint(template: GraphicsTemplate) {
 }
 
 /** The right column shows the templates or what is on air, in tabs. */
-const sideTab = ref<'templates' | 'onair'>('templates')
+const sideTab = ref<'templates' | 'onair' | 'permanent'>('templates')
 const sideTabs = computed(() => [
     { name: 'templates' as const, label: t('graphics.onAir.templates'), count: templates.value.length },
     {
         name: 'onair' as const,
         label: t('graphics.onAir.onAirTab'),
         count: onAir.value.filter((graphic) => !graphic.leaving).length,
+    },
+    {
+        name: 'permanent' as const,
+        label: t('graphics.onAir.permanentTitle'),
+        count: permanent.value.filter((model) => model.on).length,
     },
 ])
 
@@ -454,32 +458,6 @@ onMounted(() => {
                     {{ t('graphics.onAir.next') }}
                 </button>
             </div>
-
-            <SectionCard :title="t('graphics.onAir.permanentTitle')" :description="t('graphics.onAir.permanentHint')">
-                <p v-if="unavailable" class="m-0 text-sm text-muted">{{ t('graphics.onAir.statusUnavailable') }}</p>
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="model in permanent"
-                        :key="model.template.id"
-                        type="button"
-                        class="btn-quiet min-h-11 inline-flex items-center gap-2"
-                        :class="model.on ? 'border-success text-success' : ''"
-                        :aria-pressed="model.on"
-                        :disabled="unavailable || channelBusy !== null || (!model.ready && !model.on)"
-                        @click="controlModel(model, !model.on)"
-                    >
-                        <span
-                            :class="model.on ? 'dot bg-success' : 'inline-block w-2 h-2 rounded-full bg-muted'"
-                            aria-hidden="true"
-                        />
-                        {{ templateName(model.template) }}
-                        <span class="text-xs">{{
-                            t(model.on ? 'graphics.assigned.on' : 'graphics.assigned.off')
-                        }}</span>
-                    </button>
-                </div>
-                <p class="m-0 text-xs text-muted">{{ t('graphics.onAir.permanentRequested') }}</p>
-            </SectionCard>
         </section>
 
         <aside
@@ -489,7 +467,7 @@ onMounted(() => {
             <div
                 role="tablist"
                 :aria-label="t('graphics.onAir.sideTabs')"
-                class="grid grid-cols-2 border-b border-line -mx-4 -mt-4 mb-1"
+                class="grid grid-cols-3 border-b border-line -mx-4 -mt-4 mb-1"
             >
                 <button
                     v-for="tab in sideTabs"
@@ -497,7 +475,7 @@ onMounted(() => {
                     :key="tab.name"
                     type="button"
                     role="tab"
-                    class="min-h-11 px-2 border-0 border-b-2 bg-transparent cursor-pointer inline-flex items-center justify-center gap-1.5"
+                    class="min-h-11 px-1 text-[13px] whitespace-nowrap border-0 border-b-2 bg-transparent cursor-pointer inline-flex items-center justify-center gap-1"
                     :class="sideTab === tab.name ? 'border-accent font-semibold' : 'border-transparent text-muted'"
                     :aria-selected="sideTab === tab.name"
                     :aria-controls="`onair-panel-${tab.name}`"
@@ -607,6 +585,41 @@ onMounted(() => {
                     </ul>
                 </div>
             </section>
+            <div
+                v-show="sideTab === 'permanent'"
+                id="onair-panel-permanent"
+                role="tabpanel"
+                aria-labelledby="onair-tab-permanent"
+                class="min-h-0 flex-auto"
+            >
+                <section :aria-label="t('graphics.onAir.permanentTitle')" class="flex flex-col gap-3">
+                    <h2 class="m-0 text-sm font-semibold">{{ t('graphics.onAir.permanentTitle') }}</h2>
+                    <p class="m-0 text-xs text-muted">{{ t('graphics.onAir.permanentHint') }}</p>
+                    <p v-if="unavailable" class="m-0 text-sm text-muted">{{ t('graphics.onAir.statusUnavailable') }}</p>
+                    <div class="flex flex-col gap-1.5">
+                        <button
+                            v-for="model in permanent"
+                            :key="model.template.id"
+                            type="button"
+                            class="btn-quiet min-h-11 w-full flex items-center gap-2 text-left"
+                            :class="model.on ? 'border-success text-success' : ''"
+                            :aria-pressed="model.on"
+                            :disabled="unavailable || channelBusy !== null || (!model.ready && !model.on)"
+                            @click="controlModel(model, !model.on)"
+                        >
+                            <span
+                                :class="model.on ? 'dot bg-success' : 'inline-block w-2 h-2 rounded-full bg-muted'"
+                                aria-hidden="true"
+                            />
+                            <span class="flex-auto min-w-0 truncate">{{ templateName(model.template) }}</span>
+                            <span class="text-xs">{{
+                                t(model.on ? 'graphics.assigned.on' : 'graphics.assigned.off')
+                            }}</span>
+                        </button>
+                    </div>
+                    <p class="m-0 text-xs text-muted">{{ t('graphics.onAir.permanentRequested') }}</p>
+                </section>
+            </div>
         </aside>
     </div>
 </template>

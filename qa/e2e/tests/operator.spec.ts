@@ -662,6 +662,7 @@ test('the channel logo can explicitly restore its natural size and corner with u
 
 test('On air uses permanent model controls and the Player only reports graphics state', async ({ page }) => {
     await page.goto('/graphics/onair?channel=1')
+    await page.getByRole('tab', { name: /^Always on air/ }).click()
     const permanent = page.getByRole('region', { name: 'Always on air', exact: true })
     await expect(permanent).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Live graphics: logo and L-shape', exact: true })).toHaveCount(0)
@@ -675,6 +676,7 @@ test('On air uses permanent model controls and the Player only reports graphics 
     await expect(logo).toHaveAttribute('aria-pressed', wasOn!)
     const views = await api(page, '/api/graphics/1/channel')
     const lshape = views.find((view: { kind: string }) => view.kind === 'lshape')
+    await page.getByRole('tab', { name: /^Templates/ }).click()
     await page
         .getByRole('complementary', { name: 'Templates', exact: true })
         .getByRole('button')
@@ -1167,6 +1169,9 @@ test('On air lists temporary graphics in its own tab next to the templates', asy
         await tab.click()
         await expect(side.getByRole('tabpanel')).toContainText(template.name)
         await expect(side.getByRole('button', { name: 'Take all out', exact: true })).toBeVisible()
+        await side.getByRole('tab', { name: /^Always on air/ }).click()
+        await expect(side.getByRole('region', { name: 'Always on air', exact: true })).toBeVisible()
+        await expect(side.getByRole('button', { name: 'Take all out', exact: true })).toBeHidden()
     } finally {
         await page.request.delete(`/api/graphics/1/templates/${template.id}`, { headers })
     }

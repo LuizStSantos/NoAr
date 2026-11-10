@@ -22,9 +22,10 @@ one is tagged.
 
 ### Changed
 
-- In Graphics › On air the right column has two tabs: **Templates**, with a
-  search and a group filter, and **On air (n)**, with the temporary graphics
-  on air, their time, Take out and Take all out. The column stops at the
+- In Graphics › On air the right column has three tabs: **Templates**, with
+  a search and a group filter; **On air (n)**, with the temporary graphics on
+  air, their time, Take out and Take all out; and **Always on air (n)**, with
+  the logo, ticker and other always-on templates and their switches. The column stops at the
   window's height and scrolls by itself, so a long list no longer stretches
   the page.
 
