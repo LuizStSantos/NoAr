@@ -43,6 +43,12 @@ one is tagged.
 
 ### Fixed
 
+- A Google Sheets data source accepts the sheet's ordinary link (Share dialog
+  or address bar, with `#gid=` for a tab) and its published `pubhtml` page,
+  and reads their CSV. Before, these returned Google's web page and the source
+  failed with a CSV quoting error. Empty columns after the data are ignored,
+  and a web page in place of CSV is reported as such.
+
 - An uploaded font with a single face (only bold, or bold italic) is used on
   air whatever the layer's Bold setting; asking it for another weight made the
   text fall back to the default font.

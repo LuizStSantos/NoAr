@@ -9,9 +9,14 @@ sources and only one removable Logo example.
 - **CSV:** upload a UTF-8 `.csv`, paste CSV text or enter a published CSV URL.
   The first row contains unique column names. Commas and semicolons are accepted,
   including quoted separators, escaped quotes, multiline cells and a UTF-8 BOM.
-  To use Google Sheets, publish the intended sheet as CSV and paste that CSV URL.
-  An ordinary private/edit sharing link is not a published CSV. This delivery
-  does not sign into Google accounts or provide private Sheets OAuth.
+  For Google Sheets, share the sheet with *Anyone with the link* (Viewer) and
+  paste the link from the Share dialog or the address bar: NoAr reads the CSV
+  export of that tab (`#gid=` selects it, the first tab otherwise). A sheet
+  published to the web works too, as its `pubhtml` page or its CSV link. NoAr
+  does not sign into Google accounts, so a private sheet answers with Google's
+  sign-in page and the source shows that the address returned a web page.
+  Empty columns after the data, which Sheets exports for formatted cells, are
+  ignored. Google can take a few minutes to show edits in a published copy.
 - **RSS / Atom:** enter the public feed URL. Records expose fields such as
   `title`, `link`, `description`, `summary`, `pubDate` or `updated`, depending on
   the feed. Entity references and CDATA are decoded. XML document type

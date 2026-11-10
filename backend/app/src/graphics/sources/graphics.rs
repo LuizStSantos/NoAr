@@ -102,6 +102,20 @@ fn checked_rows(rows: DataRows) -> Result<DataRows, String> {
 /// RFC 4180 quoting, including escaped quotes/newlines and UTF-8 BOM; semicolon spreadsheets are accepted.
 pub fn parse_csv(document: &str) -> Result<DataRows, String> {
     let document = document.trim_start_matches('\u{feff}');
+    let start = document
+        .trim_start()
+        .get(..15)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    if start.starts_with("<!doctype html") || start.starts_with("<html") {
+        return Err(
+            "The address returned a web page, not CSV. For Google Sheets, share the sheet with \
+             anyone with the link, or publish it to the web, and paste its link"
+                .to_string(),
+        );
+    }
+
     let mut quote = false;
     let mut counts = (0, 0);
 
@@ -174,6 +188,23 @@ pub fn parse_csv(document: &str) -> Result<DataRows, String> {
 
     if records.len() < 2 {
         return Err("CSV needs a header and at least one data row".to_string());
+    }
+
+    // Spreadsheets often export formatted but empty columns after the data.
+    let width = records[0]
+        .iter()
+        .rposition(|name| !name.trim().is_empty())
+        .map_or(0, |last| last + 1);
+
+    if records.iter().all(|record| {
+        record
+            .iter()
+            .skip(width)
+            .all(|value| value.trim().is_empty())
+    }) {
+        for record in &mut records {
+            record.truncate(width);
+        }
     }
 
     let headers: Vec<_> = records
@@ -378,6 +409,60 @@ fn public_address(address: IpAddr) -> bool {
     }
 }
 
+/// A Google Sheets link as copied from the browser or the Share dialog
+/// (`/spreadsheets/d/<id>/edit#gid=<tab>`) becomes the CSV export of that tab,
+/// and a sheet published to the web (`/d/e/<id>/pubhtml`) its published CSV.
+/// Export, query (`gviz`) and published CSV links, and other hosts, are kept.
+fn sheets_csv_url(value: &str) -> String {
+    let Ok(url) = reqwest::Url::parse(value) else {
+        return value.to_string();
+    };
+
+    if url.host_str() != Some("docs.google.com") {
+        return value.to_string();
+    }
+
+    let segments: Vec<_> = url.path_segments().map_or_else(Vec::new, Iterator::collect);
+    let gid = url
+        .query_pairs()
+        .find(|(key, _)| key == "gid")
+        .map(|(_, value)| value.into_owned())
+        .or_else(|| {
+            url.fragment()?
+                .split('&')
+                .find_map(|part| part.strip_prefix("gid=").map(str::to_string))
+        })
+        .filter(|gid| !gid.is_empty() && gid.chars().all(|c| c.is_ascii_digit()));
+    let with_gid = |base: String| match &gid {
+        Some(gid) => format!("{base}&gid={gid}"),
+        None => base,
+    };
+
+    match segments.as_slice() {
+        ["spreadsheets", "d", "e", id, page, ..] if ["pubhtml", "pub"].contains(page) => {
+            if *page == "pub"
+                && url
+                    .query_pairs()
+                    .any(|(key, value)| key == "output" && value != "html")
+            {
+                return value.to_string();
+            }
+
+            with_gid(format!(
+                "https://docs.google.com/spreadsheets/d/e/{id}/pub?output=csv"
+            ))
+        }
+        ["spreadsheets", "d", id, rest @ ..]
+            if *id != "e" && !matches!(rest.first(), Some(&"export" | &"gviz")) =>
+        {
+            with_gid(format!(
+                "https://docs.google.com/spreadsheets/d/{id}/export?format=csv"
+            ))
+        }
+        _ => value.to_string(),
+    }
+}
+
 fn public_url(value: &str) -> Result<reqwest::Url, String> {
     let url = reqwest::Url::parse(value).map_err(|_| "Enter a public HTTP(S) URL")?;
 
@@ -503,7 +588,13 @@ pub async fn refresh(manager: &ChannelManager, source_id: i32) -> Result<(), Ser
         let document = if source.url.is_empty() {
             source.document.clone()
         } else {
-            tokio::time::timeout(Duration::from_secs(10), download(&source.url))
+            let url = if source.kind == "csv" {
+                sheets_csv_url(&source.url)
+            } else {
+                source.url.clone()
+            };
+
+            tokio::time::timeout(Duration::from_secs(10), download(&url))
                 .await
                 .map_err(|_| "Data source request timed out")??
         };
@@ -778,6 +869,66 @@ mod tests {
         );
         assert!(!public_address("192.168.0.1".parse().unwrap()));
         assert!(public_address("1.1.1.1".parse().unwrap()));
+    }
+
+    #[test]
+    fn google_sheets_links_become_their_csv() {
+        let id = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
+        let export = format!("https://docs.google.com/spreadsheets/d/{id}/export?format=csv");
+
+        for (link, csv) in [
+            (
+                format!("https://docs.google.com/spreadsheets/d/{id}/edit?usp=sharing"),
+                export.clone(),
+            ),
+            (
+                format!("https://docs.google.com/spreadsheets/d/{id}"),
+                export.clone(),
+            ),
+            (
+                format!("https://docs.google.com/spreadsheets/d/{id}/edit#gid=123"),
+                format!("{export}&gid=123"),
+            ),
+            (
+                format!("https://docs.google.com/spreadsheets/d/{id}/edit?gid=7#gid=7"),
+                format!("{export}&gid=7"),
+            ),
+            (
+                "https://docs.google.com/spreadsheets/d/e/2PACX-pub/pubhtml".to_string(),
+                "https://docs.google.com/spreadsheets/d/e/2PACX-pub/pub?output=csv".to_string(),
+            ),
+            (
+                "https://docs.google.com/spreadsheets/d/e/2PACX-pub/pubhtml?gid=5&single=true"
+                    .to_string(),
+                "https://docs.google.com/spreadsheets/d/e/2PACX-pub/pub?output=csv&gid=5"
+                    .to_string(),
+            ),
+        ] {
+            assert_eq!(sheets_csv_url(&link), csv, "{link}");
+        }
+
+        for kept in [
+            format!("{export}&gid=0"),
+            format!("https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:csv"),
+            "https://docs.google.com/spreadsheets/d/e/2PACX-pub/pub?output=csv".to_string(),
+            "https://docs.google.com/spreadsheets/d/e/2PACX-pub/pub?gid=0&single=true&output=csv"
+                .to_string(),
+            "https://example.com/spreadsheets/d/abc/edit".to_string(),
+        ] {
+            assert_eq!(sheets_csv_url(&kept), kept);
+        }
+    }
+
+    #[test]
+    fn csv_ignores_blank_trailing_columns_and_explains_a_web_page() {
+        let rows = parse_csv("\"Name\",\"Role\",\"\",\"\"\n\"Ana\",\"Host\",\"\",\"\"\n").unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].len(), 2);
+        assert_eq!(rows[0]["Role"], "Host");
+        assert!(parse_csv("Name,,Role\nAna,,Host").is_err());
+        assert!(parse_csv("Name,\nAna,extra").is_err());
+        let error = parse_csv("  <!DOCTYPE html><html><body>Sheet</body></html>").unwrap_err();
+        assert!(error.contains("web page"), "{error}");
     }
 
     #[test]

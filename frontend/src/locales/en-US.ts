@@ -1490,7 +1490,7 @@ export default {
             kind: 'Source type',
             url: 'Public source URL',
             publicHint:
-                'Google Sheets: publish the sheet as CSV and paste its CSV URL. No private Google sign-in. Local/private network addresses and embedded credentials are not supported.',
+                'Google Sheets: share the sheet with anyone with the link (Viewer) and paste its link, or publish it to the web. Private sheets that need a Google sign-in are not supported, nor local/private addresses or usernames and passwords in the address.',
             upload: 'Upload CSV',
             csv: 'CSV data',
             keepCsv: 'Leave empty to keep the uploaded CSV.',

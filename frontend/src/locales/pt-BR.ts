@@ -1494,7 +1494,7 @@ export default {
             kind: 'Tipo de fonte',
             url: 'URL pública da fonte',
             publicHint:
-                'Google Sheets: publique a planilha como CSV e cole a URL do CSV. Sem login privado do Google. Endereços locais/privados e usuário/senha na URL não são aceitos.',
+                'Google Sheets: compartilhe a planilha com “Qualquer pessoa com o link” (Leitor) e cole o link, ou publique-a na Web. Planilhas privadas que pedem login do Google não funcionam, nem endereços locais/privados ou usuário e senha no endereço.',
             upload: 'Enviar CSV',
             csv: 'Dados CSV',
             keepCsv: 'Deixe vazio para manter o CSV enviado.',
