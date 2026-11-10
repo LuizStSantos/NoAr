@@ -155,6 +155,9 @@ const router = createRouter({
             name: 'schedule',
             component: () => import('@/views/ScheduleView.vue'),
             meta: { showHeader: true },
+            // The live API moved to Settings › External control; old links follow it.
+            beforeEnter: (to) =>
+                to.hash === '#live-api' ? { name: 'settings-remote', query: to.query, hash: '#live-api' } : true,
         },
         {
             path: '/media',
@@ -233,6 +236,12 @@ const router = createRouter({
                     path: 'alerts',
                     name: 'settings-alerts',
                     component: () => import('@/components/settings/SettingsAlerts.vue'),
+                    meta: { showHeader: true, roles: ADMINS },
+                },
+                {
+                    path: 'remote',
+                    name: 'settings-remote',
+                    component: () => import('@/components/settings/SettingsRemote.vue'),
                     meta: { showHeader: true, roles: ADMINS },
                 },
                 {

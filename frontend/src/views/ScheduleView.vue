@@ -13,14 +13,12 @@ import { useHead } from '@unhead/vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import GenericModal from '@/components/utils/GenericModal.vue'
-import LiveRemote from '@/components/settings/LiveRemote.vue'
 import GraphicsEventDialog from '@/components/schedule/GraphicsEventDialog.vue'
 import LiveDialog from '@/components/schedule/LiveDialog.vue'
 import ScheduleDialog from '@/components/schedule/ScheduleDialog.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import ScheduleTimeline from '@/components/schedule/ScheduleTimeline.vue'
-import ScheduleEventList from '@/components/schedule/ScheduleEventList.vue'
-import ScheduleGraphicsList from '@/components/schedule/ScheduleGraphicsList.vue'
+import ScheduleAgenda from '@/components/schedule/ScheduleAgenda.vue'
 import {
     SCHEDULE_DAY_SECONDS as DAY,
     SCHEDULE_DRAG_TYPE as DRAG_TYPE,
@@ -403,11 +401,6 @@ onMounted(async () => {
     await Promise.all([refresh(), scheduleStore.loadLives().catch(() => undefined)])
     openLinkedLive()
     scrollToFocus()
-    if (route.hash === '#live-api') {
-        // From the Player's live controls: straight to the API tutorial.
-        await nextTick()
-        document.getElementById('live-api')?.scrollIntoView({ block: 'start' })
-    }
     refreshTimer = setInterval(refresh, 5000)
     clockTimer = setInterval(() => (nowSeconds.value = secondsOfDay()), 1000)
 })
@@ -577,8 +570,9 @@ watch(zoom, scrollToFocus)
                     @edit-graphics="editGraphics"
                 />
 
-                <ScheduleEventList
-                    :blocks="eventBlocks"
+                <ScheduleAgenda
+                    :event-blocks="eventBlocks"
+                    :graphics-blocks="graphicsBlocks"
                     :lives="scheduleStore.lives"
                     :date="date"
                     :today="today"
@@ -587,18 +581,10 @@ watch(zoom, scrollToFocus)
                     @trigger="trigger"
                     @edit="edit"
                     @remove="deleting = $event"
+                    @create-graphics="newGraphics"
+                    @edit-graphics="editGraphics"
+                    @remove-graphics="deletingGraphics = $event"
                 />
-
-                <ScheduleGraphicsList
-                    :blocks="graphicsBlocks"
-                    @create="newGraphics"
-                    @edit="editGraphics"
-                    @remove="deletingGraphics = $event"
-                />
-
-                <div id="live-api" class="scroll-mt-20">
-                    <LiveRemote :open="route.hash === '#live-api'" />
-                </div>
             </main>
         </div>
 

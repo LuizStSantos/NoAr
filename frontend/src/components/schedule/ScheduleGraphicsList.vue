@@ -9,15 +9,16 @@ import {
 } from '@/composables/schedulePresentation'
 
 /** Scheduled graphics remain event records; their edit/delete decisions belong to the page. */
-defineProps<{ blocks: ScheduleGraphicsBlock[] }>()
+/** `bare`: inside the day's agenda card, without a card or header of its own. */
+defineProps<{ blocks: ScheduleGraphicsBlock[]; bare?: boolean }>()
 const emit = defineEmits<{ create: []; edit: [event: GraphicsEvent]; remove: [event: GraphicsEvent] }>()
 const { t } = useI18n()
 const { repeatLabel } = useScheduleText()
 const { graphicsSummary } = useScheduledGraphicsText()
 </script>
 <template>
-    <section :aria-label="t('schedule.graphics.list')" class="card-box">
-        <div class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
+    <section :aria-label="t('schedule.graphics.list')" :class="bare ? 'border-t border-line' : 'card-box'">
+        <div v-if="!bare" class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
             <h2 class="m-0 text-base font-semibold inline-flex items-center gap-2">
                 <span class="w-3 h-3 rounded-[3px]" :style="{ background: GRAPHICS_COLOR }" />
                 {{ t('schedule.graphics.list') }}
@@ -64,7 +65,7 @@ const { graphicsSummary } = useScheduledGraphicsText()
                     </button>
                 </span>
             </li>
-            <li v-if="!blocks.length" class="px-4.5 py-6 text-center text-muted">
+            <li v-if="!blocks.length && !bare" class="px-4.5 py-6 text-center text-muted">
                 {{ t('schedule.graphics.none') }}
             </li>
         </ul>

@@ -22,6 +22,17 @@ one is tagged.
 
 ### Changed
 
+- Graphics › On air fits the window: Preview and Program side by side on
+  top, the fields and Put on air / Take off / Next under the Preview, and
+  "On air now" (temporary graphics and the always-on switches) under the
+  Program. The template list has a search and group filters and scrolls by
+  itself; the side menu is narrower on this page.
+
+- The Scheduler shows the day's materials, lives and graphics in one agenda
+  with All / Materials / Lives / Graphics filters, as tall as its rows. The
+  live key for encoders and scripts moved to **Settings › External control**;
+  old `/schedule#live-api` links open it there.
+
 - The Composer fits the window on wide screens: one toolbar row (back, name,
   group, actions), a preview that takes the height left and stays 16:9, a
   compact timeline that is always visible, and the layer's properties in tabs

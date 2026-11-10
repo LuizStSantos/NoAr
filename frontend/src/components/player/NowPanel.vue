@@ -218,7 +218,7 @@ async function backToProgramme() {
                             {{ t('schedule.extendUntilButton') }}
                         </button>
                     </form>
-                    <RouterLink to="/schedule#live-api" class="link-accent text-[12px]">{{
+                    <RouterLink :to="{ name: 'settings-remote', hash: '#live-api' }" class="link-accent text-[12px]">{{
                         t('schedule.liveRemote.link')
                     }}</RouterLink>
                 </span>

@@ -17,6 +17,7 @@ export type SettingsSectionName =
     | 'recording'
     | 'breaks'
     | 'alerts'
+    | 'remote'
     | 'advanced'
     | 'users'
     | 'server'
@@ -75,6 +76,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     { name: 'recording', group: 'channel', roles: ADMINS, keys: ['recording'] },
     { name: 'breaks', group: 'channel', roles: ADMINS, keys: ['scte35'], restarts: true },
     { name: 'alerts', group: 'channel', roles: ADMINS, keys: ['mail', 'notification'] },
+    { name: 'remote', group: 'channel', roles: ADMINS, keys: [] },
     { name: 'advanced', group: 'channel', roles: ADMINS, keys: ['general', 'logging', 'task'] },
     { name: 'users', group: 'system', roles: ALL, keys: [] },
     { name: 'server', group: 'system', roles: ['global_admin'], keys: [] },

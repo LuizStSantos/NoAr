@@ -222,8 +222,8 @@ the programme** ends it at once. Encoders and automation can do the same with
 ### Without logging in: the live key
 
 Encoders, Stream Decks and scripts that cannot log in use the channel's
-**live key**, created in the **Live by API** section at the bottom of the
-Scheduler, like the logo and SCTE-35 keys. That section has a tutorial with
+**live key**, created in **Settings › External control**, like the
+graphics and SCTE-35 keys (old `/schedule#live-api` links open it). That page has a tutorial with
 the addresses of this channel, ready to copy, and examples for curl, vMix,
 Stream Deck (Companion) and the API with a login; **By API…** in the Player's
 live controls opens it. Without a key these routes answer `403`; renewing

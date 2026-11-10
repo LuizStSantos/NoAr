@@ -13,6 +13,8 @@ const props = defineProps<{
     today: string
     nowSeconds: number
     activeEventId?: number
+    /** Inside the day's agenda card: no card or header of its own. */
+    bare?: boolean
 }>()
 const emit = defineEmits<{
     edit: [occurrence: ScheduleOccurrence]
@@ -92,8 +94,8 @@ function sourcesLabel(event: ScheduleEvent): string {
 }
 </script>
 <template>
-    <section :aria-label="t('schedule.todayEvents')" class="card-box">
-        <div class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
+    <section :aria-label="t('schedule.todayEvents')" :class="{ 'card-box': !bare }">
+        <div v-if="!bare" class="flex flex-wrap items-center justify-between gap-2 px-4.5 py-3.5 border-b border-line">
             <h2 class="m-0 text-base font-semibold">
                 {{ isToday ? t('schedule.todayEvents') : t('schedule.dayEvents') }}
             </h2>
