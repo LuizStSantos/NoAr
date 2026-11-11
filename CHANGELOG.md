@@ -11,6 +11,13 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- The dialog of **Restart the playout** in the settings side panel opened
+  under the log list on **Settings › Log**: the log rows covered its text and
+  buttons, and Cancel could not be clicked. The restart dialogs now open over
+  the whole page.
+
 ## [3.0.1] - 2026-11-11
 
 ### Fixed
