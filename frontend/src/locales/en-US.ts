@@ -2793,9 +2793,9 @@ export default {
                 '3': 'Operator',
             },
             roleHints: {
-                '1': 'everything, on every channel',
-                '2': 'settings of their channels',
-                '3': 'uses Player, Scheduler and Storage',
+                '1': 'everything, on every channel, plus users, server and updates',
+                '2': 'everything on their channels: also Output and the other settings, Composer and data sources',
+                '3': 'Player, Playlist, Scheduler, Storage, Report, Graphics › On air and Templates, and the Log; no settings',
             },
             ownRole: 'You cannot change your own role.',
             ask2fa: 'Ask for a two-factor code at sign-in',

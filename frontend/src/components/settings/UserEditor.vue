@@ -61,9 +61,11 @@ function toggleChannel(id: number) {
                 {{ t('settings.users.role') }}
                 <select v-model.number="draft.role_id" class="field-input" :disabled="self">
                     <option v-for="role in ROLES" :key="role" :value="role">
-                        {{ t(`settings.users.roles.${role}`) }}: {{ t(`settings.users.roleHints.${role}`) }}
+                        {{ t(`settings.users.roles.${role}`) }}
                     </option>
                 </select>
+                <!-- What the chosen role can use, in full: the option text stays short. -->
+                <span class="field-hint">{{ t(`settings.users.roleHints.${draft.role_id}`) }}</span>
                 <span v-if="self" class="field-hint">{{ t('settings.users.ownRole') }}</span>
             </label>
             <fieldset class="md:col-span-2 border-0 p-0 m-0 flex flex-col gap-1.5">

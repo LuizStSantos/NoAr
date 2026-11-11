@@ -2804,9 +2804,9 @@ export default {
                 '3': 'Operador',
             },
             roleHints: {
-                '1': 'tudo, em todos os canais',
-                '2': 'configurações dos seus canais',
-                '3': 'usa o Player, o Agendador e o Armazenamento',
+                '1': 'tudo, em todos os canais, mais usuários, servidor e atualizações',
+                '2': 'tudo nos seus canais: também a Saída e as outras configurações, o Composer e as fontes de dados',
+                '3': 'Player, Playlist, Agendador, Armazenamento, Relatório, Grafismo › No ar e Modelos, e o Registro; sem configurações',
             },
             ownRole: 'Você não pode mudar o seu próprio papel.',
             ask2fa: 'Pedir código de dois fatores ao entrar',
