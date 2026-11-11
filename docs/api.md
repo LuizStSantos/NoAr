@@ -578,6 +578,34 @@ Other reads stay open to everyone on the channel, because pages share them:
 the Player shows the playlist, the Scheduler and the Playlist browse the
 storage, and every page shows what is on air.
 
+## Activity
+
+NoAr records what users do: every change (saving, deleting, putting on air,
+restarting, configuring), sign-ins and sign-outs, failed sign-ins, and the
+external control commands sent with a key. Opening or reading pages is not
+recorded. Each entry keeps the time, the user (by name, so it stays readable
+after the user is deleted), their role, the channel, the action, what it was
+done to (a date, a name, a file; never a password), the HTTP status and the
+client address. Entries are kept 180 days. **Settings › Activity** shows
+them to global admins, with filters and a CSV export.
+
+| Method | Endpoint        | Access | Description                                      |
+| ------ | --------------- | ------ | ------------------------------------------------ |
+| `GET`  | `/api/activity` | `GA`   | List entries, newest first: `{ entries, more }`. |
+
+Query parameters, all optional: `from` and `to` (Unix seconds), `user` (the
+name), `channel` (channel ID), `action` (one action such as `playlist.save`,
+or a group: `auth`, `player`, `playlist`, `schedule`, `graphics`, `storage`,
+`settings`, `user`, `system`, `external`), `q` (text in the user, action,
+detail or address), `before` (an entry `id`, for the next page) and `limit`
+(1 to 1000, default 200). When `more` is `true`, ask again with `before` set
+to the last `id`.
+
+```bash
+curl 'http://127.0.0.1:8787/api/activity?action=playlist&user=maria' \
+  -H 'Authorization: Bearer <ACCESS_TOKEN>'
+```
+
 ## Server-sent events
 
 SSE connections use a short-lived UUID instead of sending a bearer token in a

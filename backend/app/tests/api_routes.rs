@@ -14,6 +14,8 @@ use tokio::sync::{Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
 use tower::util::ServiceExt;
 
+#[path = "api/activity.rs"]
+mod activity;
 #[path = "api/auth.rs"]
 mod auth;
 #[path = "api/configuration.rs"]

@@ -20,6 +20,7 @@ export type SettingsSectionName =
     | 'remote'
     | 'advanced'
     | 'users'
+    | 'activity'
     | 'server'
     | 'updates'
 
@@ -81,6 +82,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     { name: 'remote', group: 'channel', roles: ADMINS, keys: [] },
     { name: 'advanced', group: 'channel', roles: ADMINS, keys: ['general', 'logging', 'task'] },
     { name: 'users', group: 'system', roles: ALL, keys: [] },
+    { name: 'activity', group: 'system', roles: ['global_admin'], keys: [] },
     { name: 'server', group: 'system', roles: ['global_admin'], keys: [] },
     { name: 'updates', group: 'system', roles: ['global_admin'], keys: [] },
 ]

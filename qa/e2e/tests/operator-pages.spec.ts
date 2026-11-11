@@ -80,3 +80,48 @@ test('an operator follows the pages a global admin gives them without signing in
         await page.request.delete(`/api/user/${id}`, { headers })
     }
 })
+
+test('Settings › Activity lists what users did, with filters and a CSV', async ({ page }) => {
+    const headers = await adminHeaders(page)
+    const username = 'e2e-activity-user'
+    const created = await page.request.post('/api/user', {
+        headers,
+        data: {
+            username,
+            password: randomBytes(18).toString('hex'),
+            mail: 'activity@example.invalid',
+            role_id: 3,
+            channel_ids: [1],
+            two_factor: false,
+        },
+    })
+    expect(created.ok(), `create: ${created.status()}`).toBeTruthy()
+    const users = await (await page.request.get('/api/users', { headers })).json()
+    const id = users.find((user: { username: string }) => user.username === username).id
+    await page.request.delete(`/api/user/${id}`, { headers })
+
+    await page.goto('/configure/activity?channel=1')
+    await expect(page.getByRole('heading', { name: 'Activity', level: 1 })).toBeVisible()
+    const filters = page.getByRole('region', { name: 'Filters', exact: true })
+    const table = page.getByRole('table', { name: 'Activity' })
+    await filters.getByLabel('Type', { exact: true }).selectOption('user')
+    await expect(table.getByRole('row').filter({ hasText: 'Deleted a user' }).first()).toBeVisible()
+    await expect(
+        table.getByRole('row').filter({ hasText: 'Created a user' }).filter({ hasText: username }),
+    ).toBeVisible()
+
+    // The search keeps the entries that name the user: created, then deleted.
+    await filters.getByLabel('Search', { exact: true }).fill(username)
+    await expect(table.locator('tbody tr')).toHaveCount(2)
+    await expect(table.locator('tbody tr').nth(0)).toContainText('Deleted a user')
+    await expect(table.locator('tbody tr').nth(0)).toContainText(username)
+    await expect(table.locator('tbody tr').nth(1)).toContainText('Created a user')
+    await expect(table.locator('tbody tr').nth(1)).toContainText('Done')
+
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Export CSV', exact: true }).click()
+    const file = await download
+    expect(file.suggestedFilename()).toMatch(/^noar-activity-.*\.csv$/)
+    const { readFile } = await import('node:fs/promises')
+    expect(await readFile(await file.path(), 'utf8')).toContain(username)
+})

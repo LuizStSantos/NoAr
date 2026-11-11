@@ -25,6 +25,7 @@ use tokio::{
 };
 use tokio_util::io::ReaderStream;
 
+mod activity;
 mod channel;
 mod control;
 mod file;
@@ -45,6 +46,7 @@ mod system;
 mod user;
 mod xmltv;
 
+pub use activity::*;
 pub use channel::*;
 pub use control::*;
 pub use file::*;

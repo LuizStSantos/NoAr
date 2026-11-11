@@ -13,6 +13,14 @@ one is tagged.
 
 ### Added
 
+- **Settings › Activity**: what each user did, for global admins. Every
+  change (saving, deleting, putting on air, restarting, configuring),
+  sign-in, failed sign-in and external control command with a key is
+  recorded with the time, the user, the channel, what it was done to and the
+  result, and kept 180 days. Filters by date, user, channel, type and text,
+  and a CSV export. Opening pages is not recorded. Migration `00036` adds the
+  `activity_log` table ([API](docs/api.md#activity)).
+
 - **`NOAR_TRUSTED_PROXIES`** names the reverse proxies whose
   `X-Forwarded-For` NoAr believes (addresses or networks such as
   `172.18.0.0/16`). Without it, any address of a private network is still

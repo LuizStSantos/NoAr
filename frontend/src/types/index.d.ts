@@ -161,6 +161,29 @@ declare global {
         notification_token_set: boolean
     }
 
+    /** One thing a user did, from `GET /api/activity`. */
+    interface ActivityEntry {
+        id: number
+        /** Unix time in seconds. */
+        at: number
+        user_id: number | null
+        username: string
+        role: string
+        channel_id: number | null
+        /** A stable name such as `playlist.save`. */
+        action: string
+        target: string
+        method: string
+        route: string
+        status: number
+        ip: string
+    }
+
+    interface ActivityPage {
+        entries: ActivityEntry[]
+        more: boolean
+    }
+
     interface User {
         id: number
         username: string

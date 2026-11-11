@@ -1,3 +1,4 @@
+pub mod activity;
 pub mod as_run;
 pub mod channel;
 pub mod configuration;
@@ -15,6 +16,7 @@ pub mod source;
 pub mod update;
 pub mod user;
 
+pub use activity::*;
 pub use as_run::*;
 pub use channel::*;
 pub use configuration::*;

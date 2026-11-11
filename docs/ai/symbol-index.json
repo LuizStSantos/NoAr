@@ -987,9 +987,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "0cce12f028545e93ea02a781d96a3a308e295421269a455b486c08533d140f49",
+      "sha256": "56e32c286c1a0689d4c685a318fb8ad8a28128f8e3f4b2583dc9e107639f35ee",
       "language": "Markdown",
-      "bytes": 71520,
+      "bytes": 72019,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1017,9 +1017,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "16a764b60384d0732755ca46ff120bcd3350e34dcfeec5dcce58145d5267b652",
+      "sha256": "c48b23b94c0682a32fbc9ca38127bf539d7b4ea11349978987def02b72531686",
       "language": "Markdown",
-      "bytes": 17122,
+      "bytes": 17294,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -1289,6 +1289,49 @@
         }
       ]
     },
+    "backend/app/src/api/activity.rs": {
+      "sha256": "9c301f3c08820903d82807b2fb1898f3998f8682b8c150360ac0ca2984b649fc",
+      "language": "Rust",
+      "bytes": 17052,
+      "symbols": [
+        {
+          "name": "action_of",
+          "line": 51
+        },
+        {
+          "name": "activity_layer",
+          "line": 162
+        },
+        {
+          "name": "reads_body",
+          "line": 295
+        },
+        {
+          "name": "channel_of",
+          "line": 309
+        },
+        {
+          "name": "target_of",
+          "line": 322
+        },
+        {
+          "name": "shorten",
+          "line": 359
+        },
+        {
+          "name": "tests",
+          "line": 367
+        },
+        {
+          "name": "changes_are_named_and_reads_are_not_recorded",
+          "line": 373
+        },
+        {
+          "name": "the_channel_and_what_was_changed_come_from_the_path_and_body",
+          "line": 408
+        }
+      ]
+    },
     "backend/app/src/api/auth.rs": {
       "sha256": "abc6ffcea0edaaa4814d0b5acd62d979b33339eb5735b1be1cf112cc79dad275",
       "language": "Rust",
@@ -1520,40 +1563,44 @@
       ]
     },
     "backend/app/src/api/mod.rs": {
-      "sha256": "6cac42df0e987727f2060419a70731c769b81ed307fa5e719974fd5aed3a2717",
+      "sha256": "d5b30c6511beccb961fbb9222a53bfbeda764b28ef0b399400ceac2e3d5c49be",
       "language": "Rust",
-      "bytes": 96,
+      "bytes": 114,
       "symbols": [
         {
           "name": "access",
           "line": 1
         },
         {
-          "name": "auth",
+          "name": "activity",
           "line": 2
         },
         {
-          "name": "file_access",
+          "name": "auth",
           "line": 3
         },
         {
-          "name": "path",
+          "name": "file_access",
           "line": 4
         },
         {
-          "name": "routes",
+          "name": "path",
           "line": 5
         },
         {
-          "name": "state",
+          "name": "routes",
           "line": 6
+        },
+        {
+          "name": "state",
+          "line": 7
         }
       ]
     },
     "backend/app/src/api/path.rs": {
-      "sha256": "040fc3a64c8950b67cfdc60aef4d2ba38716eb085620e3538779f63c5d823517",
+      "sha256": "aae1e119ed778d53ca05c8f09df43891c7772083f08859321efd6ababce7eb7b",
       "language": "Rust",
-      "bytes": 10858,
+      "bytes": 11239,
       "symbols": [
         {
           "name": "auth_routes",
@@ -1561,7 +1608,22 @@
         },
         {
           "name": "routes",
-          "line": 26
+          "line": 27
+        }
+      ]
+    },
+    "backend/app/src/api/routes/activity.rs": {
+      "sha256": "f22a2dd2145f95dc68531e0479bb8f95dd203d6f9d3a736cba87145966172cc7",
+      "language": "Rust",
+      "bytes": 1584,
+      "symbols": [
+        {
+          "name": "ActivityPage",
+          "line": 19
+        },
+        {
+          "name": "get_activity",
+          "line": 37
         }
       ]
     },
@@ -2073,169 +2135,173 @@
       ]
     },
     "backend/app/src/api/routes/mod.rs": {
-      "sha256": "687ee54665d691e02afbaee05e8a1ee8354e403eea8fcfd299c63655af9a5a2f",
+      "sha256": "d155fb6bf157c5db7d03899a71bb5e7b2c5fb5e04bd96d61ef957d64c9d9b144",
       "language": "Rust",
-      "bytes": 12900,
+      "bytes": 12935,
       "symbols": [
         {
-          "name": "channel",
+          "name": "activity",
           "line": 28
         },
         {
-          "name": "control",
+          "name": "channel",
           "line": 29
         },
         {
-          "name": "file",
+          "name": "control",
           "line": 30
         },
         {
-          "name": "global",
+          "name": "file",
           "line": 31
         },
         {
-          "name": "graphics",
+          "name": "global",
           "line": 32
         },
         {
-          "name": "health",
+          "name": "graphics",
           "line": 33
         },
         {
-          "name": "log",
+          "name": "health",
           "line": 34
         },
         {
-          "name": "playlist",
+          "name": "log",
           "line": 35
         },
         {
-          "name": "playout_config",
+          "name": "playlist",
           "line": 36
         },
         {
-          "name": "preview",
+          "name": "playout_config",
           "line": 37
         },
         {
-          "name": "program",
+          "name": "preview",
           "line": 38
         },
         {
-          "name": "public",
+          "name": "program",
           "line": 39
         },
         {
-          "name": "report",
+          "name": "public",
           "line": 40
         },
         {
-          "name": "schedule",
+          "name": "report",
           "line": 41
         },
         {
-          "name": "scte35",
+          "name": "schedule",
           "line": 42
         },
         {
-          "name": "setup",
+          "name": "scte35",
           "line": 43
         },
         {
-          "name": "system",
+          "name": "setup",
           "line": 44
         },
         {
-          "name": "user",
+          "name": "system",
           "line": 45
         },
         {
-          "name": "xmltv",
+          "name": "user",
           "line": 46
         },
         {
+          "name": "xmltv",
+          "line": 47
+        },
+        {
           "name": "MailQueues",
-          "line": 75
+          "line": 77
         },
         {
           "name": "stream_file",
-          "line": 81
+          "line": 83
         },
         {
           "name": "RangeSelection",
-          "line": 138
+          "line": 140
         },
         {
           "name": "parse_range",
-          "line": 146
+          "line": 148
         },
         {
           "name": "ensure_any_authority",
-          "line": 200
+          "line": 202
         },
         {
           "name": "AuthUser",
-          "line": 214
+          "line": 216
         },
         {
           "name": "AuthUser",
-          "line": 220
+          "line": 222
         },
         {
           "name": "is_global_admin",
-          "line": 221
+          "line": 223
         },
         {
           "name": "ensure_channel_or_admin",
-          "line": 225
+          "line": 227
         },
         {
           "name": "ensure_self_or_admin",
-          "line": 233
+          "line": 235
         },
         {
           "name": "FromRequestParts",
-          "line": 242
+          "line": 244
         },
         {
           "name": "Rejection",
-          "line": 246
-        },
-        {
-          "name": "from_request_parts",
           "line": 248
         },
         {
+          "name": "from_request_parts",
+          "line": 250
+        },
+        {
           "name": "DateObj",
-          "line": 286
+          "line": 288
         },
         {
           "name": "PathsObj",
-          "line": 292
+          "line": 294
         },
         {
           "name": "FileObj",
-          "line": 304
+          "line": 306
         },
         {
           "name": "LogReq",
-          "line": 310
+          "line": 312
         },
         {
           "name": "ImportObj",
-          "line": 323
+          "line": 325
         },
         {
           "name": "tests",
-          "line": 331
+          "line": 333
         },
         {
           "name": "parses_closed_open_and_suffix_ranges_and_ignores_unsupported_headers",
-          "line": 337
+          "line": 339
         },
         {
           "name": "streams_exact_range_bytes_headers_and_empty_responses",
-          "line": 360
+          "line": 362
         }
       ]
     },
@@ -2791,6 +2857,45 @@
         {
           "name": "AppState",
           "line": 15
+        }
+      ]
+    },
+    "backend/app/src/db/handles/activity.rs": {
+      "sha256": "e154a7936aacb948226998a0339d5a0fad5ecda49521c50464ef3e0bd50e5125",
+      "language": "Rust",
+      "bytes": 7077,
+      "symbols": [
+        {
+          "name": "Activity",
+          "line": 14
+        },
+        {
+          "name": "ActivityFilter",
+          "line": 37
+        },
+        {
+          "name": "insert_activity",
+          "line": 54
+        },
+        {
+          "name": "prune_activity",
+          "line": 78
+        },
+        {
+          "name": "select_activity",
+          "line": 88
+        },
+        {
+          "name": "tests",
+          "line": 141
+        },
+        {
+          "name": "entry",
+          "line": 147
+        },
+        {
+          "name": "the_history_is_filtered_paged_and_pruned",
+          "line": 161
         }
       ]
     },
@@ -3409,73 +3514,77 @@
       ]
     },
     "backend/app/src/db/handles/mod.rs": {
-      "sha256": "64426e9f26f2f26e7b8e5b2ffb0fbfb8b30ad6072b77069851560d880cce2cdc",
+      "sha256": "6f5abb3a27858372b48d9921b9b8ef453f4e8c7c91af4830dab961f57012f0f1",
       "language": "Rust",
-      "bytes": 617,
+      "bytes": 656,
       "symbols": [
         {
-          "name": "as_run",
+          "name": "activity",
           "line": 1
         },
         {
-          "name": "channel",
+          "name": "as_run",
           "line": 2
         },
         {
-          "name": "configuration",
+          "name": "channel",
           "line": 3
         },
         {
-          "name": "global",
+          "name": "configuration",
           "line": 4
         },
         {
-          "name": "graphics",
+          "name": "global",
           "line": 5
         },
         {
-          "name": "graphics_schedule",
+          "name": "graphics",
           "line": 6
         },
         {
-          "name": "init",
+          "name": "graphics_schedule",
           "line": 7
         },
         {
-          "name": "output",
+          "name": "init",
           "line": 8
         },
         {
-          "name": "recording",
+          "name": "output",
           "line": 9
         },
         {
-          "name": "refresh_token",
+          "name": "recording",
           "line": 10
         },
         {
-          "name": "schedule",
+          "name": "refresh_token",
           "line": 11
         },
         {
-          "name": "scte35",
+          "name": "schedule",
           "line": 12
         },
         {
-          "name": "setup",
+          "name": "scte35",
           "line": 13
         },
         {
-          "name": "source",
+          "name": "setup",
           "line": 14
         },
         {
-          "name": "update",
+          "name": "source",
           "line": 15
         },
         {
-          "name": "user",
+          "name": "update",
           "line": 16
+        },
+        {
+          "name": "user",
+          "line": 17
         }
       ]
     },
@@ -12071,6 +12180,21 @@
         }
       ]
     },
+    "backend/app/tests/api/activity.rs": {
+      "sha256": "688f9668e7bed0206af5496ae376fa2ff7a658d4520cacff58118d923201d482",
+      "language": "Rust",
+      "bytes": 3604,
+      "symbols": [
+        {
+          "name": "recorded",
+          "line": 5
+        },
+        {
+          "name": "changes_sign_ins_and_refusals_are_recorded_for_global_admins",
+          "line": 20
+        }
+      ]
+    },
     "backend/app/tests/api/auth.rs": {
       "sha256": "9e4b81c8efde7c89b97d11a5fc4514fe0ef9ed232f702abb1fee4a2a0eeaf6bd",
       "language": "Rust",
@@ -12421,85 +12545,89 @@
       ]
     },
     "backend/app/tests/api_routes.rs": {
-      "sha256": "2c248a20a883832ee3bb654eb83818f38d0df1e424597168ed372f315e8bccbe",
+      "sha256": "7cf8074304cef1b253564378adfa2b5d9639ce24361895048dd30a8484a32060",
       "language": "Rust",
-      "bytes": 7387,
+      "bytes": 7429,
       "symbols": [
         {
-          "name": "auth",
+          "name": "activity",
           "line": 18
         },
         {
-          "name": "configuration",
+          "name": "auth",
           "line": 20
         },
         {
-          "name": "files",
+          "name": "configuration",
           "line": 22
         },
         {
-          "name": "graphics",
+          "name": "files",
           "line": 24
         },
         {
-          "name": "playlists",
+          "name": "graphics",
           "line": 26
         },
         {
-          "name": "preview",
+          "name": "playlists",
           "line": 28
         },
         {
-          "name": "report",
+          "name": "preview",
           "line": 30
         },
         {
-          "name": "schedule",
+          "name": "report",
           "line": 32
         },
         {
-          "name": "server",
+          "name": "schedule",
           "line": 34
         },
         {
-          "name": "users",
+          "name": "server",
           "line": 36
         },
         {
-          "name": "xmltv",
+          "name": "users",
           "line": 38
         },
         {
+          "name": "xmltv",
+          "line": 40
+        },
+        {
           "name": "prepare_config",
-          "line": 57
+          "line": 59
         },
         {
           "name": "SecurityFixture",
-          "line": 104
+          "line": 106
         },
         {
           "name": "Drop",
-          "line": 110
+          "line": 112
         },
         {
           "name": "drop",
-          "line": 111
+          "line": 113
         },
         {
           "name": "security_fixture",
-          "line": 117
+          "line": 119
         },
         {
           "name": "uuid_for_test",
-          "line": 197
+          "line": 199
         },
         {
           "name": "access_token",
-          "line": 209
+          "line": 211
         },
         {
           "name": "json_request",
-          "line": 231
+          "line": 233
         }
       ]
     },
@@ -22623,9 +22751,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "16f72a76731c097e81bbbbc2517289b55222c39783a0f36216fcd9771f0cebbd",
+      "sha256": "0100379cf2c3d850e023063beb97b3ea775372afc0559ab683e77c1bac5df25f",
       "language": "Markdown",
-      "bytes": 77313,
+      "bytes": 78784,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -22647,9 +22775,9 @@
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "7bf03e19b7795f527d2646a2b56a57abe8dc832dabb200d6257010b1242addd0",
+      "sha256": "d82e9ccd5fd9265b15121cf697ae54011bae338480969f5e788bafe0c03b0421",
       "language": "Markdown",
-      "bytes": 15887,
+      "bytes": 15945,
       "symbols": []
     },
     "docs/external_tasks.md": {
@@ -28934,6 +29062,137 @@
         }
       ]
     },
+    "frontend/src/components/settings/SettingsActivity.vue": {
+      "sha256": "7057196ec7890cf7b5422552e597b457cfe25a6fa1f51f676fddc0a06e7db765",
+      "language": "Vue",
+      "bytes": 10973,
+      "symbols": [
+        {
+          "name": "configStore",
+          "line": 13
+        },
+        {
+          "name": "indexStore",
+          "line": 14
+        },
+        {
+          "name": "GROUPS",
+          "line": 17
+        },
+        {
+          "name": "PAGE",
+          "line": 29
+        },
+        {
+          "name": "filters",
+          "line": 31
+        },
+        {
+          "name": "entries",
+          "line": 39
+        },
+        {
+          "name": "more",
+          "line": 40
+        },
+        {
+          "name": "loading",
+          "line": 41
+        },
+        {
+          "name": "usernames",
+          "line": 42
+        },
+        {
+          "name": "version",
+          "line": 44
+        },
+        {
+          "name": "query",
+          "line": 46
+        },
+        {
+          "name": "params",
+          "line": 47
+        },
+        {
+          "name": "load",
+          "line": 61
+        },
+        {
+          "name": "current",
+          "line": 62
+        },
+        {
+          "name": "before",
+          "line": 63
+        },
+        {
+          "name": "page",
+          "line": 67
+        },
+        {
+          "name": "users",
+          "line": 84
+        },
+        {
+          "name": "when",
+          "line": 91
+        },
+        {
+          "name": "who",
+          "line": 95
+        },
+        {
+          "name": "channelName",
+          "line": 100
+        },
+        {
+          "name": "what",
+          "line": 105
+        },
+        {
+          "name": "key",
+          "line": 106
+        },
+        {
+          "name": "result",
+          "line": 112
+        },
+        {
+          "name": "RESULT_CLASS",
+          "line": 120
+        },
+        {
+          "name": "countLabel",
+          "line": 128
+        },
+        {
+          "name": "exportCsv",
+          "line": 135
+        },
+        {
+          "name": "separator",
+          "line": 136
+        },
+        {
+          "name": "cell",
+          "line": 137
+        },
+        {
+          "name": "header",
+          "line": 138
+        },
+        {
+          "name": "lines",
+          "line": 141
+        },
+        {
+          "name": "text",
+          "line": 151
+        }
+      ]
+    },
     "frontend/src/components/settings/SettingsAdvanced.vue": {
       "sha256": "0eed418cd8aaf3dc7f25949f864b76a8b270d9a6258b3e88f998d4688b8ec37e",
       "language": "Vue",
@@ -33536,9 +33795,9 @@
       ]
     },
     "frontend/src/composables/reportExport.ts": {
-      "sha256": "2e9108a68ebd8efab6a334a2c184dc436edf781fd742f7cf3116a914dede7299",
+      "sha256": "63e54a274477b6edf823e42f07b20e79553fe05f552996d2c615f0a6c8f4ba07",
       "language": "TypeScript",
-      "bytes": 13092,
+      "bytes": 13161,
       "symbols": [
         {
           "name": "DaySummary",
@@ -33558,27 +33817,27 @@
         },
         {
           "name": "save",
-          "line": 49
+          "line": 50
         },
         {
           "name": "downloadCsv",
-          "line": 65
+          "line": 66
         },
         {
           "name": "cell",
-          "line": 68
+          "line": 69
         },
         {
           "name": "downloadPdf",
-          "line": 115
+          "line": 116
         },
         {
           "name": "tableStyle",
-          "line": 356
+          "line": 357
         },
         {
           "name": "rowTitle",
-          "line": 375
+          "line": 376
         }
       ]
     },
@@ -34079,15 +34338,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "2017ec3f413f51e442969c7f2e3cfccd9b1b0c5266da1beb980071782be1d721",
+      "sha256": "e2c468035d0f9373118e652dfa1c373e3dce599d04b1834fdaf3269ed8908931",
       "language": "TypeScript",
-      "bytes": 141180,
+      "bytes": 147424,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "118f79dcd8041eb58de207d51c2506f40aa3603b6d6062ea8f44c6bd8690d76f",
+      "sha256": "30b5a07f2a30ba40c002912862e6e2b0c4287fb4940aa7983889af395557f531",
       "language": "TypeScript",
-      "bytes": 147241,
+      "bytes": 153800,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -34102,9 +34361,9 @@
       ]
     },
     "frontend/src/router/index.ts": {
-      "sha256": "1791c58aa5baef435c2ba9c41e080af92d90a5a650e137910bbe5d1c2184e24e",
+      "sha256": "5ff66cc44d949bc378516ef1d5c421a73ffecbd75089e37b5a1b49592ea6beac",
       "language": "TypeScript",
-      "bytes": 13167,
+      "bytes": 13453,
       "symbols": [
         {
           "name": "router",
@@ -34270,9 +34529,9 @@
       ]
     },
     "frontend/src/stores/settings.ts": {
-      "sha256": "7905d7d2da6cd379b4924da3fecfd09f1af8f741158f462e28c899238599bf8b",
+      "sha256": "6a3ed71f8168b057357d191123d17fb3cad744a4fb30046e90b9fb83aaa1eead",
       "language": "TypeScript",
-      "bytes": 7540,
+      "bytes": 7635,
       "symbols": [
         {
           "name": "SettingsSectionName",
@@ -34280,55 +34539,55 @@
         },
         {
           "name": "SettingsSection",
-          "line": 26
+          "line": 27
         },
         {
           "name": "getPath",
-          "line": 88
+          "line": 90
         },
         {
           "name": "setPath",
-          "line": 94
+          "line": 96
         },
         {
           "name": "countChannelChanges",
-          "line": 117
+          "line": 119
         },
         {
           "name": "useSettings",
-          "line": 122
+          "line": 124
         },
         {
           "name": "saving",
-          "line": 127
-        },
-        {
-          "name": "restartPending",
           "line": 129
         },
         {
-          "name": "visibleSections",
+          "name": "restartPending",
           "line": 131
         },
         {
+          "name": "visibleSections",
+          "line": 133
+        },
+        {
           "name": "sectionChanges",
-          "line": 137
+          "line": 139
         },
         {
           "name": "changedSections",
-          "line": 158
+          "line": 160
         },
         {
           "name": "discardSection",
-          "line": 162
+          "line": 164
         },
         {
           "name": "savePlayout",
-          "line": 181
+          "line": 183
         },
         {
           "name": "restartPlayout",
-          "line": 209
+          "line": 211
         }
       ]
     },
@@ -34475,9 +34734,9 @@
       ]
     },
     "frontend/src/types/index.d.ts": {
-      "sha256": "675aefda061e9bc50900353110ae354e5768e5824fd85f959d0ac2f8d0c9e45f",
+      "sha256": "ae67e87223ca4ba575317212917f5bc47051db8d2c3c5c80d5b961e014824f6c",
       "language": "TypeScript",
-      "bytes": 12197,
+      "bytes": 12757,
       "symbols": [
         {
           "name": "JwtPayloadExt",
@@ -34556,120 +34815,128 @@
           "line": 154
         },
         {
+          "name": "ActivityEntry",
+          "line": 165
+        },
+        {
+          "name": "ActivityPage",
+          "line": 182
+        },
+        {
           "name": "User",
-          "line": 164
+          "line": 187
         },
         {
           "name": "Crumb",
-          "line": 178
+          "line": 201
         },
         {
           "name": "Payload",
-          "line": 183
+          "line": 206
         },
         {
           "name": "Playlist",
-          "line": 189
-        },
-        {
-          "name": "PlaylistItem",
-          "line": 195
-        },
-        {
-          "name": "FileObject",
           "line": 212
         },
         {
+          "name": "PlaylistItem",
+          "line": 218
+        },
+        {
+          "name": "FileObject",
+          "line": 235
+        },
+        {
           "name": "Folder",
-          "line": 233
-        },
-        {
-          "name": "FileFolderObject",
-          "line": 238
-        },
-        {
-          "name": "SheetKind",
           "line": 256
         },
         {
+          "name": "FileFolderObject",
+          "line": 261
+        },
+        {
+          "name": "SheetKind",
+          "line": 279
+        },
+        {
           "name": "ArtworkKind",
-          "line": 257
+          "line": 280
         },
         {
           "name": "CreditRole",
-          "line": 260
+          "line": 283
         },
         {
           "name": "Credit",
-          "line": 273
+          "line": 296
         },
         {
           "name": "SheetFields",
-          "line": 284
+          "line": 307
         },
         {
           "name": "MediaSheet",
-          "line": 300
+          "line": 323
         },
         {
           "name": "FolderObject",
-          "line": 321
+          "line": 344
         },
         {
           "name": "SourceObject",
-          "line": 327
+          "line": 350
         },
         {
           "name": "TemplateItem",
-          "line": 332
+          "line": 355
         },
         {
           "name": "Template",
-          "line": 339
+          "line": 362
         },
         {
           "name": "BodyObject",
-          "line": 343
+          "line": 366
         },
         {
           "name": "SystemStatistics",
-          "line": 349
+          "line": 372
         },
         {
           "name": "PlayoutStatus",
-          "line": 359
+          "line": 382
         },
         {
           "name": "PlayoutFailure",
-          "line": 376
+          "line": 399
         },
         {
           "name": "OutputLinkStatus",
-          "line": 386
+          "line": 409
         },
         {
           "name": "ClipProgramme",
-          "line": 397
+          "line": 420
         },
         {
           "name": "AudioLevel",
-          "line": 408
+          "line": 431
         },
         {
           "name": "LiveLoudnessMetrics",
-          "line": 413
+          "line": 436
         },
         {
           "name": "SplitTime",
-          "line": 422
+          "line": 445
         },
         {
           "name": "Key",
-          "line": 428
+          "line": 451
         },
         {
           "name": "supportedValuesOf",
-          "line": 430
+          "line": 453
         }
       ]
     },
@@ -37095,6 +37362,12 @@
       "bytes": 257,
       "symbols": []
     },
+    "migrations/00036_activity_log.sql": {
+      "sha256": "d4c6b9b64fba0f3d856215b19542f2b4de779a8dac15f1679922ac5b9bfe1c05",
+      "language": "SQL",
+      "bytes": 1049,
+      "symbols": []
+    },
     "package-lock.json": {
       "sha256": "aba0605a2adfef429a8c972fa76b47be5d57f1456492a98d5728529821ac3f07",
       "language": "JSON",
@@ -37192,9 +37465,9 @@
       "symbols": []
     },
     "qa/e2e/README.md": {
-      "sha256": "7c4e39f53043a1b202e328dab028b23a30905f9bc513db9ec7f43afa4a9647bf",
+      "sha256": "614d787de5228ae4c96ba5a36b147398806d8f3d96003db78a5d41ae656d2983",
       "language": "Markdown",
-      "bytes": 5595,
+      "bytes": 5744,
       "symbols": []
     },
     "qa/e2e/global-setup.ts": {
@@ -37332,9 +37605,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator-pages.spec.ts": {
-      "sha256": "8b95e4a61ac5c970aaeada223013a4dd7ee1b654a83c0144fa6d1caaf7b88282",
+      "sha256": "06ff1c04772066f6ec182f866eb9854f7fb53e4d480d51c11bc35ffb90f61d05",
       "language": "TypeScript",
-      "bytes": 3680,
+      "bytes": 5981,
       "symbols": [
         {
           "name": "adminHeaders",
