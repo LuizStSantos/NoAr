@@ -1,0 +1,8 @@
+# The Rust that builds NoAr: here for local builds, and the same version in
+# the Docker image (Dockerfile RUST_IMAGE) and in CI (validate.yml container).
+# A newer or older Clippy flags other code, so a check that passes locally
+# can fail in CI. qa/architecture/check.py fails when the three differ:
+# change them together.
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]

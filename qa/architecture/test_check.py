@@ -84,5 +84,29 @@ const emit = defineEmits<{ save: [] }>();
                                       "import { authFetch } from '@/composables/authFetch'"), set())
 
 
+    def toolchain(self, pinned, image, ci):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / '.github/workflows').mkdir(parents=True)
+            (root / 'rust-toolchain.toml').write_text(f'[toolchain]\nchannel = "{pinned}"\n')
+            (root / 'Dockerfile').write_text(f'ARG NODE_IMAGE=node:24\nARG RUST_IMAGE=rust:{image}-slim-trixie\n')
+            (root / '.github/workflows/validate.yml').write_text(f'jobs:\n  build:\n    container: rust:{ci}-trixie\n')
+            findings, _ = violations(root)
+            return [(finding['rule'], finding['path']) for finding in findings]
+
+    def test_local_builds_ci_and_the_image_use_one_rust(self):
+        self.assertEqual(self.toolchain('1.99.1', '1.99.1', '1.99.1'), [])
+        # Bumped in one place only: Clippy would differ between them.
+        self.assertEqual(self.toolchain('1.99.1', '1.100.0', '1.99.1'),
+                         [('rust-toolchain-mismatch', 'Dockerfile')])
+        self.assertEqual(self.toolchain('1.100.0', '1.99.1', '1.99.1'),
+                         [('rust-toolchain-mismatch', 'Dockerfile'),
+                          ('rust-toolchain-mismatch', '.github/workflows/validate.yml')])
+
+    def test_the_repository_pins_one_rust(self):
+        findings, _ = violations(Path(__file__).resolve().parents[2])
+        self.assertEqual([finding for finding in findings if finding['rule'].startswith('rust-toolchain')], [])
+
+
 if __name__ == '__main__':
     unittest.main()

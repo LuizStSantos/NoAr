@@ -93,9 +93,15 @@ jobs:
 
       - name: Set build tools for the pinned Rust toolchain
         run: |
+          set -eu
           rustup component add rustfmt clippy
+          # The Rust of rust-toolchain.toml, like local builds: another
+          # Clippy would pass or fail different code.
+          pinned=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)
           rustc --version
+          rustc --version | grep -qF "rustc $pinned " || { echo "rustc is not the pinned Rust $pinned"; exit 1; }
           cargo --version
+          cargo clippy --version
 
       - uses: Swatinem/rust-cache@v2
 

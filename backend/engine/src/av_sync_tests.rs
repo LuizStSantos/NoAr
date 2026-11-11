@@ -130,8 +130,8 @@ fn beeps(path: &Path) -> Vec<f64> {
     // Quiet before a beep: a tenth of a second.
     let mut quiet = RATE / 10;
 
-    for (index, sample) in raw.chunks_exact(4).enumerate() {
-        let sample = f32::from_le_bytes(sample.try_into().unwrap());
+    for (index, sample) in raw.as_chunks::<4>().0.iter().enumerate() {
+        let sample = f32::from_le_bytes(*sample);
         if sample.abs() > 0.1 {
             if quiet >= RATE / 10 {
                 onsets.push(start + index as f64 / RATE as f64);

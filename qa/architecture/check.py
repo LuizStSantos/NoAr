@@ -83,6 +83,32 @@ def panel_violations(root: Path) -> list[dict]:
     return findings
 
 
+# Where the Rust version is set: the version is the first group.
+TOOLCHAIN_SOURCES = (
+    ('rust-toolchain.toml', re.compile(r'^channel\s*=\s*"([^"]+)"', re.MULTILINE)),
+    ('Dockerfile', re.compile(r'^ARG RUST_IMAGE=rust:([0-9.]+)-', re.MULTILINE)),
+    ('.github/workflows/validate.yml', re.compile(r'^\s*container:\s*rust:([0-9.]+)-', re.MULTILINE)),
+)
+
+
+def toolchain_violations(root: Path) -> list[dict]:
+    """Local builds, CI and the image must use one Rust: Clippy differs between versions."""
+    if not (root / 'rust-toolchain.toml').exists():
+        return []
+    found = []
+    for name, pattern in TOOLCHAIN_SOURCES:
+        path = root / name
+        text = path.read_text() if path.exists() else ''
+        match = pattern.search(text)
+        if not match:
+            return [{'rule': 'rust-toolchain-not-pinned', 'path': name, 'line': 1}]
+        found.append((name, match.group(1), text.count('\n', 0, match.start()) + 1))
+    pinned = found[0][1]
+    return [{'rule': 'rust-toolchain-mismatch', 'path': name, 'line': line,
+             'detail': f'Rust {version}, rust-toolchain.toml pins {pinned}'}
+            for name, version, line in found[1:] if version != pinned]
+
+
 def violations(root: Path) -> tuple[list[dict], int]:
     findings, scanned = [], 0
     for crate in ('app', 'engine'):
@@ -102,6 +128,7 @@ def violations(root: Path) -> tuple[list[dict], int]:
                 for match in pattern.finditer(code):
                     findings.append({'rule': rule, 'path': relative, 'line': code.count('\n', 0, match.start()) + 1})
     findings.extend(panel_violations(root))
+    findings.extend(toolchain_violations(root))
 
     return findings, scanned
 
@@ -117,7 +144,8 @@ def main() -> int:
         print(json.dumps(result, indent=2))
     else:
         for finding in findings:
-            print(f"{finding['path']}:{finding['line']}: {finding['rule']}")
+            detail = f" ({finding['detail']})" if finding.get('detail') else ''
+            print(f"{finding['path']}:{finding['line']}: {finding['rule']}{detail}")
         print(f"{result['status']}: architecture boundaries ({scanned} Rust files)")
     return int(bool(findings))
 

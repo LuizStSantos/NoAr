@@ -939,9 +939,9 @@
       "symbols": []
     },
     ".github/workflows/validate.yml": {
-      "sha256": "235aa1db3e41d98855b00b6cf3044bb1d2a58f4ceb1c86fa6546d668ebbcdcf0",
+      "sha256": "aad9286abce996e5a087f0acd1a8521a5d1a6ea88a15ddbc60314e34a0f1b8db",
       "language": "YAML",
-      "bytes": 4526,
+      "bytes": 4894,
       "symbols": []
     },
     ".gitignore": {
@@ -1029,9 +1029,9 @@
       "symbols": []
     },
     "backend/AGENTS.md": {
-      "sha256": "0e7d77bc5c3adabcfe420e1a71248176a4d46246d3c8f6bef25c1b2c2c81fcde",
+      "sha256": "d9e5a9dd596138a4425c64bc47e51bdd98fc7421cf8273020791d89a55585a61",
       "language": "Markdown",
-      "bytes": 5615,
+      "bytes": 5927,
       "symbols": []
     },
     "backend/app/Cargo.toml": {
@@ -14249,9 +14249,9 @@
       ]
     },
     "backend/engine/src/av_sync_tests.rs": {
-      "sha256": "1b6497fde8f6859c827d012cbc7e8364af235a7c6bc52fccdf57e6e08238e1c7",
+      "sha256": "32760316d97d839e5118f6f4440742ee14f82c27dc8294789969a8bafc7e14ac",
       "language": "Rust",
-      "bytes": 7108,
+      "bytes": 7099,
       "symbols": [
         {
           "name": "run",
@@ -22800,9 +22800,9 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "0ab5815e2b6f68d18c35ce1f2124987bdf2b3e5829a27a4d856710721719491e",
+      "sha256": "5f83f752bfbfd31e4f90393709d78f6cdde86297d36a94d14c19e5ea90e4f13c",
       "language": "Markdown",
-      "bytes": 7641,
+      "bytes": 8050,
       "symbols": []
     },
     "docs/docker.md": {
@@ -37412,9 +37412,9 @@
       "symbols": []
     },
     "qa/architecture/check.py": {
-      "sha256": "1739d892e1fb96c723563528c556bc81783e748c104d60a840f40487c18cd61a",
+      "sha256": "69c8118ba4472d779f7e603dba3649159b9756ea6b89d3227549014e68bf24e0",
       "language": "Python",
-      "bytes": 5706,
+      "bytes": 7039,
       "symbols": [
         {
           "name": "production_code",
@@ -37429,19 +37429,23 @@
           "line": 65
         },
         {
+          "name": "toolchain_violations",
+          "line": 94
+        },
+        {
           "name": "violations",
-          "line": 86
+          "line": 112
         },
         {
           "name": "main",
-          "line": 109
+          "line": 136
         }
       ]
     },
     "qa/architecture/test_check.py": {
-      "sha256": "0f17c2c510370dae870646b97acd1bd7c0104e0fd7c211e82f297661ae9d3f41",
+      "sha256": "0ce006de899370bab0d129ca34b82b42ce5bac0cbfcfcd9f325a7e2afa91636f",
       "language": "Python",
-      "bytes": 3817,
+      "bytes": 5282,
       "symbols": [
         {
           "name": "ArchitectureTests",
@@ -37486,6 +37490,18 @@
         {
           "name": "test_panels_allow_typed_commands_and_ignore_network_examples",
           "line": 76
+        },
+        {
+          "name": "toolchain",
+          "line": 87
+        },
+        {
+          "name": "test_local_builds_ci_and_the_image_use_one_rust",
+          "line": 97
+        },
+        {
+          "name": "test_the_repository_pins_one_rust",
+          "line": 106
         }
       ]
     },
@@ -38416,6 +38432,12 @@
           "line": 162
         }
       ]
+    },
+    "rust-toolchain.toml": {
+      "sha256": "804e2f6caae79e6547cd403045f58ffe8529144820d71871ee68c3ce66ff053b",
+      "language": "TOML",
+      "bytes": 392,
+      "symbols": []
     },
     "site/README.md": {
       "sha256": "70c11713f15ba4a2e3fc45d4577f9ffb30b433fedc04dc7b11733d8cb96fdb2b",

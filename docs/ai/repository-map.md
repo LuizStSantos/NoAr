@@ -4,7 +4,7 @@ Machine-generated navigation index; verify behavior against current source code.
 
 ## File counts by top-level directory
 
-- `(root)/`: 18 indexed files
+- `(root)/`: 19 indexed files
 - `.agents/`: 7 indexed files
 - `.cargo/`: 1 indexed files
 - `.claude/`: 51 indexed files
@@ -31,7 +31,7 @@ Machine-generated navigation index; verify behavior against current source code.
 - Python: 27
 - Other: 20
 - YAML: 10
-- TOML: 4
+- TOML: 5
 - Shell: 4
 - HTML: 3
 - Build: 1

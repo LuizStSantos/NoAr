@@ -10,7 +10,13 @@ frontend verification.
 ## Build NoAr
 
 Use Rust 1.99.1 and Node.js 24, matching `Dockerfile` and
-`.github/workflows/validate.yml`. NoAr uses one mandatory GStreamer media
+`.github/workflows/validate.yml`. `rust-toolchain.toml` pins that Rust, with
+Clippy and rustfmt, so `rustup` uses it for every `cargo` command in the
+repository: another version's Clippy flags other code, and a check that
+passes locally could fail in CI. To move to a newer Rust, change
+`rust-toolchain.toml`, `RUST_IMAGE` in the `Dockerfile` and the
+`validate.yml` container together; `qa/architecture/check.py` fails in CI
+when they differ. NoAr uses one mandatory GStreamer media
 runtime and does not link FFmpeg.
 
 ### Native media dependencies
