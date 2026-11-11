@@ -11,17 +11,6 @@ one is tagged.
 
 ## [Unreleased]
 
-### Added
-
-- A GitHub social preview, `docs/images/social-preview.png`, rendered from
-  `qa/screenshots/social-preview.html` with the Player screenshot by
-  `node qa/screenshots/social-preview.cjs`.
-- A project website on GitHub Pages, <https://luizstsantos.github.io/NoAr/>:
-  one page in English and Portuguese with the features, the README
-  screenshots and the Docker install. It is `site/`, published by the new
-  **Website** workflow ([site/README.md](site/README.md)). Changes to `site/`
-  no longer rebuild the Docker image.
-
 ### Fixed
 
 - In the Composer on a wide screen, the timeline sits right under the
@@ -29,24 +18,26 @@ one is tagged.
   above it. The preview is as tall as its 16:9 picture and shrinks only when
   the window is too low; the README Composer screenshot is recaptured.
 
-### Removed
-
-- The verification handoffs, branch test guides and prototypes kept in the
-  repository while 3.0 was built: `docs/graphics-handoff`,
-  `docs/maintenance-handoff`, the graphics and GStreamer branch guides,
-  `docker-compose.graphics-test.yml`, the graphics roadmap, the saved audits in
-  `docs/ai/audits`, and `qa/gstreamer`, `qa/graphics`, `qa/maintenance` and
-  `qa/fire`. They remain in the git history.
-- `docker/ndi/enable-ndi.sh --test`, which served only the removed GStreamer
-  test project.
-- Interface texts and code paths left from the quick scenes removed in 3.0.
-
 ### Changed
 
-- The documentation no longer describes quick scenes, the removed
-  `/logo`, `/lshape` and `/scene` routes or the 3.0 branch as current.
-  `scene_name` in `GET /api/graphics/{id}/channel` is documented as always
-  `null`.
+- Interface texts and code paths left from the quick scenes removed in 3.0
+  are gone; nothing visible changes. The documentation no longer describes
+  quick scenes, the removed `/logo`, `/lshape` and `/scene` routes or the 3.0
+  branch as current, and documents `scene_name` in
+  `GET /api/graphics/{id}/channel` as always `null`.
+- `docker/ndi/enable-ndi.sh` no longer has `--test`, which served only the
+  GStreamer test project of the 3.0 branch.
+- Repository only, outside the application: a project website on GitHub
+  Pages, <https://luizstsantos.github.io/NoAr/>, in English and Portuguese
+  (`site/`, published by the new **Website** workflow, see
+  [site/README.md](site/README.md); changes to it no longer rebuild the Docker
+  image), and a GitHub social preview rendered by
+  `node qa/screenshots/social-preview.cjs`. The verification handoffs, branch
+  test guides, prototypes and saved audits kept while 3.0 was built
+  (`docs/graphics-handoff`, `docs/maintenance-handoff`, the graphics and
+  GStreamer branch guides, `docker-compose.graphics-test.yml`, the graphics
+  roadmap, `docs/ai/audits`, `qa/gstreamer`, `qa/graphics`, `qa/maintenance`
+  and `qa/fire`) were removed; they remain in the git history.
 
 ## [3.0.0] - 2026-11-10
 
