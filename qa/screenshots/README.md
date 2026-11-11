@@ -112,3 +112,20 @@ Failed captures remain as `<name>.failed.png` inside the owned directory. Keep
 password files, session state and failed attempts outside the repository.
 The helper opens editing dialogs and fills preview fields without saving them.
 Schedule times are placed ahead of seeding, so capture soon after preparing it.
+
+## GitHub social preview
+
+`social-preview.html` is the repository's GitHub card (1280×640): the logo,
+what NoAr does and a crop of the gallery's `docs/images/player.png`, in the
+interface's own colours and IBM Plex fonts. After recapturing the Player, or
+changing the page, render it again:
+
+```sh
+npm ci
+npm ci --prefix qa/e2e
+node qa/screenshots/social-preview.cjs --chromium /usr/bin/chromium
+```
+
+It writes `docs/images/social-preview.png` and fails if the screenshot or a
+font file is missing. GitHub has no API for the card: upload the PNG in the
+repository's **Settings › General › Social preview**.

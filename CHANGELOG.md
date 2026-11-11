@@ -11,6 +11,12 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- A GitHub social preview, `docs/images/social-preview.png`, rendered from
+  `qa/screenshots/social-preview.html` with the Player screenshot by
+  `node qa/screenshots/social-preview.cjs`.
+
 ### Removed
 
 - The verification handoffs, branch test guides and prototypes kept in the
