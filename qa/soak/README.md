@@ -28,8 +28,9 @@ The playlist repeats three clips of different sizes and frame rates (one
 without sound), made with FFmpeg on the test host. Clips and lives have moving
 pictures so movement is expected throughout normal playback. Each clip also
 carries an A/V sync marker once a second: a box in the top-left corner, black
-except for one white frame, and a 1 kHz beep that starts on that frame
-(`sync.py`). Every 12 minutes a cycle schedules three lives and acts on
+except for one white frame, and a 1 kHz beep that starts on that frame, 0.4 s
+into each second, a time every usual frame rate has a frame at, so NoAr's
+frame-rate conversion cannot move the flash (`sync.py`). Every 12 minutes a cycle schedules three lives and acts on
 them:
 
 | Time | What happens |
@@ -69,7 +70,8 @@ the nearest flash, and the offset (sound minus picture) of every pair is
 written to `av-sync.jsonl` with the time of the run. FFmpeg prints those
 times with six significant digits, so from 1000 s on only to 10 ms: the
 receiver starts over every 10 minutes to keep its clock below that and the
-offsets to the millisecond. The report's `av_sync`
+offsets to the millisecond. The lines the offsets come from are kept in
+`av-sync.receiver.log`. The report's `av_sync`
 gives the pairs, the lowest, highest, mean and last offset, how many fell
 outside EBU R37, and the drift: the mean of the last 20 offsets minus that of
 the first 20. The box is 1/8 of the clip and the receiver reads 1/16 of the

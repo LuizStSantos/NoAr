@@ -23,8 +23,10 @@ import threading
 import time
 
 RATE = 48_000
-# Frame of each second with the marker, away from where a clip starts.
-FLASH_FRAME = 10
+# When in each second the marker starts, away from where a clip starts: a
+# time every usual frame rate has a frame at (frame 10 at 25 fps, 12 at 30,
+# 20 at 50, 24 at 60), so converting a clip's frame rate cannot move it.
+FLASH_TENTHS = 4
 # EBU R37: the sound may lead its picture by up to 40 ms or follow it by 60 ms.
 EARLY, LATE = 0.040, 0.060
 # Offsets outside that window in a row before it counts as a problem.
@@ -53,12 +55,15 @@ RECEIVER_FILTER = ('[0:v:0]crop=iw/16:ih/16:0:0,blackdetect=d=0.3:pix_th=0.10:pi
 def marker_clip(ffmpeg: str, path: str, seconds: int, width: int, height: int, fps: int,
                 audio: bool) -> list[str]:
     """The FFmpeg command for a moving test clip with the marker."""
+    if fps * FLASH_TENTHS % 10:
+        raise ValueError(f'{fps} fps has no frame at the marker time')
+    frame = fps * FLASH_TENTHS // 10
     flash = (f'testsrc2=s={width}x{height}:r={fps}:d={seconds},format=yuv420p,'
              'drawbox=x=0:y=0:w=iw/8:h=ih/8:color=black:t=fill,'
-             f"drawbox=x=0:y=0:w=iw/8:h=ih/8:color=white:t=fill:enable='eq(mod(n\\,{fps})\\,{FLASH_FRAME})'")
+             f"drawbox=x=0:y=0:w=iw/8:h=ih/8:color=white:t=fill:enable='eq(mod(n\\,{fps})\\,{frame})'")
     command = [ffmpeg, '-nostdin', '-v', 'error', '-y', '-f', 'lavfi', '-i', flash]
     if audio:
-        start = RATE * FLASH_FRAME // fps
+        start = RATE * FLASH_TENTHS // 10
         end = start + RATE // fps
         beep = (f"aevalsrc='if(gte(mod(n\\,{RATE})\\,{start})*lt(mod(n\\,{RATE})\\,{end})"
                 f"\\,0.5*sin(2*PI*1000*t)\\,0)':s={RATE}:d={seconds}:c=stereo")
@@ -178,7 +183,8 @@ class SyncMonitor:
         self.thread.start()
 
     def _run(self) -> None:
-        with (self.directory / 'av-sync.jsonl').open('w') as samples:
+        with (self.directory / 'av-sync.jsonl').open('w') as samples, \
+                (self.directory / 'av-sync.receiver.log').open('w') as receiver:
             while not self.stop.is_set():
                 with self.lock:
                     if self.stop.is_set():
@@ -190,9 +196,13 @@ class SyncMonitor:
                     process = self.process
                     opened = time.monotonic()
                 try:
+                    receiver.write(f'--- receiver {self.attempts} at {opened - self.started:.3f} s\n')
                     for text in process.stderr:
                         if self.stop.is_set() or time.monotonic() - opened > self.receiver_seconds:
                             break
+                        # What the offsets come from, for a later look.
+                        if 'detect @' in text or 'rror' in text:
+                            receiver.write(f'{time.monotonic() - self.started:.3f} {text}')
                         with self.lock:
                             before = len(self.tracker.offsets)
                             self.tracker.line(text, time.monotonic() - self.started)
