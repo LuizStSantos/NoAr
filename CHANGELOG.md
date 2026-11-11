@@ -21,6 +21,15 @@ one is tagged.
   and a CSV export. Opening pages is not recorded. Migration `00036` adds the
   `activity_log` table ([API](docs/api.md#activity)).
 
+- **A/V sync tests.** A clip with a flash and a beep that start together
+  once a second plays through the playout and the encoder, across clip
+  changes and a seek, and an independent decoder checks that every beep airs
+  within EBU R37 of its flash (at most 40 ms ahead or 60 ms behind) and by the
+  same amount each time. The soak test carries the same marker in its clips
+  and measures it on the real SRT or HLS output for the whole run, with the
+  drift, in its report. Measured today: the sound airs 21 ms after the
+  picture, one AAC frame (the encoder's priming is not taken off the audio
+  timestamps), within EBU R37.
 - **`NOAR_TRUSTED_PROXIES`** names the reverse proxies whose
   `X-Forwarded-For` NoAr believes (addresses or networks such as
   `172.18.0.0/16`). Without it, any address of a private network is still

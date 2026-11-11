@@ -987,9 +987,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "56e32c286c1a0689d4c685a318fb8ad8a28128f8e3f4b2583dc9e107639f35ee",
+      "sha256": "d262c42c7e3c3b4eb1299c9d4f82d605769a66ccdc93a4d9a341db38efa78ff7",
       "language": "Markdown",
-      "bytes": 72019,
+      "bytes": 72648,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -14248,6 +14248,33 @@
         }
       ]
     },
+    "backend/engine/src/av_sync_tests.rs": {
+      "sha256": "1b6497fde8f6859c827d012cbc7e8364af235a7c6bc52fccdf57e6e08238e1c7",
+      "language": "Rust",
+      "bytes": 7108,
+      "symbols": [
+        {
+          "name": "run",
+          "line": 33
+        },
+        {
+          "name": "reference_clip",
+          "line": 45
+        },
+        {
+          "name": "flashes",
+          "line": 77
+        },
+        {
+          "name": "beeps",
+          "line": 104
+        },
+        {
+          "name": "every_beep_airs_with_its_flash_across_clip_changes_and_a_seek",
+          "line": 149
+        }
+      ]
+    },
     "backend/engine/src/benchmark.rs": {
       "sha256": "939542b4df39f17161bb44497f55f1c6c73ad0a0c0ea77d81d833bf9338b79c5",
       "language": "Rust",
@@ -16979,9 +17006,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "afc7f00a84d045a76053bb5408599023453b9f5b1e882ec31287d122a6fb1be5",
+      "sha256": "1f61761cddca179de90dd1387243a17b8951869028e7f273e3dd40445778099a",
       "language": "Rust",
-      "bytes": 46305,
+      "bytes": 46337,
       "symbols": [
         {
           "name": "analysis",
@@ -16992,356 +17019,360 @@
           "line": 20
         },
         {
-          "name": "benchmark",
-          "line": 21
-        },
-        {
-          "name": "compositor",
+          "name": "av_sync_tests",
           "line": 22
         },
         {
-          "name": "convert",
+          "name": "benchmark",
           "line": 23
         },
         {
-          "name": "frame",
+          "name": "compositor",
           "line": 24
         },
         {
-          "name": "gstreamer",
+          "name": "convert",
           "line": 25
         },
         {
-          "name": "input",
+          "name": "frame",
           "line": 26
         },
         {
-          "name": "loudness_preview",
+          "name": "gstreamer",
+          "line": 27
+        },
+        {
+          "name": "input",
           "line": 28
         },
         {
-          "name": "output",
-          "line": 29
-        },
-        {
-          "name": "playback_control",
+          "name": "loudness_preview",
           "line": 30
         },
         {
-          "name": "playout",
+          "name": "output",
           "line": 31
         },
         {
-          "name": "preview_quality",
+          "name": "playback_control",
           "line": 32
         },
         {
-          "name": "time_base",
+          "name": "playout",
           "line": 33
         },
         {
-          "name": "utils",
+          "name": "preview_quality",
           "line": 34
         },
         {
+          "name": "time_base",
+          "line": 35
+        },
+        {
+          "name": "utils",
+          "line": 36
+        },
+        {
           "name": "uploaded_font_name",
-          "line": 102
+          "line": 104
         },
         {
           "name": "register_uploaded_font",
-          "line": 106
+          "line": 108
         },
         {
           "name": "available_font_families",
-          "line": 110
+          "line": 112
         },
         {
           "name": "set_processing_bench_interval",
-          "line": 116
+          "line": 118
         },
         {
           "name": "ClipResult",
-          "line": 121
+          "line": 123
         },
         {
           "name": "LogoFade",
-          "line": 130
+          "line": 132
         },
         {
           "name": "LogoGaps",
-          "line": 149
+          "line": 151
         },
         {
           "name": "LogoGaps",
-          "line": 154
+          "line": 156
         },
         {
           "name": "new",
-          "line": 158
+          "line": 160
         },
         {
           "name": "is_empty",
-          "line": 187
+          "line": 189
         },
         {
           "name": "iter",
-          "line": 192
+          "line": 194
         },
         {
           "name": "Playout",
-          "line": 197
+          "line": 199
         },
         {
           "name": "HlsHealth",
-          "line": 208
+          "line": 210
         },
         {
           "name": "HlsHealth",
-          "line": 212
+          "line": 214
         },
         {
           "name": "new",
-          "line": 213
+          "line": 215
         },
         {
           "name": "last_muxed_age",
-          "line": 219
+          "line": 221
         },
         {
           "name": "mark_muxed",
-          "line": 226
+          "line": 228
         },
         {
           "name": "PlayOptions",
-          "line": 235
+          "line": 237
         },
         {
           "name": "AsyncPlayout",
-          "line": 244
+          "line": 246
         },
         {
           "name": "WorkerCompletion",
-          "line": 258
+          "line": 260
         },
         {
           "name": "AsyncPlayout",
-          "line": 263
+          "line": 265
         },
         {
           "name": "open",
-          "line": 264
+          "line": 266
         },
         {
           "name": "open_stream",
-          "line": 273
+          "line": 275
         },
         {
           "name": "open_hls",
-          "line": 282
+          "line": 284
         },
         {
           "name": "open_decklink",
-          "line": 313
+          "line": 315
         },
         {
           "name": "open_ndi",
-          "line": 323
+          "line": 325
         },
         {
           "name": "open_desktop",
-          "line": 333
+          "line": 335
         },
         {
           "name": "open_with",
-          "line": 337
+          "line": 339
         },
         {
           "name": "lshape_control",
-          "line": 382
+          "line": 384
         },
         {
           "name": "logo_control",
-          "line": 388
+          "line": 390
         },
         {
           "name": "playback_control",
-          "line": 392
+          "line": 394
         },
         {
           "name": "hls_health",
-          "line": 396
+          "line": 398
         },
         {
           "name": "preloader",
-          "line": 401
+          "line": 403
         },
         {
           "name": "play",
-          "line": 405
+          "line": 407
         },
         {
           "name": "play_with_seek",
-          "line": 409
+          "line": 411
         },
         {
           "name": "play_with_timing_and_logo_fade",
-          "line": 432
+          "line": 434
         },
         {
           "name": "play_with_timing_logo_fade_and_rate",
-          "line": 451
+          "line": 453
         },
         {
           "name": "play_with_timing_logo_fade_rate_and_audio",
-          "line": 473
+          "line": 475
         },
         {
           "name": "finish",
-          "line": 501
+          "line": 503
         },
         {
           "name": "Drop",
-          "line": 524
+          "line": 526
         },
         {
           "name": "drop",
-          "line": 525
+          "line": 527
         },
         {
           "name": "AsyncCommand",
-          "line": 535
+          "line": 537
         },
         {
           "name": "run_async_playout_worker",
-          "line": 553
+          "line": 555
         },
         {
           "name": "Playout",
-          "line": 605
+          "line": 607
         },
         {
           "name": "open",
-          "line": 606
+          "line": 608
         },
         {
           "name": "open_stream",
-          "line": 614
+          "line": 616
         },
         {
           "name": "open_decklink",
-          "line": 626
+          "line": 628
         },
         {
           "name": "open_ndi",
-          "line": 638
+          "line": 640
         },
         {
           "name": "open_desktop",
-          "line": 647
+          "line": 649
         },
         {
           "name": "open_hls",
-          "line": 655
+          "line": 657
         },
         {
           "name": "open_hls_with_health",
-          "line": 677
+          "line": 679
         },
         {
           "name": "validate_fallback_duration",
-          "line": 702
+          "line": 704
         },
         {
           "name": "with_output",
-          "line": 710
+          "line": 712
         },
         {
           "name": "play",
-          "line": 732
+          "line": 734
         },
         {
           "name": "play_with_loudness_preview",
-          "line": 741
+          "line": 743
         },
         {
           "name": "play_with_seek",
-          "line": 814
+          "line": 816
         },
         {
           "name": "play_with_timing_and_logo_fade",
-          "line": 826
+          "line": 828
         },
         {
           "name": "play_timed",
-          "line": 845
+          "line": 847
         },
         {
           "name": "finish",
-          "line": 933
+          "line": 935
         },
         {
           "name": "init_media",
-          "line": 941
+          "line": 943
         },
         {
           "name": "play_program_clip",
-          "line": 955
+          "line": 957
         },
         {
           "name": "play_to_output",
-          "line": 989
+          "line": 991
         },
         {
           "name": "played_seconds",
-          "line": 1044
+          "line": 1046
         },
         {
           "name": "classify_fallback_error",
-          "line": 1052
+          "line": 1054
         },
         {
           "name": "tests",
-          "line": 1065
+          "line": 1067
         },
         {
           "name": "failed_live_connection_returns_control_without_filling_the_event_slot",
-          "line": 1075
+          "line": 1077
         },
         {
           "name": "clips_take_exactly_their_duration_on_the_output",
-          "line": 1120
+          "line": 1122
         },
         {
           "name": "preloaded_clip_trim_after_a_previous_clip_completes_its_slot",
-          "line": 1155
+          "line": 1157
         },
         {
           "name": "damaged_clip",
-          "line": 1199
+          "line": 1201
         },
         {
           "name": "damaged_data_in_a_clip_keeps_its_slot_length",
-          "line": 1218
+          "line": 1220
         },
         {
           "name": "a_clip_failing_midway_counts_what_already_went_out",
-          "line": 1249
+          "line": 1251
         },
         {
           "name": "restart_during_fallback_remains_a_playout_restart",
-          "line": 1268
+          "line": 1270
         },
         {
           "name": "playlist_reset_during_fallback_reinitializes_playout",
-          "line": 1276
+          "line": 1278
         },
         {
           "name": "restart_request_is_independent_from_skip_request",
-          "line": 1284
+          "line": 1286
         },
         {
           "name": "dropping_async_playout_discards_queued_work_and_finishes_worker",
-          "line": 1295
+          "line": 1297
         }
       ]
     },
@@ -37801,15 +37832,15 @@
       "symbols": []
     },
     "qa/soak/README.md": {
-      "sha256": "dd230a24058689cb56c74b23783658540a41311a5befafa61b58d578cd85aa68",
+      "sha256": "7c47bb1cb1b0ade731d92c6f885f934f65edcb0a58954bc418a9a26b52b116df",
       "language": "Markdown",
-      "bytes": 10328,
+      "bytes": 11746,
       "symbols": []
     },
     "qa/soak/VALIDATION.md": {
-      "sha256": "046367429e653a723833803e68de4860cbdd02431c959955596a39b0fb3f900b",
+      "sha256": "c42d4ad939e0ef37d3a5a202eec92e65cf5f0c86fe5bf1b454000a1173690223",
       "language": "Markdown",
-      "bytes": 3978,
+      "bytes": 4056,
       "symbols": []
     },
     "qa/soak/evidence/native-picture-verification.json": {
@@ -37937,129 +37968,208 @@
       ]
     },
     "qa/soak/soak.py": {
-      "sha256": "9a3bc92b077d48755699ec8f6fd17b18c9454a33728522c4f0ab2d134710041d",
+      "sha256": "8593609665de39da6542f1453860495b533eb60a582f0cfb609a2ce24993ba0f",
       "language": "Python",
-      "bytes": 33106,
+      "bytes": 33651,
       "symbols": [
         {
           "name": "NativeProcesses",
-          "line": 121
+          "line": 122
         },
         {
           "name": "__init__",
-          "line": 124
+          "line": 125
         },
         {
           "name": "start",
-          "line": 129
+          "line": 130
         },
         {
           "name": "stop",
-          "line": 140
+          "line": 141
         },
         {
           "name": "running",
-          "line": 163
+          "line": 164
         },
         {
           "name": "close",
-          "line": 167
+          "line": 168
         },
         {
           "name": "executable",
-          "line": 179
+          "line": 180
         },
         {
           "name": "native_preflight",
-          "line": 186
+          "line": 187
         },
         {
           "name": "data_path",
-          "line": 201
+          "line": 202
         },
         {
           "name": "native_environment",
-          "line": 205
+          "line": 206
         },
         {
           "name": "log",
-          "line": 212
+          "line": 213
         },
         {
           "name": "docker",
-          "line": 219
+          "line": 220
         },
         {
           "name": "container",
-          "line": 223
+          "line": 224
         },
         {
           "name": "request",
-          "line": 231
+          "line": 232
         },
         {
           "name": "parse",
-          "line": 248
+          "line": 249
         },
         {
           "name": "api",
-          "line": 255
+          "line": 256
         },
         {
           "name": "login",
-          "line": 262
+          "line": 263
         },
         {
           "name": "make_clips",
-          "line": 268
+          "line": 269
         },
         {
           "name": "playlist",
-          "line": 286
+          "line": 281
         },
         {
           "name": "set_up",
-          "line": 295
+          "line": 290
         },
         {
           "name": "schedule_cycle",
-          "line": 370
+          "line": 365
         },
         {
           "name": "act",
-          "line": 384
+          "line": 379
         },
         {
           "name": "output_bytes",
-          "line": 401
+          "line": 396
         },
         {
           "name": "picture_url",
-          "line": 415
+          "line": 410
         },
         {
           "name": "picture_grace",
-          "line": 421
+          "line": 416
         },
         {
           "name": "running",
-          "line": 428
+          "line": 423
         },
         {
           "name": "prepare_work",
-          "line": 435
+          "line": 430
         },
         {
           "name": "interrupted",
-          "line": 447
+          "line": 442
         },
         {
           "name": "close_observer",
-          "line": 451
+          "line": 446
         },
         {
           "name": "main",
-          "line": 458
+          "line": 453
+        }
+      ]
+    },
+    "qa/soak/sync.py": {
+      "sha256": "bb55e0c5601fadbb9739662517c2aad9e5e77045ffbe7cb943858471b60ad243",
+      "language": "Python",
+      "bytes": 9454,
+      "symbols": [
+        {
+          "name": "marker_clip",
+          "line": 49
+        },
+        {
+          "name": "SyncTracker",
+          "line": 68
+        },
+        {
+          "name": "__init__",
+          "line": 71
+        },
+        {
+          "name": "reset",
+          "line": 81
+        },
+        {
+          "name": "line",
+          "line": 87
+        },
+        {
+          "name": "_add",
+          "line": 102
+        },
+        {
+          "name": "_record",
+          "line": 115
+        },
+        {
+          "name": "problem",
+          "line": 124
+        },
+        {
+          "name": "snapshot",
+          "line": 130
+        },
+        {
+          "name": "mean",
+          "line": 135
+        },
+        {
+          "name": "SyncMonitor",
+          "line": 148
+        },
+        {
+          "name": "__init__",
+          "line": 151
+        },
+        {
+          "name": "command",
+          "line": 165
+        },
+        {
+          "name": "start",
+          "line": 170
+        },
+        {
+          "name": "_run",
+          "line": 175
+        },
+        {
+          "name": "_end_process",
+          "line": 205
+        },
+        {
+          "name": "sample",
+          "line": 214
+        },
+        {
+          "name": "close",
+          "line": 218
         }
       ]
     },
@@ -38123,9 +38233,9 @@
       ]
     },
     "qa/soak/test_soak.py": {
-      "sha256": "15e8267101052d2f4caf0ba9f3ce52fabfa8bcf8595f3156cf82fecc863d090d",
+      "sha256": "0495973d06dfe6b0509435fa5c3331cff9f47bcea9ca3a53442297cc4865c19e",
       "language": "Python",
-      "bytes": 14733,
+      "bytes": 15075,
       "symbols": [
         {
           "name": "load_soak",
@@ -38181,51 +38291,102 @@
         },
         {
           "name": "test_cleanup_targets_only_owned_process_groups_and_reaps_children",
-          "line": 107
+          "line": 109
         },
         {
           "name": "test_docker_playlist_and_fixture_commands_keep_container_paths",
-          "line": 123
+          "line": 125
         },
         {
           "name": "test_early_setup_or_observer_failure_still_cleans_owned_processes_and_fails_duration",
-          "line": 134
+          "line": 138
         },
         {
           "name": "FakeGraphicsApi",
-          "line": 156
+          "line": 160
         },
         {
           "name": "__init__",
-          "line": 157
-        },
-        {
-          "name": "__call__",
           "line": 161
         },
         {
+          "name": "__call__",
+          "line": 165
+        },
+        {
           "name": "GraphicsCycleTests",
-          "line": 198
+          "line": 202
         },
         {
           "name": "test_real_model_contract_cycles_all_roles_and_records_every_api_response",
-          "line": 199
+          "line": 203
         },
         {
           "name": "test_http_failure_is_receipted_and_cannot_count_as_completed_work",
-          "line": 222
+          "line": 226
         },
         {
           "name": "test_control_state_mismatch_fails_even_when_http_succeeds",
-          "line": 231
+          "line": 235
         },
         {
           "name": "answer",
-          "line": 233
+          "line": 237
         },
         {
           "name": "test_authored_overlay_regions_cannot_cover_the_moving_video_roi",
-          "line": 243
+          "line": 247
+        }
+      ]
+    },
+    "qa/soak/test_sync.py": {
+      "sha256": "43f53876e00dcf96426ddab76b1d0203e256b57ce215da7c92c2581d2c3ac26c",
+      "language": "Python",
+      "bytes": 4042,
+      "symbols": [
+        {
+          "name": "feed",
+          "line": 11
+        },
+        {
+          "name": "black",
+          "line": 16
+        },
+        {
+          "name": "marker",
+          "line": 20
+        },
+        {
+          "name": "SyncTrackerTests",
+          "line": 29
+        },
+        {
+          "name": "test_each_beep_pairs_with_its_flash",
+          "line": 30
+        },
+        {
+          "name": "test_a_live_starting_after_black_and_silence_is_no_marker",
+          "line": 42
+        },
+        {
+          "name": "test_a_flash_without_sound_is_skipped",
+          "line": 50
+        },
+        {
+          "name": "test_three_offsets_in_a_row_outside_ebu_r37_are_a_problem",
+          "line": 56
+        },
+        {
+          "name": "test_a_drift_compares_the_end_with_the_start",
+          "line": 64
+        },
+        {
+          "name": "SyncMonitorTests",
+          "line": 73
+        },
+        {
+          "name": "test_the_marker_clip_measures_in_sync_through_a_real_decoder",
+          "line": 74
         }
       ]
     },

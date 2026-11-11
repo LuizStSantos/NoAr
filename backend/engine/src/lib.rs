@@ -18,6 +18,8 @@ use tokio::sync::oneshot;
 
 mod analysis;
 mod audio_mixer;
+#[cfg(test)]
+mod av_sync_tests;
 mod benchmark;
 mod compositor;
 mod convert;
