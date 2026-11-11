@@ -13,6 +13,14 @@ one is tagged.
 
 ### Fixed
 
+- A channel with NDI or SDI output restarted over and over when its H.264
+  encoder could not keep up (`video encoder stopped consuming frames`), for
+  example with two 1080p channels on one server. With NDI or SDI that encoder
+  only feeds the Player preview and recordings, so it now drops frames when it
+  falls behind and logs a warning at most every 30 s; the program output keeps
+  going. Streams and HLS, where the encoder is the program, still restart.
+- The role list in **Settings › Users** now says what each role can use; the
+  operator's hint left out the Playlist, Report, Graphics and Log pages.
 - The dialog of **Restart the playout** in the settings side panel opened
   under the log list on **Settings › Log**: the log rows covered its text and
   buttons, and Cancel could not be clicked. The restart dialogs now open over

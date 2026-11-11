@@ -730,8 +730,43 @@ impl Drop for Encoder {
     }
 }
 
+/// Bytes waiting in an encoder's video input when it counts as behind:
+/// about ten 1080p frames.
+const VIDEO_BACKLOG: u64 = 32 * 1024 * 1024;
+/// Bytes waiting in an encoder's audio input when it counts as behind.
+const AUDIO_BACKLOG: u64 = 4 * 1024 * 1024;
+/// How often an encoder that drops frames is reported again.
+const BEHIND_WARNING: Duration = Duration::from_secs(30);
+
+/// What a frame does for an encoder whose input is `level` bytes behind.
+#[derive(Debug, PartialEq, Eq)]
+enum Backlog {
+    Push,
+    /// The encoder only feeds the Player preview and recordings (NDI or SDI
+    /// carry the program uncompressed): it skips the frame and catches up.
+    Drop,
+    /// The encoder carries the program: it stopped, and the output with it.
+    Stalled,
+}
+
+fn backlog(level: u64, limit: u64, carries_program: bool) -> Backlog {
+    if level < limit {
+        Backlog::Push
+    } else if carries_program {
+        Backlog::Stalled
+    } else {
+        Backlog::Drop
+    }
+}
+
 pub(super) struct EncodedOutput {
     encoders: Vec<Encoder>,
+    /// False when NDI or SDI carries the program, so the encoders only feed
+    /// the Player preview and recordings: one falling behind must not stop
+    /// the channel.
+    encoders_carry_program: bool,
+    /// When frames were last dropped for an encoder that fell behind.
+    behind_warned: Option<std::time::Instant>,
     config: OutputConfig,
     audio_effects: AudioEffectChain,
     audio_level: AudioLevelMeter,
@@ -991,6 +1026,8 @@ impl EncodedOutput {
 
         Ok(Self {
             encoders,
+            encoders_carry_program: ndi.is_none() && decklink.is_none(),
+            behind_warned: None,
             config: cfg.clone(),
             audio_effects: AudioEffectChain::new(cfg.audio_effects.clone(), cfg.sample_rate),
             audio_level: AudioLevelMeter::new(cfg.sample_rate, cfg.audio_level_callback.clone()),
@@ -1075,14 +1112,22 @@ impl EncodedOutput {
                 }
             }
         }
-        for encoder in &self.encoders {
-            if !encoder.disabled {
-                ensure!(
-                    encoder.video.current_level_bytes() < 32 * 1024 * 1024,
-                    "video encoder stopped consuming frames"
-                );
-                encoder.video.push_buffer(buffer.clone())?;
+        let mut dropped = false;
+        for encoder in self.encoders.iter().filter(|encoder| !encoder.disabled) {
+            match backlog(
+                encoder.video.current_level_bytes(),
+                VIDEO_BACKLOG,
+                self.encoders_carry_program,
+            ) {
+                Backlog::Push => {
+                    encoder.video.push_buffer(buffer.clone())?;
+                }
+                Backlog::Drop => dropped = true,
+                Backlog::Stalled => bail!("video encoder stopped consuming frames"),
             }
+        }
+        if dropped {
+            self.warn_behind("video");
         }
         if let Some(decklink) = &self.decklink {
             decklink.push_video(buffer.clone())?;
@@ -1092,6 +1137,21 @@ impl EncodedOutput {
         }
         self.last_video = Some(frame.clone());
         Ok(())
+    }
+
+    /// Say, at most every 30 s, that the preview and recording encoder drops
+    /// frames while NDI or SDI keeps the program going.
+    fn warn_behind(&mut self, kind: &str) {
+        let now = std::time::Instant::now();
+        if self
+            .behind_warned
+            .is_none_or(|at| now.duration_since(at) >= BEHIND_WARNING)
+        {
+            self.behind_warned = Some(now);
+            log::warn!(
+                "The Player preview and recording encoder falls behind real time and drops {kind} frames; the program output keeps going. Use a faster encoder preset, a lower output resolution or a hardware encoder."
+            );
+        }
     }
 
     pub(super) fn held_video_frame(&self) -> Option<VideoFrame> {
@@ -1141,14 +1201,22 @@ impl EncodedOutput {
         writable.set_duration(gst::ClockTime::from_nseconds(
             (audio.samples() - skip) as u64 * 1_000_000_000 / u64::from(self.config.sample_rate),
         ));
-        for encoder in &self.encoders {
-            if !encoder.disabled {
-                ensure!(
-                    encoder.audio.current_level_bytes() < 4 * 1024 * 1024,
-                    "audio encoder stopped consuming frames"
-                );
-                encoder.audio.push_buffer(buffer.clone())?;
+        let mut dropped = false;
+        for encoder in self.encoders.iter().filter(|encoder| !encoder.disabled) {
+            match backlog(
+                encoder.audio.current_level_bytes(),
+                AUDIO_BACKLOG,
+                self.encoders_carry_program,
+            ) {
+                Backlog::Push => {
+                    encoder.audio.push_buffer(buffer.clone())?;
+                }
+                Backlog::Drop => dropped = true,
+                Backlog::Stalled => bail!("audio encoder stopped consuming frames"),
             }
+        }
+        if dropped {
+            self.warn_behind("audio");
         }
         if let Some(decklink) = &self.decklink {
             decklink.push_audio(buffer.clone())?;
@@ -1325,6 +1393,27 @@ fn apply_metadata(
 #[cfg(test)]
 mod tests {
     use std::{env, path::PathBuf, process::Command, sync::atomic::AtomicU64, time::Instant};
+
+    #[test]
+    fn a_preview_encoder_behind_drops_frames_and_a_program_encoder_stops() {
+        // Under the limit every encoder gets the frame.
+        assert_eq!(
+            backlog(VIDEO_BACKLOG - 1, VIDEO_BACKLOG, true),
+            Backlog::Push
+        );
+        assert_eq!(backlog(0, AUDIO_BACKLOG, false), Backlog::Push);
+        // NDI or SDI carries the program: the preview encoder catches up.
+        assert_eq!(backlog(VIDEO_BACKLOG, VIDEO_BACKLOG, false), Backlog::Drop);
+        assert_eq!(
+            backlog(AUDIO_BACKLOG * 4, AUDIO_BACKLOG, false),
+            Backlog::Drop
+        );
+        // The encoder is the program: its output stopped.
+        assert_eq!(
+            backlog(VIDEO_BACKLOG, VIDEO_BACKLOG, true),
+            Backlog::Stalled
+        );
+    }
 
     #[cfg(feature = "desktop-base")]
     use crate::RecordingConfig;
