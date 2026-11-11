@@ -39,7 +39,7 @@ async fn configuration_and_output_routes_cover_crud_and_permissions() {
         .unwrap();
     let login_json: serde_json::Value = serde_json::from_slice(&login_body).unwrap();
     let admin_token = login_json["access"].as_str().unwrap().to_string();
-    let app = path::routes()
+    let app = path::routes(&app_state)
         .with_state(app_state.clone())
         .layer(GrantsLayer::with_extractor(extract));
 

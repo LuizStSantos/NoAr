@@ -4,7 +4,7 @@ import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import { confirmEditorNavigation } from '@/composables/editorNavigation'
 
-import { useAuth } from '@/stores/auth'
+import { type AreaName, useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 
 const ALL = ['global_admin', 'channel_admin', 'user']
@@ -55,20 +55,20 @@ const router = createRouter({
             path: '/player',
             name: 'player',
             component: () => import('@/views/PlayerView.vue'),
-            meta: { showHeader: true },
+            meta: { showHeader: true, area: 'player' },
         },
         {
             path: '/playlist',
             name: 'playlist',
             component: () => import('@/views/PlayerView.vue'),
             props: { build: true },
-            meta: { showHeader: true },
+            meta: { showHeader: true, area: 'playlist' },
         },
         {
             path: '/graphics',
             name: 'graphics',
             component: () => import('@/views/GraphicsView.vue'),
-            meta: { showHeader: true },
+            meta: { showHeader: true, area: 'graphics' },
             redirect: (to) => ({ path: '/graphics/onair', query: to.query }),
             children: [
                 {
@@ -154,7 +154,7 @@ const router = createRouter({
             path: '/schedule',
             name: 'schedule',
             component: () => import('@/views/ScheduleView.vue'),
-            meta: { showHeader: true },
+            meta: { showHeader: true, area: 'schedule' },
             // The live API moved to Settings › External control; old links follow it.
             beforeEnter: (to) =>
                 to.hash === '#live-api' ? { name: 'settings-remote', query: to.query, hash: '#live-api' } : true,
@@ -163,13 +163,13 @@ const router = createRouter({
             path: '/media',
             name: 'media',
             component: () => import('@/views/MediaView.vue'),
-            meta: { showHeader: true },
+            meta: { showHeader: true, area: 'storage' },
         },
         {
             path: '/report',
             name: 'report',
             component: () => import('@/views/ReportView.vue'),
-            meta: { showHeader: true },
+            meta: { showHeader: true, area: 'report' },
         },
         {
             // The log moved into the settings; old links still land there.
@@ -194,7 +194,7 @@ const router = createRouter({
                     path: 'logging',
                     name: 'settings-logging',
                     component: () => import('@/views/LoggingView.vue'),
-                    meta: { showHeader: true, roles: ALL },
+                    meta: { showHeader: true, roles: ALL, area: 'log' },
                 },
                 {
                     path: 'output',
@@ -328,6 +328,13 @@ router.beforeEach(async (to) => {
 
     if (allowedRoles && !allowedRoles.includes(auth.role)) {
         return { name: to.path.startsWith('/graphics') ? 'graphics-onair' : 'settings-general', query: to.query }
+    }
+
+    // An operator opens only the pages of the areas they were given.
+    const area = to.meta.area as AreaName | undefined
+
+    if (area && !auth.canUse(area)) {
+        return { name: 'home', query: to.query }
     }
 
     return

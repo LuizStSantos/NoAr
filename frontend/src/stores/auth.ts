@@ -66,6 +66,10 @@ export function initAuthChannel() {
     })
 }
 
+/** The parts of NoAr an operator can be given, page by page (`api::access`). */
+export const AREAS = ['player', 'playlist', 'schedule', 'graphics', 'storage', 'report', 'log'] as const
+export type AreaName = (typeof AREAS)[number]
+
 export const useAuth = defineStore('auth', {
     state: () => ({
         isLogin: false,
@@ -76,10 +80,18 @@ export const useAuth = defineStore('auth', {
         id: 0,
         username: '',
         role: '',
+        /** What an operator may use; null for every area. */
+        areas: null as AreaName[] | null,
         uuid: null as null | string,
     }),
 
-    getters: {},
+    getters: {
+        /** Administrators use every area; an operator, the ones they were given. */
+        canUse:
+            (state) =>
+            (area: AreaName): boolean =>
+                state.role !== 'user' || state.areas === null || state.areas.includes(area),
+    },
     actions: {
         updateToken(token: string, refresh: string, broadcast: boolean = true) {
             const decodedToken = jwtDecode<JwtPayloadExt>(token)
@@ -99,6 +111,7 @@ export const useAuth = defineStore('auth', {
             this.authHeader = { Authorization: `Bearer ${token}` }
             this.id = decodedToken.id
             this.role = decodedToken.role
+            this.areas = (decodedToken.areas as AreaName[] | undefined) ?? null
 
             if (broadcast) {
                 broadcastAuthMessage({ type: 'tokens-updated', access: token, refresh })
@@ -115,6 +128,7 @@ export const useAuth = defineStore('auth', {
             this.authHeader = {}
             this.id = 0
             this.role = ''
+            this.areas = null
             this.uuid = null
 
             if (broadcast) {
@@ -286,6 +300,7 @@ export const useAuth = defineStore('auth', {
                 this.authHeader = { Authorization: `Bearer ${token}` }
                 this.id = decodedToken.id
                 this.role = decodedToken.role
+                this.areas = (decodedToken.areas as AreaName[] | undefined) ?? null
 
                 const timestamp = Date.now() / 1000
                 const expireToken = decodedToken.exp || 0

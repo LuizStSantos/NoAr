@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { onClickOutside, useEventListener } from '@vueuse/core'
 
 import { locales } from '@/i18n'
-import { useAuth } from '@/stores/auth'
+import { type AreaName, useAuth } from '@/stores/auth'
 import { useIndex } from '@/stores/index'
 import { useConfig } from '@/stores/config'
 import { usePlaylist } from '@/stores/playlist'
@@ -65,16 +65,26 @@ function menuFocusOut(event: FocusEvent) {
     }
 }
 
-const navItems = computed(() => [
-    { name: 'home', label: t('nav.home'), path: '/', icon: 'bi-house' },
-    { name: 'player', label: t('nav.player'), path: '/player', icon: 'bi-play-btn' },
-    { name: 'playlist', label: t('nav.playlist'), path: '/playlist', icon: 'bi-list-check' },
-    { name: 'schedule', label: t('nav.schedule'), path: '/schedule', icon: 'bi-calendar-week' },
-    { name: 'graphics', label: t('nav.graphics'), path: '/graphics', icon: 'bi-layers' },
-    { name: 'media', label: t('nav.media'), path: '/media', icon: 'bi-folder2' },
-    { name: 'report', label: t('nav.report'), path: '/report', icon: 'bi-bar-chart' },
-    { name: 'configure', label: t('nav.configure'), path: '/configure', icon: 'bi-gear' },
-])
+const navItems = computed(() =>
+    (
+        [
+            { name: 'home', label: t('nav.home'), path: '/', icon: 'bi-house' },
+            { name: 'player', label: t('nav.player'), path: '/player', icon: 'bi-play-btn', area: 'player' },
+            { name: 'playlist', label: t('nav.playlist'), path: '/playlist', icon: 'bi-list-check', area: 'playlist' },
+            {
+                name: 'schedule',
+                label: t('nav.schedule'),
+                path: '/schedule',
+                icon: 'bi-calendar-week',
+                area: 'schedule',
+            },
+            { name: 'graphics', label: t('nav.graphics'), path: '/graphics', icon: 'bi-layers', area: 'graphics' },
+            { name: 'media', label: t('nav.media'), path: '/media', icon: 'bi-folder2', area: 'storage' },
+            { name: 'report', label: t('nav.report'), path: '/report', icon: 'bi-bar-chart', area: 'report' },
+            { name: 'configure', label: t('nav.configure'), path: '/configure', icon: 'bi-gear' },
+        ] as { name: string; label: string; path: string; icon: string; area?: AreaName }[]
+    ).filter((item) => !item.area || authStore.canUse(item.area)),
+)
 
 const channelId = computed(() => configStore.channels[configStore.i]?.id)
 

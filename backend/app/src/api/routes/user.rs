@@ -125,6 +125,9 @@ pub async fn update_user(
     }
 
     let channel_ids = data.channel_ids.clone().unwrap_or_default();
+    // Like channels, what an operator may use is only a global admin's to
+    // change; a request without `areas` leaves the saved list as it is.
+    let areas = data.areas.clone().filter(|_| user.is_global_admin());
     let two_factor = user.is_global_admin().then_some(data.two_factor);
     let mail = data.mail.clone();
 
@@ -154,6 +157,10 @@ pub async fn update_user(
 
     if let Some(role_id) = role_id {
         handles::update_user_role(&state.pool, id, role_id).await?;
+    }
+
+    if let Some(areas) = areas {
+        handles::update_user_areas(&state.pool, id, areas.as_deref()).await?;
     }
 
     Ok("Update Success")

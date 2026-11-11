@@ -71,6 +71,10 @@ pub struct Claims {
     pub token_type: TokenType,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub jti: Option<String>,
+    /// The pages an operator may use, for the interface; absent for every
+    /// area. The server checks the saved list on each request instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub areas: Option<Vec<crate::db::models::Area>>,
     #[serde(default)]
     iat: i64,
     exp: i64,
@@ -88,6 +92,7 @@ impl Claims {
         let now = Utc::now();
         Self {
             id: user.id,
+            areas: user.area_list(),
             channels: user.channel_ids.unwrap_or_default(),
             username: user.username,
             role,
@@ -102,6 +107,7 @@ impl Claims {
         let now = Utc::now();
         Self {
             id: user.id,
+            areas: user.area_list(),
             channels: user.channel_ids.unwrap_or_default(),
             username: user.username,
             role,
@@ -640,6 +646,7 @@ mod tests {
             channel_ids: Some(vec![1]),
             token: None,
             two_factor: false,
+            areas: None,
         }
     }
 

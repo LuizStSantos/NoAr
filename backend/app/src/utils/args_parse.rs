@@ -449,6 +449,7 @@ pub async fn init_args(pool: &Pool<Sqlite>) -> Result<bool, ProcessError> {
             role_id: Some(1),
             channel_ids: Some(chl.clone()),
             two_factor: args.two_factor.unwrap_or(true),
+            areas: None,
             token: None,
         };
 

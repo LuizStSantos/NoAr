@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import RestartDialog from '@/components/settings/RestartDialog.vue'
 import { authFetch } from '@/composables/authFetch'
 import { uptimeLabel } from '@/composables/player'
+import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 import { usePlaylist } from '@/stores/playlist'
@@ -12,6 +13,7 @@ import { useSettings } from '@/stores/settings'
 
 /** The selected channel's playout, with a restart that is always at hand. */
 const { t } = useI18n()
+const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 const playlistStore = usePlaylist()
@@ -67,8 +69,9 @@ async function send(command: 'start' | 'restart') {
                 status
             }}
         </span>
+        <!-- Starting and restarting are the Player's controls. -->
         <button
-            v-if="playlistStore.playoutIsRunning"
+            v-if="authStore.canUse('player') && playlistStore.playoutIsRunning"
             type="button"
             class="btn-quiet"
             :disabled="busy"
@@ -76,7 +79,13 @@ async function send(command: 'start' | 'restart') {
         >
             <i class="bi bi-arrow-repeat" aria-hidden="true" />{{ t('settings.restartNow') }}
         </button>
-        <button v-else type="button" class="btn-quiet" :disabled="busy" @click="send('start')">
+        <button
+            v-else-if="authStore.canUse('player')"
+            type="button"
+            class="btn-quiet"
+            :disabled="busy"
+            @click="send('start')"
+        >
             <span v-if="busy" class="loading loading-spinner loading-xs" />
             <i v-else class="bi bi-play-fill" aria-hidden="true" />{{ t('settings.restart.start') }}
         </button>

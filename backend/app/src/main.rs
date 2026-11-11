@@ -198,7 +198,7 @@ async fn async_main() -> Result<(), ProcessError> {
             .map_err(|e| ProcessError::Input(format!("Failed to bind {conn}: {e}")))?;
 
         let app = Router::new()
-            .merge(api::path::routes())
+            .merge(api::path::routes(&app_state))
             .with_state(app_state.clone())
             // Layers run bottom-up: the client address is known first, then the
             // request is logged, the user identified, and only then rate limited,
