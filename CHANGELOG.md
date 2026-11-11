@@ -22,6 +22,13 @@ one is tagged.
   **Website** workflow ([site/README.md](site/README.md)). Changes to `site/`
   no longer rebuild the Docker image.
 
+### Fixed
+
+- In the Composer on a wide screen, the timeline sits right under the
+  preview again instead of at the bottom of the window with an empty gap
+  above it. The preview is as tall as its 16:9 picture and shrinks only when
+  the window is too low; the README Composer screenshot is recaptured.
+
 ### Removed
 
 - The verification handoffs, branch test guides and prototypes kept in the

@@ -1182,6 +1182,10 @@ onBeforeUnmount(() => {
         align-items: stretch;
         grid-template-columns: 236px minmax(0, 1fr) 300px;
     }
+    /* The preview sizes itself from this column's width (ComposerCanvas). */
+    .composer-grid > main {
+        container-type: inline-size;
+    }
     /* The side panels are as tall as their content, up to the window, then scroll. */
     .composer-grid > aside {
         align-self: start;

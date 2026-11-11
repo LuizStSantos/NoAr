@@ -253,12 +253,14 @@ function endInteraction() {
 .composer-fit-inner {
     width: 100%;
 }
-/* On a wide screen the editor fits the window: the preview takes the height
-   left by the timeline and stays 16:9, centred. */
+/* On a wide screen the editor fits the window. The preview is as tall as a
+   16:9 picture of the column's width, so the timeline sits right under it;
+   in a low window it shrinks to the height left by the timeline, centred.
+   (100cqw is the width of the editor's middle column, its query container.) */
 @media (min-width: 1100px) {
     .composer-fit {
         container-type: size;
-        flex: 1 1 0;
+        flex: 0 1 calc(100cqw * 9 / 16);
         min-height: 10rem;
         display: flex;
         justify-content: center;
