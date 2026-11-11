@@ -12,7 +12,7 @@ rm -rf "$out"
 mkdir -p "$out/docs/images"
 cp "$root/site/index.html" "$root/site/favicon.svg" "$out/"
 cp -R "$root/site/fonts" "$out/fonts"
-for name in player scheduler builder onair composer marks report remote social-preview; do
+for name in player scheduler builder storage onair composer marks report remote login social-preview; do
     cp "$root/docs/images/$name.png" "$out/docs/images/"
 done
 touch "$out/.nojekyll"
