@@ -302,8 +302,9 @@ out.
 
 Forward `X-Forwarded-Proto` and `X-Forwarded-Host` so XMLTV image links use
 the public address, and `X-Forwarded-For` so NoAr sees each client's address
-for login rate limits and file links. NoAr believes `X-Forwarded-For` only
-from a proxy on the same host or on a private network (loopback, 10/8,
+for login rate limits and file links. Unless `NOAR_TRUSTED_PROXIES` names your
+proxies (below), NoAr believes `X-Forwarded-For` only from a proxy on the same
+host or on a private network (loopback, 10/8,
 172.16/12, 192.168/16, link-local, fc00::/7); a client connecting from the
 internet is identified by its own address. A device on the private network,
 though, can also send the header and choose the address it is counted as;
