@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-11-11
+
 ### Added
 
 - **Pages an operator may use.** In **Settings › Users**, a global admin
@@ -1292,7 +1294,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...v3.0.0
 [2.2.1]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...v2.2.1
