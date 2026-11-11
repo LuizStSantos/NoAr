@@ -11,8 +11,8 @@ optional call to the GitHub API for the newest release number.
   both.
 - **Screenshots**: the page shows the README gallery in `docs/images`, so
   recapturing it ([screenshot guide](../qa/screenshots/README.md)) updates the
-  site too. `SCREENS` in the script lists them, with how much of each 1440×1000
-  capture is shown.
+  site too. `SCREENS` in the script lists them. Each 1440×1000
+  capture shows in the same 1440×840 frame, from the top.
 - **Fonts**: IBM Plex Sans and Mono from `@fontsource`, under the SIL Open Font
   License (`fonts/OFL.txt`).
 
