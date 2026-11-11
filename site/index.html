@@ -811,7 +811,7 @@
                     </div>
                     <div class="hero-shot">
                         <span class="badge-air"><i></i>ON AIR</span>
-                        <div class="frame crop" style="aspect-ratio: 1440 / 836">
+                        <div class="frame crop" style="aspect-ratio: 1440 / 840">
                             <img
                                 src="docs/images/player.png"
                                 width="1440"
@@ -1038,7 +1038,7 @@
                             type="button"
                             id="shot-open"
                             aria-label="Enlarge"
-                            style="aspect-ratio: 1440 / 836"
+                            style="aspect-ratio: 1440 / 840"
                         >
                             <img id="shot-img" src="docs/images/player.png" width="1440" height="1000" alt="" />
                         </button>
@@ -1154,16 +1154,20 @@
         </dialog>
 
         <script>
-            // [file, English name, Portuguese name, height shown of the 1440x1000 capture]
+            // [file, English name, Portuguese name]. Every capture is 1440x1000 and
+            // shows in the same 1440x840 frame, from the top, so switching tabs
+            // never resizes it.
             const SCREENS = [
-                ['player', 'Player', 'Player', 836],
-                ['scheduler', 'Scheduler', 'Agendador', 744],
-                ['builder', 'Playlist', 'Playlist', 1000],
-                ['onair', 'Graphics › On air', 'Grafismo › No ar', 736],
-                ['composer', 'Composer', 'Composer', 1000],
-                ['marks', 'Marks in a video', 'Marcas no vídeo', 1000],
-                ['report', 'Report', 'Relatório', 1000],
-                ['remote', 'External control', 'Controle externo', 1000],
+                ['player', 'Player', 'Player'],
+                ['scheduler', 'Scheduler', 'Agendador'],
+                ['builder', 'Playlist', 'Playlist'],
+                ['storage', 'Storage', 'Armazenamento'],
+                ['onair', 'Graphics › On air', 'Grafismo › No ar'],
+                ['composer', 'Composer', 'Composer'],
+                ['marks', 'Marks in a video', 'Marcas no vídeo'],
+                ['report', 'Report', 'Relatório'],
+                ['remote', 'External control', 'Controle externo'],
+                ['login', 'Sign in', 'Entrar'],
             ]
 
             const TEXT = {
@@ -1174,12 +1178,15 @@
                             'The day’s programme with each clip at its real length, a scheduled break and a live on the events lane, and a template on its own graphics lane, with one list of the day’s events below.',
                         builder:
                             'The library and the day’s playlist, grouped by programme the way the guide names it. Add files or a whole programme folder at the end, after the selection or at a time.',
+                        storage:
+                            'A series folder with one guide sheet for every episode, its poster and wide image, and how each video shows up in the guide. Uploads keep going while you work on other pages.',
                         onair: 'Fill the template’s fields on the preview, compare it with the real program monitor and put it on air. Templates, the graphics on air and the always-on ones sit in three tabs.',
                         composer:
                             'Image, shape, text and clock layers with named fields, resize handles, animations, fonts and safety margins, and a colour picker for every colour.',
                         marks: 'The trim, the SCTE-35 breaks and the graphics cues of a video on one timeline. The player previews each template over the video, with its entry and exit animations.',
                         report: 'A day with the actual times of what aired and how each item ended, plus what is still to come, with totals for commercials and lives. Download it as PDF or spreadsheet.',
                         remote: 'One page for everything controlled without a login, with a tab each for lives, graphics and SCTE-35 breaks: the key and the commands, ready to copy.',
+                        login: 'The sign-in page says what NoAr does, next to the form. Each user has a role, from global admin to guest, on one channel or many.',
                     },
                 },
                 pt: {
@@ -1253,12 +1260,15 @@
                             'A programação do dia com cada clipe no tamanho real, um intervalo e uma live agendados na faixa de eventos e um modelo na sua própria faixa de grafismo, com a lista dos eventos do dia embaixo.',
                         builder:
                             'A biblioteca e a playlist do dia, agrupada por programa como o guia mostra. Adicione arquivos ou a pasta inteira de um programa no fim, depois da seleção ou num horário.',
+                        storage:
+                            'Uma pasta de série com uma ficha do guia para cada episódio, o pôster e a imagem larga, e como cada vídeo aparece no guia. Os envios continuam enquanto você usa outras páginas.',
                         onair: 'Preencha os campos do modelo na prévia, compare com o monitor real do programa e coloque no ar. Modelos, grafismos no ar e os sempre no ar ficam em três abas.',
                         composer:
                             'Camadas de imagem, forma, texto e relógio com campos nomeados, alças de redimensionar, animações, fontes e margens de segurança, e um seletor de cor para cada cor.',
                         marks: 'O corte, os intervalos SCTE-35 e as deixas de grafismo de um vídeo numa só linha do tempo. O player mostra cada modelo sobre o vídeo, com as animações de entrada e saída.',
                         report: 'Um dia com os horários reais do que foi ao ar e como cada item terminou, mais o que ainda vem, com totais de comerciais e lives. Baixe em PDF ou planilha.',
                         remote: 'Uma página para tudo o que se controla sem login, com uma aba para lives, grafismo e intervalos SCTE-35: a chave e os comandos, prontos para copiar.',
+                        login: 'A página de entrada diz o que o NoAr faz, ao lado do formulário. Cada usuário tem um perfil, de administrador geral a convidado, em um canal ou vários.',
                     },
                 },
             }
@@ -1352,8 +1362,7 @@
 
             function showScreen(id, fromClick) {
                 current = id
-                const [, en, pt, shown] = SCREENS.find(([key]) => key === id)
-                document.getElementById('shot-open').style.aspectRatio = `1440 / ${shown}`
+                const [, en, pt] = SCREENS.find(([key]) => key === id)
                 const name = lang === 'pt' ? pt : en
                 const text = (lang === 'pt' ? TEXT.pt : TEXT.en).screens[id]
                 const img = document.getElementById('shot-img')
