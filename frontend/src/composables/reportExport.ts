@@ -46,7 +46,8 @@ export interface ReportExport {
     file: string
 }
 
-function save(blob: Blob, name: string) {
+/** Hand `blob` to the browser as a download named `name`. */
+export function save(blob: Blob, name: string) {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
 

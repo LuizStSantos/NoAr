@@ -3,7 +3,8 @@
 //! A global admin chooses, per operator, the areas (Player, Playlist,
 //! Scheduler, Graphics, Storage, Report, Log) they may use. The interface
 //! hides the pages of the other areas; this guard refuses their requests, so
-//! a page left out cannot be used through the API either.
+//! a page left out cannot be used through the API either. It also refuses a
+//! token that no longer matches its saved user (see [`account_guard`]).
 //!
 //! What changes the channel is guarded, and the Report and Log, which only
 //! their pages read. Other reads stay open to everyone on the channel: the
@@ -84,18 +85,18 @@ pub fn allowed(areas: Option<&[Area]>, required: &[Area]) -> bool {
         || areas.is_none_or(|areas| required.iter().any(|area| areas.contains(area)))
 }
 
-/// Refuse an operator's request for an area they were not given. Requests
-/// without a valid token pass, for the route itself to refuse.
-pub async fn area_guard(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    let Some(path) = request.extensions().get::<MatchedPath>() else {
-        return next.run(request).await;
-    };
-    let required = required_areas(request.method(), path.as_str());
-
-    if required.is_empty() {
-        return next.run(request).await;
-    }
-
+/// Check every signed-in request against the saved user.
+///
+/// A token issued before its user's role, channels or pages changed, or
+/// before the user was deleted, is refused with 401: the interface renews it
+/// at once and so follows the change (a renewal reads the saved user). Then
+/// an operator's request for an area they were not given is refused with
+/// 403. Requests without a valid token pass, for the route itself to refuse.
+pub async fn account_guard(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
     let token = request
         .headers()
         .get(AUTHORIZATION)
@@ -108,23 +109,50 @@ pub async fn area_guard(State(state): State<AppState>, request: Request, next: N
         return next.run(request).await;
     };
 
-    if claims.role != Role::User {
+    // The saved user, not the token's copy: a change applies at once.
+    let (user, role) = match handles::select_user_access(&state.pool, claims.id).await {
+        Ok(Some(account)) => account,
+        Ok(None) => return renew("This user no longer exists"),
+        Err(error) => {
+            error!("Could not read user {}: {error}", claims.id);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    if !claims.matches_account(&user, &role) {
+        return renew("Your user was changed; renew the session");
+    }
+
+    if role != Role::User {
         return next.run(request).await;
     }
 
-    // The saved list, not the token's: a change applies at once.
-    match handles::select_user_areas(&state.pool, claims.id).await {
-        Ok(areas) if allowed(areas.as_deref(), required) => next.run(request).await,
-        Ok(_) => (
+    let required = request
+        .extensions()
+        .get::<MatchedPath>()
+        .map_or(&[][..], |path| {
+            required_areas(request.method(), path.as_str())
+        });
+
+    if allowed(user.area_list().as_deref(), required) {
+        next.run(request).await
+    } else {
+        (
             StatusCode::FORBIDDEN,
             Json(serde_json::json!({ "detail": "Your user cannot use this part of NoAr" })),
         )
-            .into_response(),
-        Err(error) => {
-            error!("Could not read the areas of user {}: {error}", claims.id);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+            .into_response()
     }
+}
+
+/// A 401 that makes the interface renew its token, or sign out when the
+/// renewal is refused too.
+fn renew(detail: &str) -> Response {
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(serde_json::json!({ "detail": detail })),
+    )
+        .into_response()
 }
 
 #[cfg(test)]

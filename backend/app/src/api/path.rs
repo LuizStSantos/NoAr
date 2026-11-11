@@ -6,7 +6,7 @@ use axum::{
 };
 
 use crate::{
-    api::{access, auth, routes::*, state::AppState},
+    api::{access, activity, auth, routes::*, state::AppState},
     file::MAX_UPLOAD_REQUEST_SIZE,
     sse,
     utils::xmltv::sheet::MAX_ARTWORK_BYTES,
@@ -20,8 +20,10 @@ fn auth_routes() -> Router<AppState> {
         .route("/verify", post(auth::verify))
 }
 
-/// Every route of the server. `state` serves the guard that refuses an
-/// operator the areas they were not given (`api::access`).
+/// Every route of the server. `state` serves the guard that checks each
+/// token against its saved user and refuses an operator the areas they were
+/// not given (`api::access`), and the history of what users did
+/// (`api::activity`).
 pub fn routes(state: &AppState) -> Router<AppState> {
     Router::new()
         .nest("/auth", auth_routes())
@@ -29,6 +31,7 @@ pub fn routes(state: &AppState) -> Router<AppState> {
             "/api",
             Router::new()
                 .merge(sse::routes::api_routes())
+                .route("/activity", get(get_activity))
                 .route("/channel/{id}", get(get_channel).patch(patch_channel))
                 .route("/channel", post(add_channel))
                 .route("/channel/{id}", delete(remove_channel))
@@ -200,7 +203,7 @@ pub fn routes(state: &AppState) -> Router<AppState> {
                 .route("/users", get(get_users))
                 .route_layer(middleware::from_fn_with_state(
                     state.clone(),
-                    access::area_guard,
+                    access::account_guard,
                 )),
         )
         .nest("/data", sse::routes::data_routes())
@@ -233,4 +236,10 @@ pub fn routes(state: &AppState) -> Router<AppState> {
             get(control_live_with_key).post(control_live_with_key),
         )
         .route("/xmltv/{id}/images/{*image}", get(get_xmltv_image))
+        // Every route is known here, nested ones included: the history
+        // records what was done and how it was answered.
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            activity::activity_layer,
+        ))
 }

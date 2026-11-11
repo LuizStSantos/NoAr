@@ -52,6 +52,39 @@ test('playlist edits, undo/redo and save survive a full reload', async ({ page }
     await expect(playlist.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
 })
 
+test('a channel switch asks before it drops unsaved playlist edits', async ({ page }) => {
+    // A second channel to switch to; the cancelled switch must never load it.
+    await page.route('**/api/channels', async (route) => {
+        const response = await route.fetch()
+        const channels = await response.json()
+        await route.fulfill({ response, json: [...channels, { ...channels[0], id: 987654, name: 'Other channel' }] })
+    })
+    let destinationRequests = 0
+    page.on('request', (request) => {
+        if (/\/api\/[a-z/]+\/987654/.test(request.url())) destinationRequests += 1
+    })
+    await page.goto('/playlist?channel=1')
+    const playlist = page.getByRole('region', { name: 'Playlist', exact: true })
+    const library = page.getByRole('complementary', { name: 'Library' })
+    await library.getByRole('button', { name: 'Add e2e-clip.mp4 to the playlist', exact: true }).click()
+    await expect(playlist.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
+    const rows = await playlist.getByRole('row').count()
+
+    let question = ''
+    page.once('dialog', async (dialog) => {
+        question = dialog.message()
+        await dialog.dismiss()
+    })
+    await page.getByRole('combobox', { name: 'Channel', exact: true }).selectOption('987654')
+
+    await expect.poll(() => question).toContain('unsaved changes')
+    await expect(page.getByRole('combobox', { name: 'Channel', exact: true })).toHaveValue('1')
+    expect(new URL(page.url()).searchParams.get('channel')).toBe('1')
+    await expect(playlist.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
+    await expect(playlist.getByRole('row')).toHaveCount(rows)
+    expect(destinationRequests).toBe(0)
+})
+
 test('schedule create, edit and delete persist through the real API and reload', async ({ page }) => {
     await page.goto('/schedule')
     await page.getByRole('button', { name: 'Schedule material', exact: true }).click()

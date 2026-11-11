@@ -40,12 +40,60 @@ static DUMMY_PASSWORD_HASH: LazyLock<String> = LazyLock::new(|| {
         .to_string()
 });
 
+/// Failed sign-ins allowed for one username in [`FAILED_LOGIN_SECONDS`],
+/// from any address: a client that changes its address (a forwarding header
+/// from the private network) still cannot keep guessing a password.
+const MAX_FAILED_LOGINS: u32 = 10;
+const FAILED_LOGIN_SECONDS: i64 = 15 * 60;
+
+static FAILED_LOGINS: LazyLock<Mutex<FailedLogins>> =
+    LazyLock::new(|| Mutex::new(FailedLogins::default()));
+
+/// Failed sign-ins per username: how many, since when.
+#[derive(Debug, Default)]
+struct FailedLogins(HashMap<String, (u32, DateTime<Utc>)>);
+
+impl FailedLogins {
+    fn key(username: &str) -> String {
+        username.trim().to_lowercase()
+    }
+
+    fn locked(&self, username: &str, now: DateTime<Utc>) -> bool {
+        self.0
+            .get(&Self::key(username))
+            .is_some_and(|(count, since)| {
+                *count >= MAX_FAILED_LOGINS
+                    && now.signed_duration_since(*since).num_seconds() < FAILED_LOGIN_SECONDS
+            })
+    }
+
+    fn fail(&mut self, username: &str, now: DateTime<Utc>) {
+        let fresh = |since: &DateTime<Utc>| {
+            now.signed_duration_since(*since).num_seconds() < FAILED_LOGIN_SECONDS
+        };
+        self.0.retain(|_, (_, since)| fresh(since));
+        let entry = self.0.entry(Self::key(username)).or_insert((0, now));
+        entry.0 += 1;
+    }
+
+    fn clear(&mut self, username: &str) {
+        self.0.remove(&Self::key(username));
+    }
+}
+
+/// Wrong codes allowed for one emailed code; then it is dropped and the user
+/// signs in again for a new one, so the code cannot be guessed in its five
+/// minutes.
+const MAX_WRONG_CODES: u8 = 5;
+
 #[derive(Clone, Debug)]
 pub struct VerificationCode {
     pub code: String,
     pub user: User,
     pub role: Role,
     pub created_at: DateTime<Utc>,
+    /// Wrong codes sent for this one so far.
+    pub wrong: u8,
 }
 
 impl VerificationCode {
@@ -101,6 +149,22 @@ impl Claims {
             iat: now.timestamp(),
             exp: (now + TimeDelta::minutes(ACCESS_LIFETIME_MINUTES)).timestamp(),
         }
+    }
+
+    /// Whether this token still says what the saved `user` and `role` say:
+    /// a token issued before a change to the role, channels or pages of its
+    /// user no longer counts, so a demoted or narrowed user loses access at
+    /// once instead of when the token expires.
+    pub fn matches_account(&self, user: &User, role: &Role) -> bool {
+        let mut channels = user.channel_ids.clone().unwrap_or_default();
+        let mut claimed = self.channels.clone();
+        channels.sort_unstable();
+        claimed.sort_unstable();
+
+        self.id == user.id
+            && &self.role == role
+            && claimed == channels
+            && self.areas == user.area_list()
     }
 
     fn refresh(user: User, role: Role, jti: String) -> Self {
@@ -299,6 +363,12 @@ pub async fn login(
     let username = credentials.username.clone();
     let password = credentials.password.clone();
 
+    if FAILED_LOGINS.lock().await.locked(&username, Utc::now()) {
+        warn!("{ip} Sign-in for {username} refused: too many failed attempts");
+
+        return Err(ServiceError::ToManyRequests);
+    }
+
     match handles::select_login(&state.pool, &username).await {
         Ok(mut user) => {
             if user.username.is_empty() {
@@ -325,6 +395,8 @@ pub async fn login(
             .await?;
 
             if verified_password.is_ok() {
+                FAILED_LOGINS.lock().await.clear(&username);
+
                 // SMTP settings can be created or changed while the server is
                 // running, so do not use the startup-only global settings here.
                 let config = handles::select_global(&state.pool).await?;
@@ -347,6 +419,7 @@ pub async fn login(
                         user,
                         role,
                         created_at: Utc::now(),
+                        wrong: 0,
                     };
 
                     {
@@ -404,6 +477,7 @@ pub async fn login(
             }
 
             error!("{ip} Wrong password for {username}!");
+            FAILED_LOGINS.lock().await.fail(&username, Utc::now());
 
             Ok((
                 StatusCode::FORBIDDEN,
@@ -426,6 +500,7 @@ pub async fn login(
             .await;
 
             error!("{ip} Login {username} failed! {e}");
+            FAILED_LOGINS.lock().await.fail(&username, Utc::now());
 
             Ok((
                 StatusCode::FORBIDDEN,
@@ -451,7 +526,7 @@ pub async fn verify(
     let verification_data = {
         let mut codes = VERIFICATION_CODES.lock().await;
 
-        if let Some(verification) = codes.get(&username) {
+        if let Some(verification) = codes.get_mut(&username) {
             // Check if code is still valid (max 5 minutes)
             if !verification.is_valid_at(Utc::now()) {
                 codes.remove(&username);
@@ -465,7 +540,22 @@ pub async fn verify(
             }
 
             // Check if code is correct
-            if verification.code != provided_code {
+            if !control_key_matches(&verification.code, &provided_code) {
+                verification.wrong += 1;
+
+                if verification.wrong >= MAX_WRONG_CODES {
+                    codes.remove(&username);
+                    warn!("{ip} Too many wrong verification codes for {username}");
+
+                    return Ok((
+                        StatusCode::FORBIDDEN,
+                        AxumJson(serde_json::json!({
+                            "detail": "Too many wrong codes, sign in again for a new one",
+                        })),
+                    )
+                        .into_response());
+                }
+
                 return Ok((
                     StatusCode::FORBIDDEN,
                     AxumJson(serde_json::json!({
@@ -651,6 +741,28 @@ mod tests {
     }
 
     #[test]
+    fn ten_failed_sign_ins_lock_a_username_for_fifteen_minutes() {
+        let now = Utc::now();
+        let mut failed = FailedLogins::default();
+
+        for _ in 0..9 {
+            failed.fail("Operator", now);
+        }
+        assert!(!failed.locked("operator", now));
+
+        // From any address, in any letter case.
+        failed.fail(" OPERATOR ", now);
+        assert!(failed.locked("operator", now));
+        assert!(failed.locked("operator", now + TimeDelta::seconds(899)));
+        assert!(!failed.locked("operator", now + TimeDelta::minutes(15)));
+        assert!(!failed.locked("someone-else", now));
+
+        // A right password clears the count.
+        failed.clear("operator");
+        assert!(!failed.locked("operator", now));
+    }
+
+    #[test]
     fn verification_expiration_uses_the_exact_five_minute_boundary() {
         let now = Utc::now();
         let verification = VerificationCode {
@@ -658,6 +770,7 @@ mod tests {
             user: user(),
             role: Role::User,
             created_at: now,
+            wrong: 0,
         };
 
         assert!(verification.is_valid_at(now));

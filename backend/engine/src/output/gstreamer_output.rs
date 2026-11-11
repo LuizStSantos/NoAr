@@ -759,6 +759,27 @@ fn backlog(level: u64, limit: u64, carries_program: bool) -> Backlog {
     }
 }
 
+/// Queue `buffer` for one encoder input, `kind` (video, audio) at most
+/// `limit` bytes behind. `Ok(false)`: dropped, the encoder only feeds the
+/// preview and recordings and catches up; an error: the encoder carries the
+/// program and stopped.
+fn feed(
+    source: &AppSrc,
+    buffer: &gst::Buffer,
+    limit: u64,
+    carries_program: bool,
+    kind: &str,
+) -> Result<bool> {
+    match backlog(source.current_level_bytes(), limit, carries_program) {
+        Backlog::Push => {
+            source.push_buffer(buffer.clone())?;
+            Ok(true)
+        }
+        Backlog::Drop => Ok(false),
+        Backlog::Stalled => bail!("{kind} encoder stopped consuming frames"),
+    }
+}
+
 pub(super) struct EncodedOutput {
     encoders: Vec<Encoder>,
     /// False when NDI or SDI carries the program, so the encoders only feed
@@ -1114,17 +1135,13 @@ impl EncodedOutput {
         }
         let mut dropped = false;
         for encoder in self.encoders.iter().filter(|encoder| !encoder.disabled) {
-            match backlog(
-                encoder.video.current_level_bytes(),
+            dropped |= !feed(
+                &encoder.video,
+                &buffer,
                 VIDEO_BACKLOG,
                 self.encoders_carry_program,
-            ) {
-                Backlog::Push => {
-                    encoder.video.push_buffer(buffer.clone())?;
-                }
-                Backlog::Drop => dropped = true,
-                Backlog::Stalled => bail!("video encoder stopped consuming frames"),
-            }
+                "video",
+            )?;
         }
         if dropped {
             self.warn_behind("video");
@@ -1203,17 +1220,13 @@ impl EncodedOutput {
         ));
         let mut dropped = false;
         for encoder in self.encoders.iter().filter(|encoder| !encoder.disabled) {
-            match backlog(
-                encoder.audio.current_level_bytes(),
+            dropped |= !feed(
+                &encoder.audio,
+                &buffer,
                 AUDIO_BACKLOG,
                 self.encoders_carry_program,
-            ) {
-                Backlog::Push => {
-                    encoder.audio.push_buffer(buffer.clone())?;
-                }
-                Backlog::Drop => dropped = true,
-                Backlog::Stalled => bail!("audio encoder stopped consuming frames"),
-            }
+                "audio",
+            )?;
         }
         if dropped {
             self.warn_behind("audio");
@@ -1419,6 +1432,37 @@ mod tests {
     use crate::RecordingConfig;
 
     use super::*;
+    use crate::output::backlog::stalled::{FRAME, StalledOutput, frame};
+
+    /// The step every frame takes into each encoder, against a real pipeline
+    /// whose output stopped taking frames.
+    #[test]
+    fn a_stalled_preview_encoder_drops_frames_and_a_stalled_program_encoder_fails() {
+        let limit = 10 * FRAME;
+        let output = StalledOutput::new(limit);
+        let started = Instant::now();
+        let mut dropped = 0;
+
+        // NDI or SDI carries the program: the preview encoder drops frames,
+        // without waiting for it, and the channel goes on.
+        for index in 1..=100 {
+            if !feed(&output.source, &frame(index), limit, false, "video").unwrap() {
+                dropped += 1;
+            }
+        }
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
+        assert!(output.source.current_level_bytes() <= limit);
+        assert_eq!(dropped, 90, "frames dropped");
+
+        // The encoder is the program: stopping is an error, and the playout
+        // restarts the output.
+        let error = feed(&output.source, &frame(100), limit, true, "video").unwrap_err();
+        assert_eq!(error.to_string(), "video encoder stopped consuming frames");
+
+        // Taking frames again, it gets them.
+        output.resume();
+        assert!(feed(&output.source, &frame(101), limit, true, "video").unwrap());
+    }
 
     fn directory(name: &str) -> PathBuf {
         static NEXT: AtomicU64 = AtomicU64::new(0);

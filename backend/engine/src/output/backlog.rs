@@ -84,9 +84,123 @@ impl Backlog {
     }
 }
 
+/// A real pipeline whose output stopped taking frames, for the tests of the
+/// encoders and of the NDI and SDI sinks: paused, its sink holds the first
+/// frame and takes no more, so the frames pushed after it wait in the source.
+#[cfg(test)]
+pub(super) mod stalled {
+    use ::gstreamer::{self as gst, prelude::*};
+    use gstreamer_app::AppSrc;
+
+    pub(in crate::output) const FRAME: u64 = 64 * 36 * 3 / 2;
+
+    pub(in crate::output) struct StalledOutput {
+        pub pipeline: gst::Pipeline,
+        pub source: AppSrc,
+        pub sink: gst::Element,
+    }
+
+    impl StalledOutput {
+        /// The source caps its queue at `limit` bytes, like the outputs do.
+        pub(in crate::output) fn new(limit: u64) -> Self {
+            crate::gstreamer::init().unwrap();
+            let pipeline = gst::Pipeline::new();
+            let source = AppSrc::builder()
+                .format(gst::Format::Time)
+                .max_bytes(limit)
+                .caps(
+                    &gst::Caps::builder("video/x-raw")
+                        .field("format", "I420")
+                        .field("width", 64)
+                        .field("height", 36)
+                        .field("framerate", gst::Fraction::new(25, 1))
+                        .build(),
+                )
+                .build();
+            let sink = gst::ElementFactory::make("fakesink")
+                .property("sync", true)
+                .build()
+                .unwrap();
+            pipeline.add_many([source.upcast_ref(), &sink]).unwrap();
+            source.link(&sink).unwrap();
+            pipeline.set_state(gst::State::Paused).unwrap();
+            // The sink holds this frame: from now on it takes no other.
+            source.push_buffer(frame(0)).unwrap();
+            let (prerolled, _, _) = pipeline.state(gst::ClockTime::from_seconds(5));
+            prerolled.expect("the stalled output did not hold its first frame");
+
+            Self {
+                pipeline,
+                source,
+                sink,
+            }
+        }
+
+        /// The output takes frames again; waits until the queue is empty.
+        pub(in crate::output) fn resume(&self) {
+            self.sink.set_property("sync", false);
+            self.pipeline.set_state(gst::State::Playing).unwrap();
+            let started = std::time::Instant::now();
+            while self.source.current_level_bytes() > 0 {
+                assert!(
+                    started.elapsed() < std::time::Duration::from_secs(5),
+                    "the output did not catch up"
+                );
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+        }
+    }
+
+    impl Drop for StalledOutput {
+        fn drop(&mut self) {
+            let _ = self.pipeline.set_state(gst::State::Null);
+        }
+    }
+
+    pub(in crate::output) fn frame(index: u64) -> gst::Buffer {
+        let mut buffer = gst::Buffer::from_mut_slice(vec![16_u8; FRAME as usize]);
+        let writable = buffer.get_mut().unwrap();
+        writable.set_pts(gst::ClockTime::from_mseconds(index * 40));
+        writable.set_duration(gst::ClockTime::from_mseconds(40));
+        buffer
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        stalled::{FRAME, StalledOutput, frame},
+        *,
+    };
+
+    /// The NDI and SDI sinks queue a frame only when [`Backlog::admit`]
+    /// says so; here against a real output that stopped taking frames.
+    #[test]
+    fn a_stalled_local_output_drops_frames_without_blocking_and_catches_up() {
+        let backlog = Backlog::new("NDI", "video", 10 * FRAME);
+        let output = StalledOutput::new(backlog.limit());
+        let started = Instant::now();
+        let mut queued = 0;
+
+        for index in 1..=100 {
+            if backlog.admit(output.source.current_level_bytes()).unwrap() {
+                output.source.push_buffer(frame(index)).unwrap();
+                queued += 1;
+            }
+        }
+
+        // No frame waited for the output, the queue stayed at the limit and
+        // the rest were dropped.
+        assert!(started.elapsed() < Duration::from_secs(1));
+        assert!(output.source.current_level_bytes() <= backlog.limit());
+        assert_eq!(queued, 10, "frames queued");
+        assert!(backlog.behind.lock().unwrap().is_some());
+
+        // Taking frames again, the output gets them and is no longer behind.
+        output.resume();
+        assert!(backlog.admit(output.source.current_level_bytes()).unwrap());
+        assert!(backlog.behind.lock().unwrap().is_none());
+    }
 
     #[test]
     fn a_short_stall_drops_buffers_and_recovers() {

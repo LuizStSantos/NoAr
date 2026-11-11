@@ -257,6 +257,12 @@ const router = createRouter({
                     meta: { showHeader: true, roles: ALL },
                 },
                 {
+                    path: 'activity',
+                    name: 'settings-activity',
+                    component: () => import('@/components/settings/SettingsActivity.vue'),
+                    meta: { showHeader: true, roles: ['global_admin'] },
+                },
+                {
                     path: 'server',
                     name: 'settings-server',
                     component: () => import('@/components/settings/SettingsServer.vue'),

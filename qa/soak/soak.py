@@ -49,6 +49,7 @@ import urllib.request
 from pathlib import Path
 
 from picture import PictureMonitor
+from sync import MIN_PAIRS, SyncMonitor, marker_clip
 from graphics_cycle import GraphicsCycler
 
 if os.environ.get('NOAR_SOAK') != '1':
@@ -266,21 +267,15 @@ def login(password):
 
 
 def make_clips(media):
+    # FFmpeg on the test host, which the receivers need anyway: each clip
+    # carries the A/V sync marker (see sync.py) over a moving picture.
+    ffmpeg = shutil.which('ffmpeg')
+    if not ffmpeg:
+        raise RuntimeError('The synthetic clips need ffmpeg on the test host')
     media.mkdir(parents=True, exist_ok=True)
     for name, seconds, width, height, fps, audio in CLIPS:
-        frames = seconds * fps
-        pipeline = (f'videotestsrc num-buffers={frames} pattern=smpte horizontal-speed=3 ! video/x-raw,width={width},height={height},'
-                    f'framerate={fps}/1 ! x264enc speed-preset=ultrafast key-int-max={fps * 2} ! h264parse ! mux. ')
-        if audio:
-            pipeline += (f'audiotestsrc num-buffers={seconds * 25} samplesperbuffer=1920 freq=660 '
-                         '! audio/x-raw,rate=48000,channels=2 ! audioconvert ! avenc_aac ! aacparse ! mux. ')
-        pipeline += 'mp4mux name=mux ! filesink'
-        tail = ['location=' + data_path(f'media/{name}.mp4')]
-        command = ([native.gst] if MODE == 'native' else
-                   ['docker', 'run', '--rm', '--network', 'none', '-v', f'{WORK / "data"}:/data',
-                    '--entrypoint', 'gst-launch-1.0', IMAGE])
-        subprocess.run([*command, '-q', '-e', *shlex.split(pipeline), *tail],
-                       check=True, capture_output=True, text=True, timeout=180)
+        command = marker_clip(ffmpeg, str(media / f'{name}.mp4'), seconds, width, height, fps, audio)
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=180)
 
 
 def playlist(date):
@@ -473,12 +468,14 @@ def main():
               'coverage_notes': {'ndi': 'No NDI runtime/receiver fixture configured',
                                  'sdi': 'No DeckLink output/capture hardware fixture configured'}}
     picture = None
+    av_sync = None
     video_roi = graphics = None
     measurement_started = None
     picture_grace_until = 0
     try:
         # Fail before starting containers if the independent receiver is absent.
         picture = PictureMonitor(picture_url(), WORK)
+        av_sync = SyncMonitor(picture_url(), WORK)
         if GRAPHICS:
             video_roi = PictureMonitor(picture_url(), WORK, name='video-roi', video_filter=VIDEO_ROI_FILTER)
         password, lives = set_up()
@@ -486,6 +483,7 @@ def main():
             graphics = GraphicsCycler(request, WORK, WORK / 'data' / 'media')
             graphics.setup()
         picture.start()
+        av_sync.start()
         if video_roi:
             video_roi.start()
         measurement_started = time.monotonic()
@@ -618,6 +616,14 @@ def main():
             close_observer(video_roi, report)
             if video_roi.tracker.frames < 5 or video_roi.tracker.changes < 2 or not report['video_roi_checks']:
                 report['incidents'].append({'at': None, 'what': 'insufficient independent moving-video ROI evidence'})
+        if av_sync is not None:
+            report['av_sync'] = av_sync.sample()
+            if report['av_sync']['problem']:
+                report['incidents'].append({'at': None, 'what': report['av_sync']['problem']})
+            close_observer(av_sync, report)
+            if measurement_started is not None and report['av_sync']['pairs'] < MIN_PAIRS:
+                report['incidents'].append({'at': None, 'what': 'insufficient A/V sync evidence '
+                                            f'({report["av_sync"]["pairs"]} flash and beep pairs)'})
         if picture is not None:
             report['picture'] = picture.sample(picture_grace_until)
             if report['picture']['problem'] and not any(
@@ -673,6 +679,12 @@ def main():
                f'{report["events_on_air"]} scheduled lives on air ({report["live_waits"]} waits for a lost signal), '
                f'{report["restarts"]} restarts, {report["errors_logged"]} errors in the channel log, '
                f'{report["samples"]} samples.', '']
+    sync = report.get('av_sync') or {}
+    if sync.get('pairs'):
+        offsets = sync['offset_ms']
+        summary += [f'A/V sync: {sync["pairs"]} flash and beep pairs, sound {offsets["mean"]:+.1f} ms after '
+                    f'the picture on average ({offsets["min"]:+.1f} to {offsets["max"]:+.1f}), '
+                    f'drift {sync["drift_ms"]:+.1f} ms.', '']
     summary += [f'- {incident["what"]}' + (f' (at {incident["at"]} s)' if incident['at'] is not None else '')
                 + (f': `{incident["first"]}`' if incident.get('first') else '')
                 for incident in report['incidents']] or ['No incidents: transport and decoded moving pictures passed.']

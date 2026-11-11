@@ -90,12 +90,14 @@ class NativeAdapterTests(unittest.TestCase):
             self.soak.WORK = Path(directory) / 'path with spaces'
             self.soak.native = MagicMock(gst='/tools/gst-launch-1.0')
             with patch.object(self.soak.subprocess, 'run') as run, \
+                    patch.object(self.soak.shutil, 'which', return_value='/tools/ffmpeg'), \
                     patch.object(self.soak, 'docker') as docker, patch.object(self.soak, 'log'):
                 self.soak.make_clips(self.soak.WORK / 'data/media')
+                # The marker clips come from FFmpeg on the host, in its own paths.
                 for invocation in run.call_args_list:
                     command = invocation.args[0]
-                    self.assertEqual(command[0], '/tools/gst-launch-1.0')
-                    self.assertTrue(command[-1].startswith('location=' + str(self.soak.WORK)))
+                    self.assertEqual(command[0], '/tools/ffmpeg')
+                    self.assertTrue(command[-1].startswith(str(self.soak.WORK)))
                     self.assertIn('path with spaces', command[-1])
                 self.soak.act('publish udp-audio')
                 self.soak.act('unpublish')
@@ -124,11 +126,13 @@ class NativeAdapterTests(unittest.TestCase):
         self.soak.MODE = 'docker'
         with tempfile.TemporaryDirectory(prefix='noar-soak-unit-') as directory:
             self.soak.WORK = Path(directory)
-            with patch.object(self.soak.subprocess, 'run') as run:
+            with patch.object(self.soak.subprocess, 'run') as run, \
+                    patch.object(self.soak.shutil, 'which', return_value='/tools/ffmpeg'):
                 self.soak.make_clips(self.soak.WORK / 'data/media')
+                # Written on the host into the folder the container mounts.
                 command = run.call_args.args[0]
-                self.assertEqual(command[0], 'docker')
-                self.assertEqual(command[-1], 'location=/data/media/c.mp4')
+                self.assertEqual(command[0], '/tools/ffmpeg')
+                self.assertEqual(command[-1], str(self.soak.WORK / 'data/media/c.mp4'))
             self.assertEqual(self.soak.playlist('2026-11-09')['program'][0]['source'], '/data/media/a.mp4')
 
     def test_early_setup_or_observer_failure_still_cleans_owned_processes_and_fails_duration(self):

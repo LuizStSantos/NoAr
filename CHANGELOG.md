@@ -11,6 +11,64 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-11-11
+
+### Added
+
+- **Settings › Activity**: what each user did, for global admins. Every
+  change (saving, deleting, putting on air, restarting, configuring),
+  sign-in, failed sign-in and external control command with a key is
+  recorded with the time, the user, the channel, what it was done to and the
+  result, and kept 180 days. Filters by date, user, channel, type and text,
+  and a CSV export. Opening pages is not recorded. Migration `00036` adds the
+  `activity_log` table ([API](docs/api.md#activity)).
+
+- **A/V sync tests.** A clip with a flash and a beep that start together
+  once a second plays through the playout and the encoder, across clip
+  changes and a seek, and an independent decoder checks that every beep airs
+  within EBU R37 of its flash (at most 40 ms ahead or 60 ms behind) and by the
+  same amount each time. The soak test carries the same marker in its clips
+  and measures it on the real SRT or HLS output for the whole run, with the
+  drift, in its report. Measured today: the sound airs 21 ms after the
+  picture, one AAC frame (the encoder's priming is not taken off the audio
+  timestamps), within EBU R37.
+- **`NOAR_TRUSTED_PROXIES`** names the reverse proxies whose
+  `X-Forwarded-For` NoAr believes (addresses or networks such as
+  `172.18.0.0/16`). Without it, any address of a private network is still
+  believed, as before, so a proxy in another container keeps working
+  ([Docker](docs/docker.md#behind-a-reverse-proxy)).
+
+### Security
+
+- A token issued before its user's role, channels or pages changed, or before
+  the user was deleted, is refused (`401`) instead of counting until it
+  expires (up to 45 minutes): a demoted admin or an operator taken off a
+  channel loses that access at once. The interface renews the token by
+  itself, so an operator's menu shows the new pages and a page that was taken
+  away closes, without signing in again. API clients renew it with
+  `/auth/refresh`, as when it expires.
+- Ten failed sign-ins for one username within 15 minutes stop sign-ins for
+  that username (`429`) until the 15 minutes pass, whatever address they come
+  from: a device on the private network that changes its `X-Forwarded-For`
+  can no longer keep guessing a password.
+- A two-factor code sent by email is dropped after five wrong codes, so it
+  cannot be guessed in its five minutes; signing in again sends a new one.
+
+### Changed
+
+- Building NoAr from source uses Rust 1.99.1, pinned in `rust-toolchain.toml`
+  so `rustup` picks it for every `cargo` command, as CI and the Docker image
+  do; CI fails when the three differ ([developer guide](docs/developer.md)).
+
+### Fixed
+
+- Switching channel with unsaved playlist changes asks first; before, the
+  changes were dropped and a message said so afterwards.
+- `PUT /api/user/{id}` without `channel_ids` no longer removes all of the
+  user's channels.
+- The Report showed `report.list.noMatch` instead of a message when the
+  filters hid every item.
+
 ## [3.1.0] - 2026-11-11
 
 ### Added
@@ -1294,7 +1352,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...v3.0.0

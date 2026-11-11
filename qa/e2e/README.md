@@ -48,6 +48,8 @@ SQLite database, media and playlist folders under `work/e2e-*`, copies a synthet
 clip, starts the backend and Vite, and completes first-run setup with random
 operator credentials. It signs in once through the browser and shares only that
 disposable session across authenticated tests, respecting the login rate limit.
+One test also creates a limited operator and signs it in once in a browser of
+its own, to check that page changes reach it without signing in again.
 Anonymous tests retain separate, empty sessions.
 
 The full suite includes:

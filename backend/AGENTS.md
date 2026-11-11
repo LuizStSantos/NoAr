@@ -14,6 +14,12 @@ cargo fmt --all --
 cargo clippy --all-features --all-targets -- --deny warnings
 ```
 
+Run them with the Rust pinned in `rust-toolchain.toml` (rustup does this by
+itself in the repository): CI uses the same version, and another Clippy
+flags other code. Change that file, `RUST_IMAGE` in the `Dockerfile` and the
+`validate.yml` container together; `qa/architecture/check.py` fails when they
+differ.
+
 ## Architecture and responsibilities
 
 - Put all production database queries and data operations in

@@ -903,9 +903,15 @@
       "symbols": []
     },
     ".github/workflows/docker.yml": {
-      "sha256": "450fe3fb089bdba58d8ab27c6cde53ac59b57d71013b168eb4e0f64d38cd6102",
+      "sha256": "0dea29187f17c7ca38dfbce623efb1df90d2987c0b22875c32d8c6ab44fb6ad2",
       "language": "YAML",
-      "bytes": 2429,
+      "bytes": 2485,
+      "symbols": []
+    },
+    ".github/workflows/pages.yml": {
+      "sha256": "56421b5a78ad1f9a846f5786e063a9eefad1171b10828d1cb6b45521eea3951a",
+      "language": "YAML",
+      "bytes": 1114,
       "symbols": []
     },
     ".github/workflows/prepare-release.yml": {
@@ -933,15 +939,15 @@
       "symbols": []
     },
     ".github/workflows/validate.yml": {
-      "sha256": "235aa1db3e41d98855b00b6cf3044bb1d2a58f4ceb1c86fa6546d668ebbcdcf0",
+      "sha256": "aad9286abce996e5a087f0acd1a8521a5d1a6ea88a15ddbc60314e34a0f1b8db",
       "language": "YAML",
-      "bytes": 4526,
+      "bytes": 4894,
       "symbols": []
     },
     ".gitignore": {
-      "sha256": "610134486e79323e20b91e5f6df5942c9d452507ad9c30139077d090cc233003",
+      "sha256": "7a9f107b041a8c9b0bfe7074a01eee02e57c7c61469747324844b8a748186b11",
       "language": "Other",
-      "bytes": 714,
+      "bytes": 761,
       "symbols": []
     },
     ".prettierignore": {
@@ -981,9 +987,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "8f7e7f697f8344fa01384c1637d4ae3b0ece17f7ca498e7bf3942947335b3ead",
+      "sha256": "d262c42c7e3c3b4eb1299c9d4f82d605769a66ccdc93a4d9a341db38efa78ff7",
       "language": "Markdown",
-      "bytes": 67643,
+      "bytes": 72648,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -993,7 +999,7 @@
       "symbols": []
     },
     "Cargo.toml": {
-      "sha256": "af5677f45e5004d1b079900b257d456c41a6b6d9ba82094b14eb14813a8701c9",
+      "sha256": "0e460b27bb548416c95bb29f5073a4aeca0c6c0c7167d20a21b1c256fb14c3db",
       "language": "TOML",
       "bytes": 1223,
       "symbols": []
@@ -1011,9 +1017,9 @@
       "symbols": []
     },
     "README.md": {
-      "sha256": "f8a4d6995c6ad0ef5a49562cf7dbbf6207e0cfeab8c64e772dbfbbbd2aa6d439",
+      "sha256": "c48b23b94c0682a32fbc9ca38127bf539d7b4ea11349978987def02b72531686",
       "language": "Markdown",
-      "bytes": 16740,
+      "bytes": 17294,
       "symbols": []
     },
     "assets/dummy.vtt": {
@@ -1023,9 +1029,9 @@
       "symbols": []
     },
     "backend/AGENTS.md": {
-      "sha256": "0e7d77bc5c3adabcfe420e1a71248176a4d46246d3c8f6bef25c1b2c2c81fcde",
+      "sha256": "d9e5a9dd596138a4425c64bc47e51bdd98fc7421cf8273020791d89a55585a61",
       "language": "Markdown",
-      "bytes": 5615,
+      "bytes": 5927,
       "symbols": []
     },
     "backend/app/Cargo.toml": {
@@ -1244,134 +1250,248 @@
         }
       ]
     },
-    "backend/app/src/api/auth.rs": {
-      "sha256": "fdb40900cb04828fdc452cfa10bbbc6336ec52ee7923893ec8bce21ad2d989f3",
+    "backend/app/src/api/access.rs": {
+      "sha256": "56a2ffe30802482d97fb874a6985489f774c373dfc0f4edab4a7b332da4da783",
       "language": "Rust",
-      "bytes": 23029,
+      "bytes": 8415,
       "symbols": [
         {
-          "name": "VerificationCode",
-          "line": 44
+          "name": "required_areas",
+          "line": 35
         },
         {
-          "name": "VerificationCode",
-          "line": 51
+          "name": "allowed",
+          "line": 83
         },
         {
-          "name": "is_valid_at",
-          "line": 52
+          "name": "account_guard",
+          "line": 95
         },
         {
-          "name": "VerifyRequest",
-          "line": 60
-        },
-        {
-          "name": "Claims",
-          "line": 66
-        },
-        {
-          "name": "TokenType",
-          "line": 81
-        },
-        {
-          "name": "Claims",
-          "line": 86
-        },
-        {
-          "name": "access",
-          "line": 87
-        },
-        {
-          "name": "refresh",
-          "line": 101
-        },
-        {
-          "name": "TokenPair",
-          "line": 117
-        },
-        {
-          "name": "Credentials",
-          "line": 123
-        },
-        {
-          "name": "TokenRefreshRequest",
-          "line": 129
-        },
-        {
-          "name": "jwt_secret",
-          "line": 133
-        },
-        {
-          "name": "encode_jwt",
-          "line": 146
-        },
-        {
-          "name": "decode_jwt_with_type",
-          "line": 156
-        },
-        {
-          "name": "decode_jwt",
-          "line": 186
-        },
-        {
-          "name": "decode_refresh_jwt",
-          "line": 191
-        },
-        {
-          "name": "issue_token_pair",
-          "line": 195
-        },
-        {
-          "name": "rotate_token_pair",
-          "line": 219
-        },
-        {
-          "name": "mail_body",
-          "line": 246
-        },
-        {
-          "name": "login",
-          "line": 287
-        },
-        {
-          "name": "verify",
-          "line": 435
-        },
-        {
-          "name": "refresh",
-          "line": 549
-        },
-        {
-          "name": "logout",
-          "line": 615
+          "name": "renew",
+          "line": 150
         },
         {
           "name": "tests",
-          "line": 630
+          "line": 159
+        },
+        {
+          "name": "pages_that_change_the_channel_need_their_area",
+          "line": 163
+        },
+        {
+          "name": "the_report_and_log_need_their_area_and_other_reads_do_not",
+          "line": 207
+        },
+        {
+          "name": "every_area_by_default_and_one_matching_area_is_enough",
+          "line": 222
+        }
+      ]
+    },
+    "backend/app/src/api/activity.rs": {
+      "sha256": "9c301f3c08820903d82807b2fb1898f3998f8682b8c150360ac0ca2984b649fc",
+      "language": "Rust",
+      "bytes": 17052,
+      "symbols": [
+        {
+          "name": "action_of",
+          "line": 51
+        },
+        {
+          "name": "activity_layer",
+          "line": 162
+        },
+        {
+          "name": "reads_body",
+          "line": 295
+        },
+        {
+          "name": "channel_of",
+          "line": 309
+        },
+        {
+          "name": "target_of",
+          "line": 322
+        },
+        {
+          "name": "shorten",
+          "line": 359
+        },
+        {
+          "name": "tests",
+          "line": 367
+        },
+        {
+          "name": "changes_are_named_and_reads_are_not_recorded",
+          "line": 373
+        },
+        {
+          "name": "the_channel_and_what_was_changed_come_from_the_path_and_body",
+          "line": 408
+        }
+      ]
+    },
+    "backend/app/src/api/auth.rs": {
+      "sha256": "abc6ffcea0edaaa4814d0b5acd62d979b33339eb5735b1be1cf112cc79dad275",
+      "language": "Rust",
+      "bytes": 27600,
+      "symbols": [
+        {
+          "name": "FailedLogins",
+          "line": 54
+        },
+        {
+          "name": "FailedLogins",
+          "line": 56
+        },
+        {
+          "name": "key",
+          "line": 57
+        },
+        {
+          "name": "locked",
+          "line": 61
+        },
+        {
+          "name": "fail",
+          "line": 70
+        },
+        {
+          "name": "clear",
+          "line": 79
+        },
+        {
+          "name": "VerificationCode",
+          "line": 90
+        },
+        {
+          "name": "VerificationCode",
+          "line": 99
+        },
+        {
+          "name": "is_valid_at",
+          "line": 100
+        },
+        {
+          "name": "VerifyRequest",
+          "line": 108
+        },
+        {
+          "name": "Claims",
+          "line": 114
+        },
+        {
+          "name": "TokenType",
+          "line": 133
+        },
+        {
+          "name": "Claims",
+          "line": 138
+        },
+        {
+          "name": "access",
+          "line": 139
+        },
+        {
+          "name": "matches_account",
+          "line": 158
+        },
+        {
+          "name": "refresh",
+          "line": 170
+        },
+        {
+          "name": "TokenPair",
+          "line": 187
+        },
+        {
+          "name": "Credentials",
+          "line": 193
+        },
+        {
+          "name": "TokenRefreshRequest",
+          "line": 199
+        },
+        {
+          "name": "jwt_secret",
+          "line": 203
+        },
+        {
+          "name": "encode_jwt",
+          "line": 216
+        },
+        {
+          "name": "decode_jwt_with_type",
+          "line": 226
+        },
+        {
+          "name": "decode_jwt",
+          "line": 256
+        },
+        {
+          "name": "decode_refresh_jwt",
+          "line": 261
+        },
+        {
+          "name": "issue_token_pair",
+          "line": 265
+        },
+        {
+          "name": "rotate_token_pair",
+          "line": 289
+        },
+        {
+          "name": "mail_body",
+          "line": 316
+        },
+        {
+          "name": "login",
+          "line": 357
+        },
+        {
+          "name": "verify",
+          "line": 516
+        },
+        {
+          "name": "refresh",
+          "line": 645
+        },
+        {
+          "name": "logout",
+          "line": 711
+        },
+        {
+          "name": "tests",
+          "line": 726
         },
         {
           "name": "user",
-          "line": 633
+          "line": 729
+        },
+        {
+          "name": "ten_failed_sign_ins_lock_a_username_for_fifteen_minutes",
+          "line": 744
         },
         {
           "name": "verification_expiration_uses_the_exact_five_minute_boundary",
-          "line": 647
+          "line": 766
         },
         {
           "name": "token_lifetimes_match_session_policy",
-          "line": 664
+          "line": 784
         },
         {
           "name": "control_key_matches",
-          "line": 680
+          "line": 800
         },
         {
           "name": "control_key_tests",
-          "line": 694
+          "line": 814
         },
         {
           "name": "the_logo_key_must_be_set_and_match",
-          "line": 698
+          "line": 818
         }
       ]
     },
@@ -1443,44 +1563,67 @@
       ]
     },
     "backend/app/src/api/mod.rs": {
-      "sha256": "390611805264a503178dfd9cb4f688c1b6e465af0faac75372945699c7aeacf0",
+      "sha256": "d5b30c6511beccb961fbb9222a53bfbeda764b28ef0b399400ceac2e3d5c49be",
       "language": "Rust",
-      "bytes": 80,
+      "bytes": 114,
       "symbols": [
         {
-          "name": "auth",
+          "name": "access",
           "line": 1
         },
         {
-          "name": "file_access",
+          "name": "activity",
           "line": 2
         },
         {
-          "name": "path",
+          "name": "auth",
           "line": 3
         },
         {
-          "name": "routes",
+          "name": "file_access",
           "line": 4
         },
         {
-          "name": "state",
+          "name": "path",
           "line": 5
+        },
+        {
+          "name": "routes",
+          "line": 6
+        },
+        {
+          "name": "state",
+          "line": 7
         }
       ]
     },
     "backend/app/src/api/path.rs": {
-      "sha256": "60993635db6abfb071895920b93021944701e38a77063a7395e266bf2e5d041f",
+      "sha256": "aae1e119ed778d53ca05c8f09df43891c7772083f08859321efd6ababce7eb7b",
       "language": "Rust",
-      "bytes": 10479,
+      "bytes": 11239,
       "symbols": [
         {
           "name": "auth_routes",
-          "line": 14
+          "line": 15
         },
         {
           "name": "routes",
-          "line": 22
+          "line": 27
+        }
+      ]
+    },
+    "backend/app/src/api/routes/activity.rs": {
+      "sha256": "f22a2dd2145f95dc68531e0479bb8f95dd203d6f9d3a736cba87145966172cc7",
+      "language": "Rust",
+      "bytes": 1584,
+      "symbols": [
+        {
+          "name": "ActivityPage",
+          "line": 19
+        },
+        {
+          "name": "get_activity",
+          "line": 37
         }
       ]
     },
@@ -1992,169 +2135,173 @@
       ]
     },
     "backend/app/src/api/routes/mod.rs": {
-      "sha256": "687ee54665d691e02afbaee05e8a1ee8354e403eea8fcfd299c63655af9a5a2f",
+      "sha256": "d155fb6bf157c5db7d03899a71bb5e7b2c5fb5e04bd96d61ef957d64c9d9b144",
       "language": "Rust",
-      "bytes": 12900,
+      "bytes": 12935,
       "symbols": [
         {
-          "name": "channel",
+          "name": "activity",
           "line": 28
         },
         {
-          "name": "control",
+          "name": "channel",
           "line": 29
         },
         {
-          "name": "file",
+          "name": "control",
           "line": 30
         },
         {
-          "name": "global",
+          "name": "file",
           "line": 31
         },
         {
-          "name": "graphics",
+          "name": "global",
           "line": 32
         },
         {
-          "name": "health",
+          "name": "graphics",
           "line": 33
         },
         {
-          "name": "log",
+          "name": "health",
           "line": 34
         },
         {
-          "name": "playlist",
+          "name": "log",
           "line": 35
         },
         {
-          "name": "playout_config",
+          "name": "playlist",
           "line": 36
         },
         {
-          "name": "preview",
+          "name": "playout_config",
           "line": 37
         },
         {
-          "name": "program",
+          "name": "preview",
           "line": 38
         },
         {
-          "name": "public",
+          "name": "program",
           "line": 39
         },
         {
-          "name": "report",
+          "name": "public",
           "line": 40
         },
         {
-          "name": "schedule",
+          "name": "report",
           "line": 41
         },
         {
-          "name": "scte35",
+          "name": "schedule",
           "line": 42
         },
         {
-          "name": "setup",
+          "name": "scte35",
           "line": 43
         },
         {
-          "name": "system",
+          "name": "setup",
           "line": 44
         },
         {
-          "name": "user",
+          "name": "system",
           "line": 45
         },
         {
-          "name": "xmltv",
+          "name": "user",
           "line": 46
         },
         {
+          "name": "xmltv",
+          "line": 47
+        },
+        {
           "name": "MailQueues",
-          "line": 75
+          "line": 77
         },
         {
           "name": "stream_file",
-          "line": 81
+          "line": 83
         },
         {
           "name": "RangeSelection",
-          "line": 138
+          "line": 140
         },
         {
           "name": "parse_range",
-          "line": 146
+          "line": 148
         },
         {
           "name": "ensure_any_authority",
-          "line": 200
+          "line": 202
         },
         {
           "name": "AuthUser",
-          "line": 214
+          "line": 216
         },
         {
           "name": "AuthUser",
-          "line": 220
+          "line": 222
         },
         {
           "name": "is_global_admin",
-          "line": 221
+          "line": 223
         },
         {
           "name": "ensure_channel_or_admin",
-          "line": 225
+          "line": 227
         },
         {
           "name": "ensure_self_or_admin",
-          "line": 233
+          "line": 235
         },
         {
           "name": "FromRequestParts",
-          "line": 242
+          "line": 244
         },
         {
           "name": "Rejection",
-          "line": 246
-        },
-        {
-          "name": "from_request_parts",
           "line": 248
         },
         {
+          "name": "from_request_parts",
+          "line": 250
+        },
+        {
           "name": "DateObj",
-          "line": 286
+          "line": 288
         },
         {
           "name": "PathsObj",
-          "line": 292
+          "line": 294
         },
         {
           "name": "FileObj",
-          "line": 304
+          "line": 306
         },
         {
           "name": "LogReq",
-          "line": 310
+          "line": 312
         },
         {
           "name": "ImportObj",
-          "line": 323
+          "line": 325
         },
         {
           "name": "tests",
-          "line": 331
+          "line": 333
         },
         {
           "name": "parses_closed_open_and_suffix_ranges_and_ignores_unsupported_headers",
-          "line": 337
+          "line": 339
         },
         {
           "name": "streams_exact_range_bytes_headers_and_empty_responses",
-          "line": 360
+          "line": 362
         }
       ]
     },
@@ -2629,9 +2776,9 @@
       ]
     },
     "backend/app/src/api/routes/user.rs": {
-      "sha256": "ecda9ff0b67e832f54c89abeb2875a8af2dd02760aa578cac3d43f69e07614e5",
+      "sha256": "47319eff1afee1d69af1919010d1d5451d8e4eaaecdbe84f05759946c035c86f",
       "language": "Rust",
-      "bytes": 5809,
+      "bytes": 6205,
       "symbols": [
         {
           "name": "get_user",
@@ -2651,11 +2798,11 @@
         },
         {
           "name": "add_user",
-          "line": 169
+          "line": 177
         },
         {
           "name": "remove_user",
-          "line": 192
+          "line": 200
         }
       ]
     },
@@ -2710,6 +2857,45 @@
         {
           "name": "AppState",
           "line": 15
+        }
+      ]
+    },
+    "backend/app/src/db/handles/activity.rs": {
+      "sha256": "e154a7936aacb948226998a0339d5a0fad5ecda49521c50464ef3e0bd50e5125",
+      "language": "Rust",
+      "bytes": 7077,
+      "symbols": [
+        {
+          "name": "Activity",
+          "line": 14
+        },
+        {
+          "name": "ActivityFilter",
+          "line": 37
+        },
+        {
+          "name": "insert_activity",
+          "line": 54
+        },
+        {
+          "name": "prune_activity",
+          "line": 78
+        },
+        {
+          "name": "select_activity",
+          "line": 88
+        },
+        {
+          "name": "tests",
+          "line": 141
+        },
+        {
+          "name": "entry",
+          "line": 147
+        },
+        {
+          "name": "the_history_is_filtered_paged_and_pruned",
+          "line": 161
         }
       ]
     },
@@ -3328,73 +3514,77 @@
       ]
     },
     "backend/app/src/db/handles/mod.rs": {
-      "sha256": "64426e9f26f2f26e7b8e5b2ffb0fbfb8b30ad6072b77069851560d880cce2cdc",
+      "sha256": "6f5abb3a27858372b48d9921b9b8ef453f4e8c7c91af4830dab961f57012f0f1",
       "language": "Rust",
-      "bytes": 617,
+      "bytes": 656,
       "symbols": [
         {
-          "name": "as_run",
+          "name": "activity",
           "line": 1
         },
         {
-          "name": "channel",
+          "name": "as_run",
           "line": 2
         },
         {
-          "name": "configuration",
+          "name": "channel",
           "line": 3
         },
         {
-          "name": "global",
+          "name": "configuration",
           "line": 4
         },
         {
-          "name": "graphics",
+          "name": "global",
           "line": 5
         },
         {
-          "name": "graphics_schedule",
+          "name": "graphics",
           "line": 6
         },
         {
-          "name": "init",
+          "name": "graphics_schedule",
           "line": 7
         },
         {
-          "name": "output",
+          "name": "init",
           "line": 8
         },
         {
-          "name": "recording",
+          "name": "output",
           "line": 9
         },
         {
-          "name": "refresh_token",
+          "name": "recording",
           "line": 10
         },
         {
-          "name": "schedule",
+          "name": "refresh_token",
           "line": 11
         },
         {
-          "name": "scte35",
+          "name": "schedule",
           "line": 12
         },
         {
-          "name": "setup",
+          "name": "scte35",
           "line": 13
         },
         {
-          "name": "source",
+          "name": "setup",
           "line": 14
         },
         {
-          "name": "update",
+          "name": "source",
           "line": 15
         },
         {
-          "name": "user",
+          "name": "update",
           "line": 16
+        },
+        {
+          "name": "user",
+          "line": 17
         }
       ]
     },
@@ -3707,9 +3897,9 @@
       ]
     },
     "backend/app/src/db/handles/user.rs": {
-      "sha256": "c9b948af73d1814e8e44fff934e97eea66318d2431972c69f9b2d1b8c4aa85ce",
+      "sha256": "3b6277fceb880d9385e667bcdb0f5df0e1099030711e824e3aa6b02ec3e50a68",
       "language": "Rust",
-      "bytes": 12623,
+      "bytes": 14372,
       "symbols": [
         {
           "name": "select_role",
@@ -3724,72 +3914,84 @@
           "line": 32
         },
         {
+          "name": "select_user_access",
+          "line": 45
+        },
+        {
           "name": "select_users",
-          "line": 43
+          "line": 67
         },
         {
           "name": "insert_user",
-          "line": 53
+          "line": 77
+        },
+        {
+          "name": "select_user_areas",
+          "line": 111
+        },
+        {
+          "name": "update_user_areas",
+          "line": 124
         },
         {
           "name": "insert_or_update_user",
-          "line": 84
+          "line": 138
         },
         {
           "name": "update_user",
-          "line": 119
+          "line": 173
         },
         {
           "name": "update_user_with_channels",
-          "line": 165
+          "line": 219
         },
         {
           "name": "update_user_role",
-          "line": 187
+          "line": 241
         },
         {
           "name": "delete_user",
-          "line": 201
+          "line": 255
         },
         {
           "name": "count_users",
-          "line": 209
+          "line": 263
         },
         {
           "name": "delete_user_channels",
-          "line": 217
+          "line": 271
         },
         {
           "name": "map_global_admins",
-          "line": 229
+          "line": 283
         },
         {
           "name": "assign_channel_to_global_admins",
-          "line": 240
+          "line": 294
         },
         {
           "name": "insert_user_channel",
-          "line": 258
+          "line": 312
         },
         {
           "name": "tests",
-          "line": 278
-        },
-        {
-          "name": "updates_only_two_factor",
-          "line": 282
-        },
-        {
-          "name": "lists_users_with_role_and_channels",
-          "line": 305
-        },
-        {
-          "name": "updating_user_and_channels_is_atomic",
           "line": 332
         },
         {
+          "name": "updates_only_two_factor",
+          "line": 336
+        },
+        {
+          "name": "lists_users_with_role_and_channels",
+          "line": 359
+        },
+        {
+          "name": "updating_user_and_channels_is_atomic",
+          "line": 386
+        },
+        {
           "name": "insert_user_rolls_back_when_channel_assignment_fails",
-          "line": 379
+          "line": 433
         }
       ]
     },
@@ -3845,9 +4047,9 @@
       ]
     },
     "backend/app/src/db/models.rs": {
-      "sha256": "bd07fe6e234fe15b653b8f4a4ca9e22311e37318f1ef1a25a83ce50b3a010d8b",
+      "sha256": "68359f55beaca6c3c943afd92184cf7926e395cc7c58a02eca0fc8ea33e1120c",
       "language": "Rust",
-      "bytes": 35465,
+      "bytes": 38132,
       "symbols": [
         {
           "name": "GraphicsDataSource",
@@ -3898,248 +4100,276 @@
           "line": 171
         },
         {
+          "name": "Area",
+          "line": 179
+        },
+        {
+          "name": "Area",
+          "line": 196
+        },
+        {
+          "name": "present",
+          "line": 210
+        },
+        {
           "name": "User",
-          "line": 176
-        },
-        {
-          "name": "FromRow",
-          "line": 192
-        },
-        {
-          "name": "from_row",
-          "line": 193
-        },
-        {
-          "name": "UserMeta",
-          "line": 214
-        },
-        {
-          "name": "UserMeta",
           "line": 219
         },
         {
-          "name": "new",
-          "line": 220
+          "name": "User",
+          "line": 239
         },
         {
-          "name": "Role",
-          "line": 227
+          "name": "area_list",
+          "line": 241
         },
         {
-          "name": "FromStr",
-          "line": 235
-        },
-        {
-          "name": "Err",
-          "line": 236
-        },
-        {
-          "name": "from_str",
-          "line": 238
-        },
-        {
-          "name": "fmt",
-          "line": 248
-        },
-        {
-          "name": "fmt",
+          "name": "parse_areas",
           "line": 249
         },
         {
-          "name": "sqlx",
-          "line": 259
-        },
-        {
-          "name": "decode",
+          "name": "areas_column",
           "line": 263
         },
         {
           "name": "FromRow",
-          "line": 272
+          "line": 267
         },
         {
           "name": "from_row",
-          "line": 273
+          "line": 268
         },
         {
-          "name": "Configuration",
-          "line": 288
+          "name": "UserMeta",
+          "line": 295
         },
         {
-          "name": "Configuration",
-          "line": 385
-        },
-        {
-          "name": "from",
-          "line": 386
-        },
-        {
-          "name": "Recording",
-          "line": 474
-        },
-        {
-          "name": "Scte35",
-          "line": 495
-        },
-        {
-          "name": "Output",
-          "line": 506
-        },
-        {
-          "name": "Output",
-          "line": 536
+          "name": "UserMeta",
+          "line": 300
         },
         {
           "name": "new",
-          "line": 537
+          "line": 301
         },
         {
-          "name": "default_vtt_name",
-          "line": 588
-        },
-        {
-          "name": "default_vtt_language",
-          "line": 592
-        },
-        {
-          "name": "SetupSettings",
-          "line": 597
-        },
-        {
-          "name": "From",
-          "line": 610
-        },
-        {
-          "name": "from",
-          "line": 611
-        },
-        {
-          "name": "InitialSetup",
-          "line": 628
-        },
-        {
-          "name": "SetupRollback",
-          "line": 640
-        },
-        {
-          "name": "ScheduleKind",
-          "line": 650
-        },
-        {
-          "name": "EntryMode",
-          "line": 661
-        },
-        {
-          "name": "AfterMode",
-          "line": 672
-        },
-        {
-          "name": "as_str",
-          "line": 683
+          "name": "Role",
+          "line": 308
         },
         {
           "name": "FromStr",
-          "line": 690
+          "line": 316
         },
         {
           "name": "Err",
-          "line": 691
+          "line": 317
         },
         {
           "name": "from_str",
-          "line": 693
+          "line": 319
         },
         {
-          "name": "ScheduledGraphic",
+          "name": "fmt",
+          "line": 329
+        },
+        {
+          "name": "fmt",
+          "line": 330
+        },
+        {
+          "name": "sqlx",
+          "line": 340
+        },
+        {
+          "name": "decode",
+          "line": 344
+        },
+        {
+          "name": "FromRow",
+          "line": 353
+        },
+        {
+          "name": "from_row",
+          "line": 354
+        },
+        {
+          "name": "Configuration",
+          "line": 369
+        },
+        {
+          "name": "Configuration",
+          "line": 466
+        },
+        {
+          "name": "from",
+          "line": 467
+        },
+        {
+          "name": "Recording",
+          "line": 555
+        },
+        {
+          "name": "Scte35",
+          "line": 576
+        },
+        {
+          "name": "Output",
+          "line": 587
+        },
+        {
+          "name": "Output",
+          "line": 617
+        },
+        {
+          "name": "new",
+          "line": 618
+        },
+        {
+          "name": "default_vtt_name",
+          "line": 669
+        },
+        {
+          "name": "default_vtt_language",
+          "line": 673
+        },
+        {
+          "name": "SetupSettings",
+          "line": 678
+        },
+        {
+          "name": "From",
+          "line": 691
+        },
+        {
+          "name": "from",
+          "line": 692
+        },
+        {
+          "name": "InitialSetup",
           "line": 709
         },
         {
-          "name": "GraphicsEvent",
-          "line": 722
+          "name": "SetupRollback",
+          "line": 721
         },
         {
-          "name": "FromRow",
+          "name": "ScheduleKind",
+          "line": 731
+        },
+        {
+          "name": "EntryMode",
           "line": 742
         },
         {
+          "name": "AfterMode",
+          "line": 753
+        },
+        {
+          "name": "as_str",
+          "line": 764
+        },
+        {
+          "name": "FromStr",
+          "line": 771
+        },
+        {
+          "name": "Err",
+          "line": 772
+        },
+        {
+          "name": "from_str",
+          "line": 774
+        },
+        {
+          "name": "ScheduledGraphic",
+          "line": 790
+        },
+        {
+          "name": "GraphicsEvent",
+          "line": 803
+        },
+        {
+          "name": "FromRow",
+          "line": 823
+        },
+        {
           "name": "from_row",
-          "line": 743
+          "line": 824
         },
         {
           "name": "GraphicsRole",
-          "line": 775
+          "line": 856
         },
         {
           "name": "GraphicsChannelBinding",
-          "line": 786
+          "line": 867
         },
         {
           "name": "FromRow",
-          "line": 793
+          "line": 874
         },
         {
           "name": "from_row",
-          "line": 794
+          "line": 875
         },
         {
           "name": "GraphicsTemplate",
-          "line": 814
+          "line": 895
         },
         {
           "name": "FromRow",
-          "line": 831
+          "line": 912
         },
         {
           "name": "from_row",
-          "line": 832
+          "line": 913
         },
         {
           "name": "ScheduleEvent",
-          "line": 858
+          "line": 939
         },
         {
           "name": "FromRow",
-          "line": 882
+          "line": 963
         },
         {
           "name": "from_row",
-          "line": 883
+          "line": 964
         },
         {
           "name": "ScheduleRun",
-          "line": 920
-        },
-        {
-          "name": "UnfinishedRun",
-          "line": 933
-        },
-        {
-          "name": "UpdateSettings",
-          "line": 946
-        },
-        {
-          "name": "AsRunEntry",
-          "line": 959
-        },
-        {
-          "name": "NewAsRunEntry",
-          "line": 984
-        },
-        {
-          "name": "default_logo_transition",
-          "line": 997
-        },
-        {
-          "name": "default_lshape_scale",
           "line": 1001
         },
         {
+          "name": "UnfinishedRun",
+          "line": 1014
+        },
+        {
+          "name": "UpdateSettings",
+          "line": 1027
+        },
+        {
+          "name": "AsRunEntry",
+          "line": 1040
+        },
+        {
+          "name": "NewAsRunEntry",
+          "line": 1065
+        },
+        {
+          "name": "default_logo_transition",
+          "line": 1078
+        },
+        {
+          "name": "default_lshape_scale",
+          "line": 1082
+        },
+        {
           "name": "default_lshape_corner",
-          "line": 1005
+          "line": 1086
         },
         {
           "name": "default_graphics_scenes",
-          "line": 1009
+          "line": 1090
         }
       ]
     },
@@ -5221,9 +5451,9 @@
       ]
     },
     "backend/app/src/main.rs": {
-      "sha256": "dabbbfecd5a6fa9c1fd8798662356e62985d12dc59aa9b06bb4af38987139149",
+      "sha256": "4312bd676298780ea13d445b59bb4a4c470ddc0e80f8fa6fb2f9825d09a8e6a3",
       "language": "Rust",
-      "bytes": 11830,
+      "bytes": 11840,
       "symbols": [
         {
           "name": "env_parse_or",
@@ -5252,41 +5482,73 @@
       ]
     },
     "backend/app/src/middleware/client_ip.rs": {
-      "sha256": "3383045306fc4e0ce5413056e740a004d2c4e0068f849d8a368d3bcc58bfd2ba",
+      "sha256": "e118de362d39e9a2b0883659dc2181681d9a5742a43465d9177d59ead8848277",
       "language": "Rust",
-      "bytes": 3089,
+      "bytes": 6996,
       "symbols": [
         {
+          "name": "Network",
+          "line": 26
+        },
+        {
+          "name": "Network",
+          "line": 31
+        },
+        {
+          "name": "contains",
+          "line": 32
+        },
+        {
+          "name": "parse_networks",
+          "line": 49
+        },
+        {
+          "name": "parse_network",
+          "line": 65
+        },
+        {
+          "name": "unmap",
+          "line": 82
+        },
+        {
           "name": "is_trusted_proxy",
-          "line": 13
+          "line": 94
         },
         {
           "name": "client_ip",
-          "line": 30
+          "line": 114
+        },
+        {
+          "name": "client_ip_with",
+          "line": 118
         },
         {
           "name": "client_ip_layer",
-          "line": 57
+          "line": 149
         },
         {
           "name": "tests",
-          "line": 70
+          "line": 162
         },
         {
           "name": "forwarded",
-          "line": 75
+          "line": 167
         },
         {
           "name": "a_public_client_cannot_choose_its_address",
-          "line": 83
+          "line": 175
         },
         {
           "name": "a_local_proxy_passes_the_client_address",
-          "line": 90
+          "line": 182
+        },
+        {
+          "name": "named_proxies_replace_the_private_networks",
+          "line": 195
         },
         {
           "name": "a_proxy_without_headers_is_the_client",
-          "line": 103
+          "line": 228
         }
       ]
     },
@@ -7449,9 +7711,9 @@
       ]
     },
     "backend/app/src/utils/args_parse.rs": {
-      "sha256": "6bac713959605d42e2b57badc51f344249213dc7a8f93863695523345b0c1f56",
+      "sha256": "dd25ee5dc5a2201e03f89b7df3097952314a3f98ba781ebbe8a127f31a5984f2",
       "language": "Rust",
-      "bytes": 19077,
+      "bytes": 19102,
       "symbols": [
         {
           "name": "Args",
@@ -7491,35 +7753,35 @@
         },
         {
           "name": "update_permissions",
-          "line": 509
+          "line": 510
         },
         {
           "name": "tests",
-          "line": 543
+          "line": 544
         },
         {
           "name": "no_arguments_default_to_local_api_listener",
-          "line": 550
+          "line": 551
         },
         {
           "name": "explicit_arguments_do_not_enable_default_listener",
-          "line": 557
+          "line": 558
         },
         {
           "name": "explicit_listener_is_preserved",
-          "line": 567
+          "line": 568
         },
         {
           "name": "processing_bench_interval_defaults_to_one_second_with_console_logging",
-          "line": 576
+          "line": 577
         },
         {
           "name": "processing_bench_interval_defaults_to_ten_seconds_without_console_logging",
-          "line": 587
+          "line": 588
         },
         {
           "name": "explicit_processing_bench_interval_overrides_the_default",
-          "line": 593
+          "line": 594
         }
       ]
     },
@@ -11918,10 +12180,25 @@
         }
       ]
     },
-    "backend/app/tests/api/auth.rs": {
-      "sha256": "9d2d6d9e69f245e1b2c2e33e7348f2dc90fbc5eec35bd1a6cfa92d99105a01bc",
+    "backend/app/tests/api/activity.rs": {
+      "sha256": "688f9668e7bed0206af5496ae376fa2ff7a658d4520cacff58118d923201d482",
       "language": "Rust",
-      "bytes": 10616,
+      "bytes": 3604,
+      "symbols": [
+        {
+          "name": "recorded",
+          "line": 5
+        },
+        {
+          "name": "changes_sign_ins_and_refusals_are_recorded_for_global_admins",
+          "line": 20
+        }
+      ]
+    },
+    "backend/app/tests/api/auth.rs": {
+      "sha256": "9e4b81c8efde7c89b97d11a5fc4514fe0ef9ed232f702abb1fee4a2a0eeaf6bd",
+      "language": "Rust",
+      "bytes": 11817,
       "symbols": [
         {
           "name": "test_login",
@@ -11932,19 +12209,23 @@
           "line": 203
         },
         {
-          "name": "verification_uses_current_rights_and_rejects_deleted_users",
+          "name": "five_wrong_codes_drop_the_emailed_code",
           "line": 278
         },
         {
+          "name": "verification_uses_current_rights_and_rejects_deleted_users",
+          "line": 320
+        },
+        {
           "name": "store_verification",
-          "line": 330
+          "line": 372
         }
       ]
     },
     "backend/app/tests/api/configuration.rs": {
-      "sha256": "a80a54a15f5b04fac636c2231778c0f7da3fd992827d8d7ca2c91bdf4cc95e2f",
+      "sha256": "1b002ab5350487e0c7d69476badfe1848fa9e35e6d8b237f11f15997d175252a",
       "language": "Rust",
-      "bytes": 14562,
+      "bytes": 14572,
       "symbols": [
         {
           "name": "configuration_and_output_routes_cover_crud_and_permissions",
@@ -12218,9 +12499,9 @@
       ]
     },
     "backend/app/tests/api/users.rs": {
-      "sha256": "54b1d0750611953f26e8384bb79522175cdac06647732388d2449b3685f4ef3b",
+      "sha256": "7b935754d08e9598d93bd8102b52a158a2a3a7679e15b036a9c019ed33847eb7",
       "language": "Rust",
-      "bytes": 3779,
+      "bytes": 11457,
       "symbols": [
         {
           "name": "self_updates_cannot_grant_privileges_or_modify_another_user",
@@ -12229,6 +12510,14 @@
         {
           "name": "global_admins_change_roles_of_others_and_list_users",
           "line": 55
+        },
+        {
+          "name": "an_operator_uses_only_the_areas_a_global_admin_gave_them",
+          "line": 118
+        },
+        {
+          "name": "a_token_from_before_a_change_to_its_user_is_refused",
+          "line": 273
         }
       ]
     },
@@ -12256,85 +12545,89 @@
       ]
     },
     "backend/app/tests/api_routes.rs": {
-      "sha256": "b4d244015750bf2f7ca7cf0afc7373224b1b657f7c031887159a651120a3209a",
+      "sha256": "7cf8074304cef1b253564378adfa2b5d9639ce24361895048dd30a8484a32060",
       "language": "Rust",
-      "bytes": 7319,
+      "bytes": 7429,
       "symbols": [
         {
-          "name": "auth",
+          "name": "activity",
           "line": 18
         },
         {
-          "name": "configuration",
+          "name": "auth",
           "line": 20
         },
         {
-          "name": "files",
+          "name": "configuration",
           "line": 22
         },
         {
-          "name": "graphics",
+          "name": "files",
           "line": 24
         },
         {
-          "name": "playlists",
+          "name": "graphics",
           "line": 26
         },
         {
-          "name": "preview",
+          "name": "playlists",
           "line": 28
         },
         {
-          "name": "report",
+          "name": "preview",
           "line": 30
         },
         {
-          "name": "schedule",
+          "name": "report",
           "line": 32
         },
         {
-          "name": "server",
+          "name": "schedule",
           "line": 34
         },
         {
-          "name": "users",
+          "name": "server",
           "line": 36
         },
         {
-          "name": "xmltv",
+          "name": "users",
           "line": 38
         },
         {
+          "name": "xmltv",
+          "line": 40
+        },
+        {
           "name": "prepare_config",
-          "line": 57
+          "line": 59
         },
         {
           "name": "SecurityFixture",
-          "line": 103
+          "line": 106
         },
         {
           "name": "Drop",
-          "line": 109
+          "line": 112
         },
         {
           "name": "drop",
-          "line": 110
+          "line": 113
         },
         {
           "name": "security_fixture",
-          "line": 116
+          "line": 119
         },
         {
           "name": "uuid_for_test",
-          "line": 196
+          "line": 199
         },
         {
           "name": "access_token",
-          "line": 208
+          "line": 211
         },
         {
           "name": "json_request",
-          "line": 229
+          "line": 233
         }
       ]
     },
@@ -13952,6 +14245,33 @@
         {
           "name": "chain_runs_added_effects_in_order",
           "line": 135
+        }
+      ]
+    },
+    "backend/engine/src/av_sync_tests.rs": {
+      "sha256": "32760316d97d839e5118f6f4440742ee14f82c27dc8294789969a8bafc7e14ac",
+      "language": "Rust",
+      "bytes": 7099,
+      "symbols": [
+        {
+          "name": "run",
+          "line": 33
+        },
+        {
+          "name": "reference_clip",
+          "line": 45
+        },
+        {
+          "name": "flashes",
+          "line": 77
+        },
+        {
+          "name": "beeps",
+          "line": 104
+        },
+        {
+          "name": "every_beep_airs_with_its_flash_across_clip_changes_and_a_seek",
+          "line": 149
         }
       ]
     },
@@ -16686,9 +17006,9 @@
       ]
     },
     "backend/engine/src/lib.rs": {
-      "sha256": "afc7f00a84d045a76053bb5408599023453b9f5b1e882ec31287d122a6fb1be5",
+      "sha256": "1f61761cddca179de90dd1387243a17b8951869028e7f273e3dd40445778099a",
       "language": "Rust",
-      "bytes": 46305,
+      "bytes": 46337,
       "symbols": [
         {
           "name": "analysis",
@@ -16699,356 +17019,360 @@
           "line": 20
         },
         {
-          "name": "benchmark",
-          "line": 21
-        },
-        {
-          "name": "compositor",
+          "name": "av_sync_tests",
           "line": 22
         },
         {
-          "name": "convert",
+          "name": "benchmark",
           "line": 23
         },
         {
-          "name": "frame",
+          "name": "compositor",
           "line": 24
         },
         {
-          "name": "gstreamer",
+          "name": "convert",
           "line": 25
         },
         {
-          "name": "input",
+          "name": "frame",
           "line": 26
         },
         {
-          "name": "loudness_preview",
+          "name": "gstreamer",
+          "line": 27
+        },
+        {
+          "name": "input",
           "line": 28
         },
         {
-          "name": "output",
-          "line": 29
-        },
-        {
-          "name": "playback_control",
+          "name": "loudness_preview",
           "line": 30
         },
         {
-          "name": "playout",
+          "name": "output",
           "line": 31
         },
         {
-          "name": "preview_quality",
+          "name": "playback_control",
           "line": 32
         },
         {
-          "name": "time_base",
+          "name": "playout",
           "line": 33
         },
         {
-          "name": "utils",
+          "name": "preview_quality",
           "line": 34
         },
         {
+          "name": "time_base",
+          "line": 35
+        },
+        {
+          "name": "utils",
+          "line": 36
+        },
+        {
           "name": "uploaded_font_name",
-          "line": 102
+          "line": 104
         },
         {
           "name": "register_uploaded_font",
-          "line": 106
+          "line": 108
         },
         {
           "name": "available_font_families",
-          "line": 110
+          "line": 112
         },
         {
           "name": "set_processing_bench_interval",
-          "line": 116
+          "line": 118
         },
         {
           "name": "ClipResult",
-          "line": 121
+          "line": 123
         },
         {
           "name": "LogoFade",
-          "line": 130
+          "line": 132
         },
         {
           "name": "LogoGaps",
-          "line": 149
+          "line": 151
         },
         {
           "name": "LogoGaps",
-          "line": 154
+          "line": 156
         },
         {
           "name": "new",
-          "line": 158
+          "line": 160
         },
         {
           "name": "is_empty",
-          "line": 187
+          "line": 189
         },
         {
           "name": "iter",
-          "line": 192
+          "line": 194
         },
         {
           "name": "Playout",
-          "line": 197
+          "line": 199
         },
         {
           "name": "HlsHealth",
-          "line": 208
+          "line": 210
         },
         {
           "name": "HlsHealth",
-          "line": 212
+          "line": 214
         },
         {
           "name": "new",
-          "line": 213
+          "line": 215
         },
         {
           "name": "last_muxed_age",
-          "line": 219
+          "line": 221
         },
         {
           "name": "mark_muxed",
-          "line": 226
+          "line": 228
         },
         {
           "name": "PlayOptions",
-          "line": 235
+          "line": 237
         },
         {
           "name": "AsyncPlayout",
-          "line": 244
+          "line": 246
         },
         {
           "name": "WorkerCompletion",
-          "line": 258
+          "line": 260
         },
         {
           "name": "AsyncPlayout",
-          "line": 263
+          "line": 265
         },
         {
           "name": "open",
-          "line": 264
+          "line": 266
         },
         {
           "name": "open_stream",
-          "line": 273
+          "line": 275
         },
         {
           "name": "open_hls",
-          "line": 282
+          "line": 284
         },
         {
           "name": "open_decklink",
-          "line": 313
+          "line": 315
         },
         {
           "name": "open_ndi",
-          "line": 323
+          "line": 325
         },
         {
           "name": "open_desktop",
-          "line": 333
+          "line": 335
         },
         {
           "name": "open_with",
-          "line": 337
+          "line": 339
         },
         {
           "name": "lshape_control",
-          "line": 382
+          "line": 384
         },
         {
           "name": "logo_control",
-          "line": 388
+          "line": 390
         },
         {
           "name": "playback_control",
-          "line": 392
+          "line": 394
         },
         {
           "name": "hls_health",
-          "line": 396
+          "line": 398
         },
         {
           "name": "preloader",
-          "line": 401
+          "line": 403
         },
         {
           "name": "play",
-          "line": 405
+          "line": 407
         },
         {
           "name": "play_with_seek",
-          "line": 409
+          "line": 411
         },
         {
           "name": "play_with_timing_and_logo_fade",
-          "line": 432
+          "line": 434
         },
         {
           "name": "play_with_timing_logo_fade_and_rate",
-          "line": 451
+          "line": 453
         },
         {
           "name": "play_with_timing_logo_fade_rate_and_audio",
-          "line": 473
+          "line": 475
         },
         {
           "name": "finish",
-          "line": 501
+          "line": 503
         },
         {
           "name": "Drop",
-          "line": 524
+          "line": 526
         },
         {
           "name": "drop",
-          "line": 525
+          "line": 527
         },
         {
           "name": "AsyncCommand",
-          "line": 535
+          "line": 537
         },
         {
           "name": "run_async_playout_worker",
-          "line": 553
+          "line": 555
         },
         {
           "name": "Playout",
-          "line": 605
+          "line": 607
         },
         {
           "name": "open",
-          "line": 606
+          "line": 608
         },
         {
           "name": "open_stream",
-          "line": 614
+          "line": 616
         },
         {
           "name": "open_decklink",
-          "line": 626
+          "line": 628
         },
         {
           "name": "open_ndi",
-          "line": 638
+          "line": 640
         },
         {
           "name": "open_desktop",
-          "line": 647
+          "line": 649
         },
         {
           "name": "open_hls",
-          "line": 655
+          "line": 657
         },
         {
           "name": "open_hls_with_health",
-          "line": 677
+          "line": 679
         },
         {
           "name": "validate_fallback_duration",
-          "line": 702
+          "line": 704
         },
         {
           "name": "with_output",
-          "line": 710
+          "line": 712
         },
         {
           "name": "play",
-          "line": 732
+          "line": 734
         },
         {
           "name": "play_with_loudness_preview",
-          "line": 741
+          "line": 743
         },
         {
           "name": "play_with_seek",
-          "line": 814
+          "line": 816
         },
         {
           "name": "play_with_timing_and_logo_fade",
-          "line": 826
+          "line": 828
         },
         {
           "name": "play_timed",
-          "line": 845
+          "line": 847
         },
         {
           "name": "finish",
-          "line": 933
+          "line": 935
         },
         {
           "name": "init_media",
-          "line": 941
+          "line": 943
         },
         {
           "name": "play_program_clip",
-          "line": 955
+          "line": 957
         },
         {
           "name": "play_to_output",
-          "line": 989
+          "line": 991
         },
         {
           "name": "played_seconds",
-          "line": 1044
+          "line": 1046
         },
         {
           "name": "classify_fallback_error",
-          "line": 1052
+          "line": 1054
         },
         {
           "name": "tests",
-          "line": 1065
+          "line": 1067
         },
         {
           "name": "failed_live_connection_returns_control_without_filling_the_event_slot",
-          "line": 1075
+          "line": 1077
         },
         {
           "name": "clips_take_exactly_their_duration_on_the_output",
-          "line": 1120
+          "line": 1122
         },
         {
           "name": "preloaded_clip_trim_after_a_previous_clip_completes_its_slot",
-          "line": 1155
+          "line": 1157
         },
         {
           "name": "damaged_clip",
-          "line": 1199
+          "line": 1201
         },
         {
           "name": "damaged_data_in_a_clip_keeps_its_slot_length",
-          "line": 1218
+          "line": 1220
         },
         {
           "name": "a_clip_failing_midway_counts_what_already_went_out",
-          "line": 1249
+          "line": 1251
         },
         {
           "name": "restart_during_fallback_remains_a_playout_restart",
-          "line": 1268
+          "line": 1270
         },
         {
           "name": "playlist_reset_during_fallback_reinitializes_playout",
-          "line": 1276
+          "line": 1278
         },
         {
           "name": "restart_request_is_independent_from_skip_request",
-          "line": 1284
+          "line": 1286
         },
         {
           "name": "dropping_async_playout_discards_queued_work_and_finishes_worker",
-          "line": 1295
+          "line": 1297
         }
       ]
     },
@@ -17307,9 +17631,9 @@
       ]
     },
     "backend/engine/src/output/backlog.rs": {
-      "sha256": "1e65008528081476750a390080ce3973d32db9cb41b678bf14cdc88dcfb91be6",
+      "sha256": "7a977e2c876b3ac68787693ff840f3b5fa17910ba3f46099986f1989db75e18e",
       "language": "Rust",
-      "bytes": 3844,
+      "bytes": 8329,
       "symbols": [
         {
           "name": "video_backlog_bytes",
@@ -17336,20 +17660,56 @@
           "line": 52
         },
         {
-          "name": "tests",
-          "line": 88
+          "name": "stalled",
+          "line": 91
         },
         {
-          "name": "a_short_stall_drops_buffers_and_recovers",
-          "line": 92
+          "name": "StalledOutput",
+          "line": 97
         },
         {
-          "name": "an_output_that_takes_nothing_for_the_limit_fails",
+          "name": "StalledOutput",
           "line": 103
         },
         {
+          "name": "new",
+          "line": 105
+        },
+        {
+          "name": "resume",
+          "line": 140
+        },
+        {
+          "name": "Drop",
+          "line": 154
+        },
+        {
+          "name": "drop",
+          "line": 155
+        },
+        {
+          "name": "frame",
+          "line": 160
+        },
+        {
+          "name": "tests",
+          "line": 170
+        },
+        {
+          "name": "a_stalled_local_output_drops_frames_without_blocking_and_catches_up",
+          "line": 179
+        },
+        {
+          "name": "a_short_stall_drops_buffers_and_recovers",
+          "line": 206
+        },
+        {
+          "name": "an_output_that_takes_nothing_for_the_limit_fails",
+          "line": 217
+        },
+        {
           "name": "the_video_backlog_holds_a_second_of_frames",
-          "line": 114
+          "line": 228
         }
       ]
     },
@@ -18971,9 +19331,9 @@
       ]
     },
     "backend/engine/src/output/gstreamer_output.rs": {
-      "sha256": "e461567b11a0a4d8cc5a81ce00d3f5f12107989de776f38e4b08d78bb916565b",
+      "sha256": "f65eeddcff461dfd76eeee033ce10d6fa1c51f74f25ccc302336dd92d12846a1",
       "language": "Rust",
-      "bytes": 57449,
+      "bytes": 62507,
       "symbols": [
         {
           "name": "inject_hls_buffer",
@@ -19064,128 +19424,152 @@
           "line": 728
         },
         {
-          "name": "EncodedOutput",
-          "line": 733
+          "name": "Backlog",
+          "line": 743
+        },
+        {
+          "name": "backlog",
+          "line": 752
+        },
+        {
+          "name": "feed",
+          "line": 766
         },
         {
           "name": "EncodedOutput",
-          "line": 749
+          "line": 783
+        },
+        {
+          "name": "EncodedOutput",
+          "line": 805
         },
         {
           "name": "open_recording",
-          "line": 751
+          "line": 807
         },
         {
           "name": "open",
-          "line": 776
+          "line": 832
         },
         {
           "name": "open_with_hls_health",
-          "line": 780
+          "line": 836
         },
         {
           "name": "audio_frame_size",
-          "line": 1012
+          "line": 1070
         },
         {
           "name": "set_playout_rate",
-          "line": 1016
+          "line": 1074
         },
         {
           "name": "poll",
-          "line": 1020
+          "line": 1078
         },
         {
           "name": "encode_video",
-          "line": 1041
+          "line": 1099
+        },
+        {
+          "name": "warn_behind",
+          "line": 1161
         },
         {
           "name": "held_video_frame",
-          "line": 1097
+          "line": 1174
         },
         {
           "name": "encode_audio",
-          "line": 1101
+          "line": 1178
         },
         {
           "name": "encode_processed_audio",
-          "line": 1104
+          "line": 1181
         },
         {
           "name": "audio",
-          "line": 1108
+          "line": 1185
         },
         {
           "name": "write_vtt_subtitles",
-          "line": 1163
+          "line": 1244
         },
         {
           "name": "clear_vtt_subtitles",
-          "line": 1183
+          "line": 1264
         },
         {
           "name": "advance_vtt_subtitles",
-          "line": 1187
+          "line": 1268
         },
         {
           "name": "finish",
-          "line": 1215
+          "line": 1296
         },
         {
           "name": "clock_time",
-          "line": 1242
+          "line": 1323
         },
         {
           "name": "packed_video_buffer",
-          "line": 1251
+          "line": 1332
         },
         {
           "name": "configure_rendition",
-          "line": 1285
+          "line": 1366
         },
         {
           "name": "apply_metadata",
-          "line": 1298
-        },
-        {
-          "name": "tests",
-          "line": 1326
-        },
-        {
-          "name": "directory",
-          "line": 1334
-        },
-        {
-          "name": "video",
-          "line": 1345
-        },
-        {
-          "name": "encode_seconds",
-          "line": 1363
-        },
-        {
-          "name": "probe",
           "line": 1379
         },
         {
+          "name": "tests",
+          "line": 1407
+        },
+        {
+          "name": "a_preview_encoder_behind_drops_frames_and_a_program_encoder_stops",
+          "line": 1411
+        },
+        {
+          "name": "a_stalled_preview_encoder_drops_frames_and_a_stalled_program_encoder_fails",
+          "line": 1440
+        },
+        {
+          "name": "directory",
+          "line": 1467
+        },
+        {
+          "name": "video",
+          "line": 1478
+        },
+        {
+          "name": "encode_seconds",
+          "line": 1496
+        },
+        {
+          "name": "probe",
+          "line": 1512
+        },
+        {
           "name": "i420_transfer_honors_native_plane_alignment",
-          "line": 1394
+          "line": 1527
         },
         {
           "name": "output_audio_is_resampled_to_the_selected_rate_on_the_same_timeline",
-          "line": 1425
+          "line": 1558
         },
         {
           "name": "native_file_output_keeps_audio_and_video_on_the_same_timeline",
-          "line": 1448
+          "line": 1581
         },
         {
           "name": "native_hls_finalizes_playable_segments_and_vtt",
-          "line": 1480
+          "line": 1613
         },
         {
           "name": "standalone_recording_uses_its_encode_dimensions",
-          "line": 1539
+          "line": 1672
         }
       ]
     },
@@ -22356,9 +22740,9 @@
       ]
     },
     "docker-compose.yml": {
-      "sha256": "9cf5a7afc83f178bc95c1518548fa1eedd57c9fbc51e24c3bca499a57231632c",
+      "sha256": "50630e294af86eeebd5d76696770bbd714d3bba2f6308072803c6b3b90a12aef",
       "language": "YAML",
-      "bytes": 2975,
+      "bytes": 3147,
       "symbols": []
     },
     "docker/gstreamer/build.sh": {
@@ -22398,9 +22782,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "bd48090e06b4f2b4a86158a237f15d2a214799659296f686124cb9aafeaf2252",
+      "sha256": "0100379cf2c3d850e023063beb97b3ea775372afc0559ab683e77c1bac5df25f",
       "language": "Markdown",
-      "bytes": 73227,
+      "bytes": 78784,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -22416,15 +22800,15 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "0ab5815e2b6f68d18c35ce1f2124987bdf2b3e5829a27a4d856710721719491e",
+      "sha256": "5f83f752bfbfd31e4f90393709d78f6cdde86297d36a94d14c19e5ea90e4f13c",
       "language": "Markdown",
-      "bytes": 7641,
+      "bytes": 8050,
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "8115a80bb3e4bcb4f4cf08541dd6f0633ece715c2223e422d72de28abc7ffff1",
+      "sha256": "d82e9ccd5fd9265b15121cf697ae54011bae338480969f5e788bafe0c03b0421",
       "language": "Markdown",
-      "bytes": 15034,
+      "bytes": 15945,
       "symbols": []
     },
     "docs/external_tasks.md": {
@@ -22452,9 +22836,9 @@
       "symbols": []
     },
     "docs/images/readme-captures.json": {
-      "sha256": "f7dc827efb00daeb5e5211f32f2e8e3271abf75faac821ce6e45a03349ab8108",
+      "sha256": "cca9526371a5ac7edf3279fc2ff8b0a22e4a43cf682d94ad6ac9888fac1ca8ef",
       "language": "JSON",
-      "bytes": 6823,
+      "bytes": 7149,
       "symbols": []
     },
     "docs/ingest_error.md": {
@@ -22602,53 +22986,69 @@
       "symbols": []
     },
     "frontend/src/App.vue": {
-      "sha256": "1a3c6d7323eff1520c5d54c82ef78e888a87e6c5707cc5df39b9fe1ddc805b8c",
+      "sha256": "a6f7a399cb928d5bdafb94e49d3bd960fdab8e16ccaba31bcc3c0221806432bd",
       "language": "Vue",
-      "bytes": 2836,
+      "bytes": 3552,
       "symbols": [
         {
           "name": "indexStore",
-          "line": 17
-        },
-        {
-          "name": "uploads",
           "line": 18
         },
         {
-          "name": "route",
+          "name": "uploads",
           "line": 19
         },
         {
+          "name": "route",
+          "line": 20
+        },
+        {
+          "name": "router",
+          "line": 21
+        },
+        {
+          "name": "auth",
+          "line": 22
+        },
+        {
+          "name": "area",
+          "line": 40
+        },
+        {
+          "name": "roles",
+          "line": 41
+        },
+        {
           "name": "startLanguage",
-          "line": 32
+          "line": 50
         },
         {
           "name": "saved",
-          "line": 33
+          "line": 51
         },
         {
           "name": "code",
-          "line": 46
-        },
-        {
-          "name": "match",
-          "line": 47
-        },
-        {
-          "name": "darkThemeMq",
-          "line": 61
-        },
-        {
-          "name": "theme",
-          "line": 62
-        },
-        {
-          "name": "preferDark",
           "line": 64
         },
         {
+          "name": "match",
+          "line": 65
+        },
+        {
+          "name": "darkThemeMq",
+          "line": 79
+        },
+        {
+          "name": "theme",
+          "line": 80
+        },
+        {
+          "name": "preferDark",
+          "line": 82
+        },
+        {
           "name": "showHeader",
-          "line": 90
+          "line": 108
         }
       ]
     },
@@ -22659,9 +23059,9 @@
       "symbols": []
     },
     "frontend/src/components/HeaderMenu.vue": {
-      "sha256": "789d1d42076209a686e6e25df1304298073787479c0c1a6de3aaa147cc417623",
+      "sha256": "410622a775122dc5e215f102fbaaf898ac88617e01b7ed98a80ab03fc7fe9ea6",
       "language": "Vue",
-      "bytes": 12814,
+      "bytes": 13261,
       "symbols": [
         {
           "name": "router",
@@ -22725,39 +23125,39 @@
         },
         {
           "name": "channelId",
-          "line": 79
+          "line": 89
         },
         {
           "name": "isActive",
-          "line": 83
-        },
-        {
-          "name": "channelLink",
-          "line": 87
-        },
-        {
-          "name": "selectChannel",
-          "line": 91
-        },
-        {
-          "name": "selector",
-          "line": 92
-        },
-        {
-          "name": "id",
           "line": 93
         },
         {
+          "name": "channelLink",
+          "line": 97
+        },
+        {
+          "name": "selectChannel",
+          "line": 101
+        },
+        {
+          "name": "selector",
+          "line": 102
+        },
+        {
+          "name": "id",
+          "line": 103
+        },
+        {
           "name": "changeLang",
-          "line": 99
+          "line": 109
         },
         {
           "name": "toggleTheme",
-          "line": 104
+          "line": 114
         },
         {
           "name": "logout",
-          "line": 109
+          "line": 119
         }
       ]
     },
@@ -23077,9 +23477,9 @@
       ]
     },
     "frontend/src/components/graphics/GraphicsComposer.vue": {
-      "sha256": "731de0548cb290bc5a8881511fb5015554cb5da5209dc8e2e6272cddc21c2ffd",
+      "sha256": "09cab3f911f4ae9de02dd99377e92829603da9a7ed66f3382697b2fc4cba2f1c",
       "language": "Vue",
-      "bytes": 44912,
+      "bytes": 45061,
       "symbols": [
         {
           "name": "configStore",
@@ -24472,9 +24872,9 @@
       ]
     },
     "frontend/src/components/graphics/composer/ComposerCanvas.vue": {
-      "sha256": "2c272ccc0880a31658601ee3a9799b48be711ce1e0ee050cca2d53c5e0c42c7f",
+      "sha256": "1f1da944370f5c63c2cb9af12050a516460e3c8de106834c87ce2a5ca0907198",
       "language": "Vue",
-      "bytes": 12316,
+      "bytes": 12514,
       "symbols": [
         {
           "name": "props",
@@ -26225,537 +26625,549 @@
       ]
     },
     "frontend/src/components/player/PlaylistPanel.vue": {
-      "sha256": "417cc1e1b08ca568f40311359f5a26b257eedcbb4d7dad2738765b3dd7fb43fe",
+      "sha256": "991c7c26904c3f9c75ec881b4d726ec17aea7f56a0a47b1ee59c270c2460b63e",
       "language": "Vue",
-      "bytes": 58544,
+      "bytes": 59414,
       "symbols": [
         {
           "name": "props",
-          "line": 41
+          "line": 42
         },
         {
           "name": "emit",
-          "line": 50
+          "line": 51
         },
         {
           "name": "configStore",
-          "line": 54
-        },
-        {
-          "name": "indexStore",
           "line": 55
         },
         {
-          "name": "playlistStore",
+          "name": "indexStore",
           "line": 56
         },
         {
-          "name": "programmes",
+          "name": "playlistStore",
           "line": 57
         },
         {
-          "name": "onAir",
+          "name": "programmes",
           "line": 58
         },
         {
+          "name": "onAir",
+          "line": 59
+        },
+        {
           "name": "tableScroller",
-          "line": 62
+          "line": 63
         },
         {
           "name": "narrowTable",
-          "line": 65
+          "line": 66
         },
         {
           "name": "editing",
-          "line": 67
+          "line": 68
         },
         {
           "name": "recent",
-          "line": 69
-        },
-        {
-          "name": "newRemote",
           "line": 70
         },
         {
-          "name": "picker",
+          "name": "newRemote",
           "line": 71
         },
         {
-          "name": "dropAt",
+          "name": "picker",
           "line": 72
         },
         {
-          "name": "dragRow",
+          "name": "dropAt",
           "line": 73
         },
         {
-          "name": "menuOpen",
+          "name": "dragRow",
           "line": 74
         },
         {
-          "name": "menu",
+          "name": "menuOpen",
           "line": 75
         },
         {
-          "name": "dateInput",
+          "name": "menu",
           "line": 76
         },
         {
+          "name": "dateInput",
+          "line": 77
+        },
+        {
           "name": "pendingDate",
-          "line": 95
+          "line": 96
         },
         {
           "name": "view",
-          "line": 98
+          "line": 99
         },
         {
           "name": "selected",
-          "line": 100
+          "line": 101
         },
         {
           "name": "anchorUid",
-          "line": 102
-        },
-        {
-          "name": "moveTime",
           "line": 103
         },
         {
+          "name": "moveTime",
+          "line": 104
+        },
+        {
           "name": "readSetting",
-          "line": 105
+          "line": 106
         },
         {
           "name": "channel",
-          "line": 125
-        },
-        {
-          "name": "storage",
           "line": 126
         },
         {
-          "name": "infinite",
+          "name": "storage",
           "line": 127
         },
         {
-          "name": "dayStart",
+          "name": "infinite",
           "line": 128
         },
         {
+          "name": "dayStart",
+          "line": 129
+        },
+        {
           "name": "dateLabel",
-          "line": 130
+          "line": 131
         },
         {
           "name": "shortDateLabel",
-          "line": 133
+          "line": 134
         },
         {
           "name": "totalSeconds",
-          "line": 136
-        },
-        {
-          "name": "unsaved",
           "line": 137
         },
         {
+          "name": "unsaved",
+          "line": 138
+        },
+        {
           "name": "dayLength",
-          "line": 139
+          "line": 140
         },
         {
           "name": "dayGap",
-          "line": 141
+          "line": 142
         },
         {
           "name": "listEnd",
-          "line": 143
-        },
-        {
-          "name": "last",
           "line": 144
         },
         {
+          "name": "last",
+          "line": 145
+        },
+        {
           "name": "listKey",
-          "line": 152
+          "line": 153
         },
         {
           "name": "load",
-          "line": 156
+          "line": 157
         },
         {
           "name": "changeDate",
-          "line": 168
+          "line": 169
         },
         {
           "name": "confirmDateChange",
-          "line": 182
-        },
-        {
-          "name": "date",
           "line": 183
         },
         {
-          "name": "openDatePicker",
-          "line": 192
+          "name": "date",
+          "line": 184
         },
         {
-          "name": "input",
+          "name": "openDatePicker",
           "line": 193
         },
         {
+          "name": "input",
+          "line": 194
+        },
+        {
           "name": "scrollToOnAir",
-          "line": 207
+          "line": 208
         },
         {
           "name": "index",
-          "line": 213
+          "line": 214
         },
         {
           "name": "uid",
-          "line": 219
+          "line": 220
         },
         {
           "name": "date",
-          "line": 227
+          "line": 228
+        },
+        {
+          "name": "channelSwitchConfirmed",
+          "line": 240
+        },
+        {
+          "name": "unregisterNavigationGuard",
+          "line": 241
+        },
+        {
+          "name": "target",
+          "line": 242
         },
         {
           "name": "jumpTo",
-          "line": 291
+          "line": 311
         },
         {
           "name": "selectedIndices",
-          "line": 300
+          "line": 320
         },
         {
           "name": "selectionIsBreak",
-          "line": 305
+          "line": 325
         },
         {
           "name": "toggleSelect",
-          "line": 307
-        },
-        {
-          "name": "items",
-          "line": 308
-        },
-        {
-          "name": "anchor",
-          "line": 309
-        },
-        {
-          "name": "index",
-          "line": 310
-        },
-        {
-          "name": "range",
-          "line": 314
-        },
-        {
-          "name": "takeSelected",
           "line": 327
         },
         {
-          "name": "taken",
+          "name": "items",
           "line": 328
         },
         {
+          "name": "anchor",
+          "line": 329
+        },
+        {
+          "name": "index",
+          "line": 330
+        },
+        {
+          "name": "range",
+          "line": 334
+        },
+        {
+          "name": "takeSelected",
+          "line": 347
+        },
+        {
+          "name": "taken",
+          "line": 348
+        },
+        {
           "name": "shiftSelection",
-          "line": 336
+          "line": 356
         },
         {
           "name": "indices",
-          "line": 337
+          "line": 357
         },
         {
           "name": "first",
-          "line": 343
+          "line": 363
         },
         {
           "name": "last",
-          "line": 344
+          "line": 364
         },
         {
           "name": "neighbour",
-          "line": 350
+          "line": 370
         },
         {
           "name": "taken",
-          "line": 351
+          "line": 371
         },
         {
           "name": "at",
-          "line": 352
+          "line": 372
         },
         {
           "name": "duplicateSelection",
-          "line": 358
+          "line": 378
         },
         {
           "name": "indices",
-          "line": 359
+          "line": 379
         },
         {
           "name": "copies",
-          "line": 361
+          "line": 381
         },
         {
           "name": "toggleBreakSelection",
-          "line": 373
+          "line": 393
         },
         {
           "name": "value",
-          "line": 374
+          "line": 394
         },
         {
           "name": "item",
-          "line": 377
+          "line": 397
         },
         {
           "name": "removeSelection",
-          "line": 387
+          "line": 407
         },
         {
           "name": "count",
-          "line": 388
+          "line": 408
         },
         {
           "name": "moveSelectionTo",
-          "line": 399
+          "line": 419
         },
         {
           "name": "taken",
-          "line": 400
+          "line": 420
         },
         {
           "name": "undo",
-          "line": 416
+          "line": 436
         },
         {
           "name": "redo",
-          "line": 421
+          "line": 441
         },
         {
           "name": "target",
-          "line": 427
+          "line": 447
         },
         {
           "name": "typing",
-          "line": 428
+          "line": 448
         },
         {
           "name": "key",
-          "line": 444
-        },
-        {
-          "name": "command",
-          "line": 445
-        },
-        {
-          "name": "openMoveTime",
           "line": 464
         },
         {
-          "name": "first",
+          "name": "command",
           "line": 465
         },
         {
+          "name": "openMoveTime",
+          "line": 484
+        },
+        {
+          "name": "first",
+          "line": 485
+        },
+        {
           "name": "moveToTime",
-          "line": 471
+          "line": 491
         },
         {
           "name": "value",
-          "line": 472
+          "line": 492
         },
         {
           "name": "target",
-          "line": 481
+          "line": 501
         },
         {
           "name": "taken",
-          "line": 487
+          "line": 507
         },
         {
           "name": "at",
-          "line": 488
+          "line": 508
         },
         {
           "name": "markAdded",
-          "line": 498
+          "line": 518
         },
         {
           "name": "itemFromFile",
-          "line": 502
+          "line": 522
         },
         {
           "name": "insertAt",
-          "line": 513
+          "line": 533
         },
         {
           "name": "placeIndex",
-          "line": 519
+          "line": 539
         },
         {
           "name": "addFiles",
-          "line": 536
+          "line": 556
         },
         {
           "name": "index",
-          "line": 537
+          "line": 557
         },
         {
           "name": "addFile",
-          "line": 561
+          "line": 581
         },
         {
           "name": "place",
-          "line": 562
+          "line": 582
         },
         {
           "name": "index",
-          "line": 563
-        },
-        {
-          "name": "item",
-          "line": 564
-        },
-        {
-          "name": "removeItem",
           "line": 583
         },
         {
+          "name": "item",
+          "line": 584
+        },
+        {
+          "name": "removeItem",
+          "line": 603
+        },
+        {
           "name": "startEdit",
-          "line": 588
+          "line": 608
         },
         {
           "name": "applyEdit",
-          "line": 593
+          "line": 613
         },
         {
           "name": "index",
-          "line": 598
+          "line": 618
         },
         {
           "name": "items",
-          "line": 601
+          "line": 621
         },
         {
           "name": "addRemote",
-          "line": 611
+          "line": 631
         },
         {
           "name": "applyRemote",
-          "line": 617
+          "line": 637
         },
         {
           "name": "split",
-          "line": 623
+          "line": 643
         },
         {
           "name": "length",
-          "line": 628
+          "line": 648
         },
         {
           "name": "pick",
-          "line": 638
-        },
-        {
-          "name": "target",
-          "line": 639
-        },
-        {
-          "name": "absolute",
-          "line": 640
-        },
-        {
-          "name": "hasPayload",
-          "line": 657
-        },
-        {
-          "name": "types",
           "line": 658
         },
         {
+          "name": "target",
+          "line": 659
+        },
+        {
+          "name": "absolute",
+          "line": 660
+        },
+        {
+          "name": "hasPayload",
+          "line": 677
+        },
+        {
+          "name": "types",
+          "line": 678
+        },
+        {
           "name": "rowDragStart",
-          "line": 663
+          "line": 683
         },
         {
           "name": "uids",
-          "line": 664
+          "line": 684
         },
         {
           "name": "dragOverRow",
-          "line": 674
+          "line": 694
         },
         {
           "name": "target",
-          "line": 681
+          "line": 701
         },
         {
           "name": "rect",
-          "line": 682
+          "line": 702
         },
         {
           "name": "dragOverEnd",
-          "line": 691
+          "line": 711
         },
         {
           "name": "dragEnd",
-          "line": 700
+          "line": 720
         },
         {
           "name": "drop",
-          "line": 705
+          "line": 725
         },
         {
           "name": "index",
-          "line": 706
+          "line": 726
         },
         {
           "name": "media",
-          "line": 707
+          "line": 727
         },
         {
           "name": "folder",
-          "line": 708
+          "line": 728
         },
         {
           "name": "uid",
-          "line": 709
-        },
-        {
-          "name": "uids",
           "line": 729
         },
         {
+          "name": "uids",
+          "line": 749
+        },
+        {
           "name": "items",
-          "line": 737
+          "line": 757
         },
         {
           "name": "moving",
-          "line": 738
+          "line": 758
         },
         {
           "name": "target",
-          "line": 739
+          "line": 759
         },
         {
           "name": "rest",
-          "line": 746
+          "line": 766
         },
         {
           "name": "at",
-          "line": 747
-        },
-        {
-          "name": "dropClass",
-          "line": 755
-        },
-        {
-          "name": "focusLibrary",
           "line": 767
         },
         {
+          "name": "dropClass",
+          "line": 775
+        },
+        {
+          "name": "focusLibrary",
+          "line": 787
+        },
+        {
           "name": "search",
-          "line": 768
+          "line": 788
         }
       ]
     },
@@ -28282,45 +28694,49 @@
       ]
     },
     "frontend/src/components/settings/PlayoutCard.vue": {
-      "sha256": "1baff3af9cf930c9e216d26d594561e4aeca02a0f9096fdfb371177574c264ee",
+      "sha256": "ca9e0f1e9fb8048bd10087d365b793037e396e83e8e7034934e779c42e8027e2",
       "language": "Vue",
-      "bytes": 3312,
+      "bytes": 3579,
       "symbols": [
         {
-          "name": "configStore",
-          "line": 15
-        },
-        {
-          "name": "indexStore",
+          "name": "authStore",
           "line": 16
         },
         {
-          "name": "playlistStore",
+          "name": "configStore",
           "line": 17
         },
         {
-          "name": "settings",
+          "name": "indexStore",
           "line": 18
         },
         {
-          "name": "asking",
+          "name": "playlistStore",
+          "line": 19
+        },
+        {
+          "name": "settings",
           "line": 20
         },
         {
-          "name": "busy",
-          "line": 21
+          "name": "asking",
+          "line": 22
         },
         {
-          "name": "channel",
+          "name": "busy",
           "line": 23
         },
         {
+          "name": "channel",
+          "line": 25
+        },
+        {
           "name": "status",
-          "line": 24
+          "line": 26
         },
         {
           "name": "send",
-          "line": 34
+          "line": 36
         }
       ]
     },
@@ -28526,9 +28942,9 @@
       ]
     },
     "frontend/src/components/settings/RestartDialog.vue": {
-      "sha256": "8b6867f089272e655e6cdccb8a9120503ffc04cdf10277b75e0db5a276b01349",
+      "sha256": "d4d27b95cc5b55825f0c760bb4d7ecae00a62667d7a57c6d09f10eecc5200be4",
       "language": "Vue",
-      "bytes": 2369,
+      "bytes": 2717,
       "symbols": [
         {
           "name": "props",
@@ -28674,6 +29090,137 @@
         {
           "name": "id",
           "line": 6
+        }
+      ]
+    },
+    "frontend/src/components/settings/SettingsActivity.vue": {
+      "sha256": "7057196ec7890cf7b5422552e597b457cfe25a6fa1f51f676fddc0a06e7db765",
+      "language": "Vue",
+      "bytes": 10973,
+      "symbols": [
+        {
+          "name": "configStore",
+          "line": 13
+        },
+        {
+          "name": "indexStore",
+          "line": 14
+        },
+        {
+          "name": "GROUPS",
+          "line": 17
+        },
+        {
+          "name": "PAGE",
+          "line": 29
+        },
+        {
+          "name": "filters",
+          "line": 31
+        },
+        {
+          "name": "entries",
+          "line": 39
+        },
+        {
+          "name": "more",
+          "line": 40
+        },
+        {
+          "name": "loading",
+          "line": 41
+        },
+        {
+          "name": "usernames",
+          "line": 42
+        },
+        {
+          "name": "version",
+          "line": 44
+        },
+        {
+          "name": "query",
+          "line": 46
+        },
+        {
+          "name": "params",
+          "line": 47
+        },
+        {
+          "name": "load",
+          "line": 61
+        },
+        {
+          "name": "current",
+          "line": 62
+        },
+        {
+          "name": "before",
+          "line": 63
+        },
+        {
+          "name": "page",
+          "line": 67
+        },
+        {
+          "name": "users",
+          "line": 84
+        },
+        {
+          "name": "when",
+          "line": 91
+        },
+        {
+          "name": "who",
+          "line": 95
+        },
+        {
+          "name": "channelName",
+          "line": 100
+        },
+        {
+          "name": "what",
+          "line": 105
+        },
+        {
+          "name": "key",
+          "line": 106
+        },
+        {
+          "name": "result",
+          "line": 112
+        },
+        {
+          "name": "RESULT_CLASS",
+          "line": 120
+        },
+        {
+          "name": "countLabel",
+          "line": 128
+        },
+        {
+          "name": "exportCsv",
+          "line": 135
+        },
+        {
+          "name": "separator",
+          "line": 136
+        },
+        {
+          "name": "cell",
+          "line": 137
+        },
+        {
+          "name": "header",
+          "line": 138
+        },
+        {
+          "name": "lines",
+          "line": 141
+        },
+        {
+          "name": "text",
+          "line": 151
         }
       ]
     },
@@ -29675,9 +30222,9 @@
       ]
     },
     "frontend/src/components/settings/SettingsUsers.vue": {
-      "sha256": "1ba5c8750c946030b4fbd4856c38584aeb9ff7650bd5bdfc61b5a1770a272233",
+      "sha256": "b441a0ae5c5e2703844c8ac15b9364617935fadb630955b7d2f1e1e97e695105",
       "language": "Vue",
-      "bytes": 10820,
+      "bytes": 11505,
       "symbols": [
         {
           "name": "authStore",
@@ -29721,47 +30268,47 @@
         },
         {
           "name": "loadUsers",
-          "line": 41
+          "line": 42
         },
         {
           "name": "channelNames",
-          "line": 52
+          "line": 53
         },
         {
           "name": "names",
-          "line": 57
+          "line": 58
         },
         {
           "name": "toggleEdit",
-          "line": 64
+          "line": 65
         },
         {
           "name": "error",
-          "line": 73
-        },
-        {
-          "name": "draft",
           "line": 74
         },
         {
-          "name": "saveUser",
-          "line": 95
+          "name": "draft",
+          "line": 75
         },
         {
-          "name": "draft",
+          "name": "saveUser",
           "line": 96
         },
         {
+          "name": "draft",
+          "line": 97
+        },
+        {
           "name": "body",
-          "line": 104
+          "line": 105
         },
         {
           "name": "deleteUser",
-          "line": 150
+          "line": 153
         },
         {
           "name": "user",
-          "line": 151
+          "line": 154
         }
       ]
     },
@@ -29851,37 +30398,61 @@
       ]
     },
     "frontend/src/components/settings/UserEditor.vue": {
-      "sha256": "e2c63c7c97f1a1d65fe03dbf5a86e3009999aeba835f06b53fe454594cd2a781",
+      "sha256": "20630973a57109f14b4df4ad08e1cb68d9a158e0d10fe7af8ef486856875cbcf",
       "language": "Vue",
-      "bytes": 4621,
+      "bytes": 6590,
       "symbols": [
         {
+          "name": "props",
+          "line": 21
+        },
+        {
           "name": "draft",
-          "line": 19
+          "line": 28
         },
         {
           "name": "emit",
-          "line": 20
-        },
-        {
-          "name": "configStore",
-          "line": 23
-        },
-        {
-          "name": "ROLES",
-          "line": 25
-        },
-        {
-          "name": "allChannels",
-          "line": 27
-        },
-        {
-          "name": "toggleChannel",
           "line": 29
         },
         {
+          "name": "configStore",
+          "line": 32
+        },
+        {
+          "name": "ROLES",
+          "line": 34
+        },
+        {
+          "name": "allChannels",
+          "line": 36
+        },
+        {
+          "name": "showAreas",
+          "line": 38
+        },
+        {
+          "name": "usesArea",
+          "line": 40
+        },
+        {
+          "name": "toggleArea",
+          "line": 44
+        },
+        {
+          "name": "current",
+          "line": 45
+        },
+        {
+          "name": "next",
+          "line": 46
+        },
+        {
+          "name": "toggleChannel",
+          "line": 52
+        },
+        {
           "name": "ids",
-          "line": 30
+          "line": 53
         }
       ]
     },
@@ -33255,9 +33826,9 @@
       ]
     },
     "frontend/src/composables/reportExport.ts": {
-      "sha256": "2e9108a68ebd8efab6a334a2c184dc436edf781fd742f7cf3116a914dede7299",
+      "sha256": "63e54a274477b6edf823e42f07b20e79553fe05f552996d2c615f0a6c8f4ba07",
       "language": "TypeScript",
-      "bytes": 13092,
+      "bytes": 13161,
       "symbols": [
         {
           "name": "DaySummary",
@@ -33277,27 +33848,27 @@
         },
         {
           "name": "save",
-          "line": 49
+          "line": 50
         },
         {
           "name": "downloadCsv",
-          "line": 65
+          "line": 66
         },
         {
           "name": "cell",
-          "line": 68
+          "line": 69
         },
         {
           "name": "downloadPdf",
-          "line": 115
+          "line": 116
         },
         {
           "name": "tableStyle",
-          "line": 356
+          "line": 357
         },
         {
           "name": "rowTitle",
-          "line": 375
+          "line": 376
         }
       ]
     },
@@ -33798,15 +34369,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "59657136749f79a577a6e538dc717b91f981f178cdd38b7560bf55ebec36d48c",
+      "sha256": "e2c468035d0f9373118e652dfa1c373e3dce599d04b1834fdaf3269ed8908931",
       "language": "TypeScript",
-      "bytes": 140224,
+      "bytes": 147424,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "35968cf672fa1a76e2e3d4f1039d41ed03a67bbde7c731f1a1d29a792b2e99df",
+      "sha256": "30b5a07f2a30ba40c002912862e6e2b0c4287fb4940aa7983889af395557f531",
       "language": "TypeScript",
-      "bytes": 146221,
+      "bytes": 153800,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -33821,9 +34392,9 @@
       ]
     },
     "frontend/src/router/index.ts": {
-      "sha256": "44f4ac4dd47d2e5067ce33eebd99442d7ed966c11ae7049de4ceaa758ed01c00",
+      "sha256": "5ff66cc44d949bc378516ef1d5c421a73ffecbd75089e37b5a1b49592ea6beac",
       "language": "TypeScript",
-      "bytes": 12817,
+      "bytes": 13453,
       "symbols": [
         {
           "name": "router",
@@ -33832,9 +34403,9 @@
       ]
     },
     "frontend/src/stores/auth.ts": {
-      "sha256": "1a67fec9d41ffd8fd278f53de4855b227a9a1ef10931bf1bc2dcb7d4b1353567",
+      "sha256": "b926a96e9ac13d530cbb54aeec41be16bc9bdb48cd562e27ee3cc721f4040054",
       "language": "TypeScript",
-      "bytes": 11547,
+      "bytes": 12341,
       "symbols": [
         {
           "name": "LoginResult",
@@ -33857,8 +34428,12 @@
           "line": 44
         },
         {
+          "name": "AreaName",
+          "line": 71
+        },
+        {
           "name": "useAuth",
-          "line": 69
+          "line": 73
         }
       ]
     },
@@ -33985,9 +34560,9 @@
       ]
     },
     "frontend/src/stores/settings.ts": {
-      "sha256": "e0a5693481a97f8f04b5ef230b0247f8feb825f86adb7690e7e889b815cdc9cc",
+      "sha256": "6a3ed71f8168b057357d191123d17fb3cad744a4fb30046e90b9fb83aaa1eead",
       "language": "TypeScript",
-      "bytes": 7342,
+      "bytes": 7635,
       "symbols": [
         {
           "name": "SettingsSectionName",
@@ -33995,55 +34570,55 @@
         },
         {
           "name": "SettingsSection",
-          "line": 26
+          "line": 27
         },
         {
           "name": "getPath",
-          "line": 86
+          "line": 90
         },
         {
           "name": "setPath",
-          "line": 92
+          "line": 96
         },
         {
           "name": "countChannelChanges",
-          "line": 115
+          "line": 119
         },
         {
           "name": "useSettings",
-          "line": 120
+          "line": 124
         },
         {
           "name": "saving",
-          "line": 125
-        },
-        {
-          "name": "restartPending",
-          "line": 127
-        },
-        {
-          "name": "visibleSections",
           "line": 129
         },
         {
-          "name": "sectionChanges",
+          "name": "restartPending",
+          "line": 131
+        },
+        {
+          "name": "visibleSections",
           "line": 133
         },
         {
+          "name": "sectionChanges",
+          "line": 139
+        },
+        {
           "name": "changedSections",
-          "line": 154
+          "line": 160
         },
         {
           "name": "discardSection",
-          "line": 158
+          "line": 164
         },
         {
           "name": "savePlayout",
-          "line": 177
+          "line": 183
         },
         {
           "name": "restartPlayout",
-          "line": 205
+          "line": 211
         }
       ]
     },
@@ -34190,9 +34765,9 @@
       ]
     },
     "frontend/src/types/index.d.ts": {
-      "sha256": "66c63195cfdfc504df0af5ff3fdbe951508f5f053b239962232cc2f937ea8f8b",
+      "sha256": "ae67e87223ca4ba575317212917f5bc47051db8d2c3c5c80d5b961e014824f6c",
       "language": "TypeScript",
-      "bytes": 12004,
+      "bytes": 12757,
       "symbols": [
         {
           "name": "JwtPayloadExt",
@@ -34200,191 +34775,199 @@
         },
         {
           "name": "PlaylistExt",
-          "line": 14
+          "line": 16
         },
         {
           "name": "PlayoutConfigExt",
-          "line": 19
+          "line": 21
         },
         {
           "name": "PlayoutOutput",
-          "line": 23
+          "line": 25
         },
         {
           "name": "CodecOption",
-          "line": 49
+          "line": 51
         },
         {
           "name": "EncoderSetting",
-          "line": 58
+          "line": 60
         },
         {
           "name": "EncoderSettingChoice",
-          "line": 69
+          "line": 71
         },
         {
           "name": "EncoderSettingVisibility",
-          "line": 74
+          "line": 76
         },
         {
           "name": "OutputCodecOptions",
-          "line": 79
+          "line": 81
         },
         {
           "name": "ProgramClip",
-          "line": 85
+          "line": 87
         },
         {
           "name": "ProgramSegment",
-          "line": 91
+          "line": 93
         },
         {
           "name": "AssembledProgram",
-          "line": 98
+          "line": 100
         },
         {
           "name": "VideoDevice",
-          "line": 104
+          "line": 106
         },
         {
           "name": "VideoDevices",
-          "line": 112
+          "line": 114
         },
         {
           "name": "PlayoutCodecOptions",
-          "line": 118
+          "line": 120
         },
         {
           "name": "Token",
-          "line": 129
+          "line": 131
         },
         {
           "name": "DataAuth",
-          "line": 134
+          "line": 136
         },
         {
           "name": "Channel",
-          "line": 138
+          "line": 140
         },
         {
           "name": "GlobalSettings",
-          "line": 152
+          "line": 154
+        },
+        {
+          "name": "ActivityEntry",
+          "line": 165
+        },
+        {
+          "name": "ActivityPage",
+          "line": 182
         },
         {
           "name": "User",
-          "line": 162
+          "line": 187
         },
         {
           "name": "Crumb",
-          "line": 174
+          "line": 201
         },
         {
           "name": "Payload",
-          "line": 179
+          "line": 206
         },
         {
           "name": "Playlist",
-          "line": 185
+          "line": 212
         },
         {
           "name": "PlaylistItem",
-          "line": 191
+          "line": 218
         },
         {
           "name": "FileObject",
-          "line": 208
+          "line": 235
         },
         {
           "name": "Folder",
-          "line": 229
-        },
-        {
-          "name": "FileFolderObject",
-          "line": 234
-        },
-        {
-          "name": "SheetKind",
-          "line": 252
-        },
-        {
-          "name": "ArtworkKind",
-          "line": 253
-        },
-        {
-          "name": "CreditRole",
           "line": 256
         },
         {
-          "name": "Credit",
-          "line": 269
+          "name": "FileFolderObject",
+          "line": 261
         },
         {
-          "name": "SheetFields",
+          "name": "SheetKind",
+          "line": 279
+        },
+        {
+          "name": "ArtworkKind",
           "line": 280
         },
         {
-          "name": "MediaSheet",
+          "name": "CreditRole",
+          "line": 283
+        },
+        {
+          "name": "Credit",
           "line": 296
         },
         {
-          "name": "FolderObject",
-          "line": 317
+          "name": "SheetFields",
+          "line": 307
         },
         {
-          "name": "SourceObject",
+          "name": "MediaSheet",
           "line": 323
         },
         {
+          "name": "FolderObject",
+          "line": 344
+        },
+        {
+          "name": "SourceObject",
+          "line": 350
+        },
+        {
           "name": "TemplateItem",
-          "line": 328
-        },
-        {
-          "name": "Template",
-          "line": 335
-        },
-        {
-          "name": "BodyObject",
-          "line": 339
-        },
-        {
-          "name": "SystemStatistics",
-          "line": 345
-        },
-        {
-          "name": "PlayoutStatus",
           "line": 355
         },
         {
-          "name": "PlayoutFailure",
+          "name": "Template",
+          "line": 362
+        },
+        {
+          "name": "BodyObject",
+          "line": 366
+        },
+        {
+          "name": "SystemStatistics",
           "line": 372
         },
         {
-          "name": "OutputLinkStatus",
+          "name": "PlayoutStatus",
           "line": 382
         },
         {
-          "name": "ClipProgramme",
-          "line": 393
+          "name": "PlayoutFailure",
+          "line": 399
         },
         {
-          "name": "AudioLevel",
-          "line": 404
-        },
-        {
-          "name": "LiveLoudnessMetrics",
+          "name": "OutputLinkStatus",
           "line": 409
         },
         {
+          "name": "ClipProgramme",
+          "line": 420
+        },
+        {
+          "name": "AudioLevel",
+          "line": 431
+        },
+        {
+          "name": "LiveLoudnessMetrics",
+          "line": 436
+        },
+        {
           "name": "SplitTime",
-          "line": 418
+          "line": 445
         },
         {
           "name": "Key",
-          "line": 424
+          "line": 451
         },
         {
           "name": "supportedValuesOf",
-          "line": 426
+          "line": 453
         }
       ]
     },
@@ -36804,22 +37387,34 @@
       "bytes": 139,
       "symbols": []
     },
+    "migrations/00035_user_areas.sql": {
+      "sha256": "9d0b7858c41c97cf935425042d51de8c4505eaeefe97b78ffa30e6db7da5d971",
+      "language": "SQL",
+      "bytes": 257,
+      "symbols": []
+    },
+    "migrations/00036_activity_log.sql": {
+      "sha256": "d4c6b9b64fba0f3d856215b19542f2b4de779a8dac15f1679922ac5b9bfe1c05",
+      "language": "SQL",
+      "bytes": 1049,
+      "symbols": []
+    },
     "package-lock.json": {
-      "sha256": "4c8dd0dd2ad6f58e0bea20133e2057d3265da4b2152ffe97a21390c6b50d5d69",
+      "sha256": "aba0605a2adfef429a8c972fa76b47be5d57f1456492a98d5728529821ac3f07",
       "language": "JSON",
       "bytes": 215132,
       "symbols": []
     },
     "package.json": {
-      "sha256": "810ac34e641fa95d1d2051edb7aa088bfde67e3bb36ca6dbfdd44f16e77d0689",
+      "sha256": "e6bf2208952f574943c439722fecd2b5b8b969b3b251a57c2cbb2aab577fb759",
       "language": "JSON",
       "bytes": 1526,
       "symbols": []
     },
     "qa/architecture/check.py": {
-      "sha256": "1739d892e1fb96c723563528c556bc81783e748c104d60a840f40487c18cd61a",
+      "sha256": "69c8118ba4472d779f7e603dba3649159b9756ea6b89d3227549014e68bf24e0",
       "language": "Python",
-      "bytes": 5706,
+      "bytes": 7039,
       "symbols": [
         {
           "name": "production_code",
@@ -36834,19 +37429,23 @@
           "line": 65
         },
         {
+          "name": "toolchain_violations",
+          "line": 94
+        },
+        {
           "name": "violations",
-          "line": 86
+          "line": 112
         },
         {
           "name": "main",
-          "line": 109
+          "line": 136
         }
       ]
     },
     "qa/architecture/test_check.py": {
-      "sha256": "0f17c2c510370dae870646b97acd1bd7c0104e0fd7c211e82f297661ae9d3f41",
+      "sha256": "0ce006de899370bab0d129ca34b82b42ce5bac0cbfcfcd9f325a7e2afa91636f",
       "language": "Python",
-      "bytes": 3817,
+      "bytes": 5282,
       "symbols": [
         {
           "name": "ArchitectureTests",
@@ -36891,6 +37490,18 @@
         {
           "name": "test_panels_allow_typed_commands_and_ignore_network_examples",
           "line": 76
+        },
+        {
+          "name": "toolchain",
+          "line": 87
+        },
+        {
+          "name": "test_local_builds_ci_and_the_image_use_one_rust",
+          "line": 97
+        },
+        {
+          "name": "test_the_repository_pins_one_rust",
+          "line": 106
         }
       ]
     },
@@ -36901,9 +37512,9 @@
       "symbols": []
     },
     "qa/e2e/README.md": {
-      "sha256": "7c4e39f53043a1b202e328dab028b23a30905f9bc513db9ec7f43afa4a9647bf",
+      "sha256": "614d787de5228ae4c96ba5a36b147398806d8f3d96003db78a5d41ae656d2983",
       "language": "Markdown",
-      "bytes": 5595,
+      "bytes": 5744,
       "symbols": []
     },
     "qa/e2e/global-setup.ts": {
@@ -37040,10 +37651,29 @@
       "bytes": 4408,
       "symbols": []
     },
-    "qa/e2e/tests/operator.spec.ts": {
-      "sha256": "4bdee1db3f415ca991d4948e81d0d958f9548a372a9df66aac6a05fac6176d82",
+    "qa/e2e/tests/operator-pages.spec.ts": {
+      "sha256": "06ff1c04772066f6ec182f866eb9854f7fb53e4d480d51c11bc35ffb90f61d05",
       "language": "TypeScript",
-      "bytes": 67774,
+      "bytes": 5981,
+      "symbols": [
+        {
+          "name": "adminHeaders",
+          "line": 7
+        },
+        {
+          "name": "pathOf",
+          "line": 14
+        },
+        {
+          "name": "setAreas",
+          "line": 38
+        }
+      ]
+    },
+    "qa/e2e/tests/operator.spec.ts": {
+      "sha256": "e7702a0623eb2a0c5232425075b4cf24625d325f8c648f39a6026f0cfe2f0701",
+      "language": "TypeScript",
+      "bytes": 69498,
       "symbols": [
         {
           "name": "api",
@@ -37051,19 +37681,19 @@
         },
         {
           "name": "add",
-          "line": 193
+          "line": 226
         },
         {
           "name": "set",
-          "line": 197
+          "line": 230
         },
         {
           "name": "save",
-          "line": 499
+          "line": 532
         },
         {
           "name": "add",
-          "line": 749
+          "line": 782
         }
       ]
     },
@@ -37125,9 +37755,9 @@
       "symbols": []
     },
     "qa/screenshots/README.md": {
-      "sha256": "29fdbdc1469aaa06fd4b879582e157f8e82795f012e887bbe6a5d1304d763bba",
+      "sha256": "310ce958efbac9640e8cf4d5fe0a56fb12947535ae1c4b9674ec7b71e9a265c8",
       "language": "Markdown",
-      "bytes": 4601,
+      "bytes": 5468,
       "symbols": []
     },
     "qa/screenshots/build_demo.py": {
@@ -37194,9 +37824,21 @@
       ]
     },
     "qa/screenshots/capture.cjs": {
-      "sha256": "b56920e8fae34a32b31d272935861f4883b4c7a72385699e1d234736893cb2cb",
+      "sha256": "771ad4c310ea4ff618746798e8202c643dd29886be33d6ca46eaf5c8e4221b8e",
       "language": "Other",
-      "bytes": 13697,
+      "bytes": 14019,
+      "symbols": []
+    },
+    "qa/screenshots/social-preview.cjs": {
+      "sha256": "3ac31693675a9ad9d467a18e646111820596edef62cd67e604362918996f6da7",
+      "language": "Other",
+      "bytes": 3039,
+      "symbols": []
+    },
+    "qa/screenshots/social-preview.html": {
+      "sha256": "cb1a81136543d73d7a1d563a8ab19e5772079f9e3cfdfc18a715f48b8feae5e9",
+      "language": "HTML",
+      "bytes": 8258,
       "symbols": []
     },
     "qa/soak/.gitignore": {
@@ -37206,15 +37848,15 @@
       "symbols": []
     },
     "qa/soak/README.md": {
-      "sha256": "dd230a24058689cb56c74b23783658540a41311a5befafa61b58d578cd85aa68",
+      "sha256": "7c47bb1cb1b0ade731d92c6f885f934f65edcb0a58954bc418a9a26b52b116df",
       "language": "Markdown",
-      "bytes": 10328,
+      "bytes": 11746,
       "symbols": []
     },
     "qa/soak/VALIDATION.md": {
-      "sha256": "046367429e653a723833803e68de4860cbdd02431c959955596a39b0fb3f900b",
+      "sha256": "c42d4ad939e0ef37d3a5a202eec92e65cf5f0c86fe5bf1b454000a1173690223",
       "language": "Markdown",
-      "bytes": 3978,
+      "bytes": 4056,
       "symbols": []
     },
     "qa/soak/evidence/native-picture-verification.json": {
@@ -37342,129 +37984,208 @@
       ]
     },
     "qa/soak/soak.py": {
-      "sha256": "9a3bc92b077d48755699ec8f6fd17b18c9454a33728522c4f0ab2d134710041d",
+      "sha256": "8593609665de39da6542f1453860495b533eb60a582f0cfb609a2ce24993ba0f",
       "language": "Python",
-      "bytes": 33106,
+      "bytes": 33651,
       "symbols": [
         {
           "name": "NativeProcesses",
-          "line": 121
+          "line": 122
         },
         {
           "name": "__init__",
-          "line": 124
+          "line": 125
         },
         {
           "name": "start",
-          "line": 129
+          "line": 130
         },
         {
           "name": "stop",
-          "line": 140
+          "line": 141
         },
         {
           "name": "running",
-          "line": 163
+          "line": 164
         },
         {
           "name": "close",
-          "line": 167
+          "line": 168
         },
         {
           "name": "executable",
-          "line": 179
+          "line": 180
         },
         {
           "name": "native_preflight",
-          "line": 186
+          "line": 187
         },
         {
           "name": "data_path",
-          "line": 201
+          "line": 202
         },
         {
           "name": "native_environment",
-          "line": 205
+          "line": 206
         },
         {
           "name": "log",
-          "line": 212
+          "line": 213
         },
         {
           "name": "docker",
-          "line": 219
+          "line": 220
         },
         {
           "name": "container",
-          "line": 223
+          "line": 224
         },
         {
           "name": "request",
-          "line": 231
+          "line": 232
         },
         {
           "name": "parse",
-          "line": 248
+          "line": 249
         },
         {
           "name": "api",
-          "line": 255
+          "line": 256
         },
         {
           "name": "login",
-          "line": 262
+          "line": 263
         },
         {
           "name": "make_clips",
-          "line": 268
+          "line": 269
         },
         {
           "name": "playlist",
-          "line": 286
+          "line": 281
         },
         {
           "name": "set_up",
-          "line": 295
+          "line": 290
         },
         {
           "name": "schedule_cycle",
-          "line": 370
+          "line": 365
         },
         {
           "name": "act",
-          "line": 384
+          "line": 379
         },
         {
           "name": "output_bytes",
-          "line": 401
+          "line": 396
         },
         {
           "name": "picture_url",
-          "line": 415
+          "line": 410
         },
         {
           "name": "picture_grace",
-          "line": 421
+          "line": 416
         },
         {
           "name": "running",
-          "line": 428
+          "line": 423
         },
         {
           "name": "prepare_work",
-          "line": 435
+          "line": 430
         },
         {
           "name": "interrupted",
-          "line": 447
+          "line": 442
         },
         {
           "name": "close_observer",
-          "line": 451
+          "line": 446
         },
         {
           "name": "main",
-          "line": 458
+          "line": 453
+        }
+      ]
+    },
+    "qa/soak/sync.py": {
+      "sha256": "bb55e0c5601fadbb9739662517c2aad9e5e77045ffbe7cb943858471b60ad243",
+      "language": "Python",
+      "bytes": 9454,
+      "symbols": [
+        {
+          "name": "marker_clip",
+          "line": 49
+        },
+        {
+          "name": "SyncTracker",
+          "line": 68
+        },
+        {
+          "name": "__init__",
+          "line": 71
+        },
+        {
+          "name": "reset",
+          "line": 81
+        },
+        {
+          "name": "line",
+          "line": 87
+        },
+        {
+          "name": "_add",
+          "line": 102
+        },
+        {
+          "name": "_record",
+          "line": 115
+        },
+        {
+          "name": "problem",
+          "line": 124
+        },
+        {
+          "name": "snapshot",
+          "line": 130
+        },
+        {
+          "name": "mean",
+          "line": 135
+        },
+        {
+          "name": "SyncMonitor",
+          "line": 148
+        },
+        {
+          "name": "__init__",
+          "line": 151
+        },
+        {
+          "name": "command",
+          "line": 165
+        },
+        {
+          "name": "start",
+          "line": 170
+        },
+        {
+          "name": "_run",
+          "line": 175
+        },
+        {
+          "name": "_end_process",
+          "line": 205
+        },
+        {
+          "name": "sample",
+          "line": 214
+        },
+        {
+          "name": "close",
+          "line": 218
         }
       ]
     },
@@ -37528,9 +38249,9 @@
       ]
     },
     "qa/soak/test_soak.py": {
-      "sha256": "15e8267101052d2f4caf0ba9f3ce52fabfa8bcf8595f3156cf82fecc863d090d",
+      "sha256": "0495973d06dfe6b0509435fa5c3331cff9f47bcea9ca3a53442297cc4865c19e",
       "language": "Python",
-      "bytes": 14733,
+      "bytes": 15075,
       "symbols": [
         {
           "name": "load_soak",
@@ -37586,51 +38307,102 @@
         },
         {
           "name": "test_cleanup_targets_only_owned_process_groups_and_reaps_children",
-          "line": 107
+          "line": 109
         },
         {
           "name": "test_docker_playlist_and_fixture_commands_keep_container_paths",
-          "line": 123
+          "line": 125
         },
         {
           "name": "test_early_setup_or_observer_failure_still_cleans_owned_processes_and_fails_duration",
-          "line": 134
+          "line": 138
         },
         {
           "name": "FakeGraphicsApi",
-          "line": 156
+          "line": 160
         },
         {
           "name": "__init__",
-          "line": 157
-        },
-        {
-          "name": "__call__",
           "line": 161
         },
         {
+          "name": "__call__",
+          "line": 165
+        },
+        {
           "name": "GraphicsCycleTests",
-          "line": 198
+          "line": 202
         },
         {
           "name": "test_real_model_contract_cycles_all_roles_and_records_every_api_response",
-          "line": 199
+          "line": 203
         },
         {
           "name": "test_http_failure_is_receipted_and_cannot_count_as_completed_work",
-          "line": 222
+          "line": 226
         },
         {
           "name": "test_control_state_mismatch_fails_even_when_http_succeeds",
-          "line": 231
+          "line": 235
         },
         {
           "name": "answer",
-          "line": 233
+          "line": 237
         },
         {
           "name": "test_authored_overlay_regions_cannot_cover_the_moving_video_roi",
-          "line": 243
+          "line": 247
+        }
+      ]
+    },
+    "qa/soak/test_sync.py": {
+      "sha256": "43f53876e00dcf96426ddab76b1d0203e256b57ce215da7c92c2581d2c3ac26c",
+      "language": "Python",
+      "bytes": 4042,
+      "symbols": [
+        {
+          "name": "feed",
+          "line": 11
+        },
+        {
+          "name": "black",
+          "line": 16
+        },
+        {
+          "name": "marker",
+          "line": 20
+        },
+        {
+          "name": "SyncTrackerTests",
+          "line": 29
+        },
+        {
+          "name": "test_each_beep_pairs_with_its_flash",
+          "line": 30
+        },
+        {
+          "name": "test_a_live_starting_after_black_and_silence_is_no_marker",
+          "line": 42
+        },
+        {
+          "name": "test_a_flash_without_sound_is_skipped",
+          "line": 50
+        },
+        {
+          "name": "test_three_offsets_in_a_row_outside_ebu_r37_are_a_problem",
+          "line": 56
+        },
+        {
+          "name": "test_a_drift_compares_the_end_with_the_start",
+          "line": 64
+        },
+        {
+          "name": "SyncMonitorTests",
+          "line": 73
+        },
+        {
+          "name": "test_the_marker_clip_measures_in_sync_through_a_real_decoder",
+          "line": 74
         }
       ]
     },
@@ -37660,6 +38432,36 @@
           "line": 162
         }
       ]
+    },
+    "rust-toolchain.toml": {
+      "sha256": "804e2f6caae79e6547cd403045f58ffe8529144820d71871ee68c3ce66ff053b",
+      "language": "TOML",
+      "bytes": 392,
+      "symbols": []
+    },
+    "site/README.md": {
+      "sha256": "70c11713f15ba4a2e3fc45d4577f9ffb30b433fedc04dc7b11733d8cb96fdb2b",
+      "language": "Markdown",
+      "bytes": 1450,
+      "symbols": []
+    },
+    "site/build.sh": {
+      "sha256": "ca8fb3863a910070db61ee57fe14d972d548300a797b598d2d00d55641c9be8b",
+      "language": "Shell",
+      "bytes": 716,
+      "symbols": []
+    },
+    "site/fonts/OFL.txt": {
+      "sha256": "d0283623ef57e722fd0eb688a8041589670c608ab780cd3612d06ba6f153d3fd",
+      "language": "Other",
+      "bytes": 4429,
+      "symbols": []
+    },
+    "site/index.html": {
+      "sha256": "f9b858ae782c59ec102cff52f1eb7af60ba719563d6c00cdb2e929f8851d4e23",
+      "language": "HTML",
+      "bytes": 65639,
+      "symbols": []
     },
     "tests_assets/fonts/LICENSE.txt": {
       "sha256": "63d3ba759d12804c5b31a9d5940d855c1820d1f5999e6b0872eb1c7ff045fbc9",

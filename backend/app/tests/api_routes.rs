@@ -14,6 +14,8 @@ use tokio::sync::{Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
 use tower::util::ServiceExt;
 
+#[path = "api/activity.rs"]
+mod activity;
 #[path = "api/auth.rs"]
 mod auth;
 #[path = "api/configuration.rs"]
@@ -215,6 +217,7 @@ async fn access_token(state: &AppState, id: i32) -> String {
     let now = chrono::Utc::now().timestamp();
     let claims = serde_json::from_value(serde_json::json!({
         "id": user.id,
+        "areas": user.area_list(),
         "channels": user.channel_ids.unwrap_or_default(),
         "username": user.username,
         "role": role,

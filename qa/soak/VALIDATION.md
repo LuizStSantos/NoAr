@@ -27,7 +27,8 @@ static picture was detected, despite continuing frame delivery and health.
 The moving fixtures contain a changing test pattern, and the frozen fixtures
 contain a constant blue picture. Both have encoded audio. This verifies
 whole-picture freeze detection; it does not simulate every possible decoder
-failure or establish audio continuity, lip sync or visual correctness.
+failure or establish audio continuity, lip sync or visual correctness. Lip
+sync is measured separately, with markers, by `sync.py` (see the README).
 
 ## Reproduce
 

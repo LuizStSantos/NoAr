@@ -275,6 +275,48 @@ async fn verification_rejects_wrong_expired_and_replayed_codes() {
 
 #[tokio::test]
 #[serial]
+async fn five_wrong_codes_drop_the_emailed_code() {
+    let fixture = security_fixture().await;
+    let username = store_verification(&fixture.state, 1, 0).await;
+    let verify = |code: &'static str| {
+        let app = fixture.app.clone();
+        let username = username.clone();
+        async move {
+            app.oneshot(json_request(
+                "POST",
+                "/auth/verify",
+                None,
+                json!({"username": username, "code": code}),
+            ))
+            .await
+            .unwrap()
+            .status()
+        }
+    };
+
+    for _ in 0..4 {
+        assert_eq!(verify("000000").await, StatusCode::FORBIDDEN);
+    }
+    assert!(
+        noar::api::auth::VERIFICATION_CODES
+            .lock()
+            .await
+            .contains_key(&username)
+    );
+
+    // The fifth wrong code drops it: even the right one is refused now.
+    assert_eq!(verify("000000").await, StatusCode::FORBIDDEN);
+    assert!(
+        !noar::api::auth::VERIFICATION_CODES
+            .lock()
+            .await
+            .contains_key(&username)
+    );
+    assert_eq!(verify("123456").await, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+#[serial]
 async fn verification_uses_current_rights_and_rejects_deleted_users() {
     let fixture = security_fixture().await;
     let username = store_verification(&fixture.state, 2, 0).await;
@@ -340,6 +382,7 @@ async fn store_verification(state: &AppState, id: i32, age_seconds: i64) -> Stri
             user,
             role,
             created_at: chrono::Utc::now() - chrono::TimeDelta::seconds(age_seconds),
+            wrong: 0,
         },
     );
 

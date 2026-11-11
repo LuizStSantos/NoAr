@@ -40,6 +40,30 @@ pub async fn select_user(pool: &SqlitePool, id: i32) -> Result<User, ProcessErro
     Ok(result)
 }
 
+/// The saved user and their role, read in one query: `None` once the user
+/// is deleted. Requests check their token against it.
+pub async fn select_user_access(
+    pool: &SqlitePool,
+    id: i32,
+) -> Result<Option<(User, Role)>, ProcessError> {
+    const QUERY: &str = "SELECT u.id, u.username, u.role_id, u.areas, r.name AS role_name, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
+        join auth_roles r on r.id = u.role_id
+        left join auth_user_channels uc on uc.user_id = u.id
+    WHERE u.id = $1
+    GROUP BY u.id";
+
+    let Some(row) = sqlx::query(QUERY).bind(id).fetch_optional(pool).await? else {
+        return Ok(None);
+    };
+    let user = <User as sqlx::FromRow<_>>::from_row(&row)?;
+    let role = row
+        .try_get::<String, _>("role_name")?
+        .parse::<Role>()
+        .unwrap_or_default();
+
+    Ok(Some((user, role)))
+}
+
 pub async fn select_users(pool: &SqlitePool) -> Result<Vec<User>, ProcessError> {
     const QUERY: &str = "SELECT u.id, u.mail, u.username, u.role_id, u.two_factor, u.areas, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
         left join auth_user_channels uc on uc.user_id = u.id

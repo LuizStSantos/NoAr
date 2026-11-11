@@ -22,6 +22,9 @@ services:
       # Lets Settings › Updates install a new version through noar-updater.
       NOAR_UPDATER_URL: http://noar-updater:8080
       NOAR_UPDATER_TOKEN: ${NOAR_UPDATER_TOKEN:-}
+      # Behind a reverse proxy, only its address may say who the client is
+      # (see docs/docker.md, "Behind a reverse proxy").
+      # NOAR_TRUSTED_PROXIES: 172.17.0.1
       # NVIDIA encoding (see docs/docker.md): with the deploy block below.
       # NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
     # The NVIDIA card, for the NVENC encoders (needs the NVIDIA Container Toolkit).

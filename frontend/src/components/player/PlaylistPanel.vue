@@ -12,6 +12,7 @@ import { onClickOutside, useElementSize, useEventListener } from '@vueuse/core'
 import ClipEditor from '@/components/player/ClipEditor.vue'
 import StoragePicker from '@/components/schedule/StoragePicker.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
+import { registerEditorNavigationGuard } from '@/composables/editorNavigation'
 import { playlistOperations } from '@/composables/helper'
 import { useOnAir } from '@/composables/onAir'
 import {
@@ -234,13 +235,32 @@ onMounted(() => {
     load(date)
 })
 
+// Another channel replaces the playlist: ask first while it has unsaved
+// changes, so a channel picked by mistake does not lose them.
+let channelSwitchConfirmed = false
+const unregisterNavigationGuard = registerEditorNavigationGuard((to) => {
+    const target = Number(Array.isArray(to.query.channel) ? to.query.channel[0] : to.query.channel)
+
+    if (!playlistStore.dirty || !Number.isSafeInteger(target) || target === channel.value?.id) {
+        return true
+    }
+    if (!window.confirm(t('onair.unsavedChannelQuestion'))) {
+        return false
+    }
+
+    channelSwitchConfirmed = true
+    return true
+})
+
 watch(
     () => channel.value?.id,
     (id, previous) => {
         if (id && previous && id !== previous) {
-            if (playlistStore.dirty) {
+            // Changed without asking (a channel removed, for one): say so.
+            if (playlistStore.dirty && !channelSwitchConfirmed) {
                 indexStore.msgAlert('warning', t('onair.unsavedDropped'), 4)
             }
+            channelSwitchConfirmed = false
 
             load(playlistStore.firstLoad ? onAirDate.value : playlistStore.listDate)
         }
@@ -773,6 +793,7 @@ function focusLibrary() {
 
 onBeforeUnmount(() => {
     menuOpen.value = false
+    unregisterNavigationGuard()
 })
 
 defineExpose({ addFile, addFiles })

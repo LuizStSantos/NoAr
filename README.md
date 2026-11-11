@@ -152,6 +152,9 @@ artwork, and the Report for what aired.
 - **Multiple channels**, users with roles, and a **REST API**
   ([docs](docs/api.md)). **Settings › External control** gathers the keys and
   ready-to-copy commands for lives, graphics and SCTE-35 breaks.
+- **Activity**: who did what, for global admins in **Settings › Activity**;
+  every change, sign-in and external command, kept 180 days
+  ([docs](docs/api.md#activity)).
 - **Alerts** by mail and HTTP push (ntfy) for log errors
   ([docs](docs/notifications.md)); a **log** that follows the channel live, in
   **Settings › Log**.
