@@ -16,6 +16,11 @@ one is tagged.
 - A GitHub social preview, `docs/images/social-preview.png`, rendered from
   `qa/screenshots/social-preview.html` with the Player screenshot by
   `node qa/screenshots/social-preview.cjs`.
+- A project website on GitHub Pages, <https://luizstsantos.github.io/NoAr/>:
+  one page in English and Portuguese with the features, the README
+  screenshots and the Docker install. It is `site/`, published by the new
+  **Website** workflow ([site/README.md](site/README.md)). Changes to `site/`
+  no longer rebuild the Docker image.
 
 ### Removed
 
