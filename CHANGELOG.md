@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-11-11
+
 ### Added
 
 - **Settings › Activity**: what each user did, for global admins. Every
@@ -51,6 +53,12 @@ one is tagged.
   can no longer keep guessing a password.
 - A two-factor code sent by email is dropped after five wrong codes, so it
   cannot be guessed in its five minutes; signing in again sends a new one.
+
+### Changed
+
+- Building NoAr from source uses Rust 1.99.1, pinned in `rust-toolchain.toml`
+  so `rustup` picks it for every `cargo` command, as CI and the Docker image
+  do; CI fails when the three differ ([developer guide](docs/developer.md)).
 
 ### Fixed
 
@@ -1344,7 +1352,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...v3.0.0
