@@ -11,6 +11,39 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- **`NOAR_TRUSTED_PROXIES`** names the reverse proxies whose
+  `X-Forwarded-For` NoAr believes (addresses or networks such as
+  `172.18.0.0/16`). Without it, any address of a private network is still
+  believed, as before, so a proxy in another container keeps working
+  ([Docker](docs/docker.md#behind-a-reverse-proxy)).
+
+### Security
+
+- A token issued before its user's role, channels or pages changed, or before
+  the user was deleted, is refused (`401`) instead of counting until it
+  expires (up to 45 minutes): a demoted admin or an operator taken off a
+  channel loses that access at once. The interface renews the token by
+  itself, so an operator's menu shows the new pages and a page that was taken
+  away closes, without signing in again. API clients renew it with
+  `/auth/refresh`, as when it expires.
+- Ten failed sign-ins for one username within 15 minutes stop sign-ins for
+  that username (`429`) until the 15 minutes pass, whatever address they come
+  from: a device on the private network that changes its `X-Forwarded-For`
+  can no longer keep guessing a password.
+- A two-factor code sent by email is dropped after five wrong codes, so it
+  cannot be guessed in its five minutes; signing in again sends a new one.
+
+### Fixed
+
+- Switching channel with unsaved playlist changes asks first; before, the
+  changes were dropped and a message said so afterwards.
+- `PUT /api/user/{id}` without `channel_ids` no longer removes all of the
+  user's channels.
+- The Report showed `report.list.noMatch` instead of a message when the
+  filters hid every item.
+
 ## [3.1.0] - 2026-11-11
 
 ### Added

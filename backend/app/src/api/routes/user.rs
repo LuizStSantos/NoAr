@@ -124,7 +124,8 @@ pub async fn update_user(
         return Err(ServiceError::BadRequest("Unknown role".to_string()));
     }
 
-    let channel_ids = data.channel_ids.clone().unwrap_or_default();
+    // A request without `channel_ids` leaves the saved channels as they are.
+    let channel_ids = data.channel_ids.clone().filter(|_| update_channels);
     // Like channels, what an operator may use is only a global admin's to
     // change; a request without `areas` leaves the saved list as it is.
     let areas = data.areas.clone().filter(|_| user.is_global_admin());
@@ -151,7 +152,7 @@ pub async fn update_user(
         two_factor,
         mail,
         password_hash,
-        update_channels.then_some(channel_ids),
+        channel_ids,
     )
     .await?;
 

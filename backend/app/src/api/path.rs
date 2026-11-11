@@ -20,8 +20,9 @@ fn auth_routes() -> Router<AppState> {
         .route("/verify", post(auth::verify))
 }
 
-/// Every route of the server. `state` serves the guard that refuses an
-/// operator the areas they were not given (`api::access`).
+/// Every route of the server. `state` serves the guard that checks each
+/// token against its saved user and refuses an operator the areas they were
+/// not given (`api::access`).
 pub fn routes(state: &AppState) -> Router<AppState> {
     Router::new()
         .nest("/auth", auth_routes())
@@ -200,7 +201,7 @@ pub fn routes(state: &AppState) -> Router<AppState> {
                 .route("/users", get(get_users))
                 .route_layer(middleware::from_fn_with_state(
                     state.clone(),
-                    access::area_guard,
+                    access::account_guard,
                 )),
         )
         .nest("/data", sse::routes::data_routes())

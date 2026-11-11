@@ -25,7 +25,7 @@ These endpoints do not use a bearer token.
 | Method | Endpoint        | Request / response                                                                                                                                                 |
 | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `POST` | `/auth/login`   | `{ "username": "...", "password": "..." }`. Returns `{ "access": "...", "refresh": "..." }`, or a verification message when two-factor authentication is required. |
-| `POST` | `/auth/verify`  | `{ "username": "...", "code": "123456" }`. Returns access and refresh tokens. Verification codes expire after five minutes.                                        |
+| `POST` | `/auth/verify`  | `{ "username": "...", "code": "123456" }`. Returns access and refresh tokens. A code expires after five minutes or five wrong codes.                               |
 | `POST` | `/auth/refresh` | `{ "refresh": "..." }`. Rotates it and returns a new `{ "access": "...", "refresh": "..." }` pair.                                                                 |
 | `POST` | `/auth/logout`  | `{ "refresh": "..." }`. Revokes the complete refresh-token family for the session.                                                                                 |
 | `GET`  | `/api/setup`    | Reports whether first-time setup is required.                                                                                                                      |
@@ -35,6 +35,16 @@ Access tokens are valid for 45 minutes and refresh tokens for 14 days. Refresh
 tokens are single-use: each successful refresh replaces the submitted token.
 Reusing an already rotated token revokes the complete token family and requires
 a new login.
+
+An access token issued before its user's role, channels or pages changed, or
+before the user was deleted, answers `401` on every request: renew it with
+`/auth/refresh`, which reads the saved user (and refuses a deleted one). The
+interface does this by itself, so a change applies at once.
+
+Ten failed sign-ins for one username within 15 minutes, from any address,
+refuse further sign-ins for that username (`429`) until those 15 minutes
+pass. A two-factor code is dropped after five wrong codes; signing in again
+sends a new one.
 
 ```bash
 curl -X POST http://127.0.0.1:8787/auth/login \
@@ -534,6 +544,9 @@ single HTTP `Range` request for seeking.
 | `POST`   | `/api/user`      | `GA`         | Create a user.                                                                                                                                                         |
 | `GET`    | `/api/users`     | `GA`         | List users with mail, role, channels and two-factor setting.                                                                                                           |
 
+A `PUT /api/user/{id}` without `channel_ids` keeps the user's saved channels;
+send `[]` to remove every channel.
+
 ### Pages an operator may use
 
 `areas` limits what an operator (`role_id` 3) may use, page by page: a list
@@ -545,7 +558,9 @@ refused. `GET /api/user`, `/api/users` and the access token carry it.
 Administrators always use every page.
 
 The server checks the saved list on every request, so a change applies at
-once: a request for an area the operator was not given answers
+once: the operator's token from before it answers `401` and is renewed (the
+interface then shows the new pages and leaves one that was taken away), and a
+request for an area the operator was not given answers
 `403 {"detail": "Your user cannot use this part of NoAr"}`. What changes the
 channel is checked, and the Report and Log, which only their pages read:
 

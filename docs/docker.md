@@ -290,7 +290,9 @@ remove the old account in **Settings › Users**. Outside Docker, run
 
 If signing in then fails with *"Could not sign in right now"* (*"Não foi
 possível entrar agora"*), wait a minute and try once: sign-in allows three
-attempts a minute from one address. A wrong password says so instead. Keeping
+attempts a minute from one address, and ten failed attempts for one username
+in 15 minutes, from any address, stop that username for the rest of the 15
+minutes. A wrong password says so instead. Keeping
 a session open (the browser renewing its access every few minutes) allows 30
 renewals a minute from one address, so a team behind one office address stays
 signed in; a renewal the server cannot answer right away does not sign anyone
@@ -302,8 +304,19 @@ Forward `X-Forwarded-Proto` and `X-Forwarded-Host` so XMLTV image links use
 the public address, and `X-Forwarded-For` so NoAr sees each client's address
 for login rate limits and file links. NoAr believes `X-Forwarded-For` only
 from a proxy on the same host or on a private network (loopback, 10/8,
-172.16/12, 192.168/16, link-local, fc00::/7); a client connecting directly is identified
-by its own address. A minimal nginx location:
+172.16/12, 192.168/16, link-local, fc00::/7); a client connecting from the
+internet is identified by its own address. A device on the private network,
+though, can also send the header and choose the address it is counted as;
+the per-username sign-in limit above still holds for it.
+
+To believe only your proxy, name it in `NOAR_TRUSTED_PROXIES`: addresses or
+networks, separated by commas or spaces, for example
+`NOAR_TRUSTED_PROXIES: 172.18.0.0/16` for a proxy container on that Docker
+network, or the proxy's address. A proxy on the same host (loopback) is always
+believed. With Docker's published port, a proxy on the host that connects to
+`127.0.0.1:8787` reaches NoAr from the Docker network's gateway (for example
+`172.17.0.1`): name that address. Entries that are not an address or network
+are left out with a warning in the log. A minimal nginx location:
 
 ```nginx
 location / {

@@ -1398,6 +1398,7 @@ export default {
             legend: 'Up to now: actual times. Later: the plan from the playlist and the Scheduler.',
             toNow: 'Go to now',
             empty: 'Nothing in this range.',
+            noMatch: 'No item in this range matches the chosen filters.',
         },
         days: {
             day: 'Day',
@@ -2105,6 +2106,7 @@ export default {
         imported: 'List imported.',
         deleted: 'Playlist deleted.',
         unsavedDropped: 'Unsaved playlist changes were dropped when the channel changed.',
+        unsavedChannelQuestion: 'This playlist has unsaved changes. Another channel discards them. Switch anyway?',
         copy: 'Copy',
         targetDay: 'Day',
         copyHint: 'A playlist that already exists on that day is replaced.',

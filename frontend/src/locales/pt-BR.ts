@@ -1401,6 +1401,7 @@ export default {
             legend: 'Até agora: horários reais. Depois: o previsto pela playlist e pelo Agendador.',
             toNow: 'Ir para agora',
             empty: 'Nada neste intervalo.',
+            noMatch: 'Nenhum item deste intervalo combina com os filtros escolhidos.',
         },
         days: {
             day: 'Dia',
@@ -2115,6 +2116,7 @@ export default {
         imported: 'Lista importada.',
         deleted: 'Playlist excluída.',
         unsavedDropped: 'Alterações não salvas da playlist foram descartadas ao trocar de canal.',
+        unsavedChannelQuestion: 'Esta playlist tem alterações não salvas. Outro canal as descarta. Trocar mesmo assim?',
         copy: 'Copiar',
         targetDay: 'Dia',
         copyHint: 'Se já existir playlist nesse dia, ela será substituída.',

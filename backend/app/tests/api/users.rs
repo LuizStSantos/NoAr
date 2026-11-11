@@ -155,7 +155,14 @@ async fn an_operator_uses_only_the_areas_a_global_admin_gave_them() {
         Some(vec![Area::Playlist])
     );
 
-    // The change applies at once, with the token issued before it.
+    // The change applies at once: the token issued before it is refused, so
+    // the interface renews it and its menu follows the saved pages.
+    assert_eq!(
+        status("GET", "/api/playlist/1", operator.clone()).await,
+        StatusCode::UNAUTHORIZED
+    );
+    let operator = access_token(&fixture.state, 1).await;
+
     for (method, uri) in [
         ("GET", "/api/report/1"),
         ("GET", "/api/log/1"),
@@ -253,8 +260,112 @@ async fn an_operator_uses_only_the_areas_a_global_admin_gave_them() {
             .unwrap(),
         None
     );
-    assert_ne!(
-        status("GET", "/api/report/1", operator).await,
-        StatusCode::FORBIDDEN
+    let operator = access_token(&fixture.state, 1).await;
+    let report = status("GET", "/api/report/1", operator).await;
+    assert!(
+        ![StatusCode::FORBIDDEN, StatusCode::UNAUTHORIZED].contains(&report),
+        "{report}"
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn a_token_from_before_a_change_to_its_user_is_refused() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let operator = access_token(&fixture.state, 1).await;
+    let status = |method: &'static str, uri: String, token: String, body: serde_json::Value| {
+        let app = fixture.app.clone();
+        async move {
+            app.oneshot(json_request(method, &uri, Some(&token), body))
+                .await
+                .unwrap()
+                .status()
+        }
+    };
+
+    assert_eq!(
+        status("GET", "/api/user".into(), operator.clone(), json!({})).await,
+        StatusCode::OK
+    );
+
+    // A request without `channel_ids` keeps the saved channels.
+    assert_eq!(
+        status(
+            "PUT",
+            "/api/user/1".into(),
+            admin.clone(),
+            json!({"username": "regular", "mail": "kept@example.org"})
+        )
+        .await,
+        StatusCode::OK
+    );
+    assert_eq!(
+        handles::select_user(&fixture.state.pool, 1)
+            .await
+            .unwrap()
+            .channel_ids,
+        Some(vec![1])
+    );
+    assert_eq!(
+        status("GET", "/api/user".into(), operator.clone(), json!({})).await,
+        StatusCode::OK
+    );
+
+    // Promoted, then demoted: the old token stops counting each time.
+    let promoted = json!({"username": "regular", "role_id": 1, "channel_ids": [1]});
+    assert_eq!(
+        status("PUT", "/api/user/1".into(), admin.clone(), promoted).await,
+        StatusCode::OK
+    );
+    assert_eq!(
+        status("GET", "/api/user".into(), operator.clone(), json!({})).await,
+        StatusCode::UNAUTHORIZED
+    );
+    let promoted_token = access_token(&fixture.state, 1).await;
+    assert_eq!(
+        status(
+            "GET",
+            "/api/users".into(),
+            promoted_token.clone(),
+            json!({})
+        )
+        .await,
+        StatusCode::OK
+    );
+    let demoted = json!({"username": "regular", "role_id": 3, "channel_ids": [1]});
+    assert_eq!(
+        status("PUT", "/api/user/1".into(), admin.clone(), demoted).await,
+        StatusCode::OK
+    );
+    assert_eq!(
+        status("GET", "/api/users".into(), promoted_token, json!({})).await,
+        StatusCode::UNAUTHORIZED
+    );
+
+    // A channel taken away, and a deleted user, too.
+    let operator = access_token(&fixture.state, 1).await;
+    assert_eq!(
+        status(
+            "PUT",
+            "/api/user/1".into(),
+            admin.clone(),
+            json!({"username": "regular", "channel_ids": [2]})
+        )
+        .await,
+        StatusCode::OK
+    );
+    assert_eq!(
+        status("GET", "/api/playlist/1".into(), operator, json!({})).await,
+        StatusCode::UNAUTHORIZED
+    );
+    let operator = access_token(&fixture.state, 1).await;
+    assert_eq!(
+        status("DELETE", "/api/user/1".into(), admin, json!({})).await,
+        StatusCode::OK
+    );
+    assert_eq!(
+        status("GET", "/api/user".into(), operator, json!({})).await,
+        StatusCode::UNAUTHORIZED
     );
 }

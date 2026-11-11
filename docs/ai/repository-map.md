@@ -8,32 +8,33 @@ Machine-generated navigation index; verify behavior against current source code.
 - `.agents/`: 7 indexed files
 - `.cargo/`: 1 indexed files
 - `.claude/`: 51 indexed files
-- `.github/`: 8 indexed files
+- `.github/`: 9 indexed files
 - `.vscode/`: 2 indexed files
 - `assets/`: 1 indexed files
-- `backend/`: 231 indexed files
+- `backend/`: 232 indexed files
 - `docker/`: 4 indexed files
 - `docs/`: 31 indexed files
 - `frontend/`: 178 indexed files
-- `migrations/`: 34 indexed files
-- `qa/`: 40 indexed files
+- `migrations/`: 35 indexed files
+- `qa/`: 43 indexed files
+- `site/`: 4 indexed files
 - `tests_assets/`: 15 indexed files
 
 ## Languages and formats
 
-- Rust: 225
+- Rust: 226
 - Vue: 108
-- Markdown: 84
-- TypeScript: 79
-- SQL: 34
+- Markdown: 85
+- TypeScript: 80
+- SQL: 35
 - JSON: 29
 - Python: 25
-- Other: 18
-- YAML: 9
+- Other: 20
+- YAML: 10
 - TOML: 4
-- Shell: 3
+- Shell: 4
+- HTML: 3
 - Build: 1
-- HTML: 1
 - CSS: 1
 
 ## Find files or symbols
