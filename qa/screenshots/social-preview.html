@@ -1,5 +1,7 @@
 <!doctype html>
-<!-- GitHub social preview (1280x640). Render with: node qa/screenshots/social-preview.cjs -->
+<!-- GitHub social preview (1280x640). Render with: node qa/screenshots/social-preview.cjs
+     GitHub crops the card: keep everything that matters inside x 80-1200, y 80-560
+     (its repo card template); the script checks it. Only the background may bleed. -->
 <html lang="en">
     <head>
         <meta charset="utf-8" />
@@ -74,33 +76,33 @@
             }
             .copy {
                 position: absolute;
-                left: 72px;
-                top: 64px;
-                width: 560px;
+                left: 96px;
+                top: 96px;
+                width: 524px;
                 display: flex;
                 flex-direction: column;
             }
             .brand {
                 display: flex;
                 align-items: center;
-                gap: 22px;
+                gap: 18px;
             }
             .brand svg {
-                width: 84px;
-                height: 84px;
+                width: 68px;
+                height: 68px;
                 filter: drop-shadow(0 10px 30px rgba(242, 140, 27, 0.35));
             }
             .brand h1 {
                 margin: 0;
-                font-size: 96px;
+                font-size: 76px;
                 line-height: 1;
                 font-weight: 700;
                 letter-spacing: -0.02em;
             }
             .tag {
-                margin: 34px 0 0;
-                font-size: 44px;
-                line-height: 1.1;
+                margin: 24px 0 0;
+                font-size: 36px;
+                line-height: 1.12;
                 font-weight: 600;
                 letter-spacing: -0.01em;
             }
@@ -109,24 +111,24 @@
                 color: var(--accent);
             }
             .desc {
-                margin: 18px 0 0;
-                font-size: 23px;
+                margin: 14px 0 0;
+                font-size: 20px;
                 line-height: 1.45;
                 color: var(--muted);
-                max-width: 530px;
+                max-width: 500px;
             }
             .chips {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 10px;
-                margin-top: 30px;
-                max-width: 560px;
+                gap: 8px;
+                margin-top: 22px;
+                max-width: 524px;
             }
             .chip {
                 font:
-                    500 16px PlexMono,
+                    500 15px PlexMono,
                     monospace;
-                padding: 7px 12px;
+                padding: 6px 11px;
                 border: 1px solid var(--line);
                 border-radius: 999px;
                 color: #cfd2d6;
@@ -139,10 +141,10 @@
             }
             .foot {
                 position: absolute;
-                left: 72px;
-                bottom: 52px;
+                left: 96px;
+                bottom: 100px;
                 font:
-                    500 17px PlexMono,
+                    500 16px PlexMono,
                     monospace;
                 color: #7d8187;
                 display: flex;
@@ -154,10 +156,10 @@
             }
             .shot {
                 position: absolute;
-                left: 664px;
-                top: 160px;
-                width: 580px;
-                height: 311.3px;
+                left: 652px;
+                top: 177px;
+                width: 532px;
+                height: 285.6px;
                 border-radius: 14px;
                 overflow: hidden;
                 border: 1px solid #34373d;
@@ -169,15 +171,15 @@
             .shot img {
                 position: absolute;
                 display: block;
-                width: 602.6px;
-                left: -8.4px;
-                top: -30.1px;
+                width: 552.7px;
+                left: -7.7px;
+                top: -27.6px;
             }
 
             .onair {
                 position: absolute;
-                left: 642px;
-                top: 136px;
+                left: 636px;
+                top: 155px;
                 z-index: 2;
                 display: flex;
                 align-items: center;

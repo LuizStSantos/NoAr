@@ -39,8 +39,23 @@ async function main() {
             )
         }
 
+        // GitHub's repo card template: what matters stays 80 px inside every edge.
+        const outside = await page.evaluate(() =>
+            [...document.querySelectorAll('.brand, .tag, .desc, .chips, .foot, .shot, .onair')]
+                .map((el) => [el.className, el.getBoundingClientRect()])
+                .filter(([, box]) => box.left < 80 || box.top < 80 || box.right > 1200 || box.bottom > 560)
+                .map(
+                    ([name, box]) =>
+                        `${name} at x ${Math.round(box.left)}-${Math.round(box.right)}, y ${Math.round(box.top)}-${Math.round(box.bottom)}`,
+                ),
+        )
+
+        if (outside.length) {
+            throw new Error(`Outside GitHub's safe area (x 80-1200, y 80-560): ${outside.join('; ')}`)
+        }
+
         await page.screenshot({ path: out })
-        console.log(`PASS social preview: ${path.relative(process.cwd(), out)} (1280x640)`)
+        console.log(`PASS social preview: ${path.relative(process.cwd(), out)} (1280x640, inside the safe area)`)
     } finally {
         await browser.close()
     }

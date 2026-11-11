@@ -127,5 +127,8 @@ node qa/screenshots/social-preview.cjs --chromium /usr/bin/chromium
 ```
 
 It writes `docs/images/social-preview.png` and fails if the screenshot or a
-font file is missing. GitHub has no API for the card: upload the PNG in the
+font file is missing, or if any text, chip or the screenshot leaves GitHub's
+safe area: GitHub crops the card, so its repo card template keeps everything
+that matters 80 px inside each edge (x 80–1200, y 80–560). Only the background
+may reach the edges. GitHub has no API for the card: upload the PNG in the
 repository's **Settings › General › Social preview**.
