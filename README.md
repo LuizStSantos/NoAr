@@ -7,6 +7,8 @@ NoAr is a 24/7 TV playout system: it plays daily playlists or folders without
 interruption, lets you schedule breaks and live shows over the running
 programme, and publishes an XMLTV guide with artwork for IPTV players.
 
+**Website:** <https://luizstsantos.github.io/NoAr/>
+
 Everything is run from the browser: the Player for what is on air, the
 Playlist page to build the days, the Scheduler for timed programmes and graphics,
 Graphics to design and operate reusable templates, Storage for media and guide

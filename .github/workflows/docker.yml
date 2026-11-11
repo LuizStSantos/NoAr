@@ -12,7 +12,9 @@ on:
       - 'qa/**'
       - 'CLAUDE.md'
       - 'README.md'
+      - 'site/**'
       - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:

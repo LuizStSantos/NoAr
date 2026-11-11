@@ -1,0 +1,1425 @@
+<!doctype html>
+<!-- NoAr project website, published on GitHub Pages by .github/workflows/pages.yml (see site/README.md). -->
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>NoAr: 24/7 TV playout, run from the browser</title>
+        <meta
+            name="description"
+            content="Open-source 24/7 TV playout: daily playlists, scheduled breaks and lives, live graphics, SCTE-35 and an XMLTV guide, run from the browser and installed with Docker."
+        />
+        <meta name="theme-color" content="#17181a" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <link rel="canonical" href="https://luizstsantos.github.io/NoAr/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="NoAr: 24/7 TV playout, run from the browser" />
+        <meta
+            property="og:description"
+            content="Daily playlists, scheduled lives, live graphics and an XMLTV guide, without dropping the air."
+        />
+        <meta property="og:url" content="https://luizstsantos.github.io/NoAr/" />
+        <meta property="og:image" content="https://luizstsantos.github.io/NoAr/docs/images/social-preview.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <style>
+            @font-face {
+                font-family: Plex;
+                font-weight: 400;
+                font-display: swap;
+                src: url(fonts/ibm-plex-sans-latin-400-normal.woff2) format('woff2');
+            }
+            @font-face {
+                font-family: Plex;
+                font-weight: 500;
+                font-display: swap;
+                src: url(fonts/ibm-plex-sans-latin-500-normal.woff2) format('woff2');
+            }
+            @font-face {
+                font-family: Plex;
+                font-weight: 600;
+                font-display: swap;
+                src: url(fonts/ibm-plex-sans-latin-600-normal.woff2) format('woff2');
+            }
+            @font-face {
+                font-family: Plex;
+                font-weight: 700;
+                font-display: swap;
+                src: url(fonts/ibm-plex-sans-latin-700-normal.woff2) format('woff2');
+            }
+            @font-face {
+                font-family: PlexMono;
+                font-weight: 400;
+                font-display: swap;
+                src: url(fonts/ibm-plex-mono-latin-400-normal.woff2) format('woff2');
+            }
+            @font-face {
+                font-family: PlexMono;
+                font-weight: 500;
+                font-display: swap;
+                src: url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2');
+            }
+
+            :root {
+                color-scheme: dark;
+                --bg: #17181a;
+                --panel: #1f2023;
+                --panel-2: #24262a;
+                --line: #2c2e33;
+                --line-2: #3a3d43;
+                --text: #e8e6e3;
+                --muted: #a3a7ad;
+                --faint: #7d8187;
+                --accent: #f28c1b;
+                --accent-ink: #17181a;
+                --live: #ff5c5c;
+                --ok: #5fd38d;
+                --radius: 14px;
+                --wrap: 1160px;
+                --gutter: 24px;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html {
+                scroll-behavior: smooth;
+                scroll-padding-top: 80px;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--text);
+                font:
+                    400 17px/1.6 Plex,
+                    system-ui,
+                    sans-serif;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: hidden;
+            }
+            img {
+                max-width: 100%;
+                height: auto;
+                display: block;
+            }
+            a {
+                color: var(--accent);
+                text-decoration-thickness: 1px;
+                text-underline-offset: 3px;
+            }
+            a:hover {
+                color: #ffad55;
+            }
+            :focus-visible {
+                outline: 2px solid var(--accent);
+                outline-offset: 3px;
+                border-radius: 6px;
+            }
+            code,
+            pre {
+                font-family: PlexMono, ui-monospace, monospace;
+            }
+            .wrap {
+                width: min(var(--wrap), 100% - 2 * var(--gutter));
+                margin-inline: auto;
+            }
+            .skip {
+                position: absolute;
+                left: -999px;
+                top: 8px;
+                background: var(--accent);
+                color: var(--accent-ink);
+                padding: 8px 12px;
+                border-radius: 8px;
+                z-index: 20;
+            }
+            .skip:focus {
+                left: 8px;
+            }
+
+            /* Header */
+            header.top {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background: rgba(23, 24, 26, 0.86);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--line);
+            }
+            .top .wrap {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                height: 64px;
+            }
+            .logo {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                color: var(--text);
+                text-decoration: none;
+                font-weight: 700;
+                font-size: 20px;
+            }
+            .logo svg {
+                width: 30px;
+                height: 30px;
+            }
+            .top nav {
+                display: flex;
+                gap: 4px;
+                margin-left: 12px;
+            }
+            .top nav a {
+                color: var(--muted);
+                text-decoration: none;
+                padding: 6px 10px;
+                border-radius: 8px;
+                font-size: 15px;
+            }
+            .top nav a:hover {
+                color: var(--text);
+                background: var(--panel);
+            }
+            .top .end {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .lang {
+                display: inline-flex;
+                border: 1px solid var(--line-2);
+                border-radius: 999px;
+                padding: 2px;
+            }
+            .lang button {
+                font:
+                    600 13px Plex,
+                    sans-serif;
+                color: var(--muted);
+                background: none;
+                border: 0;
+                padding: 4px 10px;
+                border-radius: 999px;
+                cursor: pointer;
+            }
+            .lang button[aria-pressed='true'] {
+                background: var(--panel-2);
+                color: var(--text);
+            }
+
+            /* Buttons */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font:
+                    600 16px Plex,
+                    sans-serif;
+                padding: 12px 20px;
+                border-radius: 10px;
+                text-decoration: none;
+                border: 1px solid transparent;
+                cursor: pointer;
+            }
+            .btn-main {
+                background: var(--accent);
+                color: var(--accent-ink);
+            }
+            .btn-main:hover {
+                background: #ffa040;
+                color: var(--accent-ink);
+            }
+            .btn-quiet {
+                border-color: var(--line-2);
+                color: var(--text);
+                background: var(--panel);
+            }
+            .btn-quiet:hover {
+                border-color: #555a62;
+                color: var(--text);
+            }
+            .btn-sm {
+                padding: 7px 14px;
+                font-size: 14px;
+                border-radius: 8px;
+            }
+            .btn svg {
+                width: 18px;
+                height: 18px;
+                flex: none;
+            }
+
+            /* Hero */
+            .hero {
+                position: relative;
+                padding: 72px 0 56px;
+                overflow: hidden;
+            }
+            .hero::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background:
+                    radial-gradient(760px 520px at 8% 110%, rgba(242, 140, 27, 0.2), transparent 70%),
+                    radial-gradient(640px 420px at 95% -10%, rgba(242, 140, 27, 0.09), transparent 70%);
+                pointer-events: none;
+            }
+            .hero .wrap {
+                position: relative;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+                gap: 48px;
+                align-items: center;
+            }
+            .eyebrow {
+                font:
+                    500 14px PlexMono,
+                    monospace;
+                letter-spacing: 0.04em;
+                color: var(--accent);
+                margin: 0 0 14px;
+            }
+            .hero h1 {
+                margin: 0;
+                font-size: clamp(38px, 5.2vw, 60px);
+                line-height: 1.06;
+                letter-spacing: -0.02em;
+                font-weight: 700;
+                text-wrap: balance;
+            }
+            .hero h1 em {
+                font-style: normal;
+                color: var(--accent);
+            }
+            .lead {
+                margin: 20px 0 0;
+                font-size: 19px;
+                color: var(--muted);
+                max-width: 540px;
+            }
+            .actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-top: 30px;
+            }
+            .meta {
+                margin-top: 20px;
+                font-size: 14px;
+                color: var(--faint);
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 16px;
+            }
+            .meta a {
+                color: var(--muted);
+            }
+            .frame {
+                position: relative;
+                border-radius: var(--radius);
+                border: 1px solid #34373d;
+                overflow: hidden;
+                background: var(--panel);
+                box-shadow:
+                    0 30px 80px rgba(0, 0, 0, 0.55),
+                    0 0 0 8px rgba(255, 255, 255, 0.02);
+            }
+            .badge-air {
+                position: absolute;
+                left: -12px;
+                top: -16px;
+                z-index: 2;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font:
+                    600 14px Plex,
+                    sans-serif;
+                letter-spacing: 0.08em;
+                color: #fff;
+                background: var(--live);
+                padding: 6px 12px;
+                border-radius: 7px;
+                box-shadow: 0 8px 24px rgba(255, 92, 92, 0.35);
+            }
+            .badge-air i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #fff;
+                animation: pulse 2s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                50% {
+                    opacity: 0.35;
+                }
+            }
+            .hero-shot {
+                position: relative;
+            }
+            /* Captures are 1440x1000; a frame with a shorter aspect ratio cuts their empty bottom. */
+            .frame.crop img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: top;
+            }
+
+            /* Outputs strip */
+            .strip {
+                border-block: 1px solid var(--line);
+                background: #1a1b1e;
+            }
+            .strip .wrap {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 10px 14px;
+                padding: 18px 0;
+            }
+            .strip strong {
+                font-size: 14px;
+                color: var(--faint);
+                font-weight: 500;
+                margin-right: 6px;
+            }
+            .chip {
+                font:
+                    500 14px PlexMono,
+                    monospace;
+                padding: 5px 11px;
+                border: 1px solid var(--line-2);
+                border-radius: 999px;
+                color: #cfd2d6;
+            }
+            .chip.hot {
+                border-color: rgba(242, 140, 27, 0.55);
+                color: var(--accent);
+                background: rgba(242, 140, 27, 0.08);
+            }
+
+            /* Sections */
+            section.block {
+                padding: 80px 0;
+            }
+            .head {
+                max-width: 720px;
+                margin-bottom: 40px;
+            }
+            .head h2 {
+                margin: 0;
+                font-size: clamp(28px, 3.4vw, 38px);
+                line-height: 1.15;
+                letter-spacing: -0.01em;
+            }
+            .head p {
+                margin: 12px 0 0;
+                color: var(--muted);
+                font-size: 18px;
+            }
+
+            /* Features */
+            .features {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 16px;
+            }
+            .feature {
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                padding: 22px;
+            }
+            .feature .ico {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                display: grid;
+                place-items: center;
+                background: rgba(242, 140, 27, 0.1);
+                color: var(--accent);
+                margin-bottom: 14px;
+            }
+            .feature .ico svg {
+                width: 22px;
+                height: 22px;
+            }
+            .feature h3 {
+                margin: 0 0 8px;
+                font-size: 18px;
+                line-height: 1.3;
+            }
+            .feature p {
+                margin: 0;
+                color: var(--muted);
+                font-size: 15px;
+                line-height: 1.55;
+            }
+            .also {
+                margin-top: 24px;
+                color: var(--faint);
+                font-size: 15px;
+            }
+
+            /* Screens */
+            .screens {
+                background: #1a1b1e;
+                border-block: 1px solid var(--line);
+            }
+            .tabs {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+            .tabs button {
+                font:
+                    500 15px Plex,
+                    sans-serif;
+                color: var(--muted);
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 8px 16px;
+                cursor: pointer;
+            }
+            .tabs button:hover {
+                color: var(--text);
+                border-color: var(--line-2);
+            }
+            .tabs button[aria-selected='true'] {
+                color: var(--accent);
+                border-color: rgba(242, 140, 27, 0.6);
+                background: rgba(242, 140, 27, 0.08);
+            }
+            .viewer {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 300px;
+                gap: 28px;
+                align-items: start;
+            }
+            .viewer .frame {
+                cursor: zoom-in;
+                padding: 0;
+                border-radius: var(--radius);
+                width: 100%;
+                font: inherit;
+                color: inherit;
+            }
+            .viewer figcaption h3 {
+                margin: 0 0 10px;
+                font-size: 22px;
+            }
+            .viewer figcaption p {
+                margin: 0;
+                color: var(--muted);
+            }
+            .hint {
+                margin-top: 14px;
+                font-size: 14px;
+                color: var(--faint);
+            }
+
+            /* Install */
+            .install {
+                display: grid;
+                grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+                gap: 40px;
+                align-items: start;
+            }
+            .terminal {
+                background: #111214;
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                overflow: hidden;
+            }
+            .terminal .bar {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 14px;
+                border-bottom: 1px solid var(--line);
+                background: var(--panel);
+            }
+            .terminal .bar span {
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                background: var(--line-2);
+            }
+            .terminal .bar .copy {
+                margin-left: auto;
+            }
+            .terminal pre {
+                margin: 0;
+                padding: 18px 20px;
+                font-size: 15px;
+                line-height: 1.75;
+                overflow-x: auto;
+                color: #d9dce0;
+            }
+            .terminal pre b {
+                color: var(--accent);
+                font-weight: 500;
+                user-select: none;
+            }
+            .steps {
+                margin: 0;
+                padding: 0;
+                list-style: none;
+                counter-reset: step;
+                display: grid;
+                gap: 18px;
+            }
+            .steps li {
+                counter-increment: step;
+                display: grid;
+                grid-template-columns: 34px minmax(0, 1fr);
+                gap: 14px;
+            }
+            .steps li::before {
+                content: counter(step);
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                font:
+                    600 15px Plex,
+                    sans-serif;
+                background: var(--panel-2);
+                border: 1px solid var(--line-2);
+                color: var(--accent);
+            }
+            .steps h3 {
+                margin: 4px 0 4px;
+                font-size: 17px;
+            }
+            .steps p {
+                margin: 0;
+                color: var(--muted);
+                font-size: 15px;
+            }
+            .steps code {
+                font-size: 14px;
+                background: var(--panel-2);
+                padding: 1px 6px;
+                border-radius: 5px;
+                color: #d9dce0;
+            }
+
+            /* Stack & footer */
+            .stack {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 16px;
+            }
+            .stack div {
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                padding: 18px 20px;
+                background: var(--panel);
+            }
+            .stack strong {
+                display: block;
+                font-size: 17px;
+            }
+            .stack span {
+                color: var(--muted);
+                font-size: 15px;
+            }
+            .license {
+                margin-top: 28px;
+                color: var(--muted);
+                font-size: 15px;
+                max-width: 760px;
+            }
+            footer {
+                border-top: 1px solid var(--line);
+                padding: 32px 0 48px;
+                color: var(--faint);
+                font-size: 15px;
+            }
+            footer .wrap {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 14px 28px;
+                align-items: center;
+            }
+            footer nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 20px;
+                margin-left: auto;
+            }
+            footer a {
+                color: var(--muted);
+            }
+
+            /* Lightbox */
+            dialog.zoom {
+                border: 0;
+                padding: 0;
+                background: transparent;
+                max-width: min(1440px, 96vw);
+                max-height: 94vh;
+            }
+            dialog.zoom::backdrop {
+                background: rgba(10, 10, 12, 0.88);
+            }
+            dialog.zoom img {
+                max-height: 90vh;
+                width: auto;
+                border-radius: 10px;
+                border: 1px solid var(--line-2);
+            }
+            dialog.zoom button {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                font:
+                    600 14px Plex,
+                    sans-serif;
+                background: rgba(23, 24, 26, 0.9);
+                color: var(--text);
+                border: 1px solid var(--line-2);
+                border-radius: 8px;
+                padding: 6px 12px;
+                cursor: pointer;
+            }
+
+            @media (max-width: 1024px) {
+                .features {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .stack {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .viewer {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
+            @media (max-width: 860px) {
+                .top nav {
+                    display: none;
+                }
+                .hero {
+                    padding-top: 48px;
+                }
+                .hero .wrap,
+                .install {
+                    grid-template-columns: minmax(0, 1fr);
+                    gap: 40px;
+                }
+            }
+            @media (max-width: 560px) {
+                :root {
+                    --gutter: 16px;
+                }
+                .features,
+                .stack {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+                section.block {
+                    padding: 56px 0;
+                }
+                .top .gh-label {
+                    display: none;
+                }
+                .badge-air {
+                    left: 8px;
+                    top: -14px;
+                }
+                .terminal pre {
+                    font-size: 13px;
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                html {
+                    scroll-behavior: auto;
+                }
+                .badge-air i {
+                    animation: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+
+        <header class="top">
+            <div class="wrap">
+                <a class="logo" href="#top" aria-label="NoAr">
+                    <svg viewBox="0 0 64 64" aria-hidden="true">
+                        <rect width="64" height="64" rx="14" fill="#f28c1b" />
+                        <path d="M24 18v28l22-14z" fill="#1c1c1c" />
+                        <circle cx="48" cy="16" r="5" fill="#1c1c1c" />
+                    </svg>
+                    NoAr
+                </a>
+                <nav aria-label="Sections" data-i18n-label="navLabel">
+                    <a href="#features" data-i18n="navFeatures">Features</a>
+                    <a href="#screens" data-i18n="navScreens">Screens</a>
+                    <a href="#install" data-i18n="navInstall">Install</a>
+                    <a href="https://github.com/LuizStSantos/NoAr/blob/main/docs/README.md" data-i18n="navDocs"
+                        >Documentation</a
+                    >
+                </nav>
+                <div class="end">
+                    <div class="lang" role="group" aria-label="Language">
+                        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+                        <button type="button" data-lang="pt" aria-pressed="false">PT</button>
+                    </div>
+                    <a class="btn btn-quiet btn-sm" href="https://github.com/LuizStSantos/NoAr">
+                        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <path
+                                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                            />
+                        </svg>
+                        <span class="gh-label">GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main id="main">
+            <section class="hero" id="top">
+                <div class="wrap">
+                    <div>
+                        <p class="eyebrow" data-i18n="eyebrow">Open-source 24/7 TV playout</p>
+                        <h1 data-i18n-html="title">24/7 TV playout,<br /><em>run from the browser</em></h1>
+                        <p class="lead" data-i18n="lead">
+                            NoAr plays daily playlists or folders without interruption, puts breaks, lives and graphics
+                            over the running programme at their time, and publishes an XMLTV guide with artwork for IPTV
+                            players.
+                        </p>
+                        <div class="actions">
+                            <a class="btn btn-main" href="#install" data-i18n="ctaInstall">Install with Docker</a>
+                            <a class="btn btn-quiet" href="https://github.com/LuizStSantos/NoAr" data-i18n="ctaGithub"
+                                >View on GitHub</a
+                            >
+                        </div>
+                        <p class="meta">
+                            <span data-i18n="free">Free software, GPL-3.0</span>
+                            <a id="release" href="https://github.com/LuizStSantos/NoAr/releases" data-i18n="releases"
+                                >Releases</a
+                            >
+                            <a href="https://github.com/LuizStSantos/NoAr/blob/main/CHANGELOG.md" data-i18n="changelog"
+                                >What's new</a
+                            >
+                        </p>
+                    </div>
+                    <div class="hero-shot">
+                        <span class="badge-air"><i></i>ON AIR</span>
+                        <div class="frame crop" style="aspect-ratio: 1440 / 836">
+                            <img
+                                src="docs/images/player.png"
+                                width="1440"
+                                height="1000"
+                                alt="The NoAr Player: the channel's output with a lower third on air, the clock, what comes next, the audio meter and the transport controls."
+                                data-i18n-alt="heroAlt"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="strip">
+                <div class="wrap">
+                    <strong data-i18n="outputs">Outputs</strong>
+                    <span class="chip hot">HLS</span>
+                    <span class="chip hot">SRT</span>
+                    <span class="chip hot">RTMP</span>
+                    <span class="chip hot">UDP</span>
+                    <span class="chip">NDI</span>
+                    <span class="chip">SDI / HDMI (DeckLink)</span>
+                    <span class="chip">SCTE-35</span>
+                    <span class="chip">XMLTV</span>
+                    <span class="chip">WebVTT</span>
+                </div>
+            </div>
+
+            <section class="block" id="features" aria-labelledby="features-title">
+                <div class="wrap">
+                    <div class="head">
+                        <h2 id="features-title" data-i18n="featuresTitle">Everything a channel needs to stay on air</h2>
+                        <p data-i18n="featuresIntro">
+                            One server, one browser tab: the Player, the playlists, the Scheduler, graphics, storage and
+                            the report, for one channel or many.
+                        </p>
+                    </div>
+                    <div class="features">
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <circle cx="12" cy="12" r="2" />
+                                    <path
+                                        d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"
+                                    />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f1t">Output that keeps going</h3>
+                            <p data-i18n="f1p">
+                                HLS with adaptive renditions, SRT, RTMP or UDP streams, NDI and DeckLink SDI/HDMI. A
+                                destination that is down never stops the channel: NoAr reconnects by itself and says
+                                why.
+                            </p>
+                        </article>
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <rect x="3" y="4" width="18" height="17" rx="2" />
+                                    <path d="M3 9h18M8 2v4M16 2v4M8 14h3M8 17h6" />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f2t">Playlists and Scheduler</h3>
+                            <p data-i18n="f2p">
+                                Build each day in the Playlist page, or play a folder. The Scheduler places a break, a
+                                clip or a live over whatever is on air, waiting for the clip or cutting in, once or on
+                                chosen weekdays.
+                            </p>
+                        </article>
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M23 7l-7 5 7 5V7z" />
+                                    <rect x="1" y="5" width="15" height="14" rx="2" />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f3t">Scheduled lives</h3>
+                            <p data-i18n="f3p">
+                                NoAr pulls SRT, RTMP, RTSP, HLS or UDP streams from an ingest server such as MediaMTX
+                                and switches between files and lives through GStreamer, waiting for a lost signal.
+                            </p>
+                        </article>
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M12 2 2 7l10 5 10-5-10-5z" />
+                                    <path d="m2 17 10 5 10-5M2 12l10 5 10-5" />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f4t">Graphics and Composer</h3>
+                            <p data-i18n="f4p">
+                                Design lower thirds, logos, clocks, tickers and L-shapes as layers with animations,
+                                fonts and fields. Put them on air from On air, the Scheduler, cues inside a video or a
+                                Stream Deck.
+                            </p>
+                        </article>
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f5t">Live data in graphics</h3>
+                            <p data-i18n="f5p">
+                                CSV, public Google Sheets, RSS/Atom and HTTP JSON fill template fields such as prices,
+                                scores and headlines, refreshed in place and keeping the last good values.
+                            </p>
+                        </article>
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M3 12h4l3-9 4 18 3-9h4" />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f6t">SCTE-35 ad breaks</h3>
+                            <p data-i18n="f6p">
+                                Runs of commercials and breaks marked by hand, by API or inside a video are signalled in
+                                the SRT or UDP output for FAST platforms and ad servers, announced ahead.
+                            </p>
+                        </article>
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <path d="M14 2v6h6M8 13h8M8 17h5" />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f7t">XMLTV guide and report</h3>
+                            <p data-i18n="f7p">
+                                A guide built from the playlists and a Kodi-style .nfo per programme, with posters,
+                                episode images and credits; and a report of what really aired, as PDF or spreadsheet.
+                            </p>
+                        </article>
+                        <article class="feature">
+                            <div class="ico" aria-hidden="true">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                            </div>
+                            <h3 data-i18n="f8t">External control</h3>
+                            <p data-i18n="f8p">
+                                Keys and ready-to-copy commands for encoders, vMix, OBS, Stream Deck and scripts: extend
+                                or end a live, put graphics on and off, mark ad breaks.
+                            </p>
+                        </article>
+                    </div>
+                    <p class="also" data-i18n="also">
+                        Also: multiple channels, users with roles, a REST API, alerts by e-mail and ntfy, recording,
+                        loudness normalization, WebVTT subtitles, and updates from the browser.
+                    </p>
+                </div>
+            </section>
+
+            <section class="block screens" id="screens" aria-labelledby="screens-title">
+                <div class="wrap">
+                    <div class="head">
+                        <h2 id="screens-title" data-i18n="screensTitle">See it working</h2>
+                        <p data-i18n="screensIntro">
+                            Real captures of the Example TV demo channel, in the English interface. Portuguese is one
+                            click away in NoAr too.
+                        </p>
+                    </div>
+                    <div class="tabs" role="tablist" aria-label="Screens" data-i18n-label="screensTitle"></div>
+                    <div class="viewer" id="viewer" role="tabpanel">
+                        <button
+                            class="frame crop"
+                            type="button"
+                            id="shot-open"
+                            aria-label="Enlarge"
+                            style="aspect-ratio: 1440 / 836"
+                        >
+                            <img id="shot-img" src="docs/images/player.png" width="1440" height="1000" alt="" />
+                        </button>
+                        <div>
+                            <h3 id="shot-title"></h3>
+                            <p id="shot-text" class="lead" style="font-size: 17px; margin: 0"></p>
+                            <p class="hint" data-i18n="zoomHint">Click the picture to see it full size.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="block" id="install" aria-labelledby="install-title">
+                <div class="wrap">
+                    <div class="head">
+                        <h2 id="install-title" data-i18n="installTitle">Install in a few minutes</h2>
+                        <p data-i18n="installIntro">
+                            NoAr runs in Docker. You only need Docker with the Compose plugin on a Linux server.
+                        </p>
+                    </div>
+                    <div class="install">
+                        <div class="terminal">
+                            <div class="bar">
+                                <span></span><span></span><span></span>
+                                <button class="btn btn-quiet btn-sm copy" type="button" id="copy" data-i18n="copy">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre id="commands"><b>$ </b>git clone https://github.com/LuizStSantos/NoAr.git
+<b>$ </b>cd NoAr
+<b>$ </b>docker compose pull
+<b>$ </b>docker compose up -d --no-build</pre>
+                        </div>
+                        <ol class="steps">
+                            <li>
+                                <div>
+                                    <h3 data-i18n="s1t">Get the published image</h3>
+                                    <p data-i18n-html="s1p">
+                                        The commands download <code>ghcr.io/luizstsantos/noar:latest</code>, the newest
+                                        release, instead of compiling on the server.
+                                    </p>
+                                </div>
+                            </li>
+                            <li>
+                                <div>
+                                    <h3 data-i18n="s2t">Open the setup page</h3>
+                                    <p data-i18n-html="s2p">
+                                        Go to <code>http://&lt;server&gt;:8787</code>, create the admin user and keep
+                                        the suggested folders under <code>/data</code>.
+                                    </p>
+                                </div>
+                            </li>
+                            <li>
+                                <div>
+                                    <h3 data-i18n="s3t">Go on air</h3>
+                                    <p data-i18n-html="s3p">
+                                        Upload media in Storage, build a playlist and start the playout. Updates come
+                                        from <strong>Settings › Updates</strong>.
+                                    </p>
+                                </div>
+                            </li>
+                        </ol>
+                    </div>
+                    <p class="also">
+                        <a href="https://github.com/LuizStSantos/NoAr/blob/main/docs/docker.md" data-i18n="dockerGuide"
+                            >Docker guide: folders, ports, updates and backups</a
+                        >
+                    </p>
+                </div>
+            </section>
+
+            <section class="block" aria-labelledby="stack-title" style="padding-top: 0">
+                <div class="wrap">
+                    <div class="head">
+                        <h2 id="stack-title" data-i18n="stackTitle">Built for 24/7 reliability</h2>
+                    </div>
+                    <div class="stack">
+                        <div><strong>Rust</strong><span data-i18n="rust">Server, scheduler and API</span></div>
+                        <div>
+                            <strong>GStreamer</strong><span data-i18n="gst">Decoding, compositing and output</span>
+                        </div>
+                        <div><strong>Vue</strong><span data-i18n="vue">The web interface</span></div>
+                        <div><strong>Docker</strong><span data-i18n="docker">One image, one command</span></div>
+                    </div>
+                    <p class="license" data-i18n-html="license">
+                        NoAr is free software under the
+                        <a href="https://github.com/LuizStSantos/NoAr/blob/main/LICENSE">GNU GPL v3</a>. It is derived
+                        from ffplayout, by Jonathan Baecker and its contributors, also under the GPL v3.
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="wrap">
+                <span>NoAr</span>
+                <nav aria-label="Links">
+                    <a href="https://github.com/LuizStSantos/NoAr">GitHub</a>
+                    <a href="https://github.com/LuizStSantos/NoAr/blob/main/docs/README.md" data-i18n="navDocs"
+                        >Documentation</a
+                    >
+                    <a href="https://github.com/LuizStSantos/NoAr/blob/main/CHANGELOG.md" data-i18n="changelog"
+                        >What's new</a
+                    >
+                    <a href="https://github.com/LuizStSantos/NoAr/issues" data-i18n="issues">Report a problem</a>
+                </nav>
+            </div>
+        </footer>
+
+        <dialog class="zoom" id="zoom" aria-label="Screenshot">
+            <img id="zoom-img" src="docs/images/player.png" alt="" />
+            <button type="button" id="zoom-close" data-i18n="close">Close</button>
+        </dialog>
+
+        <script>
+            // [file, English name, Portuguese name, height shown of the 1440x1000 capture]
+            const SCREENS = [
+                ['player', 'Player', 'Player', 836],
+                ['scheduler', 'Scheduler', 'Agendador', 744],
+                ['builder', 'Playlist', 'Playlist', 1000],
+                ['onair', 'Graphics › On air', 'Grafismo › No ar', 736],
+                ['composer', 'Composer', 'Composer', 1000],
+                ['marks', 'Marks in a video', 'Marcas no vídeo', 1000],
+                ['report', 'Report', 'Relatório', 1000],
+                ['remote', 'External control', 'Controle externo', 1000],
+            ]
+
+            const TEXT = {
+                en: {
+                    screens: {
+                        player: 'What is on air, about a second behind the output, with the clock, what comes next, the next break and event, the sync state and the audio levels. The transport controls lock against a stray click.',
+                        scheduler:
+                            'The day’s programme with each clip at its real length, a scheduled break and a live on the events lane, and a template on its own graphics lane, with one list of the day’s events below.',
+                        builder:
+                            'The library and the day’s playlist, grouped by programme the way the guide names it. Add files or a whole programme folder at the end, after the selection or at a time.',
+                        onair: 'Fill the template’s fields on the preview, compare it with the real program monitor and put it on air. Templates, the graphics on air and the always-on ones sit in three tabs.',
+                        composer:
+                            'Image, shape, text and clock layers with named fields, resize handles, animations, fonts and safety margins, and a colour picker for every colour.',
+                        marks: 'The trim, the SCTE-35 breaks and the graphics cues of a video on one timeline. The player previews each template over the video, with its entry and exit animations.',
+                        report: 'A day with the actual times of what aired and how each item ended, plus what is still to come, with totals for commercials and lives. Download it as PDF or spreadsheet.',
+                        remote: 'One page for everything controlled without a login, with a tab each for lives, graphics and SCTE-35 breaks: the key and the commands, ready to copy.',
+                    },
+                },
+                pt: {
+                    skip: 'Pular para o conteúdo',
+                    navLabel: 'Seções',
+                    navFeatures: 'Recursos',
+                    navScreens: 'Telas',
+                    navInstall: 'Instalar',
+                    navDocs: 'Documentação',
+                    eyebrow: 'Playout de TV 24/7 de código aberto',
+                    title: 'Playout de TV&nbsp;24/7,<br><em>operado pelo navegador</em>',
+                    lead: 'O NoAr toca playlists diárias ou pastas sem interrupção, coloca intervalos, lives e grafismos sobre a programação na hora certa e publica um guia XMLTV com artes para players IPTV.',
+                    ctaInstall: 'Instalar com Docker',
+                    ctaGithub: 'Ver no GitHub',
+                    free: 'Software livre, GPL-3.0',
+                    releases: 'Versões',
+                    latest: 'Última versão: {tag}',
+                    changelog: 'Novidades',
+                    heroAlt:
+                        'O Player do NoAr: a saída do canal com um GC no ar, o relógio, o que vem a seguir, o medidor de áudio e os controles.',
+                    outputs: 'Saídas',
+                    featuresTitle: 'Tudo o que um canal precisa para ficar no ar',
+                    featuresIntro:
+                        'Um servidor, uma aba do navegador: o Player, as playlists, o Agendador, o grafismo, o armazenamento e o relatório, para um canal ou vários.',
+                    f1t: 'Saída que não para',
+                    f1p: 'HLS com renditions adaptativas, SRT, RTMP ou UDP, NDI e SDI/HDMI DeckLink. Um destino fora do ar nunca para o canal: o NoAr reconecta sozinho e diz o motivo.',
+                    f2t: 'Playlists e Agendador',
+                    f2p: 'Monte cada dia na página Playlist ou toque uma pasta. O Agendador coloca um intervalo, um clipe ou uma live sobre o que está no ar, esperando o clipe acabar ou entrando na hora, uma vez ou nos dias escolhidos.',
+                    f3t: 'Lives agendadas',
+                    f3p: 'O NoAr puxa SRT, RTMP, RTSP, HLS ou UDP de um servidor de ingest como o MediaMTX e troca entre arquivos e lives pelo GStreamer, esperando o sinal que caiu voltar.',
+                    f4t: 'Grafismo e Composer',
+                    f4p: 'Crie GCs, logos, relógios, tickers e L com camadas, animações, fontes e campos. Coloque no ar pelo No ar, pelo Agendador, por marcas dentro do vídeo ou por um Stream Deck.',
+                    f5t: 'Dados ao vivo no grafismo',
+                    f5p: 'CSV, Google Sheets público, RSS/Atom e JSON por HTTP preenchem campos dos modelos, como cotações, placares e manchetes, atualizados no lugar e mantendo os últimos valores bons.',
+                    f6t: 'Intervalos SCTE-35',
+                    f6p: 'Blocos de comerciais e intervalos marcados à mão, por API ou dentro do vídeo são sinalizados na saída SRT ou UDP para plataformas FAST e servidores de anúncios, com aviso antecipado.',
+                    f7t: 'Guia XMLTV e relatório',
+                    f7p: 'Um guia montado a partir das playlists e de um .nfo no estilo Kodi por programa, com pôsteres, imagens de episódio e créditos; e um relatório do que foi ao ar de verdade, em PDF ou planilha.',
+                    f8t: 'Controle externo',
+                    f8p: 'Chaves e comandos prontos para copiar para encoders, vMix, OBS, Stream Deck e scripts: estender ou encerrar uma live, colocar e tirar grafismos, marcar intervalos.',
+                    also: 'E mais: vários canais, usuários com perfis, API REST, alertas por e-mail e ntfy, gravação, normalização de loudness, legendas WebVTT e atualização pelo navegador.',
+                    screensTitle: 'Veja funcionando',
+                    screensIntro:
+                        'Capturas reais do canal de demonstração Example TV, com a interface em inglês. No NoAr, o português também está a um clique.',
+                    zoomHint: 'Clique na imagem para ver em tamanho real.',
+                    enlarge: 'Ampliar',
+                    installTitle: 'Instale em poucos minutos',
+                    installIntro:
+                        'O NoAr roda no Docker. Você só precisa do Docker com o plugin Compose num servidor Linux.',
+                    copy: 'Copiar',
+                    copied: 'Copiado',
+                    s1t: 'Baixe a imagem publicada',
+                    s1p: 'Os comandos baixam <code>ghcr.io/luizstsantos/noar:latest</code>, a versão mais nova, em vez de compilar no servidor.',
+                    s2t: 'Abra a página de configuração',
+                    s2p: 'Acesse <code>http://&lt;servidor&gt;:8787</code>, crie o usuário administrador e mantenha as pastas sugeridas em <code>/data</code>.',
+                    s3t: 'Coloque no ar',
+                    s3p: 'Envie as mídias no Armazenamento, monte uma playlist e inicie o playout. As atualizações vêm por <strong>Configurações › Atualizações</strong>.',
+                    dockerGuide: 'Guia do Docker: pastas, portas, atualizações e backups',
+                    stackTitle: 'Feito para funcionar 24 horas',
+                    rust: 'Servidor, agendador e API',
+                    gst: 'Decodificação, composição e saída',
+                    vue: 'A interface web',
+                    docker: 'Uma imagem, um comando',
+                    license:
+                        'O NoAr é software livre sob a <a href="https://github.com/LuizStSantos/NoAr/blob/main/LICENSE">GNU GPL v3</a>. Ele é derivado do ffplayout, de Jonathan Baecker e colaboradores, também sob a GPL v3.',
+                    issues: 'Relatar um problema',
+                    close: 'Fechar',
+                    screens: {
+                        player: 'O que está no ar, cerca de um segundo atrás da saída, com o relógio, o que vem a seguir, o próximo intervalo e evento, a sincronia e o nível de áudio. Os controles travam contra um clique sem querer.',
+                        scheduler:
+                            'A programação do dia com cada clipe no tamanho real, um intervalo e uma live agendados na faixa de eventos e um modelo na sua própria faixa de grafismo, com a lista dos eventos do dia embaixo.',
+                        builder:
+                            'A biblioteca e a playlist do dia, agrupada por programa como o guia mostra. Adicione arquivos ou a pasta inteira de um programa no fim, depois da seleção ou num horário.',
+                        onair: 'Preencha os campos do modelo na prévia, compare com o monitor real do programa e coloque no ar. Modelos, grafismos no ar e os sempre no ar ficam em três abas.',
+                        composer:
+                            'Camadas de imagem, forma, texto e relógio com campos nomeados, alças de redimensionar, animações, fontes e margens de segurança, e um seletor de cor para cada cor.',
+                        marks: 'O corte, os intervalos SCTE-35 e as deixas de grafismo de um vídeo numa só linha do tempo. O player mostra cada modelo sobre o vídeo, com as animações de entrada e saída.',
+                        report: 'Um dia com os horários reais do que foi ao ar e como cada item terminou, mais o que ainda vem, com totais de comerciais e lives. Baixe em PDF ou planilha.',
+                        remote: 'Uma página para tudo o que se controla sem login, com uma aba para lives, grafismo e intervalos SCTE-35: a chave e os comandos, prontos para copiar.',
+                    },
+                },
+            }
+
+            const english = {}
+            let lang = 'en'
+            let current = 'player'
+            let latestTag = null
+
+            function read(key) {
+                try {
+                    return localStorage.getItem(key)
+                } catch {
+                    return null
+                }
+            }
+            function write(key, value) {
+                try {
+                    localStorage.setItem(key, value)
+                } catch {
+                    // Private windows or blocked storage: the choice lasts for this visit.
+                }
+            }
+
+            // Remember the English text in the page itself, so switching back needs no copy of it.
+            document.querySelectorAll('[data-i18n]').forEach((el) => (english[el.dataset.i18n] = el.textContent.trim()))
+            document
+                .querySelectorAll('[data-i18n-html]')
+                .forEach((el) => (english[el.dataset.i18nHtml] = el.innerHTML.trim()))
+            document.querySelectorAll('[data-i18n-alt]').forEach((el) => (english[el.dataset.i18nAlt] = el.alt))
+            document
+                .querySelectorAll('[data-i18n-label]')
+                .forEach((el) => (english['label:' + el.dataset.i18nLabel] = el.getAttribute('aria-label')))
+            english.copy = 'Copy'
+            english.copied = 'Copied'
+            english.latest = 'Latest release: {tag}'
+            english.enlarge = 'Enlarge'
+
+            function t(key) {
+                return (lang === 'pt' && TEXT.pt[key]) || english[key] || key
+            }
+
+            function applyLanguage(next) {
+                lang = next
+                document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
+                document.querySelectorAll('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n)))
+                document.querySelectorAll('[data-i18n-html]').forEach((el) => (el.innerHTML = t(el.dataset.i18nHtml)))
+                document.querySelectorAll('[data-i18n-alt]').forEach((el) => (el.alt = t(el.dataset.i18nAlt)))
+                document.querySelectorAll('[data-i18n-label]').forEach((el) => {
+                    el.setAttribute(
+                        'aria-label',
+                        lang === 'pt' ? TEXT.pt[el.dataset.i18nLabel] : english['label:' + el.dataset.i18nLabel],
+                    )
+                })
+                document
+                    .querySelectorAll('.lang button')
+                    .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)))
+                if (latestTag) {
+                    document.getElementById('release').textContent = t('latest').replace('{tag}', latestTag)
+                }
+                renderTabs()
+                showScreen(current, false)
+            }
+
+            const tablist = document.querySelector('.tabs')
+            function renderTabs() {
+                tablist.replaceChildren(
+                    ...SCREENS.map(([id, en, pt]) => {
+                        const tab = document.createElement('button')
+                        tab.type = 'button'
+                        tab.role = 'tab'
+                        tab.id = 'tab-' + id
+                        tab.textContent = lang === 'pt' ? pt : en
+                        tab.setAttribute('aria-controls', 'viewer')
+                        tab.setAttribute('aria-selected', String(id === current))
+                        tab.tabIndex = id === current ? 0 : -1
+                        tab.addEventListener('click', () => showScreen(id, true))
+                        return tab
+                    }),
+                )
+            }
+            tablist.addEventListener('keydown', (event) => {
+                const index = SCREENS.findIndex(([id]) => id === current)
+                const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
+                if (!step) return
+                event.preventDefault()
+                const next = SCREENS[(index + step + SCREENS.length) % SCREENS.length][0]
+                showScreen(next, true)
+                document.getElementById('tab-' + next).focus()
+            })
+
+            function showScreen(id, fromClick) {
+                current = id
+                const [, en, pt, shown] = SCREENS.find(([key]) => key === id)
+                document.getElementById('shot-open').style.aspectRatio = `1440 / ${shown}`
+                const name = lang === 'pt' ? pt : en
+                const text = (lang === 'pt' ? TEXT.pt : TEXT.en).screens[id]
+                const img = document.getElementById('shot-img')
+                img.src = 'docs/images/' + id + '.png'
+                img.alt = name + ': ' + text
+                document.getElementById('shot-title').textContent = name
+                document.getElementById('shot-text').textContent = text
+                document.getElementById('shot-open').setAttribute('aria-label', t('enlarge') + ': ' + name)
+                document.getElementById('viewer').setAttribute('aria-labelledby', 'tab-' + id)
+                tablist.querySelectorAll('[role=tab]').forEach((tab) => {
+                    const on = tab.id === 'tab-' + id
+                    tab.setAttribute('aria-selected', String(on))
+                    tab.tabIndex = on ? 0 : -1
+                })
+            }
+
+            const zoom = document.getElementById('zoom')
+            document.getElementById('shot-open').addEventListener('click', () => {
+                const img = document.getElementById('zoom-img')
+                img.src = document.getElementById('shot-img').src
+                img.alt = document.getElementById('shot-img').alt
+                zoom.showModal()
+            })
+            document.getElementById('zoom-close').addEventListener('click', () => zoom.close())
+            zoom.addEventListener('click', (event) => event.target === zoom && zoom.close())
+
+            document.getElementById('copy').addEventListener('click', async (event) => {
+                const button = event.currentTarget
+                const text = document.getElementById('commands').textContent.replace(/^\$ /gm, '')
+                try {
+                    await navigator.clipboard.writeText(text)
+                    button.textContent = t('copied')
+                    setTimeout(() => (button.textContent = t('copy')), 1800)
+                } catch {
+                    // Without clipboard access the commands stay selectable on screen.
+                }
+            })
+
+            document.querySelectorAll('.lang button').forEach((button) =>
+                button.addEventListener('click', () => {
+                    write('noar-site-lang', button.dataset.lang)
+                    applyLanguage(button.dataset.lang)
+                }),
+            )
+
+            const asked = new URLSearchParams(location.search).get('lang')
+            const saved = read('noar-site-lang')
+            const start = ['en', 'pt'].includes(asked)
+                ? asked
+                : saved || (navigator.language.startsWith('pt') ? 'pt' : 'en')
+            applyLanguage(start)
+
+            // The newest release, when GitHub answers; the link to all releases otherwise.
+            fetch('https://api.github.com/repos/LuizStSantos/NoAr/releases/latest', {
+                headers: { Accept: 'application/vnd.github+json' },
+            })
+                .then((response) => (response.ok ? response.json() : null))
+                .then((release) => {
+                    if (release && release.tag_name && release.html_url) {
+                        latestTag = release.tag_name
+                        const link = document.getElementById('release')
+                        link.href = release.html_url
+                        link.textContent = t('latest').replace('{tag}', latestTag)
+                    }
+                })
+                .catch(() => {})
+        </script>
+    </body>
+</html>
