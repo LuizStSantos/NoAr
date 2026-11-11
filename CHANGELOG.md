@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-11-11
+
 ### Fixed
 
 - In the Composer on a wide screen, the timeline sits right under the
@@ -1265,7 +1267,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/LuizStSantos/NoAr/compare/v2.2.1...v3.0.0
 [2.2.1]: https://github.com/LuizStSantos/NoAr/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/LuizStSantos/NoAr/compare/v2.1.4...v2.2.0
