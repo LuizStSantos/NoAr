@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- **Pages an operator may use.** In **Settings › Users**, a global admin
+  chooses, for each operator, the pages they may use: Player, Playlist,
+  Scheduler, Graphics (On air and Templates), Storage, Report and Log. The
+  other pages leave the operator's menu, and the server refuses what they
+  would do there (`403`), at once. Every page stays on by default, so
+  existing operators keep their access. Migration `00035` adds the `areas`
+  column to users ([API](docs/api.md#pages-an-operator-may-use)).
+
 ### Fixed
 
 - A channel with NDI or SDI output restarted over and over when its H.264

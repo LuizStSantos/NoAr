@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { AREAS, type AreaName } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 
 export interface UserDraft {
@@ -13,9 +14,17 @@ export interface UserDraft {
     role_id: number
     channel_ids: number[]
     two_factor: boolean
+    /** The pages an operator may use; null for every page. */
+    areas: AreaName[] | null
 }
 
-defineProps<{ self: boolean; saving: boolean; error: string }>()
+const props = defineProps<{
+    self: boolean
+    saving: boolean
+    error: string
+    /** A global admin edits the pages an operator may use. */
+    manageAreas?: boolean
+}>()
 const draft = defineModel<UserDraft>('draft', { required: true })
 const emit = defineEmits<{ save: []; remove: [] }>()
 
@@ -25,6 +34,20 @@ const configStore = useConfig()
 const ROLES = [1, 2, 3]
 
 const allChannels = computed(() => draft.value.role_id === 1)
+/** Only operators are limited; administrators use every page. */
+const showAreas = computed(() => props.manageAreas && draft.value.role_id === 3)
+
+function usesArea(area: AreaName): boolean {
+    return draft.value.areas === null || draft.value.areas.includes(area)
+}
+
+function toggleArea(area: AreaName) {
+    const current = draft.value.areas ?? [...AREAS]
+    const next = current.includes(area) ? current.filter((item) => item !== area) : [...current, area]
+
+    // Every page is kept as "all", so pages added later are included too.
+    draft.value.areas = AREAS.every((item) => next.includes(item)) ? null : AREAS.filter((item) => next.includes(item))
+}
 
 function toggleChannel(id: number) {
     const ids = draft.value.channel_ids
@@ -86,6 +109,21 @@ function toggleChannel(id: number) {
                         {{ channel.name }}
                     </label>
                 </div>
+            </fieldset>
+            <fieldset v-if="showAreas" class="md:col-span-2 border-0 p-0 m-0 flex flex-col gap-1.5">
+                <legend class="text-xs text-muted mb-1.5">{{ t('settings.users.areas') }}</legend>
+                <div class="flex flex-wrap gap-x-5 gap-y-1">
+                    <label v-for="area in AREAS" :key="area" class="flex items-center gap-2 min-h-10 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm checkbox-accent"
+                            :checked="usesArea(area)"
+                            @change="toggleArea(area)"
+                        />
+                        {{ t(`settings.users.areaNames.${area}`) }}
+                    </label>
+                </div>
+                <p class="m-0 text-[13px] text-muted">{{ t('settings.users.areasHint') }}</p>
             </fieldset>
         </div>
         <p v-if="error" class="m-0 text-sm text-error" role="alert">{{ error }}</p>

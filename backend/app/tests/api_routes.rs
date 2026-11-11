@@ -46,7 +46,7 @@ use noar::{
     },
     db::{
         handles, init_globales,
-        models::{Role, User},
+        models::{Area, Role, User},
     },
     extract,
     player::controller::{ChannelController, ChannelManager},
@@ -81,6 +81,7 @@ async fn prepare_config() -> (PlayoutConfig, ChannelManager, Pool<Sqlite>) {
         channel_ids: Some(vec![1]),
         token: None,
         two_factor: false,
+        areas: None,
     };
 
     handles::insert_user(&pool, user.clone()).await.unwrap();
@@ -186,7 +187,7 @@ async fn security_fixture() -> SecurityFixture {
         shutdown,
         system,
     };
-    let app = path::routes()
+    let app = path::routes(&state)
         .with_state(state.clone())
         .layer(GrantsLayer::with_extractor(extract));
 

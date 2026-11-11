@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { cloneDeep } from 'es-toolkit/object'
 
 import { authFetch } from '@/composables/authFetch'
-import { useAuth } from '@/stores/auth'
+import { type AreaName, useAuth } from '@/stores/auth'
 import { countChanges } from '@/composables/diff'
 import { useConfig } from '@/stores/config'
 
@@ -27,6 +27,8 @@ export interface SettingsSection {
     name: SettingsSectionName
     group: 'channel' | 'system'
     roles: string[]
+    /** An operator sees the page only with this area (`auth.canUse`). */
+    area?: AreaName
     /** Parts of the channel configuration this page edits. */
     keys: string[]
     /** Saving these parts restarts the playout. */
@@ -61,7 +63,7 @@ const PROCESSING_GRAPHICS_KEYS = [
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
     { name: 'general', group: 'channel', roles: ALL, keys: [] },
-    { name: 'logging', group: 'channel', roles: ALL, keys: [] },
+    { name: 'logging', group: 'channel', roles: ALL, keys: [], area: 'log' },
     { name: 'output', group: 'channel', roles: ADMINS, keys: ['output'], restarts: true },
     {
         name: 'playlist',
@@ -127,7 +129,9 @@ export const useSettings = defineStore('settings', () => {
     const restartPending = ref(false)
 
     const visibleSections = computed(() =>
-        SETTINGS_SECTIONS.filter((section) => section.roles.includes(authStore.role)),
+        SETTINGS_SECTIONS.filter(
+            (section) => section.roles.includes(authStore.role) && (!section.area || authStore.canUse(section.area)),
+        ),
     )
 
     function sectionChanges(name: SettingsSectionName): number {

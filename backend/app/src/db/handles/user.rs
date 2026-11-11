@@ -6,7 +6,7 @@ use sqlx::{
 use tokio::task;
 
 use crate::{
-    db::models::{Role, User},
+    db::models::{Area, Role, User, areas_column, parse_areas},
     utils::errors::{ProcessError, ServiceError},
 };
 
@@ -19,7 +19,7 @@ pub async fn select_role(pool: &SqlitePool, id: &i32) -> Result<Role, ProcessErr
 
 pub async fn select_login(pool: &SqlitePool, user: &str) -> Result<User, ProcessError> {
     const QUERY: &str =
-        "SELECT u.id, u.mail, u.username, u.password, u.role_id, u.two_factor, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
+        "SELECT u.id, u.mail, u.username, u.password, u.role_id, u.two_factor, u.areas, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
         left join auth_user_channels uc on uc.user_id = u.id
     WHERE u.username = $1
     GROUP BY u.id";
@@ -30,7 +30,7 @@ pub async fn select_login(pool: &SqlitePool, user: &str) -> Result<User, Process
 }
 
 pub async fn select_user(pool: &SqlitePool, id: i32) -> Result<User, ProcessError> {
-    const QUERY: &str = "SELECT u.id, u.mail, u.username, u.role_id, u.two_factor, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
+    const QUERY: &str = "SELECT u.id, u.mail, u.username, u.role_id, u.two_factor, u.areas, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
         left join auth_user_channels uc on uc.user_id = u.id
     WHERE u.id = $1
     GROUP BY u.id";
@@ -41,7 +41,7 @@ pub async fn select_user(pool: &SqlitePool, id: i32) -> Result<User, ProcessErro
 }
 
 pub async fn select_users(pool: &SqlitePool) -> Result<Vec<User>, ProcessError> {
-    const QUERY: &str = "SELECT u.id, u.mail, u.username, u.role_id, u.two_factor, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
+    const QUERY: &str = "SELECT u.id, u.mail, u.username, u.role_id, u.two_factor, u.areas, group_concat(uc.channel_id, ',') as channel_ids FROM auth_user u
         left join auth_user_channels uc on uc.user_id = u.id
     GROUP BY u.id ORDER BY u.id";
 
@@ -51,7 +51,8 @@ pub async fn select_users(pool: &SqlitePool) -> Result<Vec<User>, ProcessError> 
 }
 
 pub async fn insert_user(pool: &SqlitePool, user: User) -> Result<(), ServiceError> {
-    const QUERY: &str = "INSERT INTO auth_user (mail, username, password, role_id, two_factor) VALUES($1, $2, $3, $4, $5) RETURNING id";
+    const QUERY: &str = "INSERT INTO auth_user (mail, username, password, role_id, two_factor, areas) VALUES($1, $2, $3, $4, $5, $6) RETURNING id";
+    let areas = areas_column(user.area_list().as_deref());
 
     let password_hash = task::spawn_blocking(move || {
         Argon2::default()
@@ -68,6 +69,7 @@ pub async fn insert_user(pool: &SqlitePool, user: User) -> Result<(), ServiceErr
         .bind(password_hash)
         .bind(user.role_id)
         .bind(user.two_factor)
+        .bind(areas)
         .fetch_one(&mut *transaction)
         .await?
         .get("id");
@@ -77,6 +79,34 @@ pub async fn insert_user(pool: &SqlitePool, user: User) -> Result<(), ServiceErr
     }
 
     transaction.commit().await?;
+
+    Ok(())
+}
+
+/// What an operator may use: `None` for every area.
+pub async fn select_user_areas(
+    pool: &SqlitePool,
+    id: i32,
+) -> Result<Option<Vec<Area>>, ProcessError> {
+    let text: Option<String> = sqlx::query_scalar("SELECT areas FROM auth_user WHERE id = $1")
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(parse_areas(text.as_deref()))
+}
+
+/// Give a user these areas, or every area with `None`.
+pub async fn update_user_areas(
+    pool: &SqlitePool,
+    id: i32,
+    areas: Option<&[Area]>,
+) -> Result<(), ProcessError> {
+    sqlx::query("UPDATE auth_user SET areas = $2 WHERE id = $1")
+        .bind(id)
+        .bind(areas_column(areas))
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

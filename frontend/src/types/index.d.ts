@@ -9,6 +9,8 @@ declare global {
         channels: number[]
         role: string
         token_type: 'access' | 'refresh'
+        /** The pages an operator may use; absent for every page. */
+        areas?: string[]
     }
 
     interface PlaylistExt extends Ply {
@@ -169,6 +171,8 @@ declare global {
         channel_ids?: number[]
         role_id?: number
         two_factor: boolean
+        /** The pages an operator may use; null for every page. */
+        areas?: string[] | null
     }
 
     interface Crumb {

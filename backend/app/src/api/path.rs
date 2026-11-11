@@ -1,11 +1,12 @@
 use axum::{
     Router,
     extract::DefaultBodyLimit,
+    middleware,
     routing::{delete, get, post, put},
 };
 
 use crate::{
-    api::{auth, routes::*, state::AppState},
+    api::{access, auth, routes::*, state::AppState},
     file::MAX_UPLOAD_REQUEST_SIZE,
     sse,
     utils::xmltv::sheet::MAX_ARTWORK_BYTES,
@@ -19,7 +20,9 @@ fn auth_routes() -> Router<AppState> {
         .route("/verify", post(auth::verify))
 }
 
-pub fn routes() -> Router<AppState> {
+/// Every route of the server. `state` serves the guard that refuses an
+/// operator the areas they were not given (`api::access`).
+pub fn routes(state: &AppState) -> Router<AppState> {
     Router::new()
         .nest("/auth", auth_routes())
         .nest(
@@ -194,7 +197,11 @@ pub fn routes() -> Router<AppState> {
                     get(get_by_name).put(update_user).delete(remove_user),
                 )
                 .route("/user", post(add_user))
-                .route("/users", get(get_users)),
+                .route("/users", get(get_users))
+                .route_layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    access::area_guard,
+                )),
         )
         .nest("/data", sse::routes::data_routes())
         .route("/file/{id}/{*filename}", get(get_file))

@@ -172,6 +172,49 @@ fn default_true() -> bool {
     true
 }
 
+/// A part of NoAr that an operator can be given or refused, page by page.
+/// Administrators always use every area.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Area {
+    /// The Player: transport controls, and ending or extending a live.
+    Player,
+    /// The Playlist page: saving, generating, importing and deleting days.
+    Playlist,
+    /// The Scheduler: breaks, clips, lives and graphics at a time.
+    Schedule,
+    /// Graphics › On air and Templates: putting templates on air and off.
+    Graphics,
+    /// Storage: uploading, renaming, deleting and editing sheets and marks.
+    Storage,
+    /// The Report of what aired.
+    Report,
+    /// Settings › Log.
+    Log,
+}
+
+impl Area {
+    pub const ALL: [Self; 7] = [
+        Self::Player,
+        Self::Playlist,
+        Self::Schedule,
+        Self::Graphics,
+        Self::Storage,
+        Self::Report,
+        Self::Log,
+    ];
+}
+
+/// Accepts `"areas": null` as `Some(None)` and a missing field as `None`, so
+/// an update that leaves `areas` out never widens an operator's access.
+fn present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct User {
     #[serde(skip_deserializing)]
@@ -185,8 +228,40 @@ pub struct User {
     pub channel_ids: Option<Vec<i32>>,
     #[serde(default = "default_true")]
     pub two_factor: bool,
+    /// What an operator may use: `null` for every area, else the list.
+    /// The outer `None` means the request left the field out.
+    #[serde(default, deserialize_with = "present")]
+    pub areas: Option<Option<Vec<Area>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+}
+
+impl User {
+    /// The areas this user was given, `None` for every area.
+    pub fn area_list(&self) -> Option<Vec<Area>> {
+        self.areas.clone().flatten()
+    }
+}
+
+/// Read the `areas` column: NULL means every area. Unknown names in the
+/// list are dropped, and text that is not a list gives no area at all, so a
+/// damaged value never widens what an operator may use.
+pub fn parse_areas(text: Option<&str>) -> Option<Vec<Area>> {
+    let Ok(values) = serde_json::from_str::<Vec<serde_json::Value>>(text?) else {
+        return Some(Vec::new());
+    };
+
+    Some(
+        values
+            .into_iter()
+            .filter_map(|value| serde_json::from_value(value).ok())
+            .collect(),
+    )
+}
+
+/// The `areas` column for a list: NULL for every area.
+pub fn areas_column(areas: Option<&[Area]>) -> Option<String> {
+    areas.map(|areas| serde_json::to_string(areas).unwrap_or_else(|_| "[]".to_string()))
 }
 
 impl FromRow<'_, SqliteRow> for User {
@@ -205,6 +280,12 @@ impl FromRow<'_, SqliteRow> for User {
                     .collect(),
             ),
             two_factor: row.try_get("two_factor").unwrap_or(true),
+            areas: Some(parse_areas(
+                row.try_get::<Option<String>, _>("areas")
+                    .ok()
+                    .flatten()
+                    .as_deref(),
+            )),
             token: None,
         })
     }

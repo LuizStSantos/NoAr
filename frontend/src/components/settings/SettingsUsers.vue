@@ -6,7 +6,7 @@ import SectionCard from '@/components/settings/SectionCard.vue'
 import UserEditor, { type UserDraft } from '@/components/settings/UserEditor.vue'
 import GenericModal from '@/components/utils/GenericModal.vue'
 import { authFetch } from '@/composables/authFetch'
-import { useAuth } from '@/stores/auth'
+import { AREAS, type AreaName, useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
@@ -35,6 +35,7 @@ function draftOf(user?: User): Draft {
         role_id: user?.role_id ?? 3,
         channel_ids: (user?.channel_ids ?? [configStore.channels[configStore.i]?.id ?? 1]).filter((id) => id > 0),
         two_factor: user?.two_factor ?? false,
+        areas: (user?.areas as AreaName[] | null | undefined) ?? null,
     }
 }
 
@@ -108,6 +109,8 @@ async function saveUser() {
         role_id: draft.role_id,
         channel_ids: draft.channel_ids,
         two_factor: draft.two_factor,
+        // Only a global admin sets the pages; administrators use every page.
+        ...(isGlobal.value ? { areas: draft.role_id === 3 ? draft.areas : null } : {}),
     }
 
     try {
@@ -229,6 +232,7 @@ async function deleteUser(confirm: boolean) {
                         <UserEditor
                             v-model:draft="editing"
                             :self="false"
+                            :manage-areas="isGlobal"
                             :saving="saving"
                             :error="error"
                             @save="saveUser"
@@ -248,7 +252,12 @@ async function deleteUser(confirm: boolean) {
                             </div>
                             <div class="text-[13px] text-muted">{{ user.mail || '—' }}</div>
                         </td>
-                        <td class="px-2 py-2.5">{{ t(`settings.users.roles.${user.role_id ?? 3}`) }}</td>
+                        <td class="px-2 py-2.5">
+                            {{ t(`settings.users.roles.${user.role_id ?? 3}`) }}
+                            <div v-if="(user.role_id ?? 3) === 3 && user.areas" class="text-[13px] text-muted">
+                                {{ t('settings.users.someAreas', { n: user.areas.length, total: AREAS.length }) }}
+                            </div>
+                        </td>
                         <td class="px-2 py-2.5 text-muted">{{ channelNames(user) }}</td>
                         <td class="px-2 py-2.5" :class="user.two_factor ? 'text-ok' : 'text-muted'">
                             {{ user.two_factor ? t('settings.users.on') : t('settings.users.off') }}
@@ -268,6 +277,7 @@ async function deleteUser(confirm: boolean) {
                             <UserEditor
                                 v-model:draft="editing"
                                 :self="user.id === me"
+                                :manage-areas="isGlobal"
                                 :saving="saving"
                                 :error="error"
                                 @save="saveUser"
