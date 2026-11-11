@@ -5,7 +5,7 @@ import time
 import unittest
 from pathlib import Path
 
-from sync import SyncMonitor, SyncTracker, marker_clip
+from sync import RECEIVER_FILTER, SyncMonitor, SyncTracker, marker_clip
 
 
 def feed(tracker: SyncTracker, lines: list[str]) -> None:
@@ -88,6 +88,27 @@ class SyncMonitorTests(unittest.TestCase):
                 self.assertLess(abs(sample['offset_ms']['max']), 2, sample)
                 self.assertLess(abs(sample['offset_ms']['min']), 2, sample)
                 self.assertIsNone(sample['problem'])
+
+
+@unittest.skipUnless(shutil.which('ffmpeg'), 'needs ffmpeg')
+class SyncReceiverTests(unittest.TestCase):
+    def test_the_receiver_starts_over_so_its_times_keep_their_millisecond(self):
+        with tempfile.TemporaryDirectory(prefix='noar-sync-unit-') as directory:
+            clip = Path(directory) / 'marker.mp4'
+            subprocess.run(marker_clip(shutil.which('ffmpeg'), str(clip), 4, 320, 180, 25, True),
+                           check=True, capture_output=True, timeout=120)
+            # A live-like input that never ends: the clip read at its own pace, again and again.
+            monitor = SyncMonitor(str(clip), Path(directory), receiver_seconds=1)
+            monitor.command = lambda: [monitor.ffmpeg, '-nostdin', '-hide_banner', '-nostats',
+                                       '-loglevel', 'info', '-re', '-stream_loop', '-1', '-i', str(clip),
+                                       '-filter_complex', RECEIVER_FILTER,
+                                       '-map', '[v]', '-map', '[a]', '-f', 'null', '-']
+            monitor.start()
+            deadline = time.monotonic() + 30
+            while monitor.sample()['attempts'] < 3 and time.monotonic() < deadline:
+                time.sleep(0.2)
+            monitor.close()
+            self.assertGreaterEqual(monitor.sample()['attempts'], 3)
 
 
 if __name__ == '__main__':

@@ -66,7 +66,10 @@ ends a silence), both on the stream's own timestamps. A flash must last one
 frame and a beep be short, so the start of a live or the end of the waiting
 card is not taken for a marker; lives carry none. Each beep is paired with
 the nearest flash, and the offset (sound minus picture) of every pair is
-written to `av-sync.jsonl` with the time of the run. The report's `av_sync`
+written to `av-sync.jsonl` with the time of the run. FFmpeg prints those
+times with six significant digits, so from 1000 s on only to 10 ms: the
+receiver starts over every 10 minutes to keep its clock below that and the
+offsets to the millisecond. The report's `av_sync`
 gives the pairs, the lowest, highest, mean and last offset, how many fell
 outside EBU R37, and the drift: the mean of the last 20 offsets minus that of
 the first 20. The box is 1/8 of the clip and the receiver reads 1/16 of the

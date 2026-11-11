@@ -37,6 +37,10 @@ PAIR = 0.5
 EDGE = 20
 # Enough pairs to say anything.
 MIN_PAIRS = 20
+# FFmpeg prints the detected times with six significant digits: from 1000 s
+# on, to 10 ms only. A receiver open longer starts over, so its clock stays
+# under that and the offsets keep their millisecond.
+RECEIVER_SECONDS = 600
 
 BLACK = re.compile(r'black_start:\s*([-\d.]+)\s+black_end:\s*([-\d.]+)')
 SILENCE_START = re.compile(r'silence_start:\s*([-\d.]+)')
@@ -148,9 +152,10 @@ class SyncTracker:
 class SyncMonitor:
     """Continuously measure a local test output, reconnecting as needed."""
 
-    def __init__(self, url: str, directory: Path):
+    def __init__(self, url: str, directory: Path, receiver_seconds: float = RECEIVER_SECONDS):
         self.url = url
         self.directory = directory
+        self.receiver_seconds = receiver_seconds
         self.ffmpeg = shutil.which('ffmpeg')
         if not self.ffmpeg:
             raise RuntimeError('A/V sync checks require ffmpeg on the test host')
@@ -183,9 +188,10 @@ class SyncMonitor:
                     self.process = subprocess.Popen(self.command(), stdout=subprocess.DEVNULL,
                                                     stderr=subprocess.PIPE, text=True, errors='replace')
                     process = self.process
+                    opened = time.monotonic()
                 try:
                     for text in process.stderr:
-                        if self.stop.is_set():
+                        if self.stop.is_set() or time.monotonic() - opened > self.receiver_seconds:
                             break
                         with self.lock:
                             before = len(self.tracker.offsets)
