@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.2.1] - 2026-11-12
+
 ### Security
 
 - Dependencies with published advisories are updated. On the server:
@@ -1380,7 +1382,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.2.1...HEAD
+[3.2.1]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...v3.0.1
