@@ -5,6 +5,10 @@
 //! to that moment, lets it run past the day start and checks which playlist
 //! it reads then. The clock is the process-wide one of `--fake-time`, so the
 //! tests run one at a time, in real time.
+//!
+//! The last tests ask the playlist for its entries without a player, to put
+//! the clock where a playout cannot be made to be: past the day start with
+//! the day that ended still loaded.
 
 use std::{fs, path::PathBuf, sync::atomic::Ordering};
 
@@ -13,7 +17,11 @@ use sqlx::sqlite::SqlitePoolOptions;
 
 use noar::{
     db::handles,
-    player::{controller::ChannelManager, output::player},
+    player::{
+        controller::ChannelManager,
+        input::{SourceIterator, source_generator},
+        output::player,
+    },
     utils::{
         config::{PlayoutConfig, ProcessMode::Playlist},
         system::SystemStat,
@@ -106,16 +114,14 @@ async fn timed_stop(sec: u64, manager: ChannelManager) {
     manager.stop_all(false).await;
 }
 
-/// Play for `seconds` from `fake_time`, with the day starting at `start_sec`
-/// (`day_start` as the settings spell it), and return the day of the
-/// playlist the channel reads at the end.
-async fn playlist_date_after(
+/// A channel about to start at `fake_time`, with a 24-hour day starting at
+/// `start_sec` (`day_start` as the settings spell it).
+async fn channel_at(
     day_start: &str,
     start_sec: f64,
     fake_time: &str,
-    seconds: u64,
-) -> String {
-    let (mut config, manager, _output) = prepare_config().await;
+) -> (ChannelManager, OutputFolder) {
+    let (mut config, manager, output) = prepare_config().await;
 
     config.playlist.day_start = day_start.into();
     config.playlist.start_sec = Some(start_sec);
@@ -128,6 +134,19 @@ async fn playlist_date_after(
     manager.list_init.store(true, Ordering::SeqCst);
 
     set_mock_time(&Some(fake_time.to_string())).unwrap();
+
+    (manager, output)
+}
+
+/// Play for `seconds` from `fake_time` and return the day of the playlist
+/// the channel reads at the end.
+async fn playlist_date_after(
+    day_start: &str,
+    start_sec: f64,
+    fake_time: &str,
+    seconds: u64,
+) -> String {
+    let (manager, _output) = channel_at(day_start, start_sec, fake_time).await;
 
     tokio::spawn(timed_stop(seconds, manager.clone()));
 
@@ -203,4 +222,52 @@ async fn playlist_change_at_six() {
     let date = playlist_date_after("06:00:00", 21600.0, "2023-02-09T05:59:45+01:00", 17).await;
 
     assert_eq!(date, "2023-02-09");
+}
+
+/// The next entry of the playlist, as the play loop asks for it.
+async fn next_entry(playlist: &mut SourceIterator) {
+    playlist
+        .next()
+        .await
+        .expect("the playlist should give an entry");
+}
+
+/// An entry that ran over the day start is followed by an init, as after a
+/// clip that was missing: it seeks by the clock, so it must seek in the day
+/// that began. In the playlist of the day that ended it would air that day
+/// again from its top.
+#[tokio::test]
+#[serial]
+async fn an_init_after_the_day_start_leaves_the_day_that_ended() {
+    let (manager, _output) = channel_at("06:00:00", 21600.0, "2024-01-31T05:59:50+01:00").await;
+    let mut playlist = source_generator(manager.clone()).await;
+
+    next_entry(&mut playlist).await;
+    assert_eq!(*manager.current_date.lock().await, "2024-01-30");
+
+    set_mock_time(&Some("2024-01-31T06:00:10+01:00".to_string())).unwrap();
+    manager.list_init.store(true, Ordering::SeqCst);
+    next_entry(&mut playlist).await;
+
+    assert_eq!(*manager.current_date.lock().await, "2024-01-31");
+}
+
+/// The day start passes while the playlist is read, or right after: more
+/// than two seconds into the new day, no day change is close any more, and
+/// the day that began must be the one loaded.
+#[tokio::test]
+#[serial]
+async fn a_day_start_that_passes_during_an_init_is_not_missed() {
+    let (manager, _output) = channel_at("06:00:00", 21600.0, "2024-01-31T05:59:58.500+01:00").await;
+    let mut playlist = source_generator(manager.clone()).await;
+    let started = std::time::Instant::now();
+
+    next_entry(&mut playlist).await;
+
+    // Until 06:00:02.5, whatever the read took.
+    let into_the_new_day = std::time::Duration::from_secs(4);
+    tokio::time::sleep(into_the_new_day.saturating_sub(started.elapsed())).await;
+    next_entry(&mut playlist).await;
+
+    assert_eq!(*manager.current_date.lock().await, "2024-01-31");
 }

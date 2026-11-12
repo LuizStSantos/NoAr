@@ -30,6 +30,15 @@ one is tagged.
   (`403`); the interface never offered it. NoAr cannot be left without a
   global admin that way.
 
+### Fixed
+
+- A playout that had to find its place again after the day start (a clip
+  that was missing, a lost sync, a last clip that ran over) with the playlist
+  of the day that ended still loaded, or whose day start passed while a long
+  or remote playlist was read, could seek in that playlist and air the ended
+  day again from its top. It now reads the playlist of the day the clock is
+  in before it seeks. Infinite playlists keep their day, as before.
+
 ### Changed
 
 - A **Dependency audit** workflow checks the locked Rust and npm dependencies

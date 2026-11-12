@@ -48,6 +48,13 @@ fn next_playlist_date(
     get_date(seek && !day_is_over, start_sec, true, timezone)
 }
 
+/// Whether `asked`, the day whose playlist was last asked for, is over:
+/// `today`, the day the clock is in, is a later one. Both are `YYYY-MM-DD`,
+/// which sorts like the dates themselves.
+fn is_earlier_day(asked: &str, today: &str) -> bool {
+    asked < today
+}
+
 #[derive(Debug, PartialEq)]
 enum LastClipEnd {
     Adjust { scheduled_duration: f64, out: f64 },
@@ -213,6 +220,14 @@ impl CurrentProgram {
         }
     }
 
+    /// Whether the day whose playlist was last asked for is over by the
+    /// clock. An infinite playlist keeps its day.
+    fn asked_day_is_over(&self) -> bool {
+        let today = get_date(true, self.start_sec, false, &self.config.channel.timezone);
+
+        !self.config.playlist.infinit && is_earlier_day(&self.date, &today)
+    }
+
     // Check if day is past and it is time for a new playlist.
     async fn check_for_playlist(&mut self, seek: bool) -> bool {
         let (delta, total_delta) = get_delta(
@@ -243,11 +258,15 @@ impl CurrentProgram {
         );
 
         // Check if we over the target length or we are close to it, if so we load the next playlist.
+        // An init seeks by the clock, so it also leaves a day that is over:
+        // seeking in its playlist would air that day again from the top, and
+        // nothing afterwards would notice.
         if !self.config.playlist.infinit
             && (next_start >= self.length_sec
                 || is_close(total_delta, 0.0, IS_CLOSE_THRESHOLD)
                 || is_close(total_delta, self.length_sec, IS_CLOSE_THRESHOLD)
-                || self.date != self.json_playlist.date)
+                || self.date != self.json_playlist.date
+                || (seek && self.asked_day_is_over()))
         {
             trace!("get next day");
             next = true;
@@ -818,6 +837,12 @@ impl CurrentProgram {
         let list_init = self.manager.list_init.load(Ordering::SeqCst);
         self.check_for_playlist(list_init).await;
 
+        // The day start can pass while the playlist is read (a long one, or
+        // one on a slow server): read the day that began before seeking.
+        if list_init && self.asked_day_is_over() {
+            self.check_for_playlist(true).await;
+        }
+
         if list_init {
             self.handle_playlist_init().await;
             return Some(self.current_node.clone());
@@ -894,7 +919,8 @@ mod tests {
     use chrono_tz::Tz;
 
     use super::{
-        LastClipEnd, apply_init_seek, last_clip_end, next_playlist_date, placeholder_duration,
+        LastClipEnd, apply_init_seek, is_earlier_day, last_clip_end, next_playlist_date,
+        placeholder_duration,
     };
     use crate::{player::utils::Media, utils::time_machine::with_mock_time};
 
@@ -935,6 +961,15 @@ mod tests {
                 "2024-01-31"
             );
         });
+    }
+
+    #[test]
+    fn a_day_is_over_once_the_clock_is_in_a_later_one() {
+        assert!(is_earlier_day("2024-01-30", "2024-01-31"));
+        assert!(is_earlier_day("2023-12-31", "2024-01-01"));
+        assert!(!is_earlier_day("2024-01-31", "2024-01-31"));
+        // Just before midnight the next day is asked for early.
+        assert!(!is_earlier_day("2024-02-01", "2024-01-31"));
     }
 
     #[test]

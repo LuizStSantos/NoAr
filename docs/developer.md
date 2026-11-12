@@ -119,6 +119,10 @@ real time, about three minutes of `cargo test`. Their times are Central
 European and the test channel has that time zone, so the result does not
 depend on the machine that runs them.
 
+Two more tests there ask the playlist for its entries without a player, to
+put the clock where a playout cannot be made to be: past the day start with
+the playlist of the day that ended still loaded.
+
 ## Dependency audit
 
 The **Dependency audit** workflow (`.github/workflows/audit.yml`) checks what
