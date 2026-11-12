@@ -11,6 +11,36 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.2.1] - 2026-11-12
+
+### Security
+
+- Dependencies with published advisories are updated. On the server:
+  `rustls` 0.23.46, `rustls-webpki` 0.103.16 and the root certificates they
+  ship with (a certificate chain through the distrusted emSign intermediates
+  was accepted; NoAr makes TLS connections for update checks, e-mail,
+  notifications, remote playlists and graphics data sources), `tokio` 1.53.3,
+  `rustix` 1.1.6 and `ctutils` 0.4.8. In the interface: `vue-i18n` 11.4.18
+  and the build tool `vite` 8.3.8.
+
+### Changed
+
+- The tests that play a channel across a day change (a missing or short
+  playlist, a day start at midnight and at 06:00) and the playlist generator
+  tests run with every `cargo test` again. They were skipped and no longer
+  worked: they chose the output by an id that is the NDI output now, and used
+  the time zone of the machine that ran them
+  ([developer guide](docs/developer.md#playlist-day-change-tests)).
+
+### Fixed
+
+- With a day start other than midnight, a channel whose playlist ended early
+  could read the playlist of the day that had just ended instead of the new
+  day's, and air it again from the top. It happened when the filler that
+  fills the rest of the day ended a few milliseconds before the day start and
+  the day start passed while the playlist was read. With less than a second
+  left of the day, NoAr now reads the playlist of the day about to begin.
+
 ## [3.2.0] - 2026-11-11
 
 ### Added
@@ -1352,7 +1382,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.2.1...HEAD
+[3.2.1]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/LuizStSantos/NoAr/compare/v3.0.0...v3.0.1

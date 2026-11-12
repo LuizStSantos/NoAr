@@ -1,15 +1,19 @@
-use std::{path::PathBuf, sync::atomic::Ordering};
+//! Which day's playlist a channel airs across a day change, with the real
+//! player.
+//!
+//! Each test starts the playout shortly before a day ends, with the clock set
+//! to that moment, lets it run past the day start and checks which playlist
+//! it reads then. The clock is the process-wide one of `--fake-time`, so the
+//! tests run one at a time, in real time.
+
+use std::{fs, path::PathBuf, sync::atomic::Ordering};
 
 use serial_test::serial;
 use sqlx::sqlite::SqlitePoolOptions;
 
 use noar::{
     db::handles,
-    player::{
-        controller::ChannelManager,
-        output::player,
-        utils::{get_delta, is_close, time_in_seconds},
-    },
+    player::{controller::ChannelManager, output::player},
     utils::{
         config::{PlayoutConfig, ProcessMode::Playlist},
         system::SystemStat,
@@ -17,7 +21,25 @@ use noar::{
     },
 };
 
-async fn prepare_config() -> (PlayoutConfig, ChannelManager) {
+/// The folder one test's HLS output is written to, removed with the test.
+struct OutputFolder(PathBuf);
+
+impl OutputFolder {
+    fn new() -> Self {
+        let folder = std::env::temp_dir().join(format!("noar-playout-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&folder).expect("test output folder should be created");
+
+        Self(folder)
+    }
+}
+
+impl Drop for OutputFolder {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+async fn prepare_config() -> (PlayoutConfig, ChannelManager, OutputFolder) {
     let pool = SqlitePoolOptions::new()
         .connect("sqlite::memory:")
         .await
@@ -28,22 +50,25 @@ async fn prepare_config() -> (PlayoutConfig, ChannelManager) {
         .join("../../tests_assets")
         .canonicalize()
         .unwrap();
-    let hls = current_path.join("hls");
+    let output = OutputFolder::new();
     let log = current_path.join("log");
     let playlists = current_path.join("playlists");
     let storage = current_path.join("storage");
     let filler = current_path.join("storage/media_filler/filler_0.mp4");
 
+    // The times of these tests are Central European: without a time zone of
+    // its own, the channel would use the one of the machine that runs them.
+    // HLS needs no receiver and no device; it is found by its name, since the
+    // ids of the outputs follow the migrations.
     sqlx::query(
         r#"
         UPDATE config_global SET public = $1, logs = $2, playlists = $3, storage = $4;
-        UPDATE channels SET public = $1, playlists = $3, storage = $4;
+        UPDATE channels SET public = $1, playlists = $3, storage = $4, timezone = 'Europe/Berlin';
         UPDATE config_storage SET filler = $5;
-        UPDATE config_output SET width = 1024, height = 576, active = 0;
-        UPDATE config_output SET active = 1 WHERE id = 4;
+        UPDATE config_output SET width = 1024, height = 576, active = (name = 'hls');
         "#,
     )
-    .bind(hls.to_string_lossy())
+    .bind(output.0.to_string_lossy())
     .bind(log.to_string_lossy())
     .bind(playlists.to_string_lossy())
     .bind(storage.to_string_lossy())
@@ -69,7 +94,7 @@ async fn prepare_config() -> (PlayoutConfig, ChannelManager) {
     .await
     .expect("test storage should initialize");
 
-    (config, manager)
+    (config, manager, output)
 }
 
 async fn timed_stop(sec: u64, manager: ChannelManager) {
@@ -81,281 +106,101 @@ async fn timed_stop(sec: u64, manager: ChannelManager) {
     manager.stop_all(false).await;
 }
 
+/// Play for `seconds` from `fake_time`, with the day starting at `start_sec`
+/// (`day_start` as the settings spell it), and return the day of the
+/// playlist the channel reads at the end.
+async fn playlist_date_after(
+    day_start: &str,
+    start_sec: f64,
+    fake_time: &str,
+    seconds: u64,
+) -> String {
+    let (mut config, manager, _output) = prepare_config().await;
+
+    config.playlist.day_start = day_start.into();
+    config.playlist.start_sec = Some(start_sec);
+    config.playlist.length = "24:00:00".into();
+    config.playlist.length_sec = Some(86400.0);
+
+    manager.update_config(config).await;
+
+    manager.is_alive.store(true, Ordering::SeqCst);
+    manager.list_init.store(true, Ordering::SeqCst);
+
+    set_mock_time(&Some(fake_time.to_string())).unwrap();
+
+    tokio::spawn(timed_stop(seconds, manager.clone()));
+
+    // A playout that cannot start (an output that is not there) would leave
+    // the date as it was and pass for a day that did not change.
+    player(manager.clone())
+        .await
+        .expect("the playout should run until it is stopped");
+
+    manager.current_date.lock().await.clone()
+}
+
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_missing() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("00:00:00", 0.0, "2023-02-07T23:59:45+01:00", 17).await;
 
-    config.playlist.day_start = "00:00:00".into();
-    config.playlist.start_sec = Some(0.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2023-02-07T23:59:45+01:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(17, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, total_delta) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-    assert!(is_close(total_delta, 0.0, 3.0) || is_close(total_delta, 86400.0, 3.0));
-
-    assert_eq!(playlist_date, "2023-02-08");
+    assert_eq!(date, "2023-02-08");
 }
 
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_next_missing() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("00:00:00", 0.0, "2023-02-09T23:59:45+01:00", 17).await;
 
-    config.playlist.day_start = "00:00:00".into();
-    config.playlist.start_sec = Some(0.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2023-02-09T23:59:45+01:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(17, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, total_delta) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-    assert!(is_close(total_delta, 0.0, 3.0) || is_close(total_delta, 86400.0, 3.0));
-
-    assert_eq!(playlist_date, "2023-02-10");
+    assert_eq!(date, "2023-02-10");
 }
 
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_to_short() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("06:00:00", 21600.0, "2024-01-31T05:59:40+01:00", 22).await;
 
-    config.playlist.day_start = "06:00:00".into();
-    config.playlist.start_sec = Some(21600.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2024-01-31T05:59:40+01:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(22, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, total_delta) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-    assert!(is_close(total_delta, 0.0, 3.0) || is_close(total_delta, 86400.0, 3.0));
-
-    assert_eq!(playlist_date, "2024-01-31");
+    assert_eq!(date, "2024-01-31");
 }
 
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_to_short_last_out() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("06:00:00", 21600.0, "2025-10-06T05:59:25+02:00", 37).await;
 
-    config.playlist.day_start = "06:00:00".into();
-    config.playlist.start_sec = Some(21600.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2025-10-06T05:59:25+02:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(37, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, total_delta) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-    assert!(is_close(total_delta, 0.0, 3.0) || is_close(total_delta, 86400.0, 3.0));
-
-    assert_eq!(playlist_date, "2025-10-06");
+    assert_eq!(date, "2025-10-06");
 }
 
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_init_after_list_end() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("06:00:00", 21600.0, "2024-01-31T05:59:47+01:00", 15).await;
 
-    config.playlist.day_start = "06:00:00".into();
-    config.playlist.start_sec = Some(21600.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2024-01-31T05:59:47+01:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(15, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, total_delta) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-    assert!(is_close(total_delta, 0.0, 3.0) || is_close(total_delta, 86400.0, 3.0));
-
-    assert_eq!(playlist_date, "2024-01-31");
+    assert_eq!(date, "2024-01-31");
 }
 
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_change_at_midnight() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("00:00:00", 0.0, "2023-02-08T23:59:45+01:00", 17).await;
 
-    config.playlist.day_start = "00:00:00".into();
-    config.playlist.start_sec = Some(0.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2023-02-08T23:59:45+01:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(17, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, total_delta) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-    assert!(is_close(total_delta, 0.0, 3.0) || is_close(total_delta, 86400.0, 3.0));
-
-    assert_eq!(playlist_date, "2023-02-09");
+    assert_eq!(date, "2023-02-09");
 }
 
+/// The day still starts at midnight (`start_sec`): nothing changes before it.
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_change_before_midnight() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("23:59:45", 0.0, "2023-02-09T23:59:30+01:00", 17).await;
 
-    config.playlist.day_start = "23:59:45".into();
-    config.playlist.start_sec = Some(0.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2023-02-09T23:59:30+01:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(17, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, _) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-
-    assert_eq!(playlist_date, "2023-02-09");
+    assert_eq!(date, "2023-02-09");
 }
 
 #[tokio::test]
 #[serial]
-#[ignore]
 async fn playlist_change_at_six() {
-    let (mut config, manager) = prepare_config().await;
+    let date = playlist_date_after("06:00:00", 21600.0, "2023-02-09T05:59:45+01:00", 17).await;
 
-    config.playlist.day_start = "06:00:00".into();
-    config.playlist.start_sec = Some(21600.0);
-    config.playlist.length = "24:00:00".into();
-    config.playlist.length_sec = Some(86400.0);
-
-    manager.update_config(config.clone()).await;
-
-    manager.is_alive.store(true, Ordering::SeqCst);
-    manager.list_init.store(true, Ordering::SeqCst);
-
-    let manager_clone = manager.clone();
-
-    set_mock_time(&Some("2023-02-09T05:59:45+01:00".to_string())).unwrap();
-
-    tokio::spawn(timed_stop(17, manager_clone));
-
-    if let Err(e) = player(manager.clone()).await {
-        eprintln!("{e:?}");
-    };
-
-    let playlist_date = &*manager.current_date.lock().await;
-
-    let (delta, total_delta) = get_delta(&config, &time_in_seconds(&config.channel.timezone));
-    assert!(is_close(delta, 0.0, 2.0));
-    assert!(is_close(total_delta, 0.0, 3.0) || is_close(total_delta, 86400.0, 3.0));
-
-    assert_eq!(playlist_date, "2023-02-09");
+    assert_eq!(date, "2023-02-09");
 }
