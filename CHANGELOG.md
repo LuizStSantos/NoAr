@@ -11,6 +11,15 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- With a day start other than midnight, a channel whose playlist ended early
+  could read the playlist of the day that had just ended instead of the new
+  day's, and air it again from the top. It happened when the filler that
+  fills the rest of the day ended a few milliseconds before the day start and
+  the day start passed while the playlist was read. With less than a second
+  left of the day, NoAr now reads the playlist of the day about to begin.
+
 ## [3.2.0] - 2026-11-11
 
 ### Added

@@ -6,6 +6,7 @@ use std::{
     },
 };
 
+use chrono_tz::Tz;
 use log::*;
 
 use crate::{
@@ -25,6 +26,27 @@ use crate::{
 const NEXT_START_THRESHOLD: f64 = 1.5;
 const IS_CLOSE_THRESHOLD: f64 = 2.0;
 const CLIP_DURATION_ADJUSTMENT_THRESHOLD: f64 = 0.5;
+/// A clip shorter than this is skipped, so with less than this left of the
+/// day nothing of it can still air.
+const SHORTEST_CLIP: f64 = 1.0;
+
+/// The day whose playlist is read when the day on air ends.
+///
+/// A playout that starts before the day start (`seek`) belongs to the day
+/// before. Not in the last moments of that day, though: the filler that
+/// fills a short playlist ends a few milliseconds before the day start as
+/// often as after it, and reading the ending day again then airs it a second
+/// time, from the top, once the day start passes while its playlist is read.
+fn next_playlist_date(
+    seek: bool,
+    start_sec: f64,
+    total_delta: f64,
+    timezone: &Option<Tz>,
+) -> String {
+    let day_is_over = is_close(total_delta, 0.0, SHORTEST_CLIP);
+
+    get_date(seek && !day_is_over, start_sec, true, timezone)
+}
 
 #[derive(Debug, PartialEq)]
 enum LastClipEnd {
@@ -229,7 +251,12 @@ impl CurrentProgram {
         {
             trace!("get next day");
             next = true;
-            self.date = get_date(seek, self.start_sec, true, &self.config.channel.timezone);
+            self.date = next_playlist_date(
+                seek,
+                self.start_sec,
+                total_delta,
+                &self.config.channel.timezone,
+            );
 
             self.json_playlist = read_json(
                 &self.manager,
@@ -574,7 +601,7 @@ impl CurrentProgram {
         let node_index = node.index.unwrap_or_default();
         let duration = node.out - node.seek;
 
-        if node.duration > 0.0 && duration < 1.0 {
+        if node.duration > 0.0 && duration < SHORTEST_CLIP {
             warn!(
                 channel = self.channel_id;
                 "Skip clip that is less then one second long (<span class=\"log-number\">{duration:.3}</span>)."
@@ -864,8 +891,59 @@ fn apply_init_seek(node: &mut Media, elapsed: f64) {
 
 #[cfg(test)]
 mod tests {
-    use super::{LastClipEnd, apply_init_seek, last_clip_end, placeholder_duration};
-    use crate::player::utils::Media;
+    use chrono_tz::Tz;
+
+    use super::{
+        LastClipEnd, apply_init_seek, last_clip_end, next_playlist_date, placeholder_duration,
+    };
+    use crate::{player::utils::Media, utils::time_machine::with_mock_time};
+
+    const BERLIN: Option<Tz> = Some(Tz::Europe__Berlin);
+    const SIX_O_CLOCK: f64 = 21600.0;
+
+    #[test]
+    fn a_start_in_the_last_moments_of_the_day_reads_the_day_about_to_begin() {
+        // Half a second before the day starts at 06:00, as after a filler
+        // that ended early: nothing of the ending day can air any more.
+        with_mock_time("2024-01-31T05:59:59.500+01:00", || {
+            assert_eq!(
+                next_playlist_date(true, SIX_O_CLOCK, 0.5, &BERLIN),
+                "2024-01-31"
+            );
+            assert_eq!(
+                next_playlist_date(false, SIX_O_CLOCK, 0.5, &BERLIN),
+                "2024-01-31"
+            );
+        });
+    }
+
+    #[test]
+    fn a_start_with_a_clip_left_to_air_reads_the_ending_day() {
+        with_mock_time("2024-01-31T05:59:58.500+01:00", || {
+            assert_eq!(
+                next_playlist_date(true, SIX_O_CLOCK, 1.5, &BERLIN),
+                "2024-01-30"
+            );
+        });
+    }
+
+    #[test]
+    fn a_start_right_after_the_day_start_reads_the_day_that_began() {
+        with_mock_time("2024-01-31T06:00:00.500+01:00", || {
+            assert_eq!(
+                next_playlist_date(true, SIX_O_CLOCK, 86399.5, &BERLIN),
+                "2024-01-31"
+            );
+        });
+    }
+
+    #[test]
+    fn the_last_moments_before_midnight_read_tomorrow() {
+        with_mock_time("2024-01-30T23:59:59.500+01:00", || {
+            assert_eq!(next_playlist_date(true, 0.0, 0.5, &BERLIN), "2024-01-31");
+            assert_eq!(next_playlist_date(false, 0.0, 0.5, &BERLIN), "2024-01-31");
+        });
+    }
 
     fn media(seek: f64, out: f64, duration: f64) -> Media {
         Media {
