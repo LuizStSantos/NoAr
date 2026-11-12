@@ -41,7 +41,18 @@ python3 qa/e2e/run_staging.py --image noar-e2e:local
 
 # An existing Chromium can be selected without downloading a browser.
 python3 qa/e2e/run_staging.py --native --binary target/debug/noar --chromium /usr/bin/chromium
+
+# The interface as the Docker image serves it, with its security headers:
+# a release build, which embeds the frontend, and no Vite.
+npm run build
+NOAR_FRONTEND_PREBUILT=1 cargo build --release --locked -p noar --no-default-features --features embed_frontend
+python3 qa/e2e/run_staging.py --native --binary target/release/noar --embedded
 ```
+
+Vite sends no security headers, so `tests/interface-headers.spec.ts` only runs
+with `--embedded`: it checks the headers, that a page refuses an injected or
+evaluated script and still starts a worker made from a blob, and that no page
+of the interface breaks its content security policy.
 
 The runner requires free loopback ports 8787 and 5757. It creates its own empty
 SQLite database, media and playlist folders under `work/e2e-*`, copies a synthetic

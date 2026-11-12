@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 
 import SectionCard from '@/components/settings/SectionCard.vue'
 import UserEditor, { type UserDraft } from '@/components/settings/UserEditor.vue'
@@ -11,11 +12,15 @@ import { useConfig } from '@/stores/config'
 import { useIndex } from '@/stores/index'
 
 const { t } = useI18n()
+const router = useRouter()
 const authStore = useAuth()
 const configStore = useConfig()
 const indexStore = useIndex()
 
 type Draft = UserDraft
+
+/** The server refuses a shorter new password. */
+const MIN_PASSWORD_CHARS = 8
 
 const users = ref<User[]>([])
 const editing = ref<Draft | null>(null)
@@ -86,6 +91,11 @@ const error = computed(() => {
         return t('settings.users.errorPassword')
     }
 
+    // Characters, as the server counts them, not UTF-16 units.
+    if (draft.password && [...draft.password].length < MIN_PASSWORD_CHARS) {
+        return t('settings.users.errorPasswordShort')
+    }
+
     if (draft.password && draft.password !== draft.confirm) {
         return t('user.mismatch')
     }
@@ -123,6 +133,15 @@ async function saveUser() {
                 body: JSON.stringify(body),
                 responseType: 'text',
             })
+
+            // A new password ends every session of its user, this one too.
+            if (draft.password && draft.id === me.value) {
+                indexStore.msgAlert('success', t('settings.users.passwordChanged'), 5)
+                await authStore.logout()
+                await router.push({ name: 'login' })
+                return
+            }
+
             indexStore.msgAlert('success', t('user.updateSuccess'), 2)
         } else {
             await authFetch('/api/user', {

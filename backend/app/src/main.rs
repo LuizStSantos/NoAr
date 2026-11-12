@@ -50,7 +50,7 @@ use noar::{
 };
 
 #[cfg(not(debug_assertions))]
-use noar::serve::routes::admin_ui_routes;
+use noar::{middleware::interface_headers::interface_headers, serve::routes::admin_ui_routes};
 
 fn env_parse_or<T>(key: &str, default: T) -> T
 where
@@ -208,8 +208,9 @@ async fn async_main() -> Result<(), ProcessError> {
             .layer(middleware::from_fn(log_middleware))
             .layer(middleware::from_fn(client_ip_layer));
 
+        // The interface is served with its own security headers.
         #[cfg(not(debug_assertions))]
-        let app = app.merge(admin_ui_routes());
+        let app = app.merge(admin_ui_routes().layer(middleware::from_fn(interface_headers)));
 
         server::mark_started();
         update::spawn_checker(pool.clone(), shutdown.clone());

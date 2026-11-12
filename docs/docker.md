@@ -80,6 +80,59 @@ NoAr does not host RTMP/SRT input listeners. Publish sources to MediaMTX or
 another ingest server, then configure their client URLs as scheduled lives in
 NoAr. These outgoing connections need no published input port on NoAr.
 
+## Container health
+
+`docker ps` shows the NoAr container as `healthy` while its web server
+answers. Every 30 seconds the image asks `NOAR_HEALTHCHECK_URL` from inside
+the container; three requests in a row without an answer within 5 seconds
+make it `unhealthy`. The first two minutes after a start do not count.
+
+Any answer counts, on purpose. `/health` answers `503` when a channel is off
+air, frozen or failed, and a tool that restarts unhealthy containers (Docker
+Swarm, an autoheal container) would then stop every channel because of one.
+The health check only says that NoAr itself is alive; to know whether the
+channels are on air, point an uptime monitor at
+[`/health`](api.md#health-check). With plain Docker Compose an `unhealthy`
+container is only shown as such: nothing restarts it.
+
+If NoAr listens on another port inside the container (a `command:` with
+another `--listen`), set `NOAR_HEALTHCHECK_URL` to match, or turn the check
+off in `docker-compose.yml`:
+
+```yaml
+services:
+  noar:
+    healthcheck:
+      disable: true
+```
+
+## Interface security headers
+
+The pages of the interface are served with a content security policy: a page
+runs only the scripts NoAr serves itself, with nothing inline, nothing
+evaluated and no plugins. The interface keeps its session in the browser, so
+this is what stops a script that got into a page from taking the session.
+What the pages show is left open, because artwork, previews and live sources
+may be on other servers. The interface's files are also sent with
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin`.
+
+By default any page may show the interface inside a frame, as before. To
+keep other sites from framing it (a page that lays its own buttons over the
+Player, for example), set `NOAR_FRAME_ANCESTORS` in `docker-compose.yml`:
+
+```yaml
+    environment:
+      # Only NoAr's own pages:
+      NOAR_FRAME_ANCESTORS: "'self'"
+      # Or NoAr and a panel that embeds it:
+      # NOAR_FRAME_ANCESTORS: "'self' https://panel.example.org"
+```
+
+Entries are `'self'`, `'none'`, `*` or addresses, separated by spaces or
+commas; one that is not a source is left out with a warning in the log. A
+reverse proxy that adds a content security policy of its own narrows this
+one: a page then has to pass both.
+
 ## Restarting
 
 *Settings › Server and e-mail › Restart NoAr* (global administrators) stops
@@ -107,6 +160,7 @@ The image sets these variables:
 | `NOAR_SETUP_PLAYLISTS` | `/data/playlists` | Playlist path suggested on the setup page |
 | `NOAR_SETUP_PUBLIC` | `/data/public` | HLS path suggested on the setup page |
 | `NOAR_SETUP_LOGS` | `/data/logs` | Log path suggested on the setup page |
+| `NOAR_HEALTHCHECK_URL` | `http://127.0.0.1:8787/health` | Address the container health check asks (below) |
 | `TZ` | `UTC` (`America/Sao_Paulo` in the compose file) | Time zone |
 
 After the setup, each channel uses the paths saved for it; change them in

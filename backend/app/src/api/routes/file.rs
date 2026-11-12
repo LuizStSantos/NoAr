@@ -20,6 +20,7 @@ use tokio::fs;
 
 use crate::{
     api::{
+        access::saved_account,
         auth::decode_jwt,
         file_access::{FileAccessData, FileAccessResponse, check_file_access, prune_file_access},
         routes::{AuthUser, FileObj, ImportObj, ensure_any_authority, stream_file},
@@ -337,10 +338,16 @@ pub async fn get_file(
         .and_then(|value| value.strip_prefix("Bearer "))
     {
         let claims = decode_jwt(token).await?;
+        // This route is outside `/api` and its account guard: check the
+        // token against the saved user here, so one issued before its user
+        // was deleted or taken off the channel reads no file either.
+        let (user, role) = saved_account(&state.pool, &claims)
+            .await?
+            .map_err(|detail| ServiceError::Unauthorized(detail.to_string()))?;
         let auth = AuthUser {
-            id: claims.id,
-            channels: claims.channels,
-            role: claims.role,
+            id: user.id,
+            channels: user.channel_ids.unwrap_or_default(),
+            role,
         };
         auth.ensure_channel_or_admin(id)?;
     } else if let Some(access) = query.access.as_deref() {

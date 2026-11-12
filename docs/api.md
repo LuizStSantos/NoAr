@@ -39,7 +39,14 @@ a new login.
 An access token issued before its user's role, channels or pages changed, or
 before the user was deleted, answers `401` on every request: renew it with
 `/auth/refresh`, which reads the saved user (and refuses a deleted one). The
-interface does this by itself, so a change applies at once.
+interface does this by itself, so a change applies at once. The same holds
+for a stored file read with a token (`GET /file/{id}/...`).
+
+A new password for a user, set by that user, by a global admin or from the
+command line (`noar -u <USER> -p <PASSWORD>`), revokes every refresh token of
+that user: each of their sessions ends when its access token expires (at most
+45 minutes), and they sign in again. The interface signs out at once after
+you change your own password.
 
 Ten failed sign-ins for one username within 15 minutes, from any address,
 refuse further sign-ins for that username (`429`) until those 15 minutes
@@ -546,6 +553,12 @@ single HTTP `Range` request for seeking.
 
 A `PUT /api/user/{id}` without `channel_ids` keeps the user's saved channels;
 send `[]` to remove every channel.
+
+A new `password`, in `POST /api/user`, `PUT /api/user/{id}` or the first-time
+setup, needs at least 8 characters (`400` otherwise); passwords saved before
+keep signing in. An empty or missing `password` in a `PUT` keeps the saved
+one. A global admin cannot delete their own user (`403`), so there is always
+one left to manage the others.
 
 ### Pages an operator may use
 

@@ -11,6 +11,68 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-11-12
+
+### Added
+
+- **Container health.** The image has a health check: `docker ps` shows the
+  NoAr container as `healthy` while its web server answers, and `unhealthy`
+  after three requests in a row without an answer. It does not look at the
+  channels, on purpose: a tool that restarts unhealthy containers would stop
+  every channel because of one that is off air. Watch the channels with a
+  monitor on `/health`, as before. `NOAR_HEALTHCHECK_URL` sets the address
+  when NoAr listens on another port inside the container
+  ([Docker](docs/docker.md#container-health)).
+
+- **`NOAR_FRAME_ANCESTORS`** says which pages may show the interface inside
+  a frame: `'self'` for NoAr's own only, or the addresses of the panels that
+  embed it. Unset, any page may, as before
+  ([Docker](docs/docker.md#interface-security-headers)).
+
+### Security
+
+- The pages of the interface are served with a content security policy that
+  runs only the scripts NoAr serves itself: nothing inline, nothing evaluated
+  and no plugins. The interface keeps its session in the browser, where a
+  script that got into a page could take it; such a script no longer runs.
+  What the pages show (artwork, previews, live sources on other servers) is
+  not restricted. The interface's files are also sent with
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin`.
+- A new password ends the sessions opened with the old one. Changing a
+  user's password, by that user, by a global admin or from the command line
+  (`noar -u <USER> -p <PASSWORD>`), revokes every refresh token of that user,
+  so a session someone else may hold stops at its next renewal (at most 45
+  minutes) instead of lasting up to 14 days. The interface signs you out when
+  you change your own password.
+- A new password needs at least 8 characters, when a user is created, when a
+  password is changed and in the first-time setup (`400` otherwise; the setup
+  page already asked for it). Passwords saved before keep signing in.
+- A stored file read with a token (`GET /file/{id}/...`) checks the token
+  against the saved user, like the `/api` routes: one issued before its user
+  was deleted or taken off the channel is refused (`401`) instead of reading
+  files until it expires.
+- A global admin can no longer delete their own user through the API
+  (`403`); the interface never offered it. NoAr cannot be left without a
+  global admin that way.
+
+### Changed
+
+- A **Dependency audit** workflow checks the locked Rust and npm dependencies
+  against the published advisories every week and on pull requests that
+  change them, so an advisory shows up as a failed check instead of waiting
+  for someone to look. The Rust advisories with no release to move to yet are
+  listed, each with its reason, in `.cargo/audit.toml`
+  ([developer guide](docs/developer.md#dependency-audit)).
+
+### Fixed
+
+- A playout that had to find its place again after the day start (a clip
+  that was missing, a lost sync, a last clip that ran over) with the playlist
+  of the day that ended still loaded, or whose day start passed while a long
+  or remote playlist was read, could seek in that playlist and air the ended
+  day again from its top. It now reads the playlist of the day the clock is
+  in before it seeks. Infinite playlists keep their day, as before.
+
 ## [3.2.1] - 2026-11-12
 
 ### Security
@@ -1382,7 +1444,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.2.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.0...HEAD
+[3.3.0]: https://github.com/LuizStSantos/NoAr/compare/v3.2.1...v3.3.0
 [3.2.1]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/LuizStSantos/NoAr/compare/v3.0.1...v3.1.0

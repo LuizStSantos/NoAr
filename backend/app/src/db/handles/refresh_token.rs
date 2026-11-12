@@ -1,4 +1,4 @@
-use sqlx::{Row, sqlite::SqlitePool};
+use sqlx::{Executor, Row, Sqlite, sqlite::SqlitePool};
 
 use crate::utils::errors::ProcessError;
 
@@ -144,6 +144,28 @@ pub async fn revoke_refresh_family(
     Ok(result.rows_affected() > 0)
 }
 
+/// End every session of a user: none of their refresh tokens renews a
+/// session any more. Returns how many were still good.
+pub async fn revoke_user_refresh_tokens<'e, E>(
+    executor: E,
+    user_id: i32,
+    now: i64,
+) -> Result<u64, ProcessError>
+where
+    E: Executor<'e, Database = Sqlite>,
+{
+    let result = sqlx::query(
+        "UPDATE auth_refresh_tokens SET revoked_at = $1
+         WHERE user_id = $2 AND revoked_at IS NULL",
+    )
+    .bind(now)
+    .bind(user_id)
+    .execute(executor)
+    .await?;
+
+    Ok(result.rows_affected())
+}
+
 #[cfg(test)]
 mod tests {
     use std::{sync::Arc, time::Duration};
@@ -287,5 +309,46 @@ mod tests {
                 .unwrap();
 
         assert_eq!(successors, 0);
+    }
+
+    #[tokio::test]
+    async fn revoking_a_user_ends_every_session_of_that_user_only() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        populate(&pool).await;
+        sqlx::query("INSERT INTO auth_user (id, mail, username, password, role_id) VALUES (2, 'other@example.org', 'other-user', 'unused', 3)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        insert_refresh_token(&pool, "second-device", "second-family", 1, 1000, 100)
+            .await
+            .unwrap();
+        insert_refresh_token(&pool, "other", "other-family", 2, 1000, 100)
+            .await
+            .unwrap();
+
+        assert_eq!(revoke_user_refresh_tokens(&pool, 1, 200).await.unwrap(), 2);
+        // A revoked token is refused like one used twice.
+        assert_eq!(
+            rotate_refresh_token(&pool, "original", "new", 1, 1000, 300)
+                .await
+                .unwrap(),
+            RefreshRotation::Reused
+        );
+        assert_eq!(
+            rotate_refresh_token(&pool, "second-device", "new", 1, 1000, 300)
+                .await
+                .unwrap(),
+            RefreshRotation::Reused
+        );
+        assert_eq!(
+            rotate_refresh_token(&pool, "other", "other-new", 2, 1000, 300)
+                .await
+                .unwrap(),
+            RefreshRotation::Rotated
+        );
     }
 }

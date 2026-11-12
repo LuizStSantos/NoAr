@@ -20,12 +20,18 @@ use axum::{
 };
 use log::error;
 
+use sqlx::SqlitePool;
+
 use crate::{
-    api::{auth::decode_jwt, state::AppState},
+    api::{
+        auth::{Claims, decode_jwt},
+        state::AppState,
+    },
     db::{
         handles,
-        models::{Area, Role},
+        models::{Area, Role, User},
     },
+    utils::errors::ProcessError,
 };
 
 use Area::*;
@@ -85,6 +91,24 @@ pub fn allowed(areas: Option<&[Area]>, required: &[Area]) -> bool {
         || areas.is_none_or(|areas| required.iter().any(|area| areas.contains(area)))
 }
 
+/// The saved user and role a token stands for, or why it no longer counts:
+/// its user was deleted, or their role, channels or pages changed after it
+/// was issued.
+pub async fn saved_account(
+    pool: &SqlitePool,
+    claims: &Claims,
+) -> Result<Result<(User, Role), &'static str>, ProcessError> {
+    let Some((user, role)) = handles::select_user_access(pool, claims.id).await? else {
+        return Ok(Err("This user no longer exists"));
+    };
+
+    if !claims.matches_account(&user, &role) {
+        return Ok(Err("Your user was changed; renew the session"));
+    }
+
+    Ok(Ok((user, role)))
+}
+
 /// Check every signed-in request against the saved user.
 ///
 /// A token issued before its user's role, channels or pages changed, or
@@ -110,18 +134,14 @@ pub async fn account_guard(
     };
 
     // The saved user, not the token's copy: a change applies at once.
-    let (user, role) = match handles::select_user_access(&state.pool, claims.id).await {
-        Ok(Some(account)) => account,
-        Ok(None) => return renew("This user no longer exists"),
+    let (user, role) = match saved_account(&state.pool, &claims).await {
+        Ok(Ok(account)) => account,
+        Ok(Err(detail)) => return renew(detail),
         Err(error) => {
             error!("Could not read user {}: {error}", claims.id);
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-
-    if !claims.matches_account(&user, &role) {
-        return renew("Your user was changed; renew the session");
-    }
 
     if role != Role::User {
         return next.run(request).await;
