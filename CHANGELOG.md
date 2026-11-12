@@ -11,6 +11,15 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- The tests that play a channel across a day change (a missing or short
+  playlist, a day start at midnight and at 06:00) and the playlist generator
+  tests run with every `cargo test` again. They were skipped and no longer
+  worked: they chose the output by an id that is the NDI output now, and used
+  the time zone of the machine that ran them
+  ([developer guide](docs/developer.md#playlist-day-change-tests)).
+
 ### Fixed
 
 - With a day start other than midnight, a channel whose playlist ended early

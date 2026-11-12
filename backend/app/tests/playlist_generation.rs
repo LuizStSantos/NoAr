@@ -36,8 +36,7 @@ async fn prepare_config() -> (PlayoutConfig, ChannelManager) {
         UPDATE config_global SET public = $1, logs = $2, playlists = $3, storage = $4;
         UPDATE channels SET public = $1, playlists = $3, storage = $4;
         UPDATE config_storage SET filler = $5;
-        UPDATE config_output SET width = 1024, height = 576, active = 0;
-        UPDATE config_output SET active = 1 WHERE id = 4;
+        UPDATE config_output SET width = 1024, height = 576, active = (name = 'hls');
         "#,
     )
     .bind(hls.to_string_lossy())
@@ -65,7 +64,6 @@ async fn prepare_config() -> (PlayoutConfig, ChannelManager) {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_filler_list() {
     let (mut config, manager) = prepare_config().await;
 
@@ -83,7 +81,6 @@ async fn test_filler_list() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_generate_playlist_from_folder() {
     let (mut config, manager) = prepare_config().await;
 
@@ -117,7 +114,6 @@ async fn test_generate_playlist_from_folder() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_generate_playlist_from_template() {
     let (mut config, manager) = prepare_config().await;
 

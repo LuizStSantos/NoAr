@@ -108,6 +108,17 @@ GStreamer plugin, driver and accessible device. Software-only validation does
 not establish that a GPU is available; unsupported encoder settings are
 rejected instead of falling back to another encoder.
 
+## Playlist day-change tests
+
+`backend/app/tests/playout_playlist.rs` runs the real player with the clock
+set shortly before a day ends, and checks which day's playlist the channel
+reads after the day start: with a missing or short playlist, and with a day
+start at midnight and at 06:00. The output is HLS in a temporary folder, so
+the tests need no receiver and no device. They run one after the other in
+real time, about three minutes of `cargo test`. Their times are Central
+European and the test channel has that time zone, so the result does not
+depend on the machine that runs them.
+
 ## Browser integration tests
 
 The [isolated Playwright harness](../qa/e2e/README.md) checks authenticated
