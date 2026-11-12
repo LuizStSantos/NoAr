@@ -140,6 +140,7 @@ RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
+        curl \
         fonts-dejavu-core \
         glib-networking \
         gstreamer1.0-tools \
@@ -202,6 +203,7 @@ ENV DB=/data/db/noar.db \
     NOAR_SETUP_PLAYLISTS=/data/playlists \
     NOAR_SETUP_PUBLIC=/data/public \
     NOAR_SETUP_LOGS=/data/logs \
+    NOAR_HEALTHCHECK_URL=http://127.0.0.1:8787/health \
     TZ=UTC
 
 RUN mkdir -p /data/db /data/media /data/playlists /data/public /data/logs
@@ -209,6 +211,13 @@ VOLUME ["/data"]
 WORKDIR /data
 
 EXPOSE 8787
+
+# Healthy while the web server answers, whatever it answers: /health says 503
+# when a channel is off air, and a tool that restarts unhealthy containers
+# would then take every channel down for one. Watch the channels with a
+# monitor on /health instead (see docs/docker.md, "Container health").
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD curl --silent --output /dev/null --max-time 4 "$NOAR_HEALTHCHECK_URL" || exit 1
 
 ENTRYPOINT ["tini", "--", "noar-entrypoint"]
 CMD ["--listen", "0.0.0.0:8787"]

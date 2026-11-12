@@ -11,6 +11,17 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- **Container health.** The image has a health check: `docker ps` shows the
+  NoAr container as `healthy` while its web server answers, and `unhealthy`
+  after three requests in a row without an answer. It does not look at the
+  channels, on purpose: a tool that restarts unhealthy containers would stop
+  every channel because of one that is off air. Watch the channels with a
+  monitor on `/health`, as before. `NOAR_HEALTHCHECK_URL` sets the address
+  when NoAr listens on another port inside the container
+  ([Docker](docs/docker.md#container-health)).
+
 ### Security
 
 - A new password ends the sessions opened with the old one. Changing a
@@ -30,15 +41,6 @@ one is tagged.
   (`403`); the interface never offered it. NoAr cannot be left without a
   global admin that way.
 
-### Fixed
-
-- A playout that had to find its place again after the day start (a clip
-  that was missing, a lost sync, a last clip that ran over) with the playlist
-  of the day that ended still loaded, or whose day start passed while a long
-  or remote playlist was read, could seek in that playlist and air the ended
-  day again from its top. It now reads the playlist of the day the clock is
-  in before it seeks. Infinite playlists keep their day, as before.
-
 ### Changed
 
 - A **Dependency audit** workflow checks the locked Rust and npm dependencies
@@ -47,6 +49,15 @@ one is tagged.
   for someone to look. The Rust advisories with no release to move to yet are
   listed, each with its reason, in `.cargo/audit.toml`
   ([developer guide](docs/developer.md#dependency-audit)).
+
+### Fixed
+
+- A playout that had to find its place again after the day start (a clip
+  that was missing, a lost sync, a last clip that ran over) with the playlist
+  of the day that ended still loaded, or whose day start passed while a long
+  or remote playlist was read, could seek in that playlist and air the ended
+  day again from its top. It now reads the playlist of the day the clock is
+  in before it seeks. Infinite playlists keep their day, as before.
 
 ## [3.2.1] - 2026-11-12
 

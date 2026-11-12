@@ -298,7 +298,9 @@ def set_up():
         native.start('noar', [native.binary, '--listen', '127.0.0.1:18787', '--log-to-console'], native_environment())
     else:
         container('mediamtx', '-v', f'{HERE / "mediamtx.yml"}:/mediamtx.yml:ro', [], image=MEDIAMTX)
-        noar_args = ['-v', f'{WORK / "data"}:/data', '-e', 'TZ=UTC']
+        # The image's health check asks port 8787; the soak listens elsewhere.
+        noar_args = ['-v', f'{WORK / "data"}:/data', '-e', 'TZ=UTC',
+                     '-e', f'NOAR_HEALTHCHECK_URL={BASE}/health']
         if BINARY:
             noar_args += ['-v', f'{Path(BINARY).resolve()}:/usr/local/bin/noar:ro']
         container('noar', *noar_args, ['--listen', '127.0.0.1:18787'], entrypoint='noar' if BINARY else None)

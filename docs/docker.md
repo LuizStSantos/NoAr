@@ -80,6 +80,32 @@ NoAr does not host RTMP/SRT input listeners. Publish sources to MediaMTX or
 another ingest server, then configure their client URLs as scheduled lives in
 NoAr. These outgoing connections need no published input port on NoAr.
 
+## Container health
+
+`docker ps` shows the NoAr container as `healthy` while its web server
+answers. Every 30 seconds the image asks `NOAR_HEALTHCHECK_URL` from inside
+the container; three requests in a row without an answer within 5 seconds
+make it `unhealthy`. The first two minutes after a start do not count.
+
+Any answer counts, on purpose. `/health` answers `503` when a channel is off
+air, frozen or failed, and a tool that restarts unhealthy containers (Docker
+Swarm, an autoheal container) would then stop every channel because of one.
+The health check only says that NoAr itself is alive; to know whether the
+channels are on air, point an uptime monitor at
+[`/health`](api.md#health-check). With plain Docker Compose an `unhealthy`
+container is only shown as such: nothing restarts it.
+
+If NoAr listens on another port inside the container (a `command:` with
+another `--listen`), set `NOAR_HEALTHCHECK_URL` to match, or turn the check
+off in `docker-compose.yml`:
+
+```yaml
+services:
+  noar:
+    healthcheck:
+      disable: true
+```
+
 ## Restarting
 
 *Settings › Server and e-mail › Restart NoAr* (global administrators) stops
@@ -107,6 +133,7 @@ The image sets these variables:
 | `NOAR_SETUP_PLAYLISTS` | `/data/playlists` | Playlist path suggested on the setup page |
 | `NOAR_SETUP_PUBLIC` | `/data/public` | HLS path suggested on the setup page |
 | `NOAR_SETUP_LOGS` | `/data/logs` | Log path suggested on the setup page |
+| `NOAR_HEALTHCHECK_URL` | `http://127.0.0.1:8787/health` | Address the container health check asks (below) |
 | `TZ` | `UTC` (`America/Sao_Paulo` in the compose file) | Time zone |
 
 After the setup, each channel uses the paths saved for it; change them in
