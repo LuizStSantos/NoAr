@@ -232,21 +232,26 @@ async fn next_entry(playlist: &mut SourceIterator) {
         .expect("the playlist should give an entry");
 }
 
-/// An entry that ran over the day start is followed by an init, as after a
-/// clip that was missing: it seeks by the clock, so it must seek in the day
-/// that began. In the playlist of the day that ended it would air that day
-/// again from its top.
+/// The filler that fills a short day runs over the day start, by more than
+/// the two seconds in which a day change counts as close. The entry after a
+/// filler is an init, which seeks by the clock: it must seek in the day that
+/// began. In the playlist of the day that ended, still loaded, it would air
+/// that day again from its top.
 #[tokio::test]
 #[serial]
 async fn an_init_after_the_day_start_leaves_the_day_that_ended() {
-    let (manager, _output) = channel_at("06:00:00", 21600.0, "2024-01-31T05:59:50+01:00").await;
+    let fake_time = |time: &str| set_mock_time(&Some(time.to_string())).unwrap();
+    let (manager, _output) = channel_at("06:00:00", 21600.0, "2024-01-31T05:59:40+01:00").await;
     let mut playlist = source_generator(manager.clone()).await;
 
+    // The last clip of the 30th, then the filler up to the day start.
+    next_entry(&mut playlist).await;
+    fake_time("2024-01-31T05:59:47+01:00");
     next_entry(&mut playlist).await;
     assert_eq!(*manager.current_date.lock().await, "2024-01-30");
+    assert!(manager.list_init.load(Ordering::SeqCst));
 
-    set_mock_time(&Some("2024-01-31T06:00:10+01:00".to_string())).unwrap();
-    manager.list_init.store(true, Ordering::SeqCst);
+    fake_time("2024-01-31T06:00:05+01:00");
     next_entry(&mut playlist).await;
 
     assert_eq!(*manager.current_date.lock().await, "2024-01-31");
