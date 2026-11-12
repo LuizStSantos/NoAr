@@ -11,6 +11,14 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- The 3.3.0 image was not published: a test of the day change, which checks
+  a day start that passes while a playlist is being read, depended on how
+  long the read took and failed in the image build. It now moves the clock
+  during the read itself, so it gives the same result on every machine.
+  3.3.1 is 3.3.0 with that test fixed: what NoAr does is the same.
+
 ## [3.3.0] - 2026-11-12
 
 ### Added

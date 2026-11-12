@@ -8,9 +8,19 @@
 //!
 //! The last tests ask the playlist for its entries without a player, to put
 //! the clock where a playout cannot be made to be: past the day start with
-//! the day that ended still loaded.
+//! the day that ended still loaded, or while a playlist is being read.
 
-use std::{fs, path::PathBuf, sync::atomic::Ordering};
+use std::{
+    fs,
+    io::{BufRead, BufReader, Write},
+    net::TcpListener,
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+};
 
 use serial_test::serial;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -257,21 +267,78 @@ async fn an_init_after_the_day_start_leaves_the_day_that_ended() {
     assert_eq!(*manager.current_date.lock().await, "2024-01-31");
 }
 
-/// The day start passes while the playlist is read, or right after: more
-/// than two seconds into the new day, no day change is close any more, and
-/// the day that began must be the one loaded.
+/// A playlist server on this machine that serves `tests_assets/playlists`.
+/// When the playlist of `slow_day` is asked for the first time, it sets the
+/// clock to `then` before it answers: the clock moves while that playlist is
+/// being read, whatever the reading takes.
+fn playlist_server(slow_day: &'static str, then: &'static str) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("a free port on this machine");
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    let playlists = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests_assets/playlists");
+    let moved = Arc::new(AtomicBool::new(false));
+
+    thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut request = String::new();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+
+            if reader.read_line(&mut request).is_err() {
+                continue;
+            }
+
+            // The rest of the request is headers, up to an empty line.
+            let mut line = String::new();
+            while reader.read_line(&mut line).is_ok_and(|read| read > 2) {
+                line.clear();
+            }
+
+            let mut parts = request.split_whitespace();
+            let method = parts.next().unwrap_or_default();
+            let path = parts.next().unwrap_or_default().trim_start_matches('/');
+
+            if path.ends_with(&format!("{slow_day}.json")) && !moved.swap(true, Ordering::SeqCst) {
+                set_mock_time(&Some(then.to_string())).unwrap();
+            }
+
+            let answer = match fs::read(playlists.join(path)) {
+                Ok(body) if method == "GET" => [
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    )
+                    .into_bytes(),
+                    body,
+                ]
+                .concat(),
+                Ok(_) => b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_vec(),
+                Err(_) => b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_vec(),
+            };
+            let _ = stream.write_all(&answer);
+        }
+    });
+
+    address
+}
+
+/// The day start passes while an init reads the playlist of the day that is
+/// ending, as with a long playlist or one on a slow server. The init must not
+/// seek in that playlist, now past its day: it would air that day again from
+/// its top. It reads the day that began instead.
 #[tokio::test]
 #[serial]
 async fn a_day_start_that_passes_during_an_init_is_not_missed() {
     let (manager, _output) = channel_at("06:00:00", 21600.0, "2024-01-31T05:59:58.500+01:00").await;
+    let mut config = manager.config.read().await.clone();
+
+    // Set here, not in the database: a playout configuration makes the
+    // folder of a local playlist path, and this one is an address.
+    config.channel.playlists =
+        playlist_server("2024-01-30", "2024-01-31T06:00:00.500+01:00").into();
+    manager.update_config(config).await;
+
     let mut playlist = source_generator(manager.clone()).await;
-    let started = std::time::Instant::now();
 
-    next_entry(&mut playlist).await;
-
-    // Until 06:00:02.5, whatever the read took.
-    let into_the_new_day = std::time::Duration::from_secs(4);
-    tokio::time::sleep(into_the_new_day.saturating_sub(started.elapsed())).await;
     next_entry(&mut playlist).await;
 
     assert_eq!(*manager.current_date.lock().await, "2024-01-31");
