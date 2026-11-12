@@ -30,6 +30,15 @@ one is tagged.
   (`403`); the interface never offered it. NoAr cannot be left without a
   global admin that way.
 
+### Changed
+
+- A **Dependency audit** workflow checks the locked Rust and npm dependencies
+  against the published advisories every week and on pull requests that
+  change them, so an advisory shows up as a failed check instead of waiting
+  for someone to look. The Rust advisories with no release to move to yet are
+  listed, each with its reason, in `.cargo/audit.toml`
+  ([developer guide](docs/developer.md#dependency-audit)).
+
 ## [3.2.1] - 2026-11-12
 
 ### Security

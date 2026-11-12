@@ -1,0 +1,21 @@
+# Advisories that `cargo audit` reports for Cargo.lock and NoAr cannot leave
+# behind yet, each with why it stays and what removes it. The Dependency audit
+# workflow fails on any advisory that is not listed here: take an entry out as
+# soon as its crate can be updated.
+[advisories]
+ignore = [
+    # Bundled SQLite before 3.54 (CVE-2026-119375): needs a crafted database
+    # and -wal file pair on the server. sqlx 0.9.0 only accepts libsqlite3-sys
+    # below 0.38; the fix is in 0.39.
+    "RUSTSEC-2026-0459",
+    # quick-xml 0.39 comes from gst-plugin-ndi 0.14, the last line for
+    # gstreamer-rs 0.24. The fix (0.41) needs the plugin's 0.15 line, which is
+    # for gstreamer-rs 0.25. NoAr builds the NDI sink only.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+    # rsa and crypto-bigint come from the rust_crypto backend of jsonwebtoken.
+    # NoAr signs and checks its tokens with HS256 only, so their RSA and
+    # elliptic-curve code never runs. rsa has no fixed release.
+    "RUSTSEC-2023-0071",
+    "RUSTSEC-2026-0387",
+]

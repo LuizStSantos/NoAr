@@ -119,6 +119,26 @@ real time, about three minutes of `cargo test`. Their times are Central
 European and the test channel has that time zone, so the result does not
 depend on the machine that runs them.
 
+## Dependency audit
+
+The **Dependency audit** workflow (`.github/workflows/audit.yml`) checks what
+`Cargo.lock`, `package-lock.json` and `qa/e2e/package-lock.json` lock against
+the published advisories, every Monday on `main` and on pull requests that
+change one of them. It fails on any Rust advisory and on high or critical npm
+findings. The same checks run locally:
+
+```sh
+cargo install cargo-audit --locked
+cargo audit
+npm audit --audit-level=high
+npm audit --audit-level=high --prefix qa/e2e
+```
+
+A Rust advisory that cannot be left behind yet (its fix is in a release NoAr
+cannot move to) is listed in `.cargo/audit.toml` with the reason and what
+removes it. Take an entry out as soon as its crate can be updated; do not add
+one for an advisory that an update fixes.
+
 ## Browser integration tests
 
 The [isolated Playwright harness](../qa/e2e/README.md) checks authenticated

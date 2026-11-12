@@ -1,0 +1,57 @@
+name: Dependency audit
+
+# Fails when a dependency locked in Cargo.lock or in a package-lock.json has a
+# published advisory: every week, and when a pull request changes what is
+# locked. Rust advisories that cannot be left behind yet are listed, each with
+# its reason, in .cargo/audit.toml.
+on:
+  schedule:
+    # Mondays, on main.
+    - cron: '23 5 * * 1'
+  pull_request:
+    paths:
+      - 'Cargo.lock'
+      - 'package-lock.json'
+      - 'qa/e2e/package-lock.json'
+      - '.cargo/audit.toml'
+      - '.github/workflows/audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads Cargo.lock only: nothing of NoAr is compiled, so the native
+      # media libraries are not needed.
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Audit Cargo.lock
+        run: cargo audit
+
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # High and critical findings fail. The lockfile alone is read; nothing
+      # is installed.
+      - name: Audit the interface
+        run: npm audit --audit-level=high
+
+      - name: Audit the browser tests
+        working-directory: qa/e2e
+        run: npm audit --audit-level=high
