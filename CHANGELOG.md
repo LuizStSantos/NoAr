@@ -22,6 +22,10 @@ one is tagged.
 - A new password needs at least 8 characters, when a user is created, when a
   password is changed and in the first-time setup (`400` otherwise; the setup
   page already asked for it). Passwords saved before keep signing in.
+- A stored file read with a token (`GET /file/{id}/...`) checks the token
+  against the saved user, like the `/api` routes: one issued before its user
+  was deleted or taken off the channel is refused (`401`) instead of reading
+  files until it expires.
 - A global admin can no longer delete their own user through the API
   (`403`); the interface never offered it. NoAr cannot be left without a
   global admin that way.

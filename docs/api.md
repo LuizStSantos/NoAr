@@ -39,7 +39,8 @@ a new login.
 An access token issued before its user's role, channels or pages changed, or
 before the user was deleted, answers `401` on every request: renew it with
 `/auth/refresh`, which reads the saved user (and refuses a deleted one). The
-interface does this by itself, so a change applies at once.
+interface does this by itself, so a change applies at once. The same holds
+for a stored file read with a token (`GET /file/{id}/...`).
 
 A new password for a user, set by that user, by a global admin or from the
 command line (`noar -u <USER> -p <PASSWORD>`), revokes every refresh token of

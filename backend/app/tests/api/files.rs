@@ -461,3 +461,63 @@ async fn a_folder_marked_as_commercials_makes_its_clips_breaks() {
     .await;
     assert!(status.is_client_error(), "{status}");
 }
+
+#[tokio::test]
+#[serial]
+async fn a_file_is_refused_to_a_token_from_before_its_user_changed() {
+    let fixture = security_fixture().await;
+    tokio::fs::write(fixture.root.join("storage/video.mp4"), b"0123456789")
+        .await
+        .unwrap();
+    let admin = access_token(&fixture.state, 2).await;
+    let operator = access_token(&fixture.state, 1).await;
+    let read = |token: String| {
+        let app = fixture.app.clone();
+        async move {
+            app.oneshot(
+                Request::builder()
+                    .uri("/file/1/video.mp4")
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .status()
+        }
+    };
+
+    assert_eq!(read(operator.clone()).await, StatusCode::OK);
+
+    // Taken off the channel: the token from before, which still names
+    // channel 1, reads no file; a renewed one is refused for the channel.
+    let moved = json!({"username": "regular", "channel_ids": [2]});
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request("PUT", "/api/user/1", Some(&admin), moved))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(read(operator.clone()).await, StatusCode::UNAUTHORIZED);
+    let renewed = access_token(&fixture.state, 1).await;
+    assert_eq!(read(renewed.clone()).await, StatusCode::FORBIDDEN);
+
+    // Deleted: no token of that user reads a file.
+    let response = fixture
+        .app
+        .clone()
+        .oneshot(json_request(
+            "DELETE",
+            "/api/user/1",
+            Some(&admin),
+            json!({}),
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(read(renewed).await, StatusCode::UNAUTHORIZED);
+    assert_eq!(read(admin).await, StatusCode::OK);
+}
