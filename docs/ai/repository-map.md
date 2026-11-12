@@ -6,9 +6,9 @@ Machine-generated navigation index; verify behavior against current source code.
 
 - `(root)/`: 19 indexed files
 - `.agents/`: 7 indexed files
-- `.cargo/`: 1 indexed files
+- `.cargo/`: 2 indexed files
 - `.claude/`: 51 indexed files
-- `.github/`: 9 indexed files
+- `.github/`: 10 indexed files
 - `.vscode/`: 2 indexed files
 - `assets/`: 1 indexed files
 - `backend/`: 237 indexed files
@@ -30,8 +30,8 @@ Machine-generated navigation index; verify behavior against current source code.
 - JSON: 29
 - Python: 27
 - Other: 20
-- YAML: 10
-- TOML: 5
+- YAML: 11
+- TOML: 6
 - Shell: 4
 - HTML: 3
 - Build: 1

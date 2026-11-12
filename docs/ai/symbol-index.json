@@ -43,6 +43,12 @@
       "bytes": 733,
       "symbols": []
     },
+    ".cargo/audit.toml": {
+      "sha256": "b82ba9593c3ff2e44ff7d8595c9056608b01faeaaef0ec357661797108604489",
+      "language": "TOML",
+      "bytes": 1042,
+      "symbols": []
+    },
     ".cargo/config.toml": {
       "sha256": "69857034f86c528f6ea4f5dd1a19927a107f9d1077f7670b6054db9311745d6b",
       "language": "TOML",
@@ -902,6 +908,12 @@
       "bytes": 1568,
       "symbols": []
     },
+    ".github/workflows/audit.yml": {
+      "sha256": "99d50a77805ad8e097994f192e07319ea393af4b364d62f53fa639dbb34134dd",
+      "language": "YAML",
+      "bytes": 1450,
+      "symbols": []
+    },
     ".github/workflows/docker.yml": {
       "sha256": "0dea29187f17c7ca38dfbce623efb1df90d2987c0b22875c32d8c6ab44fb6ad2",
       "language": "YAML",
@@ -987,9 +999,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "d262c42c7e3c3b4eb1299c9d4f82d605769a66ccdc93a4d9a341db38efa78ff7",
+      "sha256": "bb54c2c8b4ece8fbfa3db63eb331442138e7f00ba38d198e125673594cf2366b",
       "language": "Markdown",
-      "bytes": 72648,
+      "bytes": 75977,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -999,7 +1011,7 @@
       "symbols": []
     },
     "Cargo.toml": {
-      "sha256": "0e460b27bb548416c95bb29f5073a4aeca0c6c0c7167d20a21b1c256fb14c3db",
+      "sha256": "ac4317515638508280d05539576df9e992f6c190bf02a13e7abfa6870a421f5a",
       "language": "TOML",
       "bytes": 1223,
       "symbols": []
@@ -1035,9 +1047,9 @@
       "symbols": []
     },
     "backend/app/Cargo.toml": {
-      "sha256": "18e768e34ece8b9e33d366899772fbb9d31f02463d3292c848334b9c61f674ab",
+      "sha256": "29779fff53b8cec806ad4cfdfc50e3d480a71bca962fdb7c06a657b675ef1702",
       "language": "TOML",
-      "bytes": 3398,
+      "bytes": 3400,
       "symbols": []
     },
     "backend/app/bindings/playout_config.d.ts": {
@@ -1251,41 +1263,45 @@
       ]
     },
     "backend/app/src/api/access.rs": {
-      "sha256": "56a2ffe30802482d97fb874a6985489f774c373dfc0f4edab4a7b332da4da783",
+      "sha256": "64bed31d1254045863e3dc2fdf448cb4c559e9ade83e3cb68bc74f2fc9b5aab2",
       "language": "Rust",
-      "bytes": 8415,
+      "bytes": 8961,
       "symbols": [
         {
           "name": "required_areas",
-          "line": 35
+          "line": 41
         },
         {
           "name": "allowed",
-          "line": 83
+          "line": 89
+        },
+        {
+          "name": "saved_account",
+          "line": 97
         },
         {
           "name": "account_guard",
-          "line": 95
+          "line": 119
         },
         {
           "name": "renew",
-          "line": 150
+          "line": 170
         },
         {
           "name": "tests",
-          "line": 159
+          "line": 179
         },
         {
           "name": "pages_that_change_the_channel_need_their_area",
-          "line": 163
+          "line": 183
         },
         {
           "name": "the_report_and_log_need_their_area_and_other_reads_do_not",
-          "line": 207
+          "line": 227
         },
         {
           "name": "every_area_by_default_and_one_matching_area_is_enough",
-          "line": 222
+          "line": 242
         }
       ]
     },
@@ -1686,129 +1702,129 @@
       ]
     },
     "backend/app/src/api/routes/file.rs": {
-      "sha256": "4624a65a26646806cea2f315b1434776fa3123eb6ecdd1b5dbe581d8cab3b8c7",
+      "sha256": "5ea1119016e035d36cd70ad8d73e0e54618456c26d66659ef792d24e3bef71b0",
       "language": "Rust",
-      "bytes": 22263,
+      "bytes": 22682,
       "symbols": [
         {
           "name": "FileQuery",
-          "line": 43
+          "line": 44
         },
         {
           "name": "FileAccessRequest",
-          "line": 49
+          "line": 50
         },
         {
           "name": "file_browser",
-          "line": 61
+          "line": 62
         },
         {
           "name": "add_dir",
-          "line": 92
+          "line": 93
         },
         {
           "name": "move_rename",
-          "line": 122
+          "line": 123
         },
         {
           "name": "remove",
-          "line": 153
+          "line": 154
         },
         {
           "name": "upload_status",
-          "line": 188
+          "line": 189
         },
         {
           "name": "upload_file",
-          "line": 210
+          "line": 211
         },
         {
           "name": "get_conversions",
-          "line": 243
+          "line": 244
         },
         {
           "name": "create_file_access_token",
-          "line": 264
+          "line": 265
         },
         {
           "name": "get_file",
-          "line": 316
+          "line": 317
         },
         {
           "name": "is_active_content",
-          "line": 376
+          "line": 383
         },
         {
           "name": "import_playlist",
-          "line": 392
+          "line": 399
         },
         {
           "name": "SheetRequest",
-          "line": 442
+          "line": 449
         },
         {
           "name": "SheetSaveRequest",
-          "line": 448
-        },
-        {
-          "name": "ArtworkRequest",
           "line": 455
         },
         {
+          "name": "ArtworkRequest",
+          "line": 462
+        },
+        {
           "name": "PhotoRequest",
-          "line": 461
+          "line": 468
         },
         {
           "name": "storage_target",
-          "line": 469
+          "line": 476
         },
         {
           "name": "get_sheet",
-          "line": 501
+          "line": 508
         },
         {
           "name": "update_sheet",
-          "line": 523
+          "line": 530
         },
         {
           "name": "LogoMarksRequest",
-          "line": 536
+          "line": 543
         },
         {
           "name": "LogoMarksSaveRequest",
-          "line": 542
+          "line": 549
         },
         {
           "name": "get_logo_marks",
-          "line": 554
+          "line": 561
         },
         {
           "name": "update_logo_marks",
-          "line": 583
+          "line": 590
         },
         {
           "name": "CommercialRequest",
-          "line": 607
+          "line": 614
         },
         {
           "name": "mark_commercial",
-          "line": 622
+          "line": 629
         },
         {
           "name": "upload_artwork",
-          "line": 645
+          "line": 652
         },
         {
           "name": "upload_photo",
-          "line": 671
+          "line": 678
         },
         {
           "name": "image_field",
-          "line": 688
+          "line": 695
         },
         {
           "name": "delete_artwork",
-          "line": 711
+          "line": 718
         }
       ]
     },
@@ -2776,9 +2792,9 @@
       ]
     },
     "backend/app/src/api/routes/user.rs": {
-      "sha256": "47319eff1afee1d69af1919010d1d5451d8e4eaaecdbe84f05759946c035c86f",
+      "sha256": "da48d7cd13b54972a1d9a0948dc035eed73c7be1344f3f650069a6a4ca3acdc6",
       "language": "Rust",
-      "bytes": 6205,
+      "bytes": 6601,
       "symbols": [
         {
           "name": "get_user",
@@ -2798,11 +2814,11 @@
         },
         {
           "name": "add_user",
-          "line": 177
+          "line": 179
         },
         {
           "name": "remove_user",
-          "line": 200
+          "line": 203
         }
       ]
     },
@@ -3655,9 +3671,9 @@
       ]
     },
     "backend/app/src/db/handles/refresh_token.rs": {
-      "sha256": "9c01dd6fe551a669b3945c579ec5d1106be393e84e19b8b07e270ed35b2e3893",
+      "sha256": "32e9df16e8d4b76af417a85f3bae425067202155046177a1e4289f0ca49ac8a2",
       "language": "Rust",
-      "bytes": 8491,
+      "bytes": 10524,
       "symbols": [
         {
           "name": "RefreshRotation",
@@ -3676,24 +3692,32 @@
           "line": 126
         },
         {
+          "name": "revoke_user_refresh_tokens",
+          "line": 149
+        },
+        {
           "name": "tests",
-          "line": 148
-        },
-        {
-          "name": "populate",
-          "line": 158
-        },
-        {
-          "name": "concurrent_rotation_has_one_winner_and_revokes_its_successor_on_reuse",
           "line": 170
         },
         {
+          "name": "populate",
+          "line": 180
+        },
+        {
+          "name": "concurrent_rotation_has_one_winner_and_revokes_its_successor_on_reuse",
+          "line": 192
+        },
+        {
           "name": "failed_successor_insert_rolls_back_rotation_and_allows_retry",
-          "line": 224
+          "line": 246
         },
         {
           "name": "invalid_expired_and_wrong_user_tokens_cannot_rotate",
-          "line": 257
+          "line": 279
+        },
+        {
+          "name": "revoking_a_user_ends_every_session_of_that_user_only",
+          "line": 315
         }
       ]
     },
@@ -3897,101 +3921,101 @@
       ]
     },
     "backend/app/src/db/handles/user.rs": {
-      "sha256": "3b6277fceb880d9385e667bcdb0f5df0e1099030711e824e3aa6b02ec3e50a68",
+      "sha256": "f41932fa15363d1ce715c1f9222ee759b86e154de301e54d8022569756c9f985",
       "language": "Rust",
-      "bytes": 14372,
+      "bytes": 14960,
       "symbols": [
         {
           "name": "select_role",
-          "line": 13
+          "line": 17
         },
         {
           "name": "select_login",
-          "line": 20
+          "line": 24
         },
         {
           "name": "select_user",
-          "line": 32
+          "line": 36
         },
         {
           "name": "select_user_access",
-          "line": 45
+          "line": 49
         },
         {
           "name": "select_users",
-          "line": 67
+          "line": 71
         },
         {
           "name": "insert_user",
-          "line": 77
+          "line": 81
         },
         {
           "name": "select_user_areas",
-          "line": 111
+          "line": 115
         },
         {
           "name": "update_user_areas",
-          "line": 124
+          "line": 128
         },
         {
           "name": "insert_or_update_user",
-          "line": 138
+          "line": 142
         },
         {
           "name": "update_user",
-          "line": 173
+          "line": 181
         },
         {
           "name": "update_user_with_channels",
-          "line": 219
+          "line": 227
         },
         {
           "name": "update_user_role",
-          "line": 241
+          "line": 256
         },
         {
           "name": "delete_user",
-          "line": 255
+          "line": 270
         },
         {
           "name": "count_users",
-          "line": 263
+          "line": 278
         },
         {
           "name": "delete_user_channels",
-          "line": 271
+          "line": 286
         },
         {
           "name": "map_global_admins",
-          "line": 283
+          "line": 298
         },
         {
           "name": "assign_channel_to_global_admins",
-          "line": 294
+          "line": 309
         },
         {
           "name": "insert_user_channel",
-          "line": 312
+          "line": 327
         },
         {
           "name": "tests",
-          "line": 332
+          "line": 347
         },
         {
           "name": "updates_only_two_factor",
-          "line": 336
+          "line": 351
         },
         {
           "name": "lists_users_with_role_and_channels",
-          "line": 359
+          "line": 374
         },
         {
           "name": "updating_user_and_channels_is_atomic",
-          "line": 386
+          "line": 401
         },
         {
           "name": "insert_user_rolls_back_when_channel_assignment_fails",
-          "line": 433
+          "line": 448
         }
       ]
     },
@@ -6140,157 +6164,177 @@
       ]
     },
     "backend/app/src/player/input/playlist.rs": {
-      "sha256": "c0ed2b3fbcddab1ac5460d7bb159fd703ce2c8a0d3552cbf3b866101fd5bf771",
+      "sha256": "b35e77a551354e5d8c81e9161c9716ba92654be68b923058f23ce002cda5dbc7",
       "language": "Rust",
-      "bytes": 35087,
+      "bytes": 37755,
       "symbols": [
         {
+          "name": "next_playlist_date",
+          "line": 40
+        },
+        {
           "name": "LastClipEnd",
-          "line": 30
+          "line": 52
         },
         {
           "name": "placeholder_duration",
-          "line": 36
+          "line": 58
         },
         {
           "name": "last_clip_end",
-          "line": 51
+          "line": 73
         },
         {
           "name": "CurrentProgram",
-          "line": 88
+          "line": 110
         },
         {
           "name": "CurrentProgram",
-          "line": 103
+          "line": 125
         },
         {
           "name": "new",
-          "line": 104
+          "line": 126
         },
         {
           "name": "load_or_update_playlist",
-          "line": 131
+          "line": 153
         },
         {
           "name": "check_for_playlist",
-          "line": 195
+          "line": 217
         },
         {
           "name": "set_status",
-          "line": 269
+          "line": 296
         },
         {
           "name": "last_next_ad",
-          "line": 294
-        },
-        {
-          "name": "get_current_time",
-          "line": 310
-        },
-        {
-          "name": "get_current_clip",
           "line": 321
         },
         {
+          "name": "get_current_time",
+          "line": 337
+        },
+        {
+          "name": "get_current_clip",
+          "line": 348
+        },
+        {
           "name": "init_clip",
-          "line": 363
+          "line": 390
         },
         {
           "name": "fill_end",
-          "line": 404
+          "line": 431
         },
         {
           "name": "recalculate_begin",
-          "line": 426
+          "line": 453
         },
         {
           "name": "handle_list_init",
-          "line": 457
+          "line": 484
         },
         {
           "name": "handle_list_end",
-          "line": 470
+          "line": 497
         },
         {
           "name": "timed_source",
-          "line": 496
+          "line": 523
         },
         {
           "name": "gen_source",
-          "line": 573
+          "line": 600
         },
         {
           "name": "CurrentProgram",
-          "line": 753
+          "line": 780
         },
         {
           "name": "handle_playlist_init",
-          "line": 754
+          "line": 781
         },
         {
           "name": "next",
-          "line": 787
+          "line": 814
         },
         {
           "name": "apply_init_seek",
-          "line": 854
+          "line": 881
         },
         {
           "name": "tests",
-          "line": 866
+          "line": 893
+        },
+        {
+          "name": "a_start_in_the_last_moments_of_the_day_reads_the_day_about_to_begin",
+          "line": 905
+        },
+        {
+          "name": "a_start_with_a_clip_left_to_air_reads_the_ending_day",
+          "line": 921
+        },
+        {
+          "name": "a_start_right_after_the_day_start_reads_the_day_that_began",
+          "line": 931
+        },
+        {
+          "name": "the_last_moments_before_midnight_read_tomorrow",
+          "line": 941
         },
         {
           "name": "media",
-          "line": 870
-        },
-        {
-          "name": "placeholder_never_exceeds_its_natural_duration",
-          "line": 880
-        },
-        {
-          "name": "placeholder_can_be_trimmed_to_a_shorter_missing_slot",
-          "line": 885
-        },
-        {
-          "name": "missing_playlist_uses_one_natural_placeholder_duration",
-          "line": 890
-        },
-        {
-          "name": "starting_midway_through_image_keeps_it_at_first_frame",
-          "line": 895
-        },
-        {
-          "name": "starting_midway_through_live_source_does_not_seek_it",
-          "line": 910
-        },
-        {
-          "name": "starting_midway_keeps_the_planned_clip_for_the_status",
-          "line": 922
-        },
-        {
-          "name": "last_clip_is_trimmed_to_the_remaining_playlist_time",
-          "line": 935
-        },
-        {
-          "name": "last_clip_preserves_its_seek_offset_when_trimmed",
           "line": 948
         },
         {
-          "name": "last_clip_is_not_trimmed_within_duration_tolerance",
-          "line": 961
+          "name": "placeholder_never_exceeds_its_natural_duration",
+          "line": 958
         },
         {
-          "name": "last_clip_can_use_its_available_duration_to_fill_the_remaining_time",
+          "name": "placeholder_can_be_trimmed_to_a_shorter_missing_slot",
+          "line": 963
+        },
+        {
+          "name": "missing_playlist_uses_one_natural_placeholder_duration",
           "line": 968
         },
         {
+          "name": "starting_midway_through_image_keeps_it_at_first_frame",
+          "line": 973
+        },
+        {
+          "name": "starting_midway_through_live_source_does_not_seek_it",
+          "line": 988
+        },
+        {
+          "name": "starting_midway_keeps_the_planned_clip_for_the_status",
+          "line": 1000
+        },
+        {
+          "name": "last_clip_is_trimmed_to_the_remaining_playlist_time",
+          "line": 1013
+        },
+        {
+          "name": "last_clip_preserves_its_seek_offset_when_trimmed",
+          "line": 1026
+        },
+        {
+          "name": "last_clip_is_not_trimmed_within_duration_tolerance",
+          "line": 1039
+        },
+        {
+          "name": "last_clip_can_use_its_available_duration_to_fill_the_remaining_time",
+          "line": 1046
+        },
+        {
           "name": "last_clip_is_not_adjusted_for_one_second_or_less",
-          "line": 981
+          "line": 1059
         },
         {
           "name": "last_clip_reports_when_it_cannot_fill_the_remaining_time",
-          "line": 988
+          "line": 1066
         }
       ]
     },
@@ -9851,9 +9895,9 @@
       ]
     },
     "backend/app/src/utils/mod.rs": {
-      "sha256": "54d452b689a76236b649f86f1d9b52d6ae9b4547d46da34028f867d804ecac8f",
+      "sha256": "667c9cec47dceb20855552a59b844405a3d7e0d47961b1b08cf5660e36393572",
       "language": "Rust",
-      "bytes": 7573,
+      "bytes": 8102,
       "symbols": [
         {
           "name": "args_parse",
@@ -9964,48 +10008,52 @@
           "line": 44
         },
         {
+          "name": "check_new_password",
+          "line": 62
+        },
+        {
           "name": "public_path",
-          "line": 56
+          "line": 72
         },
         {
           "name": "LogChunk",
-          "line": 86
+          "line": 102
         },
         {
           "name": "read_log_file",
-          "line": 97
+          "line": 113
         },
         {
           "name": "sizeof_fmt",
-          "line": 170
+          "line": 186
         },
         {
           "name": "naive_date_time_from_str",
-          "line": 183
+          "line": 199
         },
         {
           "name": "optional_naive_date_time_from_str",
-          "line": 192
+          "line": 208
         },
         {
           "name": "parse_naive_date_time",
-          "line": 205
+          "line": 221
         },
         {
           "name": "round_to_nearest_ten",
-          "line": 218
+          "line": 234
         },
         {
           "name": "is_running_in_container",
-          "line": 228
+          "line": 244
         },
         {
           "name": "tests",
-          "line": 238
+          "line": 254
         },
         {
           "name": "log_reads_continue_after_the_last_complete_line",
-          "line": 244
+          "line": 260
         }
       ]
     },
@@ -10817,93 +10865,97 @@
       ]
     },
     "backend/app/src/utils/setup.rs": {
-      "sha256": "17706e9f87b36daf7628abffc169bd8ef8426891b2e2d8e93ed530a80ca497f6",
+      "sha256": "fa004dfd475a3741388af4d5a024942b989fe766771cad2bd927baf48faff4ef",
       "language": "Rust",
-      "bytes": 16991,
+      "bytes": 17741,
       "symbols": [
         {
           "name": "SetupRequest",
-          "line": 37
+          "line": 38
         },
         {
           "name": "SetupPaths",
-          "line": 48
+          "line": 49
         },
         {
           "name": "SetupPaths",
-          "line": 55
+          "line": 56
         },
         {
           "name": "from_env",
-          "line": 63
+          "line": 64
         },
         {
           "name": "setup_defaults",
-          "line": 77
+          "line": 78
         },
         {
           "name": "validate_setup_paths",
-          "line": 95
+          "line": 96
         },
         {
           "name": "complete_setup",
-          "line": 108
+          "line": 109
         },
         {
           "name": "tests",
-          "line": 242
+          "line": 244
         },
         {
           "name": "request",
-          "line": 248
+          "line": 250
         },
         {
           "name": "setup_state",
-          "line": 271
+          "line": 273
         },
         {
           "name": "root",
-          "line": 290
+          "line": 292
+        },
+        {
+          "name": "a_first_password_under_eight_characters_is_refused_before_anything_is_made",
+          "line": 300
         },
         {
           "name": "filesystem_failure_leaves_database_and_runtime_uninitialized",
-          "line": 298
+          "line": 321
         },
         {
           "name": "failed_channel_initialization_rolls_back_setup_and_can_be_retried",
-          "line": 329
+          "line": 352
         },
         {
           "name": "concurrent_setup_has_one_winner_and_does_not_create_loser_directories",
-          "line": 382
+          "line": 405
         },
         {
           "name": "settings",
-          "line": 427
+          "line": 450
         },
         {
           "name": "setup_defaults_prefer_path_arguments_over_stored_settings",
-          "line": 443
+          "line": 466
         },
         {
           "name": "setup_paths_allow_application_directories_and_custom_data_roots",
-          "line": 469
+          "line": 492
         },
         {
           "name": "setup_paths_reject_protected_system_directories",
-          "line": 475
+          "line": 498
         },
         {
           "name": "setup_paths_reject_relative_components",
-          "line": 481
+          "line": 504
         },
         {
           "name": "setup_paths_allow_windows_drive_and_unc_paths",
-          "line": 489
+          "line": 512
         },
         {
           "name": "setup_paths_reject_windows_roots_and_relative_components",
-          "line": 496
+          "line": 519
         }
       ]
     },
@@ -12238,9 +12290,9 @@
       ]
     },
     "backend/app/tests/api/files.rs": {
-      "sha256": "1a483017001c39d04a1a2c302cb70bc77d65073ed3e2999b37820e921a3f218d",
+      "sha256": "875bd920eed87a8bff93726c375469b1355d9e7eb077bcb9b7add85604848a18",
       "language": "Rust",
-      "bytes": 14494,
+      "bytes": 16439,
       "symbols": [
         {
           "name": "file_routes_enforce_tokens_channels_and_exact_range_responses",
@@ -12257,6 +12309,10 @@
         {
           "name": "a_folder_marked_as_commercials_makes_its_clips_breaks",
           "line": 381
+        },
+        {
+          "name": "a_file_is_refused_to_a_token_from_before_its_user_changed",
+          "line": 467
         }
       ]
     },
@@ -12499,9 +12555,9 @@
       ]
     },
     "backend/app/tests/api/users.rs": {
-      "sha256": "7b935754d08e9598d93bd8102b52a158a2a3a7679e15b036a9c019ed33847eb7",
+      "sha256": "81f2270f2663a4d1ffb3e3dbb97901edc896be00f65047c2ccf59dae72b0b245",
       "language": "Rust",
-      "bytes": 11457,
+      "bytes": 15941,
       "symbols": [
         {
           "name": "self_updates_cannot_grant_privileges_or_modify_another_user",
@@ -12518,6 +12574,18 @@
         {
           "name": "a_token_from_before_a_change_to_its_user_is_refused",
           "line": 273
+        },
+        {
+          "name": "a_new_password_ends_the_sessions_opened_with_the_old_one",
+          "line": 375
+        },
+        {
+          "name": "a_new_password_needs_eight_characters",
+          "line": 431
+        },
+        {
+          "name": "a_global_admin_deletes_other_users_but_not_their_own",
+          "line": 483
         }
       ]
     },
@@ -12671,9 +12739,9 @@
       ]
     },
     "backend/app/tests/playlist_generation.rs": {
-      "sha256": "cb5ec1e26ba9feb42cdca3044d8d6882821e984d0a8c233e639f0a28516d6b16",
+      "sha256": "82119f58c91c78ff2ceee9b746acefb30cf8d6860f0100c94d2aa45650868867",
       "language": "Rust",
-      "bytes": 5313,
+      "bytes": 5238,
       "symbols": [
         {
           "name": "prepare_config",
@@ -12681,62 +12749,86 @@
         },
         {
           "name": "test_filler_list",
-          "line": 69
+          "line": 67
         },
         {
           "name": "test_generate_playlist_from_folder",
-          "line": 87
+          "line": 84
         },
         {
           "name": "test_generate_playlist_from_template",
-          "line": 121
+          "line": 117
         }
       ]
     },
     "backend/app/tests/playout_playlist.rs": {
-      "sha256": "7c1800cfd86d4e2d0ce3da28090e5a8d6c921c2ec46a563994a33d441af65d74",
+      "sha256": "3534db90e6bdd6f9ab1c154fdd249f78afbfb3563e1998da56b5e2afda163c03",
       "language": "Rust",
-      "bytes": 10891,
+      "bytes": 6300,
       "symbols": [
         {
+          "name": "OutputFolder",
+          "line": 25
+        },
+        {
+          "name": "OutputFolder",
+          "line": 27
+        },
+        {
+          "name": "new",
+          "line": 28
+        },
+        {
+          "name": "Drop",
+          "line": 36
+        },
+        {
+          "name": "drop",
+          "line": 37
+        },
+        {
           "name": "prepare_config",
-          "line": 20
+          "line": 42
         },
         {
           "name": "timed_stop",
-          "line": 75
+          "line": 100
+        },
+        {
+          "name": "playlist_date_after",
+          "line": 112
         },
         {
           "name": "playlist_missing",
-          "line": 87
+          "line": 145
         },
         {
           "name": "playlist_next_missing",
-          "line": 122
+          "line": 153
         },
         {
           "name": "playlist_to_short",
-          "line": 157
+          "line": 161
         },
         {
           "name": "playlist_to_short_last_out",
-          "line": 192
+          "line": 169
         },
         {
           "name": "playlist_init_after_list_end",
-          "line": 227
+          "line": 177
         },
         {
           "name": "playlist_change_at_midnight",
-          "line": 262
+          "line": 185
         },
         {
           "name": "playlist_change_before_midnight",
-          "line": 297
+          "line": 194
         },
         {
           "name": "playlist_change_at_six",
-          "line": 331
+          "line": 202
         }
       ]
     },
@@ -22782,9 +22874,9 @@
       "symbols": []
     },
     "docs/api.md": {
-      "sha256": "0100379cf2c3d850e023063beb97b3ea775372afc0559ab683e77c1bac5df25f",
+      "sha256": "d1c02dcd56dd1fccf90250de0921d3f617bbb267ccf090d7a4d2a2d645075877",
       "language": "Markdown",
-      "bytes": 78784,
+      "bytes": 79535,
       "symbols": []
     },
     "docs/closed_captions.md": {
@@ -22800,9 +22892,9 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "5f83f752bfbfd31e4f90393709d78f6cdde86297d36a94d14c19e5ea90e4f13c",
+      "sha256": "917dd2b418ee1e68953143d604f5e90f675a2be6e135b0f546effdce1981af1c",
       "language": "Markdown",
-      "bytes": 8050,
+      "bytes": 9415,
       "symbols": []
     },
     "docs/docker.md": {
@@ -30222,93 +30314,101 @@
       ]
     },
     "frontend/src/components/settings/SettingsUsers.vue": {
-      "sha256": "b441a0ae5c5e2703844c8ac15b9364617935fadb630955b7d2f1e1e97e695105",
+      "sha256": "6b237751467a4879a0950d56d50b8d95e0351636344916707399fac38c13d5d3",
       "language": "Vue",
-      "bytes": 11505,
+      "bytes": 12208,
       "symbols": [
         {
-          "name": "authStore",
-          "line": 14
-        },
-        {
-          "name": "configStore",
+          "name": "router",
           "line": 15
         },
         {
-          "name": "indexStore",
+          "name": "authStore",
           "line": 16
         },
         {
-          "name": "users",
-          "line": 20
+          "name": "configStore",
+          "line": 17
         },
         {
-          "name": "editing",
-          "line": 21
+          "name": "indexStore",
+          "line": 18
         },
         {
-          "name": "saving",
-          "line": 22
-        },
-        {
-          "name": "deleting",
+          "name": "MIN_PASSWORD_CHARS",
           "line": 23
         },
         {
-          "name": "isGlobal",
+          "name": "users",
           "line": 25
         },
         {
-          "name": "me",
+          "name": "editing",
           "line": 26
         },
         {
-          "name": "draftOf",
+          "name": "saving",
+          "line": 27
+        },
+        {
+          "name": "deleting",
           "line": 28
         },
         {
+          "name": "isGlobal",
+          "line": 30
+        },
+        {
+          "name": "me",
+          "line": 31
+        },
+        {
+          "name": "draftOf",
+          "line": 33
+        },
+        {
           "name": "loadUsers",
-          "line": 42
+          "line": 47
         },
         {
           "name": "channelNames",
-          "line": 53
-        },
-        {
-          "name": "names",
           "line": 58
         },
         {
+          "name": "names",
+          "line": 63
+        },
+        {
           "name": "toggleEdit",
-          "line": 65
+          "line": 70
         },
         {
           "name": "error",
-          "line": 74
+          "line": 79
         },
         {
           "name": "draft",
-          "line": 75
+          "line": 80
         },
         {
           "name": "saveUser",
-          "line": 96
+          "line": 106
         },
         {
           "name": "draft",
-          "line": 97
+          "line": 107
         },
         {
           "name": "body",
-          "line": 105
+          "line": 115
         },
         {
           "name": "deleteUser",
-          "line": 153
+          "line": 172
         },
         {
           "name": "user",
-          "line": 154
+          "line": 173
         }
       ]
     },
@@ -34369,15 +34469,15 @@
       "symbols": []
     },
     "frontend/src/locales/en-US.ts": {
-      "sha256": "e2c468035d0f9373118e652dfa1c373e3dce599d04b1834fdaf3269ed8908931",
+      "sha256": "b65178e978b3f0037f3e376d90826341c5893b3bd7df6ccb402fb4385ec35e9d",
       "language": "TypeScript",
-      "bytes": 147424,
+      "bytes": 147583,
       "symbols": []
     },
     "frontend/src/locales/pt-BR.ts": {
-      "sha256": "30b5a07f2a30ba40c002912862e6e2b0c4287fb4940aa7983889af395557f531",
+      "sha256": "5920c237ad5f9ab7a84ea93fd24f383db14fed2ba47682a60f3165e9f8e014fe",
       "language": "TypeScript",
-      "bytes": 153800,
+      "bytes": 153961,
       "symbols": []
     },
     "frontend/src/main.ts": {
@@ -37400,13 +37500,13 @@
       "symbols": []
     },
     "package-lock.json": {
-      "sha256": "aba0605a2adfef429a8c972fa76b47be5d57f1456492a98d5728529821ac3f07",
+      "sha256": "196f69fb9eefa0563e4bc3de99f17c7b7083dc18a3e7ea6c4b4ad67d038c22f5",
       "language": "JSON",
-      "bytes": 215132,
+      "bytes": 218467,
       "symbols": []
     },
     "package.json": {
-      "sha256": "e6bf2208952f574943c439722fecd2b5b8b969b3b251a57c2cbb2aab577fb759",
+      "sha256": "4c7afd68fd64cff6cf6112d5cb9a0ae01fa74fc832804cbded02cc60a39dc1f0",
       "language": "JSON",
       "bytes": 1526,
       "symbols": []
@@ -37652,9 +37752,9 @@
       "symbols": []
     },
     "qa/e2e/tests/operator-pages.spec.ts": {
-      "sha256": "06ff1c04772066f6ec182f866eb9854f7fb53e4d480d51c11bc35ffb90f61d05",
+      "sha256": "bffc5806308f1bcf3697775542b1b112114b225c04049372a902ce2b97cc2378",
       "language": "TypeScript",
-      "bytes": 5981,
+      "bytes": 7089,
       "symbols": [
         {
           "name": "adminHeaders",
@@ -37848,9 +37948,9 @@
       "symbols": []
     },
     "qa/soak/README.md": {
-      "sha256": "7c47bb1cb1b0ade731d92c6f885f934f65edcb0a58954bc418a9a26b52b116df",
+      "sha256": "f126b9f24c27d3f5b716d15536ff19ebcb1c6212e08ce2b651261fee2fe7a4bd",
       "language": "Markdown",
-      "bytes": 11746,
+      "bytes": 12134,
       "symbols": []
     },
     "qa/soak/VALIDATION.md": {
@@ -38111,81 +38211,81 @@
       ]
     },
     "qa/soak/sync.py": {
-      "sha256": "bb55e0c5601fadbb9739662517c2aad9e5e77045ffbe7cb943858471b60ad243",
+      "sha256": "f9189c906da1566991707e43a2493bb283c1a196283ced7981f0bbcc138cb7e0",
       "language": "Python",
-      "bytes": 9454,
+      "bytes": 10575,
       "symbols": [
         {
           "name": "marker_clip",
-          "line": 49
+          "line": 55
         },
         {
           "name": "SyncTracker",
-          "line": 68
+          "line": 77
         },
         {
           "name": "__init__",
-          "line": 71
+          "line": 80
         },
         {
           "name": "reset",
-          "line": 81
+          "line": 90
         },
         {
           "name": "line",
-          "line": 87
+          "line": 96
         },
         {
           "name": "_add",
-          "line": 102
+          "line": 111
         },
         {
           "name": "_record",
-          "line": 115
-        },
-        {
-          "name": "problem",
           "line": 124
         },
         {
+          "name": "problem",
+          "line": 133
+        },
+        {
           "name": "snapshot",
-          "line": 130
+          "line": 139
         },
         {
           "name": "mean",
-          "line": 135
+          "line": 144
         },
         {
           "name": "SyncMonitor",
-          "line": 148
+          "line": 157
         },
         {
           "name": "__init__",
-          "line": 151
+          "line": 160
         },
         {
           "name": "command",
-          "line": 165
-        },
-        {
-          "name": "start",
-          "line": 170
-        },
-        {
-          "name": "_run",
           "line": 175
         },
         {
+          "name": "start",
+          "line": 180
+        },
+        {
+          "name": "_run",
+          "line": 185
+        },
+        {
           "name": "_end_process",
-          "line": 205
+          "line": 221
         },
         {
           "name": "sample",
-          "line": 214
+          "line": 230
         },
         {
           "name": "close",
-          "line": 218
+          "line": 234
         }
       ]
     },
@@ -38356,9 +38456,9 @@
       ]
     },
     "qa/soak/test_sync.py": {
-      "sha256": "43f53876e00dcf96426ddab76b1d0203e256b57ce215da7c92c2581d2c3ac26c",
+      "sha256": "695bdf733974595aecdfda348e03025e2c45b0d964d396fefc17007eaec8bb84",
       "language": "Python",
-      "bytes": 4042,
+      "bytes": 5378,
       "symbols": [
         {
           "name": "feed",
@@ -38403,6 +38503,14 @@
         {
           "name": "test_the_marker_clip_measures_in_sync_through_a_real_decoder",
           "line": 74
+        },
+        {
+          "name": "SyncReceiverTests",
+          "line": 94
+        },
+        {
+          "name": "test_the_receiver_starts_over_so_its_times_keep_their_millisecond",
+          "line": 95
         }
       ]
     },
