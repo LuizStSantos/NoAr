@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+### Security
+
+- Dependencies with published advisories are updated. On the server:
+  `rustls` 0.23.46, `rustls-webpki` 0.103.16 and the root certificates they
+  ship with (a certificate chain through the distrusted emSign intermediates
+  was accepted; NoAr makes TLS connections for update checks, e-mail,
+  notifications, remote playlists and graphics data sources), `tokio` 1.53.3,
+  `rustix` 1.1.6 and `ctutils` 0.4.8. In the interface: `vue-i18n` 11.4.18
+  and the build tool `vite` 8.3.8.
+
 ### Changed
 
 - The tests that play a channel across a day change (a missing or short
