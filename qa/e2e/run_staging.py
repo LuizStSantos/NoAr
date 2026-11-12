@@ -3,7 +3,9 @@
 
 Requires npm ci in the repository and qa/e2e, plus a local runtime image or
 --native with a binary and installed libraries. --binary also works with an image.
-The frontend always comes from this checkout. No playout is started.
+The frontend always comes from this checkout: served by Vite, or with
+--embedded by the backend itself, as the Docker image serves it, with its
+security headers. No playout is started.
 """
 from __future__ import annotations
 
@@ -70,9 +72,12 @@ def main() -> int:
     mode.add_argument('--native', action='store_true', help='Run a local binary with installed native libraries')
     parser.add_argument('--binary', type=Path, help='Current Linux binary to mount over the image entrypoint')
     parser.add_argument('--chromium', help='Optional installed Chromium executable')
+    parser.add_argument('--embedded', action='store_true',
+                        help='Test the interface the backend serves itself; needs a binary built '
+                             'with embed_frontend and without debug assertions')
     args = parser.parse_args()
     # Fixed ports match vite.config.ts; fail instead of reusing another server.
-    for port in (8787, 5757):
+    for port in (8787,) if args.embedded else (8787, 5757):
         with socket.socket() as check:
             check.bind(('127.0.0.1', port))
     binary = args.binary.resolve() if args.binary else None
@@ -122,11 +127,17 @@ def main() -> int:
         with (artifacts / 'backend.log').open('w') as back_log, (artifacts / 'frontend.log').open('w') as front_log:
             backend = subprocess.Popen(command, env=env, stdout=back_log, stderr=subprocess.STDOUT)
             wait_for('http://127.0.0.1:8787/api/setup', backend, setup=True)
-            frontend = subprocess.Popen([str(ROOT / 'node_modules/.bin/vite'), '--strictPort'], cwd=ROOT,
-                                        stdout=front_log, stderr=subprocess.STDOUT)
-            wait_for('http://127.0.0.1:5757/login', frontend)
+            if args.embedded:
+                base_url = 'http://127.0.0.1:8787'
+                wait_for(f'{base_url}/login', backend)
+            else:
+                base_url = 'http://127.0.0.1:5757'
+                frontend = subprocess.Popen([str(ROOT / 'node_modules/.bin/vite'), '--strictPort'], cwd=ROOT,
+                                            stdout=front_log, stderr=subprocess.STDOUT)
+                wait_for(f'{base_url}/login', frontend)
             test_env = {**env, 'NOAR_E2E_STAGING': '1', 'NOAR_E2E_WRITES': '1',
-                        'NOAR_E2E_DISPOSABLE': '1', 'NOAR_E2E_BASE_URL': 'http://127.0.0.1:5757',
+                        'NOAR_E2E_DISPOSABLE': '1', 'NOAR_E2E_BASE_URL': base_url,
+                        'NOAR_E2E_EMBEDDED': '1' if args.embedded else '0',
                         'NOAR_E2E_STATE_PATH': str(artifacts / 'session.json'),
                         'NOAR_E2E_STORAGE': str(data / 'media') if args.native else '/e2e-data/media'}
             if args.chromium:

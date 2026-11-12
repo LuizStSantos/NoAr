@@ -999,9 +999,9 @@
       "symbols": []
     },
     "CHANGELOG.md": {
-      "sha256": "bb54c2c8b4ece8fbfa3db63eb331442138e7f00ba38d198e125673594cf2366b",
+      "sha256": "508034f9bf9afb88728a451f99feafb1271cdc8fdd839b6bab13ce4673fd0bf7",
       "language": "Markdown",
-      "bytes": 75977,
+      "bytes": 77771,
       "symbols": []
     },
     "CLAUDE.md": {
@@ -1017,9 +1017,9 @@
       "symbols": []
     },
     "Dockerfile": {
-      "sha256": "2e1ae4dbe5f58dafc7d8b0363bc3e87b4d260da1aac39bc9dce390e050c8e3ee",
+      "sha256": "662eab1014857cc917d6477b3d6a094983393dfd7fd5768b3389d6438c9f0d7e",
       "language": "Build",
-      "bytes": 9014,
+      "bytes": 9544,
       "symbols": []
     },
     "LICENSE": {
@@ -5475,9 +5475,9 @@
       ]
     },
     "backend/app/src/main.rs": {
-      "sha256": "4312bd676298780ea13d445b59bb4a4c470ddc0e80f8fa6fb2f9825d09a8e6a3",
+      "sha256": "08d06509676e7c5ed0e907377eeaee35d45e697a84da7350580a7d287537684e",
       "language": "Rust",
-      "bytes": 11840,
+      "bytes": 12004,
       "symbols": [
         {
           "name": "env_parse_or",
@@ -5501,7 +5501,7 @@
         },
         {
           "name": "shutdown_signal",
-          "line": 321
+          "line": 322
         }
       ]
     },
@@ -5591,10 +5591,53 @@
         }
       ]
     },
-    "backend/app/src/middleware/mod.rs": {
-      "sha256": "bfb956d5c36e05768851075e6850868cba56bde518373ad3e2df7d753a0d1c0d",
+    "backend/app/src/middleware/interface_headers.rs": {
+      "sha256": "dbf0cdb7955051d378559f721a4cd302039a5c2c9fd053b855489b1ef817b748",
       "language": "Rust",
-      "bytes": 37,
+      "bytes": 8163,
+      "symbols": [
+        {
+          "name": "frame_ancestors",
+          "line": 62
+        },
+        {
+          "name": "is_frame_source",
+          "line": 81
+        },
+        {
+          "name": "content_security_policy",
+          "line": 106
+        },
+        {
+          "name": "interface_headers",
+          "line": 119
+        },
+        {
+          "name": "tests",
+          "line": 139
+        },
+        {
+          "name": "a_page_runs_only_the_scripts_noar_serves",
+          "line": 146
+        },
+        {
+          "name": "framing_is_open_unless_it_is_restricted",
+          "line": 169
+        },
+        {
+          "name": "frame_ancestors_keep_sources_and_leave_out_anything_else",
+          "line": 175
+        },
+        {
+          "name": "pages_get_the_policy_and_every_file_says_what_it_is",
+          "line": 189
+        }
+      ]
+    },
+    "backend/app/src/middleware/mod.rs": {
+      "sha256": "3ab650e1ea2d756735ee3ec70cddbac725ba4d998e8b9ce5be249b51717fb1d1",
+      "language": "Rust",
+      "bytes": 64,
       "symbols": [
         {
           "name": "client_ip",
@@ -5603,6 +5646,10 @@
         {
           "name": "governor",
           "line": 2
+        },
+        {
+          "name": "interface_headers",
+          "line": 3
         }
       ]
     },
@@ -6164,177 +6211,189 @@
       ]
     },
     "backend/app/src/player/input/playlist.rs": {
-      "sha256": "b35e77a551354e5d8c81e9161c9716ba92654be68b923058f23ce002cda5dbc7",
+      "sha256": "775ef67e2dcb7a785a1caee7c1d97a23dbb98ca3e79e7ed5727990df5d958d47",
       "language": "Rust",
-      "bytes": 37755,
+      "bytes": 39290,
       "symbols": [
         {
           "name": "next_playlist_date",
           "line": 40
         },
         {
+          "name": "is_earlier_day",
+          "line": 54
+        },
+        {
           "name": "LastClipEnd",
-          "line": 52
+          "line": 59
         },
         {
           "name": "placeholder_duration",
-          "line": 58
+          "line": 65
         },
         {
           "name": "last_clip_end",
-          "line": 73
+          "line": 80
         },
         {
           "name": "CurrentProgram",
-          "line": 110
+          "line": 117
         },
         {
           "name": "CurrentProgram",
-          "line": 125
+          "line": 132
         },
         {
           "name": "new",
-          "line": 126
+          "line": 133
         },
         {
           "name": "load_or_update_playlist",
-          "line": 153
+          "line": 160
+        },
+        {
+          "name": "asked_day_is_over",
+          "line": 225
         },
         {
           "name": "check_for_playlist",
-          "line": 217
+          "line": 232
         },
         {
           "name": "set_status",
-          "line": 296
+          "line": 315
         },
         {
           "name": "last_next_ad",
-          "line": 321
+          "line": 340
         },
         {
           "name": "get_current_time",
-          "line": 337
+          "line": 356
         },
         {
           "name": "get_current_clip",
-          "line": 348
+          "line": 367
         },
         {
           "name": "init_clip",
-          "line": 390
+          "line": 409
         },
         {
           "name": "fill_end",
-          "line": 431
+          "line": 450
         },
         {
           "name": "recalculate_begin",
-          "line": 453
+          "line": 472
         },
         {
           "name": "handle_list_init",
-          "line": 484
+          "line": 503
         },
         {
           "name": "handle_list_end",
-          "line": 497
+          "line": 516
         },
         {
           "name": "timed_source",
-          "line": 523
+          "line": 542
         },
         {
           "name": "gen_source",
-          "line": 600
+          "line": 619
         },
         {
           "name": "CurrentProgram",
-          "line": 780
+          "line": 799
         },
         {
           "name": "handle_playlist_init",
-          "line": 781
+          "line": 800
         },
         {
           "name": "next",
-          "line": 814
+          "line": 833
         },
         {
           "name": "apply_init_seek",
-          "line": 881
+          "line": 906
         },
         {
           "name": "tests",
-          "line": 893
+          "line": 918
         },
         {
           "name": "a_start_in_the_last_moments_of_the_day_reads_the_day_about_to_begin",
-          "line": 905
-        },
-        {
-          "name": "a_start_with_a_clip_left_to_air_reads_the_ending_day",
-          "line": 921
-        },
-        {
-          "name": "a_start_right_after_the_day_start_reads_the_day_that_began",
           "line": 931
         },
         {
+          "name": "a_start_with_a_clip_left_to_air_reads_the_ending_day",
+          "line": 947
+        },
+        {
+          "name": "a_start_right_after_the_day_start_reads_the_day_that_began",
+          "line": 957
+        },
+        {
+          "name": "a_day_is_over_once_the_clock_is_in_a_later_one",
+          "line": 967
+        },
+        {
           "name": "the_last_moments_before_midnight_read_tomorrow",
-          "line": 941
+          "line": 976
         },
         {
           "name": "media",
-          "line": 948
+          "line": 983
         },
         {
           "name": "placeholder_never_exceeds_its_natural_duration",
-          "line": 958
+          "line": 993
         },
         {
           "name": "placeholder_can_be_trimmed_to_a_shorter_missing_slot",
-          "line": 963
+          "line": 998
         },
         {
           "name": "missing_playlist_uses_one_natural_placeholder_duration",
-          "line": 968
+          "line": 1003
         },
         {
           "name": "starting_midway_through_image_keeps_it_at_first_frame",
-          "line": 973
+          "line": 1008
         },
         {
           "name": "starting_midway_through_live_source_does_not_seek_it",
-          "line": 988
+          "line": 1023
         },
         {
           "name": "starting_midway_keeps_the_planned_clip_for_the_status",
-          "line": 1000
+          "line": 1035
         },
         {
           "name": "last_clip_is_trimmed_to_the_remaining_playlist_time",
-          "line": 1013
+          "line": 1048
         },
         {
           "name": "last_clip_preserves_its_seek_offset_when_trimmed",
-          "line": 1026
+          "line": 1061
         },
         {
           "name": "last_clip_is_not_trimmed_within_duration_tolerance",
-          "line": 1039
+          "line": 1074
         },
         {
           "name": "last_clip_can_use_its_available_duration_to_fill_the_remaining_time",
-          "line": 1046
+          "line": 1081
         },
         {
           "name": "last_clip_is_not_adjusted_for_one_second_or_less",
-          "line": 1059
+          "line": 1094
         },
         {
           "name": "last_clip_reports_when_it_cannot_fill_the_remaining_time",
-          "line": 1066
+          "line": 1101
         }
       ]
     },
@@ -12762,73 +12821,89 @@
       ]
     },
     "backend/app/tests/playout_playlist.rs": {
-      "sha256": "3534db90e6bdd6f9ab1c154fdd249f78afbfb3563e1998da56b5e2afda163c03",
+      "sha256": "10bb977c74bcdeb24b7bb1d05fe697e2b2b281d82ba315abafcee32e839e340e",
       "language": "Rust",
-      "bytes": 6300,
+      "bytes": 9040,
       "symbols": [
         {
           "name": "OutputFolder",
-          "line": 25
+          "line": 33
         },
         {
           "name": "OutputFolder",
-          "line": 27
+          "line": 35
         },
         {
           "name": "new",
-          "line": 28
-        },
-        {
-          "name": "Drop",
           "line": 36
         },
         {
+          "name": "Drop",
+          "line": 44
+        },
+        {
           "name": "drop",
-          "line": 37
+          "line": 45
         },
         {
           "name": "prepare_config",
-          "line": 42
+          "line": 50
         },
         {
           "name": "timed_stop",
-          "line": 100
+          "line": 108
+        },
+        {
+          "name": "channel_at",
+          "line": 119
         },
         {
           "name": "playlist_date_after",
-          "line": 112
+          "line": 143
         },
         {
           "name": "playlist_missing",
-          "line": 145
+          "line": 164
         },
         {
           "name": "playlist_next_missing",
-          "line": 153
+          "line": 172
         },
         {
           "name": "playlist_to_short",
-          "line": 161
+          "line": 180
         },
         {
           "name": "playlist_to_short_last_out",
-          "line": 169
+          "line": 188
         },
         {
           "name": "playlist_init_after_list_end",
-          "line": 177
+          "line": 196
         },
         {
           "name": "playlist_change_at_midnight",
-          "line": 185
+          "line": 204
         },
         {
           "name": "playlist_change_before_midnight",
-          "line": 194
+          "line": 213
         },
         {
           "name": "playlist_change_at_six",
-          "line": 202
+          "line": 221
+        },
+        {
+          "name": "next_entry",
+          "line": 228
+        },
+        {
+          "name": "an_init_after_the_day_start_leaves_the_day_that_ended",
+          "line": 242
+        },
+        {
+          "name": "a_day_start_that_passes_during_an_init_is_not_missed",
+          "line": 265
         }
       ]
     },
@@ -22832,9 +22907,9 @@
       ]
     },
     "docker-compose.yml": {
-      "sha256": "50630e294af86eeebd5d76696770bbd714d3bba2f6308072803c6b3b90a12aef",
+      "sha256": "28b54650fdac77a54800e86a0400f9c72f3d0bf9ef0935d4e326e6266ca25705",
       "language": "YAML",
-      "bytes": 3147,
+      "bytes": 3314,
       "symbols": []
     },
     "docker/gstreamer/build.sh": {
@@ -22892,15 +22967,15 @@
       "symbols": []
     },
     "docs/developer.md": {
-      "sha256": "917dd2b418ee1e68953143d604f5e90f675a2be6e135b0f546effdce1981af1c",
+      "sha256": "9f7be79a41a3d3bbf7d8b89a7d0d8fba19bd5629bbd03f4c3f649532f0872d5d",
       "language": "Markdown",
-      "bytes": 9415,
+      "bytes": 9828,
       "symbols": []
     },
     "docs/docker.md": {
-      "sha256": "d82e9ccd5fd9265b15121cf697ae54011bae338480969f5e788bafe0c03b0421",
+      "sha256": "2a2cadda5257d0c471258aad8eeb0c2e708bbb71e9c26905ddd550584adc0892",
       "language": "Markdown",
-      "bytes": 15945,
+      "bytes": 18329,
       "symbols": []
     },
     "docs/external_tasks.md": {
@@ -37612,9 +37687,9 @@
       "symbols": []
     },
     "qa/e2e/README.md": {
-      "sha256": "614d787de5228ae4c96ba5a36b147398806d8f3d96003db78a5d41ae656d2983",
+      "sha256": "0fd622410d08a1142842cee3c75b90c1d1da117e19ab9ab37cd845ace6d88bfb",
       "language": "Markdown",
-      "bytes": 5744,
+      "bytes": 6371,
       "symbols": []
     },
     "qa/e2e/global-setup.ts": {
@@ -37647,25 +37722,25 @@
       "symbols": []
     },
     "qa/e2e/run_staging.py": {
-      "sha256": "3d8c566b575aabc0a4b8dd29ef7cdec7fc30b033632926421aec1e6d3e9de4c7",
+      "sha256": "164e77f3a0eb5110b06f4779078c369b6bf3335ff10b047cedd0d0211d8eb54b",
       "language": "Python",
-      "bytes": 9106,
+      "bytes": 9759,
       "symbols": [
         {
           "name": "wait_for",
-          "line": 26
+          "line": 28
         },
         {
           "name": "read_api",
-          "line": 44
+          "line": 46
         },
         {
           "name": "stop_backend",
-          "line": 52
+          "line": 54
         },
         {
           "name": "main",
-          "line": 66
+          "line": 68
         }
       ]
     },
@@ -37738,6 +37813,12 @@
           "line": 50
         }
       ]
+    },
+    "qa/e2e/tests/interface-headers.spec.ts": {
+      "sha256": "06d66f9d32958c2a898b77586b4e184b03969adfeba7bc7b35b33a2f9b18267c",
+      "language": "TypeScript",
+      "bytes": 5246,
+      "symbols": []
     },
     "qa/e2e/tests/login-navigation.spec.ts": {
       "sha256": "31501770c65d399e40dbf12d04eb08515aa212cf74ee5f8c50c15ea156f66d73",
@@ -38084,9 +38165,9 @@
       ]
     },
     "qa/soak/soak.py": {
-      "sha256": "8593609665de39da6542f1453860495b533eb60a582f0cfb609a2ce24993ba0f",
+      "sha256": "81126e68a4779b9c39939e2b64cbe2d9e794920123b7252a5069b91dbfeba51e",
       "language": "Python",
-      "bytes": 33651,
+      "bytes": 33796,
       "symbols": [
         {
           "name": "NativeProcesses",
@@ -38170,43 +38251,43 @@
         },
         {
           "name": "schedule_cycle",
-          "line": 365
+          "line": 367
         },
         {
           "name": "act",
-          "line": 379
+          "line": 381
         },
         {
           "name": "output_bytes",
-          "line": 396
+          "line": 398
         },
         {
           "name": "picture_url",
-          "line": 410
+          "line": 412
         },
         {
           "name": "picture_grace",
-          "line": 416
+          "line": 418
         },
         {
           "name": "running",
-          "line": 423
+          "line": 425
         },
         {
           "name": "prepare_work",
-          "line": 430
+          "line": 432
         },
         {
           "name": "interrupted",
-          "line": 442
+          "line": 444
         },
         {
           "name": "close_observer",
-          "line": 446
+          "line": 448
         },
         {
           "name": "main",
-          "line": 453
+          "line": 455
         }
       ]
     },

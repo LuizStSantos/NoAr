@@ -106,6 +106,33 @@ services:
       disable: true
 ```
 
+## Interface security headers
+
+The pages of the interface are served with a content security policy: a page
+runs only the scripts NoAr serves itself, with nothing inline, nothing
+evaluated and no plugins. The interface keeps its session in the browser, so
+this is what stops a script that got into a page from taking the session.
+What the pages show is left open, because artwork, previews and live sources
+may be on other servers. The interface's files are also sent with
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin`.
+
+By default any page may show the interface inside a frame, as before. To
+keep other sites from framing it (a page that lays its own buttons over the
+Player, for example), set `NOAR_FRAME_ANCESTORS` in `docker-compose.yml`:
+
+```yaml
+    environment:
+      # Only NoAr's own pages:
+      NOAR_FRAME_ANCESTORS: "'self'"
+      # Or NoAr and a panel that embeds it:
+      # NOAR_FRAME_ANCESTORS: "'self' https://panel.example.org"
+```
+
+Entries are `'self'`, `'none'`, `*` or addresses, separated by spaces or
+commas; one that is not a source is left out with a warning in the log. A
+reverse proxy that adds a content security policy of its own narrows this
+one: a page then has to pass both.
+
 ## Restarting
 
 *Settings › Server and e-mail › Restart NoAr* (global administrators) stops

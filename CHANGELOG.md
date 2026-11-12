@@ -22,8 +22,20 @@ one is tagged.
   when NoAr listens on another port inside the container
   ([Docker](docs/docker.md#container-health)).
 
+- **`NOAR_FRAME_ANCESTORS`** says which pages may show the interface inside
+  a frame: `'self'` for NoAr's own only, or the addresses of the panels that
+  embed it. Unset, any page may, as before
+  ([Docker](docs/docker.md#interface-security-headers)).
+
 ### Security
 
+- The pages of the interface are served with a content security policy that
+  runs only the scripts NoAr serves itself: nothing inline, nothing evaluated
+  and no plugins. The interface keeps its session in the browser, where a
+  script that got into a page could take it; such a script no longer runs.
+  What the pages show (artwork, previews, live sources on other servers) is
+  not restricted. The interface's files are also sent with
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin`.
 - A new password ends the sessions opened with the old one. Changing a
   user's password, by that user, by a global admin or from the command line
   (`noar -u <USER> -p <PASSWORD>`), revokes every refresh token of that user,

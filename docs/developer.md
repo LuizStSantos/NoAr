@@ -150,7 +150,10 @@ playlist editing, save/load errors, scheduler CRUD and recurrence, modal
 keyboard focus, and storage persistence across a backend restart. Its runner
 creates and removes its own database and synthetic media; never target an
 on-air instance. These checks do not establish scheduled execution or media
-output continuity.
+output continuity. With `--embedded` it tests the interface a release build
+serves itself, as the Docker image does, with its security headers
+([Docker](docker.md#interface-security-headers)); Vite, in the default run,
+sends none.
 
 The separate [soak harness](../qa/soak/README.md) exercises synthetic playout
 faults on SRT and HLS and observes decoded moving pictures, including a negative
