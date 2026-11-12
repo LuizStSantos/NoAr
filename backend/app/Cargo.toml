@@ -70,7 +70,7 @@ log = { version = "0.4", features = ["std", "kv"] }
 mime_guess = "2"
 nix = { version = "0.31", features = ["user", "fs"] }
 notify = "8.0"
-notify-debouncer-full = { version = "*", default-features = false }
+notify-debouncer-full = { version = "0.7", default-features = false }
 path-clean = "1.0"
 quick-xml = "0.41"
 protect-axum = "0.2"
