@@ -17,7 +17,7 @@ use crate::{
         handles,
         models::{Role, User},
     },
-    utils::errors::ServiceError,
+    utils::{check_new_password, errors::ServiceError},
 };
 
 /// From here on all request **must** contain the authorization header:\
@@ -135,6 +135,8 @@ pub async fn update_user(
     let password_hash = if data.password.is_empty() {
         None
     } else {
+        check_new_password(&data.password)?;
+
         let password_hash = task::spawn_blocking(move || {
             Argon2::default()
                 .hash_password(data.password.clone().as_bytes())
@@ -181,6 +183,7 @@ pub async fn add_user(
     Json(data): Json<User>,
 ) -> Result<&'static str, ServiceError> {
     ensure_any_authority(&details, &[&Role::GlobalAdmin])?;
+    check_new_password(&data.password)?;
 
     match handles::insert_user(&state.pool, data).await {
         Ok(..) => Ok("Add User Success"),
@@ -200,10 +203,18 @@ pub async fn add_user(
 pub async fn remove_user(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    _user: AuthUser,
+    user: AuthUser,
     details: AuthDetails<Role>,
 ) -> Result<&'static str, ServiceError> {
     ensure_any_authority(&details, &[&Role::GlobalAdmin])?;
+
+    // Only global admins delete users, so the one asking always stays:
+    // NoAr never ends up without a global admin to manage the others.
+    if user.id == id {
+        return Err(ServiceError::Forbidden(
+            "Your own user cannot be deleted".to_string(),
+        ));
+    }
 
     match handles::delete_user(&state.pool, id).await {
         Ok(_) => Ok("Delete user success"),

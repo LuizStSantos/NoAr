@@ -369,3 +369,133 @@ async fn a_token_from_before_a_change_to_its_user_is_refused() {
         StatusCode::UNAUTHORIZED
     );
 }
+
+#[tokio::test]
+#[serial]
+async fn a_new_password_ends_the_sessions_opened_with_the_old_one() {
+    let fixture = security_fixture().await;
+    let pool = &fixture.state.pool;
+    let now = chrono::Utc::now().timestamp();
+
+    // Two sessions of the operator and one of the admin.
+    for (jti, user) in [("phone", 1), ("laptop", 1), ("admin", 2)] {
+        handles::insert_refresh_token(pool, jti, jti, user, now + 3600, now)
+            .await
+            .unwrap();
+    }
+
+    let sessions = |user: i32| async move {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM auth_refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL",
+        )
+        .bind(user)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    };
+    let update = |token: String, body: serde_json::Value| {
+        let app = fixture.app.clone();
+        async move {
+            app.oneshot(json_request("PUT", "/api/user/1", Some(&token), body))
+                .await
+                .unwrap()
+                .status()
+        }
+    };
+    let operator = access_token(&fixture.state, 1).await;
+    let admin = access_token(&fixture.state, 2).await;
+
+    // A change that sets no password keeps the sessions.
+    let mail = json!({"username": "regular", "mail": "new@example.org"});
+    assert_eq!(update(operator.clone(), mail).await, StatusCode::OK);
+    assert_eq!(sessions(1).await, 2);
+
+    // The operator's own new password ends both, and nobody else's.
+    let own = json!({"username": "regular", "password": "a-new-password"});
+    assert_eq!(update(operator, own).await, StatusCode::OK);
+    assert_eq!(sessions(1).await, 0);
+    assert_eq!(sessions(2).await, 1);
+
+    // So does a password a global admin sets for the operator.
+    handles::insert_refresh_token(pool, "tablet", "tablet", 1, now + 3600, now)
+        .await
+        .unwrap();
+    let reset = json!({"username": "regular", "password": "set-by-the-admin"});
+    assert_eq!(update(admin, reset).await, StatusCode::OK);
+    assert_eq!(sessions(1).await, 0);
+    assert_eq!(sessions(2).await, 1);
+}
+
+#[tokio::test]
+#[serial]
+async fn a_new_password_needs_eight_characters() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let operator = access_token(&fixture.state, 1).await;
+    let status =
+        |method: &'static str, uri: &'static str, token: String, body: serde_json::Value| {
+            let app = fixture.app.clone();
+            async move {
+                app.oneshot(json_request(method, uri, Some(&token), body))
+                    .await
+                    .unwrap()
+                    .status()
+            }
+        };
+    let new_user = |password: &str| {
+        json!({
+            "username": "newcomer", "mail": "newcomer@example.org", "password": password,
+            "role_id": 3, "channel_ids": [1], "two_factor": false
+        })
+    };
+
+    assert_eq!(
+        status("POST", "/api/user", admin.clone(), new_user("1234567")).await,
+        StatusCode::BAD_REQUEST
+    );
+    assert!(
+        handles::select_login(&fixture.state.pool, "newcomer")
+            .await
+            .is_err()
+    );
+    // Characters, not bytes: eight accented letters are enough.
+    assert_eq!(
+        status("POST", "/api/user", admin, new_user("áéíóúâêô")).await,
+        StatusCode::OK
+    );
+
+    let short = json!({"username": "regular", "password": "short"});
+    assert_eq!(
+        status("PUT", "/api/user/1", operator, short).await,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        handles::select_login(&fixture.state.pool, "regular")
+            .await
+            .unwrap()
+            .password,
+        "unchanged"
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn a_global_admin_deletes_other_users_but_not_their_own() {
+    let fixture = security_fixture().await;
+    let admin = access_token(&fixture.state, 2).await;
+    let delete = |uri: &'static str| {
+        let app = fixture.app.clone();
+        let admin = admin.clone();
+        async move {
+            app.oneshot(json_request("DELETE", uri, Some(&admin), json!({})))
+                .await
+                .unwrap()
+                .status()
+        }
+    };
+
+    assert_eq!(delete("/api/user/2").await, StatusCode::FORBIDDEN);
+    assert!(handles::select_user(&fixture.state.pool, 2).await.is_ok());
+    assert_eq!(delete("/api/user/1").await, StatusCode::OK);
+    assert!(handles::select_user(&fixture.state.pool, 1).await.is_err());
+}

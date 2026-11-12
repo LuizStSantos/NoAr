@@ -2976,6 +2976,8 @@ export default {
             create: 'Criar usuário',
             errorName: 'Escolha um nome de usuário.',
             errorPassword: 'Escolha uma senha.',
+            errorPasswordShort: 'A senha precisa de pelo menos 8 caracteres.',
+            passwordChanged: 'Senha alterada. Entre novamente com a nova senha.',
             selfHint: 'Seu próprio usuário não pode ser excluído.',
         },
         updates: {

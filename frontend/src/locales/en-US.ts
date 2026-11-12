@@ -2965,6 +2965,8 @@ export default {
             create: 'Create user',
             errorName: 'Pick a user name.',
             errorPassword: 'Pick a password.',
+            errorPasswordShort: 'The password needs at least 8 characters.',
+            passwordChanged: 'Password changed. Sign in again with the new one.',
             selfHint: 'Your own user cannot be deleted.',
         },
         updates: {

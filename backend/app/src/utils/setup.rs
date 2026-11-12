@@ -23,6 +23,7 @@ use crate::{
     utils::{
         args_parse::Args,
         channels::initialize_channels,
+        check_new_password,
         errors::ServiceError,
         logging::{log_file_path, set_log_dir},
         mail::MailQueue,
@@ -119,6 +120,7 @@ pub async fn complete_setup(
         ));
     }
 
+    check_new_password(&data.password)?;
     validate_setup_paths(&data.settings)?;
 
     let _setup_guard = SETUP_LOCK.lock().await;
@@ -292,6 +294,27 @@ mod tests {
             .unwrap()
             .join("target")
             .join(format!("setup-test-{}", uuid::Uuid::new_v4()))
+    }
+
+    #[tokio::test]
+    async fn a_first_password_under_eight_characters_is_refused_before_anything_is_made() {
+        let (pool, controllers, queues) = setup_state().await;
+        let root = root();
+        let mut short = request(&root);
+        short.password = "1234567".to_string();
+        let result = complete_setup(
+            &pool,
+            controllers,
+            queues,
+            CancellationToken::new(),
+            SystemStat::new(),
+            short,
+        )
+        .await;
+
+        assert!(matches!(result, Err(ServiceError::BadRequest(_))));
+        assert_eq!(handles::count_users(&pool).await.unwrap(), 0);
+        assert!(!root.exists());
     }
 
     #[tokio::test]

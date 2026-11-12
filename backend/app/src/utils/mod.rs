@@ -53,6 +53,22 @@ use crate::{
     },
 };
 
+/// The fewest characters a new password may have; the setup page asks for
+/// the same.
+pub const MIN_PASSWORD_CHARS: usize = 8;
+
+/// Refuse a new password too short to resist guessing. Passwords saved
+/// before this rule keep signing in.
+pub fn check_new_password(password: &str) -> Result<(), ServiceError> {
+    if password.chars().count() < MIN_PASSWORD_CHARS {
+        return Err(ServiceError::BadRequest(format!(
+            "The password needs at least {MIN_PASSWORD_CHARS} characters"
+        )));
+    }
+
+    Ok(())
+}
+
 pub fn public_path() -> PathBuf {
     let config = GLOBAL_SETTINGS.get().unwrap();
     let dev_path = env::current_dir()

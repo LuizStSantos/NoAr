@@ -1,4 +1,5 @@
 use argon2::{Argon2, PasswordHasher};
+use chrono::Utc;
 use sqlx::{
     Executor, QueryBuilder, Row, Sqlite,
     sqlite::{SqliteConnection, SqlitePool, SqliteQueryResult},
@@ -6,7 +7,10 @@ use sqlx::{
 use tokio::task;
 
 use crate::{
-    db::models::{Area, Role, User, areas_column, parse_areas},
+    db::{
+        handles::revoke_user_refresh_tokens,
+        models::{Area, Role, User, areas_column, parse_areas},
+    },
     utils::errors::{ProcessError, ServiceError},
 };
 
@@ -160,6 +164,10 @@ pub async fn insert_or_update_user(pool: &SqlitePool, user: User) -> Result<(), 
         .await?
         .get("id");
 
+    // A password set again from the command line ends the sessions opened
+    // with the old one.
+    revoke_user_refresh_tokens(&mut *transaction, user_id, Utc::now().timestamp()).await?;
+
     if let Some(channel_ids) = user.channel_ids {
         delete_user_channels(&mut *transaction, user_id).await?;
         insert_user_channel(&mut transaction, user_id, channel_ids).await?;
@@ -224,8 +232,15 @@ pub async fn update_user_with_channels(
     password_hash: Option<String>,
     channel_ids: Option<Vec<i32>>,
 ) -> Result<(), ProcessError> {
+    let new_password = password_hash.is_some();
     let mut transaction = pool.begin().await?;
     update_user(&mut *transaction, id, two_factor, mail, password_hash).await?;
+
+    // A new password ends the sessions opened with the old one: whoever
+    // held one, the user on another device or someone else, signs in again.
+    if new_password {
+        revoke_user_refresh_tokens(&mut *transaction, id, Utc::now().timestamp()).await?;
+    }
 
     if let Some(channel_ids) = channel_ids {
         delete_user_channels(&mut *transaction, id).await?;

@@ -75,6 +75,24 @@ test('an operator follows the pages a global admin gives them without signing in
         await menu.getByRole('link', { name: 'Player', exact: true }).click()
         await expect(menu.getByRole('link', { name: 'Report', exact: true })).toBeVisible({ timeout: 20_000 })
         await expect(menu.getByRole('link', { name: 'Scheduler', exact: true })).toBeVisible()
+
+        // A password under eight characters cannot be saved. A new one ends
+        // every session of the user, so this one returns to the sign-in page.
+        await operator.goto('/configure/users?channel=1')
+        const newPassword = operator.getByLabel('New password', { exact: true })
+        const repeated = operator.getByLabel('Repeat the password', { exact: true })
+        const save = operator.getByRole('button', { name: 'Save', exact: true })
+        await newPassword.fill('short')
+        await repeated.fill('short')
+        await expect(operator.getByRole('alert').filter({ hasText: 'at least 8 characters' })).toBeVisible()
+        await expect(save).toBeDisabled()
+        const changed = randomBytes(18).toString('hex')
+        await newPassword.fill(changed)
+        await repeated.fill(changed)
+        await save.click()
+        await expect(operator).toHaveURL(/\/login(?:\?|$)/)
+        await expect(operator.getByText('Password changed. Sign in again with the new one.')).toBeVisible()
+        expect(await operator.evaluate(() => localStorage.getItem('refresh'))).toBeNull()
     } finally {
         await context.close()
         await page.request.delete(`/api/user/${id}`, { headers })

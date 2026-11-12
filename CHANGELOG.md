@@ -11,6 +11,21 @@ one is tagged.
 
 ## [Unreleased]
 
+### Security
+
+- A new password ends the sessions opened with the old one. Changing a
+  user's password, by that user, by a global admin or from the command line
+  (`noar -u <USER> -p <PASSWORD>`), revokes every refresh token of that user,
+  so a session someone else may hold stops at its next renewal (at most 45
+  minutes) instead of lasting up to 14 days. The interface signs you out when
+  you change your own password.
+- A new password needs at least 8 characters, when a user is created, when a
+  password is changed and in the first-time setup (`400` otherwise; the setup
+  page already asked for it). Passwords saved before keep signing in.
+- A global admin can no longer delete their own user through the API
+  (`403`); the interface never offered it. NoAr cannot be left without a
+  global admin that way.
+
 ## [3.2.1] - 2026-11-12
 
 ### Security
