@@ -173,6 +173,25 @@ fn output_link_map(status: &noar_engine::LinkStatus) -> Value {
     })
 }
 
+/// Half a day, in seconds: how far ahead of the clock a begin can be before it
+/// is read as the day before.
+const HALF_DAY: f64 = 43200.0;
+
+/// Seconds from `begin` to `now`. Both count seconds of the day, but the
+/// clock starts again at 0 at midnight while playlist times run on past
+/// 86400 until the day start: a begin more than half a day ahead of the clock
+/// was before midnight. A clip that started a moment early stays a moment
+/// below 0.
+fn seconds_since(begin: f64, now: f64) -> f64 {
+    let now = if begin - now > HALF_DAY {
+        now + 86400.0
+    } else {
+        now
+    };
+
+    now - begin
+}
+
 pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
     let media = manager
         .current_media
@@ -192,7 +211,7 @@ pub async fn get_data_map(manager: &ChannelManager) -> Map<String, Value> {
         Some((entry, offset)) => (Some(entry), offset),
         None => (media.index, 0.0),
     };
-    let played_time = current_time - begin + offset;
+    let played_time = seconds_since(begin, current_time) + offset;
 
     data_map.insert("index".to_string(), json!(index));
     data_map.insert("mode".to_string(), json!(config.mode));
@@ -943,8 +962,32 @@ mod tests {
     use super::{
         DEFAULT_IMAGE_DURATION, DEFAULT_LIVE_SOURCE_DURATION, Media, PlayoutConfig, custom_format,
         get_date, get_delta, header, is_remote, normalize_live_source_timing, playlist_file_path,
-        probe_media, time_from_header,
+        probe_media, seconds_since, time_from_header,
     };
+
+    #[test]
+    fn a_clip_after_midnight_of_a_playlist_still_on_air_counts_from_its_begin() {
+        // Day start at 09:00: the clip of the 12th's playlist that began at
+        // 07:33 on the 13th has the playlist time 07:33 + 86400. At 08:27:10
+        // it has played 54 min 10 s, not minus most of a day.
+        let begin = 7.0 * 3600.0 + 33.0 * 60.0 + 86400.0;
+        let now = 8.0 * 3600.0 + 27.0 * 60.0 + 10.0;
+
+        assert_eq!(seconds_since(begin, now), 54.0 * 60.0 + 10.0);
+    }
+
+    #[test]
+    fn a_clip_or_event_that_runs_over_midnight_counts_on() {
+        // Began at 23:53:20, five minutes past midnight now.
+        assert_eq!(seconds_since(86000.0, 300.0), 700.0);
+    }
+
+    #[test]
+    fn the_time_into_a_clip_of_the_same_day_is_unchanged() {
+        assert_eq!(seconds_since(30000.0, 30100.0), 100.0);
+        // A clip the playout started half a second early.
+        assert_eq!(seconds_since(1000.0, 999.5), -0.5);
+    }
 
     #[test]
     fn get_date_yesterday_before_the_playlist_start() {

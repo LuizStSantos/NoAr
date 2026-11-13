@@ -11,6 +11,22 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.3.2] - 2026-11-13
+
+### Fixed
+
+- The Player's progress of the clip on air stood at `0:00` after midnight
+  when the day starts later than midnight, for example at 08:27 on the 13th
+  with the 12th's playlist still on air. The playout status counted the time
+  on air from the clock, which starts again at 0 at midnight, while playlist
+  times run on past 24:00 until the day start. It now counts across
+  midnight, and so does a clip or scheduled event that runs over midnight.
+  The `elapsed` of `GET /api/control/{id}/media/current` and of the data
+  sent to an external task are fixed too.
+- The Player's **Up next** showed nothing during the last program of the
+  day. It now shows the first program of the next day's playlist, with its
+  time.
+
 ## [3.3.1] - 2026-11-12
 
 ### Fixed
@@ -1454,7 +1470,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.1...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.2...HEAD
+[3.3.2]: https://github.com/LuizStSantos/NoAr/compare/v3.3.1...v3.3.2
 [3.3.1]: https://github.com/LuizStSantos/NoAr/compare/v3.3.0...v3.3.1
 [3.3.0]: https://github.com/LuizStSantos/NoAr/compare/v3.2.1...v3.3.0
 [3.2.1]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...v3.2.1

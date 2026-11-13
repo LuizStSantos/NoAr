@@ -2,12 +2,12 @@ import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { fileName } from '@/composables/player'
 import { useConfig } from '@/stores/config'
 import { usePlaylist } from '@/stores/playlist'
-import { useProgrammes } from '@/stores/programmes'
+import { type ProgrammeGroup, useProgrammes } from '@/stores/programmes'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -95,7 +95,9 @@ export function useOnAir() {
     const clipRemaining = computed(() => Math.max(0, clipLength.value - clipPosition.value))
 
     const currentGroup = computed(() => (onAirIndex.value >= 0 ? programmes.groupOf(onAirIndex.value) : undefined))
-    const nextGroup = computed(() => {
+
+    /** What comes next in the playlist on screen. */
+    const nextInList = computed(() => {
         if (!currentGroup.value) {
             return programmes.groups.find((group) => group.start > listNow.value)
         }
@@ -104,6 +106,40 @@ export function useOnAir() {
 
         return programmes.groups[index + 1]
     })
+
+    /**
+     * The day after the one on air, when nothing of the day on air comes
+     * after the program on air: its first program is what airs next.
+     */
+    const nextDate = computed(() =>
+        playlistStore.playoutIsRunning &&
+        viewingOnAir.value &&
+        !configStore.playout.playlist?.infinit &&
+        !nextInList.value
+            ? dayjs(onAirDate.value).add(1, 'day').format('YYYY-MM-DD')
+            : '',
+    )
+
+    // Read again every minute while it is needed: the next day's playlist
+    // can still be edited.
+    watch(
+        () => (nextDate.value ? `${nextDate.value}:${Math.floor(now.value / 60_000)}` : ''),
+        (key) => {
+            if (key) {
+                programmes.loadOpening(nextDate.value)
+            }
+        },
+        { immediate: true },
+    )
+
+    /** The next day's first program, at its time on the day on air: a day later. */
+    const nextDayGroup = computed<ProgrammeGroup | undefined>(() => {
+        const group = nextDate.value ? programmes.openingOf(nextDate.value) : null
+
+        return group ? { ...group, start: group.start + 86400, end: group.end + 86400 } : undefined
+    })
+
+    const nextGroup = computed(() => nextInList.value ?? nextDayGroup.value)
 
     /** The program on air, as the guide names it. */
     const currentTitle = computed(() => {
