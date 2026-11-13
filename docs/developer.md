@@ -121,7 +121,11 @@ depend on the machine that runs them.
 
 Two more tests there ask the playlist for its entries without a player, to
 put the clock where a playout cannot be made to be: past the day start with
-the playlist of the day that ended still loaded.
+the playlist of the day that ended still loaded, and at the day start in the
+middle of reading a playlist. For the second, a playlist server inside the
+test moves the clock when it receives the request, so the day start passes
+during the read whatever the read takes; a test that waited for a slow read
+passed or failed depending on the machine.
 
 ## Dependency audit
 

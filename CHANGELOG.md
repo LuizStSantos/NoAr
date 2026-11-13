@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.3.1] - 2026-11-12
+
+### Fixed
+
+- The 3.3.0 image was not published: a test of the day change, which checks
+  a day start that passes while a playlist is being read, depended on how
+  long the read took and failed in the image build. It now moves the clock
+  during the read itself, so it gives the same result on every machine.
+  3.3.1 is 3.3.0 with that test fixed: what NoAr does is the same.
+
 ## [3.3.0] - 2026-11-12
 
 ### Added
@@ -1444,7 +1454,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.1...HEAD
+[3.3.1]: https://github.com/LuizStSantos/NoAr/compare/v3.3.0...v3.3.1
 [3.3.0]: https://github.com/LuizStSantos/NoAr/compare/v3.2.1...v3.3.0
 [3.2.1]: https://github.com/LuizStSantos/NoAr/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/LuizStSantos/NoAr/compare/v3.1.0...v3.2.0
