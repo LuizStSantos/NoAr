@@ -21,6 +21,9 @@ one is tagged.
   midnight, and so does a clip or scheduled event that runs over midnight.
   The `elapsed` of `GET /api/control/{id}/media/current` and of the data
   sent to an external task are fixed too.
+- The Player's **Up next** showed nothing during the last program of the
+  day. It now shows the first program of the next day's playlist, with its
+  time.
 
 ## [3.3.1] - 2026-11-12
 
