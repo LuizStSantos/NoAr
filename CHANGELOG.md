@@ -11,6 +11,17 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Player's progress of the clip on air stood at `0:00` after midnight
+  when the day starts later than midnight, for example at 08:27 on the 13th
+  with the 12th's playlist still on air. The playout status counted the time
+  on air from the clock, which starts again at 0 at midnight, while playlist
+  times run on past 24:00 until the day start. It now counts across
+  midnight, and so does a clip or scheduled event that runs over midnight.
+  The `elapsed` of `GET /api/control/{id}/media/current` and of the data
+  sent to an external task are fixed too.
+
 ## [3.3.1] - 2026-11-12
 
 ### Fixed
