@@ -11,6 +11,17 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.3.3] - 2026-11-27
+
+### Security
+
+- Updated `lettre` to 0.11.24 (with `email-encoding` 0.4.3), which sends the
+  alert e-mails. It fixes RUSTSEC-2026-0560 to RUSTSEC-2026-0565: SMTP
+  command and STARTTLS response injection, a message delivered to the wrong
+  recipient for a quoted local part, panics and unbounded buffering.
+- Updated `url` to 2.5.9 (with `form_urlencoded` 1.2.3) for
+  RUSTSEC-2026-0592, which failed the weekly dependency audit.
+
 ## [3.3.2] - 2026-11-13
 
 ### Fixed
@@ -1470,7 +1481,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.2...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.3...HEAD
+[3.3.3]: https://github.com/LuizStSantos/NoAr/compare/v3.3.2...v3.3.3
 [3.3.2]: https://github.com/LuizStSantos/NoAr/compare/v3.3.1...v3.3.2
 [3.3.1]: https://github.com/LuizStSantos/NoAr/compare/v3.3.0...v3.3.1
 [3.3.0]: https://github.com/LuizStSantos/NoAr/compare/v3.2.1...v3.3.0
