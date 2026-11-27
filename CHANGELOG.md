@@ -11,6 +11,15 @@ one is tagged.
 
 ## [Unreleased]
 
+### Security
+
+- Updated `lettre` to 0.11.24 (with `email-encoding` 0.4.3), which sends the
+  alert e-mails. It fixes RUSTSEC-2026-0560 to RUSTSEC-2026-0565: SMTP
+  command and STARTTLS response injection, a message delivered to the wrong
+  recipient for a quoted local part, panics and unbounded buffering.
+- Updated `url` to 2.5.9 (with `form_urlencoded` 1.2.3) for
+  RUSTSEC-2026-0592, which failed the weekly dependency audit.
+
 ## [3.3.2] - 2026-11-13
 
 ### Fixed
