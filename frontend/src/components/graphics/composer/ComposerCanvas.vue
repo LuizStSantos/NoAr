@@ -256,11 +256,15 @@ function endInteraction() {
 /* On a wide screen the editor fits the window. The preview is as tall as a
    16:9 picture of the column's width, so the timeline sits right under it;
    in a low window it shrinks to the height left by the timeline, centred.
-   (100cqw is the width of the editor's middle column, its query container.) */
+   The 16:9 comes from aspect-ratio, not from the column as a query
+   container: with the column one, a notice appearing above the editor as the
+   preview drew a new layer left Chromium with no layout for the whole column
+   until it was rebuilt. */
 @media (min-width: 1100px) {
     .composer-fit {
         container-type: size;
-        flex: 0 1 calc(100cqw * 9 / 16);
+        flex: 0 1 auto;
+        aspect-ratio: 16 / 9;
         min-height: 10rem;
         display: flex;
         justify-content: center;
