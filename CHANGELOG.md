@@ -11,6 +11,13 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- CI tests on the GStreamer the Docker image runs: core, base and libav
+  1.26.11 over Debian's 1.26.2, built by `docker/gstreamer/build.sh` and
+  cached. The test of an encoder that adds its picture back, skipped on
+  1.26.2 where that switch aborts the process, now runs in CI.
+
 ## [3.4.0] - 2026-11-28
 
 ### Added

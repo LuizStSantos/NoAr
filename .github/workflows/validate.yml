@@ -76,6 +76,37 @@ jobs:
             -Wl,-rpath,/usr/local/lib -lsrt-gnutls -o /tmp/test-srt-lifecycle
           timeout 30 /tmp/test-srt-lifecycle
 
+      # The image runs GStreamer core, base and libav 1.26.11 over Debian's
+      # 1.26.2 (docker/gstreamer/build.sh), and the two behave differently:
+      # 1.26.2 aborts the process on live MPEG-TS stream changes. Test the
+      # one that goes on air. The build is cached by the script's hash.
+      - name: Restore the image's GStreamer build
+        id: gstreamer-cache
+        uses: actions/cache@v4
+        with:
+          path: /opt/noar-gst
+          key: gstreamer-trixie-${{ hashFiles('docker/gstreamer/build.sh') }}
+
+      - name: Build the image's GStreamer
+        if: steps.gstreamer-cache.outputs.cache-hit != 'true'
+        run: |
+          set -eu
+          apt-get install -y --no-install-recommends \
+            bison flex meson ninja-build xz-utils \
+            libglib2.0-dev \
+            libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev \
+            libogg-dev libopus-dev liborc-0.4-dev libpango1.0-dev libtheora-dev libvorbis-dev
+          sh docker/gstreamer/build.sh /opt/noar-gst
+
+      - name: Install the image's GStreamer over Debian's
+        run: |
+          set -eu
+          cp -a /opt/noar-gst/usr/. /usr/
+          ldconfig
+          gst-inspect-1.0 --version | grep -q 'GStreamer 1.26.11'
+          gst-inspect-1.0 uridecodebin3 | grep -q 'Version.*1.26.11'
+          gst-inspect-1.0 avdec_h264 | grep -q 'Version.*1.26.11'
+
       - name: Verify required native GStreamer plugins
         run: |
           set -eu
