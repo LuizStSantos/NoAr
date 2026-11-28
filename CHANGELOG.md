@@ -11,6 +11,8 @@ one is tagged.
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-11-28
+
 ### Added
 
 - The graphics Composer duplicates a layer, from its row in the layer list,
@@ -1509,7 +1511,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.3...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.4.0...HEAD
+[3.4.0]: https://github.com/LuizStSantos/NoAr/compare/v3.3.3...v3.4.0
 [3.3.3]: https://github.com/LuizStSantos/NoAr/compare/v3.3.2...v3.3.3
 [3.3.2]: https://github.com/LuizStSantos/NoAr/compare/v3.3.1...v3.3.2
 [3.3.1]: https://github.com/LuizStSantos/NoAr/compare/v3.3.0...v3.3.1
