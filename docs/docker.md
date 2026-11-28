@@ -44,7 +44,8 @@ library. The image includes GStreamer 1.26, codec/container plugins and TLS
 support. Its GStreamer core, gst-plugins-base and gst-libav are 1.26.11, built
 from the release sources over Debian's 1.26.2 (`docker/gstreamer/build.sh`):
 in 1.26.2, `decodebin3` aborted the whole process when a live MPEG-TS source
-changed its streams, such as an encoder dropping its video, and `avdec_h264`
+changed its streams, such as an encoder dropping its video or adding it back
+to its sound, and `avdec_h264`
 aborted it on video whose width is not a multiple of 16 (854×480, for
 example). The good, bad and ugly plugin sets stay Debian's packages. Build provenance is recorded in
 `/usr/local/share/noar/gstreamer-build.txt`. NoAr itself does not link the FFmpeg libraries; they are present

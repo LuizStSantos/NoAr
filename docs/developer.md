@@ -35,6 +35,15 @@ sudo apt install \
 rustup component add rustfmt clippy
 ```
 
+Debian trixie's GStreamer is 1.26.2. Its `decodebin3` aborts the whole
+process when a live MPEG-TS source changes its streams, such as an encoder
+that drops its video or adds it back to its sound. The Docker image installs
+core, gst-plugins-base and gst-libav 1.26.11 over it
+(`docker/gstreamer/build.sh`); a native server that reads such lives needs the
+same. The engine test of an encoder that adds its picture back
+(`live_encoder_switch_tests` in `backend/engine/src/playout.rs`) runs only on
+1.26.11 or newer and says it was skipped otherwise, as in CI.
+
 The MPEG-TS development library is part of the bad-plugin development package.
 Check native core, app, audio, video, pbutils and mpegts libraries with
 `pkg-config --modversion gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0

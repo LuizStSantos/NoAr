@@ -93,8 +93,9 @@ ACTIONS = [
     (90, 'unpublish'),       # the SRT live drops out...
     (110, 'publish srt-av'),  # ...and comes back
     (400, 'publish udp-av'),
-    (480, 'publish udp-audio'),  # the encoder drops its video...
-    (510, 'publish udp-av'),     # ...and takes it back
+    # The encoder drops its video, and takes it back 30 s later in the same
+    # process, without a gap: GStreamer then drops the live's sound.
+    (480, 'publish udp-audio-then-av'),
     (580, 'unpublish'),
     (630, 'restart'),
 ]
@@ -110,6 +111,8 @@ PUBLISHERS = {
     'udp-av': VIDEO + AUDIO + 'mpegtsmux name=mux alignment=7 ! udpsink host=127.0.0.1 port=5004',
     'udp-audio': AUDIO + 'mpegtsmux name=mux alignment=7 ! udpsink host=127.0.0.1 port=5004',
 }
+# Publishers that play one publisher for some seconds, then another at once.
+SWITCHES = {'udp-audio-then-av': ('udp-audio', 30, 'udp-av')}
 # name, seconds, width, height, fps, audio
 CLIPS = [('a', 15, 640, 360, 25, True), ('b', 25, 1280, 720, 30, True), ('c', 20, 854, 480, 25, False)]
 
@@ -384,6 +387,14 @@ def act(action):
             native.stop('publisher')
         else:
             docker('rm', '-f', PREFIX + 'publisher', check=False)
+    elif action.split()[-1] in SWITCHES:
+        first, seconds, then = SWITCHES[action.split()[-1]]
+        gst = shlex.quote(native.gst) if MODE == 'native' else 'gst-launch-1.0'
+        script = f'timeout {seconds} {gst} -q {PUBLISHERS[first]}; exec {gst} -q {PUBLISHERS[then]}'
+        if MODE == 'native':
+            native.start('publisher', ['sh', '-c', script])
+        else:
+            container('publisher', ['-c', script], entrypoint='sh')
     elif action.startswith('publish '):
         command = shlex.split('-q ' + PUBLISHERS[action.split()[1]])
         if MODE == 'native':
@@ -418,7 +429,7 @@ def picture_url():
 def picture_grace(action, now, previous):
     # Deliberate encoder faults may air the static waiting card. Suppress
     # only the known fault interval plus a bounded signal-recovery allowance.
-    seconds = {'unpublish': 40, 'publish udp-audio': 50, 'restart': RESTART_GRACE}.get(action, 0)
+    seconds = {'unpublish': 40, 'publish udp-audio-then-av': 50, 'restart': RESTART_GRACE}.get(action, 0)
     return max(previous, now + seconds) if seconds else previous
 
 

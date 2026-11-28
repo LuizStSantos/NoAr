@@ -11,6 +11,26 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- A live could stay on air past its end with its output frozen, until its
+  encoder stopped sending: the nightly SRT soak test froze for 14 s at the
+  end of a UDP live. When an MPEG-TS encoder adds its picture back to its
+  sound, GStreamer delivers the picture but no longer the sound; at the end
+  of the live, the picture was there and the last 0.1 s of sound never came,
+  while the picture still coming kept the live counted as on air. A live now
+  ends at its end time: a track that is behind gets 0.25 s, then is filled.
+- Such a live went on in silence until its end. A live that has sent sound
+  and sends none for 6 s while its picture goes on now counts as lost and is
+  opened again, which brings the sound back, as a live with sound and no
+  picture already was.
+
+### Changed
+
+- The soak test's UDP encoder takes its picture back without a gap, in the
+  same process, so both cases above are tested every night; until now this
+  happened only when the encoder restarted fast enough.
+
 ## [3.3.3] - 2026-11-27
 
 ### Security

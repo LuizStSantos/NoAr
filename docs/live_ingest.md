@@ -37,6 +37,15 @@ The output encoder, muxer and transport stay open while input pipelines change.
 If a live source fails, the scheduler regains control to run its waiting and
 retry policy. An unavailable output reconnects independently of source changes.
 
+A live that keeps sending one track but stops sending the other for 6 s counts
+as lost and is opened again: sound alone does not keep a live with a picture
+on air, nor a picture alone a live with sound. When an MPEG-TS encoder adds its
+picture back to its sound, GStreamer 1.26 delivers the new picture but no
+longer the sound; opening the source again brings both back. A live ends at
+its end time even when one of its tracks has stopped: the other track gets
+0.25 s to reach the end, and the rest is filled with the last picture or with
+silence.
+
 Existing databases retain historical input settings and aired-report rows.
 Those settings are not returned by the configuration API, changed by ordinary
 settings saves, or activated at startup. Reports can still show historical

@@ -106,6 +106,26 @@ class NativeAdapterTests(unittest.TestCase):
                 self.soak.native.stop.assert_called_once_with('publisher')
                 docker.assert_not_called()
 
+    def test_a_switching_encoder_takes_its_picture_back_in_the_same_process(self):
+        self.soak.native = MagicMock(gst='/tools/gst launch')
+        with patch.object(self.soak, 'docker') as docker, patch.object(self.soak, 'log'):
+            self.soak.act('publish udp-audio-then-av')
+        shell, option, script = self.soak.native.start.call_args.args[1]
+        self.assertEqual((shell, option), ('sh', '-c'))
+        sound, both = script.split('; exec ')
+        self.assertEqual(sound, "timeout 30 '/tools/gst launch' -q " + self.soak.PUBLISHERS['udp-audio'])
+        self.assertEqual(both, "'/tools/gst launch' -q " + self.soak.PUBLISHERS['udp-av'])
+        docker.assert_not_called()
+
+    def test_a_switching_encoder_in_docker_runs_its_shell(self):
+        soak = load_soak()
+        with patch.object(soak, 'container') as container, patch.object(soak, 'log'):
+            soak.act('publish udp-audio-then-av')
+        name, (option, script) = container.call_args.args
+        self.assertEqual((name, option, container.call_args.kwargs), ('publisher', '-c', {'entrypoint': 'sh'}))
+        self.assertEqual(script, f"timeout 30 gst-launch-1.0 -q {soak.PUBLISHERS['udp-audio']}; "
+                                 f"exec gst-launch-1.0 -q {soak.PUBLISHERS['udp-av']}")
+
     def test_cleanup_targets_only_owned_process_groups_and_reaps_children(self):
         with tempfile.TemporaryDirectory(prefix='noar-soak-unit-') as directory:
             owner = self.soak.NativeProcesses(Path(directory))

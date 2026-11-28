@@ -36,7 +36,8 @@ RUN --mount=type=secret,id=proxy_ca,mode=0444 \
 
 # GStreamer core and gst-plugins-base 1.26.11 over Debian's 1.26.2: in 1.26.2,
 # decodebin3 aborts the process when a live MPEG-TS source changes its streams
-# (an encoder dropping its video). The other plugin sets stay Debian's.
+# (an encoder dropping its video, or adding it back). The other plugin sets
+# stay Debian's.
 FROM ${RUNTIME_IMAGE} AS gstreamer-build
 RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     if [ -f /run/secrets/proxy_ca ]; then \
