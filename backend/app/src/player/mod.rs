@@ -1,5 +1,4 @@
 pub mod as_run;
-#[path = "clip_cues/graphics.rs"]
 pub mod clip_cues;
 pub mod controller;
 pub mod graphics_schedule;

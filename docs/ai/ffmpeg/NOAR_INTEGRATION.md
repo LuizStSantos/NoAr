@@ -9,7 +9,7 @@ NoAr does not link the FFmpeg libraries. FFmpeg remains only as GStreamer codecs
 - Root Cargo workspace has `backend/app` (`noar`) and `backend/engine` (`noar-engine`).
 - No crate binds FFmpeg (`ffmpeg-next` and the `ffmpeg-filter`/`ffmpeg-device` features were removed).
 - Native playback/timestamps: `backend/engine/src/playout.rs` and `input/gstreamer.rs` use GStreamer.
-- Native encoding/muxing: `backend/engine/src/output/gstreamer_output.rs`, `output/pipeline.rs` and `output/link.rs`.
+- Native encoding/muxing: `backend/engine/src/output/encoded.rs`, `output/pipeline.rs` and `output/link.rs`.
 - Frames: `backend/engine/src/frame.rs` (`VideoFrame` in YUV420P, YUVA420P and BGRx; `AudioFrame` in planar f32), copy-on-write planes. Time bases: `backend/engine/src/time_base.rs` (`Rational`, `Rescale` with FFmpeg's nearest, halves-away-from-zero rounding).
 - The move off FFmpeg frames was checked against the FFmpeg path with lossless x264 on the same clips: identical decoded video and audio frames.
 - Broadcast cue insertion: `backend/engine/src/output/scte35.rs`.

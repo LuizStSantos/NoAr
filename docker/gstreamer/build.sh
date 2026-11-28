@@ -3,7 +3,9 @@
 # Debian's 1.26.2. In 1.26.2, decodebin3 aborts the whole process ("Stream
 # switch requested for future collection") when a live MPEG-TS source changes
 # its streams, for example an encoder that drops its video; 1.26.11 handles
-# the smaller collection. gst-libav 1.26.2's avdec_h264 aborts the process
+# the smaller collection. It also aborts ("assertion failed: (collection)")
+# when the encoder adds its video back to its sound, which 1.26.11 survives.
+# gst-libav 1.26.2's avdec_h264 aborts the process
 # ("video meta uses 864x480 instead of 854x480") on video whose width is not
 # a multiple of its alignment; 1.26.11 sizes its buffer pool for the padding.
 # The other plugin sets stay Debian's 1.26.2 builds, which run on a newer core

@@ -8,7 +8,6 @@ use anyhow::anyhow;
 mod backlog;
 #[cfg(feature = "desktop-base")]
 pub(crate) mod desktop;
-#[path = "gstreamer_output.rs"]
 mod encoded;
 mod gst_hls;
 mod gst_metadata;

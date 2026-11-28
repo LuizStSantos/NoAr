@@ -38,6 +38,12 @@ const MEDIA_DURATION_TOLERANCE_US: i64 = 500_000;
 /// though its sound still arrives. Longer than the gap to the first picture
 /// of a source joined between key frames.
 const LIVE_VIDEO_LOST: Duration = Duration::from_secs(6);
+/// How long a live with sound may send no sound before it counts as lost,
+/// though its picture still arrives.
+const LIVE_AUDIO_LOST: Duration = Duration::from_secs(6);
+/// How long a live whose one track has reached the end of the live waits for
+/// the other. The tracks of a healthy live end a frame or two apart.
+const LIVE_END_GRACE: Duration = Duration::from_millis(250);
 #[derive(Debug)]
 pub(crate) struct PlaybackSkipped;
 
@@ -548,6 +554,10 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
             let mut source_origin = source_origin;
             let mut last_media = Instant::now();
             let mut last_video = Instant::now();
+            // Armed by the first sound, so a live that announces sound it
+            // never sends is not opened again and again.
+            let mut last_audio: Option<Instant> = None;
+            let mut one_track_ended = None;
             let mut last_hold = Instant::now();
             let mut video_frames = 0;
             let frames_before = decoded_frames;
@@ -557,6 +567,21 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                 check_playback_control(playback_control)?;
                 if end_video.is_some_and(|end| timeline.video_pts >= end)
                     && end_audio.is_some_and(|end| timeline.audio_pts >= end)
+                {
+                    break;
+                }
+                // A live ends at its end time, though one of its tracks may
+                // not get there: the frames still coming for the other would
+                // hold it on air with nothing sent out, until the source
+                // stopped. The track behind is completed after the loop.
+                if live
+                    && live_end_overdue(
+                        timeline,
+                        end_video,
+                        end_audio,
+                        &mut one_track_ended,
+                        Instant::now(),
+                    )
                 {
                     break;
                 }
@@ -570,6 +595,18 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                 // packet loss, an encoder that dropped its video).
                 if live && info.has_video && last_video.elapsed() > LIVE_VIDEO_LOST {
                     return Err(LiveSourceLost("live source stopped sending video".into()).into());
+                }
+                // Nor does a picture alone keep a live with sound on air: when
+                // an MPEG-TS encoder adds its picture back to its sound,
+                // GStreamer 1.26 delivers the new picture but drops the sound
+                // for good, and the live would go on in silence. Opening the
+                // source again brings both back. (The sound of a live aired
+                // with sound from elsewhere is not used.)
+                if live
+                    && external.is_none()
+                    && live_sound_lost(info.has_audio, last_audio, Instant::now())
+                {
+                    return Err(LiveSourceLost("live source stopped sending sound".into()).into());
                 }
                 let event = match opened.preroll.pop_front() {
                     Some(event) => Some(event),
@@ -681,6 +718,7 @@ pub(crate) fn play_clip_with_external_audio<O: FrameOutput>(
                         }
                     }
                     FrameEvent::Audio(audio) => {
+                        last_audio = Some(Instant::now());
                         if external.is_some() {
                             continue;
                         }
@@ -1552,6 +1590,34 @@ fn synchronize_silence_to_video<O: FrameOutput>(
     check_playback_control(playback_control)
 }
 
+/// Whether a live has had one of its tracks at the end of the live for
+/// `LIVE_END_GRACE` while the other has not got there. `ended` keeps when the
+/// first track got there.
+fn live_end_overdue(
+    timeline: &Timeline,
+    end_video: Option<i64>,
+    end_audio: Option<i64>,
+    ended: &mut Option<Instant>,
+    now: Instant,
+) -> bool {
+    let video_ended = end_video.is_some_and(|end| timeline.video_pts >= end);
+    let audio_ended = end_audio.is_some_and(|end| timeline.audio_pts >= end);
+
+    if !video_ended && !audio_ended {
+        return false;
+    }
+
+    now.saturating_duration_since(*ended.get_or_insert(now)) >= LIVE_END_GRACE
+}
+
+/// Whether a live with sound has sent none for `LIVE_AUDIO_LOST` since the
+/// last it sent. A live that never sent the sound it announced is left alone:
+/// opening it again would not bring the sound either.
+fn live_sound_lost(has_audio: bool, last_audio: Option<Instant>, now: Instant) -> bool {
+    has_audio
+        && last_audio.is_some_and(|last| now.saturating_duration_since(last) > LIVE_AUDIO_LOST)
+}
+
 /// A live input may keep one track active while the other waits for data.
 /// Bound their separation so the persistent muxer can continue interleaving.
 /// Late source frames are trimmed against the timeline already sent.
@@ -1914,5 +1980,208 @@ mod live_interleave_tests {
 
         assert!(output.video.is_empty());
         assert!(output.audio.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod live_end_tests {
+    use super::*;
+
+    #[test]
+    fn a_live_waits_a_moment_for_its_other_track_at_its_end() {
+        let start = Instant::now();
+        let mut ended = None;
+        let ends = (Some(200), Some(384_000));
+
+        assert!(!live_end_overdue(
+            &Timeline::at(199, 379_200),
+            ends.0,
+            ends.1,
+            &mut ended,
+            start
+        ));
+        assert!(ended.is_none());
+
+        // The picture got there, 100 ms of sound did not.
+        let timeline = Timeline::at(200, 379_200);
+        for wait in [Duration::ZERO, LIVE_END_GRACE / 2] {
+            assert!(!live_end_overdue(
+                &timeline,
+                ends.0,
+                ends.1,
+                &mut ended,
+                start + wait
+            ));
+        }
+        assert!(live_end_overdue(
+            &timeline,
+            ends.0,
+            ends.1,
+            &mut ended,
+            start + LIVE_END_GRACE
+        ));
+    }
+
+    #[test]
+    fn a_live_whose_sound_stopped_counts_as_lost() {
+        let last = Instant::now();
+
+        assert!(!live_sound_lost(true, Some(last), last + LIVE_AUDIO_LOST));
+        assert!(live_sound_lost(
+            true,
+            Some(last),
+            last + LIVE_AUDIO_LOST + Duration::from_millis(1)
+        ));
+        // No sound announced, or none sent yet.
+        assert!(!live_sound_lost(
+            false,
+            Some(last),
+            last + LIVE_AUDIO_LOST * 2
+        ));
+        assert!(!live_sound_lost(true, None, last + LIVE_AUDIO_LOST * 2));
+    }
+
+    #[test]
+    fn a_live_without_an_end_never_ends_on_its_own() {
+        let mut ended = None;
+
+        assert!(!live_end_overdue(
+            &Timeline::at(1_000, 0),
+            None,
+            None,
+            &mut ended,
+            Instant::now() + LIVE_END_GRACE * 4
+        ));
+    }
+}
+
+/// The encoder of a live switches from its sound alone to its sound and
+/// picture, without a gap, as the soak test's UDP encoder does. GStreamer
+/// 1.26.11 delivers the new picture but drops the sound. Debian's 1.26.2
+/// aborts the process on this switch, so these tests run only on 1.26.11 or
+/// newer, as in the Docker image.
+#[cfg(test)]
+mod live_encoder_switch_tests {
+    use std::{net::UdpSocket, sync::mpsc};
+
+    use ::gstreamer::{self as gst, prelude::*};
+
+    use super::*;
+
+    const AUDIO: &str = "audiotestsrc is-live=true ! audio/x-raw,rate=48000,channels=2 \
+        ! audioconvert ! avenc_aac ! aacparse ! mux.";
+    const VIDEO: &str = "videotestsrc is-live=true pattern=smpte \
+        ! video/x-raw,width=320,height=180,framerate=25/1 \
+        ! x264enc tune=zerolatency speed-preset=ultrafast key-int-max=25 \
+        ! h264parse config-interval=-1 ! mux.";
+
+    fn gstreamer_survives_the_switch() -> bool {
+        crate::gstreamer::init().unwrap();
+        let (major, minor, micro, _) = gst::version();
+        let survives = (major, minor, micro) >= (1, 26, 11);
+
+        if !survives {
+            eprintln!(
+                "skipped: GStreamer {major}.{minor}.{micro} aborts on an encoder switch; 1.26.11 does not"
+            );
+        }
+        survives
+    }
+
+    /// An MPEG-TS encoder sending `tracks` to `port`, until dropped.
+    struct Encoder(gst::Element);
+
+    impl Encoder {
+        fn start(tracks: &str, port: u16) -> Self {
+            let pipeline = gst::parse::launch(&format!(
+                "{tracks} mpegtsmux name=mux alignment=7 ! udpsink host=127.0.0.1 port={port}"
+            ))
+            .unwrap();
+            pipeline.set_state(gst::State::Playing).unwrap();
+
+            Self(pipeline)
+        }
+    }
+
+    impl Drop for Encoder {
+        fn drop(&mut self) {
+            let _ = self.0.set_state(gst::State::Null);
+        }
+    }
+
+    struct Discard;
+
+    impl FrameOutput for Discard {
+        fn audio_frame_size(&self) -> usize {
+            1024
+        }
+
+        fn encode_video(&mut self, _frame: &VideoFrame) -> Result<()> {
+            Ok(())
+        }
+
+        fn encode_audio(&mut self, _frame: &AudioFrame) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Plays `seconds` of a live whose encoder sends its sound alone for
+    /// `switch_after` seconds, then its sound and picture until the live is
+    /// over (at most 20 s).
+    fn play_switching_live(
+        seconds: f64,
+        switch_after: Duration,
+    ) -> (Result<()>, Duration, Timeline) {
+        let port = UdpSocket::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let sound = Encoder::start(AUDIO, port);
+        let (stop, stopped) = mpsc::channel::<()>();
+        let encoder = thread::spawn(move || {
+            thread::sleep(switch_after);
+            drop(sound);
+            let _both = Encoder::start(&format!("{VIDEO} {AUDIO}"), port);
+            let _ = stopped.recv_timeout(Duration::from_secs(20));
+        });
+        let config = OutputConfig::new(320, 180, 25, 48_000);
+        let mut timeline = Timeline::new();
+        let started = Instant::now();
+        let result = play_clip_with_external_audio(
+            &format!("udp://127.0.0.1:{port}"),
+            None,
+            &config,
+            &mut timeline,
+            &mut Discard,
+            None,
+            Some(seconds),
+            None,
+            LogoFade::default(),
+            &PlaybackControl::default(),
+            None,
+        );
+        let took = started.elapsed();
+        let _ = stop.send(());
+        encoder.join().unwrap();
+
+        (result, took, timeline)
+    }
+
+    /// The live ends on time, its silent end completed, rather than when
+    /// the encoder stops sending its picture.
+    #[test]
+    fn a_live_ends_on_time_after_its_encoder_adds_its_picture_back() {
+        if !gstreamer_survives_the_switch() {
+            return;
+        }
+        let (result, took, timeline) = play_switching_live(5.0, Duration::from_secs(2));
+
+        result.unwrap_or_else(|error| panic!("after {took:?}: {error:#}"));
+        assert!(
+            took < Duration::from_secs(7),
+            "the live ended after {took:?}"
+        );
+        assert_eq!((timeline.video_pts(), timeline.audio_pts()), (125, 240_000));
     }
 }

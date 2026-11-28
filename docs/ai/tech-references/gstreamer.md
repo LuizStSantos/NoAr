@@ -9,7 +9,7 @@ canonical research workflow lives in
 | --- | --- | --- |
 | Runtime setup and CPU frame conversion | `backend/engine/src/gstreamer.rs` | Application development, VideoInfo/VideoConverter Rust APIs |
 | Client inputs, caps, seeking and timestamps | `input/gstreamer.rs`, `input/preload.rs`, `playout.rs` | uridecodebin3, hlsdemux2, audiorate, AppSink, state changes and synchronization |
-| Persistent encoding and separate destinations | `output/gstreamer_output.rs`, `output/pipeline.rs` | AppSrc, segments, encoder/parser/muxer pad caps |
+| Persistent encoding and separate destinations | `output/encoded.rs`, `output/pipeline.rs` | AppSrc, segments, encoder/parser/muxer pad caps |
 | SRT/RTMP/UDP reconnects | `output/link.rs` | Installed srtsink/rtmp2sink/udpsink properties and units |
 | HLS, WebVTT and recording | `output/gst_hls.rs`, `output/recording_native.rs` | splitmuxsink, MPEG-TS and HLS RFC 8216 |
 | Service metadata and SCTE-35 | `output/gst_metadata.rs`, `output/scte35.rs` | GStreamer MPEG-TS APIs and observed output packets |

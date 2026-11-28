@@ -7,9 +7,7 @@
 
 use sqlx::{SqliteConnection, sqlite::SqlitePool};
 
-#[path = "graphics/compatibility/graphics.rs"]
 mod compatibility;
-#[path = "graphics/resources/graphics.rs"]
 mod resources;
 
 use crate::{

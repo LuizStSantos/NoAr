@@ -11,6 +11,43 @@ one is tagged.
 
 ## [Unreleased]
 
+### Changed
+
+- CI tests on the GStreamer the Docker image runs: core, base and libav
+  1.26.11 over Debian's 1.26.2, built by `docker/gstreamer/build.sh` and
+  cached. The test of an encoder that adds its picture back, skipped on
+  1.26.2 where that switch aborts the process, now runs in CI.
+
+## [3.4.0] - 2026-11-28
+
+### Added
+
+- The graphics Composer duplicates a layer, from its row in the layer list,
+  from its properties or with Ctrl+D (Cmd+D on a Mac). The copy keeps all the
+  layer's settings, comes just in front of it, selected, named "(copy)", and
+  Undo takes it away. A template's video layer, of which there is one at
+  most, is not duplicated, nor a 65th layer.
+
+### Fixed
+
+- A live could stay on air past its end with its output frozen, until its
+  encoder stopped sending: the nightly SRT soak test froze for 14 s at the
+  end of a UDP live. When an MPEG-TS encoder adds its picture back to its
+  sound, GStreamer delivers the picture but no longer the sound; at the end
+  of the live, the picture was there and the last 0.1 s of sound never came,
+  while the picture still coming kept the live counted as on air. A live now
+  ends at its end time: a track that is behind gets 0.25 s, then is filled.
+- Such a live went on in silence until its end. A live that has sent sound
+  and sends none for 6 s while its picture goes on now counts as lost and is
+  opened again, which brings the sound back, as a live with sound and no
+  picture already was.
+
+### Changed
+
+- The soak test's UDP encoder takes its picture back without a gap, in the
+  same process, so both cases above are tested every night; until now this
+  happened only when the encoder restarted fast enough.
+
 ## [3.3.3] - 2026-11-27
 
 ### Security
@@ -1481,7 +1518,8 @@ adds and changes.
   on air no longer airs in its old form.
 - The playout keeps running when a scheduled live starts or stops.
 
-[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.3.3...HEAD
+[Unreleased]: https://github.com/LuizStSantos/NoAr/compare/v3.4.0...HEAD
+[3.4.0]: https://github.com/LuizStSantos/NoAr/compare/v3.3.3...v3.4.0
 [3.3.3]: https://github.com/LuizStSantos/NoAr/compare/v3.3.2...v3.3.3
 [3.3.2]: https://github.com/LuizStSantos/NoAr/compare/v3.3.1...v3.3.2
 [3.3.1]: https://github.com/LuizStSantos/NoAr/compare/v3.3.0...v3.3.1

@@ -9,7 +9,6 @@ use log::*;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 
-#[path = "graphics_schedule/graphics.rs"]
 mod templates;
 
 use crate::{db::handles, player::controller::ChannelManager, utils::time_machine::time_now};

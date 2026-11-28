@@ -37,7 +37,7 @@ them:
 | --- | --- |
 | 0:30–3:30 | SRT live; its encoder drops out at 1:30 for 20 s and comes back |
 | 4:30–6:30 | The same live read over RTMP |
-| 7:00–9:30 | UDP live; its encoder drops its video at 8:00 for 30 s and takes it back |
+| 7:00–9:30 | UDP live; its encoder drops its video at 8:00 and, 30 s later, takes it back in the same process, without a gap |
 | 10:30 | Playout restart in the middle of a clip |
 
 Every 2 s it reads `/health`, the bytes MediaMTX receives from NoAr (SRT) or
