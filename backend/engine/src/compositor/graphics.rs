@@ -61,66 +61,6 @@ pub fn logo_layer_geometry(
     ))
 }
 
-impl crate::LShapeControl {
-    /// Draw a bound L-shape model, preserving its complete picture geometry.
-    /// Loading it does not take it on or off air.
-    pub fn set_template(&self, spec: &GraphicSpec, width: u32, height: u32) -> Result<()> {
-        let primary = spec
-            .layers
-            .iter()
-            .position(|layer| matches!(layer.content, GraphicContent::Image { .. }))
-            .unwrap_or(0);
-
-        self.set_template_controlled(spec, primary, width, height)
-    }
-
-    pub fn set_template_controlled(
-        &self,
-        spec: &GraphicSpec,
-        primary: usize,
-        width: u32,
-        height: u32,
-    ) -> Result<()> {
-        let generation = self.begin_model_update();
-        let rendered = render_graphic(spec, width, height)?;
-        anyhow::ensure!(
-            rendered.picture.is_some(),
-            "channel L-shape needs a video layer"
-        );
-        self.set_rendered_graphic(rendered.picture, spec, primary, generation)?;
-        Ok(())
-    }
-
-    /// Prepare artwork without holding the owner's short publication guard.
-    pub fn set_template_controlled_guarded<G>(
-        &self,
-        spec: &GraphicSpec,
-        primary: usize,
-        size: (u32, u32),
-        mut before_commit: impl FnMut() -> Option<G>,
-    ) -> Result<()> {
-        let generation = {
-            let Some(_publication) = before_commit() else {
-                return Ok(());
-            };
-
-            self.begin_model_update()
-        };
-        let rendered = render_graphic(spec, size.0, size.1)?;
-        anyhow::ensure!(
-            rendered.picture.is_some(),
-            "channel L-shape needs a video layer"
-        );
-        self.set_rendered_graphic_guarded(
-            rendered.picture,
-            (spec, primary),
-            generation,
-            lshape::render_model_art,
-            before_commit,
-        )
-    }
-}
-
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum GraphicAnimation {
     None,

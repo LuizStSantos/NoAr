@@ -76,8 +76,15 @@ submodules only.
 | Shared pixel geometry and masks | `backend/engine/src/compositor/graphics/geometry.rs` |
 | Cached animated image decoding and frame selection | `backend/engine/src/compositor/graphics/images.rs` |
 | Prepared scrolling text strips and clipped repetition | `backend/engine/src/compositor/graphics/scroll.rs` |
-| Specialized logo control/transition implementation | `backend/engine/src/compositor/graphics/logo.rs` |
-| Specialized picture-window control/transition implementation | `backend/engine/src/compositor/graphics/lshape.rs` |
+| Logo picture: loading, scaling and blending | `backend/engine/src/compositor/graphics/logo/overlay.rs` |
+| Logo size and position expressions | `backend/engine/src/compositor/graphics/logo/position.rs` |
+| Logo on air: overrides, clip images and transitions (`LogoControl`) | `backend/engine/src/compositor/graphics/logo/control.rs` |
+| L-shape timing, corners, configuration and window | `backend/engine/src/compositor/graphics/lshape/shape.rs` |
+| L-shape on air and its bound model (`LShapeControl`) | `backend/engine/src/compositor/graphics/lshape/control.rs` |
+| L-shape drawn into frames, and marked stretches | `backend/engine/src/compositor/graphics/lshape/apply.rs` |
+| Fonts, glyph cache and uploaded fonts | `backend/engine/src/compositor/text/fonts.rs` |
+| Text drawn into RGBA blocks, lines and YUV pictures | `backend/engine/src/compositor/text/render.rs` |
+| Clip text overlay | `backend/engine/src/compositor/text/overlay.rs` |
 
 The old top-level `api/routes/logo.rs` and `compositor/{logo,lshape}.rs` are
 removed. Root engine exports such as `LogoControl` and `LShapeControl` remain
