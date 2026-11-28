@@ -74,8 +74,10 @@ test('a layer is duplicated in front of itself, with its settings, and the copy 
         await page.getByRole('button', { name: 'Duplicate layer Band', exact: true }).click()
         await expect(layerNames(page)).toHaveText(['Title', 'Band (copy)', 'Band', video])
         await expect(page.getByLabel('Layer name', { exact: true })).toHaveValue('Band (copy)')
-        // The preview draws it: Chromium once left the whole preview without
-        // layout when a notice above the editor came with the new layer.
+        await expect(page.getByText('Layer “Band” duplicated.', { exact: false })).toBeVisible()
+        // The preview draws it under the notice: the notice appearing as the
+        // preview drew the new layer once left Chromium with no layout for the
+        // whole preview column, while the editor's column was a query container.
         await expect(page.getByRole('button', { name: 'Select layer Band (copy)', exact: true })).toBeVisible()
 
         // Undo takes it away.

@@ -11,6 +11,16 @@ one is tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- In Chromium, the graphics Composer's preview could go blank until the page
+  was reloaded, when a notice appeared above the editor as a layer was added
+  to the preview: the preview's size containers lost their layout when they
+  changed size in the same frame. The notice now comes once the new layer is
+  drawn, and the editor's middle column is no longer a query container (the
+  preview keeps its 16:9 size by aspect ratio, at the same size as before).
+  Duplicating a layer shows its notice again, with Undo, as a deletion does.
+
 ### Changed
 
 - CI tests on the GStreamer the Docker image runs: core, base and libav

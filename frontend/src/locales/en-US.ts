@@ -1370,6 +1370,7 @@ export default {
             edit: 'Edit',
             sampleText: 'Your text',
             removed: 'Layer “{name}” deleted.',
+            duplicated: 'Layer “{name}” duplicated. The copy is selected, in front of it.',
             copyName: '{name} (copy)',
             saved: 'Template “{name}” saved.',
             notFound: 'Template not found.',

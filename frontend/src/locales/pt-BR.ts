@@ -1381,6 +1381,7 @@ export default {
             edit: 'Editar',
             sampleText: 'Seu texto',
             removed: 'Camada “{name}” apagada.',
+            duplicated: 'Camada “{name}” duplicada. A cópia está selecionada, na frente dela.',
             copyName: '{name} (cópia)',
             saved: 'Modelo “{name}” salvo.',
             notFound: 'Modelo não encontrado.',

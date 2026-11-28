@@ -305,12 +305,7 @@ function canDuplicate(layer?: TemplateLayer) {
     return !!layer && layer.kind !== 'video' && draft.value.layers.length < 64 && !editorLocked.value
 }
 
-/**
- * A copy of a layer with all its settings, drawn just in front of it and
- * selected: the list, the preview and the properties show it. No notice: one
- * shown above the editor as the preview draws the new layer made Chromium
- * leave the whole preview column without layout until it was rebuilt.
- */
+/** A copy of a layer with all its settings, drawn just in front of it and selected. */
 function duplicateLayer(id: string) {
     const layers = draft.value.layers
     const index = layers.findIndex((layer) => layer.id === id)
@@ -332,6 +327,25 @@ function duplicateLayer(id: string) {
     rememberScaleBase(copy)
     selectedId.value = copy.id
     stopPreview()
+    noteAfterPaint(t('graphics.composer.duplicated', { name }))
+}
+
+/**
+ * Show a notice once the browser has drawn the change it is about, unless
+ * another change or an Undo came first. The notice pushes the editor down;
+ * Chromium left a size container of the preview without layout when it
+ * changed size in the same frame as a layer was added inside it.
+ */
+function noteAfterPaint(text: string) {
+    const draftAt = history.value.length
+
+    requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+            if (history.value.length === draftAt && !editorLocked.value) {
+                note.value = text
+            }
+        }),
+    )
 }
 
 /** Ctrl+D (Cmd+D on a Mac) copies the selected layer, unless a field is being typed in. */
@@ -1239,10 +1253,6 @@ onBeforeUnmount(() => {
         min-height: 0;
         align-items: stretch;
         grid-template-columns: 236px minmax(0, 1fr) 300px;
-    }
-    /* The preview sizes itself from this column's width (ComposerCanvas). */
-    .composer-grid > main {
-        container-type: inline-size;
     }
     /* The side panels are as tall as their content, up to the window, then scroll. */
     .composer-grid > aside {
