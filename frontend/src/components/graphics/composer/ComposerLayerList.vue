@@ -13,6 +13,8 @@ const adding = defineModel<boolean>('adding', { required: true })
 const emit = defineEmits<{
     add: [kind: TemplateLayer['kind']]
     remove: [layerId: string]
+    /** Copy the layer, in front of it. */
+    duplicate: [layerId: string]
     toggle: [layer: TemplateLayer]
     move: [layerId: string, toward: 'front' | 'back']
     /** Put the layer at `index` of the drawing order (0 = back). */
@@ -181,6 +183,20 @@ function drop(targetId: string) {
                     @click="emit('toggle', layer)"
                 >
                     <i :class="layer.visible ? 'bi bi-eye' : 'bi bi-eye-slash'" />
+                </button>
+                <button
+                    class="btn-icon min-h-8 min-w-8"
+                    :class="selectedId === layer.id ? '' : reorderHidden"
+                    :aria-label="t('graphics.composer.duplicateNamed', { name: layerName(layer) })"
+                    :title="
+                        layer.kind === 'video'
+                            ? t('graphics.composer.duplicateVideo')
+                            : t('graphics.composer.duplicateNamed', { name: layerName(layer) }) + ' (Ctrl+D)'
+                    "
+                    :disabled="layer.kind === 'video' || layers.length >= 64"
+                    @click="emit('duplicate', layer.id)"
+                >
+                    <i class="bi bi-copy text-xs" />
                 </button>
                 <button
                     class="btn-icon min-h-8 min-w-8"

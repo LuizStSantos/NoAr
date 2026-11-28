@@ -18,10 +18,13 @@ const props = defineProps<{
     fonts: string[]
     uploadedFonts: GraphicsFont[]
     fontUploading: boolean
+    /** The selected layer can be copied (not the video layer, nor a 65th layer). */
+    canDuplicate?: boolean
 }>()
 const emit = defineEmits<{
     updateLayer: [patch: Partial<TemplateLayer>]
     remove: [layerId: string]
+    duplicate: [layerId: string]
     uploadFont: [event: Event]
 }>()
 const { t } = useI18n()
@@ -73,6 +76,15 @@ function setScroll(direction: string) {
                     maxlength="100"
                     @change="renameLayer(($event.target as HTMLInputElement).value)"
             /></label>
+            <button
+                class="btn-icon min-h-10 min-w-10"
+                :aria-label="t('graphics.composer.duplicate')"
+                :title="t('graphics.composer.duplicate') + ' (Ctrl+D)'"
+                :disabled="!canDuplicate"
+                @click="emit('duplicate', selected.id)"
+            >
+                <i class="bi bi-copy" aria-hidden="true" />
+            </button>
             <button
                 class="btn-icon min-h-10 min-w-10 text-error"
                 :aria-label="t('graphics.composer.delete')"

@@ -300,6 +300,59 @@ function addLayer(kind: TemplateLayer['kind']) {
     stopPreview()
 }
 
+/** Whether a layer can be copied: one video layer at most, 64 layers in all. */
+function canDuplicate(layer?: TemplateLayer) {
+    return !!layer && layer.kind !== 'video' && draft.value.layers.length < 64 && !editorLocked.value
+}
+
+/**
+ * A copy of a layer with all its settings, drawn just in front of it and
+ * selected: the list, the preview and the properties show it. No notice: one
+ * shown above the editor as the preview draws the new layer made Chromium
+ * leave the whole preview column without layout until it was rebuilt.
+ */
+function duplicateLayer(id: string) {
+    const layers = draft.value.layers
+    const index = layers.findIndex((layer) => layer.id === id)
+    const layer = layers[index]
+
+    if (!layer || !canDuplicate(layer)) {
+        return
+    }
+
+    rememberDraft()
+    const name = layerName(layer)
+    const copy: TemplateLayer = {
+        ...JSON.parse(JSON.stringify(layer)),
+        id: randomId(),
+        name: t('graphics.composer.copyName', { name }).slice(0, 100),
+    }
+
+    draft.value.layers = [...layers.slice(0, index + 1), copy, ...layers.slice(index + 1)]
+    rememberScaleBase(copy)
+    selectedId.value = copy.id
+    stopPreview()
+}
+
+/** Ctrl+D (Cmd+D on a Mac) copies the selected layer, unless a field is being typed in. */
+function duplicateFromKeyboard(event: KeyboardEvent) {
+    const target = event.target as HTMLElement | null
+
+    if (
+        !(event.ctrlKey || event.metaKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== 'd' ||
+        target?.closest('input, textarea, select, [contenteditable="true"]') ||
+        !canDuplicate(selected.value)
+    ) {
+        return
+    }
+
+    event.preventDefault()
+    duplicateLayer(selectedId.value)
+}
+
 function removeLayer(id: string) {
     const layer = draft.value.layers.find((layer) => layer.id === id)
 
@@ -821,12 +874,14 @@ watch(
 onMounted(() => {
     loadEditor()
     window.addEventListener('beforeunload', confirmBeforeUnload)
+    window.addEventListener('keydown', duplicateFromKeyboard)
 })
 onBeforeUnmount(() => {
     ++loadVersion
     unregisterNavigationGuard()
     unregisterAfterNavigation()
     window.removeEventListener('beforeunload', confirmBeforeUnload)
+    window.removeEventListener('keydown', duplicateFromKeyboard)
 })
 </script>
 <template>
@@ -934,6 +989,7 @@ onBeforeUnmount(() => {
                 @add="addLayer"
                 @toggle="toggleLayer"
                 @remove="removeLayer"
+                @duplicate="duplicateLayer"
                 @move="moveLayer"
                 @reorder="reorderLayer"
                 @rename="renameLayer"
@@ -972,8 +1028,10 @@ onBeforeUnmount(() => {
                 :fonts="fonts"
                 :uploaded-fonts="uploadedFonts"
                 :font-uploading="fontUploading"
+                :can-duplicate="canDuplicate(selected)"
                 @update-layer="updateSelectedLayer"
                 @remove="removeLayer"
+                @duplicate="duplicateLayer"
                 @upload-font="uploadFont"
             >
                 <template #geometry>

@@ -11,6 +11,14 @@ one is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- The graphics Composer duplicates a layer, from its row in the layer list,
+  from its properties or with Ctrl+D (Cmd+D on a Mac). The copy keeps all the
+  layer's settings, comes just in front of it, selected, named "(copy)", and
+  Undo takes it away. A template's video layer, of which there is one at
+  most, is not duplicated, nor a 65th layer.
+
 ### Fixed
 
 - A live could stay on air past its end with its output frozen, until its

@@ -1247,7 +1247,7 @@ export default {
         },
         composer: {
             renameNamed: 'Rename {name}',
-            renameHint: 'double-click or F2 to rename',
+            renameHint: 'double-click or F2 to rename, Ctrl+D to duplicate',
             tabs: {
                 position: 'Position',
                 content: 'Content',
@@ -1325,6 +1325,8 @@ export default {
             hide: 'Hide {name}',
             show: 'Show {name}',
             deleteNamed: 'Delete layer {name}',
+            duplicateNamed: 'Duplicate layer {name}',
+            duplicateVideo: 'A template has one video layer: it cannot be duplicated.',
             selectNamed: 'Select layer {name}',
             resizeKeys: 'Use arrow keys to resize by 1%, or 10% with Shift. Enter or Space increases the size.',
             safeArea: 'Safety margins',
@@ -1337,6 +1339,7 @@ export default {
             properties: 'Layer properties',
             layerName: 'Layer name',
             delete: 'Delete layer',
+            duplicate: 'Duplicate layer',
             position: 'Position and size',
             proportional: 'Proportional',
             scale: 'Scale',
@@ -1367,6 +1370,7 @@ export default {
             edit: 'Edit',
             sampleText: 'Your text',
             removed: 'Layer “{name}” deleted.',
+            copyName: '{name} (copy)',
             saved: 'Template “{name}” saved.',
             notFound: 'Template not found.',
             nameTaken: 'That name is already taken. Choose another name.',

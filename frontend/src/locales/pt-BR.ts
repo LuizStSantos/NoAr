@@ -1252,7 +1252,7 @@ export default {
         },
         composer: {
             renameNamed: 'Renomear {name}',
-            renameHint: 'clique duas vezes ou F2 para renomear',
+            renameHint: 'clique duas vezes ou F2 para renomear, Ctrl+D para duplicar',
             tabs: {
                 position: 'Posição',
                 content: 'Conteúdo',
@@ -1336,6 +1336,8 @@ export default {
             hide: 'Esconder {name}',
             show: 'Mostrar {name}',
             deleteNamed: 'Apagar a camada {name}',
+            duplicateNamed: 'Duplicar a camada {name}',
+            duplicateVideo: 'Um modelo tem uma só camada de vídeo: ela não pode ser duplicada.',
             selectNamed: 'Selecionar a camada {name}',
             resizeKeys: 'Use as setas para redimensionar em 1%, ou 10% com Shift. Enter ou Espaço aumenta o tamanho.',
             safeArea: 'Margens de segurança',
@@ -1348,6 +1350,7 @@ export default {
             properties: 'Propriedades da camada',
             layerName: 'Nome da camada',
             delete: 'Apagar camada',
+            duplicate: 'Duplicar camada',
             position: 'Posição e tamanho',
             proportional: 'Proporcional',
             scale: 'Escala',
@@ -1378,6 +1381,7 @@ export default {
             edit: 'Editar',
             sampleText: 'Seu texto',
             removed: 'Camada “{name}” apagada.',
+            copyName: '{name} (cópia)',
             saved: 'Modelo “{name}” salvo.',
             notFound: 'Modelo não encontrado.',
             nameTaken: 'Esse nome já existe. Escolha outro nome.',
