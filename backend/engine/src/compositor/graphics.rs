@@ -17,17 +17,11 @@ use std::{
 
 use anyhow::{Result, anyhow};
 
-#[path = "graphics/geometry/graphics.rs"]
 mod geometry;
-#[path = "graphics/images/graphics.rs"]
 pub(crate) mod images;
-#[path = "graphics/logo/graphics.rs"]
 pub mod logo;
-#[path = "graphics/lshape/graphics.rs"]
 pub mod lshape;
-#[path = "graphics/rendering/graphics.rs"]
 mod rendering;
-#[path = "graphics/scroll/graphics.rs"]
 mod scroll;
 
 use crate::{

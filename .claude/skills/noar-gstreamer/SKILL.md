@@ -18,7 +18,7 @@ sources, including MediaMTX URLs, remain part of scheduled live playback.
    and `.github/workflows/validate.yml`. The initial integration uses native
    GStreamer 1.26 and gstreamer-rs 0.24; use the resolved versions as evidence.
 3. Inspect only the relevant source: `gstreamer.rs`, `input/gstreamer.rs`,
-   `input/preload.rs`, `playout.rs`, `output/gstreamer_output.rs`,
+   `input/preload.rs`, `playout.rs`, `output/encoded.rs`,
    `output/pipeline.rs`, `output/link.rs`, and the native HLS/recording helpers.
 4. Read 1–3 relevant official documentation sections. Check installed native
    property/caps metadata and exact Rust bindings before applying examples.

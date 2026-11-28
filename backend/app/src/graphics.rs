@@ -18,15 +18,10 @@ use std::{
 
 use serde::Serialize;
 
-#[path = "graphics/channel/graphics.rs"]
 mod channel;
-#[path = "graphics/commands/graphics.rs"]
 pub mod commands;
-#[path = "graphics/fonts/graphics.rs"]
 pub mod fonts;
-#[path = "graphics/sources/graphics.rs"]
 pub mod sources;
-#[path = "graphics/templates/graphics.rs"]
 mod templates;
 
 use crate::{

@@ -10,9 +10,7 @@ use axum::{
 use protect_axum::authorities::AuthDetails;
 use serde::{Deserialize, Serialize};
 
-#[path = "graphics/fonts/graphics.rs"]
 mod fonts;
-#[path = "graphics/sources/graphics.rs"]
 mod sources;
 
 pub use fonts::*;

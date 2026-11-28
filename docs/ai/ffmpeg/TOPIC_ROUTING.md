@@ -10,7 +10,7 @@ NoAr's own frames. Route those questions to `/noar-gstreamer` and
 | NoAr question | Read official manuals | Inspect NoAr source |
 | --- | --- | --- |
 | Behaviour of a codec GStreamer takes from libav (`avenc_aac`, `avenc_ac3`, `avdec_*`) | `codecs`, Doxygen `libavcodec` | `gst-inspect-1.0 avenc_<codec>`, `backend/engine/src/output/pipeline.rs` |
-| Test fixtures and independent inspection | `ffmpeg`, `ffprobe`, `ffprobe-all`, `formats`, `filters` | `qa/`, tests that call `ffprobe` (`backend/engine/src/output/gstreamer_output.rs`) |
+| Test fixtures and independent inspection | `ffmpeg`, `ffprobe`, `ffprobe-all`, `formats`, `filters` | `qa/`, tests that call `ffprobe` (`backend/engine/src/output/encoded.rs`) |
 | SCTE-35 background (why NoAr writes sections itself) | `formats`, Doxygen `libavformat`, implementation source | `docs/scte35.md`, `backend/engine/src/output/scte35.rs` |
 | FATE and testing patterns | `fate`, `developer`, Doxygen | relevant Rust unit tests and synthetic fixture tests |
 

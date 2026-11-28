@@ -50,33 +50,34 @@ of constructing queries. Native frame processing stays in the engine crate.
 
 ## Finding the right owner
 
-Paths below are relative to the repository root. Backend graphics implementation
-files use the required `graphics.rs` basename; their directories describe their
-responsibility. Consumers import Rust module paths rather than disk filenames.
+Paths below are relative to the repository root. Each backend graphics file is
+named after its module, as Rust looks it up without a `#[path]` attribute:
+`crate::graphics::fonts` is `graphics/fonts.rs`, and a folder holds a module's
+submodules only.
 
 | Responsibility | Source owner |
 | --- | --- |
 | HTTP model, take, assignment and usage endpoints; shared access policy | `backend/app/src/api/routes/graphics.rs` |
-| Font HTTP endpoints | `backend/app/src/api/routes/graphics/fonts/graphics.rs` |
-| Data-source HTTP endpoints | `backend/app/src/api/routes/graphics/sources/graphics.rs` |
+| Font HTTP endpoints | `backend/app/src/api/routes/graphics/fonts.rs` |
+| Data-source HTTP endpoints | `backend/app/src/api/routes/graphics/sources.rs` |
 | Shared control-key comparison | `backend/app/src/api/auth.rs::control_key_matches` |
-| Model schema, validation, fields and conversion to engine specs | `backend/app/src/graphics/templates/graphics.rs` |
-| Channel bindings, views, visibility and ticker loading | `backend/app/src/graphics/channel/graphics.rs` |
+| Model schema, validation, fields and conversion to engine specs | `backend/app/src/graphics/templates.rs` |
+| Channel bindings, views, visibility and ticker loading | `backend/app/src/graphics/channel.rs` |
 | Take ownership, permanent loading and dynamic refresh | `backend/app/src/graphics.rs` |
-| Font and data-provider application services | `backend/app/src/graphics/{fonts,sources}/graphics.rs` |
+| Font and data-provider application services | `backend/app/src/graphics/{fonts,sources}.rs` |
 | Model CRUD and bindings repository facade | `backend/app/src/db/handles/graphics.rs` |
-| Projection and compatibility saves | `backend/app/src/db/handles/graphics/compatibility/graphics.rs` |
-| Startup conversion and adjacent migration tests | `backend/app/src/db/handles/graphics/compatibility/conversion/graphics.rs` |
-| Font and data-source persistence | `backend/app/src/db/handles/graphics/resources/graphics.rs` |
+| Projection and compatibility saves | `backend/app/src/db/handles/graphics/compatibility.rs` |
+| Startup conversion and adjacent migration tests | `backend/app/src/db/handles/graphics/compatibility/conversion.rs` |
+| Font and data-source persistence | `backend/app/src/db/handles/graphics/resources.rs` |
 | Clip sidecar metadata, trim and ad-break marks | `backend/app/src/utils/logo_marks.rs` |
-| Scheduled event timing and ownership | `backend/app/src/player/graphics_schedule.rs` and `player/graphics_schedule/graphics.rs` |
+| Scheduled event timing and ownership | `backend/app/src/player/graphics_schedule.rs` and `player/graphics_schedule/templates.rs` |
 | Engine composition state and frame composition entry points | `backend/engine/src/compositor/graphics.rs` |
-| Rasterization and layer animation/blending | `backend/engine/src/compositor/graphics/rendering/graphics.rs` |
-| Shared pixel geometry and masks | `backend/engine/src/compositor/graphics/geometry/graphics.rs` |
-| Cached animated image decoding and frame selection | `backend/engine/src/compositor/graphics/images/graphics.rs` |
-| Prepared scrolling text strips and clipped repetition | `backend/engine/src/compositor/graphics/scroll/graphics.rs` |
-| Specialized logo control/transition implementation | `backend/engine/src/compositor/graphics/logo/graphics.rs` |
-| Specialized picture-window control/transition implementation | `backend/engine/src/compositor/graphics/lshape/graphics.rs` |
+| Rasterization and layer animation/blending | `backend/engine/src/compositor/graphics/rendering.rs` |
+| Shared pixel geometry and masks | `backend/engine/src/compositor/graphics/geometry.rs` |
+| Cached animated image decoding and frame selection | `backend/engine/src/compositor/graphics/images.rs` |
+| Prepared scrolling text strips and clipped repetition | `backend/engine/src/compositor/graphics/scroll.rs` |
+| Specialized logo control/transition implementation | `backend/engine/src/compositor/graphics/logo.rs` |
+| Specialized picture-window control/transition implementation | `backend/engine/src/compositor/graphics/lshape.rs` |
 
 The old top-level `api/routes/logo.rs` and `compositor/{logo,lshape}.rs` are
 removed. Root engine exports such as `LogoControl` and `LShapeControl` remain
@@ -170,7 +171,7 @@ channel-logo renderer.
 
 ### Add or change a layer property
 
-Start with `templates/graphics.rs` for validation and serialized defaults.
+Start with `graphics/templates.rs` for validation and serialized defaults.
 Update the frontend model in `composables/graphicsTemplates.ts`, its inspector,
 `TemplatePreview.vue` and the engine layer spec/rasterization together. Preserve
 old defaults. Exercise save/reload, Undo and actual encoded output for any

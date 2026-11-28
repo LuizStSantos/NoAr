@@ -7,7 +7,6 @@
 
 use sqlx::sqlite::SqlitePool;
 
-#[path = "conversion/graphics.rs"]
 mod conversion;
 
 use crate::utils::errors::ProcessError;
